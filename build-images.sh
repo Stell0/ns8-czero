@@ -15,6 +15,7 @@ repobase="${REPOBASE:-ghcr.io/stell0}"
 repobase="${repobase,,}"
 # Configure the image name
 reponame="czero"
+revision="${GITHUB_SHA:-$(git rev-parse HEAD)}"
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -37,6 +38,10 @@ buildah add "${container}" imageroot /imageroot
 buildah add "${container}" ui/dist /ui
 # Setup the entrypoint, ask to reserve one TCP port with the label and set a rootless container
 buildah config --entrypoint=/ \
+    --label="org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY:-Stell0/ns8-czero}" \
+    --label="org.opencontainers.image.revision=${revision}" \
+    --label="org.opencontainers.image.licenses=GPL-3.0-or-later" \
+    --label="org.opencontainers.image.title=C0 (Czero) packaging smoke stub" \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
