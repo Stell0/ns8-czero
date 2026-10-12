@@ -1,13 +1,13 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 is in progress. Packaging uses `czero` identity and a pinned HTTP echo stub; publication and installed behavior require verified CI evidence. Do not describe planned C0 features as implemented. Start with M00.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 build/publication is verified; installed acceptance is blocked by private GHCR access. Packaging uses `czero` identity and a pinned HTTP echo stub. Do not describe planned C0 features as implemented. Start with M00.
 
 ## Established M00 conventions
 
 - Module image: `ghcr.io/stell0/czero`; lifecycle service: `czero.service`. The temporary smoke route is `/czero/<module-id>/`, owned by that instance. FastAPI, authentication and the separate user UI are pending M01 and later milestones.
 - `build-images.sh` packages only `imageroot/` and generated `ui/dist/`. Preserve this explicit runtime allowlist. Runtime images use verified version tags; the echo stub is `jmalloc/echo-server:v0.3.7`.
 - Publication needs both `contents: read` and `packages: write`. The upstream reusable publisher explicitly removes checkout access; use the small local job adapted from its steps for this private repository. QEMU runs only after successful publication and checks install and forced native update scenarios; M00 has no older released predecessor. UI tests run every time. A green wrapper with skipped tests is not evidence.
-- Publication inspects image metadata with GHCR authentication and fails on pull errors. Trivy scans sources and runtime images and stores SARIF/CycloneDX artifacts; optional GitHub Security ingestion is unavailable in this repository. Private package access remains an installation gate.
+- Publication inspects image metadata with GHCR authentication and fails on pull errors. Trivy scans sources and runtime images and stores SARIF/CycloneDX artifacts; optional GitHub Security ingestion is unavailable in this repository. Private package access remains an installation gate. Both QEMU legs failed before booting a VM; do not claim Robot or browser acceptance. Existing scan findings in UI dependencies and the echo stub are recorded in PLAN.md and must be reviewed before release.
 - `tests/CzeroBrowser.py` creates a random administrator only on disposable QEMU and suppresses password-entry logging. Never use this helper on a shared/live host. Local action tests live in `tests/unit/`; Robot tests remain in `tests/czero.robot`.
 
 ## Mission and boundaries
