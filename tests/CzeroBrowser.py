@@ -14,7 +14,6 @@ class CzeroBrowser:
     def login_to_disposable_cluster(self, node_addr):
         builtin = BuiltIn()
         ssh = builtin.get_library_instance("SSHLibrary")
-        browser = builtin.get_library_instance("Browser")
         username = "czero-ci-" + secrets.token_hex(4)
         password = secrets.token_urlsafe(32)
         request = json.dumps({
@@ -32,11 +31,13 @@ class CzeroBrowser:
             raise AssertionError("Cannot create disposable browser administrator")
         previous_level = builtin.set_log_level("NONE")
         try:
-            browser.new_page(f"https://{node_addr}/cluster-admin/")
-            browser.fill_text('text="Username"', username)
-            browser.click('button >> text="Continue"')
-            browser.fill_text('text="Password"', password)
-            browser.click('button >> text="Log in"')
-            browser.wait_for_elements_state("css=#main-content", "visible", timeout="30s")
+            # Robot converts typed Browser arguments (states and timeouts).
+            # Calling the Python keyword method directly skips that conversion.
+            builtin.run_keyword("Browser.New Page", f"https://{node_addr}/cluster-admin/")
+            builtin.run_keyword("Browser.Fill Text", 'text="Username"', username)
+            builtin.run_keyword("Browser.Click", 'button >> text="Continue"')
+            builtin.run_keyword("Browser.Fill Text", 'text="Password"', password)
+            builtin.run_keyword("Browser.Click", 'button >> text="Log in"')
+            builtin.run_keyword("Browser.Wait For Elements State", 'h2 >> text="Cluster status"', "visible", "timeout=30s")
         finally:
             builtin.set_log_level(previous_level)

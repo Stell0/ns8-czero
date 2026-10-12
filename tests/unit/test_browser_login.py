@@ -35,6 +35,14 @@ def test_disposable_login_obeys_core_contract_and_hides_password(monkeypatch):
         "SSHLibrary": ssh, "Browser": browser
     }[name])
     monkeypatch.setattr(BuiltIn, "set_log_level", lambda self, level: log_level(level))
+    def dispatch(self, name, *args):
+        method = name.split(".")[1].lower().replace(" ", "_")
+        if method == "wait_for_elements_state":
+            assert args[1:] == ("visible", "timeout=30s")
+        else:
+            return getattr(browser, method)(*args)
+
+    monkeypatch.setattr(BuiltIn, "run_keyword", dispatch)
     library = runpy.run_path(str(ROOT / "tests/CzeroBrowser.py"))["CzeroBrowser"]()
     library.login_to_disposable_cluster("disposable.invalid")
     request = json.loads(commands[0].split("--data '")[1][:-1])
