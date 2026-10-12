@@ -41,7 +41,7 @@ jobs:
         env:
           # Normally use GITHUB_TOKEN; an explicitly approved publisher secret
           # can recover publication of a package with disconnected CI grants.
-          REGISTRY_TOKEN: ${{ secrets.GHCR_PUBLISH_TOKEN || secrets.GITHUB_TOKEN }}
+          REGISTRY_TOKEN: ${{ secrets.NS8_MODULE_RELEASES_TOKEN || secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
           IMAGES: ${{ steps.build.outputs.images }}
         run: |
