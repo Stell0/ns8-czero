@@ -82,10 +82,16 @@ Check administration and smoke HTTP in a browser
     Get Text    iframe >>> text="czero"    contains    czero
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=settings
     Wait For Elements State    iframe >>> h2 >> text="Settings"    visible    timeout=30s
-    Get Text    iframe >>> p >> text="M00 packaging smoke stub."    contains    M00 packaging smoke stub.
+    Get Text    iframe >>> p:has-text("M00 packaging smoke stub.")    contains    M00 packaging smoke stub.
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command    curl --fail --silent --max-time 10 http://127.0.0.1/czero/${module_id}/health
+    ...    return_rc=True    return_stdout=False
+    Should Not Be Equal As Integers    ${rc}    0
     Click    iframe >>> button >> text="Save"
     Wait For Elements State    iframe >>> button >> text="Save"    enabled    timeout=30s
-    Check smoke route
+    Wait Until Keyword Succeeds    30s    2s    Check smoke route
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${NODE_ADDR}/czero/${module_id}/health
