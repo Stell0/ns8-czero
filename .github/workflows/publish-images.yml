@@ -13,10 +13,45 @@ permissions:
 
 jobs:
   publish-images:
+    # Adapted from NethServer/ns8-github-actions publish-branch.yml (GPL-3.0).
+    # Its packages-only permission block prevents private-repository checkout.
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
-    uses: NethServer/ns8-github-actions/.github/workflows/publish-branch.yml@v1
+    concurrency:
+      group: publish-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      REPOBASE: ghcr.io/${{ github.repository_owner }}
+      BRANCH_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: ui/node_modules
+          key: yarn-${{ hashFiles('ui/yarn.lock') }}
+      - id: build
+        run: |
+          export REPOBASE="${REPOBASE,,}"
+          export IMAGETAG="${BRANCH_TAG//\//-}"
+          echo "IMAGETAG=${IMAGETAG}" >> "$GITHUB_ENV"
+          bash build-images.sh
+      - name: Publish module images
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          IMAGES: ${{ steps.build.outputs.images }}
+        run: |
+          set -euo pipefail
+          trap 'buildah logout ghcr.io' EXIT
+          buildah login -u "$REGISTRY_USER" --password-stdin ghcr.io <<<"$REGISTRY_TOKEN"
+          for image in $IMAGES; do
+            buildah push "$image" "docker://${image}:${IMAGETAG}"
+            if [[ "$IMAGETAG" == main || "$IMAGETAG" == master ]]; then
+              buildah push "$image" "docker://${image}:latest"
+            fi
+          done
   module:
     needs: publish-images
     uses: NethServer/ns8-github-actions/.github/workflows/module-info.yml@v1

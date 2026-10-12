@@ -20,7 +20,8 @@ class CzeroBrowser:
         request = json.dumps({
             "user": username,
             "password_hash": hashlib.sha256(password.encode()).hexdigest(),
-            "grant": [{"role": "admin", "on": "*"}],
+            "set": {},
+            "grant": [{"role": "owner", "on": "*"}],
         })
         # Hex/hash and JSON contain no single quotes. Only disposable QEMU uses
         # this helper; it never resets any existing administrator password.
