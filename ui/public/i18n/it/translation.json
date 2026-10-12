@@ -23,8 +23,7 @@
     "settings": {
         "save": "Salva",
         "title": "Impostazioni",
-        "configure_instance": "Configura {instance}",
-        "test_field": "Campo di test"
+        "configure_instance": "Configura {instance}"
     },
     "error": {
         "error": "Errore",

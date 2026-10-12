@@ -12,7 +12,6 @@
         "validation_error": "Validation error"
     },
     "settings": {
-        "test_field": "Campo de teste",
         "configure_instance": "Configure {instance}",
         "save": "Save",
         "title": "Settings"

@@ -51,7 +51,6 @@
     "settings": {
         "title": "Settings",
         "configure_instance": "Configure {instance}",
-        "save": "Save",
-        "test_field": "Test field"
+        "save": "Save"
     }
 }

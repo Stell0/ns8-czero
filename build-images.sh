@@ -6,30 +6,31 @@
 #
 
 # Terminate on error
-set -e
+set -euo pipefail
 
 # Prepare variables for later use
 images=()
 # The image will be pushed to GitHub container registry
-repobase="${REPOBASE:-ghcr.io/nethserver}"
+repobase="${REPOBASE:-ghcr.io/stell0}"
+repobase="${repobase,,}"
 # Configure the image name
-reponame="kickstart"
+reponame="czero"
 
 # Create a new empty container image
 container=$(buildah from scratch)
 
-# Reuse existing nodebuilder-kickstart container, to speed up builds
-if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-kickstart; then
+# Reuse existing nodebuilder-czero container, to speed up builds
+if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-czero; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-kickstart -v "${PWD}:/usr/src:Z" docker.io/library/node:24.21.0-slim
+    buildah from --name nodebuilder-czero -v "${PWD}:/usr/src:Z" docker.io/library/node:24.21.0-slim
 fi
 
 echo "Build static UI files with node..."
 buildah run \
     --workingdir=/usr/src/ui \
     --env="NODE_OPTIONS=--openssl-legacy-provider" \
-    nodebuilder-kickstart \
-    sh -c "corepack enable && yarn install && yarn build"
+    nodebuilder-czero \
+    sh -c "corepack enable && yarn install --immutable && yarn build"
 
 # Add imageroot directory to the container image
 buildah add "${container}" imageroot /imageroot
@@ -39,7 +40,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=docker.io/jmalloc/echo-server:latest" \
+    --label="org.nethserver.images=docker.io/jmalloc/echo-server:v0.3.7" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
@@ -60,7 +61,7 @@ images+=("${repobase}/${reponame}")
 #
 # Setup CI when pushing to Github. 
 # Warning! docker::// protocol expects lowercase letters (,,)
-if [[ -n "${CI}" ]]; then
+if [[ -n "${CI:-}" ]]; then
     # Set output value for Github Actions
     printf "images=%s\n" "${images[*],,}" >> "${GITHUB_OUTPUT}"
 else

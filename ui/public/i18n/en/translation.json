@@ -24,7 +24,7 @@
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "test_field": "Test field"
+        "smoke_stub": "M00 packaging smoke stub. Save starts the HTTP echo service at /czero/<instance>/. Application settings and login are not yet available."
     },
     "about": {
         "title": "About"

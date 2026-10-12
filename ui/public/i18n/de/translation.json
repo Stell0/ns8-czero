@@ -12,7 +12,6 @@
         "validation_error": "Fehler bei der Validierung"
     },
     "settings": {
-        "test_field": "Testfeld",
         "configure_instance": "{instance} konfigurieren",
         "save": "Speichern",
         "title": "Einstellungen"

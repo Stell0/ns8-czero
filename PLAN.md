@@ -57,7 +57,17 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 **Documentation gate:** Correct agent source/layout/CI instructions in `AGENTS.md`; update `README.md` with achieved install and honest limitations; record image tag/commit/build/test URLs in `PLAN.md`.
 
-**Evidence:** Pending.
+**Work plan (active, 12 October 2026):**
+
+- [ ] Rename the module/image/unit/metadata to `czero`; retain the pinned echo HTTP stub explicitly until M01. Remove unused SMTP discovery and the fake settings field. Use an instance-specific `/czero/<module-id>/` smoke route.
+- [ ] Fix checkout permissions in the reusable publication workflow, remove the first-run skip, and gate QEMU on successful publication. Run browser assertions on every tested image. Retain native reusable NS8 workflows.
+- [ ] Add repeatable install/configure/reconfigure/restart/update/uninstall Robot assertions. With no released predecessor at M00, exercise Core's forced update of the installed image; older-image migration remains M04. Create a random disposable cluster administrator for browser tests, without committed passwords.
+- [ ] Run local action/packaging contract tests, Robot dry-run and UI build; inspect actual publication, scan and QEMU matrix results. Verify anonymous GHCR access before live installation. Exercise the dedicated module through Playwright MCP; keep destructive checks in QEMU.
+- [ ] Reconcile all three project documents with observed behavior and record commit/run/image evidence before closing M00.
+
+**Source findings:** Checked current `ns8-kickstart` build/actions and `ns8-hermes-agent` component build pattern, Core `docs/modules/agent.md` and `agent.set_route`, and `ns8-github-actions@v1` publication, module-info, QEMU and Robot runner files. Core supplies image environment names and lifecycle cleanup. The QEMU wrapper needs `${SCENARIO}` in the suite to exercise updates. Docker Hub confirms `jmalloc/echo-server:v0.3.7` and `node:24.21.0-slim` exist. The local installed NethServer skills are active. The existing publication run [38232079693](https://github.com/Stell0/ns8-czero/actions/runs/38232079693) failed at checkout because publication grants only `packages: write`; its apparently successful downstream run skipped QEMU entirely. Fix the permission on the caller's publication job because a called workflow cannot broaden its permissions.
+
+**Evidence:** Acceptance pending. Baseline `868242a`; clean worktree before implementation. Local `python3 -m pytest -q tests/unit`: 3 passed. Robot dry-run excluding UI: 6 parsed/passed (not an installed-service test). Shell syntax, action JSON and workflow YAML parse checks pass. Immutable Yarn installation and production UI build pass after refreshing the renamed workspace lock entry; inherited peer-dependency and bundle-size warnings remain. Repository is private, so image visibility must be checked explicitly. Local SSH Git transport fails on system SSH configuration permissions; use authenticated HTTPS without changing Git configuration. No live deployment performed.
 
 ### M01 — Minimal Python runtime, Web UI and Core/application separation [ ]
 

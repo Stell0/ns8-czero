@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (12 October 2026): planning / unimplemented C0.** This repository currently contains the [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) scaffold; its sample echo-server, `kickstart` names and existing CI do **not** mean C0 is ready. Follow [PLAN.md](PLAN.md) for the milestone implementation sequence. [AGENTS.md](AGENTS.md) defines the coding-agent rules.
+**Status (12 October 2026): M00 implementation in progress; C0 application unimplemented.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. Image publication and installed behavior are not yet verified. Follow [PLAN.md](PLAN.md) for milestone evidence. [AGENTS.md](AGENTS.md) defines the coding-agent rules.
 
 ## Why C0?
 
@@ -78,13 +78,16 @@ Prefer the maintained patterns linked directly in each milestone. The repository
 
 ## Development and testing
 
-**Current repository baseline:** `build-images.sh` still builds a `kickstart` module using a sample echo server; `imageroot/systemd/user/kickstart.service` and `tests/kickstart.robot` have not yet been converted. The first milestone must rebrand the module, remove placeholder test credentials, and prove that images are built/tested automatically.
+**Current repository baseline:** `build-images.sh` builds the `ghcr.io/stell0/czero` module, packaging only NS8 actions and the compiled administration UI. `czero.service` runs `jmalloc/echo-server:v0.3.7` on an allocated loopback port. Configuring with `{}` enables the service and registers `/czero/<module-id>/` in Traefik. This is a packaging smoke endpoint, with no authentication or C0 storage; do not send it sensitive content. The administration Settings page starts this stub; application hostname/provider settings arrive in later milestones. Install instructions remain provisional until CI and live acceptance pass.
+
+Run local action checks with `python3 -m pytest -q tests/unit`; build the administration UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies installation, repeated configuration, invalid input, service restart, native forced update and removal on disposable QEMU. Browser checks create a random temporary administrator and assert rendered module identity, settings and HTTP response. They do not use live credentials. M00 has no earlier released image; migration from a predecessor is covered starting at M04.
 
 CI workflows already present in the template:
 
-- `.github/workflows/publish-images.yml` — image build/publication (must be verified and adapted to C0).
+- `.github/workflows/publish-images.yml` — Czero image build/publication and Trivy scan; actual run evidence remains pending.
 - `.github/workflows/test-module.yml` — NS8 Robot integration via [QEMU reusable workflow](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/test-module-qemu.yml).
 - `renovate.json` — baseline Renovate config (fork/upstream awareness to be added later).
+- `.github/workflows/test-local.yml` — action tests, shell syntax and Robot dry-run.
 
 Follow the loop in `AGENTS.md`: plan **one milestone**, implement in small increments, commit/push, verify actual CI runs, run applicable NS8 and browser checks, update both documentation files, mark evidence, then advance. Use [Playwright MCP](https://github.com/microsoft/playwright-mcp) interactively to check both the NS8 administrator UI and the separate C0 user UI; add repeatable automated checks to CI.
 

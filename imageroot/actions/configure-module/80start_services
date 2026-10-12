@@ -7,6 +7,7 @@
 
 # If the control reaches this step, the service can be enabled and started
 
-touch smarthost.env
+set -e
+exec 1>&2
 
-systemctl --user enable --now kickstart.service
+systemctl --user enable --now czero.service

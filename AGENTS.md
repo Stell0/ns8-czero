@@ -1,6 +1,13 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** the repository was created from `NethServer/ns8-kickstart` and still contains placeholder kickstart code. Do not describe planned C0 features as implemented. Start with M00.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 is in progress. Packaging uses `czero` identity and a pinned HTTP echo stub; publication and installed behavior require verified CI evidence. Do not describe planned C0 features as implemented. Start with M00.
+
+## Established M00 conventions
+
+- Module image: `ghcr.io/stell0/czero`; lifecycle service: `czero.service`. The temporary smoke route is `/czero/<module-id>/`, owned by that instance. FastAPI, authentication and the separate user UI are pending M01 and later milestones.
+- `build-images.sh` packages only `imageroot/` and generated `ui/dist/`. Preserve this explicit runtime allowlist. Runtime images use verified version tags; the echo stub is `jmalloc/echo-server:v0.3.7`.
+- Reusable publication jobs need both `contents: read` and `packages: write`, including for this private repository. QEMU runs only after successful publication and checks install and forced native update scenarios; M00 has no older released predecessor. UI tests run every time. A green wrapper with skipped tests is not evidence.
+- `tests/CzeroBrowser.py` creates a random administrator only on disposable QEMU and suppresses password-entry logging. Never use this helper on a shared/live host. Local action tests live in `tests/unit/`; Robot tests remain in `tests/czero.robot`.
 
 ## Mission and boundaries
 
@@ -58,7 +65,7 @@ Work through [PLAN.md](PLAN.md) **one milestone at a time**, in order; never ski
 6. **At every milestone, update AGENTS.md (technical/agent instructions), README.md (human-facing current features, usage, limitations), and PLAN.md (milestone results, evidence and next step).** Commit/push these updates; watch the resulting CI as appropriate.
 7. Mark a milestone `[x]` only when its acceptance criteria and mandatory evidence are satisfied. Record commit SHAs, CI run links, test results and any remaining nonblocking limitations in its `Evidence` paragraph. Move to the next milestone only then.
 
-The repository initially contains a sample `tests/kickstart.robot` with hard-coded placeholder login credentials. Remove hard-coded credentials in M00; use CI-controlled variables or temporary execution-time configuration. **Never commit real live hostnames, usernames/passwords, tokens, cookies, auth state, screenshots containing secrets, or private test-server details.** Pass live access details only in the operator's execution prompt/session; mask them in logs, reports, PRs and traces.
+The template's hard-coded Robot login credentials have been removed. Use disposable random test identities or execution-time configuration. **Never commit real live hostnames, usernames/passwords, tokens, cookies, auth state, screenshots containing secrets, or private test-server details.** Pass live access details only in the operator's execution prompt/session; mask them in logs, reports, PRs and traces.
 
 ## Definition of done for any change
 

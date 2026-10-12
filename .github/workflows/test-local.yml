@@ -1,0 +1,19 @@
+name: Local checks
+on:
+  push:
+    branches-ignore: ["apidoc-**"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pytest robotframework robotframework-sshlibrary
+      - run: python -m pytest -q tests/unit
+      - run: bash -n build-images.sh imageroot/actions/configure-module/80start_services
+      - run: robot --dryrun --exclude ui -v NODE_ADDR:disposable.invalid -v IMAGE_URL:ghcr.io/stell0/czero:main -d /tmp/robot-dryrun tests

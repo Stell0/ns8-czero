@@ -2,17 +2,20 @@ name: "Publish images"
 
 on:
   push:
+    branches-ignore: ["apidoc-**"]
   workflow_dispatch:
 
 permissions:
+  contents: read
   packages: write
   actions: read
-  contents: write
   security-events: write
 
 jobs:
   publish-images:
-    if: github.run_number > 1
+    permissions:
+      contents: read
+      packages: write
     uses: NethServer/ns8-github-actions/.github/workflows/publish-branch.yml@v1
   module:
     needs: publish-images

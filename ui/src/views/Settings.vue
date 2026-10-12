@@ -23,15 +23,7 @@
       <cv-column>
         <cv-tile light>
           <cv-form @submit.prevent="configureModule">
-            <!-- TODO remove test field and code configuration fields -->
-            <cv-text-input
-              :label="$t('settings.test_field')"
-              v-model="testField"
-              :placeholder="$t('settings.test_field')"
-              :disabled="loading.getConfiguration || loading.configureModule"
-              :invalid-message="error.testField"
-              ref="testField"
-            ></cv-text-input>
+            <p>{{ $t("settings.smoke_stub") }}</p>
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification
@@ -85,7 +77,6 @@ export default {
         page: "settings",
       },
       urlCheckInterval: null,
-      testField: "", // TODO remove
       loading: {
         getConfiguration: false,
         configureModule: false,
@@ -93,8 +84,6 @@ export default {
       error: {
         getConfiguration: "",
         configureModule: "",
-        testField: "", // TODO remove
-        // TODO add all validation error fields
       },
     };
   },
@@ -157,34 +146,8 @@ export default {
       this.error.getConfiguration = this.$t("error.generic_error");
       this.loading.getConfiguration = false;
     },
-    getConfigurationCompleted(taskContext, taskResult) {
+    getConfigurationCompleted() {
       this.loading.getConfiguration = false;
-      const config = taskResult.output;
-
-      // TODO set configuration fields
-      // ...
-
-      // TODO remove
-      console.log("config", config);
-
-      // TODO focus first configuration field
-      this.focusElement("testField");
-    },
-    validateConfigureModule() {
-      this.clearErrors(this);
-      let isValidationOk = true;
-
-      // TODO remove testField and validate configuration fields
-      if (!this.testField) {
-        // test field cannot be empty
-        this.error.testField = this.$t("common.required");
-
-        if (isValidationOk) {
-          this.focusElement("testField");
-          isValidationOk = false;
-        }
-      }
-      return isValidationOk;
     },
     configureModuleValidationFailed(validationErrors) {
       this.loading.configureModule = false;
@@ -205,11 +168,6 @@ export default {
       }
     },
     async configureModule() {
-      const isValidationOk = this.validateConfigureModule();
-      if (!isValidationOk) {
-        return;
-      }
-
       this.loading.configureModule = true;
       const taskAction = "configure-module";
       const eventId = this.getUuid();
@@ -235,9 +193,7 @@ export default {
       const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
-          data: {
-            // TODO configuration fields
-          },
+          data: {},
           extra: {
             title: this.$t("settings.configure_instance", {
               instance: this.instanceName,

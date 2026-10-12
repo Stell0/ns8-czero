@@ -1,19 +1,21 @@
 {
-  "name": "kickstart",
+  "name": "czero",
   "description": {
-    "en": "My kickstart module"
+    "en": "C0 (Czero): packaging smoke stub; application features are not yet available"
   },
   "categories": [],
   "authors": [
     {
-      "name": "Name Surname",
-      "email": "author@yourmail.org"
+      "name": "C0 contributors"
+    },
+    {
+      "name": "Nethesis S.r.l. (kickstart foundation)"
     }
   ],
   "docs": {
-    "documentation_url": "https://docs.kickstart.com/",
-    "bug_url": "https://github.com/NethServer/dev",
-    "code_url": "https://github.com/author/ns8-kickstart"
+    "documentation_url": "https://github.com/Stell0/ns8-czero#readme",
+    "bug_url": "https://github.com/Stell0/ns8-czero/issues",
+    "code_url": "https://github.com/Stell0/ns8-czero"
   },
-  "source": "ghcr.io/nethserver/kickstart"
+  "source": "ghcr.io/stell0/czero"
 }
