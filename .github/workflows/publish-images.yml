@@ -54,11 +54,77 @@ jobs:
           done
   module:
     needs: publish-images
-    uses: NethServer/ns8-github-actions/.github/workflows/module-info.yml@v1
+    # Unlike upstream module-info, fail on a pull error and support private GHCR.
+    runs-on: ubuntu-26.04
+    permissions:
+      packages: read
+    outputs:
+      images: ${{ steps.images.outputs.list }}
+    steps:
+      - id: images
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          REPOBASE: ghcr.io/${{ github.repository_owner }}
+          BRANCH_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          trap 'podman logout ghcr.io' EXIT
+          podman login -u "$REGISTRY_USER" --password-stdin ghcr.io <<<"$REGISTRY_TOKEN"
+          tag="${BRANCH_TAG//\//-}"
+          image="${REPOBASE,,}/czero:${tag}"
+          podman pull "$image"
+          dependencies=$(podman image inspect "$image" -f '{{index .Config.Labels "org.nethserver.images"}}')
+          list=$(jq -cn --arg deps "$dependencies" --arg image "$image" '($deps | split(" ") | map(select(length > 0))) + [$image]')
+          echo "list=${list}" >> "$GITHUB_OUTPUT"
   trivy:
     needs: module
-
-    if: ${{ needs.module.outputs.release == 'stable' || needs.module.outputs.release == 'latest' || github.event_name == 'workflow_dispatch' }}
-    uses: NethServer/ns8-github-actions/.github/workflows/scan-with-trivy.yml@v1
-    with:
-      images: ${{ needs.module.outputs.images }}
+    # Same Trivy/SBOM operations as upstream, without optional paid SARIF ingest.
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.module.outputs.images) }}
+        include:
+          - target: ui
+            scan_type: fs
+          - target: imageroot
+            scan_type: fs
+    steps:
+      - uses: actions/checkout@v7
+      - name: Scan vulnerabilities and secrets
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: ${{ matrix.scan_type || 'image' }}
+          scan-ref: ${{ matrix.target }}
+          image-ref: ${{ matrix.target }}
+          format: sarif
+          output: trivy-results.sarif
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: ${{ matrix.scan_type || 'image' }}
+          scan-ref: ${{ matrix.target }}
+          image-ref: ${{ matrix.target }}
+          format: cyclonedx
+          output: sbom.cdx.json
+      - name: Name report artifact
+        id: artifact
+        env:
+          TARGET: ${{ matrix.target }}
+        run: echo "name=$(printf '%s' "$TARGET" | tr -c 'a-zA-Z0-9' '-')" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: trivy-${{ steps.artifact.outputs.name }}
+          path: |
+            trivy-results.sarif
+            sbom.cdx.json

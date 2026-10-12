@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (12 October 2026): M00 implementation in progress; C0 application unimplemented.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. Image publication and installed behavior are not yet verified. Follow [PLAN.md](PLAN.md) for milestone evidence. [AGENTS.md](AGENTS.md) defines the coding-agent rules.
+**Status (12 October 2026): M00 implementation in progress; C0 application unimplemented.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. Image publication is verified; QEMU and live installed behavior remain unverified. The GHCR package is currently private, so unauthenticated installations are blocked. Follow [PLAN.md](PLAN.md) for milestone evidence. [AGENTS.md](AGENTS.md) defines the coding-agent rules.
 
 ## Why C0?
 
@@ -84,7 +84,7 @@ Install development test dependencies (`pytest`, `robotframework`, `robotframewo
 
 CI workflows already present in the template:
 
-- `.github/workflows/publish-images.yml` — Czero image build/publication and Trivy scan; actual run evidence remains pending.
+- `.github/workflows/publish-images.yml` — Czero image build/publication and Trivy scan; source/image SARIF reports and CycloneDX SBOMs are retained as CI artifacts. GitHub Security ingestion is not enabled.
 - `.github/workflows/test-module.yml` — NS8 Robot integration via [QEMU reusable workflow](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/test-module-qemu.yml).
 - `renovate.json` — baseline Renovate config (fork/upstream awareness to be added later).
 - `.github/workflows/test-local.yml` — action tests, shell syntax and Robot dry-run.
