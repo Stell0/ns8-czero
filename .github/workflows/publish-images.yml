@@ -42,11 +42,26 @@ jobs:
           # Normally use GITHUB_TOKEN; an explicitly approved publisher secret
           # can recover publication of a package with disconnected CI grants.
           REGISTRY_TOKEN: ${{ secrets.NS8_MODULE_RELEASES_TOKEN || secrets.GITHUB_TOKEN }}
+          PUBLISHER_TOKEN_CONFIGURED: ${{ secrets.NS8_MODULE_RELEASES_TOKEN != '' }}
           REGISTRY_USER: ${{ github.actor }}
           IMAGES: ${{ steps.build.outputs.images }}
         run: |
           set -euo pipefail
           trap 'buildah logout ghcr.io' EXIT
+          if [[ "$PUBLISHER_TOKEN_CONFIGURED" == true ]]; then
+            scope_headers=$(mktemp)
+            curl --fail --silent --show-error --output /dev/null \
+              --dump-header "$scope_headers" \
+              --header "Authorization: Bearer $REGISTRY_TOKEN" \
+              https://api.github.com/user
+            scopes=$(awk 'tolower($0) ~ /^x-oauth-scopes:/ {sub(/^[^:]*: */, ""); gsub(/\r/, ""); print}' "$scope_headers")
+            rm -f "$scope_headers"
+            printf 'Publisher token scopes: %s\n' "${scopes:-not reported}"
+            if [[ ",${scopes// /}," != *",write:packages,"* ]]; then
+              echo '::error::NS8_MODULE_RELEASES_TOKEN must be a classic PAT with write:packages.'
+              exit 1
+            fi
+          fi
           buildah login -u "$REGISTRY_USER" --password-stdin ghcr.io <<<"$REGISTRY_TOKEN"
           for image in $IMAGES; do
             buildah push "$image" "docker://${image}:${IMAGETAG}"
