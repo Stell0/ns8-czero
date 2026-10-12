@@ -47,8 +47,12 @@ jobs:
           IMAGES: ${{ steps.build.outputs.images }}
         run: |
           set -euo pipefail
-          trap 'buildah logout ghcr.io' EXIT
+          trap 'buildah logout ghcr.io >/dev/null 2>&1 || :' EXIT
           if [[ "$PUBLISHER_TOKEN_CONFIGURED" == true ]]; then
+            if [[ "$REGISTRY_TOKEN" == github_pat_* ]]; then
+              echo '::error::NS8_MODULE_RELEASES_TOKEN is a fine-grained PAT; GHCR requires a classic PAT with write:packages.'
+              exit 1
+            fi
             scope_headers=$(mktemp)
             curl --fail --silent --show-error --output /dev/null \
               --dump-header "$scope_headers" \
