@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (12 October 2026): M00 acceptance blocked; C0 application unimplemented.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. Image publication is verified; QEMU and live installed behavior remain unverified. The GHCR package is currently private, so unauthenticated installations are blocked. Follow [PLAN.md](PLAN.md) for milestone evidence. [AGENTS.md](AGENTS.md) defines the coding-agent rules.
+**Status (12 October 2026): M00 acceptance blocked; C0 application unimplemented.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. Image publication is verified; QEMU and live installed behavior remain unverified. The repository is now public, but the GHCR package remains private, so unauthenticated installations are blocked. Package visibility is managed separately in GitHub. Follow [PLAN.md](PLAN.md) for milestone evidence. [AGENTS.md](AGENTS.md) defines the coding-agent rules.
 
 ## Why C0?
 
@@ -78,13 +78,13 @@ Prefer the maintained patterns linked directly in each milestone. The repository
 
 ## Development and testing
 
-**Current repository baseline:** `build-images.sh` builds the `ghcr.io/stell0/czero` module, packaging only NS8 actions and the compiled administration UI. `czero.service` runs `jmalloc/echo-server:v0.3.7` on an allocated loopback port. Configuring with `{}` enables the service and registers `/czero/<module-id>/` in Traefik. This is a packaging smoke endpoint, with no authentication or C0 storage; do not send it sensitive content. The administration Settings page starts this stub; application hostname/provider settings arrive in later milestones. Build/publication and local checks pass, but QEMU cannot pull the private package and live acceptance has not run. Install instructions remain provisional until those checks pass.
+**Current repository baseline:** `build-images.sh` builds the `ghcr.io/stell0/czero` module, packaging only NS8 actions and the compiled administration UI. `czero.service` runs `jmalloc/echo-server:v0.3.7` on an allocated loopback port. Configuring with `{}` enables the service and registers `/czero/<module-id>/` in Traefik. This is a packaging smoke endpoint, with no authentication or C0 storage; do not send it sensitive content. The administration Settings page starts this stub; application hostname/provider settings arrive in later milestones. Build/publication and local checks pass, but QEMU cannot pull the private package and live acceptance has not run. Live Playwright navigation additionally stops because the administration certificate is not trusted by the test browser; login has not been attempted. Install instructions remain provisional until those checks pass.
 
 Install development test dependencies (`pytest`, `robotframework`, `robotframework-sshlibrary`), then run local checks with `python3 -m pytest -q tests/unit`; build the administration UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies installation, repeated configuration, invalid input, service restart, native forced update and removal on disposable QEMU. Browser checks create a random temporary administrator and assert rendered module identity, settings and HTTP response. They do not use live credentials. M00 has no earlier released image; migration from a predecessor is covered starting at M04.
 
 CI workflows already present in the template:
 
-- `.github/workflows/publish-images.yml` — Czero image build/publication and Trivy scan; source/image SARIF reports and CycloneDX SBOMs are retained as CI artifacts. GitHub Security ingestion is not enabled. Reports contain known findings in the inherited UI dependencies and temporary echo runtime; a completed scan does not mean they are resolved.
+- `.github/workflows/publish-images.yml` — Czero image build/publication and Trivy scan; source/image SARIF reports and CycloneDX SBOMs are retained as CI artifacts. These workflows retain reports as artifacts rather than submitting them to GitHub Security. Reports contain known findings in the inherited UI dependencies and temporary echo runtime; a completed scan does not mean they are resolved.
 - `.github/workflows/test-module.yml` — NS8 Robot integration via [QEMU reusable workflow](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/test-module-qemu.yml).
 - `renovate.json` — baseline Renovate config (fork/upstream awareness to be added later).
 - `.github/workflows/test-local.yml` — action tests, shell syntax and Robot dry-run.
