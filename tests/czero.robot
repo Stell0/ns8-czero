@@ -1,5 +1,6 @@
 *** Settings ***
 Library    SSHLibrary
+Library    CzeroActions.py
 Library    CzeroBrowser.py
 Suite Teardown    Remove disposable module
 
@@ -28,8 +29,8 @@ Install Czero with its own identity
     ${output}    ${rc} =    Execute Command    add-module ${IMAGE_URL} 1
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
-    ${result} =    Evaluate    json.loads($output)    modules=json
-    Set Global Variable    ${module_id}    ${result}[module_id]
+    ${installed_id} =    Installed Module Id    ${output}
+    Set Global Variable    ${module_id}    ${installed_id}
     Should Start With    ${module_id}    czero
 
 Configure and reconfigure the smoke service
