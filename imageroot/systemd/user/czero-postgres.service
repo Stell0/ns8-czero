@@ -4,6 +4,7 @@
 [Unit]
 Description=C0 PostgreSQL database
 BindsTo=czero-pod.service
+PartOf=czero-pod.service
 After=czero-pod.service
 Before=czero.service
 

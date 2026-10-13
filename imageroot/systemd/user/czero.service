@@ -10,6 +10,7 @@
 [Unit]
 Description=C0 application service
 BindsTo=czero-pod.service
+PartOf=czero-pod.service
 Wants=czero-postgres.service
 After=czero-pod.service czero-postgres.service
 

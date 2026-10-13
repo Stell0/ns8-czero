@@ -4,7 +4,7 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## M03 implementation conventions (verification pending)
 
-- Keep PostgreSQL and app in a native private pod; publish only the allocated app port on loopback. `czero.service` remains the app identity; pod and database are ordered dependencies. Selected PostgreSQL supports notify and its entrypoint suppresses temporary-server notifications. Actual unit behavior must pass QEMU.
+- Keep PostgreSQL and app in a native private pod; publish only the allocated app port on loopback. `czero.service` remains the app identity; pod and database are ordered dependencies. Active children use `PartOf` for pod restart propagation; retain a pod-recreation persistence test. Selected PostgreSQL supports notify and its entrypoint suppresses temporary-server notifications. Actual unit behavior must pass QEMU.
 - Credentials are generated once with native atomic safe I/O into mode-0600 `state/passwords.env`, loaded by Podman env-file. Create/update invoke the same focused helper; never export credentials through `agent.set_env` or action stdout. Do not rotate initialized database passwords during configure.
 - Core owns packaged Alembic migrations and database operations. NS8 invokes the Core migration CLI before app startup. Migrations hold a PostgreSQL transaction/advisory lock and retain the knowledge-space identity across repeat runs. No NS8 lifecycle manager belongs in Core.
 - Health reports safe database status/schema/vector versions and returns 503 on unavailability. Driver exceptions and connection URLs never enter responses. Application health SQL runs in FastAPI's sync worker pool.

@@ -208,6 +208,16 @@ Verify durable isolated PostgreSQL and indexed vectors
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    1
+    # Infrastructure restart must recover both active children, not leave them stopped.
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user restart czero-pod.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Wait Until Keyword Succeeds    30s    2s    Check application route
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    2
 
 Report database outage and recover the application
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-postgres.service

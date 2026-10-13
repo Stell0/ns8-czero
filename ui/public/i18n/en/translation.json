@@ -24,7 +24,7 @@
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "description": "Choose the application hostname and certificate settings. Saving starts or restarts the C0 application. Sign-in and persistent data arrive in later milestones.",
+        "description": "Choose the application hostname and certificate settings. Saving starts the dedicated database and the C0 application. Sign-in and object operations arrive in later milestones.",
         "host": "Application hostname",
         "host_help": "DNS name pointing to this NS8 node, without https:// or a path.",
         "host_invalid": "Enter a valid fully qualified DNS hostname.",
