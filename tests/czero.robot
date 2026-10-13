@@ -492,6 +492,36 @@ Verify real native SSO and application-wide membership
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Verify Disposable Sso    ${module_id}
 
+Preserve admitted identities through update and clean restore
+    [Timeout]    15 minutes
+    Prepare Disposable Identity Persistence
+    Log To Console    SSO persistence: native configured update
+    ${rc} =    Execute Command
+    ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
+    ...    return_rc=True    return_stdout=False    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    Verify Disposable Identity Persistence    ${module_id}
+    Remove disposable backup resources
+    ${backup} =    Create Disposable Backup    ${module_id}
+    Set Global Variable    ${backup_repository}    ${backup}[repository]
+    Log To Console    SSO persistence: native encrypted backup
+    ${rc} =    Execute Command    api-cli run run-backup --data '{"id":${backup}[backup_id]}'
+    ...    return_rc=True    return_stdout=False    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    Verify Disposable Snapshot    ${module_id}    ${backup}[repository]    ${backup}[path]
+    ${donor_id} =    Set Variable    ${module_id}
+    Remove disposable module
+    Log To Console    SSO persistence: restore a new module identity
+    ${output}    ${rc} =    Execute Command
+    ...    api-cli run restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","node":1}'
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    ${restored_id} =    Installed Module Id    ${output}
+    Set Global Variable    ${module_id}    ${restored_id}
+    Should Not Be Equal    ${module_id}    ${donor_id}
+    Verify Disposable Identity Persistence    ${module_id}
+    Wait Until Keyword Succeeds    30s    2s    Check application route
+
 Uninstall only the disposable Czero module
     Should Not Be Empty    ${module_id}
     ${removed_id} =    Set Variable    ${module_id}

@@ -136,10 +136,40 @@ def probe():
     assert status == 401, "Invalid bearer accepted"
 
 
+def persistence(operation):
+    payload = json.loads((STATE / "personas.json").read_text())
+    origin = "https://" + payload["host"]
+    owner = Browser(origin)
+    profile = owner.login("c0owner", payload["password"])
+    assert profile["role"] == "admin" and profile["is_owner"], "Recovered owner is not admitted"
+    expected_file = STATE / "expected-identities.json"
+    if operation == "seed":
+        status, body, _ = owner.api("/api/v1/access/accounts")
+        assert status == 200, "Cannot seed persisted membership"
+        member = next(account for account in json.loads(body)["accounts"] if account["username"] == "c0member")
+        status, _, _ = owner.api("/api/v1/access/accounts/" + member["id"],
+                                {"role": "editor"}, "PUT", profile["csrf_token"])
+        assert status == 204, "Cannot persist Editor grant"
+        expected_file.write_text(json.dumps({"owner": profile["id"], "member": member["id"]}))
+    expected = json.loads(expected_file.read_text())
+    assert profile["id"] == expected["owner"], "Recovered owner identity changed"
+    editor = Browser(origin)
+    member_profile = editor.login("c0member", payload["password"])
+    assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
+    status, _, _ = editor.api("/api/v1/access/accounts")
+    assert status == 403, "Recovered Editor can administer"
+    owner.logout(profile)
+    editor.logout(member_profile)
+
+
 if __name__ == "__main__":
     try:
-        probe()
+        if len(sys.argv) > 1:
+            persistence(sys.argv[1])
+        else:
+            probe()
         print("Real SSO owner, membership, revocation and logout assertions passed")
     except Exception as error:
+        # Assertions contain only fixed labels; never emit URL/body/cookies.
         print(str(error) if isinstance(error, AssertionError) else type(error).__name__, file=sys.stderr)
         sys.exit(1)

@@ -152,3 +152,5 @@ The first real disposable NS8 SSO run verifies registration, signed owner login,
 Rocky also exposed a test CA ownership error during rootless SELinux labeling. The disposable fixture now assigns the public CA to its module before mounting; SELinux and TLS verification remain enabled. A fresh full QEMU run is required for acceptance.
 
 Czero strips queries from its application access logs. The platform proxy has its own access log; its default logging contract still needs release review. Disposable SSO tests suppress that proxy log to keep temporary OAuth query values out of diagnostic artifacts.
+
+The corrected disposable SSO workflow now passes Debian and Rocky, including real owner/member authentication, role changes, revocation, local/provider logout and restart identity. Both diagnostic archives contain no OAuth query-bearing access lines. Configured upgrade and clean restore with admitted memberships remain the final M05 verification gate.

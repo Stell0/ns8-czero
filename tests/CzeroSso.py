@@ -81,6 +81,38 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
+    def prepare_disposable_identity_persistence(self):
+        self._persistence("seed")
+
+    @keyword
+    def verify_disposable_identity_persistence(self, module_id):
+        builtin = BuiltIn()
+        previous = builtin.set_log_level("NONE")
+        try:
+            self._network(builtin.get_library_instance("SSHLibrary"), module_id)
+            self._persistence("verify")
+            ssh = builtin.get_library_instance("SSHLibrary")
+            _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
+                                       return_rc=True, timeout="180 seconds")
+            if rc:
+                raise AssertionError("Persisted identity access logs contain OAuth query values")
+        finally:
+            builtin.set_log_level(previous)
+
+    @staticmethod
+    def _persistence(operation):
+        builtin = BuiltIn()
+        previous = builtin.set_log_level("NONE")
+        try:
+            ssh = builtin.get_library_instance("SSHLibrary")
+            _, errors, rc = ssh.execute_command("python3 /tmp/oidc_probe.py " + operation,
+                                               return_stderr=True, return_rc=True, timeout="180 seconds")
+            if rc:
+                raise AssertionError("Real IdP persistence probe: " + errors.strip())
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
     def cleanup_disposable_sso(self):
         builtin = BuiltIn()
         previous = builtin.set_log_level("NONE")
