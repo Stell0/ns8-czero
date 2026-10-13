@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (13 October 2026): M00 packaging and smoke acceptance pass; M01 is starting.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. The repository and package are public. C0 application features remain unimplemented; M01 introduces the Python runtime. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
+**Status (13 October 2026): M00 is complete; M01 documentation verification is pending.** Czero provides a FastAPI application, a small end-user landing page and a separately versioned C0 Core package. Local, published-image and QEMU lifecycle/browser checks pass. Further interactive Playwright and live testing are temporarily waived by the operator. The repository and container packages are public. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
 
 ## Why C0?
 
@@ -28,7 +28,7 @@ It also serves as a GitHub template: fork C0, tell Codex or Claude Code what app
 | User UI | Knowledge, generic records, search, wiki, jobs and a self-describing `/agents` page |
 | Agent access | REST, native MCP tool discovery and `/agents/capabilities.json` |
 
-The Python **C0 Core** runtime will eventually be a separately versioned package; fork-specific business logic belongs in the application layer. The NS8 lifecycle itself remains implemented as short, numbered **actions**, not as a giant Python manager.
+The Python **C0 Core** runtime is a separately versioned package under `packages/czero-core`; it currently provides the health operation. Fork-specific business logic belongs in `app`. Package registry publication arrives in M13. The NS8 lifecycle remains implemented as short, numbered **actions**.
 
 ### What works with no AI credentials
 
@@ -44,23 +44,35 @@ Keep full extracted text and source locations: vectors alone are insufficient fo
 
 Safe defaults live in C0. NS8 admin UI sets instance-wide embedding and System One provider credentials, models, timeouts and resource limits; REST/MCP requests may override safe query parameters (limit, retrieval mode, graph depth, rerank mode) **within configured bounds**. Full-text fallback is always available and the response reports which retrieval method was used.
 
-## Two ways to make an application
+## Planned application development paths
 
 **Configure an installed C0:** An authenticated agent defines object types, records, relationships and generic forms using existing REST/MCP operations; simple applications need little or no new code.
 
 **Fork and extend C0:** For specialized rules/UI/SQL transactions, create a fork and ask an AI coding agent to implement the feature using [AGENTS.md](AGENTS.md) and [PLAN.md](PLAN.md). Changes to C0 Core should be separated into upstream-ready PRs where generally reusable.
 
-Development-only files (`AGENTS.md`, skills, CI, tests, build scripts, templates) stay in the repository; they are **not** exposed as installed app runtime content. The installed app does provide **usage documentation** at `/agents` and standard REST/MCP discovery.
+Development-only files (`AGENTS.md`, skills, CI, tests, build scripts, templates) stay in the repository; they are **not** exposed as installed app runtime content. The current app provides an introductory `/agents` page and health/OpenAPI discovery. Authenticated REST/MCP discovery arrives in later milestones.
 
-## Intended interfaces (not yet implemented)
+## Current interfaces
 
-- End-user browser: `/`
-- Human-readable agent capabilities: `/agents`
+M01 serves these paths beneath `/czero/<module-id>` on the cluster web host:
+
+| Path | Current behavior |
+| --- | --- |
+| `/` | Static application landing page with API and agent links |
+| `/api/v1/health` | JSON status and Core/application versions (`0.1.0`) |
+| `/openapi.json` | OpenAPI schema for the health endpoint and instance prefix |
+| `/docs` | Swagger API documentation |
+| `/agents` | Introduction describing the available health/OpenAPI capabilities |
+
+These endpoints are currently public and hold no application data. Login, database storage, document ingestion, Wiki, search, jobs and MCP are later milestones. The health response currently reports the application process contract, not database or provider readiness. `/docs` loads Swagger assets from a CDN; `/openapi.json` remains usable without them.
+
+## Planned interfaces
+
 - Machine-readable capabilities: `/agents/capabilities.json`
-- REST/OpenAPI: `/api/v1/...` and `/openapi.json`
+- Authenticated object, source, Wiki, search and job operations: `/api/v1/...`
 - Remote MCP: `/mcp`
 
-Exact resource schemas, auth flows and operation names will be recorded as each milestone passes. They must be generated from one capability/operation registry where possible.
+Machine-readable capabilities, authenticated resource operations and MCP remain planned. Exact schemas and auth flows will be recorded as each milestone passes and generated from one capability/operation registry where possible.
 
 ## Source code and NethServer conventions
 
@@ -78,17 +90,19 @@ Prefer the maintained patterns linked directly in each milestone. The repository
 
 ## Development and testing
 
-**Current repository baseline:** `build-images.sh` builds `ghcr.io/stell0/czero`, packaging only NS8 actions and the compiled administration UI. `czero.service` runs `jmalloc/echo-server:v0.3.7` on an allocated loopback port. Settings Save configures `{}`, enables the service and registers `/czero/<module-id>/` in Traefik. The HTTP endpoint has no authentication or C0 storage; do not send sensitive content. Hostname/provider settings and application login arrive later.
+`build-images.sh` builds the small `ghcr.io/stell0/czero` NS8 module image and the separate `ghcr.io/stell0/czero-app` Python component. The module contains actions and the compiled administration UI; the component contains installed Core/app runtime packages and the static user page. Its Python base and runtime dependencies are pinned, and the app runs as an unprivileged user. Repository instructions, tests, CI, skills and builder tools stay outside the runtime filesystem.
 
-The published `:latest` image has passed QEMU lifecycle checks on Debian 13 and Rocky 9, including forced native update, browser settings/service recovery, restart, invalid-input rejection and disposable removal. Interactive Playwright MCP and native task checks also pass for the dedicated live installation on Core 3.21.0/Rocky 9.8: Settings Save, configuration round-trip, refresh, active service, targeted restart and HTTPS echo response. Live System logs returned no entries. Native-token CI now publishes successfully after the operator repaired the package Actions Write grant; the PAT override has been removed. Current-image QEMU and live exit checks pass. No release is ready.
+Settings Save configures `{}`, enables `czero.service` on an allocated loopback port, and registers `/czero/<module-id>/` in Traefik. The app preserves that prefix. Native update hooks reconcile the M00 instance identity and restart running services; unconfigured services stay stopped. Hostname/TLS configuration arrives in M02 and login in M05. The M01 QEMU suite has passed Debian 13/update and Rocky 9/install, including access logs, restart, invalid-input rejection, browser settings/service recovery and disposable removal. The dedicated live instance was upgraded from M00 to M01 successfully: health, service status, invalid-input rejection, Settings Save and basic app navigation passed before the operator suspended further live testing. Remaining live restart/refresh and final inventory checks are waived. No release is ready.
 
-For the smoke image, use the native NS8 `add-module` action with `image: "ghcr.io/stell0/czero:latest"` and your node id. Open the installed module's Settings and click Save, then visit `/czero/<module-id>/health` on the cluster's web host. This returns echo text, not a C0 health API. Check PLAN.md for the exact tested image digest. Prefer a version tag for normal installation: Core 3.21.0 displays digest-only image URLs incorrectly in inventory, although installation works.
+For development installation, use the native NS8 `add-module` action with `image: "ghcr.io/stell0/czero:main"` and your node id. Open the installed module's Settings and click Save, then visit `/czero/<module-id>/` or `/czero/<module-id>/api/v1/health` on the cluster web host. Check PLAN.md for the tested commit and image digest. `:main` and `:latest` track development builds; they are not stable releases. Core 3.21.0 displays digest-only image URLs incorrectly in inventory, although installation works.
 
-Install development dependencies (`pytest`, `robotframework`, `robotframework-sshlibrary`), then run `python3 -m pytest -q tests/unit` (11 tests). Build the admin UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies native lifecycle in disposable QEMU. Browser checks create a random temporary administrator and assert rendered identity, Settings Save recovering a deliberately stopped service, About and actual HTTP content. They never use live credentials. M00 has no released predecessor; migration testing begins at M04. Publication uses `GITHUB_TOKEN` with explicit checkout and package-write permissions; the Czero package must grant the repository Actions Write access. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases and is unused by image publication. A private source repository is supported by authenticated checkout. A private container package would also require authenticated QEMU/guest pulls; the current package is public. Package naming follows Hermes: remove the repository’s `ns8-` prefix.
+Install test dependencies in a development virtualenv with `pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'`, then run `python -m pytest -q app/tests packages/czero-core/tests tests/unit` (18 tests). Runtime builds use `app/uv.lock` with `uv sync --frozen --no-dev --no-editable`. Build the admin UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies native lifecycle in disposable QEMU. Browser checks create a random temporary administrator and assert Settings Save recovering a deliberately stopped service, About, the landing page, health, OpenAPI and agent introduction. They never use live credentials. Genuine earlier-version data migration tests arrive in M04.
+
+Publication uses `GITHUB_TOKEN` with explicit checkout and package-write permissions; each container package must grant the repository Actions Write access. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases. Private source checkout is supported; private container packages would also require authenticated QEMU/guest pulls. Package naming follows Hermes: remove the repository’s `ns8-` prefix.
 
 CI workflows already present in the template:
 
-- `.github/workflows/publish-images.yml` — Czero image build/publication and Trivy scan; source/image SARIF reports and CycloneDX SBOMs are retained as CI artifacts. These workflows retain reports as artifacts rather than submitting them to GitHub Security. Reports contain known findings in the inherited UI dependencies and temporary echo runtime; a completed scan does not mean they are resolved.
+- `.github/workflows/publish-images.yml` — module/component image publication and Trivy scans; source/image SARIF reports and CycloneDX SBOMs are retained as CI artifacts. Reports contain dependency findings; successful scan execution does not mean they are resolved. Review them before release.
 - `.github/workflows/test-module.yml` — NS8 Robot integration via [QEMU reusable workflow](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/test-module-qemu.yml).
 - `renovate.json` — baseline Renovate config (fork/upstream awareness to be added later).
 - `.github/workflows/test-local.yml` — action tests, shell syntax and Robot dry-run.
