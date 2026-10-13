@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (13 October 2026): M00–M04 are complete. M05 authentication passes real disposable NS8 SSO tests; configured upgrade/restore of admitted identities is undergoing final verification.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright and live testing are temporarily waived by the operator. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (13 October 2026): M00–M05 implementation and disposable acceptance pass; M05 documentation closeout is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright and live testing are temporarily waived by the operator. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -47,7 +47,7 @@ The native API accepts hostname-only configuration such as `{"host":"c0.example.
 
 Signed issuer/LDAP UUIDs identify accounts; usernames and token role claims do not grant ownership or membership. REST accepts verified access tokens and the browser uses opaque Secure/HttpOnly/SameSite cookies. Cookie writes require CSRF plus the configured Origin. Server sessions expire at the earlier token expiry or one hour. Sign-out revokes the local session and opens provider confirmation. If the provider is unavailable, local logout still succeeds but its SSO session may remain.
 
-Native registration/binding is not a distributed transaction. A failed cross-module change reports an error and keeps the previous secret file, but may require re-saving the previous selection and hostname. Configured upgrade and clean restore of admitted identities are the remaining M05 verification gate.
+Native registration/binding is not a distributed transaction. A failed cross-module change reports an error and keeps the previous secret file, but may require re-saving the previous selection and hostname. Configured native update and encrypted clean restore preserve owner/member account IDs and saved roles, verified on Debian and Rocky. Restore re-registers the client for the new native module identity.
 
 The current upstream IdP has no stable GitHub release; its README's `1.0.0` image is unavailable. Disposable tests pin a verified main image and require the upstream `ldapproxy:1.4.0-dev.1` listener fix for Keycloak pod access. These are development dependencies. Compatible stable IdP/proxy availability is a release prerequisite; no live proxy has been modified.
 
