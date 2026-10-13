@@ -90,6 +90,9 @@ def test_backup_destination_helper_sanitizes_generated_password(monkeypatch):
     assert 'sensitive-generated-value' not in json.dumps(result)
     assert not any('sensitive-generated-value' in c for c in calls)
     assert levels == ['NONE','INFO']
+    schedule_command=next(c for c in calls if 'api-cli run add-backup --data' in c)
+    assert '"enabled": true' in schedule_command
+    assert '2099-01-01 00:00:00' in schedule_command
 
 
 @pytest.mark.parametrize('fail',[False,True])

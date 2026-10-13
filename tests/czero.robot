@@ -360,6 +360,7 @@ Backup and restore into a clean disposable instance
     ...    runagent -m ${module_id} test ! -e /home/${module_id}/.config/state/czero.pg_dump
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
+    Verify Disposable Snapshot    ${module_id}    ${backup}[repository]    ${backup}[path]
     # Only the disposable Czero module is destroyed; native backup data remains.
     Remove disposable module
     ${output}    ${rc} =    Execute Command
@@ -449,6 +450,7 @@ Check saved settings and application HTTPS in a browser
     Close Browser
 
 Uninstall only the disposable Czero module
+    Should Not Be Empty    ${module_id}
     ${removed_id} =    Set Variable    ${module_id}
     Remove disposable module
     ${output}    ${rc} =    Execute Command    api-cli run list-installed-modules
