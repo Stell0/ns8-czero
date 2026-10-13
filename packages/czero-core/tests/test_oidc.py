@@ -18,6 +18,11 @@ ISSUER = "https://idp.example.test/realms/users.example.test"
 ORIGIN = "https://c0.example.test"
 
 
+class PrivateFixture(tuple):
+    def __repr__(self):
+        return "<private OIDC fixture>"
+
+
 @pytest.fixture
 def provider():
     key = RSAKey.generate_key(2048, {"kid": "trusted", "use": "sig"})
@@ -55,7 +60,7 @@ def provider():
         return httpx2.Response(404)
     config = OidcConfig(ISSUER, "czero1", secret, ORIGIN)
     client = OidcClient(config, transport=httpx2.MockTransport(handle))
-    yield client, metadata, calls, nonce, verifier, tokens
+    yield PrivateFixture((client, metadata, calls, nonce, verifier, tokens))
     client.close()
 
 

@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from czero_core import core_health, Database
 from czero_app import __version__
+from czero_app.auth import AppAuth, install_auth_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -33,7 +34,8 @@ class HealthResponse(BaseModel):
 
 
 def create_app(module_id: str | None = None, static_dir: Path | None = None,
-               base_path: str | None = None, database: Database | None = None) -> FastAPI:
+               base_path: str | None = None, database: Database | None = None,
+               *, auth: AppAuth | None = None) -> FastAPI:
     """Create a hostname-root application or preserve a legacy NS8 path."""
     instance_id = module_id if module_id is not None else os.getenv("CZERO_MODULE_ID", "")
     if not _MODULE_ID.fullmatch(instance_id):
@@ -50,12 +52,15 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     home_page = static_dir / "index.html"
 
     database = database if database is not None else Database()
+    auth = auth if auth is not None else AppAuth.from_env(database, base_path)
 
     @asynccontextmanager
     async def lifespan(application):
         try:
             yield
         finally:
+            if auth is not None:
+                auth.oidc.close()
             database.close()
 
     instance_app = FastAPI(
@@ -65,6 +70,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         redoc_url=None,
         lifespan=lifespan,
     )
+    instance_app.state.auth = auth
+    install_auth_routes(instance_app, auth, base_path)
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
@@ -74,6 +81,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def status_script() -> FileResponse:
         return FileResponse(static_dir / "status.js", media_type="text/javascript")
 
+    @instance_app.get("/auth.js", include_in_schema=False)
+    async def auth_script() -> FileResponse:
+        return FileResponse(static_dir / "auth.js", media_type="text/javascript")
+
     @instance_app.get("/agents", response_class=HTMLResponse, include_in_schema=False)
     async def agents() -> str:
         return (
@@ -81,7 +92,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>C0 agent capabilities</title><main><h1>C0 agent capabilities</h1>"
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
-            "Database readiness is available. Authentication, objects, search and MCP are planned milestones.</p>"
+            "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
+            "Identity configuration is required for sign-in. Objects, search and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
         )

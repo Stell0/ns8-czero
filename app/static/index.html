@@ -14,6 +14,11 @@
       nav { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; }
       a { color: #075f91; font-weight: 650; }
       .status { display: inline-block; padding: .25rem .65rem; border-radius: 2rem; color: #155f35; background: #e2f5e9; }
+      section { border-top: 1px solid #d6e1e8; margin-top: 1.5rem; padding-top: 1rem; }
+      button, select { font: inherit; padding: .4rem .65rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: .65rem .3rem; border-bottom: 1px solid #d6e1e8; }
+      td small { display: block; color: #435b6c; }
       @media (max-width: 40rem) { main { margin: 1rem; padding: 1.5rem; } }
     </style>
   </head>
@@ -21,9 +26,21 @@
     <main>
       <p class="status">C0 application foundation</p>
       <h1>A foundation for useful applications.</h1>
-      <p>This application has a dedicated PostgreSQL database, a versioned C0 Core package and a documented health API. Sign-in and object operations arrive in later milestones.</p>
+      <p>This application has a dedicated PostgreSQL database, a versioned C0 Core package and a documented health API. Sign-in uses NethServer identities when configured. Object operations arrive in later milestones.</p>
       <p id="database-status" role="status" aria-live="polite">Checking database...</p>
       <button id="refresh-status" type="button">Check again</button>
+      <section aria-labelledby="account-heading">
+        <h2 id="account-heading">Your account</h2>
+        <p id="account-status" role="status" aria-live="polite">Checking sign-in...</p>
+        <a id="sign-in" href="./auth/login" hidden>Sign in with NethServer</a>
+        <button id="sign-out" type="button" hidden>Sign out</button>
+      </section>
+      <section id="sharing" aria-labelledby="sharing-heading" hidden>
+        <h2 id="sharing-heading">Shared access</h2>
+        <p>Accounts appear after their first sign-in attempt. Choose Reader, Editor or Admin access for a verified account. The owner is selected in NethServer settings.</p>
+        <table><thead><tr><th>Account</th><th>Access</th><th>Action</th></tr></thead><tbody id="accounts"></tbody></table>
+        <p id="sharing-status" role="status" aria-live="polite"></p>
+      </section>
       <nav aria-label="C0 resources">
         <a href="./api/v1/health">Service health</a>
         <a href="./docs">REST API</a>
@@ -31,5 +48,6 @@
       </nav>
     </main>
     <script src="./status.js" defer></script>
+    <script src="./auth.js" defer></script>
   </body>
 </html>

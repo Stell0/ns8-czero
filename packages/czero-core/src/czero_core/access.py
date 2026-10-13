@@ -69,13 +69,23 @@ class AccessService:
         with self.database.engine.connect() as connection:
             self._actor(connection, actor.user_id).require(Role.ADMIN)
             rows = connection.execute(text("""
-                SELECT a.id, a.username, a.display_name, a.account_key,
+                SELECT a.id, a.username, a.display_name, a.account_key, a.last_seen,
                        CASE WHEN a.account_key = :owner THEN 'admin' ELSE m.role END AS role,
                        a.account_key = :owner AS is_owner
                 FROM c0_accounts a LEFT JOIN c0_memberships m ON m.account_id = a.id
                 WHERE a.issuer = :issuer ORDER BY a.username, a.id LIMIT :limit
             """), {"owner": self.owner_account_key, "issuer": self.issuer, "limit": limit}).mappings().all()
             return [dict(row) for row in rows]
+
+    def profile(self, actor: Actor) -> dict:
+        with self.database.engine.connect() as connection:
+            current = self._actor(connection, actor.user_id)
+            current.require(Role.READER)
+            row = connection.execute(text("""
+                SELECT id, username, display_name FROM c0_accounts
+                WHERE id = :id AND issuer = :issuer
+            """), {"id": actor.user_id, "issuer": self.issuer}).mappings().one()
+            return {**dict(row), "role": current.role.value, "is_owner": current.is_owner}
 
     def set_role(self, actor: Actor, account_id: UUID, role: Role | None) -> None:
         if role is not None and not isinstance(role, Role):

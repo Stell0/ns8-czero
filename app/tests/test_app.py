@@ -44,8 +44,8 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.5.0",
-        "app_version": "0.6.0",
+        "core_version": "0.6.0",
+        "app_version": "0.7.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -54,7 +54,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
 def test_agents_page_describes_only_available_capabilities(client):
     response = client("/czero/czero17/agents")
     assert response.status_code == 200
-    assert "Authentication, objects, search and MCP are planned" in response.text
+    assert "Objects, search and MCP are planned" in response.text
     assert "./docs" in response.text
 
 
@@ -63,7 +63,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.6.0"
+    assert document["info"]["version"] == "0.7.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 

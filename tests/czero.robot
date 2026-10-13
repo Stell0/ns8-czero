@@ -56,7 +56,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.5.0"
+    Should Contain    ${output}    "core_version":"0.6.0"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -472,11 +472,11 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.5.0"
+    Get Text    body    contains    "core_version":"0.6.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
-    Get Text    body    contains    Authentication, objects, search and MCP are planned milestones.
+    Get Text    body    contains    Objects, search and MCP are planned milestones.
     Close Browser
 
 Uninstall only the disposable Czero module
