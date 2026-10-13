@@ -45,3 +45,25 @@ def test_real_provider_form_decodes_html_action_and_preserves_hidden_fields():
                 '<input type="hidden" name="credentialId" value=""></form>')
     assert parser.action == 'https://idp.czero.test/login?a=1&b=2'
     assert parser.fields == {'credentialId': ''}
+
+
+def test_provider_logout_relative_action_uses_provider_origin():
+    Browser = runpy.run_path(str(ROOT / 'tests/oidc_probe.py'))['Browser']
+    browser = Browser.__new__(Browser)
+    calls = []
+    def api(path, *args):
+        if path == '/auth/logout':
+            return 200, json.dumps({'provider_logout': True,
+                'logout_url': 'https://idp.czero.test/realms/test/logout'}).encode(), ''
+        return 401, b'{}', ''
+    def request(path, data=None, headers=None):
+        calls.append(path)
+        if len(calls) == 1:
+            return 200, b'<form action="/realms/test/logout-confirm"><input type="hidden" name="session_code" value="fixture"></form>', path
+        if len(calls) == 2:
+            assert path == 'https://idp.czero.test/realms/test/logout-confirm'
+            assert b'session_code=fixture' in data
+            return 200, b'<html>Application</html>', 'https://czero7.test/'
+        return 200, b'<form id="kc-form-login" action="/login"></form>', 'https://idp.czero.test/login'
+    browser.api, browser.request = api, request
+    browser.logout({'csrf_token': 'fixture'})

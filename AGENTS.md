@@ -4,6 +4,10 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## M05 Core identity foundation (integration pending)
 
+- Provider test forms may have relative actions. Resolve them against the final provider page URL, including logout confirmation; never against the Czero origin.
+
+- Identity restore tests must create grants through authenticated Core-backed REST and verify signed logins after a new native module/client identity. Expected test account IDs may stay in private disposable fixtures; do not fake memberships with SQL or Redis.
+
 - Disposable SSO credentials are generated inside the Python Robot helper, uploaded with mode 0600 and never returned as Robot variables or placed in command arguments. Test-only CA/DNS/systemd overrides belong in disposable QEMU fixtures, never runtime actions or images. Keep provider and application TLS verification enabled.
 
 - SDK `agent.run_helper` forwards options to `subprocess.Popen`; supply JSON through a rewound temporary file with `stdin=`, never `input=`. Restore/upgrade regressions enforce this actual SDK contract.

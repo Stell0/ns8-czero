@@ -52,7 +52,7 @@ class Browser:
         form.feed(body.decode())
         assert form.action, "Provider login form missing"
         form.fields.update(username=username, password=password)
-        status, _, _ = self.request(form.action, urlencode(form.fields).encode(), headers={
+        status, _, _ = self.request(urljoin(url, form.action), urlencode(form.fields).encode(), headers={
             "Content-Type": "application/x-www-form-urlencoded"})
         assert status == expected, "Provider callback rejected"
         status, body, _ = self.request("/api/v1/me")
@@ -67,6 +67,27 @@ class Browser:
             headers["Content-Type"] = "application/json"
             data = json.dumps(data).encode()
         return self.request(path, data, method, headers)
+
+    def logout(self, profile):
+        status, body, _ = self.api("/auth/logout", {}, "POST", profile["csrf_token"])
+        assert status == 200, "Local logout failed"
+        logout = json.loads(body)
+        assert logout["provider_logout"], "Provider logout unavailable"
+        status, body, url = self.request(logout["logout_url"])
+        assert status == 200, "Provider logout confirmation unavailable"
+        form = LoginForm(logout=True)
+        form.feed(body.decode())
+        assert form.action, "Provider logout form missing"
+        form.fields["confirmLogout"] = "Logout"
+        status, _, _ = self.request(urljoin(url, form.action), urlencode(form.fields).encode(), headers={
+            "Content-Type": "application/x-www-form-urlencoded"})
+        assert status == 200, "Provider logout confirmation failed"
+        status, _, _ = self.api("/api/v1/me")
+        assert status == 401, "Logged-out session remains usable"
+        status, body, _ = self.request("/auth/login")
+        form = LoginForm()
+        form.feed(body.decode())
+        assert status == 200 and form.action, "Provider SSO session survived logout"
 
 
 def probe():
@@ -107,25 +128,7 @@ def probe():
     assert status == 204, "Role revocation failed"
     status, _, _ = reader.api("/api/v1/me")
     assert status == 403, "Revoked session remains admitted"
-    status, body, _ = owner.api("/auth/logout", {}, "POST", profile["csrf_token"])
-    assert status == 200, "Local logout failed"
-    logout = json.loads(body)
-    assert logout["provider_logout"], "Provider logout unavailable"
-    status, body, _ = owner.request(logout["logout_url"])
-    assert status == 200, "Provider logout confirmation unavailable"
-    form = LoginForm(logout=True)
-    form.feed(body.decode())
-    assert form.action, "Provider logout form missing"
-    form.fields["confirmLogout"] = "Logout"
-    status, _, _ = owner.request(form.action, urlencode(form.fields).encode(), headers={
-        "Content-Type": "application/x-www-form-urlencoded"})
-    assert status == 200, "Provider logout confirmation failed"
-    status, _, _ = owner.api("/api/v1/me")
-    assert status == 401, "Logged-out session remains usable"
-    status, body, _ = owner.request("/auth/login")
-    form = LoginForm()
-    form.feed(body.decode())
-    assert status == 200 and form.action, "Provider SSO session survived logout"
+    owner.logout(profile)
     missing = Browser(origin)
     status, _, _ = missing.api("/api/v1/me")
     assert status == 401, "Anonymous REST access accepted"
@@ -138,6 +141,5 @@ if __name__ == "__main__":
         probe()
         print("Real SSO owner, membership, revocation and logout assertions passed")
     except Exception as error:
-        # Assertions contain only fixed labels; never emit URL/body/cookies.
         print(str(error) if isinstance(error, AssertionError) else type(error).__name__, file=sys.stderr)
         sys.exit(1)
