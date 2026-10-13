@@ -1,6 +1,6 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M03 are complete with local/CI/QEMU and documentation evidence. M04 native backup/restore runtime acceptance passes; documentation/main closeout is active. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M04 are complete with local/CI/QEMU and documentation evidence. M05 native OIDC authentication and simple application-wide roles are the active milestone. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
 ## Established M04 backup/restore conventions
 
