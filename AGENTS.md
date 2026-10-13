@@ -2,6 +2,12 @@
 
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M04 are complete with local/CI/QEMU and documentation evidence. M05 native OIDC authentication and simple application-wide roles are the active milestone. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
+## M05 Core identity foundation (integration pending)
+
+- Core `identity` verifies NS8 RS256 tokens against caller-supplied trusted keys, exact issuer/audience and required/time claims. Access tokens require Keycloak's `Bearer` type; ID tokens require login nonce and authorized party/hash bindings where applicable. Reject header-supplied key URLs and algorithm confusion. The JOSE library implements signatures; Core never implements cryptography or emits token values in errors.
+- Verified identity uses issuer plus normalized signed LDAP UUID, and contains no role authority. `Actor.require` has only Reader/Editor/Admin thresholds. Create admitted actors only from the shared membership service; never from request bodies or token role claims. The membership service, native registration, sessions and browser login are still pending in M05.
+- Current branch Core/app versions are 0.3.0/0.4.0; database revision remains `0001_database` in this foundation slice. Keep public health/landing behavior honest until authentication is wired. Freeze M04 module/component digests for genuine predecessor tests.
+
 ## Established M04 backup/restore conventions
 
 - Native dump/cleanup hooks prepare a mode-0600 custom PostgreSQL archive and backup format/service-state metadata. Restic includes these, `passwords.env` and `czero-sources`; never include live PostgreSQL files. Dumping a cold DB preserves prior database/pod state and does not start an unconfigured app.
