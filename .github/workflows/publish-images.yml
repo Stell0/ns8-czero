@@ -37,6 +37,10 @@ jobs:
           export IMAGETAG="${BRANCH_TAG//\//-}"
           echo "IMAGETAG=${IMAGETAG}" >> "$GITHUB_ENV"
           bash build-images.sh
+      - name: Validate application runtime contents
+        run: |
+          podman run --rm --interactive --entrypoint python \
+            "${REPOBASE,,}/czero-app:${IMAGETAG}" - < tests/audit_runtime.py
       - name: Publish module images
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
