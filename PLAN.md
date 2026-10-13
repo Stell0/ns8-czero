@@ -148,7 +148,9 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 **Implementation status:** Native hostname/TLS actions, hostname-root application routes, legacy-update preservation and administrator settings/errors/progress are implemented. App version is `0.2.0`; Core remains `0.1.0`. Forty local tests, shell checks, eleven non-UI Robot dry-run cases, immutable Yarn install and production UI build pass. Actual publication and QEMU verification are pending. The route step precedes persistence because native certificate validation can fail; this keeps the prior saved configuration accurate. No live or interactive Playwright checks will run under the operator waiver.
 
-**Evidence:** Pending CI/QEMU verification.
+**Failure investigation:** Initial M02 commit `7f25d8fd4c3481f7b5cd98ed41dad7e8f935de91` passes [local 38376237653](https://github.com/Stell0/ns8-czero/actions/runs/38376237653), [publication/audit/scans 38376237652](https://github.com/Stell0/ns8-czero/actions/runs/38376237652) and API docs. [QEMU 38376474181](https://github.com/Stell0/ns8-czero/actions/runs/38376474181) fails: the actual Go Core validator rejects a Python-compatible negative regex lookahead; the legacy upgrade check queried before ASGI startup (HTTP 502); Robot interpreted curl's `%{http_code}` as an environment variable. Use a portable anchored hostname pattern plus a separate whitespace exclusion, add a Go-regex schema compilation CI regression gate, wait for legacy health and escape the Robot curl placeholder. The Go gate was executed against the old schema and fails specifically on `(?!`; it passes on the corrected schema, alongside all 40 pytest tests and 11 Robot dry-run cases. Keep all acceptance assertions. Publication scans still report 166 app / 29 UI findings, zero module/imageroot; runtime archives contain only allowed files. Planning-only QEMU `38375319126` was superseded/cancelled and supplies no acceptance evidence.
+
+**Evidence:** Pending corrected CI/QEMU verification.
 
 ### M03 — Dedicated PostgreSQL + pgvector and migrations [ ]
 

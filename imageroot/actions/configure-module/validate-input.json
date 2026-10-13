@@ -15,8 +15,11 @@
             "type": "string",
             "minLength": 3,
             "maxLength": 253,
-            "pattern": "^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?![\\s\\S])",
-            "description": "Application DNS hostname, without scheme or path"
+            "pattern": "^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$",
+            "description": "Application DNS hostname, without scheme or path",
+            "not": {
+                "pattern": "\\s"
+            }
         },
         "lets_encrypt": {
             "type": "boolean",

@@ -25,6 +25,13 @@ Remove disposable module
         Set Global Variable    ${module_id}    ${EMPTY}
     END
 
+Check legacy route
+    ${output}    ${rc} =    Execute Command
+    ...    curl --fail --silent --show-error --max-time 10 http://127.0.0.1/czero/${module_id}/api/v1/health
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    "status":"ok"
+
 Check application route
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${host}/api/v1/health --insecure --resolve ${host}:443:127.0.0.1
@@ -70,17 +77,13 @@ Preserve a legacy prefix during native upgrade
     ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
-    ${output}    ${rc} =    Execute Command
-    ...    curl --fail --silent --show-error --max-time 10 http://127.0.0.1/czero/${module_id}/api/v1/health
-    ...    return_rc=True
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    "status":"ok"
+    Wait Until Keyword Succeeds    30s    2s    Check legacy route
 
 Configure and reconfigure the hostname service
     FOR    ${attempt}    IN RANGE    2
-        ${rc} =    Execute Command    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false}'
-        ...    return_rc=True    return_stdout=False
-        Should Be Equal As Integers    ${rc}    0
+        ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false}'
+        ...    return_rc=True
+        Should Be Equal As Integers    ${rc}    0    msg=${output}
     END
     Wait Until Keyword Succeeds    30s    2s    Check application route
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-configuration
@@ -100,7 +103,7 @@ Configure and reconfigure the hostname service
 
 Verify HTTPS redirect and replace the hostname route
     ${code}    ${rc} =    Execute Command
-    ...    curl --silent --max-time 10 --output /dev/null --write-out '%{http_code}' --resolve ${host}:80:127.0.0.1 http://${host}/api/v1/health
+    ...    curl --silent --max-time 10 --output /dev/null --write-out '\%{http_code}' --resolve ${host}:80:127.0.0.1 http://${host}/api/v1/health
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${code}    301
@@ -112,12 +115,12 @@ Verify HTTPS redirect and replace the hostname route
     Should Be Equal As Integers    ${rc}    0
     Check application route
     ${code}    ${rc} =    Execute Command
-    ...    curl --silent --insecure --max-time 10 --output /dev/null --write-out '%{http_code}' --resolve ${old_host}:443:127.0.0.1 https://${old_host}/api/v1/health
+    ...    curl --silent --insecure --max-time 10 --output /dev/null --write-out '\%{http_code}' --resolve ${old_host}:443:127.0.0.1 https://${old_host}/api/v1/health
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${code}    404
     ${code}    ${rc} =    Execute Command
-    ...    curl --silent --max-time 10 --output /dev/null --write-out '%{http_code}' http://127.0.0.1/czero/${module_id}/api/v1/health
+    ...    curl --silent --max-time 10 --output /dev/null --write-out '\%{http_code}' http://127.0.0.1/czero/${module_id}/api/v1/health
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${code}    404

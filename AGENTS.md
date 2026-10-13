@@ -5,6 +5,7 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 ## M02 implementation conventions (verification pending)
 
 - Keep configure steps focused: `10validate` checks native route ownership; `20configure-route` delegates TLS and explicitly clears legacy `path` with `null`; `40persist` writes only non-secrets after route acceptance; `80start_services` restarts; `90wait-ready` bounds local health checks. Do not hide native route/certificate failures.
+- Action schema regex patterns must compile with Core's Go/RE2 validator as well as Python tests. Avoid lookaheads; `tests/check_schemas.go` gates compatibility in CI. Robot curl format placeholders must escape `%{...}`. Native update completion precedes ASGI readiness; poll health in integration tests.
 - Persist hostname lowercase and certificate flags as `true`/`false`. An explicitly empty `CZERO_BASE_PATH` means hostname-root routing. Update hooks initialize a missing key to the legacy instance prefix, never overwrite a configured empty key.
 - Track admin task listeners, including repeated progress events, and remove them on every terminal result, task creation failure and Vue destruction. Field errors use native validation parameters. Only English translation source is edited.
 - Synthetic `.test` hosts and certificate exceptions belong only to disposable QEMU tests. The operator's live-testing pause remains active.
