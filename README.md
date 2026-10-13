@@ -55,7 +55,7 @@ The current upstream IdP has no stable GitHub release; its README's `1.0.0` imag
 
 Each module has PostgreSQL **17.11** plus pgvector **0.8.7**, a private pod and its own `czero-db-data` volume/password. Database ports are not published. Native startup runs packaged migrations before the app; repeated migration, restart, pod recreation and upgrades preserve data and knowledge-space identity.
 
-Use the native NS8 Backup page to select Czero and a supported destination, run backup and verify a snapshot. Restore uses a clean module slot with its hostname available. Archives contain an atomic PostgreSQL custom dump, private configuration, service-state metadata and the retained-source volume; live database files are excluded. Offline restore uses fail-fast transactional `pg_restore`, retains the new native module identity/port and restores the prior enabled/running state. A completed-archive receipt permits replay without overwriting later database changes. Debian/Rocky native tests verify these baseline behaviors.
+Use the native NS8 Backup page to select Czero and a supported destination, run backup and verify a snapshot. Restore uses a clean module slot with its hostname available. Archives contain an atomic PostgreSQL custom dump, private configuration, service-state metadata and the retained-source volume; live database files are excluded. Offline restore uses fail-fast transactional `pg_restore`, retains the new native module ID/port and Core-assigned logical UUID and restores the prior enabled/running state. A completed-archive receipt permits replay without overwriting later database changes. Debian/Rocky native tests verify these baseline behaviors.
 
 The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup coordination with workers and file-writing ingestion must be extended as those features arrive.
 
@@ -85,7 +85,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 134 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 135 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

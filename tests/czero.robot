@@ -502,8 +502,8 @@ Preserve admitted identities through update and clean restore
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Verify Disposable Identity Persistence    ${module_id}
-    Remove disposable backup resources
-    ${backup} =    Create Disposable Backup    ${module_id}
+    # Core restore preserves logical UUID/path: keep its encryption key too.
+    ${backup} =    Create Disposable Backup    ${module_id}    ${backup_repository}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
     Log To Console    SSO persistence: native encrypted backup
     ${rc} =    Execute Command    api-cli run run-backup --data '{"id":${backup}[backup_id]}'

@@ -129,3 +129,23 @@ def test_identity_probe_waits_for_health_after_native_restart(monkeypatch, ready
         with pytest.raises(AssertionError, match='application not ready'):
             library.verify_disposable_identity_persistence('czero7')
         assert calls == ['network','health']
+
+
+def test_identity_backup_reuses_existing_encryption_repository(monkeypatch):
+    library = runpy.run_path(str(ROOT / 'tests/CzeroBackup.py'))['CzeroBackup']()
+    commands=[]
+    def execute(command, **kwargs):
+        commands.append(command)
+        assert 'add-backup-repository' not in command
+        if 'api-cli run add-backup ' in command:
+            import shlex
+            request=json.loads(shlex.split(command)[-1])
+            assert request['repository']=='existing-repository'
+            assert request['instances']==['czero7']
+            return '2',0
+        return 'czero/stable-logical-uuid',0
+    monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:SimpleNamespace(execute_command=execute))
+    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
+    result=library.create_disposable_backup('czero7','existing-repository')
+    assert result=={'repository':'existing-repository','backup_id':2,'path':'czero/stable-logical-uuid'}
+    assert len(commands)==2

@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## M05 Core identity foundation (integration pending)
 
+- Core clean restore may preserve the logical MODULE_UUID/backup path while allocating a new module ID. Keep the existing backup repository encryption key when backing up that restored logical instance; repository deletion does not delete its encrypted storage.
+
 - Native update/systemd completion precedes ASGI readiness. After test-only pod/network recreation, poll bounded application health before a real identity probe; never replace this with a blind delay or treat a started workflow as a pass.
 
 - Robot log level NONE suppresses messages but retains nested keyword arguments. Never pass credentials through `BuiltIn.run_keyword`; call the public Browser fill method directly for plain strings and use Robot conversion only for non-sensitive typed arguments. Send native cluster-user/hash setup through private stdin files and assert the generated password is absent from actual output XML/Playwright logs.
