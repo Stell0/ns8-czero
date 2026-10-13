@@ -208,11 +208,12 @@ Check saved settings and application HTTPS in a browser
     Get Text    iframe >>> text="czero"    contains    czero
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=settings
     Wait For Elements State    iframe >>> h2 >> text="Settings"    visible    timeout=30s
-    Get Property    iframe >>> input[type=text]    value    ==    ${host}
-    Fill Text    iframe >>> input[type=text]    localhost
+    Wait For Elements State    iframe >>> .ns-text-input input    enabled    timeout=30s
+    Get Property    iframe >>> .ns-text-input input    value    ==    ${host}
+    Fill Text    iframe >>> .ns-text-input input    localhost
     Click    iframe >>> button >> text="Save"
     Wait For Elements State    iframe >>> text="Enter a valid fully qualified DNS hostname."    visible    timeout=30s
-    Fill Text    iframe >>> input[type=text]    ${host}
+    Fill Text    iframe >>> .ns-text-input input    ${host}
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
@@ -220,11 +221,13 @@ Check saved settings and application HTTPS in a browser
     ...    return_rc=True    return_stdout=False
     Should Not Be Equal As Integers    ${rc}    0
     Click    iframe >>> button >> text="Save"
+    Wait For Elements State    iframe >>> .progress-bar-container    visible    timeout=5s
     Wait For Elements State    iframe >>> button >> text="Save"    enabled    timeout=30s
+    Wait For Elements State    iframe >>> .progress-bar-container    detached    timeout=30s
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Reload
-    Wait For Elements State    iframe >>> input[type=text]    enabled    timeout=30s
-    Get Property    iframe >>> input[type=text]    value    ==    ${host}
+    Wait For Elements State    iframe >>> .ns-text-input input    enabled    timeout=30s
+    Get Property    iframe >>> .ns-text-input input    value    ==    ${host}
     Get Attribute    iframe >>> a:has-text("Open C0 application")    href    ==    https://${host}/
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s

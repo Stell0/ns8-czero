@@ -31,7 +31,8 @@
         "lets_encrypt": "Request a Let's Encrypt certificate",
         "certificate_help": "HTTPS is handled by NethServer. With this option off, NethServer uses its configured certificate. Certificate requests require public DNS and network access.",
         "domain_already_used_in_traefik": "This hostname is already used by another application.",
-        "open_application": "Open C0 application"
+        "open_application": "Open C0 application",
+        "certificate_failed": "Certificate request failed. Check the DNS and network settings, then retry or disable the certificate request."
     },
     "about": {
         "title": "About"

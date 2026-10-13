@@ -213,10 +213,14 @@ export default {
           validationError.parameter === "host" ||
           validationError.field === "host"
         ) {
-          this.error.host =
-            validationError.error === "domain_already_used_in_traefik"
-              ? this.$t("settings.domain_already_used_in_traefik")
-              : this.$t("settings.host_invalid");
+          const messages = {
+            domain_already_used_in_traefik:
+              "settings.domain_already_used_in_traefik",
+            newcert_acme_error: "settings.certificate_failed",
+          };
+          this.error.host = this.$t(
+            messages[validationError.error] || "settings.host_invalid"
+          );
           this.focusElement("host");
         } else {
           this.error.configureModule = this.$t("error.validation_error");
