@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (12 October 2026): M00 QEMU and live smoke tests pass; current CI publication is blocked by package Write access.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. The repository and package are public. C0 application features are unimplemented; M00 remains open. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
+**Status (13 October 2026): M00 QEMU and live smoke tests pass; current CI publication is blocked by package Write access.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. The repository and package are public. C0 application features are unimplemented; M00 remains open. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
 
 ## Why C0?
 
@@ -80,7 +80,7 @@ Prefer the maintained patterns linked directly in each milestone. The repository
 
 **Current repository baseline:** `build-images.sh` builds `ghcr.io/stell0/czero`, packaging only NS8 actions and the compiled administration UI. `czero.service` runs `jmalloc/echo-server:v0.3.7` on an allocated loopback port. Settings Save configures `{}`, enables the service and registers `/czero/<module-id>/` in Traefik. The HTTP endpoint has no authentication or C0 storage; do not send sensitive content. Hostname/provider settings and application login arrive later.
 
-The published `:latest` image has passed QEMU lifecycle checks on Debian 13 and Rocky 9, including forced native update, browser settings/service recovery, restart, invalid-input rejection and disposable removal. Interactive Playwright MCP and native task checks also pass for the dedicated live installation on Core 3.21.0/Rocky 9.8: Settings Save, configuration round-trip, refresh, active service, targeted restart and HTTPS echo response. Live System logs returned no entries. Current CI publication fails because its token lacks package Write access; see PLAN.md for the required repair. No release is ready.
+The published `:latest` image has passed QEMU lifecycle checks on Debian 13 and Rocky 9, including forced native update, browser settings/service recovery, restart, invalid-input rejection and disposable removal. Interactive Playwright MCP and native task checks also pass for the dedicated live installation on Core 3.21.0/Rocky 9.8: Settings Save, configuration round-trip, refresh, active service, targeted restart and HTTPS echo response. Live System logs returned no entries. Native-token CI passes checkout and image construction but publication lacks the existing package’s Actions Write grant; the PAT override has been removed. See PLAN.md for the required repair. No release is ready.
 
 For the smoke image, use the native NS8 `add-module` action with `image: "ghcr.io/stell0/czero:latest"` and your node id. Open the installed module's Settings and click Save, then visit `/czero/<module-id>/health` on the cluster's web host. This returns echo text, not a C0 health API. Published tags may lag source while Write access is blocked. Prefer a version tag for normal installation: Core 3.21.0 displays digest-only image URLs incorrectly in inventory, although installation works.
 
