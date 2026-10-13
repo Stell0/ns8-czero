@@ -11,6 +11,8 @@ import sys
 import agent
 
 config = {"host": os.getenv("CZERO_HOST", ""),
-          "lets_encrypt": os.getenv("CZERO_LETS_ENCRYPT", "false").lower() == "true"}
+          "lets_encrypt": os.getenv("CZERO_LETS_ENCRYPT", "false").lower() == "true",
+          "user_domain":os.getenv('CZERO_USER_DOMAIN',''),"idp":os.getenv('CZERO_IDP_UUID',''),
+          "owner":os.getenv('CZERO_OWNER_USERNAME',''),"owner_ldap_uuid":os.getenv('CZERO_OWNER_LDAP_UUID','')}
 
 json.dump(config, fp=sys.stdout)

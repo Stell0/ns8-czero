@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+from pathlib import Path
+import agent
+
+settings = json.loads((Path(os.environ['AGENT_STATE_DIR'])/'auth-pending.json').read_text())
+domains = [settings['domain']] if settings['domain'] else []
+current = agent.get_bound_domain_list(agent.redis_connect(use_replica=True))
+if domains != current:
+    agent.bind_user_domains(domains,check=True)

@@ -409,7 +409,7 @@ Backup and restore into a clean disposable instance
     Should Be Equal As Integers    ${rc}    0
     Log To Console    Restore phase: replay completed archive
     ${rc} =    Execute Command
-    ...    api-cli run module/${module_id}/restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","environment":{"IMAGE_URL":"${IMAGE_URL}","CZERO_HOST":"${host}","CZERO_LETS_ENCRYPT":"false"}}'
+    ...    api-cli run module/${module_id}/restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","environment":{"IMAGE_URL":"${IMAGE_URL}","CZERO_HOST":"${host}","CZERO_LETS_ENCRYPT":"false","CZERO_USER_DOMAIN":"${config}[user_domain]","CZERO_IDP_UUID":"${config}[idp]","CZERO_OWNER_USERNAME":"${config}[owner]","CZERO_OWNER_LDAP_UUID":"${config}[owner_ldap_uuid]"}}'
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Log To Console    Restore phase: verify health and data

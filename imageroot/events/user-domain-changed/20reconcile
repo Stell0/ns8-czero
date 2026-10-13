@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+import sys
+import agent
+import agent.tasks
+
+event = json.load(sys.stdin)
+if not os.getenv('CZERO_USER_DOMAIN') or os.environ['CZERO_USER_DOMAIN'] not in event.get('domains',[]):
+    sys.exit(0)
+result = agent.tasks.run(os.environ['AGENT_ID'],action='configure-module',data={
+    'host':os.environ['CZERO_HOST'],'lets_encrypt':os.getenv('CZERO_LETS_ENCRYPT','false')=='true',
+    'user_domain':os.environ['CZERO_USER_DOMAIN'],'idp':os.environ['CZERO_IDP_UUID'],
+    'owner':os.environ['CZERO_OWNER_USERNAME']})
+agent.assert_exp(result['exit_code']==0)

@@ -24,7 +24,7 @@
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "description": "Choose the application hostname and certificate settings. Saving starts the dedicated database and the C0 application. Sign-in and object operations arrive in later milestones.",
+        "description": "Choose the application hostname, certificate and optional NethServer sign-in settings. Saving starts the dedicated database and C0 application.",
         "host": "Application hostname",
         "host_help": "DNS name pointing to this NS8 node, without https:// or a path.",
         "host_invalid": "Enter a valid fully qualified DNS hostname.",
@@ -32,7 +32,18 @@
         "certificate_help": "HTTPS is handled by NethServer. With this option off, NethServer uses its configured certificate. Certificate requests require public DNS and network access.",
         "domain_already_used_in_traefik": "This hostname is already used by another application.",
         "open_application": "Open C0 application",
-        "certificate_failed": "Certificate request failed. Check the DNS and network settings, then retry or disable the certificate request."
+        "certificate_failed": "Certificate request failed. Check the DNS and network settings, then retry or disable the certificate request.",
+        "enable_sso": "Enable NethServer sign-in",
+        "idp": "Identity provider",
+        "choose_idp": "Choose a configured identity provider",
+        "user_domain": "User domain",
+        "choose_domain": "Choose a user domain",
+        "owner": "Owner account name",
+        "owner_help": "An existing account in the selected user domain. Ownership is pinned to its LDAP identity; the cluster administrator login is separate.",
+        "sharing_help": "The owner has Admin access. Additional Reader, Editor or Admin accounts are admitted in the C0 application after their first sign-in attempt.",
+        "auth_options_failed": "Cannot load user domains or identity providers. Verify the NS8 account domain and ns8-idp setup.",
+        "identity_required": "Select an identity provider, user domain and owner account.",
+        "identity_invalid": "Verify the selected domain/provider and the existing owner account."
     },
     "about": {
         "title": "About"
@@ -48,7 +59,8 @@
         "get-name": "Get name",
         "list-backup-repositories": "List backup repositories",
         "list-backups": "List backups",
-        "list-installed-modules": "List installed modules"
+        "list-installed-modules": "List installed modules",
+        "get-auth-options": "Get sign-in options"
     },
     "error": {
         "error": "Error",

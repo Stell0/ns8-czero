@@ -18,4 +18,5 @@ with agent.safe_open(str(state / 'restore-previous-host')) as output:
 # Core keeps the new node, allocated port, image and platform identity.
 agent.mset_env({'CZERO_MODULE_ID':module_id, 'CZERO_HOST':host,
     'CZERO_LETS_ENCRYPT':original.get('CZERO_LETS_ENCRYPT','false'),
-    'CZERO_BASE_PATH':'' if host else '/czero/'+module_id})
+    'CZERO_BASE_PATH':'' if host else '/czero/'+module_id,
+    **{key:original.get(key,'') for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}})

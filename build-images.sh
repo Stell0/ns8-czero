@@ -68,7 +68,7 @@ buildah config --entrypoint=/ \
     --label="org.opencontainers.image.revision=${revision}" \
     --label="org.opencontainers.image.licenses=GPL-3.0-or-later" \
     --label="org.opencontainers.image.title=C0 (Czero) NS8 module" \
-    --label="org.nethserver.authorizations=traefik@node:routeadm" \
+    --label="org.nethserver.authorizations=traefik@node:routeadm cluster:accountconsumer idp@any:clientadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
     --label="org.nethserver.volumes=czero-db-data czero-sources" \

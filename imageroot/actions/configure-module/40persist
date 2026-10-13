@@ -5,13 +5,22 @@
 import json
 import os
 import sys
+from pathlib import Path
 import agent
 
 data = json.load(sys.stdin)
+state = Path(os.getenv('AGENT_STATE_DIR','.'))
+pending = state/'auth-pending.json'
+auth = json.loads(pending.read_text()) if pending.exists() else {
+    'domain':os.getenv('CZERO_USER_DOMAIN',''),'provider_uuid':os.getenv('CZERO_IDP_UUID',''),
+    'owner':os.getenv('CZERO_OWNER_USERNAME',''),'owner_key':os.getenv('CZERO_OWNER_LDAP_UUID','')}
 # Only non-secret settings belong in Core's environment.
 agent.mset_env({
     "CZERO_MODULE_ID": os.environ["MODULE_ID"],
     "CZERO_BASE_PATH": "",
     "CZERO_HOST": data["host"].lower(),
     "CZERO_LETS_ENCRYPT": "true" if data.get("lets_encrypt", False) else "false",
+    "CZERO_USER_DOMAIN":auth['domain'], "CZERO_IDP_UUID":auth['provider_uuid'],
+    "CZERO_OWNER_USERNAME":auth['owner'], "CZERO_OWNER_LDAP_UUID":auth['owner_key'],
 })
+pending.unlink(missing_ok=True)

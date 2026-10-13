@@ -25,6 +25,23 @@
             "type": "boolean",
             "default": false,
             "description": "Request a certificate through NS8 Traefik"
+        },
+        "user_domain": {
+            "type": "string",
+            "maxLength": 253,
+            "not": {
+                "pattern": "\\s"
+            }
+        },
+        "idp": {
+            "type": "string",
+            "maxLength": 36,
+            "pattern": "^$|^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$"
+        },
+        "owner": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.@-]*$"
         }
     },
     "additionalProperties": false,

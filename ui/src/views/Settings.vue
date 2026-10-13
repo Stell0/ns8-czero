@@ -38,6 +38,46 @@
               :disabled="loading.getConfiguration || loading.configureModule"
             />
             <p>{{ $t("settings.certificate_help") }}</p>
+            <NsToggle
+              v-model="ssoEnabled"
+              :label="$t('settings.enable_sso')"
+              :disabled="loading.getConfiguration || loading.configureModule"
+            />
+            <div v-if="ssoEnabled">
+              <NsComboBox
+                v-model="idp"
+                ref="idp"
+                :title="$t('settings.idp')"
+                :label="$t('settings.choose_idp')"
+                :options="identityProviders"
+                :invalid-message="error.idp"
+                :disabled="loading.authOptions || loading.configureModule"
+              />
+              <NsComboBox
+                v-model="userDomain"
+                ref="userDomain"
+                :title="$t('settings.user_domain')"
+                :label="$t('settings.choose_domain')"
+                :options="userDomains"
+                :invalid-message="error.user_domain"
+                :disabled="loading.authOptions || loading.configureModule"
+              />
+              <NsTextInput
+                v-model.trim="owner"
+                ref="owner"
+                :label="$t('settings.owner')"
+                :helper-text="$t('settings.owner_help')"
+                :invalid-message="error.owner"
+                :disabled="loading.getConfiguration || loading.configureModule"
+              />
+              <p>{{ $t("settings.sharing_help") }}</p>
+              <NsInlineNotification
+                v-if="error.authOptions"
+                kind="warning"
+                :description="error.authOptions"
+                :showCloseButton="false"
+              />
+            </div>
             <p v-if="savedHost">
               <a
                 :href="'https://' + savedHost + '/'"
@@ -108,16 +148,28 @@ export default {
       host: "",
       savedHost: "",
       letsEncrypt: false,
+      ssoEnabled: false,
+      idp: "",
+      userDomain: "",
+      owner: "",
+      identityProviders: [],
+      userDomains: [],
+      pendingIdentity: null,
       progress: 0,
       taskListeners: [],
       loading: {
         getConfiguration: false,
         configureModule: false,
+        authOptions: false,
       },
       error: {
         getConfiguration: "",
         configureModule: "",
         host: "",
+        idp: "",
+        user_domain: "",
+        owner: "",
+        authOptions: "",
       },
     };
   },
@@ -139,9 +191,59 @@ export default {
     this.clearTaskListeners();
   },
   created() {
+    this.getAuthOptions();
     this.getConfiguration();
   },
   methods: {
+    async getAuthOptions() {
+      this.loading.authOptions = true;
+      const action = "get-auth-options";
+      const eventId = this.getUuid();
+      this.listenTask(`${action}-aborted-${eventId}`, () => {
+        this.clearTaskListeners(action);
+        this.loading.authOptions = false;
+        this.error.authOptions = this.$t("settings.auth_options_failed");
+      });
+      this.listenTask(`${action}-completed-${eventId}`, (context, result) => {
+        this.clearTaskListeners(action);
+        this.identityProviders = result.output.providers.map((provider) => ({
+          name: provider.id,
+          value: provider.id,
+          label: provider.label,
+        }));
+        this.userDomains = result.output.domains.map((domain) => ({
+          name: domain,
+          value: domain,
+          label: domain,
+        }));
+        this.loading.authOptions = false;
+        this.applyIdentitySelection();
+      });
+      const [error] = await to(
+        this.createModuleTaskForApp(this.instanceName, {
+          action,
+          extra: {
+            eventId,
+            isNotificationHidden: true,
+            title: this.$t("action." + action),
+          },
+        })
+      );
+      if (error) {
+        this.clearTaskListeners(action);
+        this.loading.authOptions = false;
+        this.error.authOptions = this.$t("settings.auth_options_failed");
+      }
+    },
+    applyIdentitySelection() {
+      if (!this.pendingIdentity || this.loading.authOptions) return;
+      const selection = this.pendingIdentity;
+      this.pendingIdentity = null;
+      this.$nextTick(() => {
+        this.idp = selection.idp;
+        this.userDomain = selection.user_domain;
+      });
+    },
     listenTask(event, handler, repeated = false) {
       this.taskListeners.push({ event, handler });
       this.core.$root[repeated ? "$on" : "$once"](event, handler);
@@ -203,6 +305,10 @@ export default {
       this.host = taskResult.output.host;
       this.savedHost = this.host;
       this.letsEncrypt = taskResult.output.lets_encrypt;
+      this.owner = taskResult.output.owner;
+      this.ssoEnabled = Boolean(taskResult.output.user_domain);
+      this.pendingIdentity = taskResult.output;
+      this.applyIdentitySelection();
       this.loading.getConfiguration = false;
     },
     configureModuleValidationFailed(validationErrors) {
@@ -223,7 +329,12 @@ export default {
           );
           this.focusElement("host");
         } else {
-          this.error.configureModule = this.$t("error.validation_error");
+          const field = validationError.parameter || validationError.field;
+          if (["idp", "user_domain", "owner"].includes(field)) {
+            this.error[field] = this.$t("settings.identity_invalid");
+          } else {
+            this.error.configureModule = this.$t("error.validation_error");
+          }
         }
       }
     },
@@ -233,9 +344,16 @@ export default {
     async configureModule() {
       this.error.host = "";
       this.error.configureModule = "";
+      this.error.idp = "";
+      this.error.user_domain = "";
+      this.error.owner = "";
       if (!this.host) {
         this.error.host = this.$t("common.required");
         this.focusElement("host");
+        return;
+      }
+      if (this.ssoEnabled && (!this.idp || !this.userDomain || !this.owner)) {
+        this.error.configureModule = this.$t("settings.identity_required");
         return;
       }
       this.progress = 0;
@@ -273,6 +391,9 @@ export default {
           data: {
             host: this.host.toLowerCase(),
             lets_encrypt: this.letsEncrypt,
+            idp: this.ssoEnabled ? this.idp : "",
+            user_domain: this.ssoEnabled ? this.userDomain : "",
+            owner: this.ssoEnabled ? this.owner : "",
           },
           extra: {
             title: this.$t("settings.configure_instance", {

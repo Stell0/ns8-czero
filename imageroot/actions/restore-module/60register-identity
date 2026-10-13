@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+from pathlib import Path
+import agent
+
+agent.run_helper('czero-create-auth-state').check_returncode()
+action = Path(os.environ['AGENT_INSTALL_DIR'])/'actions/configure-module'
+agent.run_helper(str(action/'15validate-auth'),input=json.dumps({'host':os.getenv('CZERO_HOST','')}),text=True).check_returncode()
+for name in ('25bind-user-domain','30register-client'):
+    agent.run_helper(str(action/name)).check_returncode()
+(Path(os.environ['AGENT_STATE_DIR'])/'auth-pending.json').unlink(missing_ok=True)

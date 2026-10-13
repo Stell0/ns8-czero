@@ -79,12 +79,13 @@ def test_settings_round_trip(monkeypatch, capsys):
     run_step(monkeypatch, 'configure-module/40persist', SimpleNamespace(mset_env=env.update),
         {'host':'C0.example.test','lets_encrypt':True})
     assert env == {'CZERO_MODULE_ID':'czero7','CZERO_BASE_PATH':'',
-                   'CZERO_HOST':'c0.example.test','CZERO_LETS_ENCRYPT':'true'}
+                   'CZERO_HOST':'c0.example.test','CZERO_LETS_ENCRYPT':'true',
+                   **{key:'' for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}}
     for key, value in env.items():
         monkeypatch.setenv(key,value)
     run_step(monkeypatch, 'get-configuration/20read', SimpleNamespace())
     config = json.loads(capsys.readouterr().out)
-    assert config == {'host':'c0.example.test','lets_encrypt':True}
+    assert config == {'host':'c0.example.test','lets_encrypt':True, **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
     schema = json.loads((ACTIONS / 'get-configuration/validate-output.json').read_text())
     Draft7Validator(schema).validate(config)
 
@@ -93,7 +94,7 @@ def test_unconfigured_defaults_are_machine_readable(monkeypatch, capsys):
     monkeypatch.delenv('CZERO_HOST',raising=False)
     monkeypatch.delenv('CZERO_LETS_ENCRYPT',raising=False)
     run_step(monkeypatch,'get-configuration/20read',SimpleNamespace())
-    assert json.loads(capsys.readouterr().out) == {'host':'','lets_encrypt':False}
+    assert json.loads(capsys.readouterr().out) == {'host':'','lets_encrypt':False, **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
 
 
 @pytest.mark.parametrize('base_path', [None, '', '/czero/czero7'])
