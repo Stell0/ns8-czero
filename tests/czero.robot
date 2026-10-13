@@ -49,7 +49,8 @@ Configure and reconfigure the smoke service
 
 Verify application requests are logged
     Check smoke route
-    ${logs}    ${rc} =    Execute Command    runagent -m ${module_id} podman logs czero.service
+    # systemd expands %N in czero.service to the container name "czero".
+    ${logs}    ${rc} =    Execute Command    runagent -m ${module_id} podman logs czero
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${logs}    /api/v1/health
