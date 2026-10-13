@@ -10,4 +10,5 @@
 set -e
 exec 1>&2
 
-systemctl --user enable --now czero.service
+systemctl --user enable czero.service
+systemctl --user restart czero.service

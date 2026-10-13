@@ -24,7 +24,14 @@
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "smoke_stub": "The C0 application service provides the landing page and FastAPI health endpoint. Save starts the service. Sign-in and persistent data arrive in later milestones."
+        "description": "Choose the application hostname and certificate settings. Saving starts or restarts the C0 application. Sign-in and persistent data arrive in later milestones.",
+        "host": "Application hostname",
+        "host_help": "DNS name pointing to this NS8 node, without https:// or a path.",
+        "host_invalid": "Enter a valid fully qualified DNS hostname.",
+        "lets_encrypt": "Request a Let's Encrypt certificate",
+        "certificate_help": "HTTPS is handled by NethServer. With this option off, NethServer uses its configured certificate. Certificate requests require public DNS and network access.",
+        "domain_already_used_in_traefik": "This hostname is already used by another application.",
+        "open_application": "Open C0 application"
     },
     "about": {
         "title": "About"

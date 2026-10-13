@@ -14,11 +14,17 @@ from czero_app import __version__
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
 
-def create_app(module_id: str | None = None, static_dir: Path | None = None) -> FastAPI:
-    """Create the NS8 path-mounted instance application."""
+def create_app(module_id: str | None = None, static_dir: Path | None = None,
+               base_path: str | None = None) -> FastAPI:
+    """Create a hostname-root application or preserve a legacy NS8 path."""
     instance_id = module_id if module_id is not None else os.getenv("CZERO_MODULE_ID", "")
     if not _MODULE_ID.fullmatch(instance_id):
         raise ValueError("CZERO_MODULE_ID must be an assigned Czero module id")
+
+    legacy_path = f"/czero/{instance_id}"
+    base_path = os.getenv("CZERO_BASE_PATH", legacy_path) if base_path is None else base_path
+    if base_path not in ("", legacy_path):
+        raise ValueError("CZERO_BASE_PATH must be empty or the assigned instance path")
 
     if static_dir is None:
         default_static_dir = Path(__file__).resolve().parents[2] / "static"
@@ -42,7 +48,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None) -> 
             "<!doctype html><html lang='en'><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>C0 agent capabilities</title><main><h1>C0 agent capabilities</h1>"
-            "<p>This M01 reference runtime exposes a health endpoint and OpenAPI. "
+            "<p>This reference runtime exposes a health endpoint and OpenAPI. "
             "Authentication, storage, search and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
@@ -52,10 +58,13 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None) -> 
     async def health() -> dict[str, str]:
         return {**core_health(), "app_version": __version__}
 
+    if not base_path:
+        return instance_app
+
     # NS8's Traefik route preserves /czero/<module-id>. A mount gives each
     # instance its own stable external prefix and makes OpenAPI account for it.
     root = FastAPI(openapi_url=None, docs_url=None, redoc_url=None)
-    root.mount(f"/czero/{instance_id}", instance_app, name=instance_id)
+    root.mount(base_path, instance_app, name=instance_id)
     return root
 
 

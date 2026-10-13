@@ -5,6 +5,17 @@
     "description": "Get czero configuration",
     "examples": [],
     "type": "object",
-    "properties": {},
-    "additionalProperties": false
+    "properties": {
+        "host": {
+            "type": "string"
+        },
+        "lets_encrypt": {
+            "type": "boolean"
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "host",
+        "lets_encrypt"
+    ]
 }

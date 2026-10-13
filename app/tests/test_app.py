@@ -38,7 +38,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
         "status": "ok",
         "service": "czero",
         "core_version": "0.1.0",
-        "app_version": "0.1.0",
+        "app_version": "0.2.0",
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
 
@@ -55,10 +55,29 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.1.0"
+    assert document["info"]["version"] == "0.2.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
 def test_invalid_module_id_is_rejected():
     with pytest.raises(ValueError, match="assigned Czero module id"):
         create_app("other1", STATIC)
+
+
+def test_hostname_root_endpoints_and_openapi():
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=create_app("czero17", STATIC, "")),
+                               base_url="https://c0.example.test") as session:
+            for path in ("/", "/agents", "/api/v1/health", "/openapi.json", "/docs"):
+                assert (await session.get(path)).status_code == 200
+            document = (await session.get("/openapi.json")).json()
+            assert "/api/v1/health" in document["paths"]
+            assert "servers" not in document
+            assert (await session.get("/czero/czero17/api/v1/health")).status_code == 404
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize("path", ["/arbitrary", "/czero/czero18", "/", "https://other.test"])
+def test_invalid_base_path_is_rejected(path):
+    with pytest.raises(ValueError, match="CZERO_BASE_PATH"):
+        create_app("czero17", STATIC, path)

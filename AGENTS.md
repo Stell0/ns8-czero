@@ -2,6 +2,13 @@
 
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 and M01 are complete with local/CI/QEMU and documentation evidence. M02 configuration is active. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
+## M02 implementation conventions (verification pending)
+
+- Keep configure steps focused: `10validate` checks native route ownership; `20configure-route` delegates TLS and explicitly clears legacy `path` with `null`; `40persist` writes only non-secrets after route acceptance; `80start_services` restarts; `90wait-ready` bounds local health checks. Do not hide native route/certificate failures.
+- Persist hostname lowercase and certificate flags as `true`/`false`. An explicitly empty `CZERO_BASE_PATH` means hostname-root routing. Update hooks initialize a missing key to the legacy instance prefix, never overwrite a configured empty key.
+- Track admin task listeners, including repeated progress events, and remove them on every terminal result, task creation failure and Vue destruction. Field errors use native validation parameters. Only English translation source is edited.
+- Synthetic `.test` hosts and certificate exceptions belong only to disposable QEMU tests. The operator's live-testing pause remains active.
+
 ## Established M01 conventions
 
 - `packages/czero-core` contains reusable runtime operations and an independent version; `app` owns FastAPI transport, route composition and the separate static application UI. Both currently have version `0.1.0`. Core is a local package dependency until M13 distribution work.
@@ -9,14 +16,14 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 - Application routes currently provide a landing page, `/api/v1/health`, `/openapi.json`, `/docs` and an honest `/agents` introduction. They have no authentication or persistence yet. Keep the application UI separate from the compiled NS8 Vue administration UI.
 - `app/uv.lock` locks runtime dependencies. Build non-editable packages into `/opt/czero/.venv` in both container stages: generated console-script interpreter paths must not change when the virtualenv is copied. The final stage runs as UID 10001 and removes base-image package installers; copy only the virtualenv and static runtime files.
 - Audit installed dependency wheels too: FastAPI currently bundles `.agents` authoring skills, which the builder removes. The publisher runs `tests/audit_runtime.py` against the assembled image through stdin before publication; this repository-only check rejects development files and installed build/test tools.
-- The inherited Core `get-status` action expects no input (`null`), so omit `data` in its UI/API task payload. Sending `{}` fails Core input validation. Custom Czero configuration remains `{}` until M02.
+- The inherited Core `get-status` action expects no input (`null`), so omit `data` in its UI/API task payload. Sending `{}` fails Core input validation. Czero configuration accepts a required DNS `host` and optional boolean `lets_encrypt`.
 - The service unit uses `%N`, so the Podman container is named `czero`, not `czero.service`. Check request logs with that container name. Uvicorn access logs are enabled; Robot verifies a real health request appears in the logs.
 - Run pytest across `app/tests`, `packages/czero-core/tests` and `tests/unit`. QEMU verifies mounted application routes, configuration/rejection, logs, restart, forced native update and disposable uninstall, with admin and end-user browser assertions. A same-image forced update does not prove a future database migration.
 - Core reloads units and image environment during update but delegates service restart to hooks. `update-module.d/20instance-id` reconciles the non-secret ID missing from M00, then `80restart` uses native `try-restart` so running containers are replaced and unconfigured instances remain stopped.
 
 ## Established M00 conventions
 
-- Module image: `ghcr.io/stell0/czero`; lifecycle service: `czero.service`. The instance-owned route is `/czero/<module-id>/`. M01 adds FastAPI and the separate application UI; authentication remains pending M05.
+- Module image: `ghcr.io/stell0/czero`; lifecycle service: `czero.service`. M02 registers an instance-owned hostname route with HTTPS redirection; existing M01 prefix routes are preserved until hostname configuration. M01 adds FastAPI and the separate application UI; authentication remains pending M05.
 - Module images carry OCI source, revision, license and product title labels. Source labels preserve repository attribution; existing package Actions permissions may still need a one-time operator repair.
 - `build-images.sh` packages only `imageroot/` and generated `ui/dist/` into the NS8 module image. Preserve this explicit runtime allowlist. M01 replaces the pinned M00 echo stub with the separately built `czero-app` component image.
 - Publication needs both `contents: read` and `packages: write`. The upstream reusable publisher explicitly removes checkout access; the small local job was adapted from its steps while the repository was private and is retained after the repository became public. QEMU runs only after successful publication and checks install and forced native update scenarios; M00 has no older released predecessor. UI tests run every time. A green wrapper with skipped tests is not evidence.

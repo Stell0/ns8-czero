@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (13 October 2026): M00 and M01 are complete; M02 configuration is in development.** Czero provides a FastAPI application, a small end-user landing page and a separately versioned C0 Core package. Local, published-image and QEMU lifecycle/browser checks pass. Further interactive Playwright and live testing are temporarily waived by the operator. The repository and container packages are public. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
+**Status (13 October 2026): M00 and M01 are complete; M02 hostname configuration is implemented; publication and QEMU verification are pending.** Czero provides a FastAPI application, a small end-user landing page and a separately versioned C0 Core package. M01 local, published-image and QEMU lifecycle/browser checks pass. Further interactive Playwright and live testing are temporarily waived by the operator. The repository and container packages are public. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
 
 ## Why C0?
 
@@ -54,13 +54,13 @@ Development-only files (`AGENTS.md`, skills, CI, tests, build scripts, templates
 
 ## Current interfaces
 
-M01 serves these paths beneath `/czero/<module-id>` on the cluster web host:
+M02 serves these paths at the configured application hostname. Existing M01 instances keep `/czero/<module-id>` on the cluster web host until hostname configuration:
 
 | Path | Current behavior |
 | --- | --- |
 | `/` | Static application landing page with API and agent links |
-| `/api/v1/health` | JSON status and Core/application versions (`0.1.0`) |
-| `/openapi.json` | OpenAPI schema for the health endpoint and instance prefix |
+| `/api/v1/health` | JSON status, Core `0.1.0` and application `0.2.0` versions |
+| `/openapi.json` | OpenAPI health schema with the configured root or legacy prefix |
 | `/docs` | Swagger API documentation |
 | `/agents` | Introduction describing the available health/OpenAPI capabilities |
 
@@ -92,11 +92,13 @@ Prefer the maintained patterns linked directly in each milestone. The repository
 
 `build-images.sh` builds the small `ghcr.io/stell0/czero` NS8 module image and the separate `ghcr.io/stell0/czero-app` Python component. The module contains actions and the compiled administration UI; the component contains installed Core/app runtime packages and the static user page. Its Python base and runtime dependencies are pinned, and the app runs as an unprivileged user. Repository instructions, tests, CI, skills and builder tools stay outside the runtime filesystem.
 
-Settings Save configures `{}`, enables `czero.service` on an allocated loopback port, and registers `/czero/<module-id>/` in Traefik. The app preserves that prefix. Native update hooks reconcile the M00 instance identity and restart running services; unconfigured services stay stopped. Hostname/TLS configuration arrives in M02 and login in M05. The M01 QEMU suite has passed Debian 13/update and Rocky 9/install, including access logs, restart, invalid-input rejection, browser settings/service recovery and disposable removal. The dedicated live instance was upgraded from M00 to M01 successfully: health, service status, invalid-input rejection, Settings Save and basic app navigation passed before the operator suspended further live testing. Remaining live restart/refresh and final inventory checks are waived. No release is ready.
+In Czero **Settings**, enter a fully qualified application DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits certificate issuance; otherwise NS8 uses its configured certificate. Save registers the hostname in Traefik, redirects HTTP to HTTPS, restarts the application and waits for local health. The saved application link opens `https://<hostname>/`. Settings survive restart/update; repeated Save retains the same route, and changing the hostname replaces its old rule. Conflicting hostnames and malformed settings are rejected. Route/certificate failure leaves the previous saved configuration intact.
 
-For development installation, use the native NS8 `add-module` action with `image: "ghcr.io/stell0/czero:main"` and your node id. Open the installed module's Settings and click Save, then visit `/czero/<module-id>/` or `/czero/<module-id>/api/v1/health` on the cluster web host. Check PLAN.md for the tested commit and image digest. `:main` and `:latest` track development builds; they are not stable releases. Core 3.21.0 displays digest-only image URLs incorrectly in inventory, although installation works.
+The native API accepts `configure-module` data such as `{"host":"c0.example.test","lets_encrypt":false}`; `get-configuration` returns those normalized settings (empty host before configuration). TLS belongs to Traefik; the app listens only on its allocated loopback port. No provider credentials are introduced. M02's 40 local tests and production UI build pass; published-image and disposable QEMU/browser verification is pending. Interactive Playwright and live tests remain temporarily waived. Authentication arrives in M05. No release is ready.
 
-Install test dependencies in a development virtualenv with `pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'`, then run `python -m pytest -q app/tests packages/czero-core/tests tests/unit` (18 tests). Runtime builds use `app/uv.lock` with `uv sync --frozen --no-dev --no-editable`. Build the admin UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies native lifecycle in disposable QEMU. Browser checks create a random temporary administrator and assert Settings Save recovering a deliberately stopped service, About, the landing page, health, OpenAPI and agent introduction. They never use live credentials. Genuine earlier-version data migration tests arrive in M04.
+For development installation, use the native NS8 `add-module` action with `image: "ghcr.io/stell0/czero:main"` and your node id. Open the installed module's Settings, enter its DNS hostname and save, then open the saved application link. Older M01 instances retain their cluster-host prefix until configured. Check PLAN.md for the tested commit and image digest. `:main` and `:latest` track development builds; they are not stable releases. Core 3.21.0 displays digest-only image URLs incorrectly in inventory, although installation works.
+
+Install test dependencies in a development virtualenv with `pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'`, then run `python -m pytest -q app/tests packages/czero-core/tests tests/unit` (40 tests). Runtime builds use `app/uv.lock` with `uv sync --frozen --no-dev --no-editable`. Build the admin UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies native lifecycle in disposable QEMU. Browser checks create a random temporary administrator and assert Settings Save recovering a deliberately stopped service, About, the landing page, health, OpenAPI and agent introduction. They never use live credentials. Genuine earlier-version data migration tests arrive in M04.
 
 Publication uses `GITHUB_TOKEN` with explicit checkout and package-write permissions; each container package must grant the repository Actions Write access. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases. Private source checkout is supported; private container packages would also require authenticated QEMU/guest pulls. Package naming follows Hermes: remove the repository’s `ns8-` prefix.
 

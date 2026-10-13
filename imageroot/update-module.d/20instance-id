@@ -5,5 +5,9 @@
 import os
 import agent
 
-# M00 instances did not persist the identity required by the application.
-agent.set_env("CZERO_MODULE_ID", os.environ["MODULE_ID"])
+# M00 instances did not persist identity; M01 instances used a path route.
+# Do not replace an explicitly empty base path configured for hostname routing.
+env = {"CZERO_MODULE_ID": os.environ["MODULE_ID"]}
+if "CZERO_BASE_PATH" not in os.environ:
+    env["CZERO_BASE_PATH"] = "/czero/" + os.environ["MODULE_ID"]
+agent.mset_env(env)

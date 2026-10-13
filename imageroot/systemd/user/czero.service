@@ -24,6 +24,7 @@ ExecStart=/usr/bin/podman run \
     --replace --name=%N \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
     --env=CZERO_MODULE_ID=${CZERO_MODULE_ID} \
+    --env=CZERO_BASE_PATH=${CZERO_BASE_PATH} \
     ${CZERO_APP_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/czero.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/czero.ctr-id

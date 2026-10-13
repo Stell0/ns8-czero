@@ -23,7 +23,35 @@
       <cv-column>
         <cv-tile light>
           <cv-form @submit.prevent="configureModule">
-            <p>{{ $t("settings.smoke_stub") }}</p>
+            <p>{{ $t("settings.description") }}</p>
+            <NsTextInput
+              v-model.trim="host"
+              ref="host"
+              :label="$t('settings.host')"
+              :helper-text="$t('settings.host_help')"
+              :invalid-message="error.host"
+              :disabled="loading.getConfiguration || loading.configureModule"
+            />
+            <NsToggle
+              v-model="letsEncrypt"
+              :label="$t('settings.lets_encrypt')"
+              :disabled="loading.getConfiguration || loading.configureModule"
+            />
+            <p>{{ $t("settings.certificate_help") }}</p>
+            <p v-if="savedHost">
+              <a
+                :href="'https://' + savedHost + '/'"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ $t("settings.open_application") }}
+              </a>
+            </p>
+            <NsProgressBar
+              v-if="loading.configureModule"
+              :value="progress"
+              :indeterminate="!progress"
+            />
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification
@@ -77,6 +105,11 @@ export default {
         page: "settings",
       },
       urlCheckInterval: null,
+      host: "",
+      savedHost: "",
+      letsEncrypt: false,
+      progress: 0,
+      taskListeners: [],
       loading: {
         getConfiguration: false,
         configureModule: false,
@@ -84,6 +117,7 @@ export default {
       error: {
         getConfiguration: "",
         configureModule: "",
+        host: "",
       },
     };
   },
@@ -100,10 +134,27 @@ export default {
     clearInterval(this.urlCheckInterval);
     next();
   },
+  beforeDestroy() {
+    clearInterval(this.urlCheckInterval);
+    this.clearTaskListeners();
+  },
   created() {
     this.getConfiguration();
   },
   methods: {
+    listenTask(event, handler, repeated = false) {
+      this.taskListeners.push({ event, handler });
+      this.core.$root[repeated ? "$on" : "$once"](event, handler);
+    },
+    clearTaskListeners(action = "") {
+      this.taskListeners = this.taskListeners.filter(({ event, handler }) => {
+        if (!action || event.startsWith(action + "-")) {
+          this.core.$root.$off(event, handler);
+          return false;
+        }
+        return true;
+      });
+    },
     async getConfiguration() {
       this.loading.getConfiguration = true;
       this.error.getConfiguration = "";
@@ -111,13 +162,13 @@ export default {
       const eventId = this.getUuid();
 
       // register to task error
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-aborted-${eventId}`,
         this.getConfigurationAborted
       );
 
       // register to task completion
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-completed-${eventId}`,
         this.getConfigurationCompleted
       );
@@ -138,54 +189,76 @@ export default {
         console.error(`error creating task ${taskAction}`, err);
         this.error.getConfiguration = this.getErrorMessage(err);
         this.loading.getConfiguration = false;
+        this.clearTaskListeners(taskAction);
         return;
       }
     },
-    getConfigurationAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
+    getConfigurationAborted() {
+      this.clearTaskListeners("get-configuration");
       this.error.getConfiguration = this.$t("error.generic_error");
       this.loading.getConfiguration = false;
     },
-    getConfigurationCompleted() {
+    getConfigurationCompleted(taskContext, taskResult) {
+      this.clearTaskListeners("get-configuration");
+      this.host = taskResult.output.host;
+      this.savedHost = this.host;
+      this.letsEncrypt = taskResult.output.lets_encrypt;
       this.loading.getConfiguration = false;
     },
     configureModuleValidationFailed(validationErrors) {
+      this.clearTaskListeners("configure-module");
       this.loading.configureModule = false;
-      let focusAlreadySet = false;
-
       for (const validationError of validationErrors) {
-        const field = validationError.field;
-
-        if (field !== "(root)") {
-          // set i18n error message
-          this.error[field] = this.$t("settings." + validationError.error);
-
-          if (!focusAlreadySet) {
-            this.focusElement(field);
-            focusAlreadySet = true;
-          }
+        if (
+          validationError.parameter === "host" ||
+          validationError.field === "host"
+        ) {
+          this.error.host =
+            validationError.error === "domain_already_used_in_traefik"
+              ? this.$t("settings.domain_already_used_in_traefik")
+              : this.$t("settings.host_invalid");
+          this.focusElement("host");
+        } else {
+          this.error.configureModule = this.$t("error.validation_error");
         }
       }
     },
+    configureModuleProgressUpdated(progress) {
+      this.progress = progress;
+    },
     async configureModule() {
+      this.error.host = "";
+      this.error.configureModule = "";
+      if (!this.host) {
+        this.error.host = this.$t("common.required");
+        this.focusElement("host");
+        return;
+      }
+      this.progress = 0;
       this.loading.configureModule = true;
       const taskAction = "configure-module";
       const eventId = this.getUuid();
 
       // register to task error
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-aborted-${eventId}`,
         this.configureModuleAborted
       );
 
+      this.listenTask(
+        `${taskAction}-progress-${eventId}`,
+        this.configureModuleProgressUpdated,
+        true
+      );
+
       // register to task validation
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-validation-failed-${eventId}`,
         this.configureModuleValidationFailed
       );
 
       // register to task completion
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
       );
@@ -193,12 +266,16 @@ export default {
       const res = await to(
         this.createModuleTaskForApp(this.instanceName, {
           action: taskAction,
-          data: {},
+          data: {
+            host: this.host.toLowerCase(),
+            lets_encrypt: this.letsEncrypt,
+          },
           extra: {
             title: this.$t("settings.configure_instance", {
               instance: this.instanceName,
             }),
             description: this.$t("common.processing"),
+            isProgressNotified: true,
             eventId,
           },
         })
@@ -209,15 +286,17 @@ export default {
         console.error(`error creating task ${taskAction}`, err);
         this.error.configureModule = this.getErrorMessage(err);
         this.loading.configureModule = false;
+        this.clearTaskListeners(taskAction);
         return;
       }
     },
-    configureModuleAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
+    configureModuleAborted() {
+      this.clearTaskListeners("configure-module");
       this.error.configureModule = this.$t("error.generic_error");
       this.loading.configureModule = false;
     },
     configureModuleCompleted() {
+      this.clearTaskListeners("configure-module");
       this.loading.configureModule = false;
 
       // reload configuration

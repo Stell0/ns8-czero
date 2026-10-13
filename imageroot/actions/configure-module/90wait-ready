@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+import agent
+
+url = "http://127.0.0.1:" + os.environ["TCP_PORT"] + "/api/v1/health"
+for attempt in range(15):
+    try:
+        with urllib.request.urlopen(url, timeout=2) as response:
+            health = json.load(response)
+        if health.get("status") == "ok" and health.get("service") == "czero":
+            agent.set_progress(100)
+            break
+    except (OSError, ValueError):
+        pass
+    agent.set_progress(int(attempt * 100 / 15))
+    time.sleep(1)
+else:
+    print("Czero application did not become ready", file=sys.stderr)
+    sys.exit(1)
