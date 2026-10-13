@@ -71,7 +71,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.volumes=czero-db-data" \
+    --label="org.nethserver.volumes=czero-db-data czero-sources" \
     --label="org.nethserver.images=${repobase}/czero-app:${imagetag} ${repobase}/czero-postgres:${imagetag}" \
     "${container}"
 # Commit the image

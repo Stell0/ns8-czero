@@ -33,7 +33,8 @@ ENV PATH="/opt/czero/.venv/bin:${PATH}" \
 # Dependencies are already installed by the builder; keep package installers
 # and build tooling out of the runtime filesystem.
 RUN python -m pip uninstall --yes pip setuptools \
-    && useradd --system --uid 10001 --create-home czero
+    && useradd --system --uid 10001 --create-home czero \
+    && install -d -o 10001 -g 10001 /var/lib/czero/sources
 WORKDIR /opt/czero
 COPY --from=builder --chown=10001:10001 /opt/czero/.venv /opt/czero/.venv
 COPY --chown=10001:10001 app/static /opt/czero/static

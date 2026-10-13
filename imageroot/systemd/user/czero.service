@@ -31,6 +31,7 @@ ExecStart=/usr/bin/podman run \
     --replace --name=%N \
     --pod-id-file=%t/czero.pod-id \
     --env-file=./passwords.env \
+    --volume=czero-sources:/var/lib/czero/sources:z \
     --env=CZERO_MODULE_ID=${CZERO_MODULE_ID} \
     --env=CZERO_BASE_PATH=${CZERO_BASE_PATH} \
     ${CZERO_APP_IMAGE}

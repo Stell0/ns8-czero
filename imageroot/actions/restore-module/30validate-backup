@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+from pathlib import Path
+import sys
+
+state = Path(os.environ['AGENT_STATE_DIR'])
+try:
+    metadata = json.loads((state / 'backup-metadata.json').read_text())
+    if type(metadata.get('format')) is not int or metadata.get('format') != 1 or not all(type(metadata.get(k)) is bool for k in ('app_active','app_enabled')):
+        raise ValueError('Unsupported C0 backup metadata')
+    with (state / 'czero.pg_dump').open('rb') as source:
+        if source.read(5) != b'PGDMP':
+            raise ValueError('Invalid C0 PostgreSQL archive')
+    for name in ('passwords.env','czero.pg_dump','backup-metadata.json'):
+        (state / name).chmod(0o600)
+except (OSError, ValueError):
+    print('C0 backup is missing or has an unsupported format',file=sys.stderr)
+    sys.exit(1)

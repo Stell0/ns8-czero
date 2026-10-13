@@ -2,13 +2,15 @@
 Library    SSHLibrary
 Library    CzeroActions.py
 Library    CzeroBrowser.py
-Suite Teardown    Remove disposable module
+Library    CzeroBackup.py
+Suite Teardown    Cleanup disposable Czero resources
 
 *** Variables ***
 ${SCENARIO}    install
 ${module_id}    ${EMPTY}
 ${other_id}    ${EMPTY}
 ${host}    ${EMPTY}
+${backup_repository}    ${EMPTY}
 
 *** Keywords ***
 Remove disposable module
@@ -24,6 +26,18 @@ Remove disposable module
         Should Be Equal As Integers    ${rc}    0
         Set Global Variable    ${module_id}    ${EMPTY}
     END
+
+Remove disposable backup resources
+    IF    $backup_repository
+        ${rc} =    Execute Command    api-cli run remove-backup-repository --data '{"id":"${backup_repository}"}'
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+        Set Global Variable    ${backup_repository}    ${EMPTY}
+    END
+
+Cleanup disposable Czero resources
+    Remove disposable module
+    Remove disposable backup resources
 
 Check legacy route
     ${output}    ${rc} =    Execute Command
@@ -46,13 +60,50 @@ Check application route
 
 *** Test Cases ***
 Install Czero with its own identity
-    ${output}    ${rc} =    Execute Command    add-module ${IMAGE_URL} 1
+    ${install_image} =    Set Variable    ${IMAGE_URL}
+    IF    $SCENARIO == 'update'
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:372601d2ea3386a2bfb1df94e253add82078a187f02b97a48490114d17cde88b
+    END
+    ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     ${installed_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${installed_id}
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
+    IF    $SCENARIO == 'update'
+        # Freeze the older component images too, not just the module shell.
+        ${rc} =    Execute Command
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:318f00884f04c23a0a6746a87e072a853e36269e3a72e1d66bc89bc10418db93','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:e8efa70f7da8eb931b2e366033e39a380ac37dca2ed146208a6f4f4520769a7d'})"
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+        # Seed a real predecessor database before running current lifecycle hooks.
+        ${rc} =    Execute Command
+        ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false}'
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+        ${rc} =    Execute Command
+        ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -v ON_ERROR_STOP=1 -c "CREATE TABLE czero_upgrade_probe (id int PRIMARY KEY); INSERT INTO czero_upgrade_probe VALUES (7);"
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+        ${rc} =    Execute Command
+        ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+        ${output}    ${rc} =    Execute Command
+        ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT id FROM czero_upgrade_probe;"
+        ...    return_rc=True
+        Should Be Equal As Integers    ${rc}    0
+        Should Be Equal    ${output}    7
+        # Return to a clean unconfigured fixture for the inherited preservation check.
+        ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-pod.service
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+        ${rc} =    Execute Command
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_HOST':'','CZERO_BASE_PATH':'/czero/${module_id}'})"
+        ...    return_rc=True    return_stdout=False
+        Should Be Equal As Integers    ${rc}    0
+    END
 
 Update an unconfigured instance without starting it
     Skip If    $SCENARIO != 'update'    Clean install scenario
@@ -68,7 +119,7 @@ Preserve a legacy prefix during native upgrade
     Skip If    $SCENARIO != 'update'    Clean install scenario
     # Disposable M01 fixture: prefix route and no persisted base-path setting.
     ${rc} =    Execute Command
-    ...    runagent -m ${module_id} python3 -c "import agent,os; m=os.environ['MODULE_ID']; agent.mset_env({'CZERO_MODULE_ID':m,'CZERO_BASE_PATH':'/czero/'+m}); agent.set_route({'instance':m,'url':'http://127.0.0.1:'+os.environ['TCP_PORT'],'path':'/czero/'+m,'http2https':False,'lets_encrypt':False})"
+    ...    runagent -m ${module_id} python3 -c "import agent,os; m=os.environ['MODULE_ID']; agent.mset_env({'CZERO_MODULE_ID':m,'CZERO_BASE_PATH':'/czero/'+m}); agent.set_route({'instance':m,'url':'http://127.0.0.1:'+os.environ['TCP_PORT'],'path':'/czero/'+m,'host':None,'http2https':False,'lets_encrypt':False})"
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero.service
@@ -290,6 +341,57 @@ Exercise the native module update
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user is-active czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
+
+Backup and restore into a clean disposable instance
+    ${before_identity}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero sh -c "printf retained-fixture > /var/lib/czero/sources/retained.txt"
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${backup} =    Create Disposable Backup    ${module_id}
+    Set Global Variable    ${backup_repository}    ${backup}[repository]
+    ${rc} =    Execute Command    api-cli run run-backup --data '{"id":${backup}[backup_id]}'
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} test ! -e /home/${module_id}/.config/state/czero.pg_dump
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    # Only the disposable Czero module is destroyed; native backup data remains.
+    Remove disposable module
+    ${output}    ${rc} =    Execute Command
+    ...    api-cli run restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","node":1}'
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${restored_id} =    Installed Module Id    ${output}
+    Set Global Variable    ${module_id}    ${restored_id}
+    Wait Until Keyword Succeeds    30s    2s    Check application route
+    ${identity}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${identity}    ${before_identity}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    2
+    ${output}    ${rc} =    Execute Command    runagent -m ${module_id} podman exec czero cat /var/lib/czero/sources/retained.txt
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    retained-fixture
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-configuration
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${config} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${config}[host]    ${host}
+    ${rc} =    Execute Command    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false}'
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Check application route
 
 Check saved settings and application HTTPS in a browser
     [Tags]    ui

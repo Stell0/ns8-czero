@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+metadata = json.loads((Path(os.environ['AGENT_STATE_DIR']) / 'backup-metadata.json').read_text())
+subprocess.run(['systemctl','--user','enable' if metadata['app_enabled'] else 'disable','czero.service'],check=True,stdout=sys.stderr)
+if metadata['app_active']:
+    # Native app startup invokes current packaged migrations after restoring data.
+    subprocess.run(['systemctl','--user','start','czero.service'],check=True,stdout=sys.stderr)
+
+for name in ('czero.pg_dump','backup-metadata.json','restore-previous-host'):
+    (Path(os.environ['AGENT_STATE_DIR']) / name).unlink(missing_ok=True)

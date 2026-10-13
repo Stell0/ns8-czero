@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# Copyright (C) 2025 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import agent
+
+state = Path(os.environ['AGENT_STATE_DIR'])
+image = os.environ['CZERO_POSTGRES_IMAGE']
+archive = state / 'czero.pg_dump'
+with archive.open('rb') as source:
+    digest = hashlib.file_digest(source,'sha256').hexdigest()
+receipt = state / 'restore-receipt.json'
+subprocess.run(['systemctl','--user','stop','czero-pod.service'],check=True)
+probe = subprocess.run(['podman','run','--rm','--network=none',
+    '--volume=czero-db-data:/var/lib/postgresql/data:Z,U','--entrypoint=sh',image,
+    '-c','test -s /var/lib/postgresql/data/PG_VERSION'])
+if probe.returncode == 0:
+    # Repeated delivery of the same completed restore must not overwrite data.
+    if receipt.exists() and json.loads(receipt.read_text()).get('dump_sha256') == digest:
+        sys.exit(0)
+    print('C0 restore requires a fresh database volume',file=sys.stderr)
+    sys.exit(1)
+if probe.returncode != 1:
+    print('Cannot inspect the C0 restore target volume',file=sys.stderr)
+    sys.exit(1)
+restore = state / 'restore-database'
+restore.mkdir(mode=0o755,exist_ok=True)
+restore.chmod(0o755)
+script = restore / '10restore.sh'
+script.write_text('''# Sourced by the upstream init server, before the permanent server starts.
+pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -U czero -d czero
+status=$?
+docker_temp_server_stop
+exit "$status"
+''')
+script.chmod(0o644)
+try:
+    with archive.open('rb') as source:
+        subprocess.run(['podman','run','--rm','--interactive','--network=none',
+            '--volume=czero-db-data:/var/lib/postgresql/data:Z,U',
+            f'--volume={restore}:/docker-entrypoint-initdb.d:ro,Z',
+            '--env-file='+str(state / 'passwords.env'), '--env=POSTGRES_USER=czero',
+            '--env=POSTGRES_DB=czero',image],stdin=source,check=True,stdout=sys.stderr)
+    with agent.safe_open(str(receipt)) as output:
+        json.dump({'format':1,'dump_sha256':digest},output)
+    receipt.chmod(0o600)
+finally:
+    shutil.rmtree(restore)

@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+# Copyright (C) 2025 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import os
+from pathlib import Path
+
+state = Path(os.environ['AGENT_STATE_DIR'])
+for name in ('czero.pg_dump','backup-metadata.json'):
+    (state / name).unlink(missing_ok=True)

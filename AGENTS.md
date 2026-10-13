@@ -2,13 +2,20 @@
 
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M03 are complete with local/CI/QEMU and documentation evidence. M04 native backup/restore implementation is active. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
+## M04 implementation conventions (verification pending)
+
+- Native dump/cleanup hooks prepare a mode-0600 custom PostgreSQL archive and backup format/service-state metadata. Restic includes these, `passwords.env` and `czero-sources`; never include live PostgreSQL files. Dumping a cold DB preserves prior database/pod state and does not start an unconfigured app.
+- Restore extends Core with numbered settings, validation, offline database, route and service steps. Keep new Core node/port/image identity; restore only C0 settings. Fail on invalid formats/archives and use `pg_restore --single-transaction --exit-on-error`. Receipts prevent overwriting initialized data on repeated delivery of an already completed archive.
+- The retained-source volume is infrastructure for later ingestion. Actual original-retention policy and coordination with file-writing ingest/worker operations must be verified in M07/M11; current M04 tests use a controlled retained file.
+- Disposable backup setup captures Core's generated encryption password with Robot logging disabled and returns only identifiers. Genuine upgrade tests pin both predecessor module and component digests, not mutable tags. All destructive backup/restore cases remain QEMU-only.
+
 ## Established M03 database conventions
 
 - Keep PostgreSQL and app in a native private pod; publish only the allocated app port on loopback. `czero.service` remains the app identity; pod and database are ordered dependencies. Active children use `PartOf` for pod restart propagation; retain a pod-recreation persistence test. Selected PostgreSQL supports notify and its entrypoint suppresses temporary-server notifications. Actual notify/startup, pod restart and database outage behavior pass QEMU.
 - Credentials are generated once with native atomic safe I/O into mode-0600 `state/passwords.env`, loaded by Podman env-file. Create/update invoke the same focused helper; never export credentials through `agent.set_env` or action stdout. Do not rotate initialized database passwords during configure.
 - Core owns packaged Alembic migrations and database operations. NS8 invokes the Core migration CLI before app startup. Migrations hold a PostgreSQL transaction/advisory lock and retain the knowledge-space identity across repeat runs. No NS8 lifecycle manager belongs in Core.
 - Health reports safe database status/schema/vector versions and returns 503 on unavailability. Driver exceptions and connection URLs never enter responses. Application health SQL runs in FastAPI's sync worker pool.
-- Keep upstream PGXS/compilers and all repository tests/configuration out of runtime images. PostgreSQL logical backup/restore is pending M04; do not describe it as ready.
+- Keep upstream PGXS/compilers and all repository tests/configuration out of runtime images. PostgreSQL logical backup/restore implementation is under M04 verification; do not describe native restore as passing until QEMU proves it.
 
 ## Established M02 configuration conventions
 

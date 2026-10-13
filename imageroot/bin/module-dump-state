@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# Copyright (C) 2025 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Prepare an atomic PostgreSQL dump for native NS8 Restic backup."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import agent
+
+
+def active(unit):
+    return subprocess.run(['systemctl','--user','is-active','--quiet',unit]).returncode == 0
+
+
+state = Path(os.environ['AGENT_STATE_DIR'])
+pod_active = active('czero-pod.service')
+db_active = active('czero-postgres.service')
+metadata = {'format': 1, 'app_active': active('czero.service'),
+    'app_enabled': subprocess.run(['systemctl','--user','is-enabled','--quiet','czero.service']).returncode == 0}
+old_umask = os.umask(0o077)
+try:
+    if not db_active:
+        subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True)
+    with agent.safe_open(str(state / 'czero.pg_dump'), 'wb') as output:
+        subprocess.run(['podman','exec','czero-postgres','pg_dump','-U','czero',
+                        '--format=custom','czero'],stdout=output,check=True)
+    with agent.safe_open(str(state / 'backup-metadata.json')) as output:
+        json.dump(metadata,output)
+except Exception:
+    (state / 'czero.pg_dump').unlink(missing_ok=True)
+    (state / 'backup-metadata.json').unlink(missing_ok=True)
+    raise
+finally:
+    os.umask(old_umask)
+    if not db_active:
+        subprocess.run(['systemctl','--user','stop','czero-postgres.service'],check=True)
+    if not pod_active:
+        subprocess.run(['systemctl','--user','stop','czero-pod.service'],check=True)
