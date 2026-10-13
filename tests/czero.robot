@@ -34,6 +34,16 @@ Install Czero with its own identity
     Set Global Variable    ${module_id}    ${installed_id}
     Should Start With    ${module_id}    czero
 
+Update an unconfigured instance without starting it
+    Skip If    $SCENARIO != 'update'    Clean install scenario
+    ${rc} =    Execute Command
+    ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user is-active czero.service
+    ...    return_rc=True    return_stdout=False
+    Should Not Be Equal As Integers    ${rc}    0
+
 Configure and reconfigure the smoke service
     FOR    ${attempt}    IN RANGE    2
         ${rc} =    Execute Command    api-cli run module/${module_id}/configure-module --data '{}'
@@ -70,12 +80,23 @@ Restart the installed service
 
 Exercise the native module update
     Skip If    $SCENARIO != 'update'    Clean install scenario
-    # M00 has no stable predecessor: force a real Core update of this image.
+    ${before}    ${rc} =    Execute Command    runagent -m ${module_id} podman inspect --format '{{.Id}}' czero
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    # M00 did not store this identity. The running process is unaffected until
+    # update replaces it, so this fixture detects both reconciliation/restart.
+    ${rc} =    Execute Command    runagent -m ${module_id} python3 -c "import agent; agent.unset_env('CZERO_MODULE_ID')"
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
     ${rc} =    Execute Command
     ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
     Wait Until Keyword Succeeds    30s    2s    Check smoke route
+    ${after}    ${rc} =    Execute Command    runagent -m ${module_id} podman inspect --format '{{.Id}}' czero
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Be Equal    ${before}    ${after}
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user is-active czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0

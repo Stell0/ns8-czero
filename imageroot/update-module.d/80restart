@@ -1,0 +1,9 @@
+#!/bin/bash
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Core has already refreshed the unit and image environment. Keep an
+# unconfigured/stopped instance stopped; replace a running old container.
+set -e
+exec 1>&2
+systemctl --user try-restart czero.service

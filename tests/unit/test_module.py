@@ -38,3 +38,13 @@ def test_configuration_is_machine_readable(monkeypatch, capsys):
     monkeypatch.setitem(sys.modules, "agent", SimpleNamespace())
     runpy.run_path(str(ROOT / "imageroot/actions/get-configuration/20read"))
     assert json.loads(capsys.readouterr().out) == {}
+
+
+def test_upgrade_from_missing_identity_keeps_stdout_clean(monkeypatch, capsys):
+    env = []
+    monkeypatch.delenv("CZERO_MODULE_ID", raising=False)
+    monkeypatch.setenv("MODULE_ID", "czero7")
+    monkeypatch.setitem(sys.modules, "agent", SimpleNamespace(set_env=lambda *args: env.append(args)))
+    runpy.run_path(str(ROOT / "imageroot/update-module.d/20instance-id"))
+    assert env == [("CZERO_MODULE_ID", "czero7")]
+    assert capsys.readouterr().out == ""

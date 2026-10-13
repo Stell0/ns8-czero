@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import os
+import agent
+
+# M00 instances did not persist the identity required by the application.
+agent.set_env("CZERO_MODULE_ID", os.environ["MODULE_ID"])
