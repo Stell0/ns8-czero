@@ -12,6 +12,7 @@ ${module_id}    ${EMPTY}
 ${other_id}    ${EMPTY}
 ${host}    ${EMPTY}
 ${backup_repository}    ${EMPTY}
+${health_run_count}    0
 
 *** Keywords ***
 Remove disposable module
@@ -116,6 +117,12 @@ Update an unconfigured instance without starting it
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user is-active czero.service
     ...    return_rc=True    return_stdout=False
     Should Not Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${scheduler} =    Evaluate    json.loads($output)    modules=json
+    Should Not Be True    ${scheduler}[timer_active]
+    Should Not Be True    ${scheduler}[worker_running]
 
 Preserve a legacy prefix during native upgrade
     Skip If    $SCENARIO != 'update'    Clean install scenario
@@ -344,6 +351,54 @@ Exercise the native module update
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
 
+Verify deterministic worker and native timer
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${scheduler} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${scheduler}[timer_active]
+    Should Be True    ${scheduler}[timer_enabled]
+    Should Not Be True    ${scheduler}[worker_failed]
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-worker.timer czero-worker.service
+    ...    return_rc=True    return_stdout=False    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${before}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM c0_task_runs t JOIN c0_scheduled_tasks s ON s.id=t.schedule_id WHERE s.name='health-hourly';"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -v ON_ERROR_STOP=1 -c "UPDATE c0_scheduled_tasks SET next_run_at=now()-interval '1 second' WHERE name='health-hourly';"
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-worker.service
+    ...    return_rc=True    return_stdout=False    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    ${state}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT j.state FROM c0_task_runs t JOIN c0_jobs j ON j.id=t.job_id JOIN c0_scheduled_tasks s ON s.id=t.schedule_id WHERE s.name='health-hourly' ORDER BY t.due_at DESC LIMIT 1;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${state}    succeeded
+    ${expected} =    Evaluate    int($before)+1
+    Set Global Variable    ${health_run_count}    ${expected}
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-worker.service
+    ...    return_rc=True    return_stdout=False    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    ${after}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM c0_task_runs t JOIN c0_scheduled_tasks s ON s.id=t.schedule_id WHERE s.name='health-hourly';"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${after}    ${expected}
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user restart czero.service
+    ...    return_rc=True    return_stdout=False    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    Wait Until Keyword Succeeds    30s    2s    Check application route
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${scheduler} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${scheduler}[timer_active]
+    Should Not Be True    ${scheduler}[worker_failed]
+
 Backup and restore into a clean disposable instance
     [Timeout]    10 minutes
     Log To Console    Backup phase: seed retained fixture
@@ -394,6 +449,11 @@ Backup and restore into a clean disposable instance
     ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    retained-fixture
+    ${count}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM c0_task_runs t JOIN c0_scheduled_tasks s ON s.id=t.schedule_id WHERE s.name='health-hourly';"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${count}    ${health_run_count}
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-configuration
     ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0

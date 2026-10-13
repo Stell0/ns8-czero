@@ -18,9 +18,15 @@ state = Path(os.environ['AGENT_STATE_DIR'])
 pod_active = active('czero-pod.service')
 db_active = active('czero-postgres.service')
 metadata = {'format': 1, 'app_active': active('czero.service'),
-    'app_enabled': subprocess.run(['systemctl','--user','is-enabled','--quiet','czero.service']).returncode == 0}
+    'app_enabled': subprocess.run(['systemctl','--user','is-enabled','--quiet','czero.service']).returncode == 0,
+    'scheduler_active': active('czero-worker.timer')}
 old_umask = os.umask(0o077)
+failed = False
 try:
+    # Keep the worker paused until Restic finishes copying retained files.
+    with agent.safe_open(str(state / 'backup-worker-state.json')) as output:
+        json.dump({'scheduler_active':metadata['scheduler_active']},output)
+    subprocess.run(['systemctl','--user','stop','czero-worker.timer','czero-worker.service'],check=True)
     if not db_active:
         subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True)
     with agent.safe_open(str(state / 'czero.pg_dump'), 'wb') as output:
@@ -29,6 +35,7 @@ try:
     with agent.safe_open(str(state / 'backup-metadata.json')) as output:
         json.dump(metadata,output)
 except Exception:
+    failed = True
     (state / 'czero.pg_dump').unlink(missing_ok=True)
     (state / 'backup-metadata.json').unlink(missing_ok=True)
     raise
@@ -38,3 +45,7 @@ finally:
         subprocess.run(['systemctl','--user','stop','czero-postgres.service'],check=True)
     if not pod_active:
         subprocess.run(['systemctl','--user','stop','czero-pod.service'],check=True)
+    if failed:
+        if metadata['scheduler_active']:
+            subprocess.run(['systemctl','--user','start','czero-worker.timer'],check=True)
+        (state / 'backup-worker-state.json').unlink(missing_ok=True)

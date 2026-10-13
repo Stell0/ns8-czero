@@ -2,13 +2,16 @@
 
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M05 are complete with local, CI/QEMU, documentation and permitted live evidence. M06 deterministic jobs/scheduler is active. The operator initially waived interactive Playwright/live testing on 13 October 2026, then reauthorized live testing only for the dedicated Czero instance. Interactive Playwright remains suspended. Retain automated CI/QEMU/Robot checks and report actual live evidence. Do not describe planned object/evidence storage, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
-## M06 queue/worker contracts (native timer pending)
+## M06 queue/worker contracts (native verification pending)
 
 - Core handler registration is trusted Python code with validated names, callable validators, retry/deadline caps and bounded canonical JSON. Request handler names never become imports, SQL or shell. Public JobService calls recheck persisted Admin membership in their transaction; worker-only methods remain private.
-- Queue idempotency fingerprints include handler and normalized payload. Conflicts fail atomically. Schedules use UTC fixed intervals and unique schedule/due records; missed intervals coalesce to one job. Seed health/hourly and bounded maintenance/weekly in migrations. Standalone Worker/REST now use these services; native timer and backup pause/resume remain pending.
+- Queue idempotency fingerprints include handler and normalized payload. Conflicts fail atomically. Schedules use UTC fixed intervals and unique schedule/due records; missed intervals coalesce to one job. Seed health/hourly and bounded maintenance/weekly in migrations. Standalone Worker/REST now use these services; native timer and backup pause/resume are implemented and awaiting disposable/live verification.
 
 - Worker execution is standalone POSIX main-thread code with session lock 49374, committed attempt claims, transactionally committed effects/completion and bounded retry/recovery. Handlers must use the supplied transaction and make external/file effects idempotent. Python deadlines require bounded I/O; the upcoming native container guard handles non-interruptible extension code. A failure after successful COMMIT must never requeue committed effects.
 - `app.job_handlers.build_registry` is the trusted shared API/worker extension point. Reuse auth read/write dependencies, CSRF/Origin and Core services for all job routes. Never execute jobs inside HTTP requests or log payload/result/exception text.
+
+- One native timer wakes a dedicated one-shot container from the app image/private pod. Requisite/PartOf/ordering ties it to the app without cold bootstrap; enable under the app target. Idle one-shot services are expected, not an app outage; inspect get-scheduler-status for timer/running/failure flags. Native container lifetime is bounded at 150 seconds.
+- Backup stops timer and worker before dump and retains the pause through Restic copy. A private transient resume flag stays outside backup includes; cleanup resumes prior active timer state, and dump failure restores it immediately. Restore accepts older format-1 archives and preserves an explicitly paused scheduler. Extend foreground file-write coordination when M08 introduces it.
 
 ## Established M05 identity conventions
 

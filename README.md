@@ -65,9 +65,9 @@ Use the native NS8 Backup page to select Czero and a supported destination, run 
 
 The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup coordination with workers and file-writing ingestion must be extended as those features arrive.
 
-M06 currently adds Core queue/schedule storage and services with registered deterministic health/maintenance handlers, validated idempotency and Admin authorization. Standalone worker execution and authenticated REST pass local database tests. Native periodic execution and backup pause/resume are the next slice; background dispatch is not configured yet.
+M06 currently adds Core queue/schedule storage and services with registered deterministic health/maintenance handlers, validated idempotency and Admin authorization. Standalone worker execution and authenticated REST pass local database tests. Native timer/one-shot execution and backup pause/resume are implemented and awaiting QEMU/live verification.
 
-Admins can POST `{"handler":"health","payload":{},"idempotency_key":"health-check-1"}` to `/api/v1/jobs`. Repeating the same request returns the same job; a conflicting handler/payload returns 409. Only registered `health`/`maintenance` accept empty payloads in the default app. Schedule intervals range from 60 seconds to 31 days; missed intervals coalesce to one due run. Pausing stops future scheduling; queued jobs may complete. Worker attempts and terminal state survive restarts; failed attempts use bounded backoff. Handlers use one database transaction for effects/completion, and must make file/network effects idempotent. Job history retention is 30 days with bounded weekly pruning. Native timer/backup/live verification remains pending.
+Admins can POST `{"handler":"health","payload":{},"idempotency_key":"health-check-1"}` to `/api/v1/jobs`. Repeating the same request returns the same job; a conflicting handler/payload returns 409. Only registered `health`/`maintenance` accept empty payloads in the default app. Schedule intervals range from 60 seconds to 31 days; missed intervals coalesce to one due run. Pausing stops future scheduling; queued jobs may complete. Worker attempts and terminal state survive restarts; failed attempts use bounded backoff. Handlers use one database transaction for effects/completion, and must make file/network effects idempotent. Job history retention is 30 days with bounded weekly pruning. The native timer wakes about one minute after activation and one minute after worker completion. Python handler deadlines are capped at 30 seconds and the native container at 150 seconds. The worker is idle between runs; `get-scheduler-status` reports timer, running and failure state. Backup pauses worker/timer through the copy and restores prior timer state. QEMU/live verification of these native behaviors remains pending.
 
 ## Remaining roadmap
 
@@ -95,7 +95,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 174 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for forty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 182 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for forty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

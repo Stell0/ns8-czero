@@ -1,0 +1,7 @@
+#!/bin/bash
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+set -e
+exec 1>&2
+# Attach to app startup; never start an unconfigured app via a timer.
+systemctl --user enable czero-worker.timer

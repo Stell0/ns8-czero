@@ -1,0 +1,18 @@
+# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Adapt the maintained NS8 mail/Porthos timer convention.
+[Unit]
+Description=C0 deterministic scheduler wake
+PartOf=czero.service
+Requisite=czero.service
+After=czero.service
+
+[Timer]
+OnActiveSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=5s
+Unit=czero-worker.service
+
+[Install]
+WantedBy=czero.service

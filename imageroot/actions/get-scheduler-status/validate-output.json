@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Native scheduler status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["timer_active", "timer_enabled", "worker_running", "worker_failed"],
+  "properties": {
+    "timer_active": {"type": "boolean"},
+    "timer_enabled": {"type": "boolean"},
+    "worker_running": {"type": "boolean"},
+    "worker_failed": {"type": "boolean"}
+  }
+}

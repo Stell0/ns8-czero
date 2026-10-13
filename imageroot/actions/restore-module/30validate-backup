@@ -11,6 +11,8 @@ try:
     metadata = json.loads((state / 'backup-metadata.json').read_text())
     if not isinstance(metadata,dict) or type(metadata.get('format')) is not int or metadata.get('format') != 1 or not all(type(metadata.get(k)) is bool for k in ('app_active','app_enabled')):
         raise ValueError('Unsupported C0 backup metadata')
+    if 'scheduler_active' in metadata and type(metadata['scheduler_active']) is not bool:
+        raise ValueError('Invalid C0 scheduler state')
     with (state / 'czero.pg_dump').open('rb') as source:
         if source.read(5) != b'PGDMP':
             raise ValueError('Invalid C0 PostgreSQL archive')

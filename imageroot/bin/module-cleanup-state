@@ -2,9 +2,17 @@
 # Copyright (C) 2025 Nethesis S.r.l.
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
+import json
 import os
 from pathlib import Path
+import subprocess
 
 state = Path(os.environ['AGENT_STATE_DIR'])
+worker_state = state / 'backup-worker-state.json'
+if worker_state.exists():
+    saved = json.loads(worker_state.read_text())
+    if saved.get('scheduler_active') is True:
+        subprocess.run(['systemctl','--user','start','czero-worker.timer'],check=True)
+    worker_state.unlink()
 for name in ('czero.pg_dump','backup-metadata.json'):
     (state / name).unlink(missing_ok=True)

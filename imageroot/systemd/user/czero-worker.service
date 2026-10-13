@@ -1,0 +1,25 @@
+# Copyright (C) 2023 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Adapt the maintained NS8 mail one-shot service convention.
+[Unit]
+Description=C0 deterministic jobs worker
+PartOf=czero.service czero-pod.service
+Requisite=czero.service
+After=czero.service czero-postgres.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+TimeoutStartSec=150
+TimeoutStopSec=20
+ExecStartPre=/usr/bin/podman rm --ignore -f czero-worker
+ExecStart=/usr/bin/podman run --rm --name=czero-worker \
+    --pod-id-file=%t/czero.pod-id \
+    --env-file=./passwords.env --env-file=./auth.env \
+    --volume=czero-sources:/var/lib/czero/sources:z \
+    --entrypoint=python ${CZERO_APP_IMAGE} -m czero_app.worker
+ExecStop=/usr/bin/podman stop --ignore -t 10 czero-worker
+ExecStopPost=/usr/bin/podman rm --ignore -f czero-worker
+SyslogIdentifier=%N
