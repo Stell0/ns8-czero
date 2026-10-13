@@ -1,6 +1,6 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 QEMU lifecycle/browser and live smoke acceptance pass; native-token publication still lacks the package Actions Write grant; private checkout and image construction pass. M00 remains open. Packaging uses `czero` identity and a pinned HTTP echo stub. Do not describe planned C0 features as implemented. Start with M00.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 acceptance passes, including native-token publication, current-image QEMU lifecycle/browser and live smoke checks. Verify final documentation CI before starting M01. Packaging uses `czero` identity and a pinned HTTP echo stub. Do not describe planned C0 features as implemented. Start with the first pending milestone in PLAN.md.
 
 ## Established M00 conventions
 
