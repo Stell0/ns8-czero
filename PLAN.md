@@ -1,6 +1,6 @@
 # C0 implementation plan — milestone-by-milestone Codex handoff
 
-**State:** M00 acceptance passes: native image publication, Debian 13/install and Rocky 9/update/browser QEMU, and current-image live checks. Czero remains an HTTP echo stub. Verify the final M00 documentation push before starting M01.
+**State:** M00 is complete. Native publication, local checks, Debian 13/update and Rocky 9/install/browser QEMU passed on the final documentation commit; the dedicated live instance runs the verified M00 stub. M01 is active and remains unimplemented.
 
 This plan is intended to be **executed iteratively**: inspect, refine the current milestone, implement, test, commit/push, verify CI, perform applicable live and Playwright MCP checks, update docs, and only then advance. Never implement several milestones blindly before reviewing the prior milestone's results.
 
@@ -63,7 +63,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 - [x] Build/publish from M00 with explicit checkout/package permissions; inspect image metadata and retain Trivy/SBOM artifacts. Gate automatic QEMU on completed successful publication.
 - [x] Add and run local contracts and Robot install/configure/reconfigure/rejection/restart/update/uninstall checks. Create random disposable browser administrators; assert Settings Save restores a stopped Czero service.
 - [x] Verify anonymous image access and run Playwright MCP/live installation, settings, status, errors, restart, HTTP and refresh checks on only the dedicated Czero module.
-- [ ] Restore current CI publication, inspect build/scans and ensuing QEMU results; reconcile all three documents, push and verify documentation CI before closing M00.
+- [x] Restore native-token publication after the package Actions Write grant; inspect scans, image metadata/archive, final-documentation commit CI and both QEMU reports; update and test only the dedicated live Czero instance; reconcile all three documents.
 
 **Source findings and implementation:** Inspected current kickstart build/actions, Hermes component packaging, Core agent/route/lifecycle contracts and `ns8-github-actions@v1` publisher, metadata, QEMU and Robot runner. Core supplies image environment and cleanup. The upstream publisher's packages-only permission block stripped private checkout access; adapt its small build/push job locally with `contents: read` and `packages: write`. The upstream metadata job masks pull errors; use authenticated inspection that fails on errors. Keep native reusable QEMU. Docker Hub tags `jmalloc/echo-server:v0.3.7` and `node:24.21.0-slim` were verified. Installed NethServer module/container/commit skills are active. Runtime packaging explicitly allows only `imageroot/` and generated `ui/dist/`; archive inspection found 99 entries and no development files.
 
@@ -79,7 +79,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 **Package grant recovery (13 October 2026):** The operator added `Stell0/ns8-czero` to package Actions access with Write. Retrying [publication 38355628389](https://github.com/Stell0/ns8-czero/actions/runs/38355628389) at `7ff5516f0663568aad4a898e2872e5531d18689c` now succeeds completely: build, native-token push, authenticated metadata and all four Trivy/SBOM jobs. Published `:main`/`:latest` digest `sha256:63d0fd7c934f7bdf8b170bb1bba04de11a4b80ddca6c8ca0ff80205002b62981`; anonymous resolution and OCI source/revision/license/title labels were inspected. Archive audit again finds 99 entries entirely under `imageroot/` and `ui/`, with no forbidden development paths. Four inspected SARIF reports still contain 29 UI and 95 echo-runtime findings, zero module/imageroot findings, and four CycloneDX SBOMs. [Automatic QEMU 38355927140](https://github.com/Stell0/ns8-czero/actions/runs/38355927140) completed successfully. Downloaded XML reports confirm Debian 13/install: six lifecycle passes and the intentional update-only skip; Rocky 9/update: all seven tests pass, including browser service recovery. [Local CI 38355628449](https://github.com/Stell0/ns8-czero/actions/runs/38355628449) passes. Native live update of only Czero to this digest exits zero. Playwright MCP confirms Settings Save/refresh, active/enabled Status, About identity and HTTPS 200 with expected body. Configuration remains `{}`; unknown settings exit 10 without disrupting HTTP; targeted restart exits zero and HTTP recovers. Before/after inventory comparison confirms all unrelated instances unchanged. Normal TLS validation remains enabled.
 
-**Evidence:** M00 acceptance passes at `7ff5516f0663568aad4a898e2872e5531d18689c`, published digest `sha256:63d0fd7c934f7bdf8b170bb1bba04de11a4b80ddca6c8ca0ff80205002b62981`, with publication/scans, local tests, both QEMU suites and current-image live/Playwright checks recorded above. Final documentation push CI is the remaining transition gate; record its result before M01. No release or C0 REST/MCP capability exists. Live log visibility and reported dependency vulnerabilities remain documented limitations.
+**Evidence:** Implementation/recovery commits `dcaaf8974ddee410fa3a15b35f933783aa4f12fa`, `7ff5516f0663568aad4a898e2872e5531d18689c`; M00 closeout docs `dd26e4af403f3305c64db5e3659c8d9423560e1e`. Published `:main`/`:latest` image for `dd26e4a` resolves to `sha256:9f01b2c5c15c1d82976d2ceada955e1b1df82eafcdc9386d31508472b134f00e`. [Publish/scans 38359773901](https://github.com/Stell0/ns8-czero/actions/runs/38359773901), [local checks 38359773965](https://github.com/Stell0/ns8-czero/actions/runs/38359773965), and final [QEMU 38359921126](https://github.com/Stell0/ns8-czero/actions/runs/38359921126) pass. Downloaded Robot XML confirms Debian 13/update has six passes; Rocky 9/install has six passes and the expected update-only skip, with admin/browser smoke and disposable uninstall included. The prior current-runtime digest `sha256:63d0fd7c934f7bdf8b170bb1bba04de11a4b80ddca6c8ca0ff80205002b62981` was installed and tested live; final source-only metadata revision changes do not alter runtime behavior. Current live native update/status/config/error/restart/HTTPS/browser checks pass and unrelated inventory is unchanged. Eleven local pytest tests pass; archive inspection confirms runtime allowlist. Four SARIF/SBOM pairs were inspected: zero findings for module/imageroot, 29 UI and 95 echo dependency findings. No release or C0 REST/MCP capability exists. Live log visibility and reported dependency vulnerabilities remain documented limitations.
 
 ### M01 — Minimal Python runtime, Web UI and Core/application separation [ ]
 
@@ -87,13 +87,24 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 **Copy/adapt from:** [ns8-hermes-agent/build-images.sh](https://github.com/NethServer/ns8-hermes-agent/blob/main/build-images.sh) (component images); [ns8-kickstart/systemd service](https://github.com/NethServer/ns8-kickstart/blob/main/imageroot/systemd/user/kickstart.service); [ns8-dependencytrack/systemd components](https://github.com/NethServer/ns8-dependencytrack/tree/main/imageroot/systemd/user); [nethserver-containerfile skill](https://github.com/NethServer/agents/tree/main/skills/nethserver-containerfile).
 
+**Work plan (active, 13 October 2026):**
+
+- [ ] Add `packages/czero-core` as a small independently versioned Python distribution; keep FastAPI transport and C0-specific page/route composition in a separate `app` package. Do not add generic storage abstractions before their later milestones.
+- [ ] Build a pinned Python runtime component image, with locked runtime dependencies and explicit copies of only the Core and app runtime files. Replace the echo dependency in module metadata/service configuration while preserving short NS8 numbered actions and the separate compiled NS8 admin UI. Keep credentials, tests, CI and developer docs out of the runtime image.
+- [ ] Serve a minimal static end-user landing page, honest `/agents` introduction, OpenAPI and `GET /api/v1/health` beneath the existing instance route. Resolve and test the dynamic `/czero/<module-id>` prefix end-to-end; preserve HTTPS and instance isolation. Do not claim authentication before M05.
+- [ ] Add focused pytest coverage for Core/app package separation, mounted path behavior, JSON health contract, OpenAPI, agents page and failure responses. Extend Robot/QEMU to assert the public app page and endpoints, access/request logging, restart and forced update. Add a repeatable UI/API browser check.
+- [ ] Before implementation, validate package/image naming and path behavior against current NS8 image-label, service, action and root-path contracts. Run local tests/build/archive audit, push focused slices, inspect publication/scans and both QEMU legs, then exercise the dedicated live module and Playwright admin/app pages. Update all three docs with verified behavior, commit/run evidence and remaining auth/UI limitations.
+
+**Source findings:** Current kickstart confirms Core-provided dependency-image environment variables, rootless loopback service, allocated port and numbered action conventions. Hermes demonstrates separate component images via `buildah build`, a module dependency label and a systemd component unit; its large upstream application image/dependency choices are not suitable for C0. The official FastAPI Docker and proxy guidance supports a single ASGI process behind the existing Traefik route; test the actual NS8 preserved-prefix behavior rather than assume a proxy strips it. Pin the supported Python base and every runtime dependency after checking current upstream versions. Keep app UI static and independent from the NS8 Vue 2 admin UI.
+
+
 **Implement:** Minimal FastAPI runtime with `GET /api/v1/health`, OpenAPI, initial browser `/` page and honest `/agents` introductory page. Create clearly separated, versioned/releasable Python C0 Core package, application-specific extension module, and repository-only development files; use a pinned, minimal Python container and a user Web UI bundle. NS8 action scripts stay separate from FastAPI. Build all required images in CI.
 
 **Acceptance:** Install image, start systemd units, access browser and REST health through NS8 path/route, verify request logs and restart behavior, run pytest and QEMU smoke; no development files in runtime images. Playwright MCP browser health/UI check when feasible.
 
 **Documentation gate:** Record package/app boundaries in `AGENTS.md`; actual endpoints/UI and install caveats in `README.md`; tests and evidence in `PLAN.md`.
 
-**Evidence:** Pending.
+**Evidence:** Pending. Planning commit records the M00 exit evidence above; no M01 code or tests are implemented yet.
 
 ### M02 — NS8 configuration, Traefik and administrator UI [ ]
 
@@ -283,4 +294,4 @@ Only after complete acceptance should additional features enter the roadmap. Pre
 
 ## Current next action
 
-**M00 acceptance is complete.** Verify its final documentation push, then start M01 with a focused runtime/package subplan. Do not claim C0 application storage, RAG, OIDC or MCP exist yet. Iterate exactly one milestone at a time.
+**M01 is active.** Implement only the minimal Python runtime, separately versioned C0 Core package and app endpoints/UI described in its work plan. Do not claim C0 application storage, RAG, OIDC or MCP exist yet. Iterate exactly one milestone at a time.

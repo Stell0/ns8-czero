@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (13 October 2026): M00 packaging and smoke acceptance pass.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. The repository and package are public. C0 application features remain unimplemented; M01 introduces the Python runtime. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
+**Status (13 October 2026): M00 packaging and smoke acceptance pass; M01 is starting.** Packaging has been adapted from [NS8 kickstart](https://github.com/NethServer/ns8-kickstart) to `czero`, with a pinned HTTP echo stub. The repository and package are public. C0 application features remain unimplemented; M01 introduces the Python runtime. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
 
 ## Why C0?
 
