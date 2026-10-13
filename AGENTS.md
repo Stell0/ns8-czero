@@ -1,6 +1,6 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M04 are complete. M05 local, disposable and permitted live acceptance pass; documentation closeout is pending. M06 follows that gate. The operator initially waived interactive Playwright/live testing on 13 October 2026, then reauthorized live testing only for the dedicated Czero instance. Interactive Playwright remains suspended. Retain automated CI/QEMU/Robot checks and report actual live evidence. Do not describe planned object/evidence storage, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M05 are complete with local, CI/QEMU, documentation and permitted live evidence. M06 deterministic jobs/scheduler is active. The operator initially waived interactive Playwright/live testing on 13 October 2026, then reauthorized live testing only for the dedicated Czero instance. Interactive Playwright remains suspended. Retain automated CI/QEMU/Robot checks and report actual live evidence. Do not describe planned object/evidence storage, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
 ## Established M05 identity conventions
 

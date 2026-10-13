@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M04 are complete. M05 implementation passes local, disposable and permitted live acceptance; final documentation CI is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M05 are complete with local, disposable, documentation and permitted live evidence. M06 jobs/scheduler is active.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -33,7 +33,7 @@ Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabi
 
 ## Install and configure
 
-For development installation, use native NS8 `add-module` with image `ghcr.io/stell0/czero:main` and your node ID. The active M05 branch image is `ghcr.io/stell0/czero:feat-m05-authentication`. `:main` and `:latest` track development builds and are not stable releases; consult PLAN.md for tested commits/digests. The repository and module/app/database packages are public. Core 3.21.0 has an inventory display issue for digest-only image URLs, although installation works.
+For development installation, use native NS8 `add-module` with image `ghcr.io/stell0/czero:main` and your node ID. `:main` and `:latest` track development builds and are not stable releases; consult PLAN.md for tested commits/digests. The repository and module/app/database packages are public. Core 3.21.0 has an inventory display issue for digest-only image URLs, although installation works.
 
 In **Czero Settings**, enter a fully qualified DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits issuance; otherwise Traefik uses its configured certificate. Save registers HTTPS routing, redirects HTTP, restarts services and waits for local health. Conflicting or malformed hostnames are rejected. The saved application link opens `https://<hostname>/`. Native Let's Encrypt configuration and trusted application HTTPS were exercised on the authorized test instance.
 
