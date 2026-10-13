@@ -7,7 +7,7 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 - Native dump/cleanup hooks prepare a mode-0600 custom PostgreSQL archive and backup format/service-state metadata. Restic includes these, `passwords.env` and `czero-sources`; never include live PostgreSQL files. Dumping a cold DB preserves prior database/pod state and does not start an unconfigured app.
 - Restore extends Core with numbered settings, validation, offline database, route and service steps. Keep new Core node/port/image identity; restore only C0 settings. Fail on invalid formats/archives and use `pg_restore --single-transaction --exit-on-error`. Receipts prevent overwriting initialized data on repeated delivery of an already completed archive.
 - The retained-source volume is infrastructure for later ingestion. Actual original-retention policy and coordination with file-writing ingest/worker operations must be verified in M08/M06; current M04 tests use a controlled retained file.
-- Disposable backup setup captures Core's generated encryption password with Robot logging disabled and returns only identifiers. Genuine upgrade tests pin both predecessor module and component digests, not mutable tags. All destructive backup/restore cases remain QEMU-only.
+- Disposable backup setup captures Core's generated encryption password with Robot logging disabled and returns only identifiers. Genuine upgrade tests pin both predecessor module and component digests, not mutable tags. Require actual snapshots before donor removal; native repeated-delivery tests preserve post-restore database changes and verify restored credential modes. All destructive backup/restore cases remain QEMU-only.
 
 ## Established M03 database conventions
 

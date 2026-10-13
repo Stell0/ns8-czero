@@ -389,6 +389,26 @@ Backup and restore into a clean disposable instance
     Should Be Equal As Integers    ${rc}    0
     ${config} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${config}[host]    ${host}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} stat -c '%a' /home/${module_id}/.config/state/passwords.env
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    600
+    # Re-delivering a completed archive preserves later database changes.
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -v ON_ERROR_STOP=1 -c "INSERT INTO czero_persistence_probe VALUES (3, '[3,0,0]');"
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command
+    ...    api-cli run module/${module_id}/restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","environment":{"IMAGE_URL":"${IMAGE_URL}","CZERO_HOST":"${host}","CZERO_LETS_ENCRYPT":"false"}}'
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Wait Until Keyword Succeeds    30s    2s    Check application route
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    3
     ${rc} =    Execute Command    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false}'
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0

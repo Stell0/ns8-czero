@@ -52,7 +52,7 @@ def test_dump_failure_and_cold_database_leave_service_state_intact(monkeypatch,t
     assert capsys.readouterr().out == ''
 
 
-@pytest.mark.parametrize('metadata,archive',[(None,b'PGDMP'),({'format':2,'app_active':True,'app_enabled':True},b'PGDMP'),({'format':True,'app_active':True,'app_enabled':True},b'PGDMP'),({'format':1,'app_active':True,'app_enabled':True},b'not an archive')])
+@pytest.mark.parametrize('metadata,archive',[(None,b'PGDMP'),([],b'PGDMP'),({'format':2,'app_active':True,'app_enabled':True},b'PGDMP'),({'format':True,'app_active':True,'app_enabled':True},b'PGDMP'),({'format':1,'app_active':True,'app_enabled':True},b'not an archive')])
 def test_invalid_backup_stops_before_database_restore(monkeypatch,tmp_path,capsys,metadata,archive):
     monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path))
     if metadata is not None: (tmp_path/'backup-metadata.json').write_text(json.dumps(metadata))
@@ -155,3 +155,20 @@ def test_restore_settings_keep_new_platform_port_and_identity(monkeypatch,tmp_pa
     runpy.run_path(str(ROOT/'imageroot/actions/restore-module/20persist-settings'))
     assert values == {'CZERO_MODULE_ID':'czero9','CZERO_HOST':'old.test','CZERO_LETS_ENCRYPT':'false','CZERO_BASE_PATH':''}
     assert not {'TCP_PORT','NODE_ID','IMAGE_URL'} & values.keys()
+
+
+def test_completed_restore_receipt_preserves_initialized_data(monkeypatch,tmp_path):
+    import hashlib
+    import subprocess
+    agent_fixture(monkeypatch)
+    calls=[]
+    monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path))
+    monkeypatch.setenv('CZERO_POSTGRES_IMAGE','database-image')
+    archive=b'PGDMP fixture'
+    (tmp_path/'czero.pg_dump').write_bytes(archive)
+    (tmp_path/'restore-receipt.json').write_text(json.dumps({'format':1,'dump_sha256':hashlib.sha256(archive).hexdigest()}))
+    monkeypatch.setattr(subprocess,'run',lambda command,**kwargs: calls.append(command) or SimpleNamespace(returncode=0))
+    with pytest.raises(SystemExit) as error:
+        runpy.run_path(str(ROOT/'imageroot/actions/restore-module/40restore-database'))
+    assert error.value.code == 0
+    assert not any('--interactive' in c for c in calls)

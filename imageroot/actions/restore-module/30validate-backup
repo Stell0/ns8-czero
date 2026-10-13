@@ -9,7 +9,7 @@ import sys
 state = Path(os.environ['AGENT_STATE_DIR'])
 try:
     metadata = json.loads((state / 'backup-metadata.json').read_text())
-    if type(metadata.get('format')) is not int or metadata.get('format') != 1 or not all(type(metadata.get(k)) is bool for k in ('app_active','app_enabled')):
+    if not isinstance(metadata,dict) or type(metadata.get('format')) is not int or metadata.get('format') != 1 or not all(type(metadata.get(k)) is bool for k in ('app_active','app_enabled')):
         raise ValueError('Unsupported C0 backup metadata')
     with (state / 'czero.pg_dump').open('rb') as source:
         if source.read(5) != b'PGDMP':
