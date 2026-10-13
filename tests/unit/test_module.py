@@ -14,11 +14,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_route_is_owned_by_instance(monkeypatch):
     routes = []
-    monkeypatch.setitem(sys.modules, "agent", SimpleNamespace(set_route=routes.append))
+    env = []
+    monkeypatch.setitem(sys.modules, "agent", SimpleNamespace(set_route=routes.append, set_env=lambda *args: env.append(args)))
     monkeypatch.setenv("MODULE_ID", "czero7")
     monkeypatch.setenv("TCP_PORT", "20007")
     monkeypatch.setattr(sys, "stdin", StringIO("{}"))
     runpy.run_path(str(ROOT / "imageroot/actions/configure-module/20configure"))
+    assert env == [("CZERO_MODULE_ID", "czero7")]
     assert routes == [{"instance": "czero7", "url": "http://127.0.0.1:20007",
                        "http2https": False, "lets_encrypt": False, "path": "/czero/czero7"}]
 

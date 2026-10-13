@@ -1,7 +1,7 @@
 {
   "name": "czero",
   "description": {
-    "en": "C0 (Czero): packaging smoke stub; application features are not yet available"
+    "en": "C0 (Czero): Python application foundation with a web page and REST health endpoint"
   },
   "categories": [],
   "authors": [

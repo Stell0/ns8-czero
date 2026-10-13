@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install pytest robotframework robotframework-sshlibrary
-      - run: python -m pytest -q tests/unit
+      - run: pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
+      - run: python -m pytest -q app/tests packages/czero-core/tests tests/unit
       - run: bash -n build-images.sh imageroot/actions/configure-module/80start_services
       - run: robot --dryrun --exclude ui -v NODE_ADDR:disposable.invalid -v IMAGE_URL:ghcr.io/stell0/czero:main -d /tmp/robot-dryrun tests

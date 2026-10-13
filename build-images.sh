@@ -15,7 +15,24 @@ repobase="${REPOBASE:-ghcr.io/stell0}"
 repobase="${repobase,,}"
 # Configure the image name
 reponame="czero"
+imagetag="${IMAGETAG:-latest}"
+imagetag="${imagetag//\//-}"
 revision="${GITHUB_SHA:-$(git rev-parse HEAD)}"
+
+# Build the versioned C0 application separately so the NS8 module image stays
+# a small shell containing actions, metadata and its administrator UI.
+buildah build \
+    --file containers/czero-app/Containerfile \
+    --force-rm \
+    --layers \
+    --jobs "$(nproc)" \
+    --tag "${repobase}/czero-app" \
+    --tag "${repobase}/czero-app:${imagetag}" \
+    --label="org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY:-Stell0/ns8-czero}" \
+    --label="org.opencontainers.image.revision=${revision}" \
+    --label="org.opencontainers.image.licenses=GPL-3.0-or-later" \
+    --label="org.opencontainers.image.title=C0 application runtime" \
+    .
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -41,17 +58,17 @@ buildah config --entrypoint=/ \
     --label="org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY:-Stell0/ns8-czero}" \
     --label="org.opencontainers.image.revision=${revision}" \
     --label="org.opencontainers.image.licenses=GPL-3.0-or-later" \
-    --label="org.opencontainers.image.title=C0 (Czero) packaging smoke stub" \
+    --label="org.opencontainers.image.title=C0 (Czero) NS8 module" \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=docker.io/jmalloc/echo-server:v0.3.7" \
+    --label="org.nethserver.images=${repobase}/czero-app:${imagetag}" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
 
 # Append the image URL to the images array
-images+=("${repobase}/${reponame}")
+images+=("${repobase}/czero-app" "${repobase}/${reponame}")
 
 #
 # NOTICE:
@@ -72,6 +89,6 @@ if [[ -n "${CI:-}" ]]; then
 else
     # Just print info for manual push
     printf "Publish the images with:\n\n"
-    for image in "${images[@],,}"; do printf "  buildah push %s docker://%s:%s\n" "${image}" "${image}" "${IMAGETAG:-latest}" ; done
+    for image in "${images[@],,}"; do printf "  buildah push %s docker://%s:%s\n" "${image}" "${image}" "${imagetag}" ; done
     printf "\n"
 fi

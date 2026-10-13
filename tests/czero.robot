@@ -19,10 +19,11 @@ Remove disposable module
 
 Check smoke route
     ${output}    ${rc} =    Execute Command
-    ...    curl --fail --silent --show-error --max-time 10 http://127.0.0.1/czero/${module_id}/health
+    ...    curl --fail --silent --show-error --max-time 10 http://127.0.0.1/czero/${module_id}/api/v1/health
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    /czero/${module_id}/health
+    Should Contain    ${output}    "status":"ok"
+    Should Contain    ${output}    "core_version":"0.1.0"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -45,6 +46,13 @@ Configure and reconfigure the smoke service
     Should Be Equal As Integers    ${rc}    0
     ${config} =    Evaluate    json.loads($output)    modules=json
     Should Be Empty    ${config}
+
+Verify application requests are logged
+    Check smoke route
+    ${logs}    ${rc} =    Execute Command    runagent -m ${module_id} podman logs czero.service
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${logs}    /api/v1/health
 
 Reject unknown settings
     ${rc} =    Execute Command
@@ -82,11 +90,11 @@ Check administration and smoke HTTP in a browser
     Get Text    iframe >>> text="czero"    contains    czero
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=settings
     Wait For Elements State    iframe >>> h2 >> text="Settings"    visible    timeout=30s
-    Get Text    iframe >>> p:has-text("M00 packaging smoke stub.")    contains    M00 packaging smoke stub.
+    Get Text    iframe >>> p:has-text("FastAPI health endpoint")    contains    FastAPI health endpoint
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
-    ${rc} =    Execute Command    curl --fail --silent --max-time 10 http://127.0.0.1/czero/${module_id}/health
+    ${rc} =    Execute Command    curl --fail --silent --max-time 10 http://127.0.0.1/czero/${module_id}/api/v1/health
     ...    return_rc=True    return_stdout=False
     Should Not Be Equal As Integers    ${rc}    0
     Click    iframe >>> button >> text="Save"
@@ -94,8 +102,14 @@ Check administration and smoke HTTP in a browser
     Wait Until Keyword Succeeds    30s    2s    Check smoke route
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
-    Go To    https://${NODE_ADDR}/czero/${module_id}/health
-    Get Text    body    contains    /czero/${module_id}/health
+    Go To    https://${NODE_ADDR}/czero/${module_id}/
+    Get Text    h1    contains    useful applications
+    Go To    https://${NODE_ADDR}/czero/${module_id}/api/v1/health
+    Get Text    body    contains    "core_version":"0.1.0"
+    Go To    https://${NODE_ADDR}/czero/${module_id}/openapi.json
+    Get Text    body    contains    /api/v1/health
+    Go To    https://${NODE_ADDR}/czero/${module_id}/agents
+    Get Text    body    contains    Authentication, storage, search and MCP are planned milestones.
     Close Browser
 
 Uninstall only the disposable Czero module
@@ -105,6 +119,6 @@ Uninstall only the disposable Czero module
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    "${removed_id}"
-    ${rc} =    Execute Command    curl --fail --silent --max-time 10 http://127.0.0.1/czero/${removed_id}/health
+    ${rc} =    Execute Command    curl --fail --silent --max-time 10 http://127.0.0.1/czero/${removed_id}/api/v1/health
     ...    return_rc=True    return_stdout=False
     Should Not Be Equal As Integers    ${rc}    0

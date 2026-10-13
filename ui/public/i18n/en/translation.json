@@ -24,7 +24,7 @@
         "title": "Settings",
         "configure_instance": "Configure {instance}",
         "save": "Save",
-        "smoke_stub": "M00 packaging smoke stub. Save starts the HTTP echo service at /czero/<instance>/. Application settings and login are not yet available."
+        "smoke_stub": "The C0 application service provides the landing page and FastAPI health endpoint. Save starts the service. Sign-in and persistent data arrive in later milestones."
     },
     "about": {
         "title": "About"

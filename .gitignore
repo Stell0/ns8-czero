@@ -105,5 +105,9 @@ dist
 
 tests/outputs/
 __pycache__/
+*.py[cod]
+*.egg-info/
+**/build/
+.venv/
 .pytest_cache/
 .playwright-mcp/

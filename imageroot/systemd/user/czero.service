@@ -8,7 +8,7 @@
 # Most parts of this file come from podman-generate-systemd.
 #
 [Unit]
-Description=C0 packaging smoke stub
+Description=C0 application service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
@@ -23,7 +23,8 @@ ExecStart=/usr/bin/podman run \
     --cgroups=no-conmon \
     --replace --name=%N \
     --publish=127.0.0.1:${TCP_PORT}:8080 \
-    ${ECHO_SERVER_IMAGE}
+    --env=CZERO_MODULE_ID=${CZERO_MODULE_ID} \
+    ${CZERO_APP_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/czero.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/czero.ctr-id
 PIDFile=%t/czero.pid
