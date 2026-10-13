@@ -96,6 +96,8 @@ def probe():
     owner = Browser(origin)
     profile = owner.login("c0owner", payload["password"])
     assert profile["role"] == "admin" and profile["is_owner"], "Owner identity mismatch"
+    status, body, _ = owner.api("/api/v1/schedules")
+    assert status == 200 and len(json.loads(body)["schedules"]) >= 2, "Admin schedules unavailable"
     identity_file = STATE / "owner-id.txt"
     if identity_file.exists():
         assert identity_file.read_text() == profile["id"], "Owner identity changed after restart"
@@ -124,6 +126,8 @@ def probe():
         assert status == 200 and json.loads(body)["role"] == role, "Session role is stale"
         status, _, _ = reader.api("/api/v1/access/accounts")
         assert status == (200 if role == "admin" else 403), "Role authorization mismatch"
+        status, _, _ = reader.api("/api/v1/schedules")
+        assert status == (200 if role == "admin" else 403), "Schedule authorization mismatch"
     status, _, _ = owner.api(path, {"role": None}, "PUT", profile["csrf_token"])
     assert status == 204, "Role revocation failed"
     status, _, _ = reader.api("/api/v1/me")

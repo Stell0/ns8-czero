@@ -63,7 +63,7 @@ class RoleUpdate(BaseModel):
     role: Role | None
 
 
-def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> None:
+def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> tuple:
     logger = logging.getLogger("uvicorn.access")
     if not any(isinstance(item, SafeAccessLog) for item in logger.filters):
         logger.addFilter(SafeAccessLog())
@@ -188,3 +188,5 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> N
         response = JSONResponse({"logout_url": logout_url, "provider_logout": provider_logout})
         response.delete_cookie("c0_session", path=cookie_path, secure=True, httponly=True, samesite="lax")
         return response
+
+    return read_context, write_context

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from czero_core import core_health, Database
 from czero_app import __version__
 from czero_app.auth import AppAuth, install_auth_routes
+from czero_app.jobs import install_job_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -71,7 +72,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         lifespan=lifespan,
     )
     instance_app.state.auth = auth
-    install_auth_routes(instance_app, auth, base_path)
+    read_context, write_context = install_auth_routes(instance_app, auth, base_path)
+    install_job_routes(instance_app, database, auth, read_context, write_context)
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
@@ -93,6 +95,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "<title>C0 agent capabilities</title><main><h1>C0 agent capabilities</h1>"
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
+            "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
+            "A standalone worker CLI is available; the native wake timer is a pending milestone slice. "
             "Identity configuration is required for sign-in. Objects, search and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"

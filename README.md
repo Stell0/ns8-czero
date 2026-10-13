@@ -24,12 +24,14 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `GET /api/v1/me` | Authenticated profile and current application role |
 | `GET /api/v1/access/accounts` | Admin list of verified profiles and grants |
 | `PUT /api/v1/access/accounts/<id>` | Admin grant/revocation of Reader, Editor or Admin |
+| `/api/v1/jobs`, `/api/v1/jobs/handlers`, `/api/v1/jobs/<id>`, `/api/v1/jobs/<id>/runs` | Admin inspection and idempotent enqueue of registered jobs |
+| `/api/v1/schedules`, `/api/v1/schedules/<id>`, `/api/v1/schedules/<id>/runs` | Admin create/list/configure UTC interval schedules and inspect run state |
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.7.0/0.8.0**, with packaged migrations through `0004_jobs`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.8.0/0.9.0**, with packaged migrations through `0004_jobs`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
-Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
+Object/source CRUD, ingestion, Wiki, retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
 
 ## Install and configure
 
@@ -63,7 +65,9 @@ Use the native NS8 Backup page to select Czero and a supported destination, run 
 
 The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup coordination with workers and file-writing ingestion must be extended as those features arrive.
 
-M06 currently adds Core queue/schedule storage and services with registered deterministic health/maintenance handlers, validated idempotency and Admin authorization. The worker, REST exposure and native timer are still pending; no scheduled execution is claimed yet. Migration/publication/QEMU verification of this slice is pending.
+M06 currently adds Core queue/schedule storage and services with registered deterministic health/maintenance handlers, validated idempotency and Admin authorization. Standalone worker execution and authenticated REST pass local database tests. Native periodic execution and backup pause/resume are the next slice; background dispatch is not configured yet.
+
+Admins can POST `{"handler":"health","payload":{},"idempotency_key":"health-check-1"}` to `/api/v1/jobs`. Repeating the same request returns the same job; a conflicting handler/payload returns 409. Only registered `health`/`maintenance` accept empty payloads in the default app. Schedule intervals range from 60 seconds to 31 days; missed intervals coalesce to one due run. Pausing stops future scheduling; queued jobs may complete. Worker attempts and terminal state survive restarts; failed attempts use bounded backoff. Handlers use one database transaction for effects/completion, and must make file/network effects idempotent. Job history retention is 30 days with bounded weekly pruning. Native timer/backup/live verification remains pending.
 
 ## Remaining roadmap
 
@@ -91,7 +95,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 174 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for thirty-four actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 174 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for forty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

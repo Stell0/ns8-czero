@@ -159,6 +159,19 @@ class JobService:
             return [dict(row) for row in connection.execute(text("""SELECT * FROM c0_jobs
                 ORDER BY created_at DESC,id LIMIT :limit"""), {"limit":limit}).mappings()]
 
+    def list_handlers(self, actor: Actor) -> list[dict]:
+        with self.database.engine.connect() as connection:
+            self._authorize(connection, actor)
+            return self.registry.describe()
+
+    def get_job(self, actor: Actor, job_id: UUID) -> dict:
+        with self.database.engine.connect() as connection:
+            self._authorize(connection,actor)
+            row=connection.execute(text("SELECT * FROM c0_jobs WHERE id=:id"),{"id":job_id}).mappings().one_or_none()
+            if row is None:
+                raise ValueError("job_not_found")
+            return dict(row)
+
     def job_runs(self, actor: Actor, job_id: UUID, *, limit=50) -> list[dict]:
         self._limit(limit)
         with self.database.engine.connect() as connection:
