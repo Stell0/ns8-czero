@@ -1,6 +1,6 @@
 # C0 implementation plan — milestone-by-milestone Codex handoff
 
-**State:** M00 is complete. M01 runtime, packaging and upgrade tests pass local CI, publication/audit/scans and both QEMU legs at `8330194`. Documentation closeout CI is pending. The dedicated live instance runs M01; further interactive Playwright and live checks are temporarily waived by the operator.
+**State:** M00 is complete. M01 is complete: runtime, packaging, upgrades and documentation closeout pass local CI, publication/audit/scans and both QEMU legs. M02 configuration is active. The dedicated live instance runs M01; further interactive Playwright and live checks are temporarily waived by the operator.
 
 This plan is intended to be **executed iteratively**: inspect, refine the current milestone, implement, test, commit/push, verify CI, perform applicable live and Playwright MCP checks, update docs, and only then advance. Never implement several milestones blindly before reviewing the prior milestone's results.
 
@@ -83,7 +83,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 **Evidence:** Implementation/recovery commits `dcaaf8974ddee410fa3a15b35f933783aa4f12fa`, `7ff5516f0663568aad4a898e2872e5531d18689c`; M00 closeout docs `dd26e4af403f3305c64db5e3659c8d9423560e1e`. Published `:main`/`:latest` image for `dd26e4a` resolves to `sha256:9f01b2c5c15c1d82976d2ceada955e1b1df82eafcdc9386d31508472b134f00e`. [Publish/scans 38359773901](https://github.com/Stell0/ns8-czero/actions/runs/38359773901), [local checks 38359773965](https://github.com/Stell0/ns8-czero/actions/runs/38359773965), and final [QEMU 38359921126](https://github.com/Stell0/ns8-czero/actions/runs/38359921126) pass. Downloaded Robot XML confirms Debian 13/update has six passes; Rocky 9/install has six passes and the expected update-only skip, with admin/browser smoke and disposable uninstall included. The prior current-runtime digest `sha256:63d0fd7c934f7bdf8b170bb1bba04de11a4b80ddca6c8ca0ff80205002b62981` was installed and tested live; final source-only metadata revision changes do not alter runtime behavior. Current live native update/status/config/error/restart/HTTPS/browser checks pass and unrelated inventory is unchanged. Eleven local pytest tests pass; archive inspection confirms runtime allowlist. Four SARIF/SBOM pairs were inspected: zero findings for module/imageroot, 29 UI and 95 echo dependency findings. No release or C0 REST/MCP capability exists. Live log visibility and reported dependency vulnerabilities remain documented limitations.
 
-### M01 — Minimal Python runtime, Web UI and Core/application separation [ ]
+### M01 — Minimal Python runtime, Web UI and Core/application separation [x]
 
 **Goal:** Replace the echo sample with an actual installable HTTP application and established package boundaries.
 
@@ -97,7 +97,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 - [x] Add focused pytest coverage for Core/app package separation, mounted path behavior, JSON health contract, OpenAPI, agents page and failure responses. Extend Robot/QEMU to assert the public app page and endpoints, access/request logging, restart and forced update. Add a repeatable UI/API browser check.
 - [x] Reconcile the instance ID during update from M00 and restart an already-running application through native update hooks. Unit-test the non-secret identity write; QEMU clears the prior identity as an upgrade fixture and asserts container replacement and healthy routes after native update. Validate the real M00-to-M01 transition on the dedicated live instance.
 - [x] Validate package/image naming, source references and path behavior; run local tests/build/archive audits and verify publication/scans plus both QEMU legs. The dedicated live M00-to-M01 transition and partial Playwright checks passed before the remaining live checks were explicitly waived.
-- [ ] Commit the reconciled AGENTS/README/PLAN closeout and verify its resulting CI before marking M01 complete.
+- [x] Commit the reconciled AGENTS/README/PLAN closeout and verify its resulting CI before marking M01 complete.
 
 **Source findings:** Current kickstart confirms Core-provided dependency-image environment variables, rootless loopback service, allocated port and numbered action conventions. Hermes demonstrates separate component images via `buildah build`, a module dependency label and a systemd component unit; its large upstream application image/dependency choices are not suitable for C0. The official FastAPI Docker and proxy guidance supports a single ASGI process behind the existing Traefik route; test the actual NS8 preserved-prefix behavior rather than assume a proxy strips it. Pin the supported Python base and every runtime dependency after checking current upstream versions. Keep app UI static and independent from the NS8 Vue 2 admin UI.
 
@@ -120,7 +120,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 **Partial live/Playwright evidence before waiver:** The targeted native update of only the dedicated M00 Czero instance to the verified M01 image exited zero. The JSON health contract returned HTTP 200 and both versions `0.1.0` immediately, proving the old echo process was replaced without another configure action. Native status reports active/enabled/not failed; configuration remains `{}`. Unknown configuration exits 10 while health remains 200. Interactive NS8 Settings renders the new runtime description; its Save task exits zero and health stays 200. The application landing page, health link, agents introduction, OpenAPI JSON with the preserved instance prefix, and rendered Swagger health operation were exercised with normal TLS validation. The Swagger Execute operation, live restart/refresh and final before/after unrelated-inventory comparison were not executed after the operator requested suspension. They are **waived by operator**, not passing evidence. Application login/normal-user authorization remains unimplemented until M05. No live destructive action, SSH, certificate exception or unrelated-module mutation was used.
 
-**Evidence:** Runtime acceptance passes with the explicit temporary live-testing exception above. M01 remains open only for the documentation commit and its resulting CI verification. No release, database storage or MCP capability exists yet. Superseded/cancelled QEMU runs do not count as acceptance.
+**Evidence:** Runtime acceptance passes with the explicit temporary live-testing exception above. Closeout documentation commit `d4ca51c1e24901b5bfdde678ca619f7bcab7479e` passes [local CI 38373643549](https://github.com/Stell0/ns8-czero/actions/runs/38373643549), [publication/audit/scans 38373643528](https://github.com/Stell0/ns8-czero/actions/runs/38373643528) and [QEMU 38373861781](https://github.com/Stell0/ns8-czero/actions/runs/38373861781). Downloaded reports confirm eight Debian 13/update passes; Rocky 9/install has seven passes including browser checks and two expected update-only skips. M01 is complete. No release, database storage or MCP capability exists yet. Superseded/cancelled QEMU runs do not count as acceptance.
 
 
 ### M02 — NS8 configuration, Traefik and administrator UI [ ]
@@ -134,6 +134,17 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 **Acceptance:** Configure through API and NS8 admin UI; settings round-trip, valid TLS route, repeated configure harmless, invalid input rejected, service status accurate. Test admin UI with Playwright MCP, then dedicated live C0 install once image build is green.
 
 **Documentation gate:** Update `AGENTS.md` action steps/secrets rules; `README.md` administrator operation instructions; `PLAN.md` evidence.
+
+**Implementation subplan and tests (13 October 2026):**
+
+- [ ] Validate a required FQDN and optional boolean `lets_encrypt` with strict schemas; normalize lowercase and reject conflicts through `agent.http_route_in_use`, allowing reconfiguration of the existing owned hostname. Unit-test syntax, collision, repeat and machine-readable validation errors before persistence.
+- [ ] Keep focused `10validate`, `20persist`, `40configure-route`, `80start_services` and bounded readiness steps. Persist only non-secret identity, hostname, certificate flag and application base path. Delegate TLS/redirects to `agent.set_route`; explicitly clear the old preserved-prefix route with `path: null`. Unit-test route ownership, settings round-trip and stdout discipline. No provider secrets are introduced.
+- [ ] Serve the application at the configured hostname root; keep the M01 prefix for existing unconfigured legacy instances on update. Test root and legacy health/OpenAPI/links, invalid base paths and preservation of an explicitly empty root base path during update.
+- [ ] Add ns8-ui-lib hostname and certificate controls, native field errors/task progress and a saved application link. Remove all task listeners on terminal states and component destruction. Build the Vue UI and test settings persistence, validation recovery and service status in disposable automated browser tests.
+- [ ] Extend QEMU/Robot tests for repeated configuration, HTTPS root health, HTTP redirect, hostname changes/old-route removal, competing-module conflict rejection, restart and upgrade persistence. Use synthetic disposable DNS names, no live endpoints. Inspect both reports and actual image publication/audit/scans; update all three documents before closeout.
+
+**Reference findings:** Inspected current Hermes validation/persistence/routes, Core certificates/agent SDK and Traefik `set-route/20writeconfig`, kickstart Settings and actual ns8-ui-lib controls. The smaller [Dependency Track hostname validation](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/actions/configure-module/01Hostname_validation) confirms the own-host conflict exemption. Traefik merges route data, so omitting `path` would preserve M01's prefix; `path: null` is required for hostname-root migration. Same-instance route replacement removes the old host rule. The inherited allocated loopback port and Traefik TLS service remain authoritative. Interactive Playwright and live acceptance are temporarily waived by the operator; automated disposable browser tests remain required.
+
 
 **Evidence:** Pending.
 
@@ -311,4 +322,4 @@ Only after complete acceptance should additional features enter the roadmap. Pre
 
 ## Current next action
 
-**M01 closeout is active.** Commit and verify its documentation, then advance to M02. Further interactive Playwright/live checks are waived by the operator; retain automated CI/QEMU/Robot gates. Do not claim C0 application storage, RAG, OIDC or MCP exist yet. Iterate exactly one milestone at a time.
+**M02 configuration is active.** Implement its committed subplan and verify publication/local/QEMU gates. Further interactive Playwright/live checks are waived by the operator; retain automated CI/QEMU/Robot gates. Do not claim C0 application storage, RAG, OIDC or MCP exist yet. Iterate exactly one milestone at a time.
