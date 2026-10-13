@@ -1,6 +1,6 @@
 # C0 implementation plan — milestone-by-milestone Codex handoff
 
-**State:** M00 is complete. M01 is complete: runtime, packaging, upgrades and documentation closeout pass local CI, publication/audit/scans and both QEMU legs. M02 runtime, packaging and native/browser tests pass; documentation closeout is active. The dedicated live instance runs M01; further interactive Playwright and live checks are temporarily waived by the operator.
+**State:** M00 is complete. M01 is complete: runtime, packaging, upgrades and documentation closeout pass local CI, publication/audit/scans and both QEMU legs. M02 is complete with runtime, native/browser QEMU and documentation evidence. M03 database implementation is active. The dedicated live instance runs M01; further interactive Playwright and live checks are temporarily waived by the operator.
 
 This plan is intended to be **executed iteratively**: inspect, refine the current milestone, implement, test, commit/push, verify CI, perform applicable live and Playwright MCP checks, update docs, and only then advance. Never implement several milestones blindly before reviewing the prior milestone's results.
 
@@ -123,7 +123,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 **Evidence:** Runtime acceptance passes with the explicit temporary live-testing exception above. Closeout documentation commit `d4ca51c1e24901b5bfdde678ca619f7bcab7479e` passes [local CI 38373643549](https://github.com/Stell0/ns8-czero/actions/runs/38373643549), [publication/audit/scans 38373643528](https://github.com/Stell0/ns8-czero/actions/runs/38373643528) and [QEMU 38373861781](https://github.com/Stell0/ns8-czero/actions/runs/38373861781). Downloaded reports confirm eight Debian 13/update passes; Rocky 9/install has seven passes including browser checks and two expected update-only skips. M01 is complete. No release, database storage or MCP capability exists yet. Superseded/cancelled QEMU runs do not count as acceptance.
 
 
-### M02 — NS8 configuration, Traefik and administrator UI [ ]
+### M02 — NS8 configuration, Traefik and administrator UI [x]
 
 **Goal:** Make installation configurable using native NS8 actions, not a custom admin service.
 
@@ -142,7 +142,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 - [x] Serve the application at the configured hostname root; keep the M01 prefix for existing unconfigured legacy instances on update. Test root and legacy health/OpenAPI/links, invalid base paths and preservation of an explicitly empty root base path during update.
 - [x] Add ns8-ui-lib hostname and certificate controls, native field errors/task progress and a saved application link. Remove all task listeners on terminal states and component destruction. Build the Vue UI and test settings persistence, validation recovery and service status in disposable automated browser tests.
 - [x] Extend QEMU/Robot tests for repeated configuration, HTTPS root health, HTTP redirect, hostname changes/old-route removal, competing-module conflict rejection, restart and upgrade persistence. Use synthetic disposable DNS names, no live endpoints. Inspect both reports and actual image publication/audit/scans; update all three documents before closeout.
-- [ ] Commit the reconciled AGENTS/README/PLAN documentation and verify its resulting CI/QEMU before marking M02 complete.
+- [x] Commit the reconciled AGENTS/README/PLAN documentation and verify its resulting CI/QEMU before marking M02 complete.
 
 **Reference findings:** Inspected current Hermes validation/persistence/routes, Core certificates/agent SDK and Traefik `set-route/20writeconfig`, kickstart Settings and actual ns8-ui-lib controls. The smaller [Dependency Track hostname validation](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/actions/configure-module/01Hostname_validation) confirms the own-host conflict exemption. Traefik merges route data, so omitting `path` would preserve M01's prefix; `path: null` is required for hostname-root migration. Same-instance route replacement removes the old host rule. The inherited allocated loopback port and Traefik TLS service remain authoritative. Interactive Playwright and live acceptance are temporarily waived by the operator; automated disposable browser tests remain required.
 
@@ -159,7 +159,7 @@ This plan is intended to be **executed iteratively**: inspect, refine the curren
 
 Module `:main`/`:latest` digest is `sha256:63a64df49b37b8eb9fd1dda798d5678126a21ab56d76aba2ff811dcea8a878e4`; app digest is `sha256:fddb151aa189202d5464d2b05bf771f1d652a08c653a5c726d51af42fb8ab8d7`. The actual publisher runtime audit passes. Final exported module/application archives contain only allowed runtime content. Inspected SARIF/SBOM still report zero module/imageroot findings, 166 app and 29 inherited UI findings; no package/build/test tools are in the application SBOM. These findings remain M14 work.
 
-**Evidence:** Runtime acceptance is green; documentation commit verification is pending. Interactive Playwright and dedicated live testing are **waived by operator**, not passed. No live module was changed during M02. QEMU validates encrypted routes using synthetic DNS and the platform test certificate; public ACME issuance was not attempted and is not claimed as verified. Database, login, objects, search and MCP remain future milestones. No release exists.
+**Evidence:** Runtime and documentation acceptance are green. Closeout commit `20c4c417bccc8b1a8129571e8ec03b86b889dfe4` passes [local CI 38380968426](https://github.com/Stell0/ns8-czero/actions/runs/38380968426), [publication/audit/scans 38380968415](https://github.com/Stell0/ns8-czero/actions/runs/38380968415) and [QEMU 38381161697](https://github.com/Stell0/ns8-czero/actions/runs/38381161697). Downloaded XML confirms Rocky 9/update: all twelve passes including browser; Debian 13/install: eight passes and three expected update-only skips. M02 is complete. Interactive Playwright and dedicated live testing are **waived by operator**, not passed. No live module was changed during M02. QEMU validates encrypted routes using synthetic DNS and the platform test certificate; public ACME issuance was not attempted and is not claimed as verified. Database, login, objects, search and MCP remain future milestones. No release exists.
 
 ### M03 — Dedicated PostgreSQL + pgvector and migrations [ ]
 
@@ -172,6 +172,18 @@ Module `:main`/`:latest` digest is `sha256:63a64df49b37b8eb9fd1dda798d5678126a21
 **Acceptance:** Two module instances cannot see each other's DB; data survives service restarts; vector extension is available and indexed test vectors can be queried; migration repeatable; UI health indicates DB availability. Build/Robot/QEMU green.
 
 **Documentation gate:** `AGENTS.md` schema/migration and systemd conventions, `README.md` DB/version/setup behavior, `PLAN.md` evidence.
+
+**Implementation subplan and tests (13 October 2026):**
+
+- [ ] Pin the maintained pgvector `0.8.7-pg17-bookworm` image by digest (PostgreSQL `17.11`, vector `0.8.7`); derive a minimal Czero database image that removes upstream PGXS development files and runs as `postgres`. Build/publish/scan it from the first database increment and audit its UID, extension and runtime contents.
+- [ ] Reuse native pod/unit conventions: one private pod, allocated loopback application port only, PostgreSQL listening on pod loopback with no published DB port. Preserve the existing `czero.service` identity/container name for upgrades, order pod -> DB readiness -> migrations -> application. The selected Debian image is compiled with `--with-systemd`; use native notify readiness only with actual QEMU verification.
+- [ ] Generate per-instance database credentials once into an atomic mode-0600 private state env-file through a small reusable native helper, invoked by create/update numbered steps. Never use `set_env` for secrets or print them. Test permissions, distinct credentials, repeated initialization and preservation; ensure Core's non-secret environment has no credentials.
+- [ ] Add reusable SQLAlchemy/psycopg database operations and packaged Alembic migrations to C0 Core. Bootstrap vector and baseline schema/knowledge-space identity transactionally; run migrations before app start. Pin dependencies, repeat migration without changing identity, and test real PostgreSQL transactions, vector availability and indexed nearest-vector queries.
+- [ ] Extend application health and landing-page status for database readiness, including safe HTTP 503 when unavailable. Keep Core/app and NS8 responsibilities separate. Test healthy/unavailable contracts, sanitized errors and browser status/recovery; avoid a generic lifecycle manager.
+- [ ] Extend local/integration CI and QEMU for two independently configured module instances, isolated data/secrets/pod networks, persisted rows across restarts/updates, vector index queries, repeated migrations and DB outage recovery. Retain all M02 routing/admin regressions. Download and inspect reports, publication/audit/scans and reconcile all three documents before completion. Native logical backup/restore remains M04; do not claim backups ready here.
+
+**Source findings/preparation:** Inspected current Dependency Track pod/database units, maintained IDP PostgreSQL unit and atomic password generation, PostgreSQL module units, Core volumes and safe I/O SDK, pgvector Dockerfile and official SQLAlchemy/Alembic/psycopg/PostgreSQL docs. Prefer the current IDP notify pattern over older polling when supported; keep the larger PostgreSQL module's external database port and pgAdmin out of C0. Selected upstream image digest is `sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d`. Inspected image config reports PostgreSQL `17.11-1.pgdg12+2`; extracted `pg_config --configure` confirms systemd support. A temporary unprivileged local PostgreSQL process from those upstream binaries, using a private Unix socket and no TCP listener, successfully installs vector `0.8.7`, creates an HNSW index and returns the expected nearest row with an actual indexed query plan. This validates upstream preparation, not C0 implementation or container/systemd acceptance. Upstream PGXS files must be removed from the derived runtime image. Local container namespaces are unavailable; actual Podman/systemd image behavior must pass QEMU. Further live/interactive Playwright tests remain waived by operator.
+
 
 **Evidence:** Pending.
 
@@ -335,4 +347,4 @@ Only after complete acceptance should additional features enter the roadmap. Pre
 
 ## Current next action
 
-**M02 runtime, packaging and native/browser tests pass; documentation closeout is active.** Implement its committed subplan and verify publication/local/QEMU gates. Further interactive Playwright/live checks are waived by the operator; retain automated CI/QEMU/Robot gates. Do not claim C0 application storage, RAG, OIDC or MCP exist yet. Iterate exactly one milestone at a time.
+**M02 is complete with runtime, native/browser QEMU and documentation evidence. M03 database implementation is active.** Implement its committed subplan and verify publication/local/QEMU gates. Further interactive Playwright/live checks are waived by the operator; retain automated CI/QEMU/Robot gates. Do not claim C0 application storage, RAG, OIDC or MCP exist yet. Iterate exactly one milestone at a time.

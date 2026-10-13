@@ -1,6 +1,6 @@
 # C0 (Czero) — AI-native application foundation for NethServer 8
 
-**Status (13 October 2026): M00 and M01 are complete; M02 native configuration and administrator/browser tests pass; documentation closeout is pending.** Czero provides a FastAPI application, a small end-user landing page and a separately versioned C0 Core package. Local, published-image and QEMU lifecycle/browser checks pass through M02. Further interactive Playwright and live testing are temporarily waived by the operator. The repository and container packages are public. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
+**Status (13 October 2026): M00 through M02 are complete; M03 dedicated database support is in development.** Czero provides a FastAPI application, a small end-user landing page and a separately versioned C0 Core package. Local, published-image and QEMU lifecycle/browser checks pass through M02. Further interactive Playwright and live testing are temporarily waived by the operator. The repository and container packages are public. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
 
 ## Why C0?
 
