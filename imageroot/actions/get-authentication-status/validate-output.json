@@ -7,6 +7,6 @@
   "properties": {
     "configured": {"type": "boolean"},
     "status": {"enum": ["disabled", "ok", "unavailable"]},
-    "reason": {"enum": ["configuration_invalid", "metadata_invalid", "tls_verification_failed", "timeout", "connection_failed", "provider_http_error"]}
+    "reason": {"enum": ["configuration_invalid", "metadata_invalid", "tls_verification_failed", "timeout", "connection_failed", "provider_http_error", "dns_failed", "connection_refused", "network_unreachable"]}
   }
 }

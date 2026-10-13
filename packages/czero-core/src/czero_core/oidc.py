@@ -4,6 +4,8 @@
 from dataclasses import dataclass, field, replace
 import json
 import re
+import errno
+import socket
 import threading
 import time
 from urllib.parse import urlencode, urlsplit
@@ -94,6 +96,13 @@ class OidcClient:
                     reason = "provider_http_error"
                 elif isinstance(current, httpx2.ConnectError):
                     reason = "connection_failed"
+                elif isinstance(current, socket.gaierror):
+                    reason = "dns_failed"
+                elif isinstance(current, OSError):
+                    if current.errno == errno.ECONNREFUSED:
+                        reason = "connection_refused"
+                    elif current.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH):
+                        reason = "network_unreachable"
                 current = current.__cause__ or current.__context__
             return {"status": "unavailable", "reason": reason}
 

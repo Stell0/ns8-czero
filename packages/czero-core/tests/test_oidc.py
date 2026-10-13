@@ -1,6 +1,8 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
+import errno
+import socket
 import time
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
@@ -51,6 +53,25 @@ def test_malformed_bearer_rejected_before_unavailable_provider(value):
                         transport=httpx2.MockTransport(handle))
     try:
         with pytest.raises(TokenRejected):client.verify_access_token(value)
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("underlying,reason", [
+    (socket.gaierror(socket.EAI_NONAME, "private DNS detail"), "dns_failed"),
+    (ConnectionRefusedError(errno.ECONNREFUSED, "private address"), "connection_refused"),
+    (OSError(errno.ENETUNREACH, "private route detail"), "network_unreachable"),
+])
+def test_connectivity_unwraps_real_transport_cause_without_error_text(underlying, reason):
+    def handle(request):
+        try:
+            raise underlying
+        except OSError as error:
+            raise httpx2.ConnectError("Wrapped private transport details") from error
+    client=OidcClient(OidcConfig(ISSUER,"czero1","private-client",ORIGIN),
+                      transport=httpx2.MockTransport(handle))
+    try:
+        assert client.health()=={"status":"unavailable","reason":reason}
     finally:
         client.close()
 

@@ -27,7 +27,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.6.1/0.7.1**, with packaged migrations through `0003_sessions`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.6.2/0.7.2**, with packaged migrations through `0003_sessions`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
 
@@ -37,7 +37,7 @@ For development installation, use native NS8 `add-module` with image `ghcr.io/st
 
 In **Czero Settings**, enter a fully qualified DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits issuance; otherwise Traefik uses its configured certificate. Save registers HTTPS routing, redirects HTTP, restarts services and waits for local health. Conflicting or malformed hostnames are rejected. The saved application link opens `https://<hostname>/`. Public certificate issuance has not been verified during the live-testing pause.
 
-The native `get-authentication-status` action checks the running app's trusted IdP discovery/keys and returns only status/reason categories (TLS, connection, timeout, provider HTTP or metadata errors). It returns disabled before sign-in is configured. Malformed bearer values are rejected locally before contacting an unavailable provider. These diagnostic changes await publication/QEMU/live verification.
+The native `get-authentication-status` action checks the running app's trusted IdP discovery/keys and returns only status/reason categories (TLS, DNS, refused/unreachable connections, timeout, provider HTTP or metadata errors). It returns disabled before sign-in is configured. Malformed bearer values are rejected locally before contacting an unavailable provider. Initial diagnostics pass publication/QEMU and report a live connection failure. Refined DNS/refused/unreachable categories await verification.
 
 The native API accepts hostname-only configuration such as `{"host":"c0.example.test","lets_encrypt":false}`. `get-configuration` returns saved host/certificate and identity settings without secrets. Authentication remains disabled until an IdP, user domain and owner are selected; resource access fails closed.
 
@@ -87,7 +87,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 152 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 155 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
