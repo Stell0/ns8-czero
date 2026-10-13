@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
 import os
+import re
 from pathlib import Path
 import sys
 from urllib.parse import urlsplit
@@ -24,7 +25,8 @@ domain = request.get('user_domain',os.getenv('CZERO_USER_DOMAIN',''))
 provider_uuid = request.get('idp',os.getenv('CZERO_IDP_UUID',''))
 owner = request.get('owner',os.getenv('CZERO_OWNER_USERNAME',''))
 staged = {'domain':domain,'provider_uuid':provider_uuid,'owner':owner,
-          'owner_key':'','provider_id':'','issuer':'','host':request.get('host',os.getenv('CZERO_HOST','')).lower()}
+          'owner_key':'','provider_id':'','issuer':'','host_option':'',
+          'host':request.get('host',os.getenv('CZERO_HOST','')).lower()}
 if any((domain,provider_uuid,owner)):
     if not all((domain,provider_uuid,owner)):
         fail('user_domain','identity_configuration_incomplete')
@@ -36,6 +38,10 @@ if any((domain,provider_uuid,owner)):
     url = urlsplit(prefix)
     if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment or not prefix.endswith('/'):
         fail('idp','identity_provider_invalid')
+    if str(provider.get('node','')) == os.getenv('NODE_ID','') and os.getenv('NODE_ID'):
+        if len(url.hostname) > 253 or not re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?',url.hostname):
+            fail('idp','identity_provider_invalid')
+        staged['host_option'] = '--add-host='+url.hostname+':10.0.2.2'
     parameters = Ldapproxy().get_domain(domain)
     if not parameters:
         fail('user_domain','user_domain_unavailable')

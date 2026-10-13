@@ -6,4 +6,4 @@
 # unconfigured/stopped instance stopped; replace a running old container.
 set -e
 exec 1>&2
-systemctl --user try-restart czero.service
+systemctl --user try-restart czero-pod.service czero-postgres.service czero.service

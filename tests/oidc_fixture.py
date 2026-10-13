@@ -119,7 +119,8 @@ def setup(payload):
 def apply_czero_network(module_id):
     global PHASE
     PHASE = "application test network"
-    # Test-only drop-ins: no DNS/CA testing flags or tools enter runtime images.
+    # Native configuration owns local-provider routing. Only a trusted test CA
+    # needs a disposable drop-in; no fixture DNS override may mask regressions.
     base = Path(command(["runagent", "-m", module_id, "python3", "-c",
                         "import os; print(os.environ['AGENT_INSTALL_DIR'])"]).strip())
     public_ca = base / "czero-test-ca.pem"
@@ -127,21 +128,14 @@ def apply_czero_network(module_id):
     public_ca.chmod(0o644)
     # Rootless Podman must own the bind source to apply SELinux's :z label.
     shutil.chown(public_ca, user=module_id, group=module_id)
-    vpn = command(["runagent", "-m", "node", "python3", "-c",
-        "import agent,os; print(agent.redis_connect().hget('node/'+os.environ['NODE_ID']+'/vpn','ip_address'))"]).strip()
     install = base / "systemd/user"
-    for name in ("czero-pod.service", "czero.service"):
+    for name in ("czero.service",):
         text = command(["runagent", "-m", module_id, "systemctl", "--user", "cat", name])
         # Normalize systemd continuations and retain only the relevant Exec line.
         text = text.replace("\\\n", " ")
-        if name == "czero-pod.service":
-            original = next(line for line in text.splitlines() if line.startswith("ExecStartPre=") and "pod create" in line)
-            amended = original.replace(" pod create ", " pod create --add-host=" + IDP_HOST + ":" + vpn + " ")
-            contents = "[Service]\nExecStartPre=\nExecStartPre=/bin/rm -f %t/czero-pod.pid %t/czero.pod-id\n" + amended + "\n"
-        else:
-            original = next(line for line in text.splitlines() if line.startswith("ExecStart=") and "podman run" in line)
-            amended = original.replace(" run ", " run --volume=" + str(public_ca) + ":/czero-test-ca.pem:ro,z --env=SSL_CERT_FILE=/czero-test-ca.pem ")
-            contents = "[Service]\nExecStart=\n" + amended + "\n"
+        original = next(line for line in text.splitlines() if line.startswith("ExecStart=") and "podman run" in line)
+        amended = original.replace(" run ", " run --volume=" + str(public_ca) + ":/czero-test-ca.pem:ro,z --env=SSL_CERT_FILE=/czero-test-ca.pem ")
+        contents = "[Service]\nExecStart=\n" + amended + "\n"
         directory = install / (name + ".d")
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "90-test-oidc.conf").write_text(contents)

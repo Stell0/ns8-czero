@@ -11,4 +11,5 @@ set -e
 exec 1>&2
 
 systemctl --user enable czero.service
-systemctl --user restart czero.service
+# Apply private-pod routing and replace every child in native dependency order.
+systemctl --user restart czero-pod.service czero-postgres.service czero.service

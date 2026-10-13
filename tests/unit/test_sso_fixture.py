@@ -90,6 +90,8 @@ def test_disposable_ca_is_owned_by_rootless_module_before_mount(monkeypatch, tmp
     network('czero7')
     assert calls[0] == (install / 'czero-test-ca.pem', {'user': 'czero7', 'group': 'czero7'})
     assert (install / 'czero-test-ca.pem').stat().st_mode & 0o777 == 0o644
+    assert not (install/'systemd/user/czero-pod.service.d').exists()
+    assert '--add-host' not in (install/'systemd/user/czero.service.d/90-test-oidc.conf').read_text()
 
 
 @pytest.mark.parametrize('output,rejected', [('GET /api/v1/me HTTP/1.1', False),

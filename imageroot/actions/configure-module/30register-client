@@ -36,3 +36,4 @@ try:
 finally:
     os.umask(old_umask)
 (state/'auth.env').chmod(0o600)
+agent.set_env('CZERO_OIDC_HOST_OPTION',settings.get('host_option',''))

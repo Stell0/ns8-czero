@@ -37,7 +37,7 @@ For development installation, use native NS8 `add-module` with image `ghcr.io/st
 
 In **Czero Settings**, enter a fully qualified DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits issuance; otherwise Traefik uses its configured certificate. Save registers HTTPS routing, redirects HTTP, restarts services and waits for local health. Conflicting or malformed hostnames are rejected. The saved application link opens `https://<hostname>/`. Public certificate issuance has not been verified during the live-testing pause.
 
-The native `get-authentication-status` action checks the running app's trusted IdP discovery/keys and returns only status/reason categories (TLS, DNS, refused/unreachable connections, timeout, provider HTTP or metadata errors). It returns disabled before sign-in is configured. Malformed bearer values are rejected locally before contacting an unavailable provider. Initial diagnostics pass publication/QEMU and report a live connection failure. Refined DNS/refused/unreachable categories await verification.
+The native `get-authentication-status` action checks the running app's trusted IdP discovery/keys and returns only status/reason categories (TLS, DNS, refused/unreachable connections, timeout, provider HTTP or metadata errors). It returns disabled before sign-in is configured. Malformed bearer values are rejected locally before contacting an unavailable provider. Initial diagnostics pass publication/QEMU and report a live connection failure. Refined categories pass publication/QEMU and identify a live refused connection. Native same-node routing changes are undergoing verification.
 
 The native API accepts hostname-only configuration such as `{"host":"c0.example.test","lets_encrypt":false}`. `get-configuration` returns saved host/certificate and identity settings without secrets. Authentication remains disabled until an IdP, user domain and owner are selected; resource access fails closed.
 
@@ -46,6 +46,8 @@ The native API accepts hostname-only configuration such as `{"host":"c0.example.
 1. Configure a compatible NS8 IdP with trusted HTTPS and a user domain. Enable **NethServer sign-in** in Czero Settings, select both and enter an existing domain account as owner. Save resolves its stable LDAP UUID, binds one domain and registers exact callback/logout URLs plus the Czero audience.
 2. Open Czero and sign in with that domain account. This is separate from the cluster-administration account. The owner receives Admin access to the shared space.
 3. A prospective member first attempts sign-in and is denied until admitted. The owner can then select Reader, Editor or Admin for that verified account in the sharing controls. Revocation applies to the next request, including existing sessions. Ownership is managed through NS8 Settings.
+
+Native configuration maps a selected same-node IdP hostname to the rootless host gateway; remote providers use normal DNS. The pod uses the standard NS8 slirp host-loopback pattern, retaining the registered HTTPS issuer and certificate validation. Configure/update replace pod, database and app together. This local-routing correction awaits QEMU/live verification.
 
 Signed issuer/LDAP UUIDs identify accounts; usernames and token role claims do not grant ownership or membership. REST accepts verified access tokens and the browser uses opaque Secure/HttpOnly/SameSite cookies. Cookie writes require CSRF plus the configured Origin. Server sessions expire at the earlier token expiry or one hour. Sign-out revokes the local session and opens provider confirmation. If the provider is unavailable, local logout still succeeds but its SSO session may remain.
 
@@ -87,7 +89,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 155 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 159 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

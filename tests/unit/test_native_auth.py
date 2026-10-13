@@ -18,6 +18,7 @@ OWNER_UUID = "00000000-0000-0000-0000-000000000001"
 def native(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_STATE_DIR", str(tmp_path))
     monkeypatch.setenv("MODULE_ID", "czero7")
+    monkeypatch.setenv("NODE_ID", "1")
     for key in ("CZERO_IDP_UUID", "CZERO_USER_DOMAIN", "CZERO_OWNER_USERNAME", "CZERO_OWNER_LDAP_UUID"):
         monkeypatch.delenv(key, raising=False)
     @contextmanager
@@ -31,10 +32,12 @@ def native(monkeypatch, tmp_path):
             "issuer": "https://idp.example.test/realms/users.example.test", "realm": "users.example.test"}}
     def write_envfile(path, values):
         Path(path).write_text("".join(key + "=" + value + "\n" for key, value in values.items()))
+    public_env={}
     agent = SimpleNamespace(safe_open=safe_open, write_envfile=write_envfile,
+        environment=public_env,set_env=lambda key,value:public_env.update({key:value}),
         redis_connect=lambda **kw: object(), set_status=lambda value: None,
         list_service_providers=lambda *args, **kw: [{"module_id": "idp1", "module_uuid": PROVIDER_UUID,
-            "host": "idp.example.test", "issuer_url_prefix": "https://idp.example.test/realms/"}],
+            "host": "idp.example.test", "node":"1", "issuer_url_prefix": "https://idp.example.test/realms/"}],
         tasks=SimpleNamespace(run=tasks))
     monkeypatch.setitem(sys.modules, "agent", agent)
     monkeypatch.setitem(sys.modules, "agent.tasks", agent.tasks)
@@ -81,6 +84,7 @@ def test_registered_client_uses_exact_uris_audience_and_private_file(monkeypatch
     assert request["post_logout_redirect_uris"] == ["https://c0.example.test/"]
     assert request["audience"] == ["czero7"]
     assert "module_id" not in request
+    assert agent.environment=={'CZERO_OIDC_HOST_OPTION':'--add-host=idp.example.test:10.0.2.2'}
     private = tmp_path / "auth.env"
     assert private.stat().st_mode & 0o777 == 0o600
     assert "CZERO_OIDC_CLIENT_SECRET=sensitive-client-value" in private.read_text()
@@ -94,11 +98,13 @@ def test_registration_failure_does_not_replace_existing_secret(monkeypatch, tmp_
                          "user_domain": "users.example.test", "owner": "owner"})
     private = tmp_path / "auth.env"
     private.write_text("previous-private-file")
+    agent.environment['CZERO_OIDC_HOST_OPTION']='previous-mapping'
     agent.tasks.run = lambda *a, **kw: {"exit_code": 1, "output": "sensitive-failure-result"}
     with pytest.raises(SystemExit) as error:
         runpy.run_path(str(ROOT / "imageroot/actions/configure-module/30register-client"))
     assert error.value.code == 1
     assert private.read_text() == "previous-private-file"
+    assert agent.environment['CZERO_OIDC_HOST_OPTION']=='previous-mapping'
     assert "sensitive" not in capsys.readouterr().err
 
 
@@ -141,3 +147,37 @@ def test_native_connectivity_action_uses_existing_app_environment(monkeypatch):
     monkeypatch.setitem(sys.modules,"agent",SimpleNamespace(run_helper=run_helper))
     runpy.run_path(str(ROOT/'imageroot/actions/get-authentication-status/20check'))
     assert calls==[('podman','exec','czero','/opt/czero/.venv/bin/python','-m','czero_app.auth_check')]
+
+
+@pytest.mark.parametrize('provider_node,expected',[('1','--add-host=idp.example.test:10.0.2.2'),('2','')])
+def test_provider_gateway_alias_is_restricted_to_same_node(monkeypatch,tmp_path,provider_node,expected):
+    agent,_=native(monkeypatch,tmp_path)
+    original=agent.list_service_providers
+    def providers(*args,**kwargs):
+        rows=original(*args,**kwargs);rows[0]['node']=provider_node;return rows
+    agent.list_service_providers=providers
+    prepare(monkeypatch,{'host':'c0.example.test','idp':PROVIDER_UUID,
+                         'user_domain':'users.example.test','owner':'owner'})
+    assert json.loads((tmp_path/'auth-pending.json').read_text())['host_option']==expected
+    runpy.run_path(str(ROOT/'imageroot/actions/configure-module/30register-client'))
+    assert agent.environment['CZERO_OIDC_HOST_OPTION']==expected
+
+
+def test_disabled_authentication_clears_gateway_alias(monkeypatch,tmp_path):
+    agent,_=native(monkeypatch,tmp_path)
+    prepare(monkeypatch,{'host':'c0.example.test'})
+    runpy.run_path(str(ROOT/'imageroot/actions/configure-module/30register-client'))
+    assert agent.environment=={'CZERO_OIDC_HOST_OPTION':''}
+    assert (tmp_path/'auth.env').read_text()==''
+
+
+def test_local_provider_hostname_cannot_inject_pod_arguments(monkeypatch,tmp_path):
+    agent,_=native(monkeypatch,tmp_path)
+    original=agent.list_service_providers
+    def providers(*args,**kwargs):
+        rows=original(*args,**kwargs);rows[0]['issuer_url_prefix']='https://bad_name.example.test/realms/';return rows
+    agent.list_service_providers=providers
+    with pytest.raises(SystemExit):
+        prepare(monkeypatch,{'host':'c0.example.test','idp':PROVIDER_UUID,
+                             'user_domain':'users.example.test','owner':'owner'})
+    assert not (tmp_path/'auth-pending.json').exists()
