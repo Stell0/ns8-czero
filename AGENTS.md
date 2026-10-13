@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## M05 Core identity foundation (integration pending)
 
+- Disposable SSO credentials are generated inside the Python Robot helper, uploaded with mode 0600 and never returned as Robot variables or placed in command arguments. Test-only CA/DNS/systemd overrides belong in disposable QEMU fixtures, never runtime actions or images. Keep provider and application TLS verification enabled.
+
 - SDK `agent.run_helper` forwards options to `subprocess.Popen`; supply JSON through a rewound temporary file with `stdin=`, never `input=`. Restore/upgrade regressions enforce this actual SDK contract.
 
 - Core `identity` verifies NS8 RS256 tokens against caller-supplied trusted keys, exact issuer/audience and required/time claims. Access tokens require Keycloak's `Bearer` type; ID tokens require login nonce and authorized party/hash bindings where applicable. Reject header-supplied key URLs and algorithm confusion. The JOSE library implements signatures; Core never implements cryptography or emits token values in errors.
