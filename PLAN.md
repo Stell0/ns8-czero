@@ -341,6 +341,8 @@ Module digest is `sha256:372601d2ea3386a2bfb1df94e253add82078a187f02b97a48490114
 
 **Evidence:** Pending.
 
+**Core queue foundation slice:** Add `0004_jobs` with constrained queue/attempt/schedule/due records, two seeded UTC schedules and lookup indexes. A trusted handler registry validates names/callables, bounded canonical JSON and timeout/retry limits; public queue/schedule operations recheck Admin membership inside the transaction. Handler/payload fingerprints reject conflicting idempotency atomically; due-task row locks and unique keys coalesce missed intervals without duplicate runs. Builtins report aggregate account/session/queue health and prune at most 1000 expired-session/login-state or old-terminal-job records per table. Fifteen registry/JSON unit cases and nine real PostgreSQL cases cover constraints, rights/forged actors/revocation, idempotency, due coalescing, configuration/migration persistence, aggregate-only health and bounded maintenance. Core/app become 0.7.0/0.8.0 and readiness requires `0004_jobs`; genuine predecessor fixtures freeze all three verified M05 digests. Worker execution, REST and native timer/backup coordination remain pending. All 208 local cases (174 unit + thirty-four PostgreSQL), Go schemas and sixteen non-UI Robot dry-run cases pass. Publication/QEMU verification of the committed slice remains pending; no background execution is claimed.
+
 ### M07 — Generic application object model and reusable CRUD [ ]
 
 **Goal:** Cover common CRM/inventory/project/idea-style records without creating a database table for every object type.

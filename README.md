@@ -27,7 +27,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.6.2/0.7.2**, with packaged migrations through `0003_sessions`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.7.0/0.8.0**, with packaged migrations through `0004_jobs`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
 
@@ -63,6 +63,8 @@ Use the native NS8 Backup page to select Czero and a supported destination, run 
 
 The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup coordination with workers and file-writing ingestion must be extended as those features arrive.
 
+M06 currently adds Core queue/schedule storage and services with registered deterministic health/maintenance handlers, validated idempotency and Admin authorization. The worker, REST exposure and native timer are still pending; no scheduled execution is claimed yet. Migration/publication/QEMU verification of this slice is pending.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -89,7 +91,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 159 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 174 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for thirty-four actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
@@ -99,7 +101,7 @@ corepack yarn install --immutable
 NODE_OPTIONS=--openssl-legacy-provider corepack yarn build
 ```
 
-`tests/czero.robot` runs native lifecycle in disposable QEMU, including an immutable M04 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates; native local-provider routing is used without fixture DNS overrides, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
+`tests/czero.robot` runs native lifecycle in disposable QEMU, including an immutable M05 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates; native local-provider routing is used without fixture DNS overrides, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
 
 An older M01 installation may stop when pod/database dependencies are introduced; re-save hostname Settings to start the new stack. Live startup, migration, hostname/certificate/identity configuration, discovery, signed owner login/logout, CSRF/owner protection, negative REST authorization and stable owner identity after restart pass. All three member roles, revocation and identity restore are verified in disposable tests; a second live application persona was not exercised.
 
