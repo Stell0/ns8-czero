@@ -130,3 +130,14 @@ def test_identity_reconciliation_uses_sdk_popen_stdin(monkeypatch, tmp_path, scr
     assert calls[1][1] == {'host': 'c0.example.test'}
     assert [Path(call[0]).name for call in calls] == [
         'czero-create-auth-state', '15validate-auth', '25bind-user-domain', '30register-client']
+
+
+def test_native_connectivity_action_uses_existing_app_environment(monkeypatch):
+    calls=[]
+    def run_helper(*command, **options):
+        calls.append(command)
+        assert options == {"stdout":sys.stdout,"stderr":sys.stderr}
+        return SimpleNamespace(check_returncode=lambda:None)
+    monkeypatch.setitem(sys.modules,"agent",SimpleNamespace(run_helper=run_helper))
+    runpy.run_path(str(ROOT/'imageroot/actions/get-authentication-status/20check'))
+    assert calls==[('podman','exec','czero','/opt/czero/.venv/bin/python','-m','czero_app.auth_check')]

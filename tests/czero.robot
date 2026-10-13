@@ -58,7 +58,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.6.0"
+    Should Contain    ${output}    "core_version":"0.6.1"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -474,7 +474,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.6.0"
+    Get Text    body    contains    "core_version":"0.6.1"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
@@ -484,9 +484,19 @@ Check saved settings and application HTTPS in a browser
 
 Verify real native SSO and application-wide membership
     [Timeout]    15 minutes
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-authentication-status
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${diagnostic} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${diagnostic}    ${{ {'configured': False, 'status': 'disabled'} }}
     Provision Disposable Sso    ${module_id}    ${host}
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Verify Disposable Sso    ${module_id}
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-authentication-status
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${diagnostic} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${diagnostic}    ${{ {'configured': True, 'status': 'ok'} }}
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user restart czero.service
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0

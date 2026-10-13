@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (13 October 2026): M00–M05 implementation and disposable acceptance pass; M05 documentation closeout is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright and live testing are temporarily waived by the operator. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (13 October 2026): M00–M04 are complete. M05 disposable implementation/documentation acceptance passes; resumed live OIDC connectivity is under investigation.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -27,7 +27,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.6.0/0.7.0**, with packaged migrations through `0003_sessions`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.6.1/0.7.1**, with packaged migrations through `0003_sessions`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
 
@@ -36,6 +36,8 @@ Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabi
 For development installation, use native NS8 `add-module` with image `ghcr.io/stell0/czero:main` and your node ID. The active M05 branch image is `ghcr.io/stell0/czero:feat-m05-authentication`. `:main` and `:latest` track development builds and are not stable releases; consult PLAN.md for tested commits/digests. The repository and module/app/database packages are public. Core 3.21.0 has an inventory display issue for digest-only image URLs, although installation works.
 
 In **Czero Settings**, enter a fully qualified DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits issuance; otherwise Traefik uses its configured certificate. Save registers HTTPS routing, redirects HTTP, restarts services and waits for local health. Conflicting or malformed hostnames are rejected. The saved application link opens `https://<hostname>/`. Public certificate issuance has not been verified during the live-testing pause.
+
+The native `get-authentication-status` action checks the running app's trusted IdP discovery/keys and returns only status/reason categories (TLS, connection, timeout, provider HTTP or metadata errors). It returns disabled before sign-in is configured. Malformed bearer values are rejected locally before contacting an unavailable provider. These diagnostic changes await publication/QEMU/live verification.
 
 The native API accepts hostname-only configuration such as `{"host":"c0.example.test","lets_encrypt":false}`. `get-configuration` returns saved host/certificate and identity settings without secrets. Authentication remains disabled until an IdP, user domain and owner are selected; resource access fails closed.
 
@@ -85,7 +87,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 135 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 152 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
@@ -96,6 +98,8 @@ NODE_OPTIONS=--openssl-legacy-provider corepack yarn build
 ```
 
 `tests/czero.robot` runs native lifecycle in disposable QEMU, including an immutable M04 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
+
+An older M01 installation may stop when pod/database dependencies are introduced; re-save hostname Settings to start the new stack. The current live runtime is healthy, but its IdP discovery connection returns safe 503 and remains under investigation. Do not assume registration proves sign-in works.
 
 Czero strips queries from application access logs. Core Traefik has its own default access log; its production logging contract still needs release review. Disposable SSO fixtures suppress proxy access logs and assert no OAuth query values in both streams. Interactive Playwright MCP/live checks remain operator-waived, and no destructive test runs on a live server.
 

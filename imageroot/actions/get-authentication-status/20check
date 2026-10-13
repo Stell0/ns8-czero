@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import sys
+import agent
+
+# The existing app container owns its private environment and trust store.
+# Return only the Core-backed diagnostic JSON, never env-file contents.
+agent.run_helper('podman', 'exec', 'czero', '/opt/czero/.venv/bin/python',
+    '-m', 'czero_app.auth_check', stdout=sys.stdout, stderr=sys.stderr).check_returncode()

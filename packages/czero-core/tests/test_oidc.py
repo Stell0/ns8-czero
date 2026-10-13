@@ -18,6 +18,43 @@ ISSUER = "https://idp.example.test/realms/users.example.test"
 ORIGIN = "https://c0.example.test"
 
 
+def test_connectivity_checks_keys_and_preserves_cached_success(provider):
+    client, _, calls, *_ = provider
+    assert client.health() == {"status": "ok"}
+    assert len(calls) == 2
+    assert client.health() == {"status": "ok"} and len(calls) == 2
+
+
+@pytest.mark.parametrize("failure,reason", [
+    (httpx2.ConnectError("CERTIFICATE_VERIFY_FAILED https://private.invalid/?secret=value"), "tls_verification_failed"),
+    (httpx2.ConnectError("private address failed"), "connection_failed"),
+    (httpx2.ReadTimeout("private address timed out"), "timeout"),
+    (None, "provider_http_error"),
+    ({"invalid": "private-metadata"}, "metadata_invalid"),
+])
+def test_connectivity_reports_only_fixed_error_categories(failure, reason):
+    def handle(request):
+        if isinstance(failure, Exception): raise failure
+        return httpx2.Response(503 if failure is None else 200, json=failure)
+    client = OidcClient(OidcConfig(ISSUER, "czero1", "private-client", ORIGIN),
+                        transport=httpx2.MockTransport(handle))
+    try:
+        assert client.health() == {"status": "unavailable", "reason": reason}
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("value", ["invalid", "", "a.b", "a.b.c.d", "a.b.$", "a.b.c\n", "a"*16385, None])
+def test_malformed_bearer_rejected_before_unavailable_provider(value):
+    def handle(request): pytest.fail("Malformed token must not request provider keys")
+    client = OidcClient(OidcConfig(ISSUER, "czero1", "private-client", ORIGIN),
+                        transport=httpx2.MockTransport(handle))
+    try:
+        with pytest.raises(TokenRejected):client.verify_access_token(value)
+    finally:
+        client.close()
+
+
 class PrivateFixture(tuple):
     def __repr__(self):
         return "<private OIDC fixture>"

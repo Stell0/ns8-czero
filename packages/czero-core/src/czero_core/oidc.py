@@ -3,6 +3,7 @@
 """Bounded NS8 OIDC discovery and authorization-code client operations."""
 from dataclasses import dataclass, field, replace
 import json
+import re
 import threading
 import time
 from urllib.parse import urlencode, urlsplit
@@ -69,6 +70,32 @@ class OidcClient:
 
     def close(self) -> None:
         self._http.close()
+
+    def health(self) -> dict[str, str]:
+        """Check trusted discovery/keys without exposing URLs or driver errors."""
+        try:
+            self._token_verifier()
+            return {"status": "ok"}
+        except OidcUnavailable as error:
+            reason = "metadata_invalid"
+            current = error
+            seen = set()
+            while current is not None and id(current) not in seen:
+                seen.add(id(current))
+                # Inspect locally, return only a fixed category. Exception
+                # strings can contain private URLs and must never be emitted.
+                message = str(current).lower()
+                if "certificate_verify_failed" in message or "certificate verify failed" in message:
+                    reason = "tls_verification_failed"
+                    break
+                if isinstance(current, httpx2.TimeoutException):
+                    reason = "timeout"
+                elif isinstance(current, httpx2.HTTPStatusError):
+                    reason = "provider_http_error"
+                elif isinstance(current, httpx2.ConnectError):
+                    reason = "connection_failed"
+                current = current.__cause__ or current.__context__
+            return {"status": "unavailable", "reason": reason}
 
     def _json(self, url: str) -> dict:
         try:
@@ -151,6 +178,9 @@ class OidcClient:
             raise TokenRejected() from None
 
     def verify_access_token(self, token: str) -> VerifiedIdentity:
+        if not isinstance(token, str) or len(token) > 16_384 or not re.fullmatch(
+                r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", token):
+            raise TokenRejected()
         return self._token_verifier().verify_access_token(token)
 
     def logout_url(self) -> str:

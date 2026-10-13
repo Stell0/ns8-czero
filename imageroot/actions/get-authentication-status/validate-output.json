@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Authentication connectivity status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["configured", "status"],
+  "properties": {
+    "configured": {"type": "boolean"},
+    "status": {"enum": ["disabled", "ok", "unavailable"]},
+    "reason": {"enum": ["configuration_invalid", "metadata_invalid", "tls_verification_failed", "timeout", "connection_failed", "provider_http_error"]}
+  }
+}
