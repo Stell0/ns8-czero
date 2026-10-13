@@ -1,0 +1,10 @@
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# PostgreSQL 17.11 + pgvector 0.8.7, from the maintained upstream build.
+FROM docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+
+# PGXS is an extension-development framework, not required to run vector.
+RUN rm -rf /usr/lib/postgresql/17/lib/pgxs \
+    && rm -f /usr/lib/postgresql/17/bin/pg_config /usr/bin/pg_config
+USER postgres

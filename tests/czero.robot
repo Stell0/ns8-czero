@@ -30,15 +30,19 @@ Check legacy route
     ...    curl --fail --silent --show-error --max-time 10 http://127.0.0.1/czero/${module_id}/api/v1/health
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    "status":"ok"
+    ${health} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${health}[status]    ok
+    Should Be Equal    ${health}[database][status]    ok
 
 Check application route
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${host}/api/v1/health --insecure --resolve ${host}:443:127.0.0.1
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    "status":"ok"
-    Should Contain    ${output}    "core_version":"0.1.0"
+    ${health} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${health}[status]    ok
+    Should Be Equal    ${health}[database][status]    ok
+    Should Contain    ${output}    "core_version":"0.2.0"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -146,6 +150,81 @@ Reject a competing instance without changing the owner
     Should Be Equal As Integers    ${rc}    0
     Set Global Variable    ${other_id}    ${EMPTY}
 
+Verify durable isolated PostgreSQL and indexed vectors
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -v ON_ERROR_STOP=1 -c "CREATE TABLE czero_persistence_probe (id integer PRIMARY KEY, embedding vector(3)); INSERT INTO czero_persistence_probe VALUES (1,'[1,0,0]'),(2,'[0,1,0]'); CREATE INDEX czero_probe_hnsw ON czero_persistence_probe USING hnsw (embedding vector_l2_ops);"
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -v ON_ERROR_STOP=1 -c "SET enable_seqscan=off; EXPLAIN SELECT id FROM czero_persistence_probe ORDER BY embedding <-> '[1,0,0]' LIMIT 1;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    czero_probe_hnsw
+    ${output}    ${rc} =    Execute Command    add-module ${IMAGE_URL} 1
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${installed_id} =    Installed Module Id    ${output}
+    Set Global Variable    ${other_id}    ${installed_id}
+    ${rc} =    Execute Command
+    ...    api-cli run module/${other_id}/configure-module --data '{"host":"${other_id}.test","lets_encrypt":false}'
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${other_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT to_regclass('czero_persistence_probe') IS NULL;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    t
+    ${rc} =    Execute Command
+    ...    cmp --quiet /home/${module_id}/.config/state/passwords.env /home/${other_id}/.config/state/passwords.env
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    1
+    ${mode}    ${rc} =    Execute Command    stat -c '%a' /home/${module_id}/.config/state/passwords.env
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${mode}    600
+    ${safe}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 -c "import agent,os; e=agent.read_envfile(os.environ['AGENT_STATE_DIR']+'/environment'); print('POSTGRES_PASSWORD' not in e and 'CZERO_DATABASE_URL' not in e)"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${safe}    True
+    ${ports}    ${rc} =    Execute Command    runagent -m ${module_id} podman port czero-postgres
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${ports}    5432
+    ${rc} =    Execute Command    remove-module --no-preserve ${other_id}
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Set Global Variable    ${other_id}    ${EMPTY}
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user restart czero-postgres.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Check application route
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero python -m czero_core.migrate
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT id FROM czero_persistence_probe ORDER BY embedding <-> '[1,0,0]' LIMIT 1;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    1
+
+Report database outage and recover the application
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-postgres.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command
+    ...    curl --silent --show-error --max-time 10 --insecure --resolve ${host}:443:127.0.0.1 https://${host}/api/v1/health
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${health} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${health}[status]    degraded
+    Should Be Equal    ${health}[database][reason]    database_unavailable
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-postgres.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Check application route
+
 Verify application requests are logged
     Check application route
     # systemd expands %N in czero.service to the container name "czero".
@@ -193,6 +272,11 @@ Exercise the native module update
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     Should Not Be Equal    ${before}    ${after}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    2
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user is-active czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
@@ -233,12 +317,23 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${host}/
     Get Text    h1    contains    useful applications
+    Get Text    \#database-status    ==    Database ready
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-postgres.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Click    \#refresh-status
+    Get Text    \#database-status    ==    Database unavailable
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-postgres.service
+    ...    return_rc=True    return_stdout=False
+    Should Be Equal As Integers    ${rc}    0
+    Click    \#refresh-status
+    Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.1.0"
+    Get Text    body    contains    "core_version":"0.2.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
-    Get Text    body    contains    Authentication, storage, search and MCP are planned milestones.
+    Get Text    body    contains    Authentication, objects, search and MCP are planned milestones.
     Close Browser
 
 Uninstall only the disposable Czero module

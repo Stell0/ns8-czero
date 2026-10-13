@@ -1,0 +1,28 @@
+# Copyright (C) 2026 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=C0 PostgreSQL database
+BindsTo=czero-pod.service
+After=czero-pod.service
+Before=czero.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+Restart=always
+TimeoutStartSec=90
+TimeoutStopSec=70
+ExecStartPre=/bin/rm -f %t/czero-postgres.ctr-id
+ExecStart=/usr/bin/podman run --detach --sdnotify=container \
+    --cidfile=%t/czero-postgres.ctr-id --cgroups=no-conmon \
+    --pod-id-file=%t/czero.pod-id --replace --name=%N \
+    --volume=czero-db-data:/var/lib/postgresql/data:Z,U \
+    --env=POSTGRES_USER=czero --env=POSTGRES_DB=czero \
+    --env-file=./passwords.env \
+    ${CZERO_POSTGRES_IMAGE} postgres -c listen_addresses=127.0.0.1
+ExecStop=/usr/bin/podman stop --ignore --cidfile=%t/czero-postgres.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile=%t/czero-postgres.ctr-id
+Type=notify
+NotifyAccess=all

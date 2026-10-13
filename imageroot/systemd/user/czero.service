@@ -9,6 +9,9 @@
 #
 [Unit]
 Description=C0 application service
+BindsTo=czero-pod.service
+Wants=czero-postgres.service
+After=czero-pod.service czero-postgres.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
@@ -16,13 +19,17 @@ EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 Restart=always
 ExecStartPre=/bin/rm -f %t/czero.pid %t/czero.ctr-id
+# Migrations are application functionality, invoked through the Core CLI.
+ExecStartPre=/usr/bin/podman run --rm --pod-id-file=%t/czero.pod-id \
+    --env-file=./passwords.env --entrypoint=python ${CZERO_APP_IMAGE} -m czero_core.migrate
 ExecStart=/usr/bin/podman run \
     --detach \
     --conmon-pidfile=%t/czero.pid \
     --cidfile=%t/czero.ctr-id \
     --cgroups=no-conmon \
     --replace --name=%N \
-    --publish=127.0.0.1:${TCP_PORT}:8080 \
+    --pod-id-file=%t/czero.pod-id \
+    --env-file=./passwords.env \
     --env=CZERO_MODULE_ID=${CZERO_MODULE_ID} \
     --env=CZERO_BASE_PATH=${CZERO_BASE_PATH} \
     ${CZERO_APP_IMAGE}

@@ -1,0 +1,21 @@
+# Copyright (C) 2025 Nethesis S.r.l.
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=C0 private application pod
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+Restart=on-failure
+TimeoutStopSec=70
+ExecStartPre=/bin/rm -f %t/czero-pod.pid %t/czero.pod-id
+ExecStartPre=/usr/bin/podman pod create --infra-conmon-pidfile=%t/czero-pod.pid \
+    --pod-id-file=%t/czero.pod-id --name=czero-pod \
+    --publish=127.0.0.1:${TCP_PORT}:8080 --replace
+ExecStart=/usr/bin/podman pod start --pod-id-file=%t/czero.pod-id
+ExecStop=/usr/bin/podman pod stop --ignore --pod-id-file=%t/czero.pod-id -t 10
+ExecStopPost=/usr/bin/podman pod rm --ignore -f --pod-id-file=%t/czero.pod-id
+PIDFile=%t/czero-pod.pid
+Type=forking

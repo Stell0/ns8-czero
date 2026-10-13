@@ -41,6 +41,15 @@ jobs:
         run: |
           podman run --rm --interactive --entrypoint python \
             "${REPOBASE,,}/czero-app:${IMAGETAG}" - < tests/audit_runtime.py
+      - name: Validate database runtime contents
+        run: |
+          podman run --rm --entrypoint sh "${REPOBASE,,}/czero-postgres:${IMAGETAG}" -ec '
+            test "$(id -u)" -gt 0
+            test -f /usr/lib/postgresql/17/lib/vector.so
+            test ! -e /usr/lib/postgresql/17/lib/pgxs
+            ! command -v gcc
+            ! command -v make
+          '
       - name: Publish module images
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}

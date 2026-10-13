@@ -21,12 +21,15 @@
     <main>
       <p class="status">C0 application foundation</p>
       <h1>A foundation for useful applications.</h1>
-      <p>This first runtime provides a small web page, a versioned C0 Core package, and a documented health API. Sign-in and persistent application data arrive in later milestones.</p>
+      <p>This application has a dedicated PostgreSQL database, a versioned C0 Core package and a documented health API. Sign-in and object operations arrive in later milestones.</p>
+      <p id="database-status" role="status" aria-live="polite">Checking database...</p>
+      <button id="refresh-status" type="button">Check again</button>
       <nav aria-label="C0 resources">
         <a href="./api/v1/health">Service health</a>
         <a href="./docs">REST API</a>
         <a href="./agents">Agent capabilities</a>
       </nav>
     </main>
+    <script src="./status.js" defer></script>
   </body>
 </html>

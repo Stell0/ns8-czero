@@ -34,6 +34,15 @@ buildah build \
     --label="org.opencontainers.image.title=C0 application runtime" \
     .
 
+# Small derived image: upstream PostgreSQL/vector runtime without PGXS tools.
+buildah build --file containers/czero-postgres/Containerfile --force-rm --layers \
+    --tag "${repobase}/czero-postgres" --tag "${repobase}/czero-postgres:${imagetag}" \
+    --label="org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY:-Stell0/ns8-czero}" \
+    --label="org.opencontainers.image.revision=${revision}" \
+    --label="org.opencontainers.image.licenses=GPL-3.0-or-later" \
+    --label="org.opencontainers.image.title=C0 PostgreSQL and pgvector runtime" \
+    .
+
 # Create a new empty container image
 container=$(buildah from scratch)
 
@@ -62,13 +71,14 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=${repobase}/czero-app:${imagetag}" \
+    --label="org.nethserver.volumes=czero-db-data" \
+    --label="org.nethserver.images=${repobase}/czero-app:${imagetag} ${repobase}/czero-postgres:${imagetag}" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
 
 # Append the image URL to the images array
-images+=("${repobase}/czero-app" "${repobase}/${reponame}")
+images+=("${repobase}/czero-app" "${repobase}/czero-postgres" "${repobase}/${reponame}")
 
 #
 # NOTICE:

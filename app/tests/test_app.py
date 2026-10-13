@@ -3,6 +3,7 @@
 
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -10,13 +11,19 @@ from httpx import ASGITransport, AsyncClient
 from czero_app.main import create_app
 
 STATIC = Path(__file__).resolve().parents[1] / "static"
+DATABASE_READY = {"status": "ok", "schema_revision": "0001_database", "vector_version": "0.8.7"}
+
+
+def ready_database():
+    return SimpleNamespace(health=lambda: DATABASE_READY, close=lambda: None)
+
 
 
 @pytest.fixture
 def client():
     async def get(path):
         async with AsyncClient(
-            transport=ASGITransport(app=create_app("czero17", STATIC)),
+            transport=ASGITransport(app=create_app("czero17", STATIC, database=ready_database())),
             base_url="http://testserver",
         ) as session:
             return await session.get(path)
@@ -37,8 +44,9 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.1.0",
-        "app_version": "0.2.0",
+        "core_version": "0.2.0",
+        "app_version": "0.3.0",
+        "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
 
@@ -46,7 +54,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
 def test_agents_page_describes_only_available_capabilities(client):
     response = client("/czero/czero17/agents")
     assert response.status_code == 200
-    assert "Authentication, storage, search and MCP are planned" in response.text
+    assert "Authentication, objects, search and MCP are planned" in response.text
     assert "./docs" in response.text
 
 
@@ -55,7 +63,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.2.0"
+    assert document["info"]["version"] == "0.3.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
@@ -66,7 +74,7 @@ def test_invalid_module_id_is_rejected():
 
 def test_hostname_root_endpoints_and_openapi():
     async def check():
-        async with AsyncClient(transport=ASGITransport(app=create_app("czero17", STATIC, "")),
+        async with AsyncClient(transport=ASGITransport(app=create_app("czero17", STATIC, "", database=ready_database())),
                                base_url="https://c0.example.test") as session:
             for path in ("/", "/agents", "/api/v1/health", "/openapi.json", "/docs"):
                 assert (await session.get(path)).status_code == 200
@@ -81,3 +89,18 @@ def test_hostname_root_endpoints_and_openapi():
 def test_invalid_base_path_is_rejected(path):
     with pytest.raises(ValueError, match="CZERO_BASE_PATH"):
         create_app("czero17", STATIC, path)
+
+
+def test_database_unavailable_is_a_safe_503():
+    unavailable = {"status": "unavailable", "reason": "database_unavailable"}
+    async def check():
+        app = create_app("czero17", STATIC, "", database=SimpleNamespace(
+            health=lambda: unavailable, close=lambda: None))
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as session:
+            response = await session.get("/api/v1/health")
+            assert response.status_code == 503
+            assert response.json()["status"] == "degraded"
+            assert response.json()["database"] == unavailable
+            assert "password" not in response.text
+            assert (await session.get("/")).status_code == 200
+    asyncio.run(check())

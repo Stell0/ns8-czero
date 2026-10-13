@@ -2,6 +2,14 @@
 
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M02 are complete with local/CI/QEMU and documentation evidence. M03 dedicated database implementation is active. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
+## M03 implementation conventions (verification pending)
+
+- Keep PostgreSQL and app in a native private pod; publish only the allocated app port on loopback. `czero.service` remains the app identity; pod and database are ordered dependencies. Selected PostgreSQL supports notify and its entrypoint suppresses temporary-server notifications. Actual unit behavior must pass QEMU.
+- Credentials are generated once with native atomic safe I/O into mode-0600 `state/passwords.env`, loaded by Podman env-file. Create/update invoke the same focused helper; never export credentials through `agent.set_env` or action stdout. Do not rotate initialized database passwords during configure.
+- Core owns packaged Alembic migrations and database operations. NS8 invokes the Core migration CLI before app startup. Migrations hold a PostgreSQL transaction/advisory lock and retain the knowledge-space identity across repeat runs. No NS8 lifecycle manager belongs in Core.
+- Health reports safe database status/schema/vector versions and returns 503 on unavailability. Driver exceptions and connection URLs never enter responses. Application health SQL runs in FastAPI's sync worker pool.
+- Keep upstream PGXS/compilers and all repository tests/configuration out of runtime images. PostgreSQL logical backup/restore is pending M04; do not describe it as ready.
+
 ## Established M02 configuration conventions
 
 - Keep configure steps focused: `10validate` checks native route ownership; `20configure-route` delegates TLS and explicitly clears legacy `path` with `null`; `40persist` writes only non-secrets after route acceptance; `80start_services` restarts; `90wait-ready` bounds local health checks. Do not hide native route/certificate failures.

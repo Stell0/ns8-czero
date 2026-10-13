@@ -18,7 +18,9 @@ COPY packages/czero-core/src /build/packages/czero-core/src
 WORKDIR /build/app
 # Some dependency wheels bundle authoring skills, which are not runtime data.
 RUN uv sync --frozen --no-dev --no-editable \
-    && find /opt/czero/.venv -type d -name .agents -prune -exec rm -rf {} + \
+    && find /opt/czero/.venv -type d \( -name .agents -o -name testing \) -prune -exec rm -rf {} + \
+    && rm -rf /opt/czero/.venv/lib/python*/site-packages/alembic/templates \
+    && rm -f /opt/czero/.venv/bin/alembic \
     && rm -rf /tmp/uv-cache
 
 FROM docker.io/library/python:3.13.16-slim-trixie AS runtime

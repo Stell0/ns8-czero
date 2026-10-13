@@ -4,18 +4,36 @@
 import os
 import re
 from pathlib import Path
+from contextlib import asynccontextmanager
+from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
+from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
-from czero_core import core_health
+from czero_core import core_health, Database
 from czero_app import __version__
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
 
+class DatabaseHealth(BaseModel):
+    status: Literal["ok", "unavailable"]
+    schema_revision: str | None = None
+    vector_version: str | None = None
+    reason: str | None = None
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok", "degraded"]
+    service: str
+    core_version: str
+    app_version: str
+    database: DatabaseHealth
+
+
 def create_app(module_id: str | None = None, static_dir: Path | None = None,
-               base_path: str | None = None) -> FastAPI:
+               base_path: str | None = None, database: Database | None = None) -> FastAPI:
     """Create a hostname-root application or preserve a legacy NS8 path."""
     instance_id = module_id if module_id is not None else os.getenv("CZERO_MODULE_ID", "")
     if not _MODULE_ID.fullmatch(instance_id):
@@ -31,16 +49,30 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         static_dir = Path(os.getenv("CZERO_STATIC_DIR", default_static_dir))
     home_page = static_dir / "index.html"
 
+    database = database if database is not None else Database()
+
+    @asynccontextmanager
+    async def lifespan(application):
+        try:
+            yield
+        finally:
+            database.close()
+
     instance_app = FastAPI(
         title="C0 API",
         version=__version__,
         description="Czero reference application API",
         redoc_url=None,
+        lifespan=lifespan,
     )
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
         return FileResponse(home_page, media_type="text/html")
+
+    @instance_app.get("/status.js", include_in_schema=False)
+    async def status_script() -> FileResponse:
+        return FileResponse(static_dir / "status.js", media_type="text/javascript")
 
     @instance_app.get("/agents", response_class=HTMLResponse, include_in_schema=False)
     async def agents() -> str:
@@ -49,21 +81,28 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>C0 agent capabilities</title><main><h1>C0 agent capabilities</h1>"
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
-            "Authentication, storage, search and MCP are planned milestones.</p>"
+            "Database readiness is available. Authentication, objects, search and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
         )
 
-    @instance_app.get("/api/v1/health", name="health")
-    async def health() -> dict[str, str]:
-        return {**core_health(), "app_version": __version__}
+    @instance_app.get("/api/v1/health", name="health", response_model=HealthResponse,
+                      response_model_exclude_none=True,
+                      responses={503: {"description": "Database unavailable"}})
+    def health(response: Response) -> HealthResponse:
+        db_health = database.health()
+        result = {**core_health(), "app_version": __version__, "database": db_health}
+        if db_health["status"] != "ok":
+            response.status_code = 503
+            result["status"] = "degraded"
+        return HealthResponse(**result)
 
     if not base_path:
         return instance_app
 
     # NS8's Traefik route preserves /czero/<module-id>. A mount gives each
     # instance its own stable external prefix and makes OpenAPI account for it.
-    root = FastAPI(openapi_url=None, docs_url=None, redoc_url=None)
+    root = FastAPI(openapi_url=None, docs_url=None, redoc_url=None, lifespan=lifespan)
     root.mount(base_path, instance_app, name=instance_id)
     return root
 
