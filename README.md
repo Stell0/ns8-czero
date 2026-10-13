@@ -148,3 +148,7 @@ Current protected operations expose identity and membership administration. Reso
 The development SSO tests also require the upstream `ldapproxy:1.4.0-dev.1` listener fix for Keycloak pod access. That prerequisite is installed only in disposable tests. Stable IdP/proxy availability must be resolved before release; no live proxy has been changed.
 
 The first real disposable NS8 SSO run verifies registration, signed owner login, normal-user denial and role changes, but stops at a logout-confirmation test-driver URL error. The driver is corrected with a regression case. Full logout/restart/restore acceptance is still pending, so M05 is not complete.
+
+Rocky also exposed a test CA ownership error during rootless SELinux labeling. The disposable fixture now assigns the public CA to its module before mounting; SELinux and TLS verification remain enabled. A fresh full QEMU run is required for acceptance.
+
+Czero strips queries from its application access logs. The platform proxy has its own access log; its default logging contract still needs release review. Disposable SSO tests suppress that proxy log to keep temporary OAuth query values out of diagnostic artifacts.

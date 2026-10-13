@@ -64,7 +64,7 @@ class CzeroSso:
             raise AssertionError("Disposable Czero SSO network fixture failed")
 
     @keyword
-    def verify_disposable_sso(self):
+    def verify_disposable_sso(self, module_id):
         builtin = BuiltIn()
         previous = builtin.set_log_level("NONE")
         try:
@@ -73,6 +73,10 @@ class CzeroSso:
             if rc:
                 # Probe emits only fixed assertions or an exception class.
                 raise AssertionError("Real IdP probe: " + errors.strip())
+            _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
+                                       return_rc=True, timeout="180 seconds")
+            if rc:
+                raise AssertionError("Disposable access logs contain OAuth query values")
         finally:
             builtin.set_log_level(previous)
 

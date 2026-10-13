@@ -485,12 +485,12 @@ Verify real native SSO and application-wide membership
     [Timeout]    15 minutes
     Provision Disposable Sso    ${module_id}    ${host}
     Wait Until Keyword Succeeds    30s    2s    Check application route
-    Verify Disposable Sso
+    Verify Disposable Sso    ${module_id}
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user restart czero.service
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Wait Until Keyword Succeeds    30s    2s    Check application route
-    Verify Disposable Sso
+    Verify Disposable Sso    ${module_id}
 
 Uninstall only the disposable Czero module
     Should Not Be Empty    ${module_id}

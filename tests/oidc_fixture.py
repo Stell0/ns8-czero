@@ -4,6 +4,7 @@
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -26,8 +27,9 @@ def task(action, data):
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
-def command(arguments):
-    result = subprocess.run(arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=180)
+def command(arguments, *, merge_stderr=False):
+    result = subprocess.run(arguments, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE, timeout=180)
     if result.returncode:
         raise RuntimeError("Disposable SSO fixture command failed")
     return result.stdout.decode()
@@ -95,6 +97,15 @@ def setup(payload):
     chain = leaf.read_bytes() + ca.read_bytes()
     task("module/traefik1/upload-certificate", {"certFile": base64.b64encode(chain).decode(),
           "keyFile": base64.b64encode(leaf_key.read_bytes()).decode()})
+    # Current Traefik has no native access-log settings action. Disable its
+    # default query-bearing access log only in this disposable SSO fixture.
+    code = ("import agent,os,pathlib,yaml\n"
+            "p=pathlib.Path(os.environ['AGENT_STATE_DIR'])/'traefik.yaml'\n"
+            "config=yaml.safe_load(p.read_text())\n"
+            "config.pop('accessLog',None)\n"
+            "with agent.safe_open(str(p)) as output: yaml.safe_dump(config,output)\n")
+    command(["runagent", "-m", "traefik1", "python3", "-c", code])
+    command(["runagent", "-m", "traefik1", "systemctl", "--user", "restart", "traefik.service"])
     PHASE = "IdP configuration"
     task("module/" + idp + "/configure-module", {"host": IDP_HOST, "lets_encrypt": False})
     # Use the SDK rather than depend on the cluster action output shape.
@@ -114,6 +125,8 @@ def apply_czero_network(module_id):
     public_ca = base / "czero-test-ca.pem"
     shutil.copyfile(STATE / "ca.pem", public_ca)
     public_ca.chmod(0o644)
+    # Rootless Podman must own the bind source to apply SELinux's :z label.
+    shutil.chown(public_ca, user=module_id, group=module_id)
     vpn = command(["runagent", "-m", "node", "python3", "-c",
         "import agent,os; print(agent.redis_connect().hget('node/'+os.environ['NODE_ID']+'/vpn','ip_address'))"]).strip()
     install = base / "systemd/user"
@@ -151,6 +164,15 @@ def cleanup():
     shutil.rmtree(STATE)
 
 
+def check_private_logs(module_id):
+    global PHASE
+    PHASE = 'access log privacy'
+    for module, container in ((module_id, 'czero'), ('traefik1', 'traefik')):
+        output = command(['runagent', '-m', module, 'podman', 'logs', container], merge_stderr=True)
+        if re.search(r'[?&](?:code|state|session_code)=', output):
+            raise RuntimeError('OAuth query values found in disposable access logs')
+
+
 if __name__ == "__main__":
     try:
         operation = sys.argv[1]
@@ -161,6 +183,8 @@ if __name__ == "__main__":
             apply_czero_network(sys.argv[2])
         elif operation == "cleanup":
             cleanup()
+        elif operation == "check-logs":
+            check_private_logs(sys.argv[2])
     except Exception as error:
         # Never echo native action outputs, certificates/keys or credentials.
         print("Disposable SSO fixture failed: " + PHASE + " (" + type(error).__name__ + ")", file=sys.stderr)

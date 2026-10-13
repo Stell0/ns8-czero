@@ -4,6 +4,10 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## M05 Core identity foundation (integration pending)
 
+- Czero query redaction does not cover Core Traefik access logs. Disposable SSO fixtures suppress the proxy access log before authentication and assert no OAuth query values; production proxy logging needs a separate platform contract review. Never publish raw OAuth query diagnostics.
+
+- Rootless Podman test bind sources must belong to the module account before `:z` labeling on SELinux hosts. Public test CA files use mode 0644; private keys remain outside runtime containers. Never disable SELinux or TLS verification to make a fixture pass.
+
 - Provider test forms may have relative actions. Resolve them against the final provider page URL, including logout confirmation; never against the Czero origin.
 
 - Identity restore tests must create grants through authenticated Core-backed REST and verify signed logins after a new native module/client identity. Expected test account IDs may stay in private disposable fixtures; do not fake memberships with SQL or Redis.

@@ -3,7 +3,9 @@
 import json
 from pathlib import Path
 import runpy
+import shutil
 from types import SimpleNamespace
+import pytest
 
 from robot.libraries.BuiltIn import BuiltIn
 
@@ -67,3 +69,39 @@ def test_provider_logout_relative_action_uses_provider_origin():
         return 200, b'<form id="kc-form-login" action="/login"></form>', 'https://idp.czero.test/login'
     browser.api, browser.request = api, request
     browser.logout({'csrf_token': 'fixture'})
+
+
+def test_disposable_ca_is_owned_by_rootless_module_before_mount(monkeypatch, tmp_path):
+    module = runpy.run_path(str(ROOT / 'tests/oidc_fixture.py'))
+    network = module['apply_czero_network']
+    state, install = tmp_path / 'state', tmp_path / 'install'
+    state.mkdir()
+    install.mkdir()
+    (state / 'ca.pem').write_text('public-test-certificate')
+    network.__globals__['STATE'] = state
+    calls = []
+    monkeypatch.setattr(shutil, 'chown', lambda path, **kw: calls.append((Path(path), kw)))
+    def command(args):
+        if 'AGENT_INSTALL_DIR' in args[-1]: return str(install)
+        if 'ip_address' in args[-1]: return '10.5.4.1'
+        if 'cat' in args: return (ROOT / 'imageroot/systemd/user' / args[-1]).read_text()
+        return ''
+    network.__globals__['command'] = command
+    network('czero7')
+    assert calls[0] == (install / 'czero-test-ca.pem', {'user': 'czero7', 'group': 'czero7'})
+    assert (install / 'czero-test-ca.pem').stat().st_mode & 0o777 == 0o644
+
+
+@pytest.mark.parametrize('output,rejected', [('GET /api/v1/me HTTP/1.1', False),
+                                          ('GET /auth/callback?code=fixture&state=fixture HTTP/1.1', True)])
+def test_disposable_log_assertion_checks_both_streams(output, rejected):
+    check = runpy.run_path(str(ROOT / 'tests/oidc_fixture.py'))['check_private_logs']
+    def command(args, *, merge_stderr):
+        assert merge_stderr
+        return output
+    check.__globals__['command'] = command
+    if rejected:
+        with pytest.raises(RuntimeError, match='OAuth query values'):
+            check('czero7')
+    else:
+        check('czero7')
