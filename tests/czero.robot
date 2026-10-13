@@ -480,6 +480,7 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${host}/agents
     Get Text    body    contains    Objects, search and MCP are planned milestones.
     Close Browser
+    Assert Disposable Browser Password Is Private
 
 Verify real native SSO and application-wide membership
     [Timeout]    15 minutes

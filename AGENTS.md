@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## M05 Core identity foundation (integration pending)
 
+- Robot log level NONE suppresses messages but retains nested keyword arguments. Never pass credentials through `BuiltIn.run_keyword`; call the public Browser fill method directly for plain strings and use Robot conversion only for non-sensitive typed arguments. Send native cluster-user/hash setup through private stdin files and assert the generated password is absent from actual output XML/Playwright logs.
+
 - Czero query redaction does not cover Core Traefik access logs. Disposable SSO fixtures suppress the proxy access log before authentication and assert no OAuth query values; production proxy logging needs a separate platform contract review. Never publish raw OAuth query diagnostics.
 
 - Rootless Podman test bind sources must belong to the module account before `:z` labeling on SELinux hosts. Public test CA files use mode 0644; private keys remain outside runtime containers. Never disable SELinux or TLS verification to make a fixture pass.

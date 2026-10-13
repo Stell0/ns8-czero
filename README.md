@@ -1,156 +1,110 @@
-# C0 (Czero) — AI-native application foundation for NethServer 8
+# C0 (Czero) — Application foundation for NethServer 8
 
-**Status (13 October 2026): M00 through M04 are complete. Native backup/restore, archive replay and earlier-image upgrade pass Debian/Rocky QEMU; M05 authentication and roles are next.** Czero provides a FastAPI application, a small end-user landing page and a separately versioned C0 Core package. Local, published-image and QEMU lifecycle/browser checks pass through M02. M03 local/integration checks, publication/audits and both native QEMU/browser legs pass. Further interactive Playwright and live testing are temporarily waived by the operator. The repository and existing module/app packages are public; the database component is public too. Follow [PLAN.md](PLAN.md) for evidence and [AGENTS.md](AGENTS.md) for coding rules.
+**Status (13 October 2026): M00–M04 are complete. M05 authentication passes real disposable NS8 SSO tests; configured upgrade/restore of admitted identities is undergoing final verification.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright and live testing are temporarily waived by the operator. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
-## Why C0?
+## Purpose and boundaries
 
-C0 is a **working application foundation**, not merely a library. The intended first installation provides a browser application, a REST API, a remotely usable OAuth-protected MCP endpoint, reusable PostgreSQL storage, and a generic LLM Wiki / retrieval engine.
+C0 is a deployable application foundation and a forkable GitHub template. External coding agents can extend its shared operations and application UI while retaining native NethServer lifecycle, packaging and tests. C0 Core lives in `packages/czero-core`; fork-specific business logic belongs in `app`.
 
-It also serves as a GitHub template: fork C0, tell Codex or Claude Code what application to build, and have the agent modify, test, package, deploy and maintain an independent NethServer 8 module. Many knowledge-centric applications should reuse existing generic storage and operations before adding domain-specific tables and code.
+One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
 
-**C0 stores and serves knowledge; external AI harnesses reason about and maintain it.**
-
-## Planned runtime
-
-| Capability | Design |
-| --- | --- |
-| Hosting | NS8 rootless module, Podman/systemd, Traefik HTTPS, native volume and backup lifecycle |
-| Application backend | Python, FastAPI, REST/OpenAPI and a shared operation/service layer |
-| Database | One PostgreSQL instance **per installed C0 module**, pgvector plus relational and JSONB storage |
-| Knowledge | Original-source metadata, retained extracted text, chunks, embeddings, wiki pages, revisions, provenance, claims, entities and typed relationships |
-| Generic app data | Object types defined by JSON Schema, JSONB records, relations, tags/events and CRUD |
-| Search | Always-on PostgreSQL full-text search; optional external embeddings for vector/hybrid retrieval; graph expansion |
-| System One | Optional external **Jev or Kev** scoring/filtering adapter; safe standard-ranking fallback |
-| Authentication | NS8 user domains and ns8-idp/OIDC for browser and MCP |
-| Permissions | Personal owner by default; optional shared Reader/Editor/Admin roles, **one common knowledge space**, no per-document ACLs |
-| Scheduling | Small PostgreSQL-backed deterministic job queue and scheduled-tasks table, dispatched by a systemd user timer |
-| Admin UI | Native NS8 module settings for host, role access, external-provider configuration, health and services |
-| User UI | Knowledge, generic records, search, wiki, jobs and a self-describing `/agents` page |
-| Agent access | REST, native MCP tool discovery and `/agents/capabilities.json` |
-
-The Python **C0 Core** runtime is a separately versioned package under `packages/czero-core`; it now provides health, bounded database operations and packaged migrations (M03 runtime verified). Fork-specific business logic belongs in `app`. Package registry publication arrives in M13. The NS8 lifecycle remains implemented as short, numbered **actions**.
-
-### What works with no AI credentials
-
-After C0 is implemented, a clean installation must work for users, data CRUD, deterministic document text extraction/chunking, wiki editing, PostgreSQL full-text search, graph queries, REST/MCP and administration **without any generative-model service**. Semantic search requires a configured external embedding API. Jev and Kev are optional external System One services; timeout/error falls back to unfiltered standard retrieval.
-
-C0 deliberately **does not** contain a generative LLM, autonomous research agent, scheduled LLM prompts, local model inference, user-defined shell jobs, document-level ACLs, webhooks, or a second graph database. External harnesses (e.g. ChatGPT, Claude, Hermes) maintain the wiki through authenticated APIs/MCP.
-
-### Documents and storage
-
-Keep full extracted text and source locations: vectors alone are insufficient for citations, re-chunking and re-embedding. Original binary uploads may be deleted **after successful extraction and persistence** by default, or retained on an NS8-backed volume when chosen. Backups must cover PostgreSQL logical dumps, required persistent files and secret configuration. Knowledge can be exported without an AI provider.
-
-### Search configuration
-
-Safe defaults live in C0. NS8 admin UI sets instance-wide embedding and System One provider credentials, models, timeouts and resource limits; REST/MCP requests may override safe query parameters (limit, retrieval mode, graph depth, rerank mode) **within configured bounds**. Full-text fallback is always available and the response reports which retrieval method was used.
-
-## Planned application development paths
-
-**Configure an installed C0:** An authenticated agent defines object types, records, relationships and generic forms using existing REST/MCP operations; simple applications need little or no new code.
-
-**Fork and extend C0:** For specialized rules/UI/SQL transactions, create a fork and ask an AI coding agent to implement the feature using [AGENTS.md](AGENTS.md) and [PLAN.md](PLAN.md). Changes to C0 Core should be separated into upstream-ready PRs where generally reusable.
-
-Development-only files (`AGENTS.md`, skills, CI, tests, build scripts, templates) stay in the repository; they are **not** exposed as installed app runtime content. The current app provides an introductory `/agents` page and health/OpenAPI discovery. Authenticated REST/MCP discovery arrives in later milestones.
+The roadmap adds generic JSON Schema objects, document evidence, an LLM Wiki, text/vector/graph retrieval, deterministic jobs and authenticated remote MCP. These resource features remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
 ## Current interfaces
 
-M02 serves these paths at the configured application hostname. Existing M01 instances keep `/czero/<module-id>` on the cluster web host until hostname configuration:
+Configure an application hostname in NS8 Settings. Older M01 installations retain `/czero/<module-id>` on the cluster host until hostname configuration.
 
-| Path | Current behavior |
+| Path | Available behavior |
 | --- | --- |
-| `/` | Static application landing page with API and agent links |
-| `/api/v1/health` | JSON status, Core `0.6.0`, app `0.7.0` and database readiness/schema/vector versions |
-| `/openapi.json` | OpenAPI health schema with the configured root or legacy prefix |
-| `/docs` | Swagger API documentation |
-| `/agents` | Introduction describing the available health/OpenAPI capabilities |
+| `/` | Landing page, database status, sign-in status and Admin sharing controls |
+| `/api/v1/health` | Public Core/app versions and PostgreSQL/schema/vector readiness |
+| `/api/v1/auth/status` | Public indication that authentication is configured |
+| `/auth/login`, `/auth/callback` | OIDC authorization-code login with PKCE, one-use state and nonce |
+| `POST /auth/logout` | Local session revocation and provider logout URL |
+| `GET /api/v1/me` | Authenticated profile and current application role |
+| `GET /api/v1/access/accounts` | Admin list of verified profiles and grants |
+| `PUT /api/v1/access/accounts/<id>` | Admin grant/revocation of Reader, Editor or Admin |
+| `/openapi.json`, `/docs` | REST schemas and Swagger UI |
+| `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-The health/discovery endpoints are public. Identity and membership endpoints below require configured authentication. Login, object/source operations, document ingestion, Wiki, search, jobs and MCP are later milestones. PostgreSQL stores the baseline schema and knowledge-space identity. Health returns HTTP 200 when PostgreSQL/schema/vector are ready, or a safe HTTP 503 with a database reason. The landing page displays database availability and supports a status refresh. Provider readiness is not implemented. `/docs` loads Swagger assets from a CDN; `/openapi.json` remains usable without them.
+Core/app versions are **0.6.0/0.7.0**, with packaged migrations through `0003_sessions`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
-## Planned interfaces
+Object/source CRUD, ingestion, Wiki, retrieval, jobs, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
 
-- Machine-readable capabilities: `/agents/capabilities.json`
-- Authenticated object, source, Wiki, search and job operations: `/api/v1/...`
-- Remote MCP: `/mcp`
+## Install and configure
 
-Machine-readable capabilities, authenticated resource operations and MCP remain planned. Exact schemas and auth flows will be recorded as each milestone passes and generated from one capability/operation registry where possible.
+For development installation, use native NS8 `add-module` with image `ghcr.io/stell0/czero:main` and your node ID. The active M05 branch image is `ghcr.io/stell0/czero:feat-m05-authentication`. `:main` and `:latest` track development builds and are not stable releases; consult PLAN.md for tested commits/digests. The repository and module/app/database packages are public. Core 3.21.0 has an inventory display issue for digest-only image URLs, although installation works.
 
-## Source code and NethServer conventions
+In **Czero Settings**, enter a fully qualified DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits issuance; otherwise Traefik uses its configured certificate. Save registers HTTPS routing, redirects HTTP, restarts services and waits for local health. Conflicting or malformed hostnames are rejected. The saved application link opens `https://<hostname>/`. Public certificate issuance has not been verified during the live-testing pause.
 
-This repository starts from [ns8-kickstart](https://github.com/NethServer/ns8-kickstart). Existing NS8 technology must be **reused**, not rebuilt:
+The native API accepts hostname-only configuration such as `{"host":"c0.example.test","lets_encrypt":false}`. `get-configuration` returns saved host/certificate and identity settings without secrets. Authentication remains disabled until an IdP, user domain and owner are selected; resource access fails closed.
 
-- Module actions and configuration: [NS8 module agent](https://github.com/NethServer/ns8-core/blob/main/docs/modules/agent.md); modern [Hermes action organization](https://github.com/NethServer/ns8-hermes-agent).
-- Embedded PostgreSQL and logical backup: [ns8-dependencytrack](https://github.com/NethServer/ns8-dependencytrack).
-- Volume and backup: [NS8 Core](https://github.com/NethServer/ns8-core/blob/main/docs/modules/backup_restore.md).
-- OIDC registration: [ns8-idp](https://github.com/NethServer/ns8-idp).
-- Admin components: [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib).
-- CI/Robot/QEMU image tests: [ns8-github-actions](https://github.com/NethServer/ns8-github-actions).
-- Coding-agent instructions and NethServer PR skills: [NethServer/agents](https://github.com/NethServer/agents).
+### Sign-in and sharing
 
-Prefer the maintained patterns linked directly in each milestone. The repository currently includes a GPL-3.0 license; retain proper attribution and check any copied code for license compatibility.
-
-## Development and testing
-
-`build-images.sh` builds the small `ghcr.io/stell0/czero` NS8 module image and the separate `ghcr.io/stell0/czero-app` Python component. The module contains actions and the compiled administration UI; the component contains installed Core/app runtime packages and the static user page. Its Python base and runtime dependencies are pinned, and the app runs as an unprivileged user. Repository instructions, tests, CI, skills and builder tools stay outside the runtime filesystem.
-
-In Czero **Settings**, enter a fully qualified application DNS hostname pointing to the NS8 node. Enable **Request a Let's Encrypt certificate** when public DNS/network access permits certificate issuance; otherwise NS8 uses its configured certificate. Save registers the hostname in Traefik, redirects HTTP to HTTPS, restarts the application and waits for local health. The saved application link opens `https://<hostname>/`. Settings survive restart/update; repeated Save retains the same route, and changing the hostname replaces its old rule. Conflicting hostnames and malformed settings are rejected. Route/certificate failure leaves the previous saved configuration intact.
-
-Each C0 module now has its own PostgreSQL 17.11 + pgvector 0.8.7 container and `czero-db-data` volume, with a private per-instance database password. The application and database share a private pod; database ports are not published. Native startup runs packaged migrations before the app, and preserves the knowledge-space identity on repeated migrations. Real local integration checks cover vector indexing, transactions and schema compatibility. Initial native QEMU tests verify container/network isolation and restart/update persistence. Pod recreation also preserves rows and recovers active children. M03 documentation closeout is verified. M04 native logical backup/restore passes Debian/Rocky tests, preserving database identity, rows, retained files and configuration.
-
-The native API accepts `configure-module` data such as `{"host":"c0.example.test","lets_encrypt":false}`; `get-configuration` returns those normalized settings (empty host before configuration). TLS belongs to Traefik; the app listens only on its allocated loopback port. No provider credentials are introduced. M02 acceptance is complete. M03 passes 44 local unit tests, three real database tests and the admin UI build; publication and native QEMU/browser verification pass. Interactive Playwright and live tests remain temporarily waived. Authentication arrives in M05. Actual public Let's Encrypt issuance has not been tested under the live-testing pause; QEMU uses synthetic hosts and the platform test certificate. No release is ready.
-
-For development installation, use the native NS8 `add-module` action with `image: "ghcr.io/stell0/czero:main"` and your node id. Open the installed module's Settings, enter its DNS hostname and save, then open the saved application link. Older M01 instances retain their cluster-host prefix until configured. Check PLAN.md for the tested commit and image digest. `:main` and `:latest` track development builds; they are not stable releases. Core 3.21.0 displays digest-only image URLs incorrectly in inventory, although installation works.
-
-Install test dependencies in a development virtualenv with `pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'`, then run `python -m pytest -q app/tests packages/czero-core/tests tests/unit` (122 unit tests). Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector test database and add `tests/integration` to run the twenty-five real database tests; CI supplies a disposable loopback-only service. Validate action regex compatibility with Core using `go run tests/check_schemas.go`; Python schema tests alone do not catch Go-incompatible patterns. Runtime builds use `app/uv.lock` with `uv sync --frozen --no-dev --no-editable`. Build the admin UI with `cd ui && corepack yarn install --immutable && NODE_OPTIONS=--openssl-legacy-provider corepack yarn build`. `tests/czero.robot` verifies native lifecycle in disposable QEMU. Browser checks create a random temporary administrator and assert Settings Save recovering a deliberately stopped service, About, the landing page, health, OpenAPI and agent introduction. They never use live credentials. M04 tests pin both the verified M03 module and component digests, seed its database, then run the current native upgrade. The current schema remains revision `0001_database`; this proves lifecycle upgrade persistence, not a new schema transformation.
-
-Publication uses `GITHUB_TOKEN` with explicit checkout and package-write permissions; each container package must grant the repository Actions Write access. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases. Private source checkout is supported; private container packages would also require authenticated QEMU/guest pulls. Package naming follows Hermes: remove the repository’s `ns8-` prefix.
-
-CI workflows already present in the template:
-
-- `.github/workflows/publish-images.yml` — module/component image publication and Trivy scans; source/image SARIF reports and CycloneDX SBOMs are retained as CI artifacts. Reports contain dependency findings; successful scan execution does not mean they are resolved. Review them before release.
-- `.github/workflows/test-module.yml` — NS8 Robot integration via [QEMU reusable workflow](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/test-module-qemu.yml).
-- `renovate.json` — baseline Renovate config (fork/upstream awareness to be added later).
-- `.github/workflows/test-local.yml` — action tests, shell syntax and Robot dry-run.
-
-Follow the loop in `AGENTS.md`: plan **one milestone**, implement in small increments, commit/push, verify actual CI runs, run applicable NS8 and browser checks, update both documentation files, mark evidence, then advance. Use [Playwright MCP](https://github.com/microsoft/playwright-mcp) interactively to check both the NS8 administrator UI and the separate C0 user UI; add repeatable automated checks to CI.
-
-Do not place private live-server details, passwords, session cookies or auth-state files in the repository. Authorized live testing details are supplied by the operator at execution time.
-
-## Roadmap
-
-[PLAN.md](PLAN.md) contains ordered milestones from kickstart/CI through database, authentication, reusable storage, wiki ingestion, retrieval, MCP, Web UI, fork upgrades and final acceptance. No item is complete until its evidence is recorded in the plan.
-
-## License
-
-See [LICENSE](LICENSE) (GPL-3.0 as present in the template). Verify license compatibility when copying implementation code or splitting out the C0 Core distribution.
-
-
-M04 uses NS8's native backup destination, schedule, run and restore actions. In the NS8 Backup page, choose Czero and a supported destination, run the backup, and verify that it has a snapshot. Restore uses a clean module slot with the recovered hostname available. The current handler requires a fresh database volume; a completed-archive receipt allows replay while preserving subsequent database changes. Its archive includes an atomic PostgreSQL custom dump, the private database credential file, service-state metadata and the retained-source volume. Live database files are excluded. Restore reconstructs C0 settings using the new module identity/allocated port, restores PostgreSQL offline with fail-fast transactional `pg_restore`, and restores the prior app enabled/running state. These hooks pass local regressions and native Debian/Rocky restore/replay tests. M04 documentation/main closeout is verified. Tests bound native backup/restore waits and use credential-free phase diagnostics. Interactive Playwright MCP and live checks remain waived. The volume currently holds test fixtures; original document ingestion/retention remains M08. Backup coordination with future file-writing ingestion and workers must be revisited as those features arrive.
-
-
-M05 adds reusable RS256 identity verification, persisted profiles and Reader/Editor/Admin grants, one-use login state and expiring opaque sessions. Ownership is pinned to the signed LDAP UUID resolved by native configuration; token roles grant no application access. Core/app versions are 0.6.0/0.7.0 with migrations through `0003_sessions`. Local tests use real signatures and PostgreSQL. Native configuration and app routes are wired; real NS8 SSO acceptance is still pending.
-
-
-The M05 transport now has `/auth/login`, `/auth/callback` and `POST /auth/logout`, public `GET /api/v1/auth/status`, protected `GET /api/v1/me`, and admin-only `GET /api/v1/access/accounts` / `PUT /api/v1/access/accounts/<id>`. Cookies are Secure/HttpOnly/SameSite and server sessions expire; cookie writes require CSRF plus the configured Origin. Bearer tokens are validated by the same Core identity/membership services. The landing page shows sign-in/role status and admin sharing controls, with profiles appearing after a verified login attempt. Local HTTP tests exercise real signatures and PostgreSQL; native NS8 identity settings/registration are wired, while real SSO verification remains pending. A hostname-only installation reports sign-in unconfigured until an IdP, user domain and owner are selected. No complete NS8 login claim is made yet. Local logout revokes the session even if the provider cannot log out; its SSO session may then remain until the provider recovers.
-
-
-M05 native Settings now includes an optional **Enable NethServer sign-in** toggle, discovered identity provider/user domain and existing owner account. Ownership is resolved to the LDAP UUID; the cluster administrator login is separate. Native actions bind the domain and register exact callback/logout URLs plus the Czero audience, storing the client secret privately. Restore/update re-register the module client and preserve identity settings. The admin UI and native SDK tests pass locally; real NS8 SSO login is still awaiting disposable integration verification. Registration/binding is not a distributed transaction: provider errors are reported and the previous secret file is kept, but a failed cross-module change may require re-saving the previous selection. The upstream IdP has no stable release at present; its README's 1.0.0 image tag is unavailable. Disposable testing pins the verified main image rather than assuming that tag works; release-readiness remains future work.
-
-The native authentication increment published successfully, but its first QEMU run found an SDK stdin error in restore. The same error could affect configured upgrades. Both hooks are corrected with regression coverage, and replacement Debian/Rocky QEMU passes. M05 remains incomplete while real SSO and identity persistence acceptance are pending.
-
-The authentication implementation is available on the M05 development branch; end-to-end acceptance is pending. Its intended configuration flow is:
-
-1. Configure an NS8 IdP and user domain, then enable NethServer sign-in in Czero **Settings**, select both and enter an existing domain account as owner. Save registers the module client with exact application callback/logout URLs.
+1. Configure a compatible NS8 IdP with trusted HTTPS and a user domain. Enable **NethServer sign-in** in Czero Settings, select both and enter an existing domain account as owner. Save resolves its stable LDAP UUID, binds one domain and registers exact callback/logout URLs plus the Czero audience.
 2. Open Czero and sign in with that domain account. This is separate from the cluster-administration account. The owner receives Admin access to the shared space.
-3. A prospective member first attempts sign-in and is denied until admitted. The owner can then select Reader, Editor or Admin for the verified account in the application sharing controls. Revocation takes effect on the next request, including existing sessions. The owner's role is controlled through NS8 Settings.
+3. A prospective member first attempts sign-in and is denied until admitted. The owner can then select Reader, Editor or Admin for that verified account in the sharing controls. Revocation applies to the next request, including existing sessions. Ownership is managed through NS8 Settings.
 
-Current protected operations expose identity and membership administration. Resource CRUD, ingestion, Wiki, search and MCP remain later milestones. Reader/Editor cannot administer membership; Editor resource writes arrive with the resource milestones. Server sessions expire at the earlier token expiry or one hour. Sign-out revokes the local session and opens the provider's logout confirmation; if the provider is unavailable, local logout still succeeds but the provider session may remain.
+Signed issuer/LDAP UUIDs identify accounts; usernames and token role claims do not grant ownership or membership. REST accepts verified access tokens and the browser uses opaque Secure/HttpOnly/SameSite cookies. Cookie writes require CSRF plus the configured Origin. Server sessions expire at the earlier token expiry or one hour. Sign-out revokes the local session and opens provider confirmation. If the provider is unavailable, local logout still succeeds but its SSO session may remain.
 
-The development SSO tests also require the upstream `ldapproxy:1.4.0-dev.1` listener fix for Keycloak pod access. That prerequisite is installed only in disposable tests. Stable IdP/proxy availability must be resolved before release; no live proxy has been changed.
+Native registration/binding is not a distributed transaction. A failed cross-module change reports an error and keeps the previous secret file, but may require re-saving the previous selection and hostname. Configured upgrade and clean restore of admitted identities are the remaining M05 verification gate.
 
-The first real disposable NS8 SSO run verifies registration, signed owner login, normal-user denial and role changes, but stops at a logout-confirmation test-driver URL error. The driver is corrected with a regression case. Full logout/restart/restore acceptance is still pending, so M05 is not complete.
+The current upstream IdP has no stable GitHub release; its README's `1.0.0` image is unavailable. Disposable tests pin a verified main image and require the upstream `ldapproxy:1.4.0-dev.1` listener fix for Keycloak pod access. These are development dependencies. Compatible stable IdP/proxy availability is a release prerequisite; no live proxy has been modified.
 
-Rocky also exposed a test CA ownership error during rootless SELinux labeling. The disposable fixture now assigns the public CA to its module before mounting; SELinux and TLS verification remain enabled. A fresh full QEMU run is required for acceptance.
+## Persistence and backup
 
-Czero strips queries from its application access logs. The platform proxy has its own access log; its default logging contract still needs release review. Disposable SSO tests suppress that proxy log to keep temporary OAuth query values out of diagnostic artifacts.
+Each module has PostgreSQL **17.11** plus pgvector **0.8.7**, a private pod and its own `czero-db-data` volume/password. Database ports are not published. Native startup runs packaged migrations before the app; repeated migration, restart, pod recreation and upgrades preserve data and knowledge-space identity.
 
-The corrected disposable SSO workflow now passes Debian and Rocky, including real owner/member authentication, role changes, revocation, local/provider logout and restart identity. Both diagnostic archives contain no OAuth query-bearing access lines. Configured upgrade and clean restore with admitted memberships remain the final M05 verification gate.
+Use the native NS8 Backup page to select Czero and a supported destination, run backup and verify a snapshot. Restore uses a clean module slot with its hostname available. Archives contain an atomic PostgreSQL custom dump, private configuration, service-state metadata and the retained-source volume; live database files are excluded. Offline restore uses fail-fast transactional `pg_restore`, retains the new native module identity/port and restores the prior enabled/running state. A completed-archive receipt permits replay without overwriting later database changes. Debian/Rocky native tests verify these baseline behaviors.
+
+The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup coordination with workers and file-writing ingestion must be extended as those features arrive.
+
+## Remaining roadmap
+
+| Capability | Agreed direction |
+| --- | --- |
+| Jobs | PostgreSQL-backed queue/schedules, trusted deterministic handlers and systemd timer |
+| Generic objects | JSON Schema definitions, JSONB records, typed references and forms |
+| Evidence | Full extracted text, offsets, metadata, revisions and citations |
+| Wiki | Pages, claims, entities, revisions and provenance, separate from raw evidence |
+| Retrieval | PostgreSQL full-text search, optional external embeddings and graph expansion |
+| System One | Optional Jev/Kev scoring with bounded requests and ordinary-ranking fallback |
+| Agent access | Shared REST/MCP operations, OAuth protection and self-description |
+| Forks | Reusable Core distribution, upstream-compatible extensions and development skills |
+
+Once implemented, CRUD, deterministic parsing/chunking, Wiki editing and full-text retrieval must work without AI credentials. Binary originals are deleted by default only after successful extraction/persistence; optional retention uses an NS8 volume. Safe built-in defaults precede NS8 instance configuration and bounded request overrides. Request overrides cannot replace provider secrets. Semantic retrieval requires configured embeddings; Jev/Kev failures must disclose fallback and never determine authorization.
+
+## Development and verification
+
+`build-images.sh` publishes `ghcr.io/stell0/czero`, `czero-app` and `czero-postgres`. The module contains numbered actions and compiled NS8 Vue UI; the Python component contains installed Core/app packages and the separate user UI. Runtime images exclude agent instructions, plans, skills, CI, tests and development tools. The app runs unprivileged; NS8 lifecycle logic stays outside the application backend.
+
+Install development dependencies in a virtualenv:
+
+```sh
+pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
+python -m pytest -q app/tests packages/czero-core/tests tests/unit
+```
+
+There are 132 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for twenty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+
+Build the administration UI:
+
+```sh
+cd ui
+corepack yarn install --immutable
+NODE_OPTIONS=--openssl-legacy-provider corepack yarn build
+```
+
+`tests/czero.robot` runs native lifecycle in disposable QEMU, including an immutable M04 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
+
+Czero strips queries from application access logs. Core Traefik has its own default access log; its production logging contract still needs release review. Disposable SSO fixtures suppress proxy access logs and assert no OAuth query values in both streams. Interactive Playwright MCP/live checks remain operator-waived, and no destructive test runs on a live server.
+
+Publication uses `GITHUB_TOKEN` with package-write permission and package Actions Write grants. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases. Private repositories are supported; private container packages additionally need authenticated guest pulls. Package names remove the repository's `ns8-` prefix, following Hermes.
+
+CI includes local/schema/shell checks, image publication/runtime audits, Trivy SARIF/CycloneDX artifacts and native QEMU/Robot tests. Successful scans do not establish that dependency findings are resolved. Review findings before release. Follow AGENTS.md's milestone loop: plan, implement, commit/push, inspect actual CI/tests, fix failures, reconcile documentation, then advance. Keep live hostnames, passwords, tokens, cookies and auth-state files out of Git and artifacts.
+
+## NethServer sources and license
+
+Czero derives from [ns8-kickstart](https://github.com/NethServer/ns8-kickstart). Reuse [Core module contracts](https://github.com/NethServer/ns8-core/tree/main/docs/modules), [Hermes](https://github.com/NethServer/ns8-hermes-agent), [Dependency-Track](https://github.com/NethServer/ns8-dependencytrack), [IdP](https://github.com/NethServer/ns8-idp), [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib), [QEMU Actions](https://github.com/NethServer/ns8-github-actions) and [NethServer agent skills](https://github.com/NethServer/agents), prioritizing maintained, tested implementations linked in PLAN.md.
+
+See [LICENSE](LICENSE) (GPL-3.0). Preserve attribution and verify license compatibility when copying code or distributing C0 Core.
