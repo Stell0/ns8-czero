@@ -4,11 +4,15 @@
 import json
 import os
 from pathlib import Path
+import tempfile
 import agent
 
 agent.run_helper('czero-create-auth-state').check_returncode()
 action = Path(os.environ['AGENT_INSTALL_DIR'])/'actions/configure-module'
-agent.run_helper(str(action/'15validate-auth'),input=json.dumps({'host':os.getenv('CZERO_HOST','')}),text=True).check_returncode()
+with tempfile.TemporaryFile(mode='w+') as payload:
+    json.dump({'host': os.getenv('CZERO_HOST', '')}, payload)
+    payload.seek(0)
+    agent.run_helper(str(action/'15validate-auth'), stdin=payload, text=True).check_returncode()
 for name in ('25bind-user-domain','30register-client'):
     agent.run_helper(str(action/name)).check_returncode()
 (Path(os.environ['AGENT_STATE_DIR'])/'auth-pending.json').unlink(missing_ok=True)

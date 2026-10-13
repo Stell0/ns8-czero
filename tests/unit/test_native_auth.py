@@ -111,3 +111,22 @@ def test_owner_key_is_preserved_for_unchanged_name_and_domain(monkeypatch, tmp_p
     sys.modules['agent.ldapclient'].Ldapclient.factory = lambda **kw: pytest.fail('Do not reassign an unchanged owner name')
     prepare(monkeypatch, {'host':'c0.example.test'})
     assert json.loads((tmp_path/'auth-pending.json').read_text())['owner_key'] == OWNER_UUID
+
+
+@pytest.mark.parametrize('script', ['actions/restore-module/60register-identity',
+                                   'update-module.d/50auth-state'])
+def test_identity_reconciliation_uses_sdk_popen_stdin(monkeypatch, tmp_path, script):
+    monkeypatch.setenv('AGENT_STATE_DIR', str(tmp_path))
+    monkeypatch.setenv('AGENT_INSTALL_DIR', '/test/module')
+    monkeypatch.setenv('CZERO_HOST', 'c0.example.test')
+    monkeypatch.setenv('CZERO_USER_DOMAIN', 'users.example.test')
+    calls = []
+    # SDK run_helper forwards keyword arguments to Popen, not subprocess.run.
+    def run_helper(path, *, stdin=None, text=False):
+        calls.append((path, json.load(stdin) if stdin else None))
+        return SimpleNamespace(check_returncode=lambda: None)
+    monkeypatch.setitem(sys.modules, 'agent', SimpleNamespace(run_helper=run_helper))
+    runpy.run_path(str(ROOT / 'imageroot' / script))
+    assert calls[1][1] == {'host': 'c0.example.test'}
+    assert [Path(call[0]).name for call in calls] == [
+        'czero-create-auth-state', '15validate-auth', '25bind-user-domain', '30register-client']
