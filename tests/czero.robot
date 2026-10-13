@@ -16,13 +16,13 @@ ${backup_repository}    ${EMPTY}
 Remove disposable module
     IF    $other_id
         ${rc} =    Execute Command    remove-module --no-preserve ${other_id}
-        ...    return_rc=True    return_stdout=False
+        ...    return_rc=True    return_stdout=False    timeout=180s
         Should Be Equal As Integers    ${rc}    0
         Set Global Variable    ${other_id}    ${EMPTY}
     END
     IF    $module_id
         ${rc} =    Execute Command    remove-module --no-preserve ${module_id}
-        ...    return_rc=True    return_stdout=False
+        ...    return_rc=True    return_stdout=False    timeout=180s
         Should Be Equal As Integers    ${rc}    0
         Set Global Variable    ${module_id}    ${EMPTY}
     END
@@ -30,7 +30,7 @@ Remove disposable module
 Remove disposable backup resources
     IF    $backup_repository
         ${rc} =    Execute Command    api-cli run remove-backup-repository --data '{"id":"${backup_repository}"}'
-        ...    return_rc=True    return_stdout=False
+        ...    return_rc=True    return_stdout=False    timeout=180s
         Should Be Equal As Integers    ${rc}    0
         Set Global Variable    ${backup_repository}    ${EMPTY}
     END
@@ -343,74 +343,84 @@ Exercise the native module update
     Should Be Equal As Integers    ${rc}    0
 
 Backup and restore into a clean disposable instance
+    [Timeout]    10 minutes
+    Log To Console    Backup phase: seed retained fixture
     ${before_identity}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero sh -c "printf retained-fixture > /var/lib/czero/sources/retained.txt"
-    ...    return_rc=True    return_stdout=False
+    ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
+    Log To Console    Backup phase: create native destination and schedule
     ${backup} =    Create Disposable Backup    ${module_id}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
+    Log To Console    Backup phase: run native encrypted backup
     ${rc} =    Execute Command    api-cli run run-backup --data '{"id":${backup}[backup_id]}'
-    ...    return_rc=True    return_stdout=False
+    ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     ${rc} =    Execute Command
     ...    runagent -m ${module_id} test ! -e /home/${module_id}/.config/state/czero.pg_dump
-    ...    return_rc=True    return_stdout=False
+    ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
+    Log To Console    Backup phase: verify native snapshot
     Verify Disposable Snapshot    ${module_id}    ${backup}[repository]    ${backup}[path]
     # Only the disposable Czero module is destroyed; native backup data remains.
+    Log To Console    Restore phase: remove donor
     Remove disposable module
+    Log To Console    Restore phase: restore clean slot
     ${output}    ${rc} =    Execute Command
     ...    api-cli run restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","node":1}'
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0    msg=${output}
     ${restored_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${restored_id}
+    Log To Console    Restore phase: verify health and data
     Wait Until Keyword Succeeds    30s    2s    Check application route
     ${identity}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${identity}    ${before_identity}
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    2
     ${output}    ${rc} =    Execute Command    runagent -m ${module_id} podman exec czero cat /var/lib/czero/sources/retained.txt
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    retained-fixture
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-configuration
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     ${config} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${config}[host]    ${host}
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} stat -c '%a' /home/${module_id}/.config/state/passwords.env
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    600
     # Re-delivering a completed archive preserves later database changes.
     ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -v ON_ERROR_STOP=1 -c "INSERT INTO czero_persistence_probe VALUES (3, '[3,0,0]');"
-    ...    return_rc=True    return_stdout=False
+    ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
+    Log To Console    Restore phase: replay completed archive
     ${rc} =    Execute Command
     ...    api-cli run module/${module_id}/restore-module --data '{"repository":"${backup}[repository]","path":"${backup}[path]","snapshot":"latest","environment":{"IMAGE_URL":"${IMAGE_URL}","CZERO_HOST":"${host}","CZERO_LETS_ENCRYPT":"false"}}'
-    ...    return_rc=True    return_stdout=False
+    ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
+    Log To Console    Restore phase: verify health and data
     Wait Until Keyword Succeeds    30s    2s    Check application route
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
-    ...    return_rc=True
+    ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${output}    3
     ${rc} =    Execute Command    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false}'
-    ...    return_rc=True    return_stdout=False
+    ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Check application route
 

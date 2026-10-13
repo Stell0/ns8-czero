@@ -16,17 +16,17 @@ class CzeroBackup:
         previous=builtin.set_log_level('NONE')
         try:
             # Read only the public VPN address required by Core's cluster provider.
-            address,rc=ssh.execute_command("runagent -m node python3 -c \"import agent,os; print(agent.redis_connect().hget('node/'+os.environ['NODE_ID']+'/vpn','ip_address'))\"",return_rc=True)
+            address,rc=ssh.execute_command("runagent -m node python3 -c \"import agent,os; print(agent.redis_connect().hget('node/'+os.environ['NODE_ID']+'/vpn','ip_address'))\"",return_rc=True,timeout='180 seconds')
             if rc != 0: raise AssertionError('Cannot resolve disposable backup node')
             request={'provider':'cluster','name':'Czero disposable backup','url':'webdav:http://'+address.strip()+':4694','password':'','parameters':{}}
-            output,rc=ssh.execute_command('api-cli run add-backup-repository --data '+shlex.quote(json.dumps(request)),return_rc=True)
+            output,rc=ssh.execute_command('api-cli run add-backup-repository --data '+shlex.quote(json.dumps(request)),return_rc=True,timeout='180 seconds')
             if rc != 0: raise AssertionError('Cannot create disposable backup destination')
             repository=json.loads(output)['id']
             request={'name':'Czero disposable backup','repository':repository,'schedule':'2099-01-01 00:00:00','retention':2,'instances':[module_id],'enabled':True}
-            output,rc=ssh.execute_command('api-cli run add-backup --data '+shlex.quote(json.dumps(request)),return_rc=True)
+            output,rc=ssh.execute_command('api-cli run add-backup --data '+shlex.quote(json.dumps(request)),return_rc=True,timeout='180 seconds')
             if rc != 0: raise AssertionError('Cannot create disposable backup schedule')
             backup_id=int(json.loads(output))
-            output,rc=ssh.execute_command("runagent -m "+shlex.quote(module_id)+" python3 -c \"import os; print('czero/'+os.environ['MODULE_UUID'])\"",return_rc=True)
+            output,rc=ssh.execute_command("runagent -m "+shlex.quote(module_id)+" python3 -c \"import os; print('czero/'+os.environ['MODULE_UUID'])\"",return_rc=True,timeout='180 seconds')
             if rc != 0: raise AssertionError('Cannot resolve disposable backup path')
             return {'repository':repository,'backup_id':backup_id,'path':output.strip()}
         finally:
@@ -41,7 +41,7 @@ class CzeroBackup:
               "assert json.loads(p.stdout), 'Native backup did not create a snapshot'")
         previous=builtin.set_log_level('NONE')
         try:
-            _,rc=ssh.execute_command('runagent -m '+shlex.quote(module_id)+' python3 -c '+shlex.quote(code),return_rc=True)
+            _,rc=ssh.execute_command('runagent -m '+shlex.quote(module_id)+' python3 -c '+shlex.quote(code),return_rc=True,timeout='180 seconds')
             if rc != 0: raise AssertionError('Native backup snapshot was not verified')
         finally:
             builtin.set_log_level(previous)

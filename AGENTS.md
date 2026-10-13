@@ -1,13 +1,13 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M03 are complete with local/CI/QEMU and documentation evidence. M04 native backup/restore implementation is active. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M03 are complete with local/CI/QEMU and documentation evidence. M04 native backup/restore runtime acceptance passes; documentation/main closeout is active. The operator temporarily waived further interactive Playwright and live testing on 13 October 2026. Retain automated CI/QEMU/Robot checks and record live checks as waived, never passed. Do not describe planned storage, authentication, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
 
-## M04 implementation conventions (verification pending)
+## Established M04 backup/restore conventions
 
 - Native dump/cleanup hooks prepare a mode-0600 custom PostgreSQL archive and backup format/service-state metadata. Restic includes these, `passwords.env` and `czero-sources`; never include live PostgreSQL files. Dumping a cold DB preserves prior database/pod state and does not start an unconfigured app.
 - Restore extends Core with numbered settings, validation, offline database, route and service steps. Keep new Core node/port/image identity; restore only C0 settings. Fail on invalid formats/archives and use `pg_restore --single-transaction --exit-on-error`. Receipts prevent overwriting initialized data on repeated delivery of an already completed archive.
 - The retained-source volume is infrastructure for later ingestion. Actual original-retention policy and coordination with file-writing ingest/worker operations must be verified in M08/M06; current M04 tests use a controlled retained file.
-- Disposable backup setup captures Core's generated encryption password with Robot logging disabled and returns only identifiers. Genuine upgrade tests pin both predecessor module and component digests, not mutable tags. Require actual snapshots before donor removal; native repeated-delivery tests preserve post-restore database changes and verify restored credential modes. All destructive backup/restore cases remain QEMU-only.
+- Disposable backup setup captures Core's generated encryption password with Robot logging disabled and returns only identifiers. Genuine upgrade tests pin both predecessor module and component digests, not mutable tags. Bound backup/restore SSH reads and emit static phase markers so native stalls yield diagnostics. Require actual snapshots before donor removal; native repeated-delivery tests preserve post-restore database changes and verify restored credential modes. All destructive backup/restore cases remain QEMU-only.
 
 ## Established M03 database conventions
 
@@ -15,7 +15,7 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 - Credentials are generated once with native atomic safe I/O into mode-0600 `state/passwords.env`, loaded by Podman env-file. Create/update invoke the same focused helper; never export credentials through `agent.set_env` or action stdout. Do not rotate initialized database passwords during configure.
 - Core owns packaged Alembic migrations and database operations. NS8 invokes the Core migration CLI before app startup. Migrations hold a PostgreSQL transaction/advisory lock and retain the knowledge-space identity across repeat runs. No NS8 lifecycle manager belongs in Core.
 - Health reports safe database status/schema/vector versions and returns 503 on unavailability. Driver exceptions and connection URLs never enter responses. Application health SQL runs in FastAPI's sync worker pool.
-- Keep upstream PGXS/compilers and all repository tests/configuration out of runtime images. PostgreSQL logical backup/restore implementation is under M04 verification; do not describe native restore as passing until QEMU proves it.
+- Keep upstream PGXS/compilers and all repository tests/configuration out of runtime images. PostgreSQL logical backup/restore passes native Debian/Rocky acceptance in M04.
 
 ## Established M02 configuration conventions
 
@@ -27,9 +27,9 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Established M01 conventions
 
-- `packages/czero-core` contains reusable runtime operations and an independent version; `app` owns FastAPI transport, route composition and the separate static application UI. Both currently have version `0.1.0`. Core is a local package dependency until M13 distribution work.
+- `packages/czero-core` contains reusable runtime operations and an independent version; `app` owns FastAPI transport, route composition and the separate static application UI. The initial M01 versions were `0.1.0`; current Core/app versions are documented in README. Core is a local package dependency until M13 distribution work.
 - NS8 still owns lifecycle through short numbered scripts. Core injects `CZERO_APP_IMAGE` from the module dependency-image label; `configure-module/20configure` persists only the non-secret `CZERO_MODULE_ID`. The app validates that identity and mounts at `/czero/<module-id>` because the NS8 route preserves its prefix.
-- Application routes currently provide a landing page, `/api/v1/health`, `/openapi.json`, `/docs` and an honest `/agents` introduction. They have no authentication or persistence yet. Keep the application UI separate from the compiled NS8 Vue administration UI.
+- Application routes currently provide a landing page, `/api/v1/health`, `/openapi.json`, `/docs` and an honest `/agents` introduction. M01 had no authentication or persistence; M03 adds dedicated PostgreSQL and M04 adds native backups. Authentication remains M05. Keep the application UI separate from the compiled NS8 Vue administration UI.
 - `app/uv.lock` locks runtime dependencies. Build non-editable packages into `/opt/czero/.venv` in both container stages: generated console-script interpreter paths must not change when the virtualenv is copied. The final stage runs as UID 10001 and removes base-image package installers; copy only the virtualenv and static runtime files.
 - Audit installed dependency wheels too: FastAPI currently bundles `.agents` authoring skills, which the builder removes. The publisher runs `tests/audit_runtime.py` against the assembled image through stdin before publication; this repository-only check rejects development files and installed build/test tools.
 - The inherited Core `get-status` action expects no input (`null`), so omit `data` in its UI/API task payload. Sending `{}` fails Core input validation. Czero configuration accepts a required DNS `host` and optional boolean `lets_encrypt`.
