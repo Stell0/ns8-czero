@@ -5,8 +5,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 ## M05 Core identity foundation (integration pending)
 
 - Core `identity` verifies NS8 RS256 tokens against caller-supplied trusted keys, exact issuer/audience and required/time claims. Access tokens require Keycloak's `Bearer` type; ID tokens require login nonce and authorized party/hash bindings where applicable. Reject header-supplied key URLs and algorithm confusion. The JOSE library implements signatures; Core never implements cryptography or emits token values in errors.
-- Verified identity uses issuer plus normalized signed LDAP UUID, and contains no role authority. `Actor.require` has only Reader/Editor/Admin thresholds. Create admitted actors only from the shared membership service; never from request bodies or token role claims. The membership service, native registration, sessions and browser login are still pending in M05.
-- Current branch Core/app versions are 0.3.0/0.4.0; database revision remains `0001_database` in this foundation slice. Keep public health/landing behavior honest until authentication is wired. Freeze M04 module/component digests for genuine predecessor tests.
+- Verified identity uses issuer plus normalized signed LDAP UUID, and contains no role authority. `Actor.require` has only Reader/Editor/Admin thresholds. Create admitted actors only from the shared membership service; never from request bodies or token role claims. Core `AccessService` now persists verified profiles and roles, and rechecks roles inside privileged operations. Ownership uses a configured LDAP UUID, never username equality. Native owner resolution/registration, sessions and browser login are still pending in M05.
+- Current branch Core/app versions are 0.4.0/0.5.0; database revision is `0002_accounts`. Role mutations serialize with PostgreSQL advisory transaction lock 49372; migration lock remains 49371. Keep public health/landing behavior honest until authentication is wired. Freeze M04 module/component digests for genuine predecessor tests.
 
 ## Established M04 backup/restore conventions
 
