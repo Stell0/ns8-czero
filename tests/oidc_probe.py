@@ -47,7 +47,7 @@ class Browser:
 
     def login(self, username, password, expected=200):
         status, body, url = self.request("/auth/login")
-        assert status == 200, "Provider login page unavailable"
+        assert status == 200, f"Provider login page unavailable (HTTP {status})"
         form = LoginForm()
         form.feed(body.decode())
         assert form.action, "Provider login form missing"

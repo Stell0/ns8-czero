@@ -105,3 +105,27 @@ def test_disposable_log_assertion_checks_both_streams(output, rejected):
             check('czero7')
     else:
         check('czero7')
+
+
+@pytest.mark.parametrize('ready', [False, True])
+def test_identity_probe_waits_for_health_after_native_restart(monkeypatch, ready):
+    library = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['CzeroSso']()
+    calls=[]
+    monkeypatch.setattr(BuiltIn, 'get_library_instance', lambda self, name: SimpleNamespace(
+        execute_command=lambda *a, **kw: ('',0)))
+    monkeypatch.setattr(BuiltIn, 'set_log_level', lambda self, level: 'INFO')
+    library._network=lambda *args: calls.append('network')
+    library._persistence=lambda *args: calls.append('probe')
+    def wait(self, name, *args):
+        assert name == 'Wait Until Keyword Succeeds'
+        assert args == ('30s','2s','Check application route')
+        calls.append('health')
+        if not ready: raise AssertionError('application not ready')
+    monkeypatch.setattr(BuiltIn, 'run_keyword', wait)
+    if ready:
+        library.verify_disposable_identity_persistence('czero7')
+        assert calls == ['network','health','probe']
+    else:
+        with pytest.raises(AssertionError, match='application not ready'):
+            library.verify_disposable_identity_persistence('czero7')
+        assert calls == ['network','health']

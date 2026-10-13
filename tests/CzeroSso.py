@@ -90,6 +90,8 @@ class CzeroSso:
         previous = builtin.set_log_level("NONE")
         try:
             self._network(builtin.get_library_instance("SSHLibrary"), module_id)
+            # Native update/systemd completion precedes ASGI readiness.
+            builtin.run_keyword("Wait Until Keyword Succeeds", "30s", "2s", "Check application route")
             self._persistence("verify")
             ssh = builtin.get_library_instance("SSHLibrary")
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
