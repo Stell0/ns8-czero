@@ -4,7 +4,7 @@ const $ = id => document.getElementById(id);
 let profile = null, currentSource = null, currentDocument = null;
 let sourceOffset = 0, chunkOffset = 0, sourcesSequence = 0, selectionSequence = 0, documentSequence = 0, searchSequence = 0, pollTimer = null;
 const canWrite = () => profile && ['editor', 'admin'].includes(profile.role);
-const errors = {invalid_text:'Invalid UTF-8 text.', no_text:'No extractable text; the original is retained.', unsupported_scan:'Scanned PDFs need OCR outside C0.', encrypted_pdf:'Encrypted PDFs are unsupported.', archive_limit:'DOCX archive expansion exceeds the safe limit.', too_large:'The file or extracted text exceeds the safe limit.', parser_timeout:'Extraction reached its time limit.', invalid_file:'The stored original is missing or changed.', invalid_docx:'Unsupported or malformed DOCX.', invalid_pdf:'Malformed PDF.'};
+const errors = {unsupported_docx:"Unsupported DOCX text structures. Convert this file; its original is retained.",invalid_text:'Invalid UTF-8 text.', no_text:'No extractable text; the original is retained.', unsupported_scan:'Scanned PDFs need OCR outside C0.', encrypted_pdf:'Encrypted PDFs are unsupported.', archive_limit:'DOCX archive expansion exceeds the safe limit.', too_large:'The file or extracted text exceeds the safe limit.', parser_timeout:'Extraction reached its time limit.', invalid_file:'The stored original is missing or changed.', invalid_docx:'Unsupported or malformed DOCX.', invalid_pdf:'Malformed PDF.'};
 async function api(path, options = {}) {
   const response = await fetch('./api/v1/' + path, {cache:'no-store', ...options});
   if (!response.ok) {

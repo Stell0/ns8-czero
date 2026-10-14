@@ -217,3 +217,23 @@ def test_four_format_storage_roundtrip_stable_hashes_and_duplicate(sources, samp
     duplicate = upload(sources, content, filename=sample, media_type=fixture['media_type'])
     assert duplicate['id'] == row['id']
     assert svc.chunks(owner, document['id'])[0]['id'] == chunk['id']
+
+
+def test_partial_docx_quarantine_never_schedules_default_original_deletion(sources):
+    from docx import Document
+    from docx.oxml import OxmlElement
+    document = Document(); paragraph = document.add_paragraph('Supported body')
+    control = OxmlElement('w:sdt'); content = OxmlElement('w:sdtContent')
+    run = OxmlElement('w:r'); evidence = OxmlElement('w:t'); evidence.text = 'Omitted evidence'
+    run.append(evidence); content.append(run); control.append(content); paragraph._p.append(control)
+    stream = BytesIO(); document.save(stream)
+    row = upload(sources, stream.getvalue(), media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    assert execute(sources, 'source.extract', row['id']) == {'state': 'failed', 'error_code': 'unsupported_docx'}
+    service, owner, _, _ = sources
+    version = service.versions(owner, row['source_id'])[0]
+    assert version['original_present'] and version['state'] == 'failed'
+    path, _ = service.original(owner, row['id'])
+    assert path.read_bytes() == stream.getvalue()
+    with service.database.engine.connect() as connection:
+        assert connection.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'), {'id': row['id']}).scalar_one() == 0
+        assert connection.execute(text("SELECT count(*) FROM c0_jobs WHERE handler='source.cleanup' AND payload->>'version_id'=:id"), {'id': str(row['id'])}).scalar_one() == 0

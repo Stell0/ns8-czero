@@ -35,7 +35,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.11.0/0.13.0**, with packaged migrations through `0006_sources`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.11.1/0.13.1**, with packaged migrations through `0006_sources`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST now pass local tests; native/UI/live ingestion acceptance remains pending. Wiki, full retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -85,7 +85,7 @@ For example, register `inventory` with `{"type":"object","properties":{"name":{"
 
 Native manager restart exposed a systemd app/timer/basic-target ordering cycle. The corrected timer keeps explicit app/shutdown bindings without default boot-target ordering. Actual Debian/Rocky manager restarts pass with no C0 ordering-cycle journal lines; three live manager restarts recover an active/successful timer and preserve object/job/schedule/configuration state. The native scheduler diagnostic includes bounded timer state/result/dependency names. App-only restart tests remain insufficient for this path.
 
-M08 now adds isolated deterministic Text/Markdown/PDF/DOCX extraction, source/version/document/chunk storage, citations, source full-text search and typed REST. These pass local PostgreSQL-backed tests; installed native/live and browser acceptance remain pending. Child limits cap memory/CPU/time, input bytes, text, PDF pages and archive expansion. Unsupported encrypted/scanned PDFs and unsafe/unsupported DOCX structures fail with static error codes and preserve the input file. The parser supports DOCX body, tables and defined headers/footers; notes/comments/macros are rejected. No OCR or provider credential is required. Full ingestion acceptance remains pending.
+M08 now adds isolated deterministic Text/Markdown/PDF/DOCX extraction, source/version/document/chunk storage, citations, source full-text search and typed REST. These pass local PostgreSQL-backed tests; installed native/live and browser acceptance remain pending. Child limits cap memory/CPU/time, input bytes, text, PDF pages and archive expansion. Unsupported encrypted/scanned PDFs and unsafe/unsupported DOCX structures fail with static error codes and preserve the input file. The parser supports DOCX body, tables and defined headers/footers; notes/comments/macros and unsupported text controls, tracked changes, textboxes and simple fields are rejected to preserve incomplete originals. No OCR or provider credential is required. Full ingestion acceptance remains pending.
 
 
 Use authenticated `POST /api/v1/sources/upload` multipart fields `file`, `title`, `media_type`, optional `metadata` JSON and `retain_original=true|false`. The four MIME types are text/plain, text/markdown, application/pdf and application/vnd.openxmlformats-officedocument.wordprocessingml.document. Upload returns HTTP 202 and a version UUID; poll `/api/v1/sources/<source-id>/versions` for queued/ready/failed state. Initial identical uploads with matching title/metadata/media deduplicate. To add changed content, include `source_id` and `expected_revision`; conflicts return 409. Different provenance remains a separate source.
@@ -120,7 +120,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 241 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for seventy-four actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks ten record/source response races using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for seventy-five actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks ten record/source response races using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
@@ -138,7 +138,7 @@ Czero strips queries from application access logs. Core Traefik has its own defa
 
 Publication uses `GITHUB_TOKEN` with package-write permission and package Actions Write grants. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases. Private repositories are supported; private container packages additionally need authenticated guest pulls. Package names remove the repository's `ns8-` prefix, following Hermes.
 
-CI checks discovery text against available REST routes and documented limitations. CI includes local/schema/shell checks, image publication/runtime audits, Trivy SARIF/CycloneDX artifacts and native QEMU/Robot tests. Successful scans do not establish that dependency findings are resolved. Review findings before release. Follow AGENTS.md's milestone loop: plan, implement, commit/push, inspect actual CI/tests, fix failures, reconcile documentation, then advance. Keep live hostnames, passwords, tokens, cookies and auth-state files out of Git and artifacts.
+Local and native browser CI check discovery text against available REST routes and documented limitations. CI includes local/schema/shell checks, image publication/runtime audits, Trivy SARIF/CycloneDX artifacts and native QEMU/Robot tests. Successful scans do not establish that dependency findings are resolved. Review findings before release. Follow AGENTS.md's milestone loop: plan, implement, commit/push, inspect actual CI/tests, fix failures, reconcile documentation, then advance. Keep live hostnames, passwords, tokens, cookies and auth-state files out of Git and artifacts.
 
 ## NethServer sources and license
 

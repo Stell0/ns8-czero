@@ -21,7 +21,7 @@ MEDIA_TYPES={'text/plain','text/markdown','application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
 ERRORS={'unsupported_format','too_large','invalid_text','invalid_pdf','invalid_docx',
     'encrypted_pdf','no_text','unsupported_scan','archive_limit','unsupported_xml',
-    'resource_limit','parser_timeout','parser_failed','invalid_file'}
+    'resource_limit','parser_timeout','parser_failed','invalid_file','unsupported_docx'}
 
 
 class ExtractionError(ValueError):
@@ -64,6 +64,15 @@ def _parts(parts):
 
 def _docx(path):
     try:
+        from lxml import etree
+        namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+        unsupported_tags = {'{' + namespace + '}' + tag for tag in
+            ('sdt','ins','del','moveFrom','moveTo','txbxContent','altChunk',
+             'customXml','smartTag','fldSimple','subDoc','object')}
+        text_roots = {'{' + namespace + '}' + tag for tag in ('document','hdr','ftr')}
+        def check_text_tree(root):
+            if root.getroottree().docinfo.doctype:raise ExtractionError('unsupported_xml')
+            if any(node.tag in unsupported_tags for node in root.iter()):raise ExtractionError('unsupported_docx')
         with zipfile.ZipFile(path) as archive:
             entries=archive.infolist()
             if len(entries)>1000 or sum(e.file_size for e in entries)>16*1024*1024:
@@ -77,13 +86,20 @@ def _docx(path):
                 if entry.filename.lower().endswith('vbaproject.bin'):raise ExtractionError('invalid_docx')
                 if entry.filename in ('word/comments.xml','word/footnotes.xml','word/endnotes.xml'):
                     raise ExtractionError('invalid_docx')
-                if entry.filename.endswith('.xml'):
-                    data=archive.read(entry).upper()
-                    if b'<!DOCTYPE' in data or b'<!ENTITY' in data:raise ExtractionError('unsupported_xml')
+                if entry.filename.lower().endswith(('.xml', '.rels')):
+                    data=archive.read(entry)
+                    if b'<!DOCTYPE' in data.upper() or b'<!ENTITY' in data.upper():raise ExtractionError('unsupported_xml')
+                    # Detect UTF-16 declarations too, without entity expansion
+                    # or external fetching. Check actual roots, not filenames.
+                    root=etree.fromstring(data, etree.XMLParser(resolve_entities=False, no_network=True))
+                    if root.getroottree().docinfo.doctype:raise ExtractionError('unsupported_xml')
+                    if root.tag in text_roots:check_text_tree(root)
         from docx import Document
         from docx.text.paragraph import Paragraph
         from docx.table import Table
         document=Document(path)
+        # OPC relationships can give XML parts arbitrary names/extensions.
+        check_text_tree(document.element)
         parts=[]
         def walk(container,kind):
             for item in container.iter_inner_content():
@@ -102,6 +118,7 @@ def _docx(path):
                 container=getattr(section,kind)
                 # Accessing an undefined header creates an empty part: skip it.
                 if not container._has_definition:continue
+                check_text_tree(container.part.element)
                 key=str(container.part.partname)
                 if key in headers:continue
                 headers.add(key);walk(container,kind)
