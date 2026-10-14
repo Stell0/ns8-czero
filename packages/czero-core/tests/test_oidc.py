@@ -138,6 +138,16 @@ def test_login_uses_exact_callback_nonce_and_s256_pkce(provider):
     assert calls.count("/realms/users.example.test/.well-known/openid-configuration") == 1
 
 
+def test_account_switch_forces_provider_login_without_changing_bindings(provider):
+    client, _, _, nonce, verifier, _ = provider
+    pending = PendingLogin("unit-only-state", "unit-only-browser", nonce, verifier)
+    ordinary = parse_qs(urlsplit(client.authorization_url(pending)).query)
+    retry = parse_qs(urlsplit(client.authorization_url(pending, reauthenticate=True)).query)
+    assert "prompt" not in ordinary
+    assert retry.pop("prompt") == ["login"]
+    assert retry == ordinary
+
+
 def test_exchange_validates_both_tokens_and_returned_identity(provider):
     client, _, _, nonce, verifier, tokens = provider
     identity = client.exchange("unit-only-code", LoginSecrets(nonce, verifier))

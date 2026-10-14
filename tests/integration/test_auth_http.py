@@ -49,10 +49,12 @@ def application(monkeypatch):
     class Provider:
         config = OidcConfig(issuer, "czero900", "unit-only-client-value", ORIGIN)
         verify_access_token = staticmethod(verifier.verify_access_token)
-        def authorization_url(self, pending):
-            return issuer + "/authorize?" + urlencode({"state": pending.state})
+        def authorization_url(self, pending, *, reauthenticate=False):
+            return issuer + "/authorize?" + urlencode({"state": pending.state,
+                **({"prompt": "login"} if reauthenticate else {})})
         def exchange(self, code, login):
-            return verifier.verify_id_token(token(owner_key, "owner", "ID", nonce=login.nonce), nonce=login.nonce)
+            key, username = (member_key, "member") if code == "unit-only-forbidden-code" else (owner_key, "owner")
+            return verifier.verify_id_token(token(key, username, "ID", nonce=login.nonce), nonce=login.nonce)
         def logout_url(self):
             return issuer + "/logout?" + urlencode({"client_id": "czero900", "post_logout_redirect_uri": ORIGIN + "/"})
         def close(self):
@@ -137,6 +139,59 @@ def test_expired_cookie_session_is_rejected(application):
             with database.engine.begin() as connection:
                 connection.execute(text("UPDATE c0_sessions SET expires_at = now() - interval '1 second' WHERE issuer = :issuer"), {"issuer": issuer})
             assert (await client.get("/api/v1/me")).status_code == 401
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize("base_path", ["", "/czero/czero900"])
+@pytest.mark.parametrize("already_signed_in", [False, True])
+def test_forbidden_browser_login_can_retry_with_another_account(application, base_path, already_signed_in):
+    async def check():
+        from czero_app.main import create_app
+        app, owner, member, _, database, _ = application
+        auth = app.state.auth
+        if base_path:
+            app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/static",
+                             base_path, database, auth=app.state.auth)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            old_session = None
+            if already_signed_in:
+                identity = auth.oidc.verify_access_token(owner)
+                old_session = auth.sessions.create(identity)
+                client.cookies.set('c0_session', old_session, domain='c0.example.test', path=base_path+'/')
+                assert (await client.get(base_path + '/api/v1/me')).status_code == 200
+            started = await client.get(base_path + "/auth/login")
+            state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
+            assert "prompt" not in parse_qs(urlsplit(started.headers["location"]).query)
+            binding = client.cookies.get("c0_login")
+            denied = await client.get(base_path + "/auth/callback",
+                params={"state": state, "code": "unit-only-forbidden-code"})
+            assert denied.status_code == 403
+            assert denied.headers["content-type"].startswith("text/html")
+            assert denied.headers["cache-control"] == "no-store"
+            assert denied.headers["referrer-policy"] == "no-referrer"
+            assert 'href="' + base_path + '/auth/login?switch_account=true"' in denied.text
+            assert "Sign in with another account" in denied.text
+            assert state not in denied.text and "unit-only-forbidden-code" not in denied.text
+            binding_present = "c0_login" in client.cookies
+            session_present = "c0_session" in client.cookies
+            assert not binding_present and not session_present
+            if old_session:
+                stale = await client.get(base_path + '/api/v1/me', headers={'Cookie':'c0_session='+old_session})
+                assert stale.status_code == 401
+            assert (await client.get(base_path + "/api/v1/me")).status_code == 401
+            replay = await client.get(base_path + "/auth/callback",
+                params={"state":state,"code":"unit-only-code"}, headers={"Cookie":"c0_login="+binding})
+            assert replay.status_code == 400
+            api_denied = await client.get(base_path + "/api/v1/me",
+                headers={"Authorization": "Bearer " + member})
+            assert api_denied.status_code == 403 and api_denied.json() == {"detail": "forbidden"}
+            retry = await client.get(base_path + "/auth/login?switch_account=true")
+            parameters = parse_qs(urlsplit(retry.headers["location"]).query)
+            assert parameters["prompt"] == ["login"] and parameters["state"] != [state]
+            accepted = await client.get(base_path + "/auth/callback",
+                params={"state": parameters["state"][0], "code": "unit-only-code"})
+            assert accepted.status_code == 302 and accepted.headers["location"] == base_path + "/"
+            assert (await client.get(base_path + "/api/v1/me")).json()["username"] == "owner"
     asyncio.run(check())
 
 

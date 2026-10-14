@@ -175,6 +175,37 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
+    def verify_disposable_account_switch_browser(self, module_id, host):
+        builtin=BuiltIn(); previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary'); browser=builtin.get_library_instance('Browser')
+            payload=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json'))
+            self._browser_password=payload['password']
+            def run(name,*args): return builtin.run_keyword('Browser.'+name,*args)
+            run('Go To','https://'+host+'/auth/login')
+            run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
+            browser.fill_text('input[name="username"]','c0denied')
+            browser.fill_text('input[name="password"]',self._browser_password)
+            run('Click','#kc-login')
+            run('Get Text','h1','==','Access denied')
+            run('Get Attribute','a','href','==','/auth/login?switch_account=true')
+            run('Click','a')
+            # The provider's denied-account SSO session must not skip this form.
+            run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
+            browser.fill_text('input[name="username"]','c0owner')
+            browser.fill_text('input[name="password"]',self._browser_password)
+            run('Click','#kc-login')
+            run('Wait For Elements State','#sign-out','visible','timeout=30s')
+            run('Get Text','#account-status','contains','Owner (Admin)')
+            _, rc=ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs '+shlex.quote(module_id),
+                return_rc=True,timeout='180 seconds')
+            if rc: raise AssertionError('Account-switch logs contain OAuth query values')
+        except Exception as error:
+            raise AssertionError('Disposable account-switch browser failed ('+type(error).__name__+')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
     def verify_disposable_objects_browser(self, host):
         """Generated password is never a Robot variable or nested keyword arg."""
         builtin=BuiltIn(); previous=builtin.set_log_level('NONE')

@@ -59,13 +59,13 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.23.0"
+    Should Contain    ${output}    "core_version":"0.24.0"
 
 *** Test Cases ***
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:b53c57b53df7162d4a854bb5441910b8dcfc12b9b4711d3a0d6856183ad659cf
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:9e758b6786ef01a5ce27b9abd3dc49feab5524e4b2a91c7f27b216e257908fc5
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -77,7 +77,7 @@ Install Czero with its own identity
     IF    $SCENARIO == 'update'
         # Freeze the older component images too, not just the module shell.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:bc5d3c492fd747d06dc1a077dc99edf06ca57a7c0bb24d5c271115608b8bcccc','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:072781b5b07af4d82ecbb69c8cc3c91a60e0fe31cd6bc8390eefd2adad12a09c'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:461e0248345929b764c0f8120f19683f71f0ffac3b0a257e91586ed396e1a63e','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:d902efa3fa9e0318dbbd6d7d8c14efa4560d203ac5e77828427fc40e092ec257'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -556,7 +556,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.23.0"
+    Get Text    body    contains    "core_version":"0.24.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
@@ -622,6 +622,17 @@ Preserve admitted identities through update and clean restore
     Should Not Be Equal    ${module_id}    ${donor_id}
     Verify Disposable Identity Persistence    ${module_id}
     Wait Until Keyword Succeeds    30s    2s    Check application route
+
+Check rejected sign-in can switch accounts in a browser
+    [Tags]    ui
+    [Timeout]    4 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Account Switch Browser    ${module_id}    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
 
 Check OAuth consent, delegated scopes and SDK calls in a browser
     [Tags]    ui

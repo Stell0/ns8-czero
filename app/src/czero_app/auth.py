@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """FastAPI transport for shared Core authentication and membership services."""
 from dataclasses import dataclass, field
+from html import escape
 import logging
 import os
 import re
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import APIKeyCookie, HTTPBearer
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.exc import SQLAlchemyError
@@ -172,10 +173,14 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         return Response(status_code=204)
 
     @app.get("/auth/login", include_in_schema=False)
-    def login():
+    def login(request: Request):
         active = configured()
         pending = active.sessions.begin_login()
-        response = RedirectResponse(active.oidc.authorization_url(pending), status_code=302)
+        if request.query_params.get("switch_account") == "true":
+            destination = active.oidc.authorization_url(pending, reauthenticate=True)
+        else:
+            destination = active.oidc.authorization_url(pending)
+        response = RedirectResponse(destination, status_code=302)
         response.set_cookie("c0_login", pending.browser_binding, max_age=300,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
         return response
@@ -185,7 +190,27 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         active = configured()
         login = active.sessions.consume_login(request.query_params.get("state"), request.cookies.get("c0_login"))
         identity = active.oidc.exchange(request.query_params.get("code"), login)
-        cookie = active.sessions.create(identity)
+        try:
+            cookie = active.sessions.create(identity)
+        except PermissionDenied:
+            active.sessions.destroy(request.cookies.get("c0_session"))
+            # Admission failure does not clear the provider's SSO session.
+            # Retry must explicitly reauthenticate instead of reusing it.
+            retry = escape(base_path + "/auth/login?switch_account=true", quote=True)
+            response = HTMLResponse(
+                '<!doctype html><html lang="en"><meta charset="utf-8">'
+                '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                '<title>C0 access denied</title><main><h1>Access denied</h1>'
+                '<p>This account does not have access to C0. '
+                'Sign in with an authorized account or ask an administrator for access.</p>'
+                f'<p><a href="{retry}">Sign in with another account</a></p>'
+                '</main></html>', status_code=403,
+                headers={"Referrer-Policy": "no-referrer"})
+            response.delete_cookie("c0_login", path=cookie_path,
+                                   secure=True, httponly=True, samesite="lax")
+            response.delete_cookie("c0_session", path=cookie_path,
+                                   secure=True, httponly=True, samesite="lax")
+            return response
         destination = cookie_path
         consent = getattr(app.state, 'oauth_consent', None)
         if consent is not None and request.cookies.get('c0_consent'):

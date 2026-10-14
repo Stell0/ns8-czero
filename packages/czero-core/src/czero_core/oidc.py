@@ -159,11 +159,12 @@ class OidcClient:
             scope="openid profile", redirect_uri=self.config.callback_uri,
             code_challenge_method="S256", timeout=3.0, follow_redirects=False, transport=self._transport)
 
-    def authorization_url(self, pending: PendingLogin) -> str:
+    def authorization_url(self, pending: PendingLogin, *, reauthenticate: bool = False) -> str:
         metadata = self._discovery()
         with self._oauth_client() as client:
             url, _ = client.create_authorization_url(metadata["authorization_endpoint"],
-                state=pending.state, nonce=pending.nonce, code_verifier=pending.code_verifier)
+                state=pending.state, nonce=pending.nonce, code_verifier=pending.code_verifier,
+                **({"prompt": "login"} if reauthenticate else {}))
         return url
 
     def exchange(self, code: str, login: LoginSecrets) -> VerifiedIdentity:
