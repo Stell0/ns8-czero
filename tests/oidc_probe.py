@@ -328,8 +328,8 @@ def verify_knowledge(browser, profile, expected):
     status, body, _ = browser.api('/api/v1/wiki/pages/' + key + '/export?format=markdown&revision=1')
     assert status == 200 and body.decode() == expected['original']['body'], 'Markdown export changed'
     assert get('wiki/pages/' + key + '/export') == page, 'JSON export changed'
-    searched = get('knowledge/search?query=independent+authored&kind=wiki&mode=hybrid')
-    assert searched['retrieval_method'] == 'text' and searched['fallback_reason'] == 'embeddings_not_configured', 'Provider-free fallback changed'
+    searched = get('knowledge/search?query=independent+authored&kind=wiki&mode=text&rerank=off')
+    assert searched['retrieval_method'] == 'text' and searched['fallback_reason'] is None, 'Provider-free text changed'
     assert any(h['id'] == page['content']['id'] and h['resource_id'] == key and h['wiki']['revision'] == 2 for h in searched['hits']), 'Recovered Wiki FTS/revision citation missing'
     for entity in expected['entities']:
         assert get('entities/' + entity['id']) == entity, 'Entity or aliases changed'

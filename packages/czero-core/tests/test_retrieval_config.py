@@ -25,6 +25,8 @@ def test_instance_settings_decode_only_private_environment_and_mask_keys(monkeyp
 @pytest.mark.parametrize('field,change',[
     ('embedding',{'enabled':'true'}),('embedding',{'enabled':True}),
     ('embedding',{'dimensions':2001}),('embedding',{'api_key':'bad\nkey'}),
+    ('embedding',{'endpoint':0}),('embedding',{'model':False}),
+    ('scorer',{'endpoint':None}),('scorer',{'model':[]}),
     ('scorer',{'mode':'shell'}),('scorer',{'mode':'filter'}),
     ('scorer',{'threshold':float('nan')}),('limits',{'max_limit':51}),
     ('limits',{'graph_depth':True}),('limits',{'arbitrary_url':'https://unknown.test'}),

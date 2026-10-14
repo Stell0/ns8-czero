@@ -39,6 +39,8 @@ class RetrievalSettings:
         # only explicitly active providers construct network clients.
         eargs={k:v for k,v in embedding.items() if k!='enabled'}
         sargs={k:v for k,v in scorer.items() if k!='mode'}
+        if any(not isinstance(args[key],str) for args in (eargs,sargs) for key in ('endpoint','model')):
+            raise ValueError('invalid_retrieval_configuration')
         checked_e=EmbeddingSettings(**eargs) if embedding['enabled'] or embedding['endpoint'] or embedding['model'] else None
         checked_s=ScorerSettings(**sargs) if scorer['mode']!='off' or scorer['endpoint'] or scorer['model'] else None
         if checked_e is None:

@@ -129,7 +129,7 @@ def apply_czero_network(module_id):
     # Rootless Podman must own the bind source to apply SELinux's :z label.
     shutil.chown(public_ca, user=module_id, group=module_id)
     install = base / "systemd/user"
-    for name in ("czero.service",):
+    for name in ("czero.service", "czero-worker.service"):
         text = command(["runagent", "-m", module_id, "systemctl", "--user", "cat", name])
         # Normalize systemd continuations and retain only the relevant Exec line.
         text = text.replace("\\\n", " ")
@@ -149,6 +149,12 @@ def apply_czero_network(module_id):
 def cleanup():
     global PHASE
     PHASE = "fixture cleanup"
+    if (STATE / 'retrieval-pid').exists():
+        import signal
+        pid = int((STATE / 'retrieval-pid').read_text())
+        cmdline = Path('/proc') / str(pid) / 'cmdline'
+        if cmdline.exists() and b'retrieval_fixture.py\x00serve' in cmdline.read_bytes():
+            os.kill(pid, signal.SIGTERM)
     if not (STATE / "resources.json").exists():
         return
     resources = json.loads((STATE / "resources.json").read_text())

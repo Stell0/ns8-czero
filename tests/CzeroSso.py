@@ -18,7 +18,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -96,6 +96,7 @@ class CzeroSso:
             # Native update/systemd completion precedes ASGI readiness.
             builtin.run_keyword("Wait Until Keyword Succeeds", "30s", "2s", "Check application route")
             self._persistence("verify")
+            self._retrieval(module_id, "verify")
             ssh = builtin.get_library_instance("SSHLibrary")
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                                        return_rc=True, timeout="180 seconds")
@@ -114,6 +115,25 @@ class CzeroSso:
                                                return_stderr=True, return_rc=True, timeout="180 seconds")
             if rc:
                 raise AssertionError("Real IdP persistence probe: " + errors.strip())
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
+    def prepare_disposable_retrieval_persistence(self, module_id):
+        self._retrieval(module_id, "prepare")
+        BuiltIn().run_keyword("Wait Until Keyword Succeeds", "30s", "2s", "Check application route")
+        self._retrieval(module_id, "seed")
+
+    @staticmethod
+    def _retrieval(module_id, operation):
+        builtin = BuiltIn()
+        previous = builtin.set_log_level("NONE")
+        try:
+            ssh = builtin.get_library_instance("SSHLibrary")
+            _, errors, rc = ssh.execute_command("python3 /tmp/retrieval_fixture.py " + operation + " " + shlex.quote(module_id),
+                                               return_stderr=True, return_rc=True, timeout="180 seconds")
+            if rc:
+                raise AssertionError("Disposable retrieval: " + errors.strip())
         finally:
             builtin.set_log_level(previous)
 
@@ -387,8 +407,59 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
+    def verify_disposable_search_browser(self, host):
+        builtin = BuiltIn(); previous = builtin.set_log_level('NONE')
+        try:
+            ssh = builtin.get_library_instance('SSHLibrary')
+            payload = json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json'))
+            self._browser_password = payload['password']
+            browser = builtin.get_library_instance('Browser')
+            def run(name, *args): return builtin.run_keyword('Browser.' + name, *args)
+            for username in ('c0owner', 'c0member'):
+                if username == 'c0member':
+                    run('New Context', 'ignoreHTTPSErrors=True'); run('New Page')
+                run('Go To', 'https://' + host + '/search')
+                run('Wait For Elements State', '#search-signin', 'visible', 'timeout=30s')
+                run('Click', '#search-signin')
+                browser.fill_text('input[name="username"]', username)
+                browser.fill_text('input[name="password"]', self._browser_password)
+                run('Click', '#kc-login')
+                run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
+                run('Go To', 'https://' + host + '/search')
+                run('Wait For Elements State', '#search-workspace', 'visible', 'timeout=30s')
+                run('Fill Text', '#knowledge-query', 'independent authored')
+                run('Select Options By', '#knowledge-mode', 'value', 'hybrid')
+                run('Select Options By', '#knowledge-rerank', 'value', 'filter')
+                run('Click', '#knowledge-search-form button')
+                run('Get Text', '#knowledge-search-status', 'contains', 'hybrid+filter')
+                run('Get Element Count', '#knowledge-results article', '==', 1)
+                run('Get Text', '#knowledge-results', 'contains', 'Independent authored claims')
+                run('Get Text', '#knowledge-results', 'contains', '"revision_id"')
+                run('Select Options By', '#knowledge-mode', 'value', 'text')
+                run('Select Options By', '#knowledge-rerank', 'value', 'off')
+                run('Click', '#knowledge-search-form button')
+                run('Get Text', '#knowledge-search-status', 'contains', '· text ·')
+                run('Reload')
+                run('Wait For Elements State', '#search-workspace', 'visible', 'timeout=30s')
+                run('Get Text', '#knowledge-index-status', 'contains', 'derivative chunks indexed')
+                run('Get Element Count', '#knowledge-results article', '==', 0)
+                run('Get Element Count', '#knowledge-results img', '==', 0)
+        except Exception as error:
+            raise AssertionError('Disposable search browser failed (' + type(error).__name__ + ')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
     def assert_disposable_sso_browser_password_is_private(self):
         builtin=BuiltIn(); output=Path(builtin.get_variable_value('${OUTPUT FILE}'))
-        for path in (output,output.parent/'playwright-log.txt'):
-            if path.exists() and self._browser_password in path.read_text(errors='replace'):
-                raise AssertionError('Temporary SSO browser password entered test output')
+        previous = builtin.set_log_level('NONE')
+        try:
+            key = builtin.get_library_instance('SSHLibrary').execute_command('cat /tmp/czero-oidc-fixture/retrieval-key')
+            assert isinstance(key,str) and len(key)>20, 'Fixture provider credential missing'
+            for path in (output,output.parent/'playwright-log.txt'):
+                if path.exists():
+                    content=path.read_text(errors='replace')
+                    if self._browser_password in content or key.strip() in content:
+                        raise AssertionError('Temporary fixture credential entered test output')
+        finally:
+            builtin.set_log_level(previous)

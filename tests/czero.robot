@@ -59,7 +59,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.18.0"
+    Should Contain    ${output}    "core_version":"0.19.0"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -519,12 +519,12 @@ Check saved settings and application HTTPS in a browser
     Get Text    iframe >>> text="czero"    contains    czero
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=settings
     Wait For Elements State    iframe >>> h2 >> text="Settings"    visible    timeout=30s
-    Wait For Elements State    iframe >>> .ns-text-input input    enabled    timeout=30s
-    Get Property    iframe >>> .ns-text-input input    value    ==    ${host}
-    Fill Text    iframe >>> .ns-text-input input    localhost
+    Wait For Elements State    iframe >>> .ns-text-input input >> nth=0    enabled    timeout=30s
+    Get Property    iframe >>> .ns-text-input input >> nth=0    value    ==    ${host}
+    Fill Text    iframe >>> .ns-text-input input >> nth=0    localhost
     Click    iframe >>> button >> text="Save"
     Wait For Elements State    iframe >>> text="Enter a valid fully qualified DNS hostname."    visible    timeout=30s
-    Fill Text    iframe >>> .ns-text-input input    ${host}
+    Fill Text    iframe >>> .ns-text-input input >> nth=0    ${host}
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
@@ -537,8 +537,8 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> .progress-bar-container    detached    timeout=30s
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Reload
-    Wait For Elements State    iframe >>> .ns-text-input input    enabled    timeout=30s
-    Get Property    iframe >>> .ns-text-input input    value    ==    ${host}
+    Wait For Elements State    iframe >>> .ns-text-input input >> nth=0    enabled    timeout=30s
+    Get Property    iframe >>> .ns-text-input input >> nth=0    value    ==    ${host}
     Get Attribute    iframe >>> a:has-text("Open C0 application")    href    ==    https://${host}/
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
@@ -556,13 +556,13 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.18.0"
+    Get Text    body    contains    "core_version":"0.19.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
     Get Text    body    contains    search source text.
     Get Text    body    contains    sourced claims and bounded graph queries are available.
-    Get Text    body    contains    Hybrid retrieval and MCP are planned milestones.
+    Get Text    body    contains    MCP is a planned milestone.
     Close Browser
     Assert Disposable Browser Password Is Private
 
@@ -590,6 +590,7 @@ Verify real native SSO and application-wide membership
 Preserve admitted identities through update and clean restore
     [Timeout]    15 minutes
     Prepare Disposable Identity Persistence
+    Prepare Disposable Retrieval Persistence    ${module_id}
     Log To Console    SSO persistence: native configured update
     ${rc} =    Execute Command
     ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
@@ -649,6 +650,17 @@ Check Wiki revisions, provenance, graph and Reader controls in a browser
     New Context    ignoreHTTPSErrors=True
     New Page
     Verify Disposable Wiki Browser    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
+
+Check hybrid search, citations and Reader behavior in a browser
+    [Tags]    ui
+    [Timeout]    5 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Search Browser    ${host}
     Close Browser
     Assert Disposable Sso Browser Password Is Private
 

@@ -101,6 +101,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def objects_page() -> FileResponse:
         return FileResponse(static_dir / "objects.html", media_type="text/html")
 
+    @instance_app.get('/search', include_in_schema=False)
+    async def search_page() -> FileResponse:
+        return FileResponse(static_dir / 'search.html', media_type='text/html')
+
+    @instance_app.get('/search.js', include_in_schema=False)
+    async def search_script() -> FileResponse:
+        return FileResponse(static_dir / 'search.js', media_type='text/javascript')
+
     @instance_app.get("/objects.js", include_in_schema=False)
     async def objects_script() -> FileResponse:
         return FileResponse(static_dir / "objects.js", media_type="text/javascript")
@@ -139,7 +147,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Hybrid retrieval and MCP are planned milestones.</p>"
+            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. MCP is a planned milestone.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
         )
