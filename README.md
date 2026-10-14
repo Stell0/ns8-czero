@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M06 are complete with local, disposable, documentation and permitted live evidence. M07 storage passes local/image/native acceptance; REST and record-editor replacement acceptance is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M06 are complete with local, disposable, documentation and permitted live evidence. M07 objects/REST/editor pass local, image and disposable/browser acceptance plus permitted live CRUD persistence. A live scheduler restart gap and final documentation remain open.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -17,7 +17,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | Path | Available behavior |
 | --- | --- |
 | `/` | Landing page, database status, sign-in status and Admin sharing controls |
-| `/objects` | Minimal typed record list/detail and JSON editor; replacement browser/native verification pending |
+| `/objects` | Minimal typed record list/detail and JSON editor; disposable/browser verified; live interactive browser waived |
 | `/api/v1/object-types`, `/api/v1/objects`, `/api/v1/objects/batch` | Authenticated type inspection/registration, CRUD, paging/filters and atomic batches |
 | `/api/v1/object-relations`, `/api/v1/objects/<id>/relations`, `/api/v1/object-events`, `/api/v1/references/<kind>/<id>` | Typed object edges, metadata changes and trusted registered reference resolution |
 | `/api/v1/health` | Public Core/app versions and PostgreSQL/schema/vector readiness |
@@ -34,7 +34,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 
 Core/app versions are **0.9.0/0.10.0**, with packaged migrations through `0005_objects`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
-Source CRUD, ingestion, Wiki, retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP tests; native/browser acceptance of the replacement remains pending.
+Source CRUD, ingestion, Wiki, retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
 ## Install and configure
 
@@ -74,11 +74,13 @@ Admins can POST `{"handler":"health","payload":{},"idempotency_key":"health-chec
 
 There is no full jobs/schedules application page yet; use the authenticated API/OpenAPI. The worker processes at most twenty jobs per wake within its bounded budget, serially. Python deadlines cannot preempt every extension call; the native container lifetime guard bounds those cases. External/file effects remain at-least-once and must be idempotent. Foreground source-file backup coordination will be added with ingestion in M08.
 
-M07 Core implements immutable type registration, JSONB records, tags, optimistic revisions, optional top-level scalar uniqueness, atomic batches, typed object relations and paginated events. The REST transport passes signed local PostgreSQL tests; the record page is implemented with repeatable browser assertions awaiting actual QEMU execution. Schemas support a bounded Draft 2020-12 subset: explicit types, properties/required, arrays, scalar bounds, enum and const. Remote/recursive references, regexes, combinators and unknown properties are rejected; validation never fetches URLs. Objects are capped at 64 KiB, batches at 25 operations/256 KiB, and reads at 100 rows. Existing object relations use foreign keys. Trusted application code can register relational reference resolvers; the default app resolves only object kinds until sources/Wiki tables are implemented.
+M07 Core implements immutable type registration, JSONB records, tags, optimistic revisions, optional top-level scalar uniqueness, atomic batches, typed object relations and paginated events. The REST transport passes signed local PostgreSQL tests; the record page passes actual repeatable QEMU browser assertions for owner forms, refresh, hostile-text rendering and Reader controls. Schemas support a bounded Draft 2020-12 subset: explicit types, properties/required, arrays, scalar bounds, enum and const. Remote/recursive references, regexes, combinators and unknown properties are rejected; validation never fetches URLs. Objects are capped at 64 KiB, batches at 25 operations/256 KiB, and reads at 100 rows. Existing object relations use foreign keys. Trusted application code can register relational reference resolvers; the default app resolves only object kinds until sources/Wiki tables are implemented.
 
 On the Records page, choose a type, browse or open a record, and use New record or Save record with a JSON object and comma-separated tags. Invalid schema values report the field/keyword. A revision conflict preserves the local draft; Load saved version explicitly refreshes it. Admins can expand Register a record type, enter its name/label/schema and optional unique scalar fields. Types are immutable. The type picker shows the first 100 definitions and record paging uses 50 rows; the API exposes paging and equality/containment filters. Full schema-generated forms remain M12.
 
 For example, register `inventory` with `{"type":"object","properties":{"name":{"type":"string","maxLength":64}},"required":["name"]}` and `unique_fields:["name"]` at `/api/v1/object-types`; POST `{"type_name":"inventory","data":{"name":"Rack A"},"tags":["inventory"]}` to `/api/v1/objects`. PUT the record with `data` and `expected_revision` from its last response. Cookie writes require the existing CSRF token; bearer requests use the signed access token.
+
+The live owner object checks pass, but native node restart recovered the app/database without an active scheduler timer. M07 remains open while this lifecycle gap is diagnosed; app-only restart tests do not cover a full rootless user-manager restart. The native scheduler diagnostic now includes bounded timer state/result/dependency names.
 
 ## Remaining roadmap
 
@@ -105,7 +107,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 204 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for fifty-eight actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks record refresh races using the real UI script. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 205 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for fifty-eight actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks record refresh races using the real UI script. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

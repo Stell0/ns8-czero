@@ -13,7 +13,16 @@ def check(operation,unit):
 
 worker=subprocess.run(['systemctl','--user','show','--property=ActiveState','--value','czero-worker.service'],
                       capture_output=True,text=True,check=True).stdout.strip()
-json.dump({'timer_active':check('is-active','czero-worker.timer'),
+timer_output=subprocess.run(['systemctl','--user','show','--property=ActiveState',
+    '--property=Result','--property=WantedBy','czero-worker.timer'],capture_output=True,text=True,check=True).stdout
+properties=dict(line.split('=',1) for line in timer_output.splitlines() if '=' in line)
+state=properties.get('ActiveState','unknown')
+if state not in ('active','activating','inactive','deactivating','failed','reloading'):state='unknown'
+result=properties.get('Result','unknown')
+if result not in ('success','resources','dependency','start-limit-hit','timeout','exit-code','signal'):result='unknown'
+json.dump({'timer_active_state':state,'timer_result':result,
+    'timer_wanted_by':properties.get('WantedBy','').split()[:8],
+    'timer_active':check('is-active','czero-worker.timer'),
     'timer_enabled':check('is-enabled','czero-worker.timer'),
     'worker_running':worker in ('active','activating','reloading'),
     'worker_failed':check('is-failed','czero-worker.service')},sys.stdout)

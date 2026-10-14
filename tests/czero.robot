@@ -399,6 +399,20 @@ Verify deterministic worker and native timer
     Should Be True    ${scheduler}[timer_active]
     Should Not Be True    ${scheduler}[worker_failed]
 
+    # Core restart-module restarts the whole rootless user manager, not merely
+    # the app service. Verify this distinct startup path as used live.
+    ${rc} =    Execute Command
+    ...    api-cli run node/1/restart-module --data '{"module_id":"${module_id}"}'
+    ...    return_rc=True    return_stdout=False    timeout=180s
+    Should Be Equal As Integers    ${rc}    0
+    Wait Until Keyword Succeeds    30s    2s    Check application route
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${scheduler} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${scheduler}[timer_active]
+    Should Not Be True    ${scheduler}[worker_failed]
+
 Backup and restore into a clean disposable instance
     [Timeout]    10 minutes
     Log To Console    Backup phase: seed retained fixture

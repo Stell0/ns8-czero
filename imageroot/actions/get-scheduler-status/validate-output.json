@@ -3,11 +3,61 @@
   "title": "Native scheduler status",
   "type": "object",
   "additionalProperties": false,
-  "required": ["timer_active", "timer_enabled", "worker_running", "worker_failed"],
+  "required": [
+    "timer_active",
+    "timer_enabled",
+    "worker_running",
+    "worker_failed",
+    "timer_active_state",
+    "timer_result",
+    "timer_wanted_by"
+  ],
   "properties": {
-    "timer_active": {"type": "boolean"},
-    "timer_enabled": {"type": "boolean"},
-    "worker_running": {"type": "boolean"},
-    "worker_failed": {"type": "boolean"}
+    "timer_active": {
+      "type": "boolean"
+    },
+    "timer_enabled": {
+      "type": "boolean"
+    },
+    "worker_running": {
+      "type": "boolean"
+    },
+    "worker_failed": {
+      "type": "boolean"
+    },
+    "timer_active_state": {
+      "type": "string",
+      "enum": [
+        "active",
+        "activating",
+        "inactive",
+        "deactivating",
+        "failed",
+        "reloading",
+        "unknown"
+      ]
+    },
+    "timer_result": {
+      "type": "string",
+      "enum": [
+        "success",
+        "resources",
+        "dependency",
+        "start-limit-hit",
+        "timeout",
+        "exit-code",
+        "signal",
+        "unknown"
+      ]
+    },
+    "timer_wanted_by": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9_.@-]+$"
+      }
+    }
   }
 }

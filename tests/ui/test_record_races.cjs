@@ -10,7 +10,8 @@ const vm = require('node:vm');
 function harness() {
   const nodes = new Map(), requests = [];
   function node() {
-    return { children: [], value: '', textContent: '', addEventListener() {},
+    return { children: [], value: '', textContent: '', listeners: {},
+      addEventListener(event, callback) { this.listeners[event] = callback; },
       replaceChildren(...children) { this.children = children; },
       append(...children) { this.children.push(...children); } };
   }
@@ -77,4 +78,20 @@ test('late detail replies cannot switch back to an earlier selection', async () 
   await second;
   h.requests[0].resolve(record('old')); await first;
   assert.match(h.nodes.get('record-identity').textContent,/^new · revision 1$/);
+});
+
+
+test('an earlier save completion preserves a new unsaved draft', async () => {
+  const h = harness();
+  vm.runInContext("profile={role:'editor',csrf_token:'fixture-only'}; definitions=[{name:'inventory',label:'Inventory',schema:{type:'object'}}]; displayRecord({id:'old',type_name:'inventory',data:{name:'old'},tags:[],revision:1})", h.context);
+  h.nodes.get('record-data').value = '{"name":"edited old"}';
+  const saving = h.nodes.get('record-form').listeners.submit({preventDefault(){}});
+  vm.runInContext('displayRecord(null)', h.context);
+  h.nodes.get('record-data').value = '{"name":"unsaved new draft"}';
+  h.requests[0].resolve({ok:true,status:200,json:async()=>({id:'old',type_name:'inventory',data:{name:'edited old'},tags:[],revision:2})});
+  await new Promise(setImmediate);
+  h.requests[1].resolve(response('edited old'));
+  await saving;
+  assert.equal(h.nodes.get('record-heading').textContent,'New record');
+  assert.equal(h.nodes.get('record-data').value,'{"name":"unsaved new draft"}');
 });
