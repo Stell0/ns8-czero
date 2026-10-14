@@ -56,6 +56,8 @@ def test_agents_page_describes_only_available_capabilities(client):
     assert response.status_code == 200
     assert "Objects, search and MCP are planned" in response.text
     assert "./docs" in response.text
+    assert "A native timer wakes" in response.text
+    assert "pending milestone slice" not in response.text
 
 
 def test_openapi_documents_the_health_endpoint(client):

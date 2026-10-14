@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M05 are complete with local, disposable, documentation and permitted live evidence. M06 jobs/scheduler passes runtime/local/QEMU/permitted live acceptance; final documentation CI is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M06 are complete with local, disposable, documentation and permitted live evidence. M07 generic object storage is next.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -8,7 +8,7 @@ C0 is a deployable application foundation and a forkable GitHub template. Extern
 
 One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
 
-The roadmap adds generic JSON Schema objects, document evidence, an LLM Wiki, text/vector/graph retrieval, deterministic jobs and authenticated remote MCP. These resource features remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
+The roadmap adds generic JSON Schema objects, document evidence, an LLM Wiki, text/vector/graph retrieval and authenticated remote MCP. These resource features remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
 ## Current interfaces
 
@@ -63,7 +63,7 @@ Each module has PostgreSQL **17.11** plus pgvector **0.8.7**, a private pod and 
 
 Use the native NS8 Backup page to select Czero and a supported destination, run backup and verify a snapshot. Restore uses a clean module slot with its hostname available. Archives contain an atomic PostgreSQL custom dump, private configuration, service-state metadata and the retained-source volume; live database files are excluded. Offline restore uses fail-fast transactional `pg_restore`, retains the new native module ID/port and Core-assigned logical UUID and restores the prior enabled/running state. A completed-archive receipt permits replay without overwriting later database changes. Debian/Rocky native tests verify these baseline behaviors.
 
-The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup coordination with workers and file-writing ingestion must be extended as those features arrive.
+The retained-source volume currently holds controlled test fixtures. Document ingestion and original-retention behavior arrive in M08. Backup pauses workers/timer through the copy. Foreground file-writing coordination must be extended with ingestion.
 
 M06 currently adds Core queue/schedule storage and services with registered deterministic health/maintenance handlers, validated idempotency and Admin authorization. Standalone worker execution and authenticated REST pass local database tests. Native timer/one-shot execution, due-once runs, restart and backup/restore pass Debian/Rocky QEMU. Permitted live timer completion and API persistence pass.
 
@@ -75,7 +75,6 @@ There is no full jobs/schedules application page yet; use the authenticated API/
 
 | Capability | Agreed direction |
 | --- | --- |
-| Jobs | PostgreSQL-backed queue/schedules, trusted deterministic handlers and systemd timer |
 | Generic objects | JSON Schema definitions, JSONB records, typed references and forms |
 | Evidence | Full extracted text, offsets, metadata, revisions and citations |
 | Wiki | Pages, claims, entities, revisions and provenance, separate from raw evidence |

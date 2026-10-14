@@ -96,7 +96,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
-            "A standalone worker CLI is available; the native wake timer is a pending milestone slice. "
+            "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
             "Identity configuration is required for sign-in. Objects, search and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
