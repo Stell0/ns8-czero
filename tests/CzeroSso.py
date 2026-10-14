@@ -9,11 +9,13 @@ import tempfile
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
+from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
 
 
 class CzeroSso:
     @keyword
     def provision_disposable_sso(self, module_id, host):
+        configure_browser_diagnostics()
         builtin = BuiltIn()
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
@@ -456,6 +458,7 @@ class CzeroSso:
         try:
             key = builtin.get_library_instance('SSHLibrary').execute_command('cat /tmp/czero-oidc-fixture/retrieval-key')
             assert isinstance(key,str) and len(key)>20, 'Fixture provider credential missing'
+            assert_no_oauth_queries((output, output.parent/'playwright-log.txt'))
             for path in (output,output.parent/'playwright-log.txt'):
                 if path.exists():
                     content=path.read_text(errors='replace')

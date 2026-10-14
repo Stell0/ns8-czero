@@ -9,11 +9,13 @@ import tempfile
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
+from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
 
 
 class CzeroBrowser:
     @keyword
     def login_to_disposable_cluster(self, node_addr):
+        configure_browser_diagnostics()
         builtin = BuiltIn()
         ssh = builtin.get_library_instance("SSHLibrary")
         username = "czero-ci-" + secrets.token_hex(4)
@@ -59,6 +61,7 @@ class CzeroBrowser:
         builtin = BuiltIn()
         output = Path(builtin.get_variable_value("${OUTPUT FILE}"))
         logs = [output, output.parent / "playwright-log.txt"]
+        assert_no_oauth_queries(logs)
         for path in logs:
             if path.exists() and self._password in path.read_text(errors="replace"):
                 raise AssertionError("Temporary browser password entered test output")
