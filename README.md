@@ -29,7 +29,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.8.0/0.9.0**, with packaged migrations through `0004_jobs`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.9.0/0.10.0**, with packaged migrations through `0005_objects`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Object/source CRUD, ingestion, Wiki, retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Editor resource writes arrive with those resource services. Current Reader/Editor accounts can see their identity but cannot administer membership.
 
@@ -71,6 +71,8 @@ Admins can POST `{"handler":"health","payload":{},"idempotency_key":"health-chec
 
 There is no full jobs/schedules application page yet; use the authenticated API/OpenAPI. The worker processes at most twenty jobs per wake within its bounded budget, serially. Python deadlines cannot preempt every extension call; the native container lifetime guard bounds those cases. External/file effects remain at-least-once and must be idempotent. Foreground source-file backup coordination will be added with ingestion in M08.
 
+M07's first Core slice implements immutable type registration, JSONB records, tags, optimistic revisions, optional top-level scalar uniqueness, atomic batches, typed object relations and paginated events. REST and the record UI are not yet implemented, so these are Python services rather than user-facing features. Schemas support a bounded Draft 2020-12 subset: explicit types, properties/required, arrays, scalar bounds, enum and const. Remote/recursive references, regexes, combinators and unknown properties are rejected; validation never fetches URLs. Objects are capped at 64 KiB, batches at 25 operations/256 KiB, and reads at 100 rows. Existing object relations use foreign keys; future Wiki/source reference extensions are not yet available.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -96,7 +98,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 182 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for forty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 201 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for fifty-five actual database cases. CI supplies a disposable service. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
