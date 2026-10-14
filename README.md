@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M09 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. Source ingestion passes local, native, browser and permitted live checks. Wiki/graph passes local, native, browser and permitted live checks. M10 retrieval is active; provider-free knowledge FTS passes local and installed tests; optional configured retrieval acceptance is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M09 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. Source ingestion passes local, native, browser and permitted live checks. Wiki/graph passes local, native, browser and permitted live checks. M10 retrieval is active; provider-free knowledge FTS passes local and installed tests; optional configured retrieval passes disposable acceptance and provider-free live checks; final documentation CI is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -8,7 +8,7 @@ C0 is a deployable application foundation and a forkable GitHub template. Extern
 
 One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
 
-Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; full retrieval and authenticated remote MCP remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
+Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; optional retrieval passes acceptance; authenticated remote MCP remains planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
 ## Current interfaces
 
@@ -18,7 +18,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | --- | --- |
 | `/` | Landing page, database status, sign-in status and Admin sharing controls |
 | `/sources` | Minimal upload/history/evidence/search/retry/archive UI with Reader controls; repeatable native browser verified; interactive live browser waived |
-| /search | Minimal knowledge query/options, literal evidence/citations and fallback metadata; local tests pass, installed browser acceptance pending |
+| /search | Minimal knowledge query/options, literal evidence/citations and fallback metadata; local tests pass, installed owner/Reader browser acceptance passes |
 | `/wiki` | Minimal authored page/revision/entity/claim/graph UI; repeatable native owner/Reader browser acceptance passes; interactive Playwright waived |
 | `/api/v1/wiki/pages`, `/api/v1/entities`, `/api/v1/claims`, `/api/v1/knowledge/graph/<id>`, `/api/v1/knowledge/changes` | Versioned Wiki, aliases, sourced assertions, bounded graph and change cursors; signed local REST, real disposable SSO/update/restore and permitted live owner acceptance verified |
 | `/objects` | Minimal typed record list/detail and JSON editor; disposable/browser verified; live interactive browser waived |
@@ -26,7 +26,8 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/api/v1/object-relations`, `/api/v1/objects/<id>/relations`, `/api/v1/object-events`, `/api/v1/references/<kind>/<id>` | Typed object edges, metadata changes and trusted registered reference resolution |
 | `/api/v1/sources`, `/api/v1/sources/upload`, `/api/v1/sources/search` | Authenticated source browse, bounded queued uploads and sourced PostgreSQL text search; native and permitted live acceptance verified |
 | `/api/v1/source-versions/<id>/document`, `/api/v1/documents/<id>/chunks`, `/api/v1/chunks/<id>/citation` | Retained full text, offsets/location chunks and stable citations |
-| `/api/v1/knowledge/search` | Source/current-Wiki FTS with stable citations and bounded exact excerpts; installed provider-free acceptance verified; optional configured retrieval pending |
+| `/api/v1/knowledge/search` | Source/current-Wiki FTS with stable citations and bounded exact excerpts; installed provider-free acceptance verified; optional configured retrieval passes disposable acceptance |
+| /api/v1/knowledge/index/status | Reader inspection of configured profile/generation and derivative row count; no provider credentials or URLs |
 | `/api/v1/health` | Public Core/app versions and PostgreSQL/schema/vector readiness |
 | `/api/v1/auth/status` | Public indication that authentication is configured |
 | `/auth/login`, `/auth/callback` | OIDC authorization-code login with PKCE, one-use state and nonce |
@@ -119,7 +120,7 @@ Optional System One uses the common Jev/Kev model/state/questions/answers Noul p
 
 Use mode=text|semantic|hybrid|auto, kind=all|source|wiki, graph_depth=0|1|2|3 and rerank=off|rerank|filter within administrator caps. Graphs are supplemental unscored context, separate from ranked evidence, using at most three roots/sixteen nodes each. Fallback reasons, considered/scored counts, truncation and safe token usage are explicit. Provider calls release database connections and recheck persisted roles before returning.
 
-The minimal search page renders literal evidence/citations and ignores stale responses. Local protocol, database, configuration and UI tests pass. Configured QEMU inference/vector recovery, repeatable search browser and permitted live M10 checks remain pending. The [fixture benchmark](docs/retrieval-benchmark.md) reports recall, precision, citations, latency and request costs; it shows RRF can favor distractors and deliberately unhelpful scoring can fail. No real provider quality/calibration is claimed.
+The minimal search page renders literal evidence/citations and ignores stale responses. Local protocol, database, configuration and UI tests pass. Configured QEMU HTTPS inference/indexing/vector recovery and repeatable owner/Reader search browsers pass. Provider-free live source/Wiki search, exact citations/offsets/fallbacks/graph/policy and full native restart persistence also pass; providers were kept disabled. Interactive Playwright remains waived. Final documentation CI is pending. The [fixture benchmark](docs/retrieval-benchmark.md) reports recall, precision, citations, latency and request costs; it shows RRF can favor distractors and deliberately unhelpful scoring can fail. No real provider quality/calibration is claimed.
 
 ## Remaining roadmap
 
@@ -169,3 +170,5 @@ Local and native browser CI check discovery text against available REST routes a
 Czero derives from [ns8-kickstart](https://github.com/NethServer/ns8-kickstart). Reuse [Core module contracts](https://github.com/NethServer/ns8-core/tree/main/docs/modules), [Hermes](https://github.com/NethServer/ns8-hermes-agent), [Dependency-Track](https://github.com/NethServer/ns8-dependencytrack), [IdP](https://github.com/NethServer/ns8-idp), [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib), [QEMU Actions](https://github.com/NethServer/ns8-github-actions) and [NethServer agent skills](https://github.com/NethServer/agents), prioritizing maintained, tested implementations linked in PLAN.md.
 
 See [LICENSE](LICENSE) (GPL-3.0). Preserve attribution and verify license compatibility when copying code or distributing C0 Core.
+
+Retrieval limitations: embeddings support at most 2000 full-precision dimensions; old profile/generation vectors remain stored until future derivative maintenance. Graph context is supplemental and unscored. C0 produces no generated answer. Real provider quality and model thresholds require corpus-specific evaluation. Live retrieval checks used the configured owner with providers disabled; disposable tests cover all roles and configured mock HTTPS providers. Stable IdP/proxy availability and the recorded image/UI vulnerabilities remain release-review work.
