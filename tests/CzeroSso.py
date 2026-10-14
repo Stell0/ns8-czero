@@ -126,3 +126,85 @@ class CzeroSso:
                 raise AssertionError("Disposable SSO cleanup failed")
         finally:
             builtin.set_log_level(previous)
+
+    @keyword
+    def verify_disposable_objects_browser(self, host):
+        """Generated password is never a Robot variable or nested keyword arg."""
+        builtin=BuiltIn(); previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary')
+            raw=ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json')
+            payload=json.loads(raw); self._browser_password=payload['password']
+            browser=builtin.get_library_instance('Browser')
+            def run(name,*args): return builtin.run_keyword('Browser.'+name,*args)
+            def login(username):
+                run('Go To','https://'+host+'/objects')
+                run('Wait For Elements State','#records-signin','visible','timeout=30s')
+                run('Click','#records-signin')
+                browser.fill_text('input[name="username"]',username)
+                browser.fill_text('input[name="password"]',self._browser_password)
+                run('Click','#kc-login')
+                # OIDC callback returns to the home page.
+                run('Wait For Elements State','#sign-out','visible','timeout=30s')
+                run('Go To','https://'+host+'/objects')
+                run('Wait For Elements State','#records-workspace','visible','timeout=30s')
+            login('c0owner')
+            type_name='browser-inventory-'+secrets.token_hex(4)
+            run('Click','#type-registration summary')
+            run('Fill Text','#type-name',type_name)
+            run('Fill Text','#type-label','Browser inventory')
+            run('Fill Text','#type-schema',json.dumps({'type':'object','properties':{
+                'name':{'type':'string','maxLength':64},'count':{'type':'integer','minimum':0}},'required':['name','count']}))
+            run('Fill Text','#type-unique','name')
+            run('Click','#type-form button')
+            run('Get Text','#type-status','==','Type registered.')
+            run('Click','#new-record')
+            run('Fill Text','#record-data','{"name":3,"count":2}')
+            run('Click','#save-record')
+            run('Get Text','#record-status','contains','Validation failed')
+            run('Fill Text','#record-data','{"name":"Browser rack","count":2}')
+            run('Fill Text','#record-tags','inventory, priority')
+            run('Click','#save-record')
+            run('Get Text','#record-status','==','Record saved.')
+            run('Reload')
+            run('Select Options By','#record-type','value',type_name)
+            run('Click','#record-list button')
+            run('Get Property','#record-data','value','contains','"count": 2')
+            run('Fill Text','#record-data','{"name":"Browser rack revised","count":3}')
+            run('Click','#save-record')
+            run('Get Text','#record-status','==','Record saved.')
+            run('Get Text','#record-identity','contains','revision 2')
+            run('Reload')
+            run('Select Options By','#record-type','value',type_name)
+            run('Click','#record-list button')
+            run('Get Property','#record-data','value','contains','"count": 3')
+            hostile='<img src=x onerror=alert(1)>'
+            run('Fill Text','#record-data',json.dumps({'name':hostile,'count':3}))
+            run('Click','#save-record')
+            run('Get Text','#record-status','==','Record saved.')
+            run('Get Text','#record-list button','==',hostile)
+            run('Get Element Count','#record-list img','==',0)
+            # Change membership through real owner-authenticated HTTP on the VM.
+            _,errors,rc=ssh.execute_command('python3 /tmp/oidc_probe.py browser-reader',return_stderr=True,return_rc=True,timeout='180 seconds')
+            if rc: raise AssertionError('Cannot prepare disposable Reader browser')
+            run('New Context','ignoreHTTPSErrors=True')
+            run('New Page')
+            login('c0member')
+            run('Select Options By','#record-type','value',type_name)
+            run('Wait For Elements State','#new-record','hidden')
+            run('Wait For Elements State','#type-registration','hidden')
+            run('Click','#record-list button')
+            run('Get Property','#record-data','readOnly','==',True)
+            run('Wait For Elements State','#save-record','hidden')
+            run('Get Property','#record-data','value','contains','"count": 3')
+        except Exception as error:
+            raise AssertionError('Disposable object browser failed ('+type(error).__name__+')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
+    def assert_disposable_sso_browser_password_is_private(self):
+        builtin=BuiltIn(); output=Path(builtin.get_variable_value('${OUTPUT FILE}'))
+        for path in (output,output.parent/'playwright-log.txt'):
+            if path.exists() and self._browser_password in path.read_text(errors='replace'):
+                raise AssertionError('Temporary SSO browser password entered test output')

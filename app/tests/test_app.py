@@ -54,7 +54,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
 def test_agents_page_describes_only_available_capabilities(client):
     response = client("/czero/czero17/agents")
     assert response.status_code == 200
-    assert "Objects, search and MCP are planned" in response.text
+    assert "Search and MCP are planned" in response.text
     assert "./docs" in response.text
     assert "A native timer wakes" in response.text
     assert "pending milestone slice" not in response.text
@@ -106,3 +106,13 @@ def test_database_unavailable_is_a_safe_503():
             assert "password" not in response.text
             assert (await session.get("/")).status_code == 200
     asyncio.run(check())
+
+
+def test_objects_page_uses_local_assets_and_accessible_editor(client):
+    response=client('/czero/czero17/objects')
+    assert response.status_code==200
+    assert 'for="record-data"' in response.text and 'aria-live="polite"' in response.text
+    assert './objects.js' in response.text
+    script=client('/czero/czero17/objects.js')
+    assert script.status_code==200 and 'expected_revision' in script.text
+    assert 'innerHTML' not in script.text

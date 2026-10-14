@@ -15,6 +15,7 @@ from czero_core import core_health, Database
 from czero_app import __version__
 from czero_app.auth import AppAuth, install_auth_routes
 from czero_app.jobs import install_job_routes
+from czero_app.objects import install_object_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -74,10 +75,19 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     instance_app.state.auth = auth
     read_context, write_context = install_auth_routes(instance_app, auth, base_path)
     install_job_routes(instance_app, database, auth, read_context, write_context)
+    install_object_routes(instance_app, database, auth, read_context, write_context)
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
         return FileResponse(home_page, media_type="text/html")
+
+    @instance_app.get("/objects", include_in_schema=False)
+    async def objects_page() -> FileResponse:
+        return FileResponse(static_dir / "objects.html", media_type="text/html")
+
+    @instance_app.get("/objects.js", include_in_schema=False)
+    async def objects_script() -> FileResponse:
+        return FileResponse(static_dir / "objects.js", media_type="text/javascript")
 
     @instance_app.get("/status.js", include_in_schema=False)
     async def status_script() -> FileResponse:
@@ -97,7 +107,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Identity configuration is required for sign-in. Objects, search and MCP are planned milestones.</p>"
+            "Readers can inspect typed objects; Editors can write records and relations; Admins register schemas. Search and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
         )

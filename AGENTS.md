@@ -4,9 +4,12 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M07 object implementation
 
-- Core ObjectService now implements immutable type definitions, bounded Draft 2020-12 schemas, JSONB CRUD, tags, optimistic revisions, scalar uniqueness, atomic batches and object-to-object typed relations. These Core operations are not yet exposed in REST/UI. Serialize object mutations with transaction lock 49375 before allocating event IDs so change cursors preserve commit order. Deleting an object cascades its relations; its delete event tells consumers to discard those edges.
+- Core ObjectService now implements immutable type definitions, bounded Draft 2020-12 schemas, JSONB CRUD, tags, optimistic revisions, scalar uniqueness, atomic batches and object-to-object typed relations. REST now reuses these operations and a minimal separate record editor is implemented; its replacement native/browser gate is pending. Serialize object mutations with transaction lock 49375 before allocating event IDs so change cursors preserve commit order. Deleting an object cascades its relations; its delete event tells consumers to discard those edges.
 - Define the bounded JSON Schema and atomic revision/uniqueness/batch contracts in Core; REST and the separate app UI reuse them. Recheck persisted roles inside transactions. Do not borrow multi-organization ACLs from upstream CRM examples. Object schemas/records and typed relation endpoints are data, never imports or schema-fetch URLs.
 - Freeze verified M06 module and component digests from PLAN.md for genuine upgrade tests. Extend encrypted backup/restore with actual objects/relations/events; no new native management abstraction is required.
+
+- Object transport must preserve PermissionDenied as 403 before catching ValueError. Typed reference resolution accepts only trusted registered callbacks; they receive the transaction/current actor/UUID, enforce domain roles and return bounded data. Current stored relations retain object foreign keys; sources/Wiki adapters arrive with their real tables.
+- Record UI uses local assets, associated labels, role-gated controls and DOM text for record/schema content. Keep draft edits on conflicts; loading the saved revision is explicit. Disposable end-user SSO passwords follow the direct Browser fill/private-artifact convention; never route them through Robot keyword arguments.
 
 ## Established M06 queue/worker contracts
 

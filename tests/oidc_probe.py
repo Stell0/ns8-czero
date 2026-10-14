@@ -90,6 +90,20 @@ class Browser:
         assert status == 200 and form.action, "Provider SSO session survived logout"
 
 
+OBJECT_SCHEMA = {"type":"object","properties":{"name":{"type":"string","maxLength":64},"count":{"type":"integer","minimum":0}},"required":["name","count"]}
+
+
+def object_fixtures(owner,profile):
+    """Use authenticated public services, never fixture SQL, for app records."""
+    for name,label in (("fixture-inventory","Inventory"),("fixture-projects","Projects")):
+        status,_,_=owner.api("/api/v1/object-types/"+name)
+        if status==404:
+            status,_,_=owner.api("/api/v1/object-types",{"name":name,"label":label,"schema":OBJECT_SCHEMA,"unique_fields":["name"]},"POST",profile["csrf_token"])
+            assert status==201,"Cannot register fixture object type"
+        else:
+            assert status==200,"Cannot inspect fixture object type"
+
+
 def probe():
     payload = json.loads((STATE / "personas.json").read_text())
     origin = "https://" + payload["host"]
@@ -98,6 +112,7 @@ def probe():
     assert profile["role"] == "admin" and profile["is_owner"], "Owner identity mismatch"
     status, body, _ = owner.api("/api/v1/schedules")
     assert status == 200 and len(json.loads(body)["schedules"]) >= 2, "Admin schedules unavailable"
+    object_fixtures(owner,profile)
     identity_file = STATE / "owner-id.txt"
     if identity_file.exists():
         assert identity_file.read_text() == profile["id"], "Owner identity changed after restart"
@@ -119,6 +134,12 @@ def probe():
     assert current["role"] == "reader", "Reader grant not persisted"
     status, _, _ = reader.api("/api/v1/access/accounts")
     assert status == 403, "Reader can administer"
+    status,_,_=reader.api("/api/v1/objects?type_name=fixture-inventory")
+    assert status==200,"Reader cannot browse objects"
+    status,_,_=reader.api("/api/v1/objects",{"type_name":"fixture-inventory","data":{"name":"denied","count":0}},"POST",current["csrf_token"])
+    assert status==403,"Reader can mutate objects"
+    from uuid import uuid4
+    record_name="probe-"+uuid4().hex
     for role in ("editor", "admin"):
         status, _, _ = owner.api(path, {"role": role}, "PUT", profile["csrf_token"])
         assert status == 204, "Role update failed"
@@ -128,6 +149,13 @@ def probe():
         assert status == (200 if role == "admin" else 403), "Role authorization mismatch"
         status, _, _ = reader.api("/api/v1/schedules")
         assert status == (200 if role == "admin" else 403), "Schedule authorization mismatch"
+        status,body,_=reader.api("/api/v1/objects",{"type_name":"fixture-inventory","data":{"name":record_name+role,"count":1}},"POST",current["csrf_token"])
+        assert status==201,"Editor/Admin object write failed"
+        created=json.loads(body)
+        status,_,_=reader.api("/api/v1/objects/"+created["id"]+"?expected_revision=1",None,"DELETE",current["csrf_token"])
+        assert status==200,"Editor/Admin object delete failed"
+        status,_,_=reader.api("/api/v1/object-types",{"name":"fixture-inventory","label":"Inventory","schema":OBJECT_SCHEMA},"POST",current["csrf_token"])
+        assert status==(409 if role=="admin" else 403),"Object type role mismatch"
     status, _, _ = owner.api(path, {"role": None}, "PUT", profile["csrf_token"])
     assert status == 204, "Role revocation failed"
     status, _, _ = reader.api("/api/v1/me")
@@ -154,21 +182,51 @@ def persistence(operation):
         status, _, _ = owner.api("/api/v1/access/accounts/" + member["id"],
                                 {"role": "editor"}, "PUT", profile["csrf_token"])
         assert status == 204, "Cannot persist Editor grant"
-        expected_file.write_text(json.dumps({"owner": profile["id"], "member": member["id"]}))
+        object_fixtures(owner,profile)
+        records=[]
+        for type_name in ("fixture-inventory","fixture-projects"):
+            status,body,_=owner.api("/api/v1/objects",{"type_name":type_name,"data":{"name":"persistent-record","count":7},"tags":["persistent"]},"POST",profile["csrf_token"])
+            assert status==201,"Cannot seed persisted object"
+            records.append(json.loads(body))
+        status,body,_=owner.api("/api/v1/object-relations",{"source_id":records[0]["id"],"target_id":records[1]["id"],"source_type":"fixture-inventory","target_type":"fixture-projects","kind":"used-by"},"POST",profile["csrf_token"])
+        assert status==201,"Cannot seed persisted relation"
+        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":json.loads(body)["id"]}))
     expected = json.loads(expected_file.read_text())
     assert profile["id"] == expected["owner"], "Recovered owner identity changed"
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
+    for record in expected["objects"]:
+        status,body,_=editor.api("/api/v1/objects/"+record["id"])
+        assert status==200,"Recovered object missing"
+        actual=json.loads(body)
+        assert all(actual[key]==record[key] for key in ("id","type_name","data","tags","revision")),"Recovered object changed"
+    status,body,_=editor.api("/api/v1/objects/"+expected["objects"][0]["id"]+"/relations")
+    assert status==200 and any(r["id"]==expected["relation"] for r in json.loads(body)["relations"]),"Recovered relation missing"
+    status,body,_=editor.api("/api/v1/object-events?limit=100")
+    assert status==200 and all(any(e["object_id"]==record["id"] and e["operation"]=="create" for e in json.loads(body)["events"]) for record in expected["objects"]),"Recovered event history missing"
     status, _, _ = editor.api("/api/v1/access/accounts")
     assert status == 403, "Recovered Editor can administer"
     owner.logout(profile)
     editor.logout(member_profile)
 
 
+def browser_reader():
+    payload=json.loads((STATE/"personas.json").read_text())
+    owner=Browser("https://"+payload["host"]); profile=owner.login("c0owner",payload["password"])
+    status,body,_=owner.api("/api/v1/access/accounts")
+    assert status==200,"Cannot prepare browser membership"
+    member=next(a for a in json.loads(body)["accounts"] if a["username"]=="c0member")
+    status,_,_=owner.api("/api/v1/access/accounts/"+member["id"],{"role":"reader"},"PUT",profile["csrf_token"])
+    assert status==204,"Cannot grant browser Reader"
+    owner.logout(profile)
+
+
 if __name__ == "__main__":
     try:
-        if len(sys.argv) > 1:
+        if len(sys.argv)>1 and sys.argv[1]=="browser-reader":
+            browser_reader()
+        elif len(sys.argv) > 1:
             persistence(sys.argv[1])
         else:
             probe()

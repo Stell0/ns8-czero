@@ -25,13 +25,21 @@ def page(limit,offset=0):
 
 
 class ObjectService:
-    def __init__(self,database,access):
+    def __init__(self,database,access,*,reference_resolvers=None):
         self.database=database
         self.access=access
+        # Only trusted application code supplies these callbacks. Requests can
+        # select a registered kind, never an import path, table or SQL.
+        self.reference_resolvers={} if reference_resolvers is None else dict(reference_resolvers)
+        for kind,resolver in self.reference_resolvers.items():
+            if name(kind)=='object' or not callable(resolver):
+                raise ValueError('invalid_reference_resolver')
 
     def _authorize(self,c,actor,role):
         if self.access is None: raise PermissionDenied()
-        self.access._actor(c,actor.user_id).require(role)
+        current=self.access._actor(c,actor.user_id)
+        current.require(role)
+        return current
 
     def register_type(self,actor,type_name,label,schema,unique_fields=None):
         type_name=name(type_name)
@@ -223,3 +231,25 @@ class ObjectService:
             self._authorize(c,actor,Role.READER)
             return [dict(r) for r in c.execute(text('SELECT * FROM c0_object_events WHERE id>:after ORDER BY id LIMIT :limit'),
                 {'after':after,'limit':limit}).mappings()]
+
+    def resolve_reference(self,actor,kind,resource_id,type_name):
+        """Resolve a typed object or an explicitly registered relational domain.
+
+        A trusted resolver(connection, current_actor, UUID) returns a mapping
+        with type_name and bounded JSON data, or None. It must honor its domain
+        role, use this transaction and coordinate its own deletion policy.
+        M08/M09 can register their real storage after it exists. Current durable
+        object relations deliberately retain real object foreign keys.
+        """
+        kind=name(kind); type_name=name(type_name); resource_id=UUID(str(resource_id))
+        with self.database.engine.connect() as c:
+            current=self._authorize(c,actor,Role.READER)
+            if kind=='object':
+                row=self._get(c,resource_id)
+            else:
+                resolver=self.reference_resolvers.get(kind)
+                if resolver is None: raise ValueError('unknown_reference_kind')
+                row=resolver(c,current,resource_id)
+                if row is None: raise ObjectNotFound()
+            if row['type_name']!=type_name: raise ValueError('reference_type_mismatch')
+            return {'kind':kind,'id':resource_id,'type_name':type_name,'data':bounded_json(row['data'])}

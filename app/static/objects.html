@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C0 — records</title>
+  <style>
+    :root { font: 16px/1.5 system-ui,sans-serif; color:#183044; background:#f3f7fa; }
+    main { max-width:60rem; margin:2rem auto; padding:2rem; background:white; border:1px solid #d6e1e8; border-radius:1rem; }
+    nav { display:flex; flex-wrap:wrap; gap:1rem; } a { color:#075f91; }
+    section,details { border-top:1px solid #d6e1e8; margin-top:1.5rem; padding-top:1rem; }
+    label { display:block; margin-top:.7rem; } input,textarea,select,button { font:inherit; padding:.4rem; max-width:100%; box-sizing:border-box; }
+    textarea { width:100%; font-family:monospace; } button { margin:.5rem .5rem .5rem 0; }
+    table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:.5rem; border-bottom:1px solid #d6e1e8; overflow-wrap:anywhere; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; } [role=status] { min-height:1.5rem; }
+    @media(max-width:40rem) { main { margin:.5rem; padding:1rem; } }
+  </style>
+</head>
+<body><main>
+  <nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./docs">REST API</a><a href="./agents">Agent capabilities</a></nav>
+  <h1>Records</h1><p id="records-account" role="status">Checking sign-in...</p><a id="records-signin" href="./auth/login" hidden>Sign in with NethServer</a>
+  <div id="records-workspace" hidden>
+    <label for="record-type">Record type</label><select id="record-type"></select>
+    <button id="new-record" type="button" hidden>New record</button><button id="refresh-records" type="button">Refresh records</button>
+    <p id="records-status" role="status" aria-live="polite"></p>
+    <table><thead><tr><th>Record</th><th>Revision</th><th>Tags</th></tr></thead><tbody id="record-list"></tbody></table>
+    <button id="records-previous" type="button">Previous</button><button id="records-next" type="button">Next</button>
+    <section id="record-detail" aria-labelledby="record-heading" hidden>
+      <h2 id="record-heading">Record</h2><p id="record-identity"></p>
+      <details><summary>Type schema</summary><pre id="record-schema"></pre></details>
+      <form id="record-form">
+        <label for="record-data">Record data (JSON)</label><textarea id="record-data" rows="12" maxlength="65536" required></textarea>
+        <label for="record-tags">Tags (comma separated)</label><input id="record-tags" maxlength="2048">
+        <button id="save-record" type="submit" hidden>Save record</button><button id="reload-record" type="button" hidden>Load saved version</button><button id="delete-record" type="button" hidden>Delete record</button>
+      </form><p id="record-status" role="status" aria-live="polite"></p>
+      <h3>Relations</h3><ul id="record-relations"></ul>
+      <form id="relation-form" hidden>
+        <label for="relation-kind">Relation kind</label><input id="relation-kind" maxlength="64" required value="related-to">
+        <label for="relation-type">Target type</label><select id="relation-type"></select>
+        <label for="relation-target">Target record ID</label><input id="relation-target" minlength="36" maxlength="36" required>
+        <button type="submit">Add relation</button>
+      </form>
+    </section>
+    <details id="type-registration" hidden><summary>Register a record type</summary>
+      <p>Type definitions are immutable. Supported schemas use explicit types, properties, required fields, items, scalar bounds, enum and const. References, regexes and combinators are unsupported. Unknown fields are rejected.</p>
+      <form id="type-form">
+        <label for="type-name">Type name</label><input id="type-name" maxlength="64" required pattern="[a-z][a-z0-9_-]*">
+        <label for="type-label">Type label</label><input id="type-label" maxlength="128" required>
+        <label for="type-schema">JSON Schema</label><textarea id="type-schema" rows="8" maxlength="16384" required>{"type":"object","properties":{"name":{"type":"string","maxLength":64}},"required":["name"]}</textarea>
+        <label for="type-unique">Unique scalar fields (comma separated)</label><input id="type-unique" maxlength="512">
+        <button type="submit">Register type</button>
+      </form><p id="type-status" role="status" aria-live="polite"></p>
+    </details>
+  </div>
+</main><script src="./objects.js" defer></script></body></html>

@@ -538,7 +538,7 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
-    Get Text    body    contains    Objects, search and MCP are planned milestones.
+    Get Text    body    contains    Search and MCP are planned milestones.
     Close Browser
     Assert Disposable Browser Password Is Private
 
@@ -592,6 +592,17 @@ Preserve admitted identities through update and clean restore
     Should Not Be Equal    ${module_id}    ${donor_id}
     Verify Disposable Identity Persistence    ${module_id}
     Wait Until Keyword Succeeds    30s    2s    Check application route
+
+Check object CRUD and Reader controls in a browser
+    [Tags]    ui
+    [Timeout]    5 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Objects Browser    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
 
 Uninstall only the disposable Czero module
     Should Not Be Empty    ${module_id}

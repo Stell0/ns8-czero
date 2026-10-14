@@ -151,3 +151,20 @@ def test_identity_backup_reuses_existing_encryption_repository(monkeypatch):
     result=library.create_disposable_backup('czero7','existing-repository')
     assert result=={'repository':'existing-repository','backup_id':2,'path':'czero/stable-logical-uuid'}
     assert len(commands)==2
+
+
+def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monkeypatch):
+    invocations=[]; filled=[]; commands=[]; secret='private-browser-fixture-value'
+    def execute(command,**kwargs):
+        commands.append(command)
+        if command.startswith('cat '): return json.dumps({'password':secret})
+        return '', '', 0
+    ssh=SimpleNamespace(execute_command=execute)
+    browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)))
+    monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
+    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
+    monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    library.verify_disposable_objects_browser('czero7.test')
+    assert filled.count(('input[name="password"]',secret))==2
+    assert all(secret not in str(item) for item in invocations+commands)

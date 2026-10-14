@@ -160,3 +160,20 @@ def test_event_cursor_cannot_skip_an_uncommitted_earlier_write(objects,monkeypat
     events=[e for e in svc.events(owner) if e['type_name']==inv]
     assert [e['object_id'] for e in events]==[a['id'],b['id']]
     assert svc.events(owner,after=events[0]['id'])[0]['object_id']==b['id']
+
+
+def test_trusted_relational_resolvers_do_not_import_request_kinds(objects):
+    svc,owner,inv,_=objects
+    row=svc.create(owner,inv,{'name':'typed'})
+    assert svc.resolve_reference(owner,'object',row['id'],inv)['data']==row['data']
+    def account(c,current,key):
+        assert current.user_id==owner.user_id
+        profile=c.execute(text('SELECT display_name FROM c0_accounts WHERE id=:id'),{'id':key}).scalar_one_or_none()
+        return {'type_name':'profile','data':{'display_name':profile}} if profile else None
+    extended=ObjectService(svc.database,svc.access,reference_resolvers={'account':account})
+    assert extended.resolve_reference(owner,'account',owner.user_id,'profile')['data']['display_name']=='Owner'
+    with pytest.raises(ValueError,match='unknown_reference_kind'):
+        extended.resolve_reference(owner,'os-system',owner.user_id,'profile')
+    with pytest.raises(ObjectNotFound): extended.resolve_reference(owner,'account',uuid4(),'profile')
+    with pytest.raises(ValueError,match='reference_type_mismatch'):
+        extended.resolve_reference(owner,'account',owner.user_id,'wrong')
