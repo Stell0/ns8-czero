@@ -35,7 +35,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.11.1/0.13.1**, with packaged migrations through `0006_sources`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.12.0/0.14.0**, with packaged migrations through `0007_wiki`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native update/restore and permitted live owner checks. Wiki, full retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -98,6 +98,8 @@ On the Sources page, expand Upload evidence, choose a file/format, enter a title
 
 Permitted live owner tests verify all four formats, deduplication, changed versions, FTS/citations, default deletion, retention, quarantine and retry. A DOCX content-control file remains intact with `unsupported_docx` and no partial document. Native restart preserves evidence and existing object/job/schedule/configuration state; unrelated inventory stays unchanged. Native Debian installation and Rocky update/browser suites pass. Reader/Editor/Admin source boundaries and encrypted restore are tested in disposable instances; a second live persona and live destructive restore were not exercised.
 
+M09's first Core slice adds authored Wiki pages with immutable revisions, optimistic edits, replay-safe mutations, archive history, Markdown/JSON export, entity CRUD/aliases and metadata change cursors. Fifteen PostgreSQL cases cover those operations and persisted roles; no Wiki REST/UI, claims or graph endpoint is available yet. Native packaging/upgrade acceptance of this slice is pending. Raw extracted evidence remains separate from authored Wiki data.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -122,7 +124,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for seventy-five actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks ten record/source response races using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for ninety actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks ten record/source response races using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

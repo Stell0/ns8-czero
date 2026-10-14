@@ -1,7 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-core_version = "0.11.1"
+core_version = "0.12.0"
 
 
 def core_health() -> dict[str, str]:
