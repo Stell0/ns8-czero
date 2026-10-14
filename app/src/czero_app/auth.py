@@ -4,6 +4,7 @@
 from dataclasses import dataclass, field
 import logging
 import os
+import re
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
@@ -17,6 +18,7 @@ from czero_core.database import Database
 from czero_core.identity import Actor, PermissionDenied, Role, TokenRejected
 from czero_core.oidc import OidcClient, OidcConfig, OidcUnavailable
 from czero_core.sessions import LoginStateRejected, SessionRejected, SessionService
+from czero_core.oauth_grants import GrantRejected
 
 
 class SafeAccessLog(logging.Filter):
@@ -107,6 +109,13 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             if not authorization.startswith("Bearer ") or not authorization[7:]:
                 raise TokenRejected()
             active = configured()
+            grants = getattr(app.state, 'delegated_grants', None)
+            if grants is not None and re.fullmatch(r'[A-Za-z0-9_-]{43}', authorization[7:]):
+                try:
+                    delegated = grants.verify(authorization[7:], resource=grants.resource)
+                except GrantRejected:
+                    raise TokenRejected() from None
+                return RequestAccess(delegated.actor, scopes=delegated.scopes)
             identity = active.oidc.verify_access_token(authorization[7:])
             return RequestAccess(active.access.resolve(identity))
         cookie = request.cookies.get("c0_session")
@@ -132,6 +141,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
 
     @app.get("/api/v1/me")
     def current_user(context: RequestAccess = Depends(read_context)):
+        if context.scopes is not None and 'c0:read' not in context.scopes:
+            raise PermissionDenied()
         result = configured().access.profile(context.actor)
         if context.csrf_token is not None:
             result["csrf_token"] = context.csrf_token
@@ -139,6 +150,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
 
     @app.get("/api/v1/access/accounts")
     def accounts(limit: int = 100, context: RequestAccess = Depends(read_context)):
+        if context.scopes is not None and 'c0:admin' not in context.scopes:
+            raise PermissionDenied()
         try:
             return {"accounts": configured().access.list_accounts(context.actor, limit=limit)}
         except PermissionDenied:
@@ -148,6 +161,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
 
     @app.put("/api/v1/access/accounts/{account_id}", status_code=204)
     def change_role(account_id: UUID, data: RoleUpdate, context: RequestAccess = Depends(write_context)):
+        if context.scopes is not None and 'c0:admin' not in context.scopes:
+            raise PermissionDenied()
         try:
             configured().access.set_role(context.actor, account_id, data.role)
         except PermissionDenied:
@@ -171,7 +186,17 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         login = active.sessions.consume_login(request.query_params.get("state"), request.cookies.get("c0_login"))
         identity = active.oidc.exchange(request.query_params.get("code"), login)
         cookie = active.sessions.create(identity)
-        response = RedirectResponse(cookie_path, status_code=302)
+        destination = cookie_path
+        consent = getattr(app.state, 'oauth_consent', None)
+        if consent is not None and request.cookies.get('c0_consent'):
+            from czero_app.oauth_server import pending_cookie
+            from czero_core.oauth_consent import ConsentRejected
+            try:
+                consent.view(*pending_cookie(request))
+                destination = '/oauth/consent'
+            except ConsentRejected:
+                pass
+        response = RedirectResponse(destination, status_code=302)
         response.set_cookie("c0_session", cookie, max_age=active.sessions.max_session_seconds,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
         response.delete_cookie("c0_login", path=cookie_path, secure=True, httponly=True, samesite="lax")
@@ -179,6 +204,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
 
     @app.post("/auth/logout")
     def logout(request: Request, context: RequestAccess = Depends(write_context)):
+        if context.scopes is not None:
+            raise PermissionDenied()
         active = configured()
         active.sessions.destroy(request.cookies.get("c0_session"))
         try:

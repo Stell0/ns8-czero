@@ -5,7 +5,7 @@ import os
 import re
 from html import escape
 from pathlib import Path
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Literal
 
 from fastapi import FastAPI, Request, Response
@@ -65,11 +65,15 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
 
     database = database if database is not None else Database()
     auth = auth if auth is not None else AppAuth.from_env(database, base_path)
+    mcp_child = None
 
     @asynccontextmanager
     async def lifespan(application):
         try:
-            yield
+            async with AsyncExitStack() as stack:
+                if mcp_child is not None:
+                    await stack.enter_async_context(mcp_child.router.lifespan_context(mcp_child))
+                yield
         finally:
             if auth is not None:
                 auth.oidc.close()
@@ -87,6 +91,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     # multipart errors are handled before crossing its task-group boundary.
     instance_app.add_middleware(UploadBodyLimit)
     read_context, write_context = install_auth_routes(instance_app, auth, base_path)
+    instance_app.state.read_context = read_context
+    instance_app.state.write_context = write_context
     catalog = OperationCatalog(auth)
     instance_app.state.operations = catalog.registry
     instance_app.state.operation_catalog = catalog
@@ -195,6 +201,15 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             response.status_code = 503
             result["status"] = "degraded"
         return HealthResponse(**result)
+
+    if auth is not None and not base_path:
+        from czero_app.oauth_server import install_oauth_server
+        from czero_app.mcp_transport import create_mcp_app
+        grants, _ = install_oauth_server(instance_app, auth, read_context, write_context, static_dir)
+        mcp_child = create_mcp_app(catalog.registry, grants,
+            issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth')
+        instance_app.state.mcp_app = mcp_child
+        instance_app.mount('/', mcp_child, name='mcp')
 
     if not base_path:
         return instance_app

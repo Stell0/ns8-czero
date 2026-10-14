@@ -36,9 +36,8 @@ def transport(application):
     clients = OAuthClientService(access)
     client = clients.register(owner, 'MCP HTTP fixture ' + uuid4().hex, [CALLBACK],
         scopes=['c0:read', 'c0:write', 'c0:admin'])
-    grants = OAuthGrantService(access, 'czero900', RESOURCE)
-    child = create_mcp_app(app.state.operations, grants, issuer_url=ISSUER)
-    app.mount('/', child)
+    grants = app.state.delegated_grants
+    child = app.state.mcp_app
     def token(identity, scopes):
         cookie = app.state.auth.sessions.create(identity)
         session = app.state.auth.sessions.get(cookie)

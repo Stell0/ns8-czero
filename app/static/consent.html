@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C0 client authorization</title>
+<main>
+  <h1>Authorize a client</h1>
+  <p id="profile"></p>
+  <p id="client"></p>
+  <p>Approved callback: <span id="callback"></span></p>
+  <p>Choose the permissions to grant. Access expires with this sign-in, within one hour.</p>
+  <form id="consent-form">
+    <fieldset id="scopes"><legend>Permissions</legend></fieldset>
+    <button id="approve" type="submit" disabled>Authorize</button>
+    <button id="deny" type="button" disabled>Deny</button>
+  </form>
+  <p id="message" role="status" aria-live="polite"></p>
+</main>
+<script src="/oauth/consent.js" defer></script>
+</html>
