@@ -226,3 +226,47 @@ def test_provider_free_knowledge_search_signed_rest_has_revision_citations_and_s
             client.headers['Authorization']='Bearer '+member
             assert (await client.get(path,params={'query':query})).status_code==403
     asyncio.run(check())
+
+
+def test_signed_hybrid_and_scorer_transport_use_core_caps_and_provenance(knowledge_http):
+    import httpx2
+    from czero_core.providers import EmbeddingClient,EmbeddingSettings,SystemOneClient,ScorerSettings
+    from czero_core.embeddings import EmbeddingStore
+    from czero_core.retrieval import SearchLimits
+    async def setup():
+        app,owner,*_=knowledge_http
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,headers={'Authorization':'Bearer '+owner}) as client:
+            pages=[]
+            for label in ('Wanted','Other'):
+                response=await client.post('/api/v1/wiki/pages',json={'slug':label.lower()+'-'+uuid4().hex,'title':label,
+                    'body':'Hybrid transport evidence '+label,'idempotency_key':label})
+                assert response.status_code==201;pages.append(response.json())
+            return pages
+    pages=asyncio.run(setup());app=knowledge_http[0]
+    def embedding_reply(request):
+        body=json.loads(request.content)
+        return httpx2.Response(200,json={'model':body['model'],'data':[{'index':i,'embedding':[1,0,0]} for i in range(len(body['input']))]})
+    import json
+    client=EmbeddingClient(EmbeddingSettings('https://embedding.example.test/'+uuid4().hex,'fixture',dimensions=3),transport=httpx2.MockTransport(embedding_reply))
+    store=EmbeddingStore(knowledge_http[4],client,app.state.auth.access)
+    app.state.search.embeddings=store;app.state.search.limits=SearchLimits(max_limit=3,candidates=4,graph_depth=0,scorer_candidates=2)
+    def score_reply(request):
+        body=json.loads(request.content)
+        return httpx2.Response(200,json={'model':'kev-mock','answers':{'r'+str(i):{'type':'noul','noul':.9 if 'Wanted' in c['text'] else .1} for i,c in enumerate(body['state']['candidates'])}})
+    app.state.search.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone','kev-mock'),transport=httpx2.MockTransport(score_reply))
+    app.state.search.scorer_mode='filter'
+    try:
+        with knowledge_http[4].engine.begin() as c:store._index_batch(c)
+        async def check():
+            async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,headers={'Authorization':'Bearer '+knowledge_http[1]}) as transport:
+                response=await transport.get('/api/v1/knowledge/search',params={'query':'Hybrid transport','mode':'hybrid','rerank':'filter'})
+                assert response.status_code==200;result=response.json()
+                assert result['retrieval_method']=='hybrid+filter' and result['scored_count']==2
+                assert len(result['hits'])==1 and result['hits'][0]['resource_id']==pages[0]['id']
+                assert result['hits'][0]['wiki']['revision_id']==pages[0]['content']['id'] and result['hits'][0]['relevance_score']==.9
+                assert (await transport.get('/api/v1/knowledge/search',params={'query':'Hybrid','limit':4})).status_code==422
+                assert (await transport.get('/api/v1/knowledge/search',params={'query':'Hybrid','graph_depth':1})).status_code==422
+                assert (await transport.get('/api/v1/knowledge/search',params={'query':'Hybrid','api_key':'untrusted-request'})).status_code==422
+        asyncio.run(check())
+    finally:
+        with knowledge_http[4].engine.begin() as c:c.execute(text('DELETE FROM c0_embedding_profiles WHERE id=:id'),{'id':store.profile_id})

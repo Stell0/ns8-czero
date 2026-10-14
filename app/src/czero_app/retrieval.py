@@ -9,6 +9,7 @@ from czero_core.identity import PermissionDenied
 from czero_core.retrieval import SearchService
 from czero_app.auth import RequestAccess
 from czero_app.sources import CitationView
+from czero_app.knowledge import GraphView
 
 
 class WikiCitation(BaseModel):
@@ -32,6 +33,7 @@ class SearchHit(BaseModel):
     score: float
     citation: CitationView | None
     wiki: WikiCitation | None
+    relevance_score: float | None = Field(default=None, ge=0, le=1)
 
 
 class SearchResult(BaseModel):
@@ -40,14 +42,21 @@ class SearchResult(BaseModel):
     fallback_reason: str | None
     requested_mode: str
     candidate_count: int
+    fallback_reasons: list[str]
+    scored_count: int
+    scorer_truncated_candidates: int
+    provider_usage: dict[str, dict[str, int]]
+    graphs: list[GraphView]
 
 
 class SearchOptions(BaseModel):
     model_config = ConfigDict(extra='forbid')
     query: str = Field(min_length=1, max_length=512)
-    limit: int = Field(default=20, ge=1, le=50)
+    limit: int | None = Field(default=None, ge=1, le=50)
     mode: Literal['auto','text','semantic','hybrid'] = 'auto'
     kind: Literal['all','source','wiki'] = 'all'
+    graph_depth: int = Field(default=0, ge=0, le=3)
+    rerank: Literal['off','rerank','filter'] | None = None
 
 
 def install_retrieval_routes(app, database, auth, read_context):
