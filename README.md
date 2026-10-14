@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M09 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. Source ingestion passes local, native, browser and permitted live checks. Wiki/graph passes local, native, browser and permitted live checks. M10 retrieval is next.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M09 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. Source ingestion passes local, native, browser and permitted live checks. Wiki/graph passes local, native, browser and permitted live checks. M10 retrieval is active; provider-free knowledge FTS passes local tests, installed acceptance pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -25,6 +25,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/api/v1/object-relations`, `/api/v1/objects/<id>/relations`, `/api/v1/object-events`, `/api/v1/references/<kind>/<id>` | Typed object edges, metadata changes and trusted registered reference resolution |
 | `/api/v1/sources`, `/api/v1/sources/upload`, `/api/v1/sources/search` | Authenticated source browse, bounded queued uploads and sourced PostgreSQL text search; native and permitted live acceptance verified |
 | `/api/v1/source-versions/<id>/document`, `/api/v1/documents/<id>/chunks`, `/api/v1/chunks/<id>/citation` | Retained full text, offsets/location chunks and stable citations |
+| `/api/v1/knowledge/search` | Provider-free source/current-Wiki FTS with stable citations and bounded exact excerpts; signed local REST verified, native acceptance pending |
 | `/api/v1/health` | Public Core/app versions and PostgreSQL/schema/vector readiness |
 | `/api/v1/auth/status` | Public indication that authentication is configured |
 | `/auth/login`, `/auth/callback` | OIDC authorization-code login with PKCE, one-use state and nonce |
@@ -37,7 +38,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.13.1/0.16.1**, with packaged migrations through `0008_knowledge_graph`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.14.0/0.17.0**, with packaged migrations through `0009_retrieval_text`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native update/restore and permitted live owner checks. Full retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -109,6 +110,8 @@ Wiki typed REST and the minimal page pass local, installed and permitted live ac
 Knowledge POST/PUT bodies require `idempotency_key`; edits/archive/retraction require `expected_revision`. A replay returns its original snapshot; reused keys with changed payload and stale edits return 409. Page bodies cap at 128 KiB, metadata/value at 16 KiB, entity aliases at sixteen, active incident edges and typed references at thirty-two, reads at one hundred. Graph results report truncation. Entities show the first one hundred entries in the minimal picker; full forms/navigation remain M12. Native update/encrypted backup/clean restore preserve exact Wiki data. Permitted live owner CRUD/exports/replay/CAS/CSRF and full native restart preserve knowledge, prior sources/objects/jobs, configuration and unrelated inventory. Interactive Playwright remains waived; only the owner persona was used live, with all roles verified in disposable tests.
 
 
+M10's first slice exposes `GET /api/v1/knowledge/search?query=inventory&kind=all&mode=auto&limit=20`. Source chunks retain complete citations; Wiki hits include immutable revision IDs/hashes and exact excerpt offsets. Only current active Wiki revisions rank; archives/history remain retrievable through their original endpoints. Query text caps at 512 characters and result limits at fifty. `kind` selects all/source/wiki; unknown query fields are rejected. Semantic/hybrid requests currently return ordinary FTS with `retrieval_method:text` and `fallback_reason:embeddings_not_configured`. No optional provider, vectors, reranking or native retrieval configuration is implemented yet; the first slice's installed/native checks are pending.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -131,7 +134,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 104 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 109 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
@@ -141,7 +144,7 @@ corepack yarn install --immutable
 NODE_OPTIONS=--openssl-legacy-provider corepack yarn build
 ```
 
-`tests/czero.robot` runs native lifecycle in disposable QEMU, including the frozen verified M08 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates; native local-provider routing is used without fixture DNS overrides, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
+`tests/czero.robot` runs native lifecycle in disposable QEMU, including the frozen verified M09 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates; native local-provider routing is used without fixture DNS overrides, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
 
 An older M01 installation may stop when pod/database dependencies are introduced; re-save hostname Settings to start the new stack. Live startup, migration, hostname/certificate/identity configuration, discovery, signed owner login/logout, CSRF/owner protection, negative REST authorization and stable owner identity after restart pass. All three member roles, revocation and identity restore are verified in disposable tests; a second live application persona was not exercised.
 

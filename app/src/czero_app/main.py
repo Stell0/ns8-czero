@@ -20,6 +20,7 @@ from czero_app.sources import install_source_routes, UploadBodyLimit
 from czero_app.job_handlers import build_registry
 from czero_core.sources import OriginalStore
 from czero_app.knowledge import install_knowledge_routes
+from czero_app.retrieval import install_retrieval_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -86,6 +87,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
     sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
     knowledge = install_knowledge_routes(instance_app, database, auth, read_context, write_context)
+    install_retrieval_routes(instance_app, database, auth, read_context)
     install_object_routes(instance_app, database, auth, read_context, write_context,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
 

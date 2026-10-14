@@ -188,3 +188,41 @@ def test_native_wiki_persistence_fixture_uses_actual_signed_rest(knowledge_http)
             with knowledge_http[4].engine.begin() as c:
                 c.execute(text('DELETE FROM c0_object_events WHERE type_name=:name'),{'name':definition['name']})
                 c.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':definition['name']})
+
+
+def test_provider_free_knowledge_search_signed_rest_has_revision_citations_and_safe_fallback(knowledge_http):
+    async def check():
+        app, owner, member, *_ = knowledge_http
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+            path='/api/v1/knowledge/search'
+            assert (await client.get(path,params={'query':'knowledge'})).status_code==401
+            client.headers['Authorization']='Bearer '+owner
+            query='searchtoken'+uuid4().hex
+            created=await client.post('/api/v1/wiki/pages',json={'slug':query,'title':'Search fixture','body':'Authored '+query,'idempotency_key':query})
+            assert created.status_code==201
+            page=created.json()
+            upload=await client.post('/api/v1/sources/upload',data={'title':'HTTP Wiki evidence '+uuid4().hex,'media_type':'text/plain'},files={'file':('evidence.txt',('Raw '+query).encode())})
+            assert upload.status_code==202
+            Worker(knowledge_http[4],app.state.jobs.registry).tick()
+            response=await client.get(path,params={'query':query,'mode':'hybrid'})
+            assert response.status_code==200
+            result=response.json();assert result['retrieval_method']=='text' and result['fallback_reason']=='embeddings_not_configured'
+            assert {h['kind'] for h in result['hits']}=={'chunk','wiki_revision'}
+            wiki_hit=next(h for h in result['hits'] if h['kind']=='wiki_revision')
+            assert wiki_hit['wiki']['revision_id']==page['content']['id'] and query in wiki_hit['excerpt']
+            citation=next(h['citation'] for h in result['hits'] if h['kind']=='chunk')
+            assert citation['source_hash']==upload.json()['content_hash']
+            assert (await client.get(path,params={'query':query,'limit':51})).status_code==422
+            assert (await client.get(path,params={'query':query,'provider_url':'https://arbitrary.invalid'})).status_code==422
+            client.headers['Authorization']='Bearer '+member
+            assert (await client.get(path,params={'query':query})).status_code==403
+            client.headers['Authorization']='Bearer '+owner
+            account=next(a['id'] for a in (await client.get('/api/v1/access/accounts')).json()['accounts'] if a['username']=='member')
+            await client.put('/api/v1/access/accounts/'+account,json={'role':'reader'})
+            client.headers['Authorization']='Bearer '+member
+            assert (await client.get(path,params={'query':query})).status_code==200
+            client.headers['Authorization']='Bearer '+owner
+            await client.put('/api/v1/access/accounts/'+account,json={'role':None})
+            client.headers['Authorization']='Bearer '+member
+            assert (await client.get(path,params={'query':query})).status_code==403
+    asyncio.run(check())

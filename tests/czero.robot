@@ -59,13 +59,13 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.13.1"
+    Should Contain    ${output}    "core_version":"0.14.0"
 
 *** Test Cases ***
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:e02567b7cab418a2c2774b2aede91f05414e7b13f5e172ca07ae4d000101657b
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:1d6b9d152605990e74e89926354a1d56317c21d64df6aa9ffa1f6077d24dcbbf
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -77,7 +77,7 @@ Install Czero with its own identity
     IF    $SCENARIO == 'update'
         # Freeze the older component images too, not just the module shell.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:7ec2bdb24afc38adcdfb21ea8789a701178fb45d441e321e9318110974140d0f','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:562b7721b208ea59057ff526a44157db41e2366a01d9e414cf30be6396b5ff5d'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:ae45c76afd2982d2ba7d15398f23d6daa50918daf3b79a01604f4d6c7d5db4e7','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:686f9fdedca81f97264ef458d41838f1eb9bf1a6cc29df3f3c07ab3c7f0ba207'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -548,7 +548,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.13.1"
+    Get Text    body    contains    "core_version":"0.14.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
