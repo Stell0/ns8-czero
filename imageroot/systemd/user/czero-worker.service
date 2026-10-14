@@ -18,6 +18,7 @@ ExecStartPre=/usr/bin/podman rm --ignore -f czero-worker
 ExecStart=/usr/bin/podman run --rm --name=czero-worker \
     --pod-id-file=%t/czero.pod-id \
     --env-file=./passwords.env --env-file=./auth.env \
+    --env-file=./retrieval.env \
     --volume=czero-sources:/var/lib/czero/sources:z \
     --entrypoint=python ${CZERO_APP_IMAGE} -m czero_app.worker
 ExecStop=/usr/bin/podman stop --ignore -t 10 czero-worker

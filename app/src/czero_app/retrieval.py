@@ -49,6 +49,15 @@ class SearchResult(BaseModel):
     graphs: list[GraphView]
 
 
+class IndexStatus(BaseModel):
+    configured: bool
+    profile_id: UUID | None
+    generation: int | None
+    indexed: int
+    model: str | None = None
+    dimensions: int | None = None
+
+
 class SearchOptions(BaseModel):
     model_config = ConfigDict(extra='forbid')
     query: str = Field(min_length=1, max_length=512)
@@ -59,8 +68,13 @@ class SearchOptions(BaseModel):
     rerank: Literal['off','rerank','filter'] | None = None
 
 
-def install_retrieval_routes(app, database, auth, read_context):
-    service = SearchService(database,auth.access if auth else None)
+def install_retrieval_routes(app, database, auth, read_context, *, settings=None):
+    from czero_core.retrieval_config import load_settings
+    settings=settings or load_settings()
+    embedding,scorer=settings.clients()
+    service = SearchService(database,auth.access if auth else None,embedding_client=embedding,
+        scorer=scorer,scorer_mode=settings.scorer_mode,limits=settings.limits)
+    service.configuration_issue=settings.issue
     app.state.search = service
 
     @app.get('/api/v1/knowledge/search', response_model=SearchResult)
@@ -69,4 +83,8 @@ def install_retrieval_routes(app, database, auth, read_context):
         try: return service.search(context.actor,**options.model_dump())
         except PermissionDenied: raise
         except ValueError: raise HTTPException(422,'invalid_retrieval_request') from None
+
+    @app.get('/api/v1/knowledge/index/status', response_model=IndexStatus)
+    def index_status(context: RequestAccess = Depends(read_context)):
+        return service.embeddings.status(context.actor)
     return service

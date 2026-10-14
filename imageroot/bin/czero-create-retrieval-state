@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import os
+from pathlib import Path
+import agent
+from czero_retrieval_config import defaults, encode, read
+
+private = Path(os.environ['AGENT_STATE_DIR']) / 'retrieval.env'
+old_umask = os.umask(0o077)
+try:
+    if private.exists():
+        read(private)
+    else:
+        with agent.safe_open(str(private)) as output:
+            output.write(encode(defaults()))
+    private.chmod(0o600)
+except (OSError, ValueError, TypeError, KeyError, RecursionError):
+    raise SystemExit('Invalid private retrieval configuration') from None
+finally:
+    os.umask(old_umask)

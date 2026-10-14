@@ -7,12 +7,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "czero-app"
-version = "0.20.0"
+version = "0.21.0"
 description = "C0 reference web application"
 requires-python = ">=3.12,<3.15"
 license = "GPL-3.0-or-later"
 dependencies = [
-    "czero-core==0.17.0",
+    "czero-core==0.18.0",
     "fastapi==0.143.0",
     "uvicorn==0.54.0",
     "python-multipart==0.0.32",

@@ -59,7 +59,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.17.0"
+    Should Contain    ${output}    "core_version":"0.18.0"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -156,6 +156,14 @@ Configure and reconfigure the hostname service
     ${config} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${config}[host]    ${host}
     Should Be Equal    ${config}[lets_encrypt]    ${False}
+    Should Be Equal    ${config}[retrieval][embedding][enabled]    ${False}
+    Should Be Equal    ${config}[retrieval][scorer][mode]    off
+    Should Be Equal    ${config}[retrieval][embedding][api_key_configured]    ${False}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} stat -c '%a' /home/${module_id}/.config/state/retrieval.env
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${output}    600
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-status
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
@@ -548,7 +556,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.17.0"
+    Get Text    body    contains    "core_version":"0.18.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents

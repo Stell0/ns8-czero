@@ -9,10 +9,14 @@ import os
 import json
 import sys
 import agent
+from pathlib import Path
+sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
+from czero_retrieval_config import read, public
 
 config = {"host": os.getenv("CZERO_HOST", ""),
           "lets_encrypt": os.getenv("CZERO_LETS_ENCRYPT", "false").lower() == "true",
           "user_domain":os.getenv('CZERO_USER_DOMAIN',''),"idp":os.getenv('CZERO_IDP_UUID',''),
           "owner":os.getenv('CZERO_OWNER_USERNAME',''),"owner_ldap_uuid":os.getenv('CZERO_OWNER_LDAP_UUID','')}
 
+config['retrieval'] = public(read(Path(os.environ['AGENT_STATE_DIR']) / 'retrieval.env'))
 json.dump(config, fp=sys.stdout)

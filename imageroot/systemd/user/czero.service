@@ -32,6 +32,7 @@ ExecStart=/usr/bin/podman run \
     --pod-id-file=%t/czero.pod-id \
     --env-file=./passwords.env \
     --env-file=./auth.env \
+    --env-file=./retrieval.env \
     --volume=czero-sources:/var/lib/czero/sources:z \
     --env=CZERO_MODULE_ID=${CZERO_MODULE_ID} \
     --env=CZERO_BASE_PATH=${CZERO_BASE_PATH} \

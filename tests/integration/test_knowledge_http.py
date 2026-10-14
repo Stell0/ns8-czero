@@ -259,6 +259,11 @@ def test_signed_hybrid_and_scorer_transport_use_core_caps_and_provenance(knowled
         with knowledge_http[4].engine.begin() as c:store._index_batch(c)
         async def check():
             async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,headers={'Authorization':'Bearer '+knowledge_http[1]}) as transport:
+                status=await transport.get('/api/v1/knowledge/index/status')
+                assert status.status_code==200 and status.json()['configured'] is True
+                assert status.json()['indexed']==2 and status.json()['dimensions']==3
+                assert status.json()['profile_id']==str(store.profile_id)
+                assert 'endpoint' not in status.text and 'api_key' not in status.text
                 response=await transport.get('/api/v1/knowledge/search',params={'query':'Hybrid transport','mode':'hybrid','rerank':'filter'})
                 assert response.status_code==200;result=response.json()
                 assert result['retrieval_method']=='hybrid+filter' and result['scored_count']==2

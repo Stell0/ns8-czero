@@ -78,6 +78,11 @@
                 :showCloseButton="false"
               />
             </div>
+            <RetrievalSettings
+              :value="retrieval"
+              :error="error.retrieval"
+              :disabled="loading.getConfiguration || loading.configureModule"
+            />
             <p v-if="savedHost">
               <a
                 :href="'https://' + savedHost + '/'"
@@ -119,6 +124,12 @@
 <script>
 import to from "await-to-js";
 import { mapState } from "vuex";
+import RetrievalSettings from "../components/RetrievalSettings.vue";
+import {
+  retrievalForm,
+  retrievalPayload,
+  clearRetrievalKeys,
+} from "../retrieval-settings.mjs";
 import {
   QueryParamService,
   UtilService,
@@ -129,6 +140,7 @@ import {
 
 export default {
   name: "Settings",
+  components: { RetrievalSettings },
   mixins: [
     TaskService,
     IconService,
@@ -152,6 +164,7 @@ export default {
       idp: "",
       userDomain: "",
       owner: "",
+      retrieval: retrievalForm(),
       identityProviders: [],
       userDomains: [],
       pendingIdentity: null,
@@ -170,6 +183,7 @@ export default {
         user_domain: "",
         owner: "",
         authOptions: "",
+        retrieval: "",
       },
     };
   },
@@ -187,6 +201,7 @@ export default {
     next();
   },
   beforeDestroy() {
+    clearRetrievalKeys(this.retrieval);
     clearInterval(this.urlCheckInterval);
     this.clearTaskListeners();
   },
@@ -306,6 +321,7 @@ export default {
       this.savedHost = this.host;
       this.letsEncrypt = taskResult.output.lets_encrypt;
       this.owner = taskResult.output.owner;
+      this.retrieval = retrievalForm(taskResult.output.retrieval);
       this.ssoEnabled = Boolean(taskResult.output.user_domain);
       this.pendingIdentity = taskResult.output;
       this.applyIdentitySelection();
@@ -330,7 +346,9 @@ export default {
           this.focusElement("host");
         } else {
           const field = validationError.parameter || validationError.field;
-          if (["idp", "user_domain", "owner"].includes(field)) {
+          if (field === "retrieval") {
+            this.error.retrieval = this.$t("settings.retrieval_invalid");
+          } else if (["idp", "user_domain", "owner"].includes(field)) {
             this.error[field] = this.$t("settings.identity_invalid");
           } else {
             this.error.configureModule = this.$t("error.validation_error");
@@ -347,6 +365,7 @@ export default {
       this.error.idp = "";
       this.error.user_domain = "";
       this.error.owner = "";
+      this.error.retrieval = "";
       if (!this.host) {
         this.error.host = this.$t("common.required");
         this.focusElement("host");
@@ -394,6 +413,7 @@ export default {
             idp: this.ssoEnabled ? this.idp : "",
             user_domain: this.ssoEnabled ? this.userDomain : "",
             owner: this.ssoEnabled ? this.owner : "",
+            retrieval: retrievalPayload(this.retrieval),
           },
           extra: {
             title: this.$t("settings.configure_instance", {
@@ -408,7 +428,7 @@ export default {
       const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
+        clearRetrievalKeys(this.retrieval);
         this.error.configureModule = this.getErrorMessage(err);
         this.loading.configureModule = false;
         this.clearTaskListeners(taskAction);
@@ -421,6 +441,7 @@ export default {
       this.loading.configureModule = false;
     },
     configureModuleCompleted() {
+      clearRetrievalKeys(this.retrieval);
       this.clearTaskListeners("configure-module");
       this.loading.configureModule = false;
 

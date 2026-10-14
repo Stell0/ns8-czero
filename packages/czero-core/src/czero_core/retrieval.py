@@ -60,6 +60,7 @@ class SearchService:
         self.scorer,self.scorer_mode=scorer,scorer_mode
         self.limits=limits or SearchLimits()
         self.knowledge=KnowledgeService(database,access)
+        self.configuration_issue=None
 
     def _authorize(self,connection,actor):
         if self.access is None:raise PermissionDenied()
@@ -144,7 +145,8 @@ class SearchService:
                 or (selected!='off' and self.scorer_mode=='off')
                 or (selected=='filter' and self.scorer_mode!='filter')):
             raise ValueError('invalid_retrieval_options')
-        failures=[];usage={};scored_count=0;truncated=0;method='text';graphs=[]
+        failures=[self.configuration_issue] if self.configuration_issue else []
+        usage={};scored_count=0;truncated=0;method='text';graphs=[]
         desired=('hybrid' if self.embeddings.client else 'text') if mode=='auto' else mode
         with self.database.engine.connect() as connection:
             self._authorize(connection,actor)
