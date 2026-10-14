@@ -123,6 +123,8 @@ class UploadBodyLimit:
             resource = path.split('/api/v1/', 1)[-1]
             if resource == 'entities' or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
                 limited, maximum = True, 1048576
+            if resource.startswith('oauth/'):
+                limited, maximum = True, 16384
         size = 0
         async def bounded_receive():
             nonlocal size
