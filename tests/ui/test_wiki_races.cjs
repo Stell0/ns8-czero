@@ -55,3 +55,18 @@ test('an uncertain identical retry reuses its idempotency key',async()=>{
   assert.equal(JSON.parse(h.requests[0].options.body).idempotency_key,JSON.parse(h.requests[1].options.body).idempotency_key);
   h.requests[1].resolve(reply(page('saved')));await retry;
 });
+
+test('late revision previews cannot replace a newer chosen revision',async()=>{
+  const h=harness();h.run('displayPage('+JSON.stringify(page('page'))+')');
+  const history=h.run('loadHistory()');h.requests[0].resolve(reply({revisions:[{number:1},{number:2}]}));await history;
+  const buttons=h.nodes.get('wiki-history').children.map(row=>row.children[0]);
+  buttons[0].listeners.click();buttons[1].listeners.click();
+  h.requests[2].resolve(reply({content:{body:'new revision'}}));await flush();
+  h.requests[1].resolve(reply({content:{body:'old revision'}}));await flush();
+  assert.match(h.nodes.get('wiki-revision').textContent,/new revision/);assert.doesNotMatch(h.nodes.get('wiki-revision').textContent,/old revision/);
+});
+test('Reader page fields remain read-only and mutations hidden',()=>{
+  const h=harness();h.run("profile={role:'reader'};displayPage("+JSON.stringify(page('page'))+")");
+  for(const id of ['wiki-title','wiki-body','wiki-metadata','wiki-slug'])assert.equal(h.nodes.get(id).readOnly,true);
+  for(const id of ['save-page','archive-page'])assert.equal(h.nodes.get(id).hidden,true);
+});

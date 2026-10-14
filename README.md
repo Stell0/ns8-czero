@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M08 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. Source ingestion passes local, native, browser and permitted live checks. M09 Wiki/graph is active; REST/UI local tests pass and installed acceptance is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M08 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. Source ingestion passes local, native, browser and permitted live checks. M09 Wiki/graph runtime passes local, native, browser and permitted live checks; documentation CI is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -8,7 +8,7 @@ C0 is a deployable application foundation and a forkable GitHub template. Extern
 
 One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
 
-Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph have local REST coverage; full retrieval and authenticated remote MCP remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
+Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; full retrieval and authenticated remote MCP remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
 ## Current interfaces
 
@@ -18,8 +18,8 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | --- | --- |
 | `/` | Landing page, database status, sign-in status and Admin sharing controls |
 | `/sources` | Minimal upload/history/evidence/search/retry/archive UI with Reader controls; repeatable native browser verified; interactive live browser waived |
-| `/wiki` | Minimal authored page/revision/entity/claim/graph UI; local race tests pass, installed acceptance pending |
-| `/api/v1/wiki/pages`, `/api/v1/entities`, `/api/v1/claims`, `/api/v1/knowledge/graph/<id>`, `/api/v1/knowledge/changes` | Versioned Wiki, aliases, sourced assertions, bounded graph and change cursors; signed local REST verified |
+| `/wiki` | Minimal authored page/revision/entity/claim/graph UI; repeatable native owner/Reader browser acceptance passes; interactive Playwright waived |
+| `/api/v1/wiki/pages`, `/api/v1/entities`, `/api/v1/claims`, `/api/v1/knowledge/graph/<id>`, `/api/v1/knowledge/changes` | Versioned Wiki, aliases, sourced assertions, bounded graph and change cursors; signed local REST, real disposable SSO/update/restore and permitted live owner acceptance verified |
 | `/objects` | Minimal typed record list/detail and JSON editor; disposable/browser verified; live interactive browser waived |
 | `/api/v1/object-types`, `/api/v1/objects`, `/api/v1/objects/batch` | Authenticated type inspection/registration, CRUD, paging/filters and atomic batches |
 | `/api/v1/object-relations`, `/api/v1/objects/<id>/relations`, `/api/v1/object-events`, `/api/v1/references/<kind>/<id>` | Typed object edges, metadata changes and trusted registered reference resolution |
@@ -92,7 +92,7 @@ M08 now adds isolated deterministic Text/Markdown/PDF/DOCX extraction, source/ve
 
 Use authenticated `POST /api/v1/sources/upload` multipart fields `file`, `title`, `media_type`, optional `metadata` JSON and `retain_original=true|false`. The four MIME types are text/plain, text/markdown, application/pdf and application/vnd.openxmlformats-officedocument.wordprocessingml.document. Upload returns HTTP 202 and a version UUID; poll `/api/v1/sources/<source-id>/versions` for queued/ready/failed state. Initial identical uploads with matching title/metadata/media deduplicate. To add changed content, include `source_id` and `expected_revision`; conflicts return 409. Different provenance remains a separate source. Source title/provenance are established by the first upload; existing-source uploads add versions and retain that source metadata. Version content/retention are immutable.
 
-Readers browse sources, documents, chunks, citations and retained/failed original attachments. Editors ingest, retry with `expected_generation`, and archive with `expected_revision`. Source deletion archives it from browse/search while preserving historical evidence and citations. Get full text at `/api/v1/source-versions/<id>/document`, chunks at `/api/v1/documents/<id>/chunks`, a citation at `/api/v1/chunks/<id>/citation`, and bounded FTS at `/api/v1/sources/search?query=inventory`. Downloads at `/api/v1/source-versions/<id>/original` use attachments/octet-stream. Uncertain database commit failures preserve generated originals for operator recovery; automatic orphan reconciliation is not yet implemented. The separate Sources page now offers upload/retention, history/full text/citations, FTS, quarantine/retry and archive controls; ten real-script Node race tests pass. Repeatable native owner/Reader browser workflows pass; interactive Playwright remains waived.
+Readers browse sources, documents, chunks, citations and retained/failed original attachments. Editors ingest, retry with `expected_generation`, and archive with `expected_revision`. Source deletion archives it from browse/search while preserving historical evidence and citations. Get full text at `/api/v1/source-versions/<id>/document`, chunks at `/api/v1/documents/<id>/chunks`, a citation at `/api/v1/chunks/<id>/citation`, and bounded FTS at `/api/v1/sources/search?query=inventory`. Downloads at `/api/v1/source-versions/<id>/original` use attachments/octet-stream. Uncertain database commit failures preserve generated originals for operator recovery; automatic orphan reconciliation is not yet implemented. The separate Sources page now offers upload/retention, history/full text/citations, FTS, quarantine/retry and archive controls; ten record/source Node race tests pass. Repeatable native owner/Reader browser workflows pass; interactive Playwright remains waived.
 
 The runtime builder removes dependency-wheel development headers and Cython sources; compiled parser libraries and required runtime data remain.
 
@@ -100,22 +100,25 @@ On the Sources page, expand Upload evidence, choose a file/format, enter a title
 
 Permitted live owner tests verify all four formats, deduplication, changed versions, FTS/citations, default deletion, retention, quarantine and retry. A DOCX content-control file remains intact with `unsupported_docx` and no partial document. Native restart preserves evidence and existing object/job/schedule/configuration state; unrelated inventory stays unchanged. Native Debian installation and Rocky update/browser suites pass. Reader/Editor/Admin source boundaries and encrypted restore are tested in disposable instances; a second live persona and live destructive restore were not exercised.
 
-M09's first Core slice adds authored Wiki pages with immutable revisions, optimistic edits, replay-safe mutations, archive history, Markdown/JSON export, entity CRUD/aliases and metadata change cursors. Fifteen PostgreSQL cases cover those operations and persisted roles; no Wiki REST/UI endpoint is available yet. Core now also provides sourced immutable claim assertions, evidence lookup/annotation/retraction, entity relations and bounded graph traversal. These pass ten additional PostgreSQL cases; claims/graph REST and installed acceptance remain pending. Native packaging/upgrade acceptance of this slice is pending. Raw extracted evidence remains separate from authored Wiki data.
+M09 adds authored Wiki pages with immutable revisions, optimistic edits, replay-safe mutations, archive history, Markdown/JSON export, entities/aliases and metadata change cursors. Core also provides sourced immutable assertions, evidence annotation/retraction, entity relations and bounded graph traversal. Typed REST and the minimal Wiki editor pass signed local HTTP, real disposable SSO/browser/update/restore and permitted live owner tests. Raw extracted evidence remains separate from authored Wiki data.
 
-Claim values/entity/predicate/time are immutable assertions; record conflicting values as additional claims. Annotation adds metadata/evidence and retraction preserves history. Traversal is bounded to 1–3 hops, thirty-two active incident entity relations, at most one hundred returned entities/references and an explicit truncated flag. Typed references preserve a missing-object marker after object deletion. These Core operations are not exposed through the application UI/API yet.
+Claim values/entity/predicate/time are immutable assertions; record conflicting values as additional claims. Annotation adds metadata/evidence and retraction preserves it. Traversal is bounded to 1–3 hops, thirty-two active incident entity relations, at most one hundred returned entities/references and an explicit truncated flag. Typed references retain a missing-object marker after object deletion.
+
+Wiki typed REST and the minimal page pass local, installed and permitted live acceptance. Open Wiki, create a fixed slug/title/Markdown page, save with metadata and inspect immutable revisions or export Markdown/JSON. Reader controls permit inspection; Editors author pages/entities/claims/relationships. Every claim requires real evidence chunk IDs from Sources; conflicting values coexist and retraction preserves provenance. Select an entity to inspect its claims/citations and 1–3-hop graph. Names/data render as text; Markdown is not executed or rendered as HTML.
+
+Knowledge POST/PUT bodies require `idempotency_key`; edits/archive/retraction require `expected_revision`. A replay returns its original snapshot; reused keys with changed payload and stale edits return 409. Page bodies cap at 128 KiB, metadata/value at 16 KiB, entity aliases at sixteen, active incident edges and typed references at thirty-two, reads at one hundred. Graph results report truncation. Entities show the first one hundred entries in the minimal picker; full forms/navigation remain M12. Native update/encrypted backup/clean restore preserve exact Wiki data. Permitted live owner CRUD/exports/replay/CAS/CSRF and full native restart preserve knowledge, prior sources/objects/jobs, configuration and unrelated inventory. Interactive Playwright remains waived; only the owner persona was used live, with all roles verified in disposable tests.
+
 
 ## Remaining roadmap
 
 | Capability | Agreed direction |
 | --- | --- |
-| Evidence | Full extracted text, offsets, metadata, revisions and citations |
-| Wiki | Pages, claims, entities, revisions and provenance, separate from raw evidence |
 | Retrieval | PostgreSQL full-text search, optional external embeddings and graph expansion |
 | System One | Optional Jev/Kev scoring with bounded requests and ordinary-ranking fallback |
 | Agent access | Shared REST/MCP operations, OAuth protection and self-description |
 | Forks | Reusable Core distribution, upstream-compatible extensions and development skills |
 
-Object CRUD, deterministic ingestion and jobs work without AI credentials. Deterministic parsing/chunking, Wiki editing and full-text retrieval must retain that property as they are implemented. Binary originals are deleted by default only after successful extraction/persistence; optional retention uses an NS8 volume. Safe built-in defaults precede NS8 instance configuration and bounded request overrides. Request overrides cannot replace provider secrets. Semantic retrieval requires configured embeddings; Jev/Kev failures must disclose fallback and never determine authorization.
+Object CRUD, deterministic ingestion and jobs work without AI credentials. Deterministic parsing/chunking, Wiki editing and source full-text retrieval retain that property. Binary originals are deleted by default only after successful extraction/persistence; optional retention uses an NS8 volume. Safe built-in defaults precede NS8 instance configuration and bounded request overrides. Request overrides cannot replace provider secrets. Semantic retrieval requires configured embeddings; Jev/Kev failures must disclose fallback and never determine authorization.
 
 ## Development and verification
 
@@ -128,7 +131,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for one hundred actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks ten record/source response races using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 104 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
@@ -138,7 +141,7 @@ corepack yarn install --immutable
 NODE_OPTIONS=--openssl-legacy-provider corepack yarn build
 ```
 
-`tests/czero.robot` runs native lifecycle in disposable QEMU, including an immutable M05 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates; native local-provider routing is used without fixture DNS overrides, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
+`tests/czero.robot` runs native lifecycle in disposable QEMU, including the frozen verified M08 predecessor, real PostgreSQL/vector persistence and encrypted backup/restore/replay. Baseline browser tests use a generated temporary cluster administrator. Real SSO fixtures provision OpenLDAP/IdP, generated private personas and trusted test certificates; native local-provider routing is used without fixture DNS overrides, asserting actual owner/member authorization, roles, revocation and logout. TLS and SELinux remain enabled. Private password/token values never become Robot variables, command arguments or nested keyword arguments. A report assertion checks the temporary browser password.
 
 An older M01 installation may stop when pod/database dependencies are introduced; re-save hostname Settings to start the new stack. Live startup, migration, hostname/certificate/identity configuration, discovery, signed owner login/logout, CSRF/owner protection, negative REST authorization and stable owner identity after restart pass. All three member roles, revocation and identity restore are verified in disposable tests; a second live application persona was not exercised.
 
@@ -148,12 +151,9 @@ Publication uses `GITHUB_TOKEN` with package-write permission and package Action
 
 Local and native browser CI check discovery text against available REST routes and documented limitations. CI includes local/schema/shell checks, image publication/runtime audits, Trivy SARIF/CycloneDX artifacts and native QEMU/Robot tests. Successful scans do not establish that dependency findings are resolved. Review findings before release. Follow AGENTS.md's milestone loop: plan, implement, commit/push, inspect actual CI/tests, fix failures, reconcile documentation, then advance. Keep live hostnames, passwords, tokens, cookies and auth-state files out of Git and artifacts.
 
+
 ## NethServer sources and license
 
 Czero derives from [ns8-kickstart](https://github.com/NethServer/ns8-kickstart). Reuse [Core module contracts](https://github.com/NethServer/ns8-core/tree/main/docs/modules), [Hermes](https://github.com/NethServer/ns8-hermes-agent), [Dependency-Track](https://github.com/NethServer/ns8-dependencytrack), [IdP](https://github.com/NethServer/ns8-idp), [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib), [QEMU Actions](https://github.com/NethServer/ns8-github-actions) and [NethServer agent skills](https://github.com/NethServer/agents), prioritizing maintained, tested implementations linked in PLAN.md.
 
 See [LICENSE](LICENSE) (GPL-3.0). Preserve attribution and verify license compatibility when copying code or distributing C0 Core.
-
-M09 typed REST and the minimal Wiki page now pass signed local HTTP tests. Open Wiki, create a fixed slug/title/Markdown page, save with metadata and inspect immutable revisions or export Markdown/JSON. Reader controls permit inspection; Editors author pages/entities/claims/relationships. Every claim requires real evidence chunk IDs from Sources; conflicting values coexist and retraction preserves provenance. Select an entity to inspect its claims/citations and 1–3-hop graph. Names/data render as text; Markdown is not executed or rendered as HTML.
-
-Knowledge POST/PUT bodies require `idempotency_key`; edits/archive/retraction require `expected_revision`. A replay returns its original snapshot; reused keys with changed payload and stale edits return 409. Page bodies cap at 128 KiB, metadata/value at 16 KiB, entity aliases at sixteen, active incident edges and typed references at thirty-two, reads at one hundred. Graph results report truncation. Entities show the first one hundred entries in the minimal picker; full forms/navigation remain M12. Native update/backup/restore and permitted live M09 checks are pending; interactive Playwright remains waived.
