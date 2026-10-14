@@ -234,3 +234,51 @@ def test_refresh_rotation_work_is_bounded_and_limit_revokes_family(grants):
         service.refresh(pair.refresh_token, client['client_id'], resource=RESOURCE)
     with pytest.raises(GrantRejected):
         service.verify(pair.access_token, resource=RESOURCE)
+
+
+def test_private_sdk_metadata_loaders_are_masked_current_and_one_use(grants):
+    service, _, client, session, _, _, _ = grants
+    values = issue(service, client, session)
+    metadata = service._authorization_code(values[0], client['client_id'])
+    assert metadata.code not in repr(metadata) and metadata.challenge not in repr(metadata)
+    assert metadata.client_id == client['client_id'] and metadata.subject == session.actor.user_id
+    assert metadata.scopes == frozenset(('c0:read',)) and metadata.callback == CALLBACK
+    assert metadata.resource == RESOURCE
+    with pytest.raises(GrantRejected):
+        service._authorization_code(values[0], str(uuid4()))
+    pair = redeem(service, client, values)
+    with pytest.raises(GrantRejected):
+        service._authorization_code(values[0], client['client_id'])
+    refresh = service._refresh_token(pair.refresh_token, client['client_id'])
+    assert refresh.token not in repr(refresh) and refresh.subject == session.actor.user_id
+    assert refresh.resource == RESOURCE and refresh.scopes == pair.scopes
+    with pytest.raises(GrantRejected):
+        service._refresh_token(pair.refresh_token, str(uuid4()))
+    assert service.verify(pair.access_token, resource=RESOURCE).actor == session.actor
+
+
+def test_sdk_loader_replay_revokes_rotated_family_before_scope_short_circuit(grants):
+    service, _, client, session, _, _, _ = grants
+    pair = redeem(service, client, issue(service, client, session, scopes={'c0:read', 'c0:write'}))
+    metadata = service._refresh_token(pair.refresh_token, client['client_id'])
+    second = service.refresh(metadata.token, client['client_id'], resource=RESOURCE, scopes={'c0:read'})
+    with pytest.raises(GrantRejected):
+        service._refresh_token(pair.refresh_token, client['client_id'])
+    with pytest.raises(GrantRejected):
+        service.verify(second.access_token, resource=RESOURCE)
+
+
+def test_sdk_loaders_reject_expiry_and_disabled_client(grants):
+    service, clients, client, session, clock, _, _ = grants
+    values = issue(service, client, session)
+    clock[0] += 300
+    with pytest.raises(GrantRejected):
+        service._authorization_code(values[0], client['client_id'])
+    values = issue(service, client, session)
+    pair = redeem(service, client, values)
+    clients.set_enabled(session.actor, UUID(client['client_id']), enabled=False, expected_revision=1)
+    with pytest.raises(GrantRejected):
+        service._refresh_token(pair.refresh_token, client['client_id'])
+    clients.set_enabled(session.actor, UUID(client['client_id']), enabled=True, expected_revision=2)
+    with pytest.raises(GrantRejected):
+        service._refresh_token(pair.refresh_token, client['client_id'])

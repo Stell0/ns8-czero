@@ -43,6 +43,28 @@ class TokenPair:
     expires_in: int
 
 
+@dataclass(frozen=True)
+class CodeMetadata:
+    code: str = field(repr=False)
+    challenge: str = field(repr=False)
+    client_id: str
+    callback: str
+    scopes: frozenset[str]
+    expires_at: datetime
+    subject: UUID
+    resource: str
+
+
+@dataclass(frozen=True)
+class RefreshMetadata:
+    token: str = field(repr=False)
+    client_id: str
+    scopes: frozenset[str]
+    expires_at: datetime
+    subject: UUID
+    resource: str
+
+
 def _digest(value):
     if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', value):
         raise GrantRejected()
@@ -179,6 +201,45 @@ class OAuthGrantService:
             grant, _ = self._grant(connection, row['grant_id'], client_id, resource)
             connection.execute(text('DELETE FROM c0_oauth_codes WHERE hash=:hash'), {'hash': digest})
             return self._tokens(connection, grant, grant['scopes'])
+
+    def _authorization_code(self, code, client_id):
+        """Trusted SDK loader; exchange still verifies the actual raw request."""
+        digest = _digest(code)
+        with self.access.database.engine.connect() as connection:
+            row = connection.execute(text('''SELECT * FROM c0_oauth_codes WHERE hash=:hash AND expires_at>:now'''),
+                {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
+            if row is None:
+                raise GrantRejected()
+            grant, _ = self._grant(connection, row['grant_id'], client_id, self.resource)
+            return CodeMetadata(code, row['challenge'], client_id, row['redirect_uri'],
+                frozenset(grant['scopes']), row['expires_at'], grant['account_id'], self.resource)
+
+    def _refresh_token(self, token, client_id):
+        """Trusted SDK loader; a consumed-token replay revokes before parsing scope.
+
+        Otherwise SDK scope rejection could short-circuit family revocation.
+        Call only after the transport has validated the exact resource.
+        """
+        digest = _digest(token)
+        rejected = False
+        result = None
+        with self.access.database.engine.begin() as connection:
+            self._lock(connection)
+            row = connection.execute(text('''SELECT * FROM c0_oauth_tokens
+                WHERE hash=:hash AND kind='refresh' AND expires_at>:now'''),
+                {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
+            if row is None:
+                raise GrantRejected()
+            grant, _ = self._grant(connection, row['grant_id'], client_id, self.resource)
+            if row['consumed']:
+                connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
+                rejected = True
+            else:
+                result = RefreshMetadata(token, client_id, frozenset(grant['scopes']),
+                    row['expires_at'], grant['account_id'], self.resource)
+        if rejected:
+            raise GrantRejected()
+        return result
 
     def refresh(self, token, client_id, *, resource, scopes=None):
         digest = _digest(token)
