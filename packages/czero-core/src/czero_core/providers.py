@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 import json
 import math
 import re
+import ssl
 from urllib.parse import urlsplit
 import httpx2
 
@@ -100,7 +101,7 @@ class _HttpProvider:
                 headers={'Content-Type':'application/json','Accept-Encoding':'identity'}
                 if self.settings.api_key:headers['Authorization']='Bearer '+self.settings.api_key
                 async with httpx2.AsyncClient(timeout=self.settings.timeout,follow_redirects=False,
-                        trust_env=False,transport=self._transport) as client:
+                        trust_env=False,verify=ssl.create_default_context(),transport=self._transport) as client:
                     async with client.stream('POST',self.settings.endpoint,content=payload,headers=headers) as response:
                         if response.status_code==429:raise ProviderUnavailable('rate_limited')
                         if response.status_code!=200:raise ProviderUnavailable()
@@ -119,7 +120,7 @@ class _HttpProvider:
         try:return asyncio.run(request())
         except ProviderUnavailable:raise
         except (TimeoutError,httpx2.TimeoutException):raise ProviderUnavailable('timeout') from None
-        except httpx2.HTTPError:raise ProviderUnavailable() from None
+        except (httpx2.HTTPError,OSError):raise ProviderUnavailable() from None
         except (ValueError,UnicodeError,RecursionError):raise ProviderUnavailable('invalid_response') from None
 
 
