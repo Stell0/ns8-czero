@@ -92,8 +92,10 @@ def test_roles_revocation_and_cookie_csrf_protect_object_writes(application):
                     grant=await client.post('/api/v1/object-types',json={'name':name,'label':'Roles','schema':SCHEMA})
                     assert grant.status_code==(409 if role=='admin' else 403)
                     reg=await client.post('/api/v1/object-types',json={'name':'invalid-name','label':'Role check','schema':{'type':'object','$ref':'https://untrusted.invalid'}})
-                    # Invalid schemas are rejected without a remote fetch or write.
-                    assert reg.status_code==422
+                    # The shared operation boundary denies non-admins before
+                    # inspecting schema semantics. Admin invalid schemas still
+                    # fail validation without a remote fetch or write.
+                    assert reg.status_code==(422 if role=='admin' else 403)
                     client.headers['Authorization']='Bearer '+owner
                 assert (await client.put('/api/v1/access/accounts/'+target,json={'role':None})).status_code==204
                 client.headers['Authorization']='Bearer '+member

@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from czero_core.identity import PermissionDenied
+from czero_core.identity import PermissionDenied, Role
 from czero_core.retrieval import SearchService
 from czero_app.auth import RequestAccess
 from czero_app.sources import CitationView
@@ -69,6 +69,7 @@ class SearchOptions(BaseModel):
 
 
 def install_retrieval_routes(app, database, auth, read_context, *, settings=None):
+    operation = app.state.operation_catalog.bind
     from czero_core.retrieval_config import load_settings
     settings=settings or load_settings()
     embedding,scorer=settings.clients()
@@ -78,6 +79,7 @@ def install_retrieval_routes(app, database, auth, read_context, *, settings=None
     app.state.search = service
 
     @app.get('/api/v1/knowledge/search', response_model=SearchResult)
+    @operation('knowledge_search', 'Search source and Wiki evidence with bounded optional providers', Role.READER, SearchResult, read_only=True)
     def search(options: Annotated[SearchOptions, Query()], context: RequestAccess = Depends(read_context)):
         if auth is None: raise HTTPException(503,'authentication_not_configured')
         try: return service.search(context.actor,**options.model_dump())
@@ -85,6 +87,7 @@ def install_retrieval_routes(app, database, auth, read_context, *, settings=None
         except ValueError: raise HTTPException(422,'invalid_retrieval_request') from None
 
     @app.get('/api/v1/knowledge/index/status', response_model=IndexStatus)
+    @operation('knowledge_index_status', 'Inspect optional derivative indexing state', Role.READER, IndexStatus, read_only=True)
     def index_status(context: RequestAccess = Depends(read_context)):
         return service.embeddings.status(context.actor)
     return service

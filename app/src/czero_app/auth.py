@@ -56,6 +56,9 @@ class AppAuth:
 class RequestAccess:
     actor: Actor
     csrf_token: str | None = field(default=None, repr=False)
+    # None is reserved for verified first-party tokens/browser sessions.
+    # Delegated clients receive an explicit verified scope set.
+    scopes: frozenset[str] | None = None
 
 
 class RoleUpdate(BaseModel):
