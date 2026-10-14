@@ -119,3 +119,8 @@ class OAuthClientService:
         row = connection.execute(text('SELECT * FROM c0_oauth_clients WHERE id=:id AND enabled'),
             {'id': identifier}).mappings().one_or_none()
         return _view(row) if row is not None else None
+
+    def _lookup(self, client_id):
+        """Trusted OAuth handler metadata lookup, never a public client list."""
+        with self.access.database.engine.connect() as connection:
+            return self._registered(connection, client_id)
