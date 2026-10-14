@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C0 — sources</title><style>
+:root { font:16px/1.5 system-ui,sans-serif; color:#183044; background:#f3f7fa; }
+main { max-width:60rem; margin:2rem auto; padding:2rem; background:white; border:1px solid #d6e1e8; border-radius:1rem; }
+nav { display:flex; gap:1rem; flex-wrap:wrap; } a { color:#075f91; }
+section,details { border-top:1px solid #d6e1e8; margin-top:1.5rem; padding-top:1rem; }
+label { display:block; margin-top:.7rem; } input,select,textarea,button { font:inherit; padding:.4rem; max-width:100%; box-sizing:border-box; }
+textarea { width:100%; } button { margin:.5rem .5rem .5rem 0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+[role=status] { min-height:1.5rem; } @media(max-width:40rem) { main { margin:.5rem; padding:1rem; } }
+</style></head><body><main>
+<nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./docs">REST API</a><a href="./agents">Agent capabilities</a></nav>
+<h1>Sources</h1><p id="sources-account" role="status">Checking sign-in...</p><a id="sources-signin" href="./auth/login" hidden>Sign in with NethServer</a>
+<div id="sources-workspace" hidden>
+<details id="source-upload" hidden><summary>Upload evidence</summary>
+<p>Text, Markdown, PDF and DOCX, up to 10 MiB. Extraction runs in the background, usually within a minute. Failed files remain available for recovery.</p>
+<form id="upload-form">
+<label for="upload-source">Source</label><select id="upload-source"><option value="">New source</option></select>
+<label for="upload-title">Title</label><input id="upload-title" maxlength="256" required>
+<label for="upload-file">Document</label><input id="upload-file" type="file" accept=".txt,.md,.pdf,.docx" required>
+<label for="upload-media">Format</label><select id="upload-media"><option value="text/plain">Text</option><option value="text/markdown">Markdown</option><option value="application/pdf">PDF</option><option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">DOCX</option></select>
+<label for="upload-metadata">Provenance metadata (JSON object)</label><textarea id="upload-metadata" rows="3" maxlength="16384">{}</textarea>
+<label for="upload-retain"><input id="upload-retain" type="checkbox"> Retain this original after successful extraction</label>
+<button id="upload-submit" type="submit">Upload document</button>
+</form><p id="upload-status" role="status" aria-live="polite"></p></details>
+<section aria-labelledby="source-list-heading"><h2 id="source-list-heading">Browse sources</h2>
+<button id="refresh-sources" type="button">Refresh sources</button><ul id="source-list"></ul>
+<button id="sources-previous" type="button">Previous sources</button><button id="sources-next" type="button">Next sources</button>
+<p id="sources-status" role="status" aria-live="polite"></p></section>
+<section aria-labelledby="source-search-heading"><h2 id="source-search-heading">Search source text</h2>
+<form id="source-search-form"><label for="source-query">Search query</label><input id="source-query" maxlength="512" required><button type="submit">Search sources</button></form>
+<p id="search-status" role="status" aria-live="polite"></p><ul id="source-results"></ul></section>
+<section id="source-detail" hidden aria-labelledby="source-heading"><h2 id="source-heading">Source</h2>
+<p id="source-identity"></p><pre id="source-metadata"></pre><button id="refresh-source" type="button">Refresh source</button><button id="archive-source" type="button" hidden>Archive source</button>
+<p>Archiving removes the source from browse/search and preserves its historical evidence and citations.</p>
+<p id="source-status" role="status" aria-live="polite"></p><h3>Version history</h3><ul id="source-versions"></ul>
+<h3>Extracted full text</h3><p id="document-status" role="status"></p><pre id="document-text"></pre>
+<h3>Chunks and citations</h3><ul id="source-chunks"></ul><button id="chunks-previous" type="button">Previous chunks</button><button id="chunks-next" type="button">Next chunks</button>
+<pre id="source-citation"></pre></section>
+</div></main><script src="./sources.js" defer></script></body></html>

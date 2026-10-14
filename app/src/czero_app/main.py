@@ -102,6 +102,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def status_script() -> FileResponse:
         return FileResponse(static_dir / "status.js", media_type="text/javascript")
 
+    @instance_app.get('/sources', include_in_schema=False)
+    async def sources_page() -> FileResponse:
+        return FileResponse(static_dir / 'sources.html', media_type='text/html')
+
+    @instance_app.get('/sources.js', include_in_schema=False)
+    async def sources_script() -> FileResponse:
+        return FileResponse(static_dir / 'sources.js', media_type='text/javascript')
+
     @instance_app.get("/auth.js", include_in_schema=False)
     async def auth_script() -> FileResponse:
         return FileResponse(static_dir / "auth.js", media_type="text/javascript")

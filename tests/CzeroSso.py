@@ -20,6 +20,9 @@ class CzeroSso:
         try:
             for name in ("oidc_fixture.py", "oidc_probe.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
+            fixture_root = Path(__file__).parent / 'fixtures/evidence'
+            for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
+                ssh.put_file(str(fixture_root / name), '/tmp/czero-evidence-' + name, mode='0644')
             with tempfile.TemporaryDirectory(prefix="czero-sso-") as directory:
                 payload = Path(directory) / "payload.json"
                 payload.write_text(json.dumps({"password": "Sso-" + secrets.token_urlsafe(32) + "9!", "host": host}))
@@ -199,6 +202,119 @@ class CzeroSso:
             run('Get Property','#record-data','value','contains','"count": 3')
         except Exception as error:
             raise AssertionError('Disposable object browser failed ('+type(error).__name__+')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
+    def verify_disposable_sources_browser(self, host):
+        """Real owner/Reader workflows; only synthetic files enter the reports."""
+        builtin = BuiltIn(); previous = builtin.set_log_level('NONE')
+        try:
+            ssh = builtin.get_library_instance('SSHLibrary')
+            payload = json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json'))
+            self._browser_password = payload['password']
+            browser = builtin.get_library_instance('Browser')
+            def run(name, *args): return builtin.run_keyword('Browser.' + name, *args)
+            def login(username):
+                run('Go To', 'https://' + host + '/sources')
+                run('Wait For Elements State', '#sources-signin', 'visible', 'timeout=30s')
+                run('Click', '#sources-signin')
+                browser.fill_text('input[name="username"]', username)
+                browser.fill_text('input[name="password"]', self._browser_password)
+                run('Click', '#kc-login')
+                run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
+                run('Go To', 'https://' + host + '/sources')
+                run('Wait For Elements State', '#sources-workspace', 'visible', 'timeout=30s')
+            def view(number, expected):
+                selector = '#source-versions button:text-is("View version ' + str(number) + '")'
+                run('Wait For Elements State', selector, 'visible', 'timeout=100s')
+                run('Click', selector)
+                run('Get Text', '#document-text', 'contains', expected)
+            login('c0owner')
+            title = '<img src=x onerror=alert(1)> browser-source-' + secrets.token_hex(4)
+            sample = Path(__file__).parent / 'fixtures/evidence/sample.txt'
+            expected_text = sample.read_text()
+            run('Click', '#source-upload summary')
+            run('Fill Text', '#upload-title', title)
+            run('Upload File By Selector', '#upload-file', str(sample))
+            run('Fill Text', '#upload-metadata', '{')
+            run('Click', '#upload-submit')
+            run('Get Text', '#upload-status', '==', 'Metadata must be valid JSON.')
+            run('Fill Text', '#upload-metadata', '{"fixture":"browser"}')
+            run('Check Checkbox', '#upload-retain')
+            run('Click', '#upload-submit')
+            run('Get Text', '#upload-status', 'contains', 'Upload accepted.')
+            view(1, expected_text)
+            run('Get Text', '#source-heading', '==', title)
+            run('Get Element Count', '#source-detail img', '==', 0)
+            run('Get Text', '#source-versions', 'contains', 'original retained')
+            source_id = browser.get_text('#source-identity').split(' · ')[0]
+            run('Click', '#source-chunks button')
+            run('Get Text', '#source-citation', 'contains', '"source_hash"')
+            run('Reload')
+            run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
+            view(1, expected_text)
+            run('Click', '#source-upload summary')
+            run('Select Options By', '#upload-source', 'value', source_id)
+            run('Check Checkbox', '#upload-retain')
+            run('Upload File By Selector', '#upload-file', str(sample))
+            run('Click', '#upload-submit')
+            run('Get Text', '#upload-status', 'contains', 'Upload accepted.')
+            run('Get Element Count', '#source-versions li', '==', 1)
+            with tempfile.TemporaryDirectory(prefix='czero-source-browser-') as directory:
+                revised = Path(directory) / 'revised.txt'
+                revised.write_text(expected_text + '\nBrowser revised evidence')
+                run('Upload File By Selector', '#upload-file', str(revised))
+                run('Click', '#upload-submit')
+                run('Get Text', '#upload-status', 'contains', 'Upload accepted.')
+                view(2, 'Browser revised evidence')
+                run('Get Text', '#source-identity', 'contains', 'revision 2')
+                run('Get Element Count', '#source-versions li', '==', 2)
+                view(1, expected_text)
+                run('Fill Text', '#source-query', 'inventory')
+                run('Click', '#source-search-form button')
+                run('Wait For Elements State', '#source-results button:text-is(' + json.dumps(title + ' · version 2') + ')', 'visible')
+                run('Click', '#source-results button:text-is(' + json.dumps(title + ' · version 2') + ')')
+                run('Get Text', '#document-text', 'contains', 'Browser revised evidence')
+                invalid = Path(directory) / 'invalid.txt'; invalid.write_bytes(b'\xff')
+                run('Select Options By', '#upload-source', 'value', '')
+                run('Fill Text', '#upload-title', 'Browser quarantined evidence')
+                run('Upload File By Selector', '#upload-file', str(invalid))
+                run('Uncheck Checkbox', '#upload-retain')
+                run('Click', '#upload-submit')
+                run('Get Text', '#upload-status', 'contains', 'Upload accepted.')
+                retry = '#source-versions button:text-is("Retry version 1")'
+                run('Wait For Elements State', retry, 'visible', 'timeout=100s')
+                run('Get Text', '#source-versions', 'contains', 'Invalid UTF-8 text.')
+                run('Get Element Count', '#source-versions a', '==', 1)
+                run('Click', retry)
+                run('Get Text', '#source-status', 'contains', 'Extraction queued.')
+                run('Wait For Elements State', retry, 'visible', 'timeout=100s')
+            _, errors, rc = ssh.execute_command('python3 /tmp/oidc_probe.py browser-reader', return_stderr=True, return_rc=True, timeout='180 seconds')
+            if rc: raise AssertionError('Cannot prepare source Reader browser')
+            run('New Context', 'ignoreHTTPSErrors=True'); run('New Page'); login('c0member')
+            run('Wait For Elements State', '#source-upload', 'hidden')
+            run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
+            run('Wait For Elements State', '#archive-source', 'hidden')
+            view(2, 'Browser revised evidence')
+            run('Click', '#source-list button:text-is("Browser quarantined evidence")')
+            run('Wait For Elements State', '#source-detail', 'visible')
+            run('Get Element Count', '#source-versions button', '==', 0)
+            run('Get Element Count', '#source-versions a', '==', 1)
+            run('New Context', 'ignoreHTTPSErrors=True'); run('New Page'); login('c0owner')
+            run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
+            view(2, 'Browser revised evidence')
+            run('Click', '#archive-source')
+            run('Get Text', '#source-identity', 'contains', 'archived')
+            run('Get Element Count', '#source-list button:text-is(' + json.dumps(title) + ')', '==', 0)
+            view(2, 'Browser revised evidence')
+            run('Click', '#source-chunks button')
+            run('Get Text', '#source-citation', 'contains', '"deleted": true')
+            run('Fill Text', '#source-query', '"Browser revised evidence"')
+            run('Click', '#source-search-form button')
+            run('Get Text', '#search-status', '==', '0 sourced text matches (up to 20).')
+        except Exception as error:
+            raise AssertionError('Disposable source browser failed (' + type(error).__name__ + ')') from None
         finally:
             builtin.set_log_level(previous)
 

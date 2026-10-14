@@ -3,12 +3,32 @@
 """Disposable backup setup; never return/log the generated encryption password."""
 import json
 import shlex
+from pathlib import Path
+from uuid import uuid4
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 
 
 class CzeroBackup:
+    @keyword
+    def begin_disposable_backup_observer(self, module_id):
+        ssh = BuiltIn().get_library_instance('SSHLibrary')
+        ssh.put_file(str(Path(__file__).with_name('backup_observer.py')), '/tmp/czero-backup-observer.py', mode='0644')
+        token = uuid4().hex
+        background = 'python3 /tmp/czero-backup-observer.py observe ' + token + ' </dev/null >/dev/null 2>&1 &'
+        _, rc = ssh.execute_command('runagent -m ' + shlex.quote(module_id) + ' sh -c ' + shlex.quote(background), return_rc=True, timeout='15 seconds')
+        if rc: raise AssertionError('Cannot start disposable native backup observer')
+        return token
+
+    @keyword
+    def verify_disposable_backup_observer(self, token):
+        ssh = BuiltIn().get_library_instance('SSHLibrary')
+        _, errors, rc = ssh.execute_command('python3 /tmp/czero-backup-observer.py verify ' + shlex.quote(token),
+            return_stderr=True, return_rc=True, timeout='20 seconds')
+        if rc:
+            raise AssertionError('Disposable backup observation: ' + errors.strip())
+
     @keyword
     def create_disposable_backup(self, module_id, repository=None):
         builtin=BuiltIn()

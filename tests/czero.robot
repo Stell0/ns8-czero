@@ -590,9 +590,11 @@ Preserve admitted identities through update and clean restore
     ${backup} =    Create Disposable Backup    ${module_id}    ${backup_repository}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
     Log To Console    SSO persistence: native encrypted backup
+    ${observer} =    Begin Disposable Backup Observer    ${module_id}
     ${rc} =    Execute Command    api-cli run run-backup --data '{"id":${backup}[backup_id]}'
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
+    Verify Disposable Backup Observer    ${observer}
     Verify Disposable Snapshot    ${module_id}    ${backup}[repository]    ${backup}[path]
     ${donor_id} =    Set Variable    ${module_id}
     Remove disposable module
@@ -615,6 +617,17 @@ Check object CRUD and Reader controls in a browser
     New Context    ignoreHTTPSErrors=True
     New Page
     Verify Disposable Objects Browser    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
+
+Check source ingestion, history, search and Reader controls in a browser
+    [Tags]    ui
+    [Timeout]    8 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Sources Browser    ${host}
     Close Browser
     Assert Disposable Sso Browser Password Is Private
 
