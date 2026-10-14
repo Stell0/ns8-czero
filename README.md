@@ -41,7 +41,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Core/app versions are **0.21.0/0.24.0**, with packaged migrations through `0011_oauth_clients`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.22.0/0.25.0**, with packaged migrations through `0012_oauth_grants`. The client-approval image under corrected native verification is 0.21.0/0.24.0; the verified live registry image is 0.20.0/0.23.0. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native update/restore and permitted live owner checks. Optional retrieval and its stronger complete-index/paused-refresh recovery fixture pass acceptance. Caller-aware capability JSON passes installed and permitted live acceptance. `/mcp` and external OAuth remain M11 work. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -127,6 +127,8 @@ Use mode=text|semantic|hybrid|auto, kind=all|source|wiki, graph_depth=0|1|2|3 an
 
 The minimal search page renders literal evidence/citations and ignores stale responses. Local protocol, database, configuration and UI tests pass. Configured QEMU HTTPS inference/indexing/vector recovery and repeatable owner/Reader search browsers pass. Provider-free live source/Wiki search, exact citations/offsets/fallbacks/graph/policy and full native restart persistence also pass; providers were kept disabled. Interactive Playwright remains waived. M10 documentation and the corrected complete-index/paused-refresh native recovery gate pass. The [fixture benchmark](docs/retrieval-benchmark.md) reports recall, precision, citations, latency and request costs; it shows RRF can favor distractors and deliberately unhelpful scoring can fail. No real provider quality/calibration is claimed.
 
+Core delegated-grant storage now passes local PostgreSQL tests for hashed tokens, one-use S256 codes, exact bindings, expiry, rotating/narrowing refresh, replay and membership/client revocation. It remains a prerequisite with no public consent or token endpoints. The planned grant lifetime is at most the verified session lifetime or one hour, requiring renewed sign-in afterward. MCP transport and external-client interoperability remain unimplemented.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -149,7 +151,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 358 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 134 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-four record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 379 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 143 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-four record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
