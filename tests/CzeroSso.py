@@ -26,7 +26,7 @@ class CzeroSso:
                 payload.chmod(0o600)
                 ssh.put_file(str(payload), "/tmp/czero-sso-payload.json", mode="0600")
             output, errors, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py setup /tmp/czero-sso-payload.json",
-                                             return_stderr=True, return_rc=True, timeout="600 seconds")
+                                             return_stderr=True, return_rc=True, timeout="900 seconds")
             if rc:
                 safe = next((line for line in errors.splitlines() if line.startswith("Disposable SSO fixture failed:")), "")
                 raise AssertionError(safe or "Disposable SSO provisioning failed")

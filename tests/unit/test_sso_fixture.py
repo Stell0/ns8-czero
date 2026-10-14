@@ -168,3 +168,14 @@ def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monke
     library.verify_disposable_objects_browser('czero7.test')
     assert filled.count(('input[name="password"]',secret))==2
     assert all(secret not in str(item) for item in invocations+commands)
+
+
+def test_sso_dependency_installation_can_use_a_longer_bounded_deadline(monkeypatch):
+    namespace=runpy.run_path(str(ROOT/'tests/oidc_fixture.py')); durations=[]
+    def run(args,**kwargs):
+        durations.append(kwargs['timeout'])
+        return SimpleNamespace(returncode=0,stdout=b'installed')
+    monkeypatch.setattr(namespace['subprocess'],'run',run)
+    assert namespace['command'](['safe-fixture-command'])=='installed'
+    assert namespace['command'](['add-module','fixture-image','1'],timeout=480)=='installed'
+    assert durations==[180,480]

@@ -27,9 +27,9 @@ def task(action, data):
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
-def command(arguments, *, merge_stderr=False):
+def command(arguments, *, merge_stderr=False, timeout=180):
     result = subprocess.run(arguments, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE, timeout=180)
+                            stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE, timeout=timeout)
     if result.returncode:
         raise RuntimeError("Disposable SSO fixture command failed")
     return result.stdout.decode()
@@ -55,7 +55,7 @@ def setup(payload):
         task("module/" + ldap + "/add-user", {"user": username, "display_name": username,
                                              "password": payload["password"]})
     PHASE = "IdP installation"
-    result = command(["add-module", IDP_IMAGE, "1"])
+    result = command(["add-module", IDP_IMAGE, "1"], timeout=480)
     import ast
     try:
         installed = json.loads(result)
