@@ -532,6 +532,10 @@ class CzeroSso:
                 run('Get Element Count','#scopes input:checked','==',3-disabled)
                 run('Click','#approve')
                 run('Get Text','h1','==','C0 agent capabilities')
+                run('Get Element Count','nav a[aria-current="page"]','==',1)
+                run('Get Property','#agent-mcp-url','value','==','https://'+host+'/mcp')
+                run('Click','button[data-copy-target="agent-mcp-url"]')
+                run('Get Text','#copy-status','matches',r'^(Server URL copied\.|Select and copy the server URL above\.)$')
                 # The callback query is private and validated by the host probe.
                 value['returned_callback']=browser.get_url()
                 with tempfile.TemporaryDirectory(prefix='czero-oauth-browser-') as directory:

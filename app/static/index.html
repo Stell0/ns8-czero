@@ -4,36 +4,23 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>C0 — application foundation</title>
-    <style>
-      :root { color-scheme: light; font: 16px/1.55 system-ui, sans-serif; color: #183044; background: #f3f7fa; }
-      body { margin: 0; }
-      main { max-width: 48rem; margin: 10vh auto; padding: 2.5rem; background: white; border: 1px solid #d6e1e8; border-radius: 1rem; box-shadow: 0 1rem 3rem #17354a12; }
-      h1 { margin-top: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; }
-      p { color: #435b6c; }
-      nav { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; }
-      a { color: #075f91; font-weight: 650; }
-      .status { display: inline-block; padding: .25rem .65rem; border-radius: 2rem; color: #155f35; background: #e2f5e9; }
-      section { border-top: 1px solid #d6e1e8; margin-top: 1.5rem; padding-top: 1rem; }
-      button, select { font: inherit; padding: .4rem .65rem; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { text-align: left; padding: .65rem .3rem; border-bottom: 1px solid #d6e1e8; }
-      td small { display: block; color: #435b6c; }
-      @media (max-width: 40rem) { main { margin: 1rem; padding: 1.5rem; } }
-    </style>
+    <title>C0 — shared workspace</title>
+    <link rel="stylesheet" href="./app.css">
   </head>
   <body>
-    <main>
-      <p class="status">C0 application foundation</p>
-      <h1>A foundation for useful applications.</h1>
-      <p>This application has a dedicated PostgreSQL database, a versioned C0 Core package and a documented health API. Sign-in uses NethServer identities when configured. Typed object records are available after sign-in.</p>
-      <p id="database-status" role="status" aria-live="polite">Checking database...</p>
+    <a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a></nav>
+
+      <h1>Your shared workspace.</h1>
+      <p>Keep shared records, original sources and authored knowledge together. Sign in to browse the workspace; your access determines which changes you can make.</p>
+      <ul class="workflows"><li><a href="./sources">Work with sources</a><p>Upload evidence, inspect extracted text and keep original documents.</p></li><li><a href="./wiki">Build shared knowledge</a><p>Write versioned pages and connect claims to their evidence.</p></li><li><a href="./objects">Manage records</a><p>Browse and edit shared records and their relationships.</p></li><li><a href="./search">Find evidence</a><p>Search sources and Wiki, with citations you can inspect.</p></li></ul>
+      <p id="database-status" role="status" aria-live="polite">Checking workspace availability...</p>
       <button id="refresh-status" type="button">Check again</button>
       <section aria-labelledby="account-heading">
         <h2 id="account-heading">Your account</h2>
         <p id="account-status" role="status" aria-live="polite">Checking sign-in...</p>
         <a id="sign-in" href="./auth/login" hidden>Sign in with NethServer</a>
         <button id="sign-out" type="button" hidden>Sign out</button>
+        <button id="refresh-account" type="button">Refresh access</button>
       </section>
       <section id="sharing" aria-labelledby="sharing-heading" hidden>
         <h2 id="sharing-heading">Shared access</h2>
@@ -41,15 +28,10 @@
         <table><thead><tr><th>Account</th><th>Access</th><th>Action</th></tr></thead><tbody id="accounts"></tbody></table>
         <p id="sharing-status" role="status" aria-live="polite"></p>
       </section>
-      <nav aria-label="C0 resources">
-        <a href="./objects">Records</a>
-        <a href="./search">Knowledge search</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a>
-        <a href="./api/v1/health">Service health</a>
-        <a href="./docs">REST API</a>
-        <a href="./agents">Agent capabilities</a>
-      </nav>
+
+      <details><summary>Service and integration details</summary><p><a href="./api/v1/health">Service health</a> · <a href="./docs">REST API</a> · <a href="./agents">Agent capabilities</a></p></details>
     </main>
     <script src="./status.js" defer></script>
     <script src="./auth.js" defer></script>
-  </body>
+  <script src="./navigation.js" defer></script></body>
 </html>

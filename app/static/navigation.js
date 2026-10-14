@@ -1,0 +1,27 @@
+// Copyright (C) 2026 C0 contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+'use strict';
+(() => {
+  const clean = (path) => path.replace(/\/+$/, '') || '/';
+  for (const link of document.querySelectorAll('nav[aria-label="C0 navigation"] a')) {
+    if (clean(new URL(link.href, window.location.href).pathname) === clean(window.location.pathname)) {
+      link.setAttribute('aria-current', 'page');
+    }
+  }
+  for (const button of document.querySelectorAll('button[data-copy-target]')) {
+    button.addEventListener('click', async () => {
+      if (button.disabled) return;
+      const field = document.getElementById(button.dataset.copyTarget);
+      const status = document.getElementById('copy-status');
+      const value = field.value;
+      button.disabled = true;
+      try {
+        await navigator.clipboard.writeText(value);
+        status.textContent = 'Server URL copied.';
+      } catch (_) {
+        field.focus(); field.select();
+        status.textContent = 'Select and copy the server URL above.';
+      } finally { button.disabled = false; }
+    });
+  }
+})();

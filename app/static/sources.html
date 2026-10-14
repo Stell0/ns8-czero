@@ -1,16 +1,8 @@
 <!doctype html>
 <!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>C0 — sources</title><style>
-:root { font:16px/1.5 system-ui,sans-serif; color:#183044; background:#f3f7fa; }
-main { max-width:60rem; margin:2rem auto; padding:2rem; background:white; border:1px solid #d6e1e8; border-radius:1rem; }
-nav { display:flex; gap:1rem; flex-wrap:wrap; } a { color:#075f91; }
-section,details { border-top:1px solid #d6e1e8; margin-top:1.5rem; padding-top:1rem; }
-label { display:block; margin-top:.7rem; } input,select,textarea,button { font:inherit; padding:.4rem; max-width:100%; box-sizing:border-box; }
-textarea { width:100%; } button { margin:.5rem .5rem .5rem 0; } pre { white-space:pre-wrap; overflow-wrap:anywhere; }
-[role=status] { min-height:1.5rem; } @media(max-width:40rem) { main { margin:.5rem; padding:1rem; } }
-</style></head><body><main>
-<nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./search">Knowledge search</a><a href="./wiki">Wiki</a><a href="./docs">REST API</a><a href="./agents">Agent capabilities</a></nav>
+<title>C0 — sources</title><link rel="stylesheet" href="./app.css"></head><body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a></nav>
+
 <h1>Sources</h1><p id="sources-account" role="status">Checking sign-in...</p><a id="sources-signin" href="./auth/login" hidden>Sign in with NethServer</a>
 <div id="sources-workspace" hidden>
 <details id="source-upload" hidden><summary>Upload evidence</summary>
@@ -38,4 +30,4 @@ textarea { width:100%; } button { margin:.5rem .5rem .5rem 0; } pre { white-spac
 <h3>Extracted full text</h3><p id="document-status" role="status"></p><pre id="document-text"></pre>
 <h3>Chunks and citations</h3><ul id="source-chunks"></ul><button id="chunks-previous" type="button">Previous chunks</button><button id="chunks-next" type="button">Next chunks</button>
 <pre id="source-citation"></pre></section>
-</div></main><script src="./sources.js" defer></script></body></html>
+</div></main><script src="./sources.js" defer></script><script src="./navigation.js" defer></script></body></html>

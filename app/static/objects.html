@@ -4,20 +4,10 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>C0 — records</title>
-  <style>
-    :root { font: 16px/1.5 system-ui,sans-serif; color:#183044; background:#f3f7fa; }
-    main { max-width:60rem; margin:2rem auto; padding:2rem; background:white; border:1px solid #d6e1e8; border-radius:1rem; }
-    nav { display:flex; flex-wrap:wrap; gap:1rem; } a { color:#075f91; }
-    section,details { border-top:1px solid #d6e1e8; margin-top:1.5rem; padding-top:1rem; }
-    label { display:block; margin-top:.7rem; } input,textarea,select,button { font:inherit; padding:.4rem; max-width:100%; box-sizing:border-box; }
-    textarea { width:100%; font-family:monospace; } button { margin:.5rem .5rem .5rem 0; }
-    table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:.5rem; border-bottom:1px solid #d6e1e8; overflow-wrap:anywhere; }
-    pre { white-space:pre-wrap; overflow-wrap:anywhere; } [role=status] { min-height:1.5rem; }
-    @media(max-width:40rem) { main { margin:.5rem; padding:1rem; } }
-  </style>
+  <link rel="stylesheet" href="./app.css">
 </head>
-<body><main>
-  <nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./search">Knowledge search</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./docs">REST API</a><a href="./agents">Agent capabilities</a></nav>
+<body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a></nav>
+
   <h1>Records</h1><p id="records-account" role="status">Checking sign-in...</p><a id="records-signin" href="./auth/login" hidden>Sign in with NethServer</a>
   <div id="records-workspace" hidden>
     <label for="record-type">Record type</label><select id="record-type"></select>
@@ -52,4 +42,4 @@
       </form><p id="type-status" role="status" aria-live="polite"></p>
     </details>
   </div>
-</main><script src="./objects.js" defer></script></body></html>
+</main><script src="./objects.js" defer></script><script src="./navigation.js" defer></script></body></html>

@@ -1,8 +1,8 @@
 <!doctype html>
 <!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C0 — Knowledge search</title>
-<style>:root{font:16px/1.5 system-ui,sans-serif;color:#183044;background:#f3f7fa}main{max-width:64rem;margin:2rem auto;padding:2rem;background:white;border:1px solid #d6e1e8;border-radius:1rem}nav{display:flex;gap:1rem;flex-wrap:wrap}a{color:#075f91}label{display:block;margin-top:.7rem}input,select,button{font:inherit;padding:.4rem;max-width:100%;box-sizing:border-box}input{width:100%}pre{white-space:pre-wrap;overflow-wrap:anywhere}article{border-top:1px solid #d6e1e8;margin-top:1rem}button{margin-top:1rem}[role=status]{min-height:1.5rem}@media(max-width:40rem){main{margin:.5rem;padding:1rem}}</style></head>
-<body><main><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./objects">Records</a><a href="./docs">REST API</a><a href="./agents">Agent capabilities</a></nav>
+<link rel="stylesheet" href="./app.css"></head>
+<body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a></nav>
 <h1>Knowledge search</h1><p id="search-account" role="status">Checking sign-in...</p><a id="search-signin" href="./auth/login" hidden>Sign in with NethServer</a>
 <div id="search-workspace" hidden><p>Search source evidence and current Wiki revisions. Text search works without providers. Optional embedding/scoring requests send queries and bounded evidence to administrator-configured providers. Graphs are supplemental unscored context; authored claims remain separate from source evidence.</p>
 <form id="knowledge-search-form"><label for="knowledge-query">Query</label><input id="knowledge-query" maxlength="512" required>
@@ -12,4 +12,4 @@
 <label for="knowledge-depth">Supplemental graph hops</label><select id="knowledge-depth"><option value="0">None</option><option value="1">1 if allowed</option><option value="2">2 if allowed</option><option value="3">3 if allowed</option></select>
 <button type="submit">Search knowledge</button></form><p id="knowledge-search-status" role="status" aria-live="polite"></p><p id="knowledge-index-status" role="status"></p>
 <section aria-label="Ranked evidence" id="knowledge-results"></section><section aria-label="Supplemental unscored graph"><h2>Supplemental graph</h2><pre id="search-graphs"></pre></section></div>
-</main><script src="./search.js" defer></script></body></html>
+</main><script src="./search.js" defer></script><script src="./navigation.js" defer></script></body></html>

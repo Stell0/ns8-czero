@@ -543,18 +543,23 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${host}/
-    Get Text    h1    contains    useful applications
-    Get Text    \#database-status    ==    Database ready
+    Get Text    h1    ==    Your shared workspace.
+    Get Element Count    nav[aria-label="C0 navigation"] a    ==    6
+    Get Element Count    nav a[aria-current="page"]    ==    1
+    Press Keys    body    Tab
+    Wait For Elements State    .skip-link    focused
+    Get Attribute    .skip-link    href    ==    \#main-content
+    Get Text    \#database-status    ==    Workspace ready
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-postgres.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
     Click    \#refresh-status
-    Get Text    \#database-status    ==    Database unavailable
+    Get Text    \#database-status    ==    Workspace unavailable. Ask an administrator to check the service.
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-postgres.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
     Click    \#refresh-status
-    Get Text    \#database-status    ==    Database ready
+    Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
     Get Text    body    contains    "core_version":"0.24.0"
     Go To    https://${host}/openapi.json

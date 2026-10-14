@@ -43,7 +43,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Development Core/app versions are **0.24.0/0.30.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is Core/app 0.23.0/0.29.0 at aa26512, with all six disposable browser workflows and active-grant recovery. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.24.0/0.31.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is Core/app 0.23.0/0.29.0 at aa26512, with all six disposable browser workflows and active-grant recovery. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
@@ -59,6 +59,8 @@ To connect a compatible MCP client:
 4. Use the returned opaque access token for MCP or matching REST operations. Refresh rotates tokens; reusing an old refresh revokes its family. Explicit `/oauth/revoke`, client disable or membership changes revoke authority.
 
 Grants last at most one hour and no later than the originating sign-in expiry; access tokens/codes last at most five minutes. Signing out of the browser does not revoke delegated client access. Native update/restart preserves bounded refresh authority; clean restore allocates a new native client and rejects old grants, requiring fresh sign-in/consent. Real SDK 2.3.0 current/legacy transport and local automatic OAuth discovery/exchange pass. Actual ChatGPT account/plugin/scheduled-run integration is unverified; no scheduled task or plugin was created.
+
+M12 development adds consistent local navigation and keyboard focus across the home, records, sources, Wiki, search and agent pages. Home links the main human workflows and retains service/API details. The agent page offers canonical URL copying with manual fallback. Sharing and availability refreshes ignore older responses, and role writes preserve newer selections. Local scripts/pages pass; native/live verification of this slice remains pending.
 
 ## Install and configure
 
@@ -164,7 +166,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 387 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 173 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-seven consent/record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 393 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 173 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks thirty-eight navigation/copy/sharing/health/consent/record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Disposable OAuth fixtures also seed active grants for exact update/clean-restore checks and exercise real Admin/Reader/Editor consent controls. Local signed HTTP verifies the exact preparation/recovery helpers and guards, including a deliberately bypassed Origin and a leftover earlier grant. Unknown virtual hosts are rejected by the NS8 proxy; the canonical application also rejects unauthorized Origins. Installed TLS, browser, exact recovery and permitted live owner acceptance pass; test credentials, token pairs and snapshots stay outside Git and runtime images.
 
