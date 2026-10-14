@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M06 are complete with local, disposable, documentation and permitted live evidence. M07 objects/REST/editor pass local, image and disposable/browser acceptance plus permitted live CRUD persistence. The native scheduler ordering-cycle fix passes disposable and repeated live manager restarts; final documentation CI is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M07 are complete with local, disposable, documentation and permitted live evidence. Generic objects, REST, the minimal record editor and corrected native scheduler pass acceptance. M08 document ingestion is next.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 

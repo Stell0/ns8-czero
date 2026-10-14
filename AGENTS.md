@@ -1,6 +1,12 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M06 are complete with local, CI/QEMU, documentation and permitted live evidence. M07 generic objects passes runtime/local/disposable/browser/permitted live acceptance; final documentation CI is pending. The operator initially waived interactive Playwright/live testing on 13 October 2026, then reauthorized live testing only for the dedicated Czero instance. Interactive Playwright remains suspended. Retain automated CI/QEMU/Robot checks and report actual live evidence. Do not describe planned object/evidence storage, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for milestones and [README.md](README.md) for the public product contract. **Current baseline:** M00 through M07 are complete with local, CI/QEMU, documentation and permitted live evidence. M08 ingestion is active. The operator initially waived interactive Playwright/live testing on 13 October 2026, then reauthorized live testing only for the dedicated Czero instance. Interactive Playwright remains suspended. Retain automated CI/QEMU/Robot checks and report actual live evidence. Do not describe planned object/evidence storage, search or MCP as implemented. Start with the first pending milestone in PLAN.md.
+
+## Active M08 ingestion conventions
+
+- Keep uploaded originals on the existing restricted source volume using generated IDs. Delete only after extracted full text/chunks/status have committed successfully; queue idempotent post-persistence cleanup. Failed or incomplete extraction retains its original and an actionable state.
+- Native backups must quiesce foreground file writers and workers across both SQL archive preparation and Restic copy, preserving prior app/timer states. Do not introduce a custom NS8 management daemon. Isolate untrusted parsers with bounded CPU/memory/time; never execute document instructions, macros, embedded scripts or external links.
+- Freeze verified M07 fixed-timer module/component digests in PLAN.md for genuine upgrade tests. Evidence offsets are defined against the retained extracted text, with immutable source/version identities and location metadata; optional source/Wiki reference adapters use trusted Core registration.
 
 ## Established M07 object contracts
 
