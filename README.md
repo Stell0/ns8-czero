@@ -151,7 +151,9 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 386 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 165 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-seven consent/record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 386 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 166 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-seven consent/record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+
+Disposable OAuth fixtures also seed active grants for exact update/clean-restore checks and exercise real Admin/Reader/Editor consent controls. Local signed HTTP verifies the exact preparation/recovery helpers. Installed TLS, browser and recovery acceptance remains pending; test credentials, token pairs and snapshots stay outside Git and runtime images.
 
 Build the administration UI:
 

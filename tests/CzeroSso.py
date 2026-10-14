@@ -107,6 +107,7 @@ class CzeroSso:
             builtin.run_keyword("Wait Until Keyword Succeeds", "30s", "2s", "Check application route")
             self._persistence("verify")
             self._retrieval(module_id, "verify")
+            self._oauth_persistence(module_id, "verify")
             ssh = builtin.get_library_instance("SSHLibrary")
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                                        return_rc=True, timeout="180 seconds")
@@ -133,6 +134,19 @@ class CzeroSso:
         self._retrieval(module_id, "prepare")
         BuiltIn().run_keyword("Wait Until Keyword Succeeds", "30s", "2s", "Check application route")
         self._retrieval(module_id, "seed")
+        self._oauth_persistence(module_id, "seed")
+
+    @staticmethod
+    def _oauth_persistence(module_id, operation):
+        builtin = BuiltIn(); previous = builtin.set_log_level('NONE')
+        try:
+            ssh = builtin.get_library_instance('SSHLibrary')
+            _, errors, rc = ssh.execute_command('python3 /tmp/oauth_fixture.py ' + shlex.quote(module_id) +
+                ' ' + operation, return_stderr=True, return_rc=True, timeout='300 seconds')
+            if rc:
+                raise AssertionError('Disposable OAuth recovery: ' + errors.strip())
+        finally:
+            builtin.set_log_level(previous)
 
     @staticmethod
     def _retrieval(module_id, operation):
@@ -456,6 +470,51 @@ class CzeroSso:
                 run('Get Element Count', '#knowledge-results img', '==', 0)
         except Exception as error:
             raise AssertionError('Disposable search browser failed (' + type(error).__name__ + ')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
+    def verify_disposable_oauth_browser(self, module_id, host):
+        builtin=BuiltIn();previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary');browser=builtin.get_library_instance('Browser')
+            payload=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json'))
+            self._browser_password=payload['password']
+            def run(name,*args): return builtin.run_keyword('Browser.'+name,*args)
+            for role in ('admin','reader','editor'):
+                _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
+                    ' browser-prepare '+role,return_stderr=True,return_rc=True,timeout='180 seconds')
+                if rc: raise AssertionError('Cannot prepare OAuth browser request')
+                value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/browser-oauth.json'))
+                run('New Context','ignoreHTTPSErrors=True');run('New Page')
+                # Private URLs/passwords never enter Robot keyword arguments.
+                browser.go_to(value['authorization_url'])
+                run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
+                browser.fill_text('input[name="username"]','c0owner' if role=='admin' else 'c0member')
+                browser.fill_text('input[name="password"]',self._browser_password)
+                run('Click','#kc-login')
+                run('Wait For Elements State','#approve','enabled','timeout=30s')
+                run('Get Text','#client','==',value['client']['client_name'])
+                run('Get Element Count','#client img','==',0)
+                disabled={'admin':0,'editor':1,'reader':2}[role]
+                run('Get Element Count','#scopes input:disabled','==',disabled)
+                run('Get Element Count','#scopes input:checked','==',3-disabled)
+                run('Click','#approve')
+                run('Get Text','h1','==','C0 agent capabilities')
+                # The callback query is private and validated by the host probe.
+                value['returned_callback']=browser.get_url()
+                with tempfile.TemporaryDirectory(prefix='czero-oauth-browser-') as directory:
+                    path=Path(directory)/'request.json';path.write_text(json.dumps(value));path.chmod(0o600)
+                    ssh.put_file(str(path),'/tmp/czero-oidc-fixture/browser-oauth.json',mode='0600')
+                _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
+                    ' browser-complete',return_stderr=True,return_rc=True,timeout='300 seconds')
+                if rc: raise AssertionError('Real OAuth browser/token assertions failed')
+                run('Close Context')
+            _, rc=ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs '+shlex.quote(module_id),
+                                     return_rc=True,timeout='180 seconds')
+            if rc: raise AssertionError('OAuth browser logs contain private query values')
+        except Exception as error:
+            raise AssertionError('Disposable OAuth browser failed ('+type(error).__name__+')') from None
         finally:
             builtin.set_log_level(previous)
 

@@ -266,7 +266,8 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
     asyncio.run(check())
 
 
-def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, application):
+@pytest.mark.parametrize("restored", [False, True])
+def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, application, tmp_path, monkeypatch, restored):
     app,_,_,_=oauth_app
     _,owner_token,*_=application
     path=Path(__file__).resolve().parents[1]/'oauth_fixture.py'
@@ -295,8 +296,47 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                 return response.status_code,response.content,str(response.url)
         saved=fixture.registered(Browser(),profile)
         try:
-            pair=fixture.issue(Browser(),profile,saved)
-            assert app.state.delegated_grants.verify(pair['access_token'],resource=RESOURCE).scopes==frozenset(('c0:read',))
+            monkeypatch.setattr(fixture, 'STATE', tmp_path)
+            def snapshot(_module, client_id):
+                with app.state.auth.access.database.engine.connect() as connection:
+                    return connection.execute(text('''SELECT json_build_object(
+                        'grants',(SELECT json_agg(g ORDER BY id) FROM c0_oauth_grants g WHERE client_id=:id),
+                        'tokens',(SELECT json_agg(t ORDER BY hash) FROM c0_oauth_tokens t JOIN c0_oauth_grants g
+                                  ON g.id=t.grant_id WHERE g.client_id=:id),
+                        'codes',(SELECT json_agg(c ORDER BY hash) FROM c0_oauth_codes c JOIN c0_oauth_grants g
+                                 ON g.id=c.grant_id WHERE g.client_id=:id))'''), {'id':UUID(client_id)}).scalar_one()
+            def sdk(_module, _origin, pair):
+                assert app.state.delegated_grants.verify(pair['access_token'],resource=RESOURCE).scopes==frozenset(('c0:read',))
+                assert client.get('/api/v1/object-types',headers={'Authorization':'Bearer '+pair['access_token']}).status_code==200
+            fixture.seed_persistence('czero1',Browser(),profile,snapshot_fn=snapshot)
+            assert (tmp_path/'expected-oauth-grant.json').stat().st_mode & 0o777 == 0o600
+            if restored:
+                app.state.delegated_grants.native_client='restored-native-client'
+            fixture.verify_persistence('czero2' if restored else 'czero1',Browser(),profile,
+                snapshot_fn=snapshot,sdk_fn=sdk)
+            if not restored:
+                browser=Browser()
+                browser.login=lambda *_:profile
+                browser.logout=lambda *_:None
+                monkeypatch.setattr(fixture,'Browser',lambda *_:browser)
+                monkeypatch.setattr(fixture,'sdk',lambda module,origin,pair,**_:sdk(module,origin,pair))
+                (tmp_path/'personas.json').write_text(json.dumps({'host':'c0.example.test','password':'unused'}))
+                fixture.prepare_browser('czero1','admin')
+                request_path=tmp_path/'browser-oauth.json'
+                value=json.loads(request_path.read_text())
+                assert request_path.stat().st_mode & 0o777 == 0o600
+                assert browser.request(value['authorization_url'])[0]==200
+                status,body,_=browser.api('/oauth/consent',{'approve':True,'scopes':['c0:read','c0:write','c0:admin']},'POST',profile['csrf_token'])
+                assert status==200
+                value['returned_callback']=json.loads(body)['redirect_uri']
+                request_path.write_text(json.dumps(value))
+                def sdk_admin(_module,_origin,pair,**_):
+                    assert app.state.delegated_grants.verify(pair['access_token'],resource=RESOURCE).scopes==frozenset(('c0:read','c0:write','c0:admin'))
+                monkeypatch.setattr(fixture,'sdk',sdk_admin)
+                try:fixture.complete_browser('czero1')
+                finally:
+                    with app.state.auth.access.database.engine.begin() as connection:
+                        connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(value['client']['client_id'])})
         finally:
             with app.state.auth.access.database.engine.begin() as connection:
                 connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(saved['client_id'])})

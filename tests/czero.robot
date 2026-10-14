@@ -623,6 +623,17 @@ Preserve admitted identities through update and clean restore
     Verify Disposable Identity Persistence    ${module_id}
     Wait Until Keyword Succeeds    30s    2s    Check application route
 
+Check OAuth consent, delegated scopes and SDK calls in a browser
+    [Tags]    ui
+    [Timeout]    8 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Oauth Browser    ${module_id}    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
+
 Check object CRUD and Reader controls in a browser
     [Tags]    ui
     [Timeout]    5 minutes

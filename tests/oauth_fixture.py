@@ -60,8 +60,119 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
         'access_token':pair['access_token'],'scope':scope}
     result=subprocess.run(['runagent','-m',module_id,'podman','exec','-i','czero','python','-c',source],
         input=json.dumps(payload).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=120)
-    assert result.returncode==0,'Installed TLS SDK protocol assertions failed'
+    if result.returncode:
+        # Emit only our fixed labels or exception class, never SDK traces.
+        safe = next((line for line in result.stderr.decode(errors='replace').splitlines()
+                     if line.startswith(('Installed MCP client failed: ', 'Installed MCP assertion failed: '))), '')
+        raise AssertionError(safe or 'Installed TLS SDK protocol assertions failed')
     assert result.stdout.strip().endswith(b'checks passed'),'Installed TLS SDK success marker missing'
+
+
+
+def snapshot(module_id, client_id):
+    from uuid import UUID
+    from oidc_fixture import command
+    client = str(UUID(client_id))
+    query = """SELECT json_build_object(
+        'grants',(SELECT json_agg(g ORDER BY id) FROM c0_oauth_grants g WHERE client_id='%s'),
+        'tokens',(SELECT json_agg(t ORDER BY hash) FROM c0_oauth_tokens t JOIN c0_oauth_grants g
+                  ON g.id=t.grant_id WHERE g.client_id='%s'),
+        'codes',(SELECT json_agg(c ORDER BY hash) FROM c0_oauth_codes c JOIN c0_oauth_grants g
+                 ON g.id=c.grant_id WHERE g.client_id='%s'));""" % (client, client, client)
+    # Captured only in private Python memory/files, never Robot output.
+    return json.loads(command(['runagent','-m',module_id,'podman','exec','czero-postgres',
+                              'psql','-U','czero','-d','czero','-At','-c',query]))
+
+
+def seed_persistence(module_id, browser, profile, *, snapshot_fn=snapshot):
+    client = registered(browser, profile)
+    pair = issue(browser, profile, client)
+    rows = snapshot_fn(module_id, client['client_id'])
+    assert len(rows['grants'] or []) == 1 and len(rows['tokens'] or []) == 2, 'Active recovery grant missing'
+    path = STATE / 'expected-oauth-grant.json'
+    path.write_text(json.dumps({'module_id':module_id,'client':client,'pair':pair,'rows':rows}))
+    path.chmod(0o600)
+
+
+def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk_fn=sdk):
+    path = STATE / 'expected-oauth-grant.json'
+    expected = json.loads(path.read_text())
+    client, pair = expected['client'], expected['pair']
+    assert snapshot_fn(module_id, client['client_id']) == expected['rows'], 'Recovered OAuth grant/token/code rows changed'
+    headers = {'Content-Type':'application/x-www-form-urlencoded'}
+    refresh = {'grant_type':'refresh_token','client_id':client['client_id'],
+               'refresh_token':pair['refresh_token'],'resource':browser.origin+'/mcp'}
+    restored = module_id != expected['module_id']
+    # An expired grant would not prove restored native-client binding.
+    from datetime import datetime, timezone
+    assert all(datetime.fromisoformat(row['expires_at']).astimezone(timezone.utc) > datetime.now(timezone.utc)
+               for row in expected['rows']['grants']), 'Recovery grant expired before binding assertion'
+    status, body, _ = browser.request('/oauth/token',urlencode(refresh).encode(),'POST',headers)
+    if restored:
+        assert status == 400, 'Clean restore accepted previous native-client refresh'
+        assert browser.request('/api/v1/object-types',headers={'Authorization':'Bearer '+pair['access_token']})[0] == 401, 'Clean restore accepted previous native-client access'
+        pair = issue(browser, profile, client)
+    else:
+        assert status == 200, 'Update lost active refresh authority'
+        pair = json.loads(body)
+    sdk_fn(module_id, browser.origin, pair)
+    expected.update(module_id=module_id, pair=pair, rows=snapshot_fn(module_id,client['client_id']))
+    path.write_text(json.dumps(expected)); path.chmod(0o600)
+
+
+def persistence(module_id, operation):
+    personas=json.loads((STATE/'personas.json').read_text())
+    browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
+    if operation == 'seed': seed_persistence(module_id, browser, profile)
+    else: verify_persistence(module_id, browser, profile)
+    browser.logout(profile)
+    print('Disposable exact active-grant recovery, native-client binding and TLS SDK checks passed')
+
+
+
+def prepare_browser(module_id, role):
+    personas=json.loads((STATE/'personas.json').read_text())
+    browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
+    if role != 'admin':
+        status, body, _=browser.api('/api/v1/access/accounts')
+        assert status == 200, 'Cannot prepare consent browser membership'
+        member=next(a for a in json.loads(body)['accounts'] if a['username']=='c0member')
+        assert browser.api('/api/v1/access/accounts/'+member['id'],{'role':role},'PUT',profile['csrf_token'])[0] == 204, 'Cannot set consent browser role'
+    descriptor={'client_name':'<img src=x onerror=alert(1)> consent browser client',
+                'redirect_uris':[browser.origin+'/agents'],'allowed_scopes':['c0:read','c0:write','c0:admin']}
+    status, body, _=browser.api('/api/v1/oauth/clients',descriptor,'POST',profile['csrf_token'])
+    assert status == 201, 'Cannot approve consent browser client'
+    client=json.loads(body);verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32)
+    challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
+    parameters={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],
+                'response_type':'code','code_challenge':challenge,'code_challenge_method':'S256',
+                'scope':'c0:read c0:write c0:admin','resource':browser.origin+'/mcp','state':state}
+    value={'client':client,'verifier':verifier,'state':state,'role':role,
+           'origin':browser.origin,'authorization_url':browser.origin+'/oauth/authorize?'+urlencode(parameters)}
+    path=STATE/'browser-oauth.json';path.write_text(json.dumps(value));path.chmod(0o600)
+    browser.logout(profile)
+    print('Disposable consent browser request prepared')
+
+
+def complete_browser(module_id):
+    from urllib.parse import urlsplit
+    value=json.loads((STATE/'browser-oauth.json').read_text())
+    callback=value['returned_callback'];parts=urlsplit(callback);expected=urlsplit(value['client']['redirect_uris'][0])
+    assert (parts.scheme,parts.netloc,parts.path)==(expected.scheme,expected.netloc,expected.path), 'Consent browser callback changed'
+    query=parse_qs(parts.query)
+    assert query.get('state')==[value['state']] and len(query.get('code',[]))==1, 'Consent browser state/code missing'
+    browser=Browser(value['origin'])
+    data={'grant_type':'authorization_code','client_id':value['client']['client_id'],'code':query['code'][0],
+          'redirect_uri':value['client']['redirect_uris'][0],'code_verifier':value['verifier'],'resource':browser.origin+'/mcp'}
+    status, body, _=browser.request('/oauth/token',urlencode(data).encode(),'POST',{'Content-Type':'application/x-www-form-urlencoded'})
+    assert status == 200, 'Consent browser code exchange failed'
+    pair=json.loads(body); scopes={'reader':['c0:read'],'editor':['c0:read','c0:write'],
+                                 'admin':['c0:admin','c0:read','c0:write']}[value['role']]
+    assert set(pair['scope'].split())==set(scopes), 'Consent browser granted unavailable scope'
+    sdk(module_id,browser.origin,pair,scope=pair['scope'])
+    status, _, _=browser.request('/api/v1/access/accounts',headers={'Authorization':'Bearer '+pair['access_token']})
+    assert status == (200 if value['role']=='admin' else 403), 'Consent browser delegated Admin boundary failed'
+    print('Disposable real consent controls, role narrowing and TLS SDK checks passed')
 
 
 def run(module_id):
@@ -86,6 +197,10 @@ def run(module_id):
 
 
 if __name__=='__main__':
-    try:run(sys.argv[1])
+    try:
+        if len(sys.argv) > 2 and sys.argv[2] == 'browser-prepare': prepare_browser(sys.argv[1],sys.argv[3])
+        elif len(sys.argv) > 2 and sys.argv[2] == 'browser-complete': complete_browser(sys.argv[1])
+        elif len(sys.argv) > 2: persistence(sys.argv[1], sys.argv[2])
+        else: run(sys.argv[1])
     except AssertionError as error:print(str(error),file=sys.stderr);sys.exit(1)
     except Exception as error:print('Disposable OAuth failed: '+type(error).__name__,file=sys.stderr);sys.exit(1)
