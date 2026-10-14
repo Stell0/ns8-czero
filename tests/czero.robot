@@ -59,13 +59,13 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.19.0"
+    Should Contain    ${output}    "core_version":"0.20.0"
 
 *** Test Cases ***
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:1d6b9d152605990e74e89926354a1d56317c21d64df6aa9ffa1f6077d24dcbbf
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:b53c57b53df7162d4a854bb5441910b8dcfc12b9b4711d3a0d6856183ad659cf
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -77,7 +77,7 @@ Install Czero with its own identity
     IF    $SCENARIO == 'update'
         # Freeze the older component images too, not just the module shell.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:ae45c76afd2982d2ba7d15398f23d6daa50918daf3b79a01604f4d6c7d5db4e7','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:686f9fdedca81f97264ef458d41838f1eb9bf1a6cc29df3f3c07ab3c7f0ba207'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:bc5d3c492fd747d06dc1a077dc99edf06ca57a7c0bb24d5c271115608b8bcccc','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:072781b5b07af4d82ecbb69c8cc3c91a60e0fe31cd6bc8390eefd2adad12a09c'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -556,13 +556,16 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.19.0"
+    Get Text    body    contains    "core_version":"0.20.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
     Get Text    body    contains    search source text.
     Get Text    body    contains    sourced claims and bounded graph queries are available.
     Get Text    body    contains    MCP is a planned milestone.
+    Go To    https://${host}/agents/capabilities.json
+    Get Text    body    contains    "authenticated":false
+    Get Text    body    contains    "operations":[]
     Close Browser
     Assert Disposable Browser Password Is Private
 

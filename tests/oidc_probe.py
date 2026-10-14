@@ -205,12 +205,27 @@ def verify_sources(browser, records):
     assert status == 200 and len(json.loads(body)['citations']) >= 5, 'Recovered full-text search missing evidence'
 
 
+def verify_capabilities(browser, role):
+    status, body, _ = browser.api('/agents/capabilities.json')
+    assert status == 200, 'Caller capability discovery unavailable'
+    capabilities = json.loads(body)
+    assert capabilities['authenticated'] and capabilities['role'] == role, 'Capability role is stale'
+    definitions = {operation['name']: operation for operation in capabilities['operations']}
+    assert {'objects_get', 'wiki_pages_get', 'documents_get', 'knowledge_search'} <= definitions.keys(), 'Reader operations missing'
+    assert ('wiki_pages_create' in definitions) == (role != 'reader'), 'Editor discovery mismatch'
+    assert ('schedules_list' in definitions) == (role == 'admin'), 'Admin discovery mismatch'
+    if role == 'reader':
+        assert all(operation['minimum_role'] == 'reader' and operation['read_only']
+                   for operation in definitions.values()), 'Reader discovery exposes writes'
+
+
 def probe():
     payload = json.loads((STATE / "personas.json").read_text())
     origin = "https://" + payload["host"]
     owner = Browser(origin)
     profile = owner.login("c0owner", payload["password"])
     assert profile["role"] == "admin" and profile["is_owner"], "Owner identity mismatch"
+    verify_capabilities(owner, 'admin')
     status, body, _ = owner.api("/api/v1/schedules")
     assert status == 200 and len(json.loads(body)["schedules"]) >= 2, "Admin schedules unavailable"
     object_fixtures(owner,profile)
@@ -233,6 +248,7 @@ def probe():
     reader = Browser(origin)
     current = reader.login("c0member", payload["password"])
     assert current["role"] == "reader", "Reader grant not persisted"
+    verify_capabilities(reader, 'reader')
     status, _, _ = reader.api("/api/v1/access/accounts")
     assert status == 403, "Reader can administer"
     status,_,_=reader.api("/api/v1/objects?type_name=fixture-inventory")
@@ -254,6 +270,7 @@ def probe():
         assert status == 204, "Role update failed"
         status, body, _ = reader.api("/api/v1/me")
         assert status == 200 and json.loads(body)["role"] == role, "Session role is stale"
+        verify_capabilities(reader, role)
         status, _, _ = reader.api("/api/v1/access/accounts")
         assert status == (200 if role == "admin" else 403), "Role authorization mismatch"
         status, _, _ = reader.api("/api/v1/schedules")
@@ -272,6 +289,8 @@ def probe():
     assert status == 204, "Role revocation failed"
     status, _, _ = reader.api("/api/v1/me")
     assert status == 403, "Revoked session remains admitted"
+    status, _, _ = reader.api('/agents/capabilities.json')
+    assert status == 403, 'Revoked session can discover private capabilities'
     owner.logout(profile)
     missing = Browser(origin)
     status, _, _ = missing.api("/api/v1/me")
@@ -353,6 +372,7 @@ def persistence(operation):
     owner = Browser(origin)
     profile = owner.login("c0owner", payload["password"])
     assert profile["role"] == "admin" and profile["is_owner"], "Recovered owner is not admitted"
+    verify_capabilities(owner, 'admin')
     expected_file = STATE / "expected-identities.json"
     if operation == "seed":
         status, body, _ = owner.api("/api/v1/access/accounts")
@@ -378,6 +398,7 @@ def persistence(operation):
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
+    verify_capabilities(editor, 'editor')
     for record in expected["objects"]:
         status,body,_=editor.api("/api/v1/objects/"+record["id"])
         assert status==200,"Recovered object missing"

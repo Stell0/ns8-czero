@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from czero_core.extraction import ExtractionError, MAX_UPLOAD
-from czero_core.identity import PermissionDenied
+from czero_core.identity import PermissionDenied, Role
 from czero_core.sources import SourceService, SourceConflict, SourceNotFound
 from czero_app.auth import RequestAccess
 
@@ -139,6 +139,7 @@ class UploadBodyLimit:
 
 
 def install_source_routes(app, database, auth, read_context, write_context, registry, originals):
+    operation = app.state.operation_catalog.bind
     service = SourceService(database, auth.access if auth else None, registry, originals)
     app.state.sources = service
 
@@ -176,31 +177,38 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             source_id=source_id, expected_revision=expected_revision)
 
     @app.get('/api/v1/sources', response_model=SourcesView)
+    @operation('sources_list', 'Browse source metadata', Role.READER, SourcesView, read_only=True)
     def sources(limit: int = 50, offset: int = 0, include_deleted: bool = False,
                 context: RequestAccess = Depends(read_context)):
         return {'sources': invoke(service.list, context.actor, limit=limit, offset=offset, include_deleted=include_deleted)}
 
     @app.get('/api/v1/sources/search', response_model=SourceSearchView)
+    @operation('sources_search', 'Search retained source text with citations', Role.READER, SourceSearchView, read_only=True)
     def search(query: str, limit: int = 20, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'citations': invoke(service.search, context.actor, query, limit=limit, offset=offset)}
 
     @app.get('/api/v1/sources/{source_id}', response_model=SourceView)
+    @operation('sources_get', 'Inspect source metadata', Role.READER, SourceView, read_only=True)
     def source(source_id: UUID, context: RequestAccess = Depends(read_context)):
         return invoke(service.get, context.actor, source_id)
 
     @app.delete('/api/v1/sources/{source_id}', response_model=SourceView)
+    @operation('sources_archive', 'Archive a source while retaining evidence', Role.EDITOR, SourceView, read_only=False)
     def delete(source_id: UUID, expected_revision: int, context: RequestAccess = Depends(write_context)):
         return invoke(service.delete, context.actor, source_id, expected_revision=expected_revision)
 
     @app.get('/api/v1/sources/{source_id}/versions', response_model=VersionsView)
+    @operation('source_versions_list', 'Inspect immutable source version history', Role.READER, VersionsView, read_only=True)
     def versions(source_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'versions': invoke(service.versions, context.actor, source_id, limit=limit, offset=offset)}
 
     @app.post('/api/v1/source-versions/{version_id}/retry', response_model=VersionView, status_code=202)
+    @operation('source_versions_retry', 'Queue retry of retained failed evidence', Role.EDITOR, VersionView, read_only=False)
     def retry(version_id: UUID, data: RetryRequest, context: RequestAccess = Depends(write_context)):
         return invoke(service.retry, context.actor, version_id, expected_generation=data.expected_generation)
 
     @app.get('/api/v1/source-versions/{version_id}/document', response_model=DocumentView)
+    @operation('documents_get', 'Read complete retained extracted text', Role.READER, DocumentView, read_only=True)
     def document(version_id: UUID, context: RequestAccess = Depends(read_context)):
         return invoke(service.document, context.actor, version_id)
 
@@ -212,10 +220,12 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
                             headers={'X-Content-Type-Options': 'nosniff'})
 
     @app.get('/api/v1/documents/{document_id}/chunks', response_model=ChunksView)
+    @operation('document_chunks_list', 'Read immutable chunks and offsets', Role.READER, ChunksView, read_only=True)
     def chunks(document_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'chunks': invoke(service.chunks, context.actor, document_id, limit=limit, offset=offset)}
 
     @app.get('/api/v1/chunks/{chunk_id}/citation', response_model=CitationView)
+    @operation('citations_get', 'Read the stable citation of an evidence chunk', Role.READER, CitationView, read_only=True)
     def citation(chunk_id: UUID, context: RequestAccess = Depends(read_context)):
         return invoke(service.citation, context.actor, chunk_id)
     return service

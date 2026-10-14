@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "czero-core"
-version = "0.19.0"
+version = "0.20.0"
 description = "Reusable runtime services for C0 applications"
 requires-python = ">=3.12,<3.15"
 license = "GPL-3.0-or-later"

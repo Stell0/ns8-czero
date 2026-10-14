@@ -44,8 +44,8 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.19.0",
-        "app_version": "0.22.0",
+        "core_version": "0.20.0",
+        "app_version": "0.23.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -63,6 +63,10 @@ def test_agents_page_describes_only_available_capabilities(client):
     assert "./docs" in response.text
     assert "A native timer wakes" in response.text
     assert "pending milestone slice" not in response.text
+    capabilities = client('/czero/czero17/agents/capabilities.json')
+    assert capabilities.status_code == 200 and capabilities.headers['cache-control'] == 'no-store'
+    assert capabilities.json()['operations'] == [] and capabilities.json()['interfaces']['mcp'] is False
+    assert capabilities.json()['rest_base'] == '/czero/czero17/api/v1'
 
 
 def test_search_page_uses_local_assets_and_no_privileged_mutation(client):
@@ -79,7 +83,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.22.0"
+    assert document["info"]["version"] == "0.23.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 

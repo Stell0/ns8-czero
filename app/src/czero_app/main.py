@@ -3,11 +3,12 @@
 
 import os
 import re
+from html import escape
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
@@ -22,6 +23,8 @@ from czero_core.sources import OriginalStore
 from czero_app.knowledge import install_knowledge_routes
 from czero_app.retrieval import install_retrieval_routes
 from czero_core.retrieval_config import load_settings
+from czero_app.operations import OperationCatalog
+from czero_core.identity import Role
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -83,6 +86,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     # multipart errors are handled before crossing its task-group boundary.
     instance_app.add_middleware(UploadBodyLimit)
     read_context, write_context = install_auth_routes(instance_app, auth, base_path)
+    catalog = OperationCatalog(auth)
+    instance_app.state.operations = catalog.registry
+    instance_app.state.operation_catalog = catalog
     originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
     retrieval_settings=load_settings()
     registry = build_registry(database, originals, settings=retrieval_settings)
@@ -92,6 +98,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     install_retrieval_routes(instance_app, database, auth, read_context, settings=retrieval_settings)
     install_object_routes(instance_app, database, auth, read_context, write_context,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
+    catalog.annotate_openapi(instance_app)
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
@@ -137,8 +144,30 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def auth_script() -> FileResponse:
         return FileResponse(static_dir / "auth.js", media_type="text/javascript")
 
+    def capabilities(request):
+        context = read_context(request) if (request.headers.get('authorization') is not None
+            or request.cookies.get('c0_session')) else None
+        operations = catalog.registry.describe(context.actor, scopes=context.scopes) if context else []
+        return {'version': 1, 'authenticated': context is not None,
+                'role': auth.access.authorize(context.actor, Role.READER).role.value if context else None,
+                'interfaces': {'rest': True, 'mcp': False},
+                'rest_base': base_path + '/api/v1', 'mcp_url': None,
+                'operations': operations,
+                'rest_attachments': ['multipart source upload', 'retained original download', 'Markdown export']}
+
+    @instance_app.get('/agents/capabilities.json')
+    def capability_json(request: Request, response: Response):
+        response.headers['Cache-Control'] = 'no-store'
+        return capabilities(request)
+
     @instance_app.get("/agents", response_class=HTMLResponse, include_in_schema=False)
-    async def agents() -> str:
+    def agents(request: Request, response: Response) -> str:
+        response.headers['Cache-Control'] = 'no-store'
+        current = capabilities(request)
+        available = ''.join('<li><code>' + escape(operation['name']) + '</code>: '
+            + escape(operation['description']) + ' (' + escape(operation['required_scope']) + ')</li>'
+            for operation in current['operations'])
+        caller = ('Current role: ' + current['role']) if current['authenticated'] else 'Sign in to inspect your available operations.'
         return (
             "<!doctype html><html lang='en'><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -149,7 +178,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
             "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. MCP is a planned milestone.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
-            "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
+            "<li><a href='./docs'>OpenAPI documentation</a></li>"
+            "<li><a href='./agents/capabilities.json'>Caller-aware capability JSON</a></li></ul>"
+            "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul></main></html>"
         )
 
     @instance_app.get("/api/v1/health", name="health", response_model=HealthResponse,

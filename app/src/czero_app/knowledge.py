@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from czero_core.identity import PermissionDenied
+from czero_core.identity import PermissionDenied, Role
 from czero_core.knowledge import KnowledgeService
 from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound
 from czero_app.auth import RequestAccess
@@ -229,6 +229,7 @@ class ChangesView(BaseModel):
 
 
 def install_knowledge_routes(app, database, auth, read_context, write_context):
+    operation = app.state.operation_catalog.bind
     service = KnowledgeService(database, auth.access if auth else None)
     app.state.knowledge = service
     def invoke(operation, *args, **kwargs):
@@ -240,26 +241,32 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
         except ValueError: raise HTTPException(422, 'invalid_knowledge_request') from None
 
     @app.get('/api/v1/wiki/pages', response_model=PagesView)
+    @operation('wiki_pages_list', 'Browse authored Wiki page metadata', Role.READER, PagesView, read_only=True)
     def pages(limit: int = 50, offset: int = 0, include_deleted: bool = False, context: RequestAccess = Depends(read_context)):
         return {'pages': invoke(service.list_pages, context.actor, limit=limit, offset=offset, include_deleted=include_deleted)}
 
     @app.post('/api/v1/wiki/pages', response_model=PageView, status_code=201)
+    @operation('wiki_pages_create', 'Create an authored page with a replay key', Role.EDITOR, PageView, read_only=False)
     def create(data: PageCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.create_page, context.actor, **data.model_dump())
 
     @app.get('/api/v1/wiki/pages/{page_id}', response_model=PageView)
+    @operation('wiki_pages_get', 'Read current or historical immutable Wiki content', Role.READER, PageView, read_only=True)
     def page_detail(page_id: UUID, revision: int | None = None, context: RequestAccess = Depends(read_context)):
         return invoke(service.get_page, context.actor, page_id, revision=revision)
 
     @app.put('/api/v1/wiki/pages/{page_id}', response_model=PageView)
+    @operation('wiki_pages_update', 'Edit a page with revision and replay protection', Role.EDITOR, PageView, read_only=False)
     def edit(page_id: UUID, data: PageUpdate, context: RequestAccess = Depends(write_context)):
         return invoke(service.update_page, context.actor, page_id, **data.model_dump())
 
     @app.post('/api/v1/wiki/pages/{page_id}/archive', response_model=PageSummary)
+    @operation('wiki_pages_archive', 'Archive a page while retaining revisions', Role.EDITOR, PageSummary, read_only=False)
     def archive(page_id: UUID, data: ArchiveRequest, context: RequestAccess = Depends(write_context)):
         return invoke(service.delete_page, context.actor, page_id, **data.model_dump())
 
     @app.get('/api/v1/wiki/pages/{page_id}/revisions', response_model=HistoryView)
+    @operation('wiki_revisions_list', 'Inspect immutable authored revision history', Role.READER, HistoryView, read_only=True)
     def history(page_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'revisions': invoke(service.page_history, context.actor, page_id, limit=limit, offset=offset)}
 
@@ -273,87 +280,107 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
         return result
 
     @app.get('/api/v1/entities', response_model=EntitiesView)
+    @operation('entities_list', 'Browse knowledge entities', Role.READER, EntitiesView, read_only=True)
     def entities(kind: str | None = None, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'entities': invoke(service.list_entities, context.actor, kind=kind, limit=limit, offset=offset)}
 
     @app.post('/api/v1/entities', response_model=EntityView, status_code=201)
+    @operation('entities_create', 'Create an entity and normalized aliases', Role.EDITOR, EntityView, read_only=False)
     def entity_create(data: EntityCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.create_entity, context.actor, **data.model_dump())
 
     @app.get('/api/v1/entities/resolve', response_model=EntityView)
+    @operation('entities_resolve', 'Resolve a normalized entity alias', Role.READER, EntityView, read_only=True)
     def resolve(alias: str, context: RequestAccess = Depends(read_context)):
         return invoke(service.resolve_alias, context.actor, alias)
 
     @app.get('/api/v1/entities/{entity_id}', response_model=EntityView)
+    @operation('entities_get', 'Inspect a knowledge entity', Role.READER, EntityView, read_only=True)
     def entity_detail(entity_id: UUID, context: RequestAccess = Depends(read_context)):
         return invoke(service.get_entity, context.actor, entity_id)
 
     @app.put('/api/v1/entities/{entity_id}', response_model=EntityView)
+    @operation('entities_update', 'Update entity metadata with revision protection', Role.EDITOR, EntityView, read_only=False)
     def entity_update(entity_id: UUID, data: EntityUpdate, context: RequestAccess = Depends(write_context)):
         return invoke(service.update_entity, context.actor, entity_id, **data.model_dump())
 
     @app.post('/api/v1/entities/{entity_id}/archive', response_model=EntityView)
+    @operation('entities_archive', 'Archive an entity preserving its identity', Role.EDITOR, EntityView, read_only=False)
     def entity_archive(entity_id: UUID, data: ArchiveRequest, context: RequestAccess = Depends(write_context)):
         return invoke(service.delete_entity, context.actor, entity_id, **data.model_dump())
 
     @app.post('/api/v1/entities/{entity_id}/aliases', response_model=EntityView)
+    @operation('entity_aliases_create', 'Add a reserved normalized entity alias', Role.EDITOR, EntityView, read_only=False)
     def alias_add(entity_id: UUID, data: AliasCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.add_alias, context.actor, entity_id, data.alias,
             expected_revision=data.expected_revision, idempotency_key=data.idempotency_key)
 
     @app.get('/api/v1/claims', response_model=ClaimsView)
+    @operation('claims_list', 'Browse immutable sourced assertions', Role.READER, ClaimsView, read_only=True)
     def claims(entity_id: UUID | None = None, page_id: UUID | None = None, predicate: str | None = None,
                limit: int = 50, offset: int = 0, include_deleted: bool = False, context: RequestAccess = Depends(read_context)):
         return {'claims': invoke(service.list_claims, context.actor, entity_id=entity_id, page_id=page_id,
             predicate=predicate, limit=limit, offset=offset, include_deleted=include_deleted)}
 
     @app.post('/api/v1/claims', response_model=ClaimView, status_code=201)
+    @operation('claims_create', 'Record an assertion backed by real evidence', Role.EDITOR, ClaimView, read_only=False)
     def claim_create(data: ClaimCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.create_claim, context.actor, **data.model_dump())
 
     @app.get('/api/v1/claims/{claim_id}', response_model=ClaimView)
+    @operation('claims_get', 'Inspect an assertion and its provenance', Role.READER, ClaimView, read_only=True)
     def claim_detail(claim_id: UUID, context: RequestAccess = Depends(read_context)):
         return invoke(service.get_claim, context.actor, claim_id)
 
     @app.put('/api/v1/claims/{claim_id}', response_model=ClaimView)
+    @operation('claims_annotate', 'Annotate a claim without rewriting its assertion', Role.EDITOR, ClaimView, read_only=False)
     def claim_update(claim_id: UUID, data: ClaimUpdate, context: RequestAccess = Depends(write_context)):
         return invoke(service.update_claim, context.actor, claim_id, **data.model_dump())
 
     @app.post('/api/v1/claims/{claim_id}/retract', response_model=ClaimView)
+    @operation('claims_retract', 'Retract a claim while retaining provenance', Role.EDITOR, ClaimView, read_only=False)
     def retract(claim_id: UUID, data: ArchiveRequest, context: RequestAccess = Depends(write_context)):
         return invoke(service.delete_claim, context.actor, claim_id, **data.model_dump())
 
     @app.post('/api/v1/knowledge/relations', response_model=RelationView, status_code=201)
+    @operation('entity_relations_create', 'Create a bounded entity relationship', Role.EDITOR, RelationView, read_only=False)
     def relation_create(data: RelationCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.add_relation, context.actor, **data.model_dump())
 
     @app.put('/api/v1/knowledge/relations/{relation_id}', response_model=RelationView)
+    @operation('entity_relations_update', 'Update an entity relationship with revision protection', Role.EDITOR, RelationView, read_only=False)
     def relation_update(relation_id: UUID, data: RelationUpdate, context: RequestAccess = Depends(write_context)):
         return invoke(service.update_relation, context.actor, relation_id, **data.model_dump())
 
     @app.get('/api/v1/entities/{entity_id}/relations', response_model=RelationsView)
+    @operation('entity_relations_list', 'Inspect entity relationships', Role.READER, RelationsView, read_only=True)
     def relations(entity_id: UUID, limit: int = 50, offset: int = 0, include_deleted: bool = False,
                   context: RequestAccess = Depends(read_context)):
         return {'relations': invoke(service.list_relations, context.actor, entity_id, limit=limit, offset=offset, include_deleted=include_deleted)}
 
     @app.post('/api/v1/entities/{entity_id}/references', response_model=LinkView, status_code=201)
+    @operation('entity_references_create', 'Attach a typed knowledge reference', Role.EDITOR, LinkView, read_only=False)
     def reference(entity_id: UUID, data: ReferenceCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.link_entity, context.actor, entity_id, **data.model_dump())
 
     @app.get('/api/v1/entities/{entity_id}/references', response_model=LinksView)
+    @operation('entity_references_list', 'Inspect typed knowledge references', Role.READER, LinksView, read_only=True)
     def references(entity_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'references': invoke(service.entity_links, context.actor, entity_id, limit=limit, offset=offset)}
 
     @app.post('/api/v1/entities/{entity_id}/references/{link_id}/remove', response_model=RemovedView)
+    @operation('entity_references_remove', 'Remove an authored typed reference', Role.EDITOR, RemovedView, read_only=False)
     def unlink(entity_id: UUID, link_id: UUID, data: Mutation, context: RequestAccess = Depends(write_context)):
         return invoke(service.unlink_entity, context.actor, entity_id, link_id, idempotency_key=data.idempotency_key)
 
     @app.get('/api/v1/knowledge/graph/{entity_id}', response_model=GraphView)
+    @operation('knowledge_graph', 'Traverse a bounded supplemental knowledge graph', Role.READER, GraphView, read_only=True)
     def graph(entity_id: UUID, depth: int = 1, limit: int = 50, direction: Literal['out','in','both'] = 'both',
               context: RequestAccess = Depends(read_context)):
         return invoke(service.graph, context.actor, entity_id, depth=depth, limit=limit, direction=direction)
 
     @app.get('/api/v1/knowledge/changes', response_model=ChangesView)
+    @operation('knowledge_changes', 'Read commit-ordered knowledge metadata changes', Role.READER, ChangesView, read_only=True)
     def changes(after: int = 0, limit: int = 50, context: RequestAccess = Depends(read_context)):
         return {'changes': invoke(service.changes, context.actor, after=after, limit=limit)}
     return service
