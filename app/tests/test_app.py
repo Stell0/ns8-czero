@@ -54,7 +54,9 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
 def test_agents_page_describes_only_available_capabilities(client):
     response = client("/czero/czero17/agents")
     assert response.status_code == 200
-    assert "Search and MCP are planned" in response.text
+    assert "search source text" in response.text
+    assert "Wiki, hybrid retrieval and MCP are planned" in response.text
+    assert '/api/v1/sources/search' in client('/czero/czero17/openapi.json').json()['paths']
     assert "./docs" in response.text
     assert "A native timer wakes" in response.text
     assert "pending milestone slice" not in response.text

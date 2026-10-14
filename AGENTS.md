@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M08 ingestion conventions
 
+- Keep discovery-page assertions aligned with actual installed routes: require source FTS and its OpenAPI path while retaining explicit Wiki/hybrid/MCP limitations. Rerun the public-page tests after capability text changes.
+
 - Strip dependency-wheel extension build headers/Cython sources from the assembled virtualenv, while retaining runtime shared libraries, schemas and licenses. The image audit rejects these development suffixes as well as bundled tests/skills.
 
 - Core SourceService now provides immutable versions, retained full text/chunks, citations, FTS, original storage and trusted extraction/cleanup handlers. Typed REST reuses it. Local PostgreSQL and signed HTTP pass; native/live source acceptance and source UI remain pending. Child parser limits fail with bounded codes; never echo document bytes, filesystem paths or library exception text. Preserve all extracted text and reject over-limit/incomplete files. Pin parser versions; test original corpus formats and unsafe/archive/timeout cases before adapters.

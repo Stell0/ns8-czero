@@ -135,7 +135,7 @@ Czero strips queries from application access logs. Core Traefik has its own defa
 
 Publication uses `GITHUB_TOKEN` with package-write permission and package Actions Write grants. `NS8_MODULE_RELEASES_TOKEN` is reserved for future GitHub releases. Private repositories are supported; private container packages additionally need authenticated guest pulls. Package names remove the repository's `ns8-` prefix, following Hermes.
 
-CI includes local/schema/shell checks, image publication/runtime audits, Trivy SARIF/CycloneDX artifacts and native QEMU/Robot tests. Successful scans do not establish that dependency findings are resolved. Review findings before release. Follow AGENTS.md's milestone loop: plan, implement, commit/push, inspect actual CI/tests, fix failures, reconcile documentation, then advance. Keep live hostnames, passwords, tokens, cookies and auth-state files out of Git and artifacts.
+CI checks discovery text against available REST routes and documented limitations. CI includes local/schema/shell checks, image publication/runtime audits, Trivy SARIF/CycloneDX artifacts and native QEMU/Robot tests. Successful scans do not establish that dependency findings are resolved. Review findings before release. Follow AGENTS.md's milestone loop: plan, implement, commit/push, inspect actual CI/tests, fix failures, reconcile documentation, then advance. Keep live hostnames, passwords, tokens, cookies and auth-state files out of Git and artifacts.
 
 ## NethServer sources and license
 
