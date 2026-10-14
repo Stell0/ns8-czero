@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (15 October 2026): M00–M10 are complete. M11 shared operations, public-client approval, OAuth consent/token lifecycle and current/legacy MCP pass local, disposable TLS/browser/recovery and permitted live owner acceptance. Discovery/connection closeout is under verification; M11 is not complete yet.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and encrypted backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is authorized only on the dedicated Czero instance. See [PLAN.md](PLAN.md) for commits, CI, tests and limitations, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (15 October 2026): M00–M11 are complete with local, CI/QEMU, documentation and permitted live evidence. Shared REST/MCP operations, public-client approval, OAuth consent/token lifecycle, caller-aware discovery/OpenAPI and current/legacy MCP pass disposable TLS/browser/recovery and permitted live owner acceptance. Full application UI, Core distribution/forking and release hardening remain M12–M14.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and encrypted backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is authorized only on the dedicated Czero instance. See [PLAN.md](PLAN.md) for commits, CI, tests and limitations, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -8,7 +8,7 @@ C0 is a deployable application foundation and a forkable GitHub template. Extern
 
 One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
 
-Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; optional retrieval passes acceptance; authenticated remote MCP passes installed and permitted live owner acceptance; discovery closeout is under verification. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
+Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; optional retrieval passes acceptance; authenticated remote MCP and its discovery/OpenAPI connection metadata pass installed and permitted live owner acceptance. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
 ## Current interfaces
 
@@ -43,7 +43,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Development Core/app versions are **0.23.0/0.29.0**, with migrations through `0013_oauth_consent`. The verified live implementation is Core/app 0.23.0/0.28.0 at 5bc2dca; discovery closeout 0.29.0 awaits installed/live verification. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.23.0/0.29.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is Core/app 0.23.0/0.29.0 at aa26512, with all six disposable browser workflows and active-grant recovery. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
@@ -164,7 +164,7 @@ python -m pytest -q app/tests packages/czero-core/tests tests/unit
 
 There are 386 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 169 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-seven consent/record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
-Disposable OAuth fixtures also seed active grants for exact update/clean-restore checks and exercise real Admin/Reader/Editor consent controls. Local signed HTTP verifies the exact preparation/recovery helpers and guards, including a deliberately bypassed Origin and a leftover earlier grant. Unknown virtual hosts are rejected by the NS8 proxy; the canonical application also rejects unauthorized Origins. Installed TLS, browser and recovery acceptance remains pending; test credentials, token pairs and snapshots stay outside Git and runtime images.
+Disposable OAuth fixtures also seed active grants for exact update/clean-restore checks and exercise real Admin/Reader/Editor consent controls. Local signed HTTP verifies the exact preparation/recovery helpers and guards, including a deliberately bypassed Origin and a leftover earlier grant. Unknown virtual hosts are rejected by the NS8 proxy; the canonical application also rejects unauthorized Origins. Installed TLS, browser, exact recovery and permitted live owner acceptance pass; test credentials, token pairs and snapshots stay outside Git and runtime images.
 
 Build the administration UI:
 
