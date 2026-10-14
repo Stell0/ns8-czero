@@ -9,7 +9,7 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 - Freeze verified M06 module and component digests from PLAN.md for genuine upgrade tests. Extend encrypted backup/restore with actual objects/relations/events; no new native management abstraction is required.
 
 - Object transport must preserve PermissionDenied as 403 before catching ValueError. Typed reference resolution accepts only trusted registered callbacks; they receive the transaction/current actor/UUID, enforce domain roles and return bounded data. Current stored relations retain object foreign keys; sources/Wiki adapters arrive with their real tables.
-- Record UI uses local assets, associated labels, role-gated controls and DOM text for record/schema content. Keep draft edits on conflicts; loading the saved revision is explicit. Disposable end-user SSO passwords follow the direct Browser fill/private-artifact convention; never route them through Robot keyword arguments.
+- Record-list refreshes must ignore stale response generations before rendering; clear after the accepted reply, not only before await. Dependency-free Node tests execute the real script with out-of-order responses, alongside strict real browser assertions. Record UI uses local assets, associated labels, role-gated controls and DOM text for record/schema content. Keep draft edits on conflicts; loading the saved revision is explicit. Disposable end-user SSO passwords follow the direct Browser fill/private-artifact convention; never route them through Robot keyword arguments.
 
 ## Established M06 queue/worker contracts
 

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 C0 contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 const el = id => document.getElementById(id);
-let profile = null, definitions = [], current = null, offset = 0;
+let profile = null, definitions = [], current = null, offset = 0, listRequest = 0;
 const canWrite = () => profile && ["editor", "admin"].includes(profile.role);
 const splitList = value => value.split(",").map(s => s.trim()).filter(Boolean);
 
@@ -36,10 +36,13 @@ async function loadTypes(preferred = null) {
 }
 
 async function loadRecords() {
+  const request = ++listRequest, pageOffset = offset;
   const type = el("record-type").value;
   el("record-list").replaceChildren();
   if (!type) { el("records-status").textContent = "No types yet. Ask an Admin to register one."; return; }
-  const result = await api(`objects?${new URLSearchParams({ type_name: type, limit: 50, offset })}`);
+  const result = await api(`objects?${new URLSearchParams({ type_name: type, limit: 50, offset: pageOffset })}`);
+  if (request !== listRequest) return;
+  el("record-list").replaceChildren();
   for (const record of result.objects) {
     const row = document.createElement("tr"), name = document.createElement("td"), revision = document.createElement("td"), tags = document.createElement("td"), button = document.createElement("button");
     button.type = "button"; button.textContent = typeof record.data.name === "string" ? record.data.name : record.id;
@@ -48,7 +51,7 @@ async function loadRecords() {
   }
   el("records-previous").disabled = offset === 0;
   el("records-next").disabled = result.objects.length < 50;
-  el("records-status").textContent = `${result.objects.length} records shown, starting at ${offset + 1}. Type picker shows the first 100 types.`;
+  el("records-status").textContent = `${result.objects.length} records shown, starting at ${pageOffset + 1}. Type picker shows the first 100 types.`;
 }
 const showListError = error => { el("records-status").textContent = error.message; };
 

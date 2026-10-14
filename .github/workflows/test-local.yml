@@ -30,6 +30,10 @@ jobs:
           python-version: "3.12"
       - run: pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
       - run: python -m pytest -q app/tests packages/czero-core/tests tests/unit tests/integration
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.21.0"
+      - run: node --test tests/ui/*.cjs
       - run: go run tests/check_schemas.go
       - run: bash -n build-images.sh imageroot/actions/configure-module/80start_services imageroot/actions/create-module/40scheduler imageroot/update-module.d/60scheduler imageroot/update-module.d/80restart
       - run: robot --dryrun --exclude ui -v NODE_ADDR:disposable.invalid -v IMAGE_URL:ghcr.io/stell0/czero:main -d /tmp/robot-dryrun tests
