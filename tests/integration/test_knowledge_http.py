@@ -72,7 +72,7 @@ def test_external_agent_rest_workflow_wiki_aliases_sourced_claims_graph_exports_
             assert (await client.get(path, params={'revision': 1})).json()['content']['body'] == data['body']
             exported = await client.get(path + '/export', params={'format': 'markdown', 'revision': 1})
             assert exported.text == data['body'] and exported.headers['content-disposition'].startswith('attachment;')
-            assert (await client.get(path + '/export')).json()['content']['body'] == 'Revised authored claim'
+            assert (await client.get(path + '/export')).json() == updated.json()
             entities = []
             for i in range(4):
                 result = await client.post('/api/v1/entities', json={'kind': 'system', 'label': 'HTTP entity ' + str(i), 'aliases': ['HTTP alias ' + str(i)], 'idempotency_key': 'entity-' + str(i)})

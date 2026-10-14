@@ -263,7 +263,7 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
     def history(page_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'revisions': invoke(service.page_history, context.actor, page_id, limit=limit, offset=offset)}
 
-    @app.get('/api/v1/wiki/pages/{page_id}/export')
+    @app.get('/api/v1/wiki/pages/{page_id}/export', response_model=PageView)
     def export(page_id: UUID, format: Literal['json', 'markdown'] = 'json', revision: int | None = None,
                context: RequestAccess = Depends(read_context)):
         result = invoke(service.export_page, context.actor, page_id, revision=revision, format=format)
