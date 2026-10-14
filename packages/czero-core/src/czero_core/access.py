@@ -103,6 +103,9 @@ class AccessService:
                 raise ValueError("account_not_found")
             if target == self.owner_account_key:
                 raise PermissionDenied()
+            # Delegation never survives a membership change, including a later
+            # regrant of the same role. Grant issuance takes this role lock too.
+            connection.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account_id})
             if role is None:
                 connection.execute(text("DELETE FROM c0_memberships WHERE account_id = :id"), {"id": account_id})
             else:
