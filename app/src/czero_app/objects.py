@@ -135,8 +135,8 @@ class EventsView(BaseModel):
     events: list[EventView]
 
 
-def install_object_routes(app: FastAPI,database,auth,read_context,write_context):
-    service=ObjectService(database,auth.access if auth else None)
+def install_object_routes(app: FastAPI,database,auth,read_context,write_context, *, reference_resolvers=None):
+    service=ObjectService(database,auth.access if auth else None,reference_resolvers=reference_resolvers)
     app.state.objects=service
 
     def invoke(operation,*args,**kwargs):

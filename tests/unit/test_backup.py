@@ -77,10 +77,43 @@ def test_backup_pauses_worker_until_cleanup_and_resumes_after_failure(monkeypatc
         assert resume not in calls
         assert (tmp_path/'backup-worker-state.json').stat().st_mode & 0o777==0o600
         assert calls.index(stop)<next(i for i,c in enumerate(calls) if c[:3]==['podman','exec','czero-postgres'])
+        assert calls.index(['systemctl','--user','stop','czero.service'])<next(i for i,c in enumerate(calls) if c[:3]==['podman','exec','czero-postgres'])
+        assert ['systemctl','--user','start','czero.service'] not in calls
         runpy.run_path(str(ROOT/'imageroot/bin/module-cleanup-state'))
         assert resume in calls
+        assert ['systemctl','--user','start','czero.service'] in calls
         assert not (tmp_path/'backup-worker-state.json').exists()
         assert not (tmp_path/'czero.pg_dump').exists()
+
+
+@pytest.mark.parametrize('app_active,timer_active', [(True, False), (True, True), (False, False)])
+@pytest.mark.parametrize('failed', [False, True])
+def test_backup_quiesces_app_through_copy_and_preserves_prior_states(monkeypatch, tmp_path, app_active, timer_active, failed):
+    import subprocess
+    calls = []
+    def run(command, **kwargs):
+        calls.append(command)
+        if 'is-active' in command:
+            state = {'czero.service': app_active, 'czero-worker.timer': timer_active}
+            return SimpleNamespace(returncode=0 if state.get(command[-1], True) else 1)
+        if command[:3] == ['podman', 'exec', 'czero-postgres']:
+            if failed:
+                raise subprocess.CalledProcessError(1, command)
+            kwargs['stdout'].write(b'PGDMP fixture')
+        return SimpleNamespace(returncode=0)
+    agent_fixture(monkeypatch)
+    monkeypatch.setattr(subprocess, 'run', run)
+    monkeypatch.setenv('AGENT_STATE_DIR', str(tmp_path))
+    if failed:
+        with pytest.raises(subprocess.CalledProcessError):
+            runpy.run_path(str(ROOT / 'imageroot/bin/module-dump-state'))
+    else:
+        runpy.run_path(str(ROOT / 'imageroot/bin/module-dump-state'))
+        assert ['systemctl','--user','start','czero.service'] not in calls
+        assert ['systemctl','--user','start','czero-worker.timer'] not in calls
+        runpy.run_path(str(ROOT / 'imageroot/bin/module-cleanup-state'))
+    assert (['systemctl','--user','start','czero.service'] in calls) == app_active
+    assert ['systemctl','--user','start' if timer_active else 'stop','czero-worker.timer'] == calls[-1]
 
 
 @pytest.mark.parametrize('metadata,expected',[

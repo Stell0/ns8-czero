@@ -107,8 +107,8 @@ class TaskRunsView(BaseModel):
     runs: list[TaskRunView]
 
 
-def install_job_routes(app: FastAPI, database, auth, read_context, write_context):
-    service = JobService(database,build_registry(),auth.access if auth else None)
+def install_job_routes(app: FastAPI, database, auth, read_context, write_context, *, registry=None):
+    service = JobService(database,registry or build_registry(database),auth.access if auth else None)
     app.state.jobs = service
 
     def invoke(operation, *args, **kwargs):

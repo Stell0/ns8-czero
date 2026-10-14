@@ -11,8 +11,10 @@ state = Path(os.environ['AGENT_STATE_DIR'])
 worker_state = state / 'backup-worker-state.json'
 if worker_state.exists():
     saved = json.loads(worker_state.read_text())
-    if saved.get('scheduler_active') is True:
-        subprocess.run(['systemctl','--user','start','czero-worker.timer'],check=True)
+    if saved.get('app_active') is True:
+        subprocess.run(['systemctl','--user','start','czero.service'],check=True)
+    # App activation may start an enabled timer that was explicitly paused.
+    subprocess.run(['systemctl','--user','start' if saved.get('scheduler_active') is True else 'stop','czero-worker.timer'],check=True)
     worker_state.unlink()
 for name in ('czero.pg_dump','backup-metadata.json'):
     (state / name).unlink(missing_ok=True)

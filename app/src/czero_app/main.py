@@ -16,6 +16,9 @@ from czero_app import __version__
 from czero_app.auth import AppAuth, install_auth_routes
 from czero_app.jobs import install_job_routes
 from czero_app.objects import install_object_routes
+from czero_app.sources import install_source_routes, UploadBodyLimit
+from czero_app.job_handlers import build_registry
+from czero_core.sources import OriginalStore
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -73,9 +76,15 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         lifespan=lifespan,
     )
     instance_app.state.auth = auth
+    # Keep the body guard inside the existing response-header middleware;
+    # multipart errors are handled before crossing its task-group boundary.
+    instance_app.add_middleware(UploadBodyLimit)
     read_context, write_context = install_auth_routes(instance_app, auth, base_path)
-    install_job_routes(instance_app, database, auth, read_context, write_context)
-    install_object_routes(instance_app, database, auth, read_context, write_context)
+    originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
+    registry = build_registry(database, originals)
+    install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
+    sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
+    install_object_routes(instance_app, database, auth, read_context, write_context, reference_resolvers=sources.reference_resolvers())
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
@@ -107,7 +116,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Readers can inspect typed objects; Editors can write records and relations; Admins register schemas. Search and MCP are planned milestones.</p>"
+            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Editors can write records/relations and upload or retry evidence. Admins register schemas. Wiki, hybrid retrieval and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
         )

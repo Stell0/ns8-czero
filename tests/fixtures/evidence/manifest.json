@@ -1,0 +1,22 @@
+[
+  {
+    "filename": "sample.txt",
+    "media_type": "text/plain",
+    "text": "Inventory evidence café 東京"
+  },
+  {
+    "filename": "sample.md",
+    "media_type": "text/markdown",
+    "text": "# Inventory\n\nInventory evidence café 東京\n\n# Projects\n\nProject evidence"
+  },
+  {
+    "filename": "sample.pdf",
+    "media_type": "application/pdf",
+    "text": "Inventory PDF evidence"
+  },
+  {
+    "filename": "sample.docx",
+    "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text": "Inventory evidence café 東京"
+  }
+]
