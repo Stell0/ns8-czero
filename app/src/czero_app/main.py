@@ -25,6 +25,7 @@ from czero_app.retrieval import install_retrieval_routes
 from czero_core.retrieval_config import load_settings
 from czero_app.operations import OperationCatalog
 from czero_core.identity import Role
+from czero_app.oauth import install_oauth_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -98,6 +99,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     install_retrieval_routes(instance_app, database, auth, read_context, settings=retrieval_settings)
     install_object_routes(instance_app, database, auth, read_context, write_context,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
+    install_oauth_routes(instance_app, auth, read_context, write_context)
     catalog.annotate_openapi(instance_app)
 
     @instance_app.get("/", include_in_schema=False)

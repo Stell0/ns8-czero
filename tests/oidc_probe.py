@@ -219,6 +219,32 @@ def verify_capabilities(browser, role):
                    for operation in definitions.values()), 'Reader discovery exposes writes'
 
 
+def seed_oauth_clients(browser, profile):
+    clients = []
+    for name, path, scopes in [('Disposable knowledge client', 'knowledge', ['c0:read','c0:write']),
+                              ('Disposable disabled client', 'disabled', ['c0:read'])]:
+        status, body, _ = browser.api('/api/v1/oauth/clients', {'client_name': name,
+            'redirect_uris': ['https://client.example.test/' + path], 'allowed_scopes': scopes},
+            'POST', profile['csrf_token'])
+        assert status == 201, 'Cannot approve disposable OAuth client'
+        client = json.loads(body)
+        if path == 'disabled' and client['enabled']:
+            status, body, _ = browser.api('/api/v1/oauth/clients/' + client['client_id'],
+                {'enabled': False, 'expected_revision': client['revision']}, 'PUT', profile['csrf_token'])
+            assert status == 200, 'Cannot disable disposable OAuth client'
+            client = json.loads(body)
+        assert client['token_endpoint_auth_method'] == 'none' and 'client_secret' not in client, 'Client approval exposes a secret'
+        clients.append(client)
+    return clients
+
+
+def verify_oauth_clients(browser, expected):
+    status, body, _ = browser.api('/api/v1/oauth/clients')
+    assert status == 200, 'Recovered approved clients unavailable'
+    actual = {client['client_id']: client for client in json.loads(body)['clients']}
+    assert all(actual.get(client['client_id']) == client for client in expected), 'Recovered client approval metadata changed'
+
+
 def probe():
     payload = json.loads((STATE / "personas.json").read_text())
     origin = "https://" + payload["host"]
@@ -251,6 +277,8 @@ def probe():
     verify_capabilities(reader, 'reader')
     status, _, _ = reader.api("/api/v1/access/accounts")
     assert status == 403, "Reader can administer"
+    status, _, _ = reader.api('/api/v1/oauth/clients')
+    assert status == 403, 'Reader can inspect approved external clients'
     status,_,_=reader.api("/api/v1/objects?type_name=fixture-inventory")
     assert status==200,"Reader cannot browse objects"
     status,_,_=reader.api("/api/v1/objects",{"type_name":"fixture-inventory","data":{"name":"denied","count":0}},"POST",current["csrf_token"])
@@ -392,9 +420,11 @@ def persistence(operation):
         relation_id = json.loads(body)['id']
         source_records = seed_sources(owner, profile)
         knowledge = seed_knowledge(owner, profile, source_records, records)
-        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":relation_id,"sources":source_records,"knowledge":knowledge}))
+        clients = seed_oauth_clients(owner, profile)
+        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":relation_id,"sources":source_records,"knowledge":knowledge,"oauth_clients":clients}))
     expected = json.loads(expected_file.read_text())
     assert profile["id"] == expected["owner"], "Recovered owner identity changed"
+    verify_oauth_clients(owner, expected['oauth_clients'])
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
