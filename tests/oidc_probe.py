@@ -210,6 +210,10 @@ def verify_capabilities(browser, role):
     assert status == 200, 'Caller capability discovery unavailable'
     capabilities = json.loads(body)
     assert capabilities['authenticated'] and capabilities['role'] == role, 'Capability role is stale'
+    assert capabilities['interfaces']['mcp'] and capabilities['mcp_url'] == browser.origin+'/mcp', 'Installed MCP discovery unavailable'
+    assert capabilities['oauth']['authorization_server'] == browser.origin+'/oauth', 'Installed OAuth discovery mismatch'
+    status, body, _ = browser.api('/openapi.json')
+    assert status == 200 and json.loads(body)['x-c0-interfaces']['mcp_url'] == capabilities['mcp_url'], 'Installed OpenAPI MCP metadata mismatch'
     definitions = {operation['name']: operation for operation in capabilities['operations']}
     assert {'objects_get', 'wiki_pages_get', 'documents_get', 'knowledge_search'} <= definitions.keys(), 'Reader operations missing'
     assert ('wiki_pages_create' in definitions) == (role != 'reader'), 'Editor discovery mismatch'

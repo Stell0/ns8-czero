@@ -562,7 +562,7 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${host}/agents
     Get Text    body    contains    search source text.
     Get Text    body    contains    sourced claims and bounded graph queries are available.
-    Get Text    body    contains    MCP is a planned milestone.
+    Get Text    body    contains    MCP is unavailable until NS8 sign-in and hostname-root routing are configured.
     Go To    https://${host}/agents/capabilities.json
     Get Text    body    contains    "authenticated":false
     Get Text    body    contains    "operations":[]

@@ -76,7 +76,8 @@ async def check(value):
                 assert not result.is_error and result.structured_content == expected, 'Installed REST/MCP result mismatch'
                 if value['scope'] == 'c0:read':
                     assert all(tool.annotations.read_only_hint for tool in tools), 'Read token discovered mutation'
-                    assert (await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})).is_error, 'Read token mutated'
+                    denied = await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})
+                    assert denied.is_error and denied.content[0].text == 'permission_denied', 'Read token mutation scope not enforced'
                 assert str((await client.list_resources()).resources[0].uri) == 'c0://capabilities', 'Installed resource missing'
         guard_body = {'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}}
         guard_headers = {'Accept':'application/json, text/event-stream', 'MCP-Protocol-Version':'2025-11-25'}

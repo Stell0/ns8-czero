@@ -152,14 +152,25 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def auth_script() -> FileResponse:
         return FileResponse(static_dir / "auth.js", media_type="text/javascript")
 
+    def connection_metadata():
+        available = mcp_child is not None
+        origin = auth.oidc.config.public_origin.rstrip('/') if available else None
+        return {'interfaces': {'rest': True, 'mcp': available},
+                'rest_base': base_path + '/api/v1',
+                'mcp_url': origin + '/mcp' if available else None,
+                'oauth': {'authorization_server': origin + '/oauth',
+                    'authorization_metadata': origin + '/.well-known/oauth-authorization-server/oauth',
+                    'protected_resource_metadata': origin + '/.well-known/oauth-protected-resource/mcp',
+                    'scopes': ['c0:read', 'c0:write', 'c0:admin'],
+                    'public_clients_only': True, 'dynamic_registration': False} if available else None}
+
     def capabilities(request):
         context = read_context(request) if (request.headers.get('authorization') is not None
             or request.cookies.get('c0_session')) else None
         operations = catalog.registry.describe(context.actor, scopes=context.scopes) if context else []
         return {'version': 1, 'authenticated': context is not None,
                 'role': auth.access.authorize(context.actor, Role.READER).role.value if context else None,
-                'interfaces': {'rest': True, 'mcp': False},
-                'rest_base': base_path + '/api/v1', 'mcp_url': None,
+                **connection_metadata(),
                 'operations': operations,
                 'rest_attachments': ['multipart source upload', 'retained original download', 'Markdown export']}
 
@@ -176,6 +187,17 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             + escape(operation['description']) + ' (' + escape(operation['required_scope']) + ')</li>'
             for operation in current['operations'])
         caller = ('Current role: ' + current['role']) if current['authenticated'] else 'Sign in to inspect your available operations.'
+        connection = (
+            '<h2>Connect an MCP client</h2><p>Remote MCP Streamable HTTP is available at '
+            '<code>' + escape(current['mcp_url']) + '</code>. Ask an application Admin to approve '
+            'your public client ID and exact callback, then sign in and explicitly consent. '
+            'Use S256 and the exact server URL as the resource; no client secret or dynamic registration.</p>'
+            '<p>Scopes: <code>c0:read</code>, <code>c0:write</code>, <code>c0:admin</code>. '
+            'Your current role also limits every operation.</p>'
+            '<ul><li><a href="' + escape(current['oauth']['protected_resource_metadata'], quote=True) + '">Protected-resource metadata</a></li>'
+            '<li><a href="' + escape(current['oauth']['authorization_metadata'], quote=True) + '">OAuth authorization metadata</a></li></ul>'
+        ) if current['interfaces']['mcp'] else (
+            '<p>MCP is unavailable until NS8 sign-in and hostname-root routing are configured.</p>')
         return (
             "<!doctype html><html lang='en'><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -184,11 +206,11 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. MCP is a planned milestone.</p>"
+            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. </p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li>"
             "<li><a href='./agents/capabilities.json'>Caller-aware capability JSON</a></li></ul>"
-            "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul></main></html>"
+            + connection + "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul></main></html>"
         )
 
     @instance_app.get("/api/v1/health", name="health", response_model=HealthResponse,
@@ -210,6 +232,15 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth')
         instance_app.state.mcp_app = mcp_child
         instance_app.mount('/', mcp_child, name='mcp')
+
+    default_openapi = instance_app.openapi
+
+    def described_openapi():
+        schema = default_openapi()
+        schema['x-c0-interfaces'] = connection_metadata()
+        return schema
+
+    instance_app.openapi = described_openapi
 
     if not base_path:
         return instance_app

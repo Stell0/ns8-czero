@@ -25,7 +25,10 @@ def test_signed_discovery_and_direct_operations_match_rest_and_recheck_roles(app
             anonymous = await client.get('/agents/capabilities.json')
             assert anonymous.status_code == 200 and anonymous.headers['cache-control'] == 'no-store'
             assert anonymous.json()['operations'] == [] and not anonymous.json()['authenticated']
-            assert anonymous.json()['interfaces']['mcp'] is False
+            assert anonymous.json()['interfaces']['mcp'] is True
+            assert anonymous.json()['mcp_url'] == ORIGIN + '/mcp'
+            assert anonymous.json()['oauth']['authorization_server'] == ORIGIN + '/oauth'
+            assert (await client.get('/agents')).text.count('Remote MCP Streamable HTTP is available') == 1
             assert (await client.get('/agents/capabilities.json', headers={'Authorization':'Bearer invalid'})).status_code == 401
             client.headers['Authorization'] = 'Bearer ' + owner_token
             try:
@@ -36,6 +39,8 @@ def test_signed_discovery_and_direct_operations_match_rest_and_recheck_roles(app
                 assert definitions['schedules_list']['minimum_role'] == 'admin'
                 assert 'multipart source upload' in capabilities['rest_attachments']
                 schema = (await client.get('/openapi.json')).json()
+                assert schema['x-c0-interfaces']['mcp_url'] == capabilities['mcp_url']
+                assert schema['x-c0-interfaces']['oauth'] == capabilities['oauth']
                 assert schema['paths']['/api/v1/objects']['post']['operationId'] == 'objects_create'
                 assert schema['paths']['/api/v1/objects']['post']['x-c0-operation']['required_scope'] == 'c0:write'
                 created = await client.post('/api/v1/object-types', json={'name':name,'label':'Parity','schema':SCHEMA})
@@ -69,4 +74,21 @@ def test_signed_discovery_and_direct_operations_match_rest_and_recheck_roles(app
                 assert (await client.get('/agents/capabilities.json')).status_code == 403
             finally:
                 cleanup(db, [name])
+    asyncio.run(check())
+
+
+def test_configured_legacy_prefix_keeps_rest_and_does_not_advertise_mcp(application):
+    from czero_app.main import create_app
+    configured, *_, database, _ = application
+    legacy = create_app('czero17', base_path='/czero/czero17', database=database, auth=configured.state.auth)
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=legacy), base_url=ORIGIN) as client:
+            value = (await client.get('/czero/czero17/agents/capabilities.json')).json()
+            assert value['interfaces'] == {'rest': True, 'mcp': False}
+            assert value['mcp_url'] is None and value['oauth'] is None
+            assert value['rest_base'] == '/czero/czero17/api/v1' and value['operations'] == []
+            schema = (await client.get('/czero/czero17/openapi.json')).json()
+            assert schema['x-c0-interfaces']['mcp_url'] is None
+            assert '/api/v1/wiki/pages' in schema['paths']
+            assert (await client.get('/mcp')).status_code == 404
     asyncio.run(check())
