@@ -4,6 +4,11 @@
 # Adapt the maintained NS8 mail/Porthos timer convention.
 [Unit]
 Description=C0 deterministic scheduler wake
+# Timer defaults order before timers.target/basic.target, but this timer must
+# follow the app service. Keep lifecycle/shutdown ordering explicit instead.
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
 PartOf=czero.service
 Requisite=czero.service
 After=czero.service

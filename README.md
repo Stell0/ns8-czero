@@ -80,7 +80,7 @@ On the Records page, choose a type, browse or open a record, and use New record 
 
 For example, register `inventory` with `{"type":"object","properties":{"name":{"type":"string","maxLength":64}},"required":["name"]}` and `unique_fields:["name"]` at `/api/v1/object-types`; POST `{"type_name":"inventory","data":{"name":"Rack A"},"tags":["inventory"]}` to `/api/v1/objects`. PUT the record with `data` and `expected_revision` from its last response. Cookie writes require the existing CSRF token; bearer requests use the signed access token.
 
-The live owner object checks pass, but native node restart recovered the app/database without an active scheduler timer. M07 remains open while this lifecycle gap is diagnosed; app-only restart tests do not cover a full rootless user-manager restart. The native scheduler diagnostic now includes bounded timer state/result/dependency names.
+The live owner object checks pass, but native node restart recovered the app/database without an active scheduler timer. The new disposable manager restart regression reproduces a systemd app/timer/basic-target ordering cycle. A focused timer dependency fix is awaiting replacement acceptance; M07 remains open. App-only restart tests do not cover a full rootless user-manager restart. The native scheduler diagnostic now includes bounded timer state/result/dependency names.
 
 ## Remaining roadmap
 
