@@ -38,7 +38,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.15.1/0.18.1**, with packaged migrations through `0009_retrieval_text`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.16.0/0.19.0**, with packaged migrations through `0010_embeddings`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native update/restore and permitted live owner checks. Full retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -115,6 +115,8 @@ M10's first slice exposes `GET /api/v1/knowledge/search?query=inventory&kind=all
 Core now includes locally tested embeddings/System One HTTP adapters; they are not wired into retrieval or native settings yet. They cap absolute time at five seconds, request/response bytes, eight embedding inputs and sixteen scorer candidates. Noul responses must match all candidate IDs and the configured model; scores are finite probabilities. Kev latest aliases resolve to backend-specific IDs, so configure a pinned resolved model for calibration. Protocol mocks and a disposable real HTTPS server verify trust/deadlines; operator CA configuration is honored while untrusted certificates fail. No real remote inference or provider quality is claimed.
 
 
+Core's embedding storage now passes ten PostgreSQL cases: stable profile identity, complete derivative Wiki offsets, idempotent eight-input indexing, worker execution, reindex generations, profile isolation, archives/current revisions, actual filtered HNSW plans, failure rollback and scheduler-pause preservation. Vectors are full precision, normalized and zero-padded to 2000 dimensions; same-profile cosine is preserved and raw evidence/claims/revisions remain unchanged. A disabled embedding-refresh schedule is seeded; Safe disabled handlers keep an explicitly enabled dormant schedule from blocking other jobs. Runtime provider configuration/activation, semantic search and scoring are still pending. This storage slice has no installed/vector-backup acceptance yet.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -137,7 +139,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 286 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 109 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 286 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 119 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 

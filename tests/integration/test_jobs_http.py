@@ -29,7 +29,7 @@ def test_signed_rest_queue_and_schedule_contracts(application):
             owner_id=(await client.get('/api/v1/me')).json()['id']
             try:
                 handlers=await client.get('/api/v1/jobs/handlers')
-                assert handlers.status_code==200 and {h['name'] for h in handlers.json()['handlers']}=={'health','maintenance','source.extract','source.cleanup'}
+                assert handlers.status_code==200 and {h['name'] for h in handlers.json()['handlers']}=={'health','maintenance','source.extract','source.cleanup','embedding.index','embedding.reindex'}
                 data={'handler':'health','payload':{},'idempotency_key':'http-one'}
                 first=await client.post('/api/v1/jobs',json=data)
                 assert first.status_code==201
