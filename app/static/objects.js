@@ -1,7 +1,7 @@
 // Copyright (C) 2026 C0 contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 const el = id => document.getElementById(id);
-let profile = null, definitions = [], current = null, offset = 0, listRequest = 0;
+let profile = null, definitions = [], current = null, offset = 0, listRequest = 0, detailRequest = 0, relationRequest = 0;
 const canWrite = () => profile && ["editor", "admin"].includes(profile.role);
 const splitList = value => value.split(",").map(s => s.trim()).filter(Boolean);
 
@@ -56,6 +56,7 @@ async function loadRecords() {
 const showListError = error => { el("records-status").textContent = error.message; };
 
 function displayRecord(record) {
+  ++detailRequest;
   current = record;
   const type = definitions.find(t => t.name === (record ? record.type_name : el("record-type").value));
   el("record-detail").hidden = false; el("record-heading").textContent = record ? type.label : "New record";
@@ -69,8 +70,11 @@ function displayRecord(record) {
 }
 
 async function loadRelations() {
+  const request = ++relationRequest;
   if (!current) return;
-  const result = await api(`objects/${current.id}/relations`);
+  const objectId = current.id;
+  const result = await api(`objects/${objectId}/relations`);
+  if (request !== relationRequest || !current || current.id !== objectId) return;
   el("record-relations").replaceChildren();
   for (const relation of result.relations) {
     const li = document.createElement("li"), outgoing = relation.source_id === current.id, other = outgoing ? relation.target_id : relation.source_id;
@@ -84,12 +88,18 @@ async function loadRelations() {
   }
 }
 async function selectRecord(id) {
+  const request = ++detailRequest;
   const record = await api(`objects/${id}`);
-  if (!definitions.some(t => t.name === record.type_name)) definitions.push(await api(`object-types/${encodeURIComponent(record.type_name)}`));
+  if (request !== detailRequest) return;
+  if (!definitions.some(t => t.name === record.type_name)) {
+    const definition = await api(`object-types/${encodeURIComponent(record.type_name)}`);
+    if (request !== detailRequest) return;
+    definitions.push(definition);
+  }
   displayRecord(record); await loadRelations();
 }
 
-el("record-type").addEventListener("change", () => { offset = 0; current = null; el("record-detail").hidden = true; loadRecords().catch(showListError); });
+el("record-type").addEventListener("change", () => { offset = 0; ++detailRequest; current = null; el("record-detail").hidden = true; loadRecords().catch(showListError); });
 el("refresh-records").addEventListener("click", () => loadRecords().catch(showListError));
 el("records-previous").addEventListener("click", () => { offset = Math.max(0, offset - 50); loadRecords().catch(showListError); });
 el("records-next").addEventListener("click", () => { offset += 50; loadRecords().catch(showListError); });
@@ -97,10 +107,12 @@ el("new-record").addEventListener("click", () => { displayRecord(null); el("reco
 el("reload-record").addEventListener("click", () => selectRecord(current.id).catch(e => { el("record-status").textContent = e.message; }));
 el("record-form").addEventListener("submit", async event => {
   event.preventDefault(); el("save-record").disabled = true;
+  const selected = detailRequest;
   try {
     const data = JSON.parse(el("record-data").value), tags = splitList(el("record-tags").value);
     const record = current ? await api(`objects/${current.id}`, "PUT", { data, tags, expected_revision: current.revision }) : await api("objects", "POST", { type_name: el("record-type").value, data, tags });
-    displayRecord(record); el("record-status").textContent = "Record saved."; await loadRecords(); await loadRelations();
+    if (selected === detailRequest) { displayRecord(record); el("record-status").textContent = "Record saved."; await loadRelations(); }
+    await loadRecords();
   } catch (error) { el("record-status").textContent = error instanceof SyntaxError ? "Enter valid JSON." : error.message; }
   finally { el("save-record").disabled = false; }
 });
@@ -117,7 +129,7 @@ el("type-form").addEventListener("submit", async event => {
   try {
     const name = el("type-name").value;
     await api("object-types", "POST", { name, label: el("type-label").value, schema: JSON.parse(el("type-schema").value), unique_fields: splitList(el("type-unique").value) });
-    await loadTypes(name); offset = 0; current = null; el("record-detail").hidden = true; await loadRecords(); el("type-status").textContent = "Type registered.";
+    await loadTypes(name); offset = 0; ++detailRequest; current = null; el("record-detail").hidden = true; await loadRecords(); el("type-status").textContent = "Type registered.";
   } catch (error) { el("type-status").textContent = error instanceof SyntaxError ? "Enter valid JSON Schema." : error.message; }
 });
 (async () => {

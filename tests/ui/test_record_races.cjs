@@ -22,7 +22,7 @@ function harness() {
     fetch(url) {
       return new Promise(resolve => {
         // Leave automatic identity bootstrap parked; only exercise listing.
-        if (url.includes('/objects?')) requests.push({ url, resolve });
+        if (url.includes('/objects')) requests.push({ url, resolve });
       });
     } });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../../app/static/objects.js'), 'utf8'), context);
@@ -48,4 +48,33 @@ test('a late response cannot overwrite the newest selected type', async () => {
   h.requests[0].resolve(response('Old inventory')); await first;
   assert.equal(h.nodes.get('record-list').children.length, 1);
   assert.equal(recordName(h), 'Project');
+});
+
+
+test('late relation replies cannot replace the newly selected record edges', async () => {
+  const h = harness();
+  vm.runInContext("current = {id:'rack'}", h.context);
+  const first = vm.runInContext('loadRelations()', h.context);
+  vm.runInContext("current = {id:'project'}", h.context);
+  const second = vm.runInContext('loadRelations()', h.context);
+  const edge = (source, target) => ({ok:true,status:200,json:async()=>({relations:[
+    {id:'relation',source_id:source,target_id:target,kind:'linked'}]})});
+  h.requests[1].resolve(edge('project','new-target')); await second;
+  h.requests[0].resolve(edge('rack','old-target')); await first;
+  assert.equal(h.nodes.get('record-relations').children[0].children[0].textContent, 'linked → new-target');
+});
+
+test('late detail replies cannot switch back to an earlier selection', async () => {
+  const h = harness();
+  vm.runInContext("definitions = [{name:'inventory',label:'Inventory',schema:{type:'object'}}]",h.context);
+  const first = vm.runInContext("selectRecord('old')",h.context);
+  const second = vm.runInContext("selectRecord('new')",h.context);
+  const record = id => ({ok:true,status:200,json:async()=>({id,type_name:'inventory',data:{name:id},tags:[],revision:1})});
+  h.requests[1].resolve(record('new'));
+  // Finish the detail response's subsequent relation request.
+  await new Promise(setImmediate);
+  h.requests[2].resolve({ok:true,status:200,json:async()=>({relations:[]})});
+  await second;
+  h.requests[0].resolve(record('old')); await first;
+  assert.match(h.nodes.get('record-identity').textContent,/^new · revision 1$/);
 });
