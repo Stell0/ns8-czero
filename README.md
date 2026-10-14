@@ -41,7 +41,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Development Core/app versions are **0.22.0/0.26.0**, with packaged migrations through `0012_oauth_grants`. The verified live client-approval image is 0.21.0/0.24.0; grant-storage publication/native verification is pending. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.22.1/0.26.1**, with packaged migrations through `0012_oauth_grants`. The verified live client-approval image is 0.21.0/0.24.0; grant-storage publication/native verification is pending. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native update/restore and permitted live owner checks. Optional retrieval and its stronger complete-index/paused-refresh recovery fixture pass acceptance. Caller-aware capability JSON passes installed and permitted live acceptance. `/mcp` and external OAuth remain M11 work. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -151,7 +151,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 385 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 148 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-four record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 385 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 151 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks twenty-four record/source/Wiki/search response, role and retrieval-form cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
