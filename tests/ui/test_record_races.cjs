@@ -95,3 +95,31 @@ test('an earlier save completion preserves a new unsaved draft', async () => {
   assert.equal(h.nodes.get('record-heading').textContent,'New record');
   assert.equal(h.nodes.get('record-data').value,'{"name":"unsaved new draft"}');
 });
+
+test('a save preserves newer edits to the same record and advances its revision', async () => {
+  const h = harness();
+  vm.runInContext("profile={role:'editor',csrf_token:'fixture-only'}; definitions=[{name:'inventory',label:'Inventory',schema:{type:'object'}}]; displayRecord({id:'same',type_name:'inventory',data:{name:'old'},tags:[],revision:1})", h.context);
+  h.nodes.get('record-data').value='{"name":"first edit"}';
+  const saving=h.nodes.get('record-form').listeners.submit({preventDefault(){}});
+  h.nodes.get('record-data').value='{"name":"newer draft"}';h.nodes.get('record-data').listeners.input();
+  h.requests[0].resolve({ok:true,status:200,json:async()=>({id:'same',type_name:'inventory',data:{name:'first edit'},tags:[],revision:2})});
+  await new Promise(setImmediate);h.requests[1].resolve(response('first edit'));await saving;
+  assert.equal(h.nodes.get('record-data').value,'{"name":"newer draft"}');
+  assert.match(h.nodes.get('record-status').textContent,/newer edits are preserved/);
+  assert.equal(vm.runInContext('current.revision',h.context),2);
+});
+
+test('late relation targets cannot replace another selected target type', async()=>{
+  const h=harness();vm.runInContext("profile={role:'editor',csrf_token:'fixture-only'}; current={id:'source'}",h.context);
+  h.nodes.get('relation-type').value='inventory';const first=vm.runInContext('loadRelationTargets()',h.context);
+  h.nodes.get('relation-type').value='projects';h.nodes.get('relation-type').listeners.change();
+  const second=vm.runInContext('loadRelationTargets()',h.context);h.requests[1].resolve(response('New project'));await second;
+  h.requests[0].resolve(response('Old target'));await first;
+  assert.match(h.nodes.get('relation-picker').children[1].textContent,/New project/);
+});
+test('relation target replies preserve a newer manually entered ID',async()=>{
+  const h=harness();vm.runInContext("profile={role:'editor',csrf_token:'fixture-only'}; current={id:'source'}",h.context);
+  h.nodes.get('relation-type').value='inventory';const pending=vm.runInContext('loadRelationTargets()',h.context);
+  h.nodes.get('relation-target').value='new-manual-id';h.requests[0].resolve(response('Target'));await pending;
+  assert.equal(h.nodes.get('relation-target').value,'new-manual-id');
+});

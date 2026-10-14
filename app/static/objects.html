@@ -19,7 +19,8 @@
       <h2 id="record-heading">Record</h2><p id="record-identity"></p>
       <details><summary>Type schema</summary><pre id="record-schema"></pre></details>
       <form id="record-form">
-        <label for="record-data">Record data (JSON)</label><textarea id="record-data" rows="12" maxlength="65536" required></textarea>
+        <div id="record-fields" aria-label="Record fields"></div><p id="record-fields-status" role="status" aria-live="polite"></p>
+        <details id="record-json"><summary>Advanced JSON editor</summary><label for="record-data">Record data (JSON)</label><textarea id="record-data" rows="12" maxlength="65536" required></textarea></details>
         <label for="record-tags">Tags (comma separated)</label><input id="record-tags" maxlength="2048">
         <button id="save-record" type="submit" hidden>Save record</button><button id="reload-record" type="button" hidden>Load saved version</button><button id="delete-record" type="button" hidden>Delete record</button>
       </form><p id="record-status" role="status" aria-live="polite"></p>
@@ -27,6 +28,9 @@
       <form id="relation-form" hidden>
         <label for="relation-kind">Relation kind</label><input id="relation-kind" maxlength="64" required value="related-to">
         <label for="relation-type">Target type</label><select id="relation-type"></select>
+        <button id="browse-relation-targets" type="button">Browse target records</button>
+        <label for="relation-picker">Choose a target record</label><select id="relation-picker"><option value="">Choose a record, or enter an ID below</option></select>
+        <button id="relation-targets-previous" type="button" disabled>Previous targets</button><button id="relation-targets-next" type="button" disabled>Next targets</button><p id="relation-targets-status" role="status" aria-live="polite"></p>
         <label for="relation-target">Target record ID</label><input id="relation-target" minlength="36" maxlength="36" required>
         <button type="submit">Add relation</button>
       </form>
@@ -42,4 +46,4 @@
       </form><p id="type-status" role="status" aria-live="polite"></p>
     </details>
   </div>
-</main><script src="./objects.js" defer></script><script src="./navigation.js" defer></script></body></html>
+</main><script src="./record-fields.js" defer></script><script src="./objects.js" defer></script><script src="./navigation.js" defer></script></body></html>

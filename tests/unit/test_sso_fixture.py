@@ -162,7 +162,8 @@ def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monke
         if command.startswith('cat '): return json.dumps({'password':secret})
         return '', '', 0
     ssh=SimpleNamespace(execute_command=execute)
-    browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)))
+    browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
+        get_text=lambda selector:'00000000-0000-4000-8000-000000000001 · revision 1')
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))

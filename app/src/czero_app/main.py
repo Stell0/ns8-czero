@@ -132,6 +132,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def search_script() -> FileResponse:
         return FileResponse(static_dir / 'search.js', media_type='text/javascript')
 
+    @instance_app.get('/record-fields.js', include_in_schema=False)
+    async def record_fields_script() -> FileResponse:
+        return FileResponse(static_dir / 'record-fields.js', media_type='text/javascript')
+
     @instance_app.get("/objects.js", include_in_schema=False)
     async def objects_script() -> FileResponse:
         return FileResponse(static_dir / "objects.js", media_type="text/javascript")
