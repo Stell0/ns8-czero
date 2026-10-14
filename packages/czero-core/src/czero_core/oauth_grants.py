@@ -134,6 +134,12 @@ class OAuthGrantService:
 
     def issue_code(self, session, client_id, *, callback, scopes, challenge, resource):
         """Called only after explicit, CSRF-protected consent by this session."""
+        with self.access.database.engine.begin() as connection:
+            return self._issue_code(connection, session, client_id, callback=callback,
+                scopes=scopes, challenge=challenge, resource=resource)
+
+    def _issue_code(self, connection, session, client_id, *, callback, scopes, challenge, resource):
+        """Called only after explicit, CSRF-protected consent by this session."""
         if not isinstance(session, SessionContext) or session.expires_at.tzinfo is None:
             raise GrantRejected()
         if type(scopes) not in (set, frozenset) or not scopes or not scopes <= SCOPES:
@@ -151,33 +157,32 @@ class OAuthGrantService:
         if expires <= current:
             raise GrantRejected()
         code = secrets.token_urlsafe(32)
-        with self.access.database.engine.begin() as connection:
-            self._lock(connection, roles=True)
-            self._clean(connection)
-            actor = self.access._actor(connection, session.actor.user_id)
-            actor.require(Role.READER)
-            for scope, role in [('c0:write', Role.EDITOR), ('c0:admin', Role.ADMIN)]:
-                if scope in scopes:
-                    actor.require(role)
-            client = self.clients._registered(connection, client_id)
-            if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
-                raise GrantRejected()
-            if connection.execute(text('SELECT count(*) FROM c0_oauth_grants')).scalar_one() >= 1000:
-                raise GrantRejected()
-            if connection.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE account_id=:id'),
-                    {'id': actor.user_id}).scalar_one() >= 32:
-                raise GrantRejected()
-            identifier = uuid4()
-            connection.execute(text('''INSERT INTO c0_oauth_grants
-                (id,account_id,client_id,client_revision,issuer,native_client,resource,scopes,expires_at)
-                VALUES (:id,:account,:client,:revision,:issuer,:native,:resource,CAST(:scopes AS jsonb),:expires)'''),
-                {'id': identifier, 'account': actor.user_id, 'client': UUID(client_id), 'revision': client['revision'],
-                 'issuer': self.access.issuer, 'native': self.native_client, 'resource': self.resource,
-                 'scopes': json.dumps(sorted(scopes)), 'expires': _date(expires)})
-            connection.execute(text('''INSERT INTO c0_oauth_codes(hash,grant_id,redirect_uri,challenge,expires_at)
-                VALUES (:hash,:grant,:redirect,:challenge,:expires)'''),
-                {'hash': _digest(code), 'grant': identifier, 'redirect': callback,
-                 'challenge': challenge, 'expires': _date(min(expires, current + 300))})
+        self._lock(connection, roles=True)
+        self._clean(connection)
+        actor = self.access._actor(connection, session.actor.user_id)
+        actor.require(Role.READER)
+        for scope, role in [('c0:write', Role.EDITOR), ('c0:admin', Role.ADMIN)]:
+            if scope in scopes:
+                actor.require(role)
+        client = self.clients._registered(connection, client_id)
+        if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
+            raise GrantRejected()
+        if connection.execute(text('SELECT count(*) FROM c0_oauth_grants')).scalar_one() >= 1000:
+            raise GrantRejected()
+        if connection.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE account_id=:id'),
+                {'id': actor.user_id}).scalar_one() >= 32:
+            raise GrantRejected()
+        identifier = uuid4()
+        connection.execute(text('''INSERT INTO c0_oauth_grants
+            (id,account_id,client_id,client_revision,issuer,native_client,resource,scopes,expires_at)
+            VALUES (:id,:account,:client,:revision,:issuer,:native,:resource,CAST(:scopes AS jsonb),:expires)'''),
+            {'id': identifier, 'account': actor.user_id, 'client': UUID(client_id), 'revision': client['revision'],
+             'issuer': self.access.issuer, 'native': self.native_client, 'resource': self.resource,
+             'scopes': json.dumps(sorted(scopes)), 'expires': _date(expires)})
+        connection.execute(text('''INSERT INTO c0_oauth_codes(hash,grant_id,redirect_uri,challenge,expires_at)
+            VALUES (:hash,:grant,:redirect,:challenge,:expires)'''),
+            {'hash': _digest(code), 'grant': identifier, 'redirect': callback,
+             'challenge': challenge, 'expires': _date(min(expires, current + 300))})
         return code
 
     def _tokens(self, connection, grant, scopes):

@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from czero_app.main import create_app
 
 STATIC = Path(__file__).resolve().parents[1] / "static"
-DATABASE_READY = {"status": "ok", "schema_revision": "0012_oauth_grants", "vector_version": "0.8.7"}
+DATABASE_READY = {"status": "ok", "schema_revision": "0013_oauth_consent", "vector_version": "0.8.7"}
 
 
 def ready_database():
@@ -44,8 +44,8 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.22.1",
-        "app_version": "0.26.1",
+        "core_version": "0.23.0",
+        "app_version": "0.27.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -83,7 +83,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.26.1"
+    assert document["info"]["version"] == "0.27.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
