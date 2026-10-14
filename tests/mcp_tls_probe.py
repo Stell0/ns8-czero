@@ -78,8 +78,15 @@ async def check(value):
                     assert all(tool.annotations.read_only_hint for tool in tools), 'Read token discovered mutation'
                     assert (await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})).is_error, 'Read token mutated'
                 assert str((await client.list_resources()).resources[0].uri) == 'c0://capabilities', 'Installed resource missing'
-        for headers in [{'Origin':'https://unapproved.invalid'}, {'Host':'unapproved.invalid'}]:
-            assert (await http.post('/mcp', json={}, headers=headers)).status_code in (400,403,421), 'Installed host/origin accepted'
+        guard_body = {'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}}
+        guard_headers = {'Accept':'application/json, text/event-stream', 'MCP-Protocol-Version':'2025-11-25'}
+        assert (await http.post('/mcp', json=guard_body, headers=guard_headers)).status_code == 200, 'Installed guard positive control failed'
+        for label, headers, allowed in [('origin', {'Origin':'https://unapproved.invalid'}, (400,403,421)),
+                ('host', {'Host':'unapproved.invalid'}, (400,403,404,421))]:
+            # Traefik rejects unknown virtual hosts before the app with 404.
+            # Origin still reaches the canonical route and must fail there.
+            status = (await http.post('/mcp', json=guard_body, headers={**guard_headers, **headers})).status_code
+            assert status in allowed, 'Installed %s guard returned HTTP %d' % (label, status)
     print('Installed TLS SDK current/legacy tools, resources, REST parity, scopes and host/origin checks passed')
 
 

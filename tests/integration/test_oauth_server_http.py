@@ -294,8 +294,11 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                 if csrf:headers['X-C0-CSRF']=csrf
                 response=client.request(method or 'GET',path,json=data,headers=headers)
                 return response.status_code,response.content,str(response.url)
-        saved=fixture.registered(Browser(),profile)
+        saved=fixture.registered(Browser(),profile,client_name='Disposable active grant recovery')
+        preceding=fixture.registered(Browser(),profile)
         try:
+            # Simulate the failed preceding protocol probe's retained grant.
+            fixture.issue(Browser(),profile,preceding)
             monkeypatch.setattr(fixture, 'STATE', tmp_path)
             def snapshot(_module, client_id):
                 with app.state.auth.access.database.engine.connect() as connection:
@@ -339,4 +342,5 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                         connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(value['client']['client_id'])})
         finally:
             with app.state.auth.access.database.engine.begin() as connection:
-                connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(saved['client_id'])})
+                for row in (saved,preceding):
+                    connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(row['client_id'])})

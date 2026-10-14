@@ -163,3 +163,33 @@ def test_token_database_failure_has_static_diagnostics(transport, monkeypatch, c
                 assert response.status_code == 503 and response.json() == {'error':'service_unavailable'}
                 assert 'synthetic-private-database-diagnostic' not in caplog.text
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('bypass_origin', [False, True])
+def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejection(transport, monkeypatch, bypass_origin):
+    import importlib.util
+    from pathlib import Path
+    from starlette.responses import Response
+    app,child,_,_,pair,token,owner_token,_=transport
+    identity=app.state.auth.oidc.verify_access_token(owner_token)
+    read_pair=token(identity,{'c0:read'})
+    path=Path(__file__).resolve().parents[1]/'mcp_tls_probe.py'
+    spec=importlib.util.spec_from_file_location('installed_tls_probe',path)
+    probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
+    async def proxy(scope,receive,send):
+        headers=dict(scope.get('headers',[]))
+        if headers.get(b'host')==b'unapproved.invalid':
+            return await Response(status_code=404)(scope,receive,send)
+        if bypass_origin:
+            scope={**scope,'headers':[(k,v) for k,v in scope.get('headers',[]) if k!=b'origin']}
+        await app(scope,receive,send)
+    monkeypatch.setattr(probe,'NodeTransport',lambda *_:httpx2.ASGITransport(app=proxy))
+    async def check():
+        async with app.router.lifespan_context(app):
+            value={'origin':ORIGIN,'address':None,'ca':None,'access_token':read_pair.access_token,'scope':'c0:read'}
+            if bypass_origin:
+                with pytest.raises(AssertionError,match='^Installed origin guard returned HTTP 200$'):
+                    await probe.check(value)
+            else:
+                await probe.check(value)
+    asyncio.run(check())

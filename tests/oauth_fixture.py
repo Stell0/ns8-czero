@@ -14,8 +14,8 @@ from oidc_fixture import STATE
 from oidc_probe import Browser
 
 
-def registered(browser, profile):
-    descriptor={'client_name':'Disposable TLS MCP client',
+def registered(browser, profile, *, client_name='Disposable TLS MCP client'):
+    descriptor={'client_name':client_name,
         'redirect_uris':['http://127.0.0.1:8765/callback'], 'allowed_scopes':['c0:read','c0:write','c0:admin']}
     status, body, _=browser.api('/api/v1/oauth/clients',descriptor,'POST',profile['csrf_token'])
     assert status==201,'Disposable OAuth client approval failed'
@@ -85,7 +85,7 @@ def snapshot(module_id, client_id):
 
 
 def seed_persistence(module_id, browser, profile, *, snapshot_fn=snapshot):
-    client = registered(browser, profile)
+    client = registered(browser, profile, client_name='Disposable active grant recovery')
     pair = issue(browser, profile, client)
     rows = snapshot_fn(module_id, client['client_id'])
     assert len(rows['grants'] or []) == 1 and len(rows['tokens'] or []) == 2, 'Active recovery grant missing'
