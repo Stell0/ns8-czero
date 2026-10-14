@@ -4,11 +4,13 @@ import asyncio
 import json
 import os
 import secrets
+import importlib.util
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit, urlencode
 from uuid import UUID, uuid4
 
 from httpx import ASGITransport, AsyncClient
+from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import text
 import httpx2
@@ -262,3 +264,39 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
                         assert not (await client.call_tool('object_types_list',{})).is_error
             assert storage.tokens is not None and storage.tokens.scope=='c0:read'
     asyncio.run(check())
+
+
+def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, application):
+    app,_,_,_=oauth_app
+    _,owner_token,*_=application
+    path=Path(__file__).resolve().parents[1]/'oauth_fixture.py'
+    import sys
+    directory=str(path.parent)
+    sys.path.insert(0,directory)
+    try:
+        spec=importlib.util.spec_from_file_location('native_oauth_fixture',path)
+        fixture=importlib.util.module_from_spec(spec);spec.loader.exec_module(fixture)
+    finally:
+        sys.path.remove(directory)
+    with TestClient(app,base_url=ORIGIN) as client:
+        identity=app.state.auth.oidc.verify_access_token(owner_token)
+        cookie=app.state.auth.sessions.create(identity)
+        client.cookies.set('c0_session',cookie,domain='c0.example.test',path='/')
+        profile=client.get('/api/v1/me').json()
+        class Browser:
+            origin=ORIGIN
+            def request(self,path,data=None,method=None,headers=None):
+                response=client.request(method or 'GET',path,content=data,headers=headers,follow_redirects=True)
+                return response.status_code,response.content,str(response.url)
+            def api(self,path,data=None,method=None,csrf=None):
+                headers={'Origin':ORIGIN}
+                if csrf:headers['X-C0-CSRF']=csrf
+                response=client.request(method or 'GET',path,json=data,headers=headers)
+                return response.status_code,response.content,str(response.url)
+        saved=fixture.registered(Browser(),profile)
+        try:
+            pair=fixture.issue(Browser(),profile,saved)
+            assert app.state.delegated_grants.verify(pair['access_token'],resource=RESOURCE).scopes==frozenset(('c0:read',))
+        finally:
+            with app.state.auth.access.database.engine.begin() as connection:
+                connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(saved['client_id'])})

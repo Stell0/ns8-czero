@@ -20,7 +20,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -82,6 +82,14 @@ class CzeroSso:
                                        return_rc=True, timeout="180 seconds")
             if rc:
                 raise AssertionError("Disposable access logs contain OAuth query values")
+            _, errors, rc = ssh.execute_command("python3 /tmp/oauth_fixture.py " + shlex.quote(module_id),
+                return_stderr=True, return_rc=True, timeout="300 seconds")
+            if rc:
+                raise AssertionError("Installed OAuth probe: " + errors.strip())
+            _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
+                return_rc=True, timeout="180 seconds")
+            if rc:
+                raise AssertionError("Installed OAuth access logs contain private query values")
         finally:
             builtin.set_log_level(previous)
 
