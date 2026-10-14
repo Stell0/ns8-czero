@@ -44,8 +44,8 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.13.0",
-        "app_version": "0.15.0",
+        "core_version": "0.13.1",
+        "app_version": "0.16.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -55,7 +55,9 @@ def test_agents_page_describes_only_available_capabilities(client):
     response = client("/czero/czero17/agents")
     assert response.status_code == 200
     assert "search source text" in response.text
-    assert "Wiki, hybrid retrieval and MCP are planned" in response.text
+    assert "sourced claims and bounded graph queries are available" in response.text
+    assert "Hybrid retrieval and MCP are planned" in response.text
+    assert '/api/v1/wiki/pages' in client('/czero/czero17/openapi.json').json()['paths']
     assert '/api/v1/sources/search' in client('/czero/czero17/openapi.json').json()['paths']
     assert "./docs" in response.text
     assert "A native timer wakes" in response.text
@@ -67,7 +69,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.15.0"
+    assert document["info"]["version"] == "0.16.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 

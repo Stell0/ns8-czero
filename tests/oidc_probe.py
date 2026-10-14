@@ -243,6 +243,10 @@ def probe():
     assert status == 200, 'Reader cannot browse sources'
     status, _, _ = reader.upload(current, b'denied', filename='reader.txt', title='Denied', media_type='text/plain')
     assert status == 403, 'Reader can upload evidence'
+    status, _, _ = reader.api('/api/v1/wiki/pages')
+    assert status == 200, 'Reader cannot browse Wiki'
+    status, _, _ = reader.api('/api/v1/wiki/pages', {'slug':'denied','title':'Denied','body':'Denied','idempotency_key':'reader-denied'}, 'POST', current['csrf_token'])
+    assert status == 403, 'Reader can author Wiki'
     from uuid import uuid4
     record_name="probe-"+uuid4().hex
     for role in ("editor", "admin"):
@@ -261,6 +265,7 @@ def probe():
         assert status==200,"Editor/Admin object delete failed"
         status, body, _ = reader.upload(current, b'Role-gated source evidence', filename='role.txt', title=record_name + role, media_type='text/plain')
         assert status == 202, 'Editor/Admin source upload failed'
+        knowledge_request(reader, current, 'wiki/pages', {'slug':record_name+role,'title':'Role fixture','body':'Authored role fixture'}, 'POST', 201)
         status,_,_=reader.api("/api/v1/object-types",{"name":"fixture-inventory","label":"Inventory","schema":OBJECT_SCHEMA},"POST",current["csrf_token"])
         assert status==(409 if role=="admin" else 403),"Object type role mismatch"
     status, _, _ = owner.api(path, {"role": None}, "PUT", profile["csrf_token"])
@@ -273,6 +278,70 @@ def probe():
     assert status == 401, "Anonymous REST access accepted"
     status, _, _ = missing.request("/api/v1/me", headers={"Authorization": "Bearer invalid"})
     assert status == 401, "Invalid bearer accepted"
+
+
+def knowledge_request(browser, profile, path, data=None, method=None, expected=200):
+    if data is not None:
+        data = {**data, 'idempotency_key': 'fixture-' + uuid4().hex}
+    status, body, _ = browser.api('/api/v1/' + path, data, method, profile['csrf_token'])
+    assert status == expected, 'Knowledge operation failed (HTTP %s)' % status
+    return json.loads(body)
+
+
+def seed_knowledge(browser, profile, sources, objects):
+    page = knowledge_request(browser, profile, 'wiki/pages', {
+        'slug': 'persistent-wiki', 'title': 'Persistent Wiki', 'body': '# Inventory\n\nOriginal authored café 東京',
+        'metadata': {'author': 'external fixture'}}, 'POST', 201)
+    original = page['content']
+    page = knowledge_request(browser, profile, 'wiki/pages/' + page['id'], {
+        'title': 'Revised Wiki', 'body': '# Revised inventory\n\nIndependent authored claims',
+        'metadata': {'author': 'external fixture'}, 'expected_revision': 1}, 'PUT')
+    entities = [knowledge_request(browser, profile, 'entities', {
+        'kind': 'system', 'label': 'Persistent entity ' + str(i), 'aliases': ['Persistent alias ' + str(i)]}, 'POST', 201)
+        for i in range(4)]
+    relations = [knowledge_request(browser, profile, 'knowledge/relations', {
+        'source_id': entities[i]['id'], 'target_id': entities[i+1]['id'], 'kind': 'depends-on'}, 'POST', 201)
+        for i in range(3)]
+    chunk = sources[0]['chunks'][0]['id']
+    claims = [knowledge_request(browser, profile, 'claims', {
+        'entity_id': entities[0]['id'], 'page_id': page['id'], 'predicate': 'operating-system',
+        'value': {'name': name}, 'evidence_chunk_ids': [chunk], 'valid_from': '2026-10-14T00:00:00Z'}, 'POST', 201)
+        for name in ('Linux', 'BSD')]
+    references = [knowledge_request(browser, profile, 'entities/' + entities[0]['id'] + '/references', {
+        'target_kind': kind, 'target_id': key}, 'POST', 201) for kind, key in (
+            ('page', page['id']), ('object', objects[0]['id']), ('source', sources[0]['version']['source_id']),
+            ('document', sources[0]['document']['id']), ('chunk', chunk))]
+    entities = [knowledge_request(browser, profile, 'entities/' + entity['id']) for entity in entities]
+    claims = [knowledge_request(browser, profile, 'claims/' + claim['id']) for claim in claims]
+    references = knowledge_request(browser, profile, 'entities/' + entities[0]['id'] + '/references')['references']
+    changes = knowledge_request(browser, profile, 'knowledge/changes?limit=100')['changes']
+    return {'page': page, 'original': original, 'entities': entities, 'relations': relations,
+            'claims': claims, 'references': references, 'changes': changes}
+
+
+def verify_knowledge(browser, profile, expected):
+    get = lambda path: knowledge_request(browser, profile, path)
+    page = expected['page']; key = page['id']
+    assert get('wiki/pages/' + key) == page, 'Recovered Wiki page changed'
+    assert get('wiki/pages/' + key + '?revision=1')['content'] == expected['original'], 'Immutable Wiki revision changed'
+    assert len(get('wiki/pages/' + key + '/revisions')['revisions']) == 2, 'Wiki revision history missing'
+    status, body, _ = browser.api('/api/v1/wiki/pages/' + key + '/export?format=markdown&revision=1')
+    assert status == 200 and body.decode() == expected['original']['body'], 'Markdown export changed'
+    assert get('wiki/pages/' + key + '/export') == page, 'JSON export changed'
+    for entity in expected['entities']:
+        assert get('entities/' + entity['id']) == entity, 'Entity or aliases changed'
+        assert get('entities/resolve?' + urlencode({'alias': entity['aliases'][0]['label']}))['id'] == entity['id'], 'Alias no longer resolves'
+    for claim in expected['claims']:
+        assert get('claims/' + claim['id']) == claim, 'Claim/provenance changed'
+    root = expected['entities'][0]['id']
+    claims = get('claims?entity_id=' + root)['claims']
+    assert {c['id'] for c in claims} == {c['id'] for c in expected['claims']}, 'Conflicting claims lost'
+    for depth in (1, 2, 3):
+        graph = get('knowledge/graph/' + root + '?direction=out&depth=' + str(depth))
+        assert len(graph['nodes']) == depth + 1 and not graph['truncated'], 'Recovered graph depth changed'
+        assert {r['id'] for r in graph['relations']} == {r['id'] for r in expected['relations'][:depth]}, 'Graph relations changed'
+    assert get('entities/' + root + '/references')['references'] == expected['references'], 'Typed knowledge references changed'
+    assert get('knowledge/changes?limit=100')['changes'] == expected['changes'], 'Knowledge change cursor history changed'
 
 
 def persistence(operation):
@@ -299,7 +368,8 @@ def persistence(operation):
         assert status==201,"Cannot seed persisted relation"
         relation_id = json.loads(body)['id']
         source_records = seed_sources(owner, profile)
-        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":relation_id,"sources":source_records}))
+        knowledge = seed_knowledge(owner, profile, source_records, records)
+        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":relation_id,"sources":source_records,"knowledge":knowledge}))
     expected = json.loads(expected_file.read_text())
     assert profile["id"] == expected["owner"], "Recovered owner identity changed"
     editor = Browser(origin)
@@ -315,6 +385,7 @@ def persistence(operation):
     status,body,_=editor.api("/api/v1/object-events?limit=100")
     assert status==200 and all(any(e["object_id"]==record["id"] and e["operation"]=="create" for e in json.loads(body)["events"]) for record in expected["objects"]),"Recovered event history missing"
     verify_sources(editor, expected['sources'])
+    verify_knowledge(editor, member_profile, expected['knowledge'])
     status, _, _ = editor.api("/api/v1/access/accounts")
     assert status == 403, "Recovered Editor can administer"
     owner.logout(profile)

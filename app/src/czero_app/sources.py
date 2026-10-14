@@ -111,20 +111,25 @@ class _UploadLimitExceeded(BaseException):
 
 
 class UploadBodyLimit:
-    """Bound file spooling, including chunked bodies without Content-Length."""
+    """Bound uploads and authored-knowledge JSON, including chunked bodies."""
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
         limited = scope['type'] == 'http' and scope.get('method') == 'POST' and path.endswith('/api/v1/sources/upload')
+        maximum = MAX_UPLOAD + 65536
+        if scope['type'] == 'http' and scope.get('method') in ('POST','PUT','PATCH'):
+            resource = path.split('/api/v1/', 1)[-1]
+            if resource == 'entities' or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
+                limited, maximum = True, 1048576
         size = 0
         async def bounded_receive():
             nonlocal size
             message = await receive()
             if limited:
                 size += len(message.get('body', b''))
-                if size > MAX_UPLOAD + 65536:
+                if size > maximum:
                     raise _UploadLimitExceeded()
             return message
         try:

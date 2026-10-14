@@ -319,6 +319,74 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
+    def verify_disposable_wiki_browser(self, host):
+        """Exercise actual authored pages and restored provenance through SSO."""
+        builtin = BuiltIn(); previous = builtin.set_log_level('NONE')
+        try:
+            ssh = builtin.get_library_instance('SSHLibrary')
+            payload = json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json'))
+            expected = json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/expected-identities.json'))['knowledge']
+            self._browser_password = payload['password']
+            browser = builtin.get_library_instance('Browser')
+            def run(name, *args): return builtin.run_keyword('Browser.' + name, *args)
+            def login(username):
+                run('Go To', 'https://' + host + '/wiki')
+                run('Wait For Elements State', '#wiki-signin', 'visible', 'timeout=30s')
+                run('Click', '#wiki-signin')
+                browser.fill_text('input[name="username"]', username)
+                browser.fill_text('input[name="password"]', self._browser_password)
+                run('Click', '#kc-login')
+                run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
+                run('Go To', 'https://' + host + '/wiki')
+                run('Wait For Elements State', '#wiki-workspace', 'visible', 'timeout=30s')
+            login('c0owner')
+            run('Click', '#new-page')
+            slug = 'browser-wiki-' + secrets.token_hex(4)
+            title = '<img src=x onerror=alert(1)> ' + slug
+            run('Fill Text', '#wiki-slug', slug)
+            run('Fill Text', '#wiki-title', title)
+            run('Fill Text', '#wiki-body', '# Authored browser content')
+            run('Fill Text', '#wiki-metadata', '{')
+            run('Click', '#save-page')
+            run('Get Text', '#page-status', '==', 'Metadata must be valid JSON.')
+            run('Fill Text', '#wiki-metadata', '{"fixture":"browser"}')
+            run('Click', '#save-page')
+            run('Get Text', '#page-status', '==', 'Page saved.')
+            run('Get Text', '#wiki-heading', '==', title)
+            run('Get Element Count', '#wiki-detail img', '==', 0)
+            run('Fill Text', '#wiki-body', '# Revised browser content')
+            run('Click', '#save-page')
+            run('Get Text', '#wiki-identity', 'contains', 'revision 2')
+            run('Click', '#wiki-history button:text-is("View revision 1")')
+            run('Get Text', '#wiki-revision', 'contains', '# Authored browser content')
+            run('Get Property', '#wiki-body', 'value', '==', '# Revised browser content')
+            run('Reload')
+            run('Click', '#wiki-pages button:text-is(' + json.dumps(title) + ')')
+            run('Get Property', '#wiki-body', 'value', '==', '# Revised browser content')
+            root = expected['entities'][0]['id']
+            run('Select Options By', '#knowledge-entity', 'value', root)
+            run('Get Element Count', '#knowledge-claims li', '==', 2)
+            run('Click', '#knowledge-claims button:text-is(' + json.dumps('Evidence for claim ' + expected['claims'][0]['id']) + ')')
+            run('Get Text', '#claim-citations', 'contains', '"source_hash"')
+            run('Select Options By', '#graph-depth', 'value', '3')
+            run('Click', '#graph-form button')
+            run('Get Text', '#graph-status', '==', '4 entities · 3 relationships')
+            _, _, rc = ssh.execute_command('python3 /tmp/oidc_probe.py browser-reader', return_stderr=True, return_rc=True, timeout='180 seconds')
+            assert rc == 0, 'Cannot prepare Wiki Reader'
+            run('New Context', 'ignoreHTTPSErrors=True'); run('New Page'); login('c0member')
+            run('Wait For Elements State', '#new-page', 'hidden')
+            run('Click', '#wiki-pages button:text-is(' + json.dumps(title) + ')')
+            run('Get Property', '#wiki-body', 'readOnly', '==', True)
+            run('Wait For Elements State', '#save-page', 'hidden')
+            run('Wait For Elements State', '#claim-form', 'hidden')
+            run('Click', '#wiki-history button:text-is("View revision 1")')
+            run('Get Text', '#wiki-revision', 'contains', '# Authored browser content')
+        except Exception as error:
+            raise AssertionError('Disposable Wiki browser failed (' + type(error).__name__ + ')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
     def assert_disposable_sso_browser_password_is_private(self):
         builtin=BuiltIn(); output=Path(builtin.get_variable_value('${OUTPUT FILE}'))
         for path in (output,output.parent/'playwright-log.txt'):

@@ -59,7 +59,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.13.0"
+    Should Contain    ${output}    "core_version":"0.13.1"
 
 *** Test Cases ***
 Install Czero with its own identity
@@ -548,12 +548,13 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Database ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.13.0"
+    Get Text    body    contains    "core_version":"0.13.1"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
     Get Text    body    contains    search source text.
-    Get Text    body    contains    Wiki, hybrid retrieval and MCP are planned milestones.
+    Get Text    body    contains    sourced claims and bounded graph queries are available.
+    Get Text    body    contains    Hybrid retrieval and MCP are planned milestones.
     Close Browser
     Assert Disposable Browser Password Is Private
 
@@ -629,6 +630,17 @@ Check source ingestion, history, search and Reader controls in a browser
     New Context    ignoreHTTPSErrors=True
     New Page
     Verify Disposable Sources Browser    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
+
+Check Wiki revisions, provenance, graph and Reader controls in a browser
+    [Tags]    ui
+    [Timeout]    5 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Wiki Browser    ${host}
     Close Browser
     Assert Disposable Sso Browser Password Is Private
 

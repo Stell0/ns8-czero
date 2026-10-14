@@ -19,6 +19,7 @@ from czero_app.objects import install_object_routes
 from czero_app.sources import install_source_routes, UploadBodyLimit
 from czero_app.job_handlers import build_registry
 from czero_core.sources import OriginalStore
+from czero_app.knowledge import install_knowledge_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -84,7 +85,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     registry = build_registry(database, originals)
     install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
     sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
-    install_object_routes(instance_app, database, auth, read_context, write_context, reference_resolvers=sources.reference_resolvers())
+    knowledge = install_knowledge_routes(instance_app, database, auth, read_context, write_context)
+    install_object_routes(instance_app, database, auth, read_context, write_context,
+        reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
 
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
@@ -110,6 +113,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def sources_script() -> FileResponse:
         return FileResponse(static_dir / 'sources.js', media_type='text/javascript')
 
+    @instance_app.get('/wiki', include_in_schema=False)
+    async def wiki_page() -> FileResponse:
+        return FileResponse(static_dir / 'wiki.html', media_type='text/html')
+
+    @instance_app.get('/wiki.js', include_in_schema=False)
+    async def wiki_script() -> FileResponse:
+        return FileResponse(static_dir / 'wiki.js', media_type='text/javascript')
+
     @instance_app.get("/auth.js", include_in_schema=False)
     async def auth_script() -> FileResponse:
         return FileResponse(static_dir / "auth.js", media_type="text/javascript")
@@ -124,7 +135,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Editors can write records/relations and upload or retry evidence. Admins register schemas. Wiki, hybrid retrieval and MCP are planned milestones.</p>"
+            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Hybrid retrieval and MCP are planned milestones.</p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li></ul></main></html>"
         )

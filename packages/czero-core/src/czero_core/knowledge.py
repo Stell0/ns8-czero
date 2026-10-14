@@ -30,6 +30,30 @@ def _revision(value):
 
 
 class KnowledgeService(WikiService):
+    def reference_resolvers(self):
+        def page_reference(connection, actor, key):
+            self._authorize(connection, actor)
+            try:
+                row = self._page(connection, key)
+                revision = self._revision(connection, key, row['revision'])
+            except KnowledgeNotFound:
+                return None
+            return {'type_name': 'page', 'data': {'slug': row['slug'], 'title': row['title'],
+                'revision': row['revision'], 'content_hash': revision['content_hash'], 'deleted': row['deleted']}}
+        def entity_reference(connection, actor, key):
+            self._authorize(connection, actor)
+            try: row = self._entity(connection, key)
+            except KnowledgeNotFound: return None
+            return {'type_name': 'entity', 'data': {'kind': row['kind'], 'label': row['label'],
+                'revision': row['revision'], 'deleted': row['deleted']}}
+        def claim_reference(connection, actor, key):
+            self._authorize(connection, actor)
+            try: row = self._claim(connection, key)
+            except KnowledgeNotFound: return None
+            return {'type_name': 'claim', 'data': {'entity_id': str(row['entity_id']), 'predicate': row['predicate'],
+                'revision': row['revision'], 'deleted': row['deleted']}}
+        return {'page': page_reference, 'entity': entity_reference, 'claim': claim_reference}
+
     @staticmethod
     def _claim(connection, claim_id, *, lock=False):
         row = connection.execute(text('SELECT * FROM c0_claims WHERE id=:id' + (' FOR UPDATE' if lock else '')),
