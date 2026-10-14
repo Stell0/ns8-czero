@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M08 ingestion conventions
 
+- Strip dependency-wheel extension build headers/Cython sources from the assembled virtualenv, while retaining runtime shared libraries, schemas and licenses. The image audit rejects these development suffixes as well as bundled tests/skills.
+
 - Core extraction now provides pure and isolated deterministic parser functions plus exact text/offset chunks. It is not an upload/retention service yet. Child parser limits fail with bounded codes; never echo document bytes, filesystem paths or library exception text. Preserve all extracted text and reject over-limit/incomplete files. Pin parser versions; test original corpus formats and unsafe/archive/timeout cases before adapters.
 
 - Keep uploaded originals on the existing restricted source volume using generated IDs. Delete only after extracted full text/chunks/status have committed successfully; queue idempotent post-persistence cleanup. Failed or incomplete extraction retains its original and an actionable state.

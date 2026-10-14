@@ -41,6 +41,10 @@ jobs:
         run: |
           podman run --rm --interactive --entrypoint python \
             "${REPOBASE,,}/czero-app:${IMAGETAG}" - < tests/audit_runtime.py
+      - name: Validate packaged document parsers
+        run: |
+          podman run --rm --interactive --entrypoint python \
+            "${REPOBASE,,}/czero-app:${IMAGETAG}" - < tests/parser_runtime_probe.py
       - name: Validate database runtime contents
         run: |
           podman run --rm --entrypoint sh "${REPOBASE,,}/czero-postgres:${IMAGETAG}" -ec '

@@ -84,6 +84,8 @@ Native manager restart exposed a systemd app/timer/basic-target ordering cycle. 
 
 M08's first Core slice adds isolated deterministic Text/Markdown/PDF/DOCX text extraction and chunk/offset functions. It has no upload endpoint, source database or retention workflow yet. Child limits cap memory/CPU/time, input bytes, text, PDF pages and archive expansion. Unsupported encrypted/scanned PDFs and unsafe/unsupported DOCX structures fail with static error codes and preserve the input file. The parser supports DOCX body, tables and defined headers/footers; notes/comments/macros are rejected. No OCR or provider credential is required. Full ingestion acceptance remains pending.
 
+The runtime builder removes dependency-wheel development headers and Cython sources; compiled parser libraries and required runtime data remain.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |

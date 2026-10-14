@@ -16,6 +16,7 @@ def audit(root: Path) -> None:
         "AGENTS.md", "PLAN.md", "SKILL.md", "pyproject.toml", "uv.lock",
     }
     unexpected = sorted(str(p) for p in root.rglob("*") if p.name in forbidden_names
+                        or p.suffix in {".h", ".pxd", ".pxi", ".pyx"}
                         or (p.name == "templates" and p.parent.name == "alembic")
                         or (p.name == "alembic" and p.parent.name == "bin"))
     tools = [name for name in ("pip", "setuptools", "uv", "pytest", "robot")

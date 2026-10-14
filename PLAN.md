@@ -433,6 +433,8 @@ Twenty new cases cover UTF-8/Text/Markdown, actual PDF pages and DOCX body/table
 
 **Evidence:** Pending.
 
+**Packaging review:** The selected lxml wheel includes 123 development headers/Cython files. Remove those suffixes from the runtime virtualenv and extend the image audit to reject them, retaining shared libraries and runtime data. Add a publication-time four-format isolated parser probe inside the actual assembled image. Four regression cases verify the audit rejects extension build files but permits runtime shared libraries. Parser local CI [38512363129](https://github.com/Stell0/ns8-czero/actions/runs/38512363129) and publication [38512363223](https://github.com/Stell0/ns8-czero/actions/runs/38512363223) passed before this packaging correction; native run [38512528579](https://github.com/Stell0/ns8-czero/actions/runs/38512528579) is still pending inspection. The M07 main marker's native run [38510898821](https://github.com/Stell0/ns8-czero/actions/runs/38510898821) succeeded; downloaded-report inspection remains pending.
+
 ### M09 — Versioned Wiki, entities, claims, provenance and PostgreSQL graph [ ]
 
 **Goal:** Persistent LLM Wiki data usable by external agents, without a second graph database.

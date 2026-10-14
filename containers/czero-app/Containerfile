@@ -16,9 +16,10 @@ COPY app/src /build/app/src
 COPY packages/czero-core/pyproject.toml /build/packages/czero-core/
 COPY packages/czero-core/src /build/packages/czero-core/src
 WORKDIR /build/app
-# Some dependency wheels bundle authoring skills, which are not runtime data.
+# Dependency wheels can bundle authoring skills and extension build sources.
 RUN uv sync --frozen --no-dev --no-editable \
     && find /opt/czero/.venv -type d \( -name .agents -o -name testing -o -name tests \) -prune -exec rm -rf {} + \
+    && find /opt/czero/.venv -type f \( -name '*.h' -o -name '*.pxd' -o -name '*.pxi' -o -name '*.pyx' \) -delete \
     && rm -rf /opt/czero/.venv/lib/python*/site-packages/alembic/templates \
     && rm -f /opt/czero/.venv/bin/alembic \
     && rm -rf /tmp/uv-cache
