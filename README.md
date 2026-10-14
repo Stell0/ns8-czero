@@ -1,6 +1,6 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (14 October 2026): M00–M06 are complete with local, disposable, documentation and permitted live evidence. M07 objects/REST/editor pass local, image and disposable/browser acceptance plus permitted live CRUD persistence. A live scheduler restart gap and final documentation remain open.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
+**Status (14 October 2026): M00–M06 are complete with local, disposable, documentation and permitted live evidence. M07 objects/REST/editor pass local, image and disposable/browser acceptance plus permitted live CRUD persistence. The native scheduler ordering-cycle fix passes disposable and repeated live manager restarts; final documentation CI is pending.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is reauthorized. See [PLAN.md](PLAN.md) for commit, CI and test evidence, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
 
@@ -8,7 +8,7 @@ C0 is a deployable application foundation and a forkable GitHub template. Extern
 
 One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
 
-The roadmap adds generic JSON Schema objects, document evidence, an LLM Wiki, text/vector/graph retrieval and authenticated remote MCP. These resource features remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
+Generic JSON Schema objects and deterministic jobs work now. Document evidence, an LLM Wiki, text/vector/graph retrieval and authenticated remote MCP remain planned. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
 ## Current interfaces
 
@@ -80,13 +80,12 @@ On the Records page, choose a type, browse or open a record, and use New record 
 
 For example, register `inventory` with `{"type":"object","properties":{"name":{"type":"string","maxLength":64}},"required":["name"]}` and `unique_fields:["name"]` at `/api/v1/object-types`; POST `{"type_name":"inventory","data":{"name":"Rack A"},"tags":["inventory"]}` to `/api/v1/objects`. PUT the record with `data` and `expected_revision` from its last response. Cookie writes require the existing CSRF token; bearer requests use the signed access token.
 
-The live owner object checks pass, but native node restart recovered the app/database without an active scheduler timer. The new disposable manager restart regression reproduces a systemd app/timer/basic-target ordering cycle. A focused timer dependency fix is awaiting replacement acceptance; M07 remains open. App-only restart tests do not cover a full rootless user-manager restart. The native scheduler diagnostic now includes bounded timer state/result/dependency names.
+Native manager restart exposed a systemd app/timer/basic-target ordering cycle. The corrected timer keeps explicit app/shutdown bindings without default boot-target ordering. Actual Debian/Rocky manager restarts pass with no C0 ordering-cycle journal lines; three live manager restarts recover an active/successful timer and preserve object/job/schedule/configuration state. The native scheduler diagnostic includes bounded timer state/result/dependency names. App-only restart tests remain insufficient for this path.
 
 ## Remaining roadmap
 
 | Capability | Agreed direction |
 | --- | --- |
-| Generic objects | JSON Schema definitions, JSONB records, typed references and forms |
 | Evidence | Full extracted text, offsets, metadata, revisions and citations |
 | Wiki | Pages, claims, entities, revisions and provenance, separate from raw evidence |
 | Retrieval | PostgreSQL full-text search, optional external embeddings and graph expansion |
@@ -94,7 +93,7 @@ The live owner object checks pass, but native node restart recovered the app/dat
 | Agent access | Shared REST/MCP operations, OAuth protection and self-description |
 | Forks | Reusable Core distribution, upstream-compatible extensions and development skills |
 
-Once implemented, CRUD, deterministic parsing/chunking, Wiki editing and full-text retrieval must work without AI credentials. Binary originals are deleted by default only after successful extraction/persistence; optional retention uses an NS8 volume. Safe built-in defaults precede NS8 instance configuration and bounded request overrides. Request overrides cannot replace provider secrets. Semantic retrieval requires configured embeddings; Jev/Kev failures must disclose fallback and never determine authorization.
+Object CRUD and jobs work without AI credentials. Deterministic parsing/chunking, Wiki editing and full-text retrieval must retain that property as they are implemented. Binary originals are deleted by default only after successful extraction/persistence; optional retention uses an NS8 volume. Safe built-in defaults precede NS8 instance configuration and bounded request overrides. Request overrides cannot replace provider secrets. Semantic retrieval requires configured embeddings; Jev/Kev failures must disclose fallback and never determine authorization.
 
 ## Development and verification
 
