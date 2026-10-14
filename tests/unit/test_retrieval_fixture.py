@@ -32,6 +32,18 @@ def test_native_browser_selects_one_hostname_input_after_form_expansion():
     assert 'iframe >>> .ns-text-input input >> nth=0' in script
 
 
+def test_snapshot_diagnostics_report_counts_and_columns_without_private_values(monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / 'tests'))
+    difference=runpy.run_path(str(ROOT / 'tests/retrieval_fixture.py'))['snapshot_difference']
+    before={'profiles':[{'id':'private-id','active':True}], 'chunks':[],
+            'vectors':[{'id':'private-vector-id','vector':'private-vector-value'}]}
+    after={'profiles':[{'id':'private-id','active':False}], 'chunks':[],
+           'vectors':[{'id':'new-private-id','vector':'new-private-value'}]}
+    result=difference(before,after)
+    assert result=='profiles: added=0 removed=0 fields=active; vectors: added=1 removed=1 fields='
+    assert 'private' not in result
+
+
 def test_disposable_https_server_checks_credentials_models_and_failures(tmp_path, monkeypatch):
     from datetime import datetime, timedelta, timezone
     import ipaddress

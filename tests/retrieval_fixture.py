@@ -120,6 +120,38 @@ def snapshot(module_id):
                               'psql', '-U', 'czero', '-d', 'czero', '-At', '-c', query]))
 
 
+def index_complete(module_id):
+    # A minimum vector count is not completion: earlier role fixtures add
+    # sources/pages, and each batch prepares only two new Wiki revisions.
+    query = """SELECT EXISTS(SELECT 1 FROM c0_embedding_profiles WHERE active)
+        AND NOT EXISTS(SELECT 1 FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
+        JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
+        WHERE NOT s.deleted AND NOT EXISTS(SELECT 1 FROM c0_embeddings e JOIN c0_embedding_profiles p
+        ON p.id=e.profile_id WHERE p.active AND e.generation=p.generation AND e.source_chunk_id=c.id))
+        AND NOT EXISTS(SELECT 1 FROM c0_wiki_pages p JOIN c0_wiki_revisions r
+        ON r.page_id=p.id AND r.number=p.revision WHERE NOT p.deleted AND
+        (NOT EXISTS(SELECT 1 FROM c0_wiki_chunks w WHERE w.revision_id=r.id)
+        OR EXISTS(SELECT 1 FROM c0_wiki_chunks w WHERE w.revision_id=r.id AND NOT EXISTS(
+        SELECT 1 FROM c0_embeddings e JOIN c0_embedding_profiles ep ON ep.id=e.profile_id
+        WHERE ep.active AND e.generation=ep.generation AND e.wiki_chunk_id=w.id))));"""
+    return command(['runagent', '-m', module_id, 'podman', 'exec', 'czero-postgres',
+                    'psql', '-U', 'czero', '-d', 'czero', '-At', '-c', query]).strip() == 't'
+
+
+def snapshot_difference(before, after):
+    # Static categories/counts/column names only; no IDs, bodies or vectors.
+    differences = []
+    for category in ('profiles', 'chunks', 'vectors'):
+        old = {row['id']: row for row in before.get(category) or []}
+        new = {row['id']: row for row in after.get(category) or []}
+        if old != new:
+            fields = sorted({field for key in old.keys() & new.keys() for field in old[key]
+                             if old[key][field] != new[key].get(field)})
+            differences.append('%s: added=%d removed=%d fields=%s' %
+                (category, len(new.keys()-old.keys()), len(old.keys()-new.keys()), ','.join(fields)))
+    return '; '.join(differences)
+
+
 def check(module_id, operation):
     from oidc_probe import Browser, knowledge_request
     payload = json.loads((STATE / 'personas.json').read_text())
@@ -131,6 +163,31 @@ def check(module_id, operation):
             if status['indexed'] >= 5: break
             time.sleep(2)
         assert status['configured'] and status['indexed'] >= 5, 'Native worker did not index evidence'
+        schedules = get('schedules')['schedules']
+        refresh = next(s for s in schedules if s['handler'] == 'embedding.index')
+        code, body, _ = browser.api('/api/v1/schedules/' + refresh['id'],
+            {'enabled': False, 'interval_seconds': refresh['interval_seconds']}, 'PUT', profile['csrf_token'])
+        assert code == 200, 'Embedding refresh pause rejected'
+        paused = json.loads(body)
+        assert paused['enabled'] is False, 'Embedding refresh did not pause'
+        # Retain the actual timer first-batch assertion, then finish all earlier
+        # role/persistence fixtures via bounded registered jobs and the worker.
+        jobs = []
+        for ordinal in range(4):
+            jobs.append(knowledge_request(browser, profile, 'jobs',
+                {'handler': 'embedding.index', 'payload': {}}, 'POST', 201)['id'])
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            states = [get('jobs/' + key)['state'] for key in jobs]
+            assert 'failed' not in states, 'Fixture index completion job failed'
+            if all(state == 'succeeded' for state in states) and index_complete(module_id):
+                break
+            time.sleep(2)
+        else:
+            raise AssertionError('Complete derivative indexing did not settle')
+    refresh = next(s for s in get('schedules')['schedules'] if s['handler'] == 'embedding.index')
+    assert refresh['enabled'] is False, 'Paused embedding refresh changed during recovery'
+    assert index_complete(module_id), 'Recovered derivative indexing is incomplete'
     config = task('module/' + module_id + '/get-configuration', {})['retrieval']
     assert config == json.loads((STATE / 'retrieval-config.json').read_text()), 'Recovered provider settings changed'
     result = get('knowledge/search?query=independent+authored&mode=hybrid&rerank=filter')
@@ -138,6 +195,9 @@ def check(module_id, operation):
     assert result['scored_count'] > 0 and len(result['hits']) == 1, 'Scorer did not filter evidence'
     page = json.loads((STATE / 'expected-identities.json').read_text())['knowledge']['page']
     assert result['hits'][0]['wiki']['revision_id'] == page['content']['id'], 'Semantic Wiki identity changed'
+    semantic = get('knowledge/search?query=independent+authored&mode=semantic&rerank=filter')
+    assert semantic['retrieval_method'] == 'semantic+filter' and semantic['fallback_reason'] is None, 'Semantic-only retrieval failed'
+    assert len(semantic['hits']) == 1 and semantic['hits'][0]['wiki']['revision_id'] == page['content']['id'], 'Semantic-only Wiki identity missing'
     text = get('knowledge/search?query=independent+authored&mode=text&rerank=off')
     assert text['retrieval_method'] == 'text' and text['hits'], 'Configured provider-free text missing'
     for mode, reason in [('rate_limited', 'rate_limited'), ('mismatch', 'invalid_response'), ('unavailable', 'unavailable')]:
@@ -155,7 +215,8 @@ def check(module_id, operation):
     if operation == 'seed':
         path.write_text(json.dumps(rows)); path.chmod(0o600)
     else:
-        assert rows == json.loads(path.read_text()), 'Recovered profile/chunk/vector data changed'
+        before = json.loads(path.read_text())
+        assert rows == before, 'Recovered profile/chunk/vector data changed (' + snapshot_difference(before, rows) + ')'
     browser.logout(profile)
 
 

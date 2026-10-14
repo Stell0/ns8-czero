@@ -131,7 +131,7 @@ class CzeroSso:
         try:
             ssh = builtin.get_library_instance("SSHLibrary")
             _, errors, rc = ssh.execute_command("python3 /tmp/retrieval_fixture.py " + operation + " " + shlex.quote(module_id),
-                                               return_stderr=True, return_rc=True, timeout="180 seconds")
+                                               return_stderr=True, return_rc=True, timeout="300 seconds" if operation == 'seed' else "180 seconds")
             if rc:
                 raise AssertionError("Disposable retrieval: " + errors.strip())
         finally:

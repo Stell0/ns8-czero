@@ -5,7 +5,7 @@ from uuid import uuid4
 import httpx2
 import pytest
 from sqlalchemy import text
-from czero_core.embeddings import EmbeddingStore,profile_identity,vector_literal,register_embedding_handlers,reindex_payload
+from czero_core.embeddings import EmbeddingStore,profile_identity,vector_literal,register_embedding_handlers,reindex_payload,SCHEDULE_ID
 from czero_core.providers import EmbeddingClient,EmbeddingSettings,ProviderUnavailable
 from czero_core.jobs import Registry
 from czero_core.wiki import KnowledgeConflict
@@ -26,9 +26,12 @@ def indexed(search):
     settings=EmbeddingSettings('https://embedding.example.test/'+uuid4().hex,'fixture-model',dimensions=3)
     client=EmbeddingClient(settings,transport=httpx2.MockTransport(responder))
     store=EmbeddingStore(service.database,client,wiki[0].access)
+    with service.database.engine.connect() as c:
+        schedule=dict(c.execute(text('SELECT enabled,interval_seconds,next_run_at FROM c0_scheduled_tasks WHERE id=:id'),{'id':SCHEDULE_ID}).mappings().one())
     yield store,search,calls
     with service.database.engine.begin() as c:
         c.execute(text('DELETE FROM c0_embedding_profiles WHERE id=:id'),{'id':store.profile_id})
+        c.execute(text('UPDATE c0_scheduled_tasks SET enabled=:enabled,interval_seconds=:interval_seconds,next_run_at=:next_run_at WHERE id=:id'),{**schedule,'id':SCHEDULE_ID})
 
 
 def test_indexing_preserves_evidence_ids_complete_wiki_offsets_and_is_replay_safe(indexed):
@@ -47,6 +50,44 @@ def test_indexing_preserves_evidence_ids_complete_wiki_offsets_and_is_replay_saf
     assert second['indexed']==0 and len(calls)==1
     assert wiki[0].get_page(wiki[1],page['id'])['content']['id']==original['id']
     assert sources[0].document(sources[1],source['id'])['body']=='alpha source evidence'
+
+
+def test_first_successful_batch_is_not_a_complete_snapshot_with_prior_role_fixtures(indexed,monkeypatch):
+    store, fixtures, _ = indexed
+    _, wiki, sources = fixtures
+    import runpy
+    from pathlib import Path
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1]))
+    native=runpy.run_path(str(Path(__file__).parents[1]/'retrieval_fixture.py'))['index_complete']
+    def command(arguments):
+        with store.database.engine.connect() as connection:
+            return 't' if connection.execute(text(arguments[-1])).scalar_one() else 'f'
+    native.__globals__['command']=command
+    for ordinal in range(5):
+        create_page(wiki, title='Prior role ' + str(ordinal), body='alpha role evidence')
+    for ordinal in range(10):
+        version=upload(sources,data=('alpha source '+str(ordinal)).encode())
+        execute(sources,'source.extract',version['id'])
+    # Five vectors can satisfy the old fixture while both source and Wiki
+    # indexing are incomplete; repeated valid work then changes the snapshot.
+    with store.database.engine.begin() as connection:
+        store._activate(connection)
+        first=store._index_batch(connection)
+        assert first['indexed']==8
+        initial=connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE profile_id=:id'),{'id':store.profile_id}).scalar_one()
+        assert initial>=5
+        assert connection.execute(text('SELECT count(*) FROM c0_wiki_chunks WHERE revision_id IN (SELECT id FROM c0_wiki_revisions WHERE page_id IN (SELECT resource_id FROM c0_knowledge_events WHERE actor_id=:actor))'),{'actor':wiki[1].user_id}).scalar_one()==2
+        connection.execute(text('UPDATE c0_scheduled_tasks SET enabled=false WHERE handler=\'embedding.index\''))
+    assert native('disposable') is False
+    for _ in range(4):
+        with store.database.engine.begin() as connection:store._index_batch(connection)
+    with store.database.engine.begin() as connection:
+        complete=connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE profile_id=:id'),{'id':store.profile_id}).scalar_one()
+        assert complete==15 and complete>initial
+        store._activate(connection)
+        assert connection.execute(text('SELECT enabled FROM c0_scheduled_tasks WHERE handler=\'embedding.index\'')).scalar_one() is False
+        assert store._index_batch(connection)['indexed']==0
+    assert native('disposable') is True
 
 
 def test_profile_identity_excludes_keys_and_reembedding_generations_reject_stale_jobs(indexed):
