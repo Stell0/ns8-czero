@@ -584,6 +584,8 @@ Native settings cec01bc passes [local 38565947030](https://github.com/Stell0/ns8
 
 Final pre-publication rerun: all 466 Python cases pass (337 unit + 129 PostgreSQL), twenty-four Node cases pass, Go schemas and seventeen non-UI dry-run cases pass. Configured native and live acceptance remain pending.
 
+**Settings native result:** cec01bc native 38566253698 is red: downloaded Debian installation fourteen passes/three expected skips, Rocky update twenty passes/one failure. Actual failed browser report and CI log identify strict-mode ambiguity in the expanded settings form's text-input locator. The correction already prepared in 8759d19 selects its first hostname input explicitly and retains invalid-host/save/restart/reload assertions; no acceptance case is removed. Both native reports contain zero temporary password/OAuth candidates. All preceding private configuration/lifecycle/SSO/recovery cases pass, but this run is not accepted as green. Publish the corrected search/provider-test increment and require a complete new native result.
+
 ### M11 — REST/MCP parity, OAuth interoperability and `/agents` discovery [ ]
 
 **Goal:** An external AI client can connect immediately and discover exactly what the installed C0 can do.
