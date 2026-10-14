@@ -97,14 +97,16 @@ def maintenance_handler(connection, payload):
     result = {}
     for table, key in (("c0_sessions", "token_hash"), ("c0_login_states", "state_hash")):
         # Identifiers are fixed trusted code, never handler/request input.
-        removed = connection.execute(text(f"""DELETE FROM {table} WHERE {key} IN
+        removed = connection.execute(text(f"""WITH expired AS MATERIALIZED
             (SELECT {key} FROM {table} WHERE expires_at <= now()
-             ORDER BY expires_at LIMIT 1000 FOR UPDATE SKIP LOCKED)"""))
+             ORDER BY expires_at LIMIT 1000 FOR UPDATE SKIP LOCKED)
+            DELETE FROM {table} USING expired WHERE {table}.{key}=expired.{key}"""))
         result[table.removeprefix("c0_") + "_removed"] = removed.rowcount
-    result["jobs_removed"] = connection.execute(text("""DELETE FROM c0_jobs WHERE id IN
+    result["jobs_removed"] = connection.execute(text("""WITH expired AS MATERIALIZED
         (SELECT id FROM c0_jobs WHERE state IN ('succeeded','failed')
          AND finished_at < now() - interval '30 days'
-         ORDER BY finished_at LIMIT 1000 FOR UPDATE SKIP LOCKED)""")).rowcount
+         ORDER BY finished_at LIMIT 1000 FOR UPDATE SKIP LOCKED)
+        DELETE FROM c0_jobs USING expired WHERE c0_jobs.id=expired.id""")).rowcount
     return result
 
 

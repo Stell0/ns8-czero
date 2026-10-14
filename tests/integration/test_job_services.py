@@ -111,13 +111,17 @@ def test_schedule_name_conflict_and_repeat_migration_preserve_config(service):
     assert not current['enabled'] and current['interval_seconds']==86400
 
 
-def test_maintenance_bounds_expired_session_work_and_preserves_accounts(service):
+@pytest.mark.parametrize('planner', ['default', 'nested'])
+def test_maintenance_bounds_expired_session_work_and_preserves_accounts(service, planner):
     queue,owner=service
     from czero_core.sessions import SessionService, SessionRejected
     access=queue.access
     sessions=SessionService(access,'test-client')
     cookie=sessions.create(identity(access,access.owner_account_key))
     with queue.database.engine.begin() as c:
+        if planner == 'nested':
+            for setting in ('enable_hashjoin', 'enable_mergejoin', 'enable_material'):
+                c.execute(text('SET LOCAL ' + setting + '=off'))
         c.execute(text("UPDATE c0_sessions SET expires_at=now()-interval '1 hour' WHERE account_id=:id"),{'id':owner.user_id})
         before=c.execute(text('SELECT count(*) FROM c0_sessions WHERE expires_at<=now()')).scalar_one()
         c.execute(text("""INSERT INTO c0_sessions(token_hash,account_id,csrf_token,issuer,client_id,expires_at)
