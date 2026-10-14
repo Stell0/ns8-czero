@@ -32,7 +32,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.9.0/0.10.0**, with packaged migrations through `0005_objects`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.10.0/0.11.0**, with packaged migrations through `0005_objects`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source CRUD, ingestion, Wiki, retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -82,6 +82,8 @@ For example, register `inventory` with `{"type":"object","properties":{"name":{"
 
 Native manager restart exposed a systemd app/timer/basic-target ordering cycle. The corrected timer keeps explicit app/shutdown bindings without default boot-target ordering. Actual Debian/Rocky manager restarts pass with no C0 ordering-cycle journal lines; three live manager restarts recover an active/successful timer and preserve object/job/schedule/configuration state. The native scheduler diagnostic includes bounded timer state/result/dependency names. App-only restart tests remain insufficient for this path.
 
+M08's first Core slice adds isolated deterministic Text/Markdown/PDF/DOCX text extraction and chunk/offset functions. It has no upload endpoint, source database or retention workflow yet. Child limits cap memory/CPU/time, input bytes, text, PDF pages and archive expansion. Unsupported encrypted/scanned PDFs and unsafe/unsupported DOCX structures fail with static error codes and preserve the input file. The parser supports DOCX body, tables and defined headers/footers; notes/comments/macros are rejected. No OCR or provider credential is required. Full ingestion acceptance remains pending.
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -106,7 +108,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 205 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for fifty-eight actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks record refresh races using the real UI script. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 225 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for fifty-eight actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks record refresh races using the real UI script. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
