@@ -38,7 +38,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas and Swagger UI |
 | `/agents` | Honest introduction to implemented interfaces and remaining roadmap |
 
-Core/app versions are **0.14.0/0.17.0**, with packaged migrations through `0009_retrieval_text`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
+Core/app versions are **0.15.0/0.18.0**, with packaged migrations through `0009_retrieval_text`. Public health returns HTTP 200 when PostgreSQL, schema and pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads assets from a CDN; OpenAPI JSON remains usable without them.
 
 Source ingestion/REST pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native update/restore and permitted live owner checks. Full retrieval, `/mcp` and `/agents/capabilities.json` remain later milestones. Readers can inspect object records; Editors can write objects and relations. Admins register immutable schemas and manage membership. These object transports pass local PostgreSQL-backed HTTP, actual disposable SSO/browser, native update/restore and permitted live owner CRUD/restart persistence. Interactive live browser remains waived.
 
@@ -112,6 +112,9 @@ Knowledge POST/PUT bodies require `idempotency_key`; edits/archive/retraction re
 
 M10's first slice exposes `GET /api/v1/knowledge/search?query=inventory&kind=all&mode=auto&limit=20`. Source chunks retain complete citations; Wiki hits include immutable revision IDs/hashes and exact excerpt offsets. Only current active Wiki revisions rank; archives/history remain retrievable through their original endpoints. Query text caps at 512 characters and result limits at fifty. `kind` selects all/source/wiki; unknown query fields are rejected. Semantic/hybrid requests currently return ordinary FTS with `retrieval_method:text` and `fallback_reason:embeddings_not_configured`. No optional provider, vectors, reranking or native retrieval configuration is implemented yet; the first slice's installed/native checks are pending.
 
+Core now includes locally tested embeddings/System One HTTP adapters; they are not wired into retrieval or native settings yet. They cap absolute time at five seconds, request/response bytes, eight embedding inputs and sixteen scorer candidates. Noul responses must match all candidate IDs and the configured model; scores are finite probabilities. Kev latest aliases resolve to backend-specific IDs, so configure a pinned resolved model for calibration. Only protocol mocks have been used; no provider quality or real remote inference is claimed.
+
+
 ## Remaining roadmap
 
 | Capability | Agreed direction |
@@ -134,7 +137,7 @@ pip install pytest robotframework robotframework-sshlibrary -e packages/czero-co
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
-There are 248 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 109 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
+There are 285 unit cases. Set `CZERO_TEST_DATABASE_URL` to an isolated PostgreSQL/pgvector database and include `tests/integration` for 109 actual database cases. CI supplies a disposable service. `node --test tests/ui/*.cjs` checks eighteen record/source/Wiki response and role cases using the real UI scripts. `go run tests/check_schemas.go` validates action regex compatibility with Core's Go engine. Runtime dependency builds use `app/uv.lock` and frozen, non-development installation.
 
 Build the administration UI:
 
