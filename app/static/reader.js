@@ -12,6 +12,7 @@
   const writable=()=>profile && ['editor','admin'].includes(profile.role);
   function status(message) {if($('reader-status'))$('reader-status').textContent=message;}
   function revoke() {
+    document.title='C0 — Knowledge';
     ++epoch;++selection;++versionSequence;profile=null;article=null;source=null;pages.clear();versions=[];evidence.clear();clearTimeout(pollTimer);
     if($('reader-root'))$('reader-root').hidden=true;
     for(const id of ['reader-tree','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks'])if($(id))$(id).replaceChildren();
@@ -80,7 +81,7 @@
       const page=await read('wiki/pages/'+id+(revision?'?revision='+revision:''));if(captured!==selection)return;
       article=page;pages.set(page.id,page);tree();breadcrumbs(page);
       const displayed=page.content.number, historical=displayed!==page.revision;
-      $('page-title').textContent=page.content.title;
+      $('page-title').textContent=page.content.title;document.title=page.content.title+' · C0';
       $('reader-updated').textContent='Updated '+C.date(page.content.created_at)+(historical?' · revision '+displayed:'');
       C.markdown($('reader-content'),page.content.body,$('reader-toc'));$('reader-toc-panel').hidden=!$('reader-toc').children.length;
       $('reader-actions').hidden=false;$('article-update-task').hidden=!writable() || page.deleted;
@@ -176,7 +177,7 @@
     try {
       const [item,history]=await Promise.all([read('sources/'+id),read('sources/'+id+'/versions?limit=100')]);if(captured!==selection)return;
       source=item;versions=history.versions;versionOffset=versions.length;
-      $('reader-source-title').textContent=item.title;$('reader-source-description').textContent='Updated '+C.date(item.updated_at)+(item.deleted?' · archived':'');
+      $('reader-source-title').textContent=item.title;document.title=item.title+' · Sources · C0';$('reader-source-description').textContent='Updated '+C.date(item.updated_at)+(item.deleted?' · archived':'');
       $('reader-source-details').hidden=false;$('reader-source-metadata').textContent=JSON.stringify(item.metadata,null,2);
       const chosen=requested || versions.find(v=>v.state==='ready')?.id || versions[0]?.id;
       versionOptions(chosen);
@@ -221,6 +222,7 @@
   async function initialize() {
     try {
       if(kind==='agents'){await guide();return;}
+      if(kind==='index' && C.params.get('view')==='account')return;
       profile=await read('me');
       const account=$({wiki:'wiki-account',sources:'sources-account'}[kind]);if(account)account.textContent='Signed in as '+profile.username;
       const signIn=$({wiki:'wiki-signin',sources:'sources-signin'}[kind]);if(signIn)signIn.hidden=true;

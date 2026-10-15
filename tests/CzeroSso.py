@@ -630,6 +630,7 @@ class CzeroSso:
                 assert_accessibility(browser, 'home', role)
                 run('Go To', 'https://' + host + '/agents')
                 run('Get Text', 'h1', '==', 'Use with AI')
+                run('Get Element Count', '#guide-tasks > details', '==', 1 if role == 'reader' else 4)
                 assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host)
                 run('Close Context')

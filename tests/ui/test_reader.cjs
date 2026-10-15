@@ -115,3 +115,9 @@ test('AI research tasks pin the displayed historical revision',()=>{
   const h=fixture(),historical=page();historical.content.number=1;
   assert.match(h.C.task('read',historical),/Read article revision 1/);
 });
+
+
+test('Account uses its existing identity controller without loading the knowledge home',async()=>{
+  const h=fixture('index','?view=account'),r=h.reader();await r.initialize();
+  assert.equal(h.requests.length,0);assert.equal(h.node('page-title').textContent,'Account and shared access');
+});

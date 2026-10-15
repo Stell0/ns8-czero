@@ -150,4 +150,9 @@
   for(const element of document.querySelectorAll('[data-tools-only]'))element.hidden=!toolsMode;
   for(const element of document.querySelectorAll('[data-reading-only]'))element.hidden=toolsMode;
   for(const element of document.querySelectorAll('[data-account-panel]'))element.hidden=params.get('view')!=='account';
+  if(params.get('view')==='account'){
+    const heading=document.getElementById('page-title');if(heading)heading.textContent='Account and shared access';
+    const lead=document.querySelector?.('.hero .lead');if(lead)lead.textContent='Review your sign-in and shared access.';
+    for(const item of document.querySelectorAll('.hero .action-link'))item.hidden=true;
+  }
 })();
