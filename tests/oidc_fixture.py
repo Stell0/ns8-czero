@@ -12,9 +12,9 @@ import sys
 
 IDP_HOST = "idp.czero.test"
 DOMAIN = "users.czero.test"
-IDP_IMAGE = "ghcr.io/nethserver/idp:main@sha256:fb33441753aba1f7df20df8511cf992dd21202e527a5cd983707a36876ec5976"
-KEYCLOAK_IMAGE = "ghcr.io/nethserver/idp-keycloak:main@sha256:c9327906f63fe03e0571bf94cbdd0839033e6b56cd14604b72a9100b223a833a"
-LDAPROXY_IMAGE = "ghcr.io/nethserver/ldapproxy:1.4.0-dev.1@sha256:c06ad303d81596a50c5aef84f3220fdd0ef5e3af7e85ce8c252fe4f0ca36219e"
+IDP_IMAGE = "ghcr.io/nethserver/idp:0.3.1@sha256:1c6ee1b6b393e20b4e8fcd1bf3733058a5b86409f12a4288e83a26d17bc0631f"
+KEYCLOAK_IMAGE = "ghcr.io/nethserver/idp-keycloak:0.3.1@sha256:175bddd31f8ed3fa47a92a85e607655d0e752db5dee19ff04c3011d1baf3826d"
+LDAPROXY_IMAGE = "ghcr.io/nethserver/ldapproxy:1.4.0@sha256:3dc6fc3a2bc4ae3d7775bdbd934f6f1295b80933d6fd11b2bf2301897b4cd16d"
 STATE = Path("/tmp/czero-oidc-fixture")
 PHASE = "initialization"
 
