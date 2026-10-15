@@ -211,6 +211,17 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 M13 is implementing independent Core distribution. The first packaging slice adds a complete GPL license/readme, version metadata and packaged migration verification; the initial Core packaging patch is 0.24.1 with no schema/API behavior change. Local isolated wheel/archive checks pass. Package publication, the released-package consumer/Renovate path and upstream update automation are not available until their recorded acceptance passes. See PLAN.md for the active subplan.
 
-The container builder now copies Core's declared README/license inputs, and the runtime audit checks the installed Core GPL metadata. Standalone wheel success alone does not prove the assembled image contains its license. The first M13 image exposed this gap; corrected-image verification is pending.
+The container builder now copies Core's declared README/license inputs, and the runtime audit checks the installed Core GPL metadata. Standalone wheel success alone does not prove the assembled image contains its license. The first M13 image exposed this gap; the corrected published image passes the strengthened license audit.
 
 The prepared Core artifact workflow uses `core-v<version>` tags, validates the exact checkout against local and Debian/Rocky CI, and tests the actual supplied wheel/archive before publication. Its separate publisher checks uploaded SHA256SUMS and preserves existing versions. This is Python library distribution, separate from an NS8 module release. Local guard/artifact tests and Actionlint pass; actual publication is still pending the recorded source CI gates.
+
+Managed-file upgrade tooling is under M13 acceptance. `scripts/sync-upstream.py`
+compares only files explicitly registered in a version-1 `c0-upstream.json`
+manifest against a matching trusted Git checkout. Preview with
+`python scripts/sync-upstream.py --upstream-dir /path/to/upstream --revision FULL_SHA`;
+add `--apply` to prepare a proposal. Untouched files update; customized files
+stay intact, with `needs_review` flags and `.c0/UPSTREAM_UPDATE.md` instructions.
+The scheduled/dispatch workflow prepares a review PR for opted-in forks.
+It never automatically merges. GITHUB_TOKEN-created PRs require explicit CI
+dispatch or an approved GitHub App before merging. Twenty-six real Git-history
+checks pass; manifest initialization and real proposal acceptance are pending.

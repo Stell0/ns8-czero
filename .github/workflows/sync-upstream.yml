@@ -1,0 +1,79 @@
+name: Propose upstream updates
+on:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: 'Optional full upstream commit SHA (default: upstream HEAD)'
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: c0-upstream-proposal
+  cancel-in-progress: false
+jobs:
+  propose:
+    # The template itself has no upstream to synchronize until a fork opts in.
+    if: github.repository != 'Stell0/ns8-czero'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Validate trusted upstream selection
+        id: selection
+        env:
+          REQUESTED_REVISION: ${{ inputs.revision }}
+        run: |
+          python - <<'PY'
+          import importlib.util, json, os
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('sync', 'scripts/sync-upstream.py')
+          sync = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(sync)
+          manifest = json.loads(Path(sync.MANIFEST).read_text())
+          upstream = manifest['upstream']
+          revision = os.environ.get('REQUESTED_REVISION', '')
+          if not sync.REPOSITORY.fullmatch(upstream) or (revision and not sync.SHA.fullmatch(revision)):
+              raise SystemExit('Invalid trusted upstream selection')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write(f'upstream={upstream}\nrevision={revision}\n')
+          PY
+      - name: Compare registered files without running upstream code
+        env:
+          UPSTREAM: ${{ steps.selection.outputs.upstream }}
+          REQUESTED_REVISION: ${{ steps.selection.outputs.revision }}
+        run: |
+          git clone --filter=blob:none --no-checkout "$UPSTREAM" "$RUNNER_TEMP/c0-upstream"
+          revision="${REQUESTED_REVISION:-$(git -C "$RUNNER_TEMP/c0-upstream" rev-parse HEAD)}"
+          python scripts/sync-upstream.py --upstream-dir "$RUNNER_TEMP/c0-upstream" --revision "$revision" --apply
+      - name: Open reviewable update proposal
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ github.token }}
+          branch: c0/upstream-update
+          title: 'chore(upstream): review managed updates'
+          commit-message: |
+            chore(upstream): propose managed updates
+
+            Apply untouched upstream files and preserve customized files
+            with explicit migration instructions for review.
+
+            Assisted-by: Codex:GPT-6
+          body: |
+            Registered upstream files changed. See `.c0/UPSTREAM_UPDATE.md`
+            for the exact revisions and per-file migration instructions.
+            Customized files are preserved; resolve `needs_review` entries
+            and run the normal build, local and native tests before merging.
+
+            GitHub does not trigger push/PR workflows for changes made with
+            GITHUB_TOKEN. Dispatch the normal CI workflows on this branch
+            before merging, or use an approved GitHub App for this automation.
