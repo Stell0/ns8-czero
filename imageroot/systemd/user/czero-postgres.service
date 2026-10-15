@@ -17,6 +17,8 @@ TimeoutStartSec=90
 TimeoutStopSec=70
 ExecStartPre=/bin/rm -f %t/czero-postgres.ctr-id
 ExecStart=/usr/bin/podman run --detach --sdnotify=container \
+    --memory=1g --memory-swap=2g --cpus=2 --pids-limit=256 \
+    --cap-drop=ALL --security-opt=no-new-privileges \
     --cidfile=%t/czero-postgres.ctr-id --cgroups=no-conmon \
     --pod-id-file=%t/czero.pod-id --replace --name=%N \
     --volume=czero-db-data:/var/lib/postgresql/data:Z,U \

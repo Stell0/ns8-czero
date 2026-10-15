@@ -389,6 +389,14 @@ Exercise the native module update
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
 
+Verify effective container hardening and memory targets
+    Put File    ${CURDIR}/hardening_probe.py    /tmp/czero-hardening-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-hardening-probe.py
+    ...    return_rc=True    timeout=45s
+    Should Be Equal As Integers    ${rc}    0
+    Log    ${output}
+
 Verify deterministic worker and native timer
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
     ...    return_rc=True    timeout=30s
