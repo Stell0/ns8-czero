@@ -61,6 +61,21 @@ Check application route
     Should Be Equal    ${health}[database][status]    ok
     Should Contain    ${output}    "core_version":"0.24.0"
 
+Check worker timer recovered
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${scheduler} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${scheduler}[timer_active]
+    Should Be True    ${scheduler}[timer_enabled]
+    Should Not Be True    ${scheduler}[worker_failed]
+    Should Not Be True    ${scheduler}[worker_running]
+    ${result}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} systemctl --user show --property=Result --value czero-worker.service
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal    ${result}    success
+
 *** Test Cases ***
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
@@ -298,10 +313,25 @@ Report database outage and recover the application
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    degraded
     Should Be Equal    ${health}[database][reason]    database_unavailable
+    # Force a genuine failed wake during the outage; do not mask its state.
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-worker.service
+    ...    return_rc=True    return_stdout=False    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-worker.service
+    ...    return_rc=True    return_stdout=False    timeout=30s
+    Should Not Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${scheduler} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${scheduler}[worker_failed]
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user start czero-postgres.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
     Check application route
+    # Retain the real timer and wait for its next successful completed wake.
+    # Never reset-failed or start the worker manually after restoring the DB.
+    Wait Until Keyword Succeeds    95s    2s    Check worker timer recovered
 
 Verify application requests are logged
     Check application route

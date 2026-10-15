@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M12 UI conventions
 
+- A failed one-shot wake during intentional database restart/outage remains a legitimate failed service until the next timer run. Do not reset/mask this state to pass readiness. Disposable outage regression must force a real failed worker with PostgreSQL down, restore the DB and require a timer-driven completed success within 95 seconds before later deterministic job assertions. Keep exact due counts and both app/full-manager restart gates. No destructive outage fixture runs live.
+
 - Sources citation selection has its own request generation, checked with document/page identity for both success and error. Clearing/changing document chunks invalidates citations. Query edits clear old source-search evidence and reject late errors as well as successes. Upload-source lookup checks the captured draft generation before filling title/provenance; busy uploads suppress duplicate submits. Keep existing immutable source/version/hash/offset/original and CSRF/role contracts.
 
 - Wiki graph lists render bounded entity/edge/reference metadata through DOM text; retain raw JSON under explicit details. Entity navigation can add a current graph node beyond the initial picker window. Construct metadata links only from known local target routes and validated UUIDs; missing references retain snapshots without live links. Changing depth clears stale graph evidence; sequence both graph successes/errors. Same-page saves advance revisions while preserving newer text, fixed slugs and usable export/reload controls; new selections have independent save-button lifetimes. Relation/reference feedback must match the captured entity selection.
