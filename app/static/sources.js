@@ -3,6 +3,7 @@
 const $ = id => document.getElementById(id);
 let profile = null, currentSource = null, currentDocument = null;
 let sourceOffset = 0, chunkOffset = 0, sourcesSequence = 0, selectionSequence = 0, documentSequence = 0, searchSequence = 0, pollTimer = null;
+let citationSequence = 0, uploadDraftSequence = 0;
 const canWrite = () => profile && ['editor', 'admin'].includes(profile.role);
 const errors = {unsupported_docx:"Unsupported DOCX text structures. Convert this file; its original is retained.",invalid_text:'Invalid UTF-8 text.', no_text:'No extractable text; the original is retained.', unsupported_scan:'Scanned PDFs need OCR outside C0.', encrypted_pdf:'Encrypted PDFs are unsupported.', archive_limit:'DOCX archive expansion exceeds the safe limit.', too_large:'The file or extracted text exceeds the safe limit.', parser_timeout:'Extraction reached its time limit.', invalid_file:'The stored original is missing or changed.', invalid_docx:'Unsupported or malformed DOCX.', invalid_pdf:'Malformed PDF.'};
 async function api(path, options = {}) {
@@ -20,7 +21,7 @@ function button(label, action) {
   node.addEventListener('click', () => action().catch(error => {$('source-status').textContent = error.message;})); return node;
 }
 function clearDocument() {
-  ++documentSequence; currentDocument = null; chunkOffset = 0;
+  ++documentSequence; ++citationSequence; currentDocument = null; chunkOffset = 0;
   $('document-text').textContent = ''; $('source-citation').textContent = ''; $('source-chunks').replaceChildren();
   $('document-status').textContent = 'Choose a ready version to inspect its evidence.';
   $('chunks-previous').disabled = true; $('chunks-next').disabled = true;
@@ -77,41 +78,50 @@ async function loadDocument(versionId) {
 async function loadChunks() {
   if (!currentDocument) return;
   const id = currentDocument.id, sequence = documentSequence, offset = chunkOffset;
+  ++citationSequence; $('source-citation').textContent = '';
   const result = await api(`documents/${id}/chunks?limit=50&offset=${offset}`);
   if (sequence !== documentSequence || currentDocument?.id !== id || offset !== chunkOffset) return;
   $('source-chunks').replaceChildren();
   for (const chunk of result.chunks) {
     const row = document.createElement('li'); row.append(button(`Chunk ${chunk.ordinal+1} · offsets ${chunk.start_offset}–${chunk.end_offset}`, async () => {
-      const citation = await api('chunks/' + chunk.id + '/citation');
-      if (sequence === documentSequence && currentDocument?.id === id) $('source-citation').textContent = JSON.stringify(citation, null, 2);
+      const request = ++citationSequence;
+      const current = () => request === citationSequence && sequence === documentSequence && currentDocument?.id === id && offset === chunkOffset;
+      try {const citation = await api('chunks/' + chunk.id + '/citation');if (current()) $('source-citation').textContent = JSON.stringify(citation, null, 2);}
+      catch (_) {if (current()) $('source-citation').textContent = 'Cannot load this citation. Check access and try again.';}
     })); $('source-chunks').append(row);
   }
   $('chunks-previous').disabled = offset === 0; $('chunks-next').disabled = result.chunks.length < 50;
 }
 async function searchSources() {
   const sequence = ++searchSequence, query = $('source-query').value;
-  const result = await api('sources/search?' + new URLSearchParams({query, limit:20}));
-  if (sequence !== searchSequence || query !== $('source-query').value) return;
-  $('source-results').replaceChildren();
-  for (const citation of result.citations) {
-    const row = document.createElement('li'); row.append(button(`${citation.title} · version ${citation.version}`, async () => {
-      if (await selectSource(citation.source_id)) await loadDocument(citation.version_id);
-    })); const excerpt = document.createElement('p'); excerpt.textContent = citation.body.slice(0,300); row.append(excerpt); $('source-results').append(row);
-  }
-  $('search-status').textContent = `${result.citations.length} sourced text matches (up to 20).`;
+  const current = () => sequence === searchSequence && query === $('source-query').value;
+  $('search-status').textContent = 'Searching source evidence...';
+  try {
+    const result = await api('sources/search?' + new URLSearchParams({query, limit:20}));
+    if (!current()) return;
+    $('source-results').replaceChildren();
+    for (const citation of result.citations) {
+      const row = document.createElement('li'); row.append(button(`${citation.title} · version ${citation.version}`, async () => {
+        if (await selectSource(citation.source_id)) await loadDocument(citation.version_id);
+      })); const excerpt = document.createElement('p'); excerpt.textContent = citation.body.slice(0,300); row.append(excerpt); $('source-results').append(row);
+    }
+    $('search-status').textContent = `${result.citations.length} sourced text matches (up to 20).`;
+  } catch (_) {if (current()) {$('source-results').replaceChildren();$('search-status').textContent='Source search is unavailable. Check access and try again.';}}
 }
+$('source-query').addEventListener('input', () => {++searchSequence;$('source-results').replaceChildren();$('search-status').textContent='Query changed. Search to refresh evidence.';});
+for (const id of ['upload-title','upload-metadata']) $(id).addEventListener('input', () => {++uploadDraftSequence;});
 $('upload-file').addEventListener('change', () => {
   const file = $('upload-file').files[0]; if (!file) return;
   const extension = file.name.split('.').pop().toLowerCase(), formats = {txt:'text/plain',md:'text/markdown',pdf:'application/pdf',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
   if (formats[extension]) $('upload-media').value = formats[extension]; if (!$('upload-title').value) $('upload-title').value = file.name;
 });
 $('upload-source').addEventListener('change', async () => {
-  const id = $('upload-source').value; if (!id) return;
-  try {const source = await api('sources/' + id); if ($('upload-source').value === id) {$('upload-title').value = source.title; $('upload-metadata').value = JSON.stringify(source.metadata);}}
-  catch (error) {$('upload-status').textContent = error.message;}
+  const id = $('upload-source').value, draft = ++uploadDraftSequence; if (!id) return;
+  try {const source = await api('sources/' + id); if ($('upload-source').value === id && draft === uploadDraftSequence) {$('upload-title').value = source.title; $('upload-metadata').value = JSON.stringify(source.metadata);}}
+  catch (_) {if ($('upload-source').value === id && draft === uploadDraftSequence) $('upload-status').textContent = 'Cannot load this source metadata.';}
 });
 $('upload-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!canWrite()) return; $('upload-submit').disabled = true;
+  event.preventDefault(); if (!canWrite() || $('upload-submit').disabled) return; $('upload-submit').disabled = true;
   const selection = selectionSequence;
   try {
     const file = $('upload-file').files[0]; if (!file || file.size > 10*1024*1024) throw new Error('Choose a file up to 10 MiB.');

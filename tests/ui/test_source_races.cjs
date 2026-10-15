@@ -13,7 +13,7 @@ function harness() {
   for(const match of fs.readFileSync(path.join(__dirname,'../../app/static/sources.html'),'utf8').matchAll(/id="([^"]+)"/g))document.getElementById(match[1]);
   class FormData {constructor(){this.values=[];}append(...value){this.values.push(value);}}
   const context = vm.createContext({document,URLSearchParams,FormData,console,setTimeout(){},clearTimeout(){},
-    fetch(url,options){return new Promise(resolve=>{if(!url.includes('/auth/status'))requests.push({url,options,resolve});});}});
+    fetch(url,options){return new Promise((resolve,reject)=>{if(!url.includes('/auth/status'))requests.push({url,options,resolve,reject});});}});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../../app/static/sources.js'),'utf8'),context);
   return {context,nodes,requests,run:code=>vm.runInContext(code,context)};
 }
@@ -63,4 +63,32 @@ test('upload captures its inputs and preserves a later source selection', async(
   h.requests[1].resolve(reply({id:'uploaded',source_id:'old'}));await new Promise(setImmediate);
   h.requests[2].resolve(reply({sources:[source('new'),source('old')]}));await submitting;
   assert.equal(h.run('currentSource.id'),'new');assert.equal(h.nodes.get('upload-title').value,'new draft');
+});
+
+
+test('older citations and errors cannot replace the most recently clicked chunk',async()=>{
+  for(const fail of [false,true]){
+    const h=harness();h.run("currentDocument={id:'doc'}");const chunks=h.run('loadChunks()');
+    h.requests[0].resolve(reply({chunks:[{id:'first',ordinal:0,start_offset:0,end_offset:5},{id:'second',ordinal:1,start_offset:5,end_offset:9}]}));await chunks;
+    const controls=h.nodes.get('source-chunks').children.map(row=>row.children[0]);controls[0].listeners.click();controls[1].listeners.click();
+    h.requests[2].resolve(reply({chunk_id:'second'}));await new Promise(setImmediate);
+    if(fail)h.requests[1].reject(new Error('private transport'));else h.requests[1].resolve(reply({chunk_id:'first'}));await new Promise(setImmediate);
+    assert.equal(JSON.parse(h.nodes.get('source-citation').textContent).chunk_id,'second');
+  }
+});
+test('query edits clear old evidence and reject earlier source-search errors',async()=>{
+  const h=harness();h.nodes.get('source-query').value='old';const pending=h.run('searchSources()');
+  h.nodes.get('source-results').append({textContent:'Earlier evidence'});h.nodes.get('source-query').value='new';h.nodes.get('source-query').listeners.input();
+  h.requests[0].reject(new Error('private transport detail'));await pending;
+  assert.equal(h.nodes.get('source-results').children.length,0);assert.match(h.nodes.get('search-status').textContent,/Query changed/);
+});
+test('upload metadata lookup preserves text typed after the source was chosen',async()=>{
+  const h=harness();h.nodes.get('upload-source').value='existing';const pending=h.nodes.get('upload-source').listeners.change();
+  h.nodes.get('upload-title').value='New draft';h.nodes.get('upload-title').listeners.input();
+  h.requests[0].resolve(reply(source('existing')));await pending;assert.equal(h.nodes.get('upload-title').value,'New draft');
+});
+test('duplicate busy upload submissions never issue a second POST',async()=>{
+  const h=harness();h.run("profile={role:'editor',csrf_token:'fixture'}");h.nodes.get('upload-file').files=[{name:'new.txt',size:10}];h.nodes.get('upload-metadata').value='{}';
+  const first=h.nodes.get('upload-form').listeners.submit({preventDefault(){}});await h.nodes.get('upload-form').listeners.submit({preventDefault(){}});
+  assert.equal(h.requests.length,1);h.requests[0].resolve({ok:false,status:409});await first;assert.equal(h.nodes.get('upload-submit').disabled,false);
 });
