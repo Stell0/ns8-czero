@@ -244,3 +244,35 @@ def test_manual_contribution_forms_belong_to_the_tools_view(client, page, form):
     structure = Ancestors()
     structure.feed(client('/czero/czero17/' + page).text)
     assert structure.tools
+
+
+@pytest.mark.parametrize('page', ['', 'wiki', 'sources', 'search', 'agents', 'objects', 'admin'])
+def test_user_templates_have_balanced_elements_and_no_duplicate_attributes(client, page):
+    from html.parser import HTMLParser
+
+    class Markup(HTMLParser):
+        void = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+                'link', 'meta', 'param', 'source', 'track', 'wbr'}
+
+        def __init__(self):
+            super().__init__()
+            self.stack = []
+            self.errors = []
+
+        def handle_starttag(self, tag, attrs):
+            names = [key for key, value in attrs]
+            if len(names) != len(set(names)):
+                self.errors.append(('duplicate attributes', tag))
+            if tag not in self.void:
+                self.stack.append(tag)
+
+        def handle_endtag(self, tag):
+            if not self.stack or self.stack[-1] != tag:
+                self.errors.append(('unbalanced element', tag))
+            elif self.stack:
+                self.stack.pop()
+
+    markup = Markup()
+    markup.feed(client('/czero/czero17/' + page).text)
+    assert not markup.errors
+    assert not markup.stack

@@ -353,7 +353,7 @@ class CzeroSso:
             title = '<img src=x onerror=alert(1)> browser-source-' + secrets.token_hex(4)
             sample = Path(__file__).parent / 'fixtures/evidence/sample.txt'
             expected_text = sample.read_text()
-            run('Click', '#source-upload summary')
+            run('Click', '#source-upload > summary')
             run('Fill Text', '#upload-title', title)
             run('Upload File By Selector', '#upload-file', str(sample))
             run('Click', '#upload-form details summary')
@@ -374,7 +374,7 @@ class CzeroSso:
             run('Reload')
             run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
             view(1, expected_text)
-            run('Click', '#source-upload summary')
+            run('Click', '#source-upload > summary')
             run('Select Options By', '#upload-source', 'value', source_id)
             run('Check Checkbox', '#upload-retain')
             run('Upload File By Selector', '#upload-file', str(sample))
