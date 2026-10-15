@@ -334,3 +334,8 @@ The template's hard-coded Robot login credentials have been removed. Use disposa
 Code, data migrations, REST/MCP schema, end-user/admin UI, tests, backup implications and docs must be considered together. Before declaring completion: inspect diff, run relevant local tests, push, verify CI, run QEMU/live/browser checks when applicable, and reconcile `AGENTS.md`, `README.md` and `PLAN.md`. Document blockers precisely; do not substitute fabricated output.
 
 **Start at [PLAN.md — M00](PLAN.md) unless a milestone has already been recorded as complete with evidence.**
+
+
+## Active structured-object repair
+
+The operator's M1/M2/M3 repair takes priority while M16 acceptance remains open. Preserve its separate draft; do not begin M17. Core already requires unique string properties to declare maxLength <=128; omitted maxLength uses the ordinary 8192 default and fails with unique_string_too_long. Current object REST and MCP adapters mask that reason. Keep uniqueness, Admin/c0:admin type creation, Editor/c0:write records, schema subset, limits and immutable types unchanged. Surface only fixed public domain codes and safe record path/keyword errors, with generic fallbacks for unexpected internals. Test the reported failure and explicit bounded positive controls before code. M1 intentionally reproduces red assertions and must never be deployed; M2/M3 require passing source and genuine native/deployed MCP evidence. Use isolated runtime-generated names only; preserve all pilot data and prior fixtures. Do not invent native sessions or extract stored authority to bypass OAuth. The authorized connector is now available for actual deployed MCP calls.

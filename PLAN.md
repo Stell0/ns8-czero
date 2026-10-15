@@ -1104,3 +1104,33 @@ This plan uses **Integration M15–M20**, preserving the existing completed M15 
 - **Integration M20:** first measure real delegated-session behavior. Retain current policy if sufficient; otherwise explicitly configurable bounded delegation with short access tokens, rotating refresh/replay detection, absolute/inactivity bounds, no scope escalation and immediate membership/client/native-identity invalidation. Controlled-clock lifecycle/concurrency/recovery tests precede any policy change; never extend authority to satisfy a test.
 
 Every follow-on milestone requires the same full cycle and updates to all three project documents. Core publication, if necessary, retains the immutable artifact -> released dependency/lock -> consumer-image verification sequence. The final integration checklist remains unaccepted until actual ChatGPT workflows, identity/permissions/metadata, optional CIMD, lifecycle, preserved data/recovery and per-milestone deployment evidence pass.
+
+
+## Structured object creation repair — active operator task
+
+This repair takes priority over further ChatGPT integration milestones. Keep the separate unfinished M16 acceptance draft intact; do not claim M16 scope-upgrade acceptance or begin M17. Starting source is main `1e14865123dc98ab51ad5c046f8a1637eeb51749`, also the currently installed runtime. Work is isolated on `fix/structured-object-creation` in a separate checkout.
+
+### M1 — Root cause and regression reproduction [ ]
+
+Trace: MCP `call` -> `OperationRegistry.execute` (persisted Admin + c0:admin) -> typed `OperationCatalog.invoke` -> objects `register`/`invoke` -> Core `ObjectService.register_type` -> `schema_validator` -> PostgreSQL insert. The reported unique string has no maxLength. Core's ordinary string default is 8192, while unique strings require maxLength <=128; `register_type` raises the existing `unique_string_too_long` before opening its insert transaction. REST replaces that code with `invalid_object_request`; MCP replaces its resulting HTTPException with `invalid_operation_request`. The deployed connector independently reproduces that generic error on an isolated unique name. No object type is created by the rejected request. Authorization, request serialization, supported required/additionalProperties keywords and migrations are not the root cause.
+
+Preserve the existing deliberate uniqueness bound and all schema/data isolation. The operator permits a precise validation error for unsupported reasonable constructs: do not silently truncate data, widen unique keys or inject schema constraints. Make the required explicit maxLength discoverable and return safe stable codes. No Core, dependency or database/schema change is planned. Reusable validation stays in Core; adapter error translation and tool guidance stay in the app.
+
+- [ ] Commit/push independent REST and actual current/legacy SDK regression tests plus Core and bounded-schema positive controls. The three intended error-code assertions must fail before the fix; record those as reproduced failures, never passing tests. A reproduction-only red commit is not eligible for main or deployment.
+- [ ] Inspect exact-source CI and retain the expected failure evidence before M2. Resolve unexpected failures first.
+
+### M2 — Minimal implementation fix [ ]
+
+- [ ] Preserve known safe object validation/conflict/not-found codes through REST and MCP using a fixed public allowlist; retain generic fallback for unexpected/private exceptions and unchanged permission/scope challenges. Advertise explicit unique-string maxLength <=128 and supported schema constructs in the existing tool input metadata.
+- [ ] Verify focused and full applicable local checks, dependency/schema diff, exact-source local/image/released-Core/native CI; promote only passing source, verify main publication and all three immutable digests, update only the authorized C0 instance with the canonical native action.
+- [ ] Wait for actual readiness; verify installed revision/digests, existing data/settings/schedules/unrelated modules and bounded log privacy. Use the actual connected MCP tool to create/retrieve a uniquely isolated bounded type. Preserve existing pilot data.
+
+### M3 — Complete validated CRUD regression [ ]
+
+- [ ] Cover minimal/multiple-property/required/closed schemas, get/list schema identity, valid objects, missing/wrong/extra fields, unique/type/revision conflicts, query/get/update/delete, Reader/Editor denial, insufficient/revoked authority, invalid/unsupported schema and safe unexpected-error fallback independently through REST and current/legacy MCP.
+- [ ] Extend existing native OAuth/TLS probes with isolated complete typed CRUD. Freeze all three genuine deployed predecessors. Run full checks and exact CI/native/artifact gates, commit/push/main publication and supported targeted deployment with exact identity/persistence/privacy checks.
+- [ ] Through the actual connected MCP integration, create a unique regression type, retrieve/list it, create Digit 5, get/query/update/re-read it, reject invalid data, delete it and verify absence. Keep immutable type definitions and audit events as the documented application contract; never delete pilot data or bypass validation with live SQL.
+- [ ] Update all three documents with exact commits/CI/deployed digests/outcomes and limitations; distinguish actual connector execution from a separately operated ChatGPT UI prompt.
+
+
+**M1 local evidence:** Existing Core schema/PostgreSQL objects/REST/registry baseline: **34 passed**. New reproducer: **four controls passed, three intended assertions failed** (REST, current SDK, legacy SDK); each expected unique_string_too_long but received the adapter's generic error. Direct Core identifies that exact validation reason without inserting a type; the same type with explicit maxLength:128 is created/retrieved through all three transports. The actual authorized connected MCP reproduces invalid_operation_request on a unique isolated name with omitted maxLength. This is a deliberate reproduction-only red increment, not a deployable or accepted fix. Exact-source CI inspection follows its push.
