@@ -8,6 +8,19 @@ permissions:
 jobs:
   core:
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+        env:
+          POSTGRES_USER: czero
+          POSTGRES_DB: czero_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['127.0.0.1:5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U czero -d czero_test"
+          --health-interval=5s --health-timeout=5s --health-retries=15
+    env:
+      CZERO_TEST_DATABASE_URL: postgresql+psycopg://czero@127.0.0.1:5432/czero_test
     steps:
       - uses: actions/checkout@v7
         with:

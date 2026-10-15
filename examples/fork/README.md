@@ -63,3 +63,9 @@ GitHub combines PR creation and approval in that setting; this updater only
 creates proposals and never approves or merges them. Keep default token
 permissions read. Bot-created PR checks require workflow approval or manual
 dispatch, as documented in GitHub's June 2026 Actions behavior.
+
+Consumer CI also creates a disposable PostgreSQL/pgvector database to exercise
+an original application schema, records, stale revisions, persisted Reader
+authorization and repeated packaged migrations. Set CZERO_TEST_DATABASE_URL
+only to an isolated development database to run that case locally; it never
+uses the live C0 database. Test identities are trusted fixture inputs, not SSO.
