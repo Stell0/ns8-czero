@@ -40,8 +40,21 @@ the knowledge-space identity. Never place a database URL or identity/provider
 secret in source code or application logs.
 
 Version `0.24.1` is the initial distribution packaging patch, with the existing
-`0013_oauth_consent` schema and unchanged runtime contracts. The planned compatible
-consumer range is `>=0.24.1,<0.25.0`; patch publication and automatic fork updates
-are not claimed verified until their execution is recorded in PLAN.md.
+`0013_oauth_consent` schema and unchanged runtime contracts. The compatible consumer range is `>=0.24.1,<0.25.0`. Publication and automatic
+fork-update evidence is recorded in the repository PLAN.md.
 
 Licensed GPL-3.0-or-later; the complete license is included in both distributions.
+
+## Core artifact publication
+
+`.github/workflows/publish-core.yml` handles `core-v<package-version>` tags,
+independently of NS8 module releases. It checks the exact checkout/source,
+successful local CI and both native distributions before building artifacts.
+The exact wheel/source archive is tested, including packaged PostgreSQL
+migrations, before a separate narrowly scoped job creates a draft release,
+checks its uploaded hashes and publishes it without replacing the module's
+latest release. Replays must match existing artifact bytes; published files
+are never clobbered.
+
+The workflow is prepared and locally validated; consult PLAN.md for actual
+executed publication and consumer tests before selecting an artifact.

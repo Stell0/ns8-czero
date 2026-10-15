@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import tarfile
 import tomllib
 from uuid import uuid4
@@ -28,7 +29,11 @@ def command(arguments, *, cwd, env=None):
 @pytest.fixture(scope='module')
 def distributions(tmp_path_factory):
     directory=tmp_path_factory.mktemp('core-distribution')
-    env={**os.environ,'SOURCE_DATE_EPOCH':'1767225600','UV_CACHE_DIR':str(directory/'cache')}
+    env={**os.environ,'SOURCE_DATE_EPOCH':os.getenv('SOURCE_DATE_EPOCH','1767225600'),'UV_CACHE_DIR':str(directory/'cache')}
+    supplied=os.getenv('CZERO_CORE_DISTRIBUTION_DIR')
+    if supplied:
+        shutil.copytree(Path(supplied).resolve(),directory/'dist')
+        return directory,env
     command(['uv','build','--no-sources',str(ROOT/'packages/czero-core'),'--out-dir',str(directory/'dist')],cwd=directory,env=env)
     return directory, env
 

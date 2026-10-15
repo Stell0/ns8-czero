@@ -1,0 +1,110 @@
+name: Publish C0 Core
+
+# Core library artifacts use their own namespace, separate from NS8 module tags.
+on:
+  push:
+    tags: ["core-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: read
+      actions: read
+    services:
+      postgres:
+        image: docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+        env:
+          POSTGRES_USER: czero
+          POSTGRES_DB: czero_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["127.0.0.1:5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U czero -d czero_test"
+          --health-interval=5s --health-timeout=5s --health-retries=15
+    env:
+      CZERO_TEST_DATABASE_URL: postgresql+psycopg://czero@127.0.0.1:5432/czero_test
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Require verified source and matching version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/status" > /tmp/core-native-status.json
+          gh run list --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
+            --workflow test-local.yml --json headSha,status,conclusion > /tmp/core-local-runs.json
+          python scripts/check-core-release.py /tmp/core-native-status.json /tmp/core-local-runs.json
+      - name: Build independent distributions
+        run: |
+          set -euo pipefail
+          pip install uv==0.12.20 pytest -e packages/czero-core
+          echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+          SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD) \
+            uv build --no-sources packages/czero-core --out-dir dist/core
+      - name: Verify exact artifacts and packaged migrations
+        env:
+          CZERO_CORE_DISTRIBUTION_DIR: ${{ github.workspace }}/dist/core
+        run: python -m pytest -q tests/packaging
+      - name: Record distribution checksums
+        run: |
+          cd dist/core
+          sha256sum ./*.whl ./*.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: core-distributions
+          path: dist/core/
+          if-no-files-found: error
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download verified artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name core-distributions --dir dist
+      - name: Publish immutable Core artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag_commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}" --jq .sha)
+          test "$tag_commit" = "$GITHUB_SHA"
+          cd dist
+          sha256sum --check SHA256SUMS
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            python - <<'PY'
+          import os
+          from pathlib import Path
+          Path('release-notes.md').write_text(
+              'Independent C0 Core Python library distribution. This is not an NS8 module release.\n\n'
+              'Source commit: ' + os.environ['GITHUB_SHA'] + '\n\n'
+              'Wheel, source archive and SHA256SUMS are attached. GPL-3.0-or-later license and migrations are included. '
+              'See packages/czero-core/README.md at this tag for installation and compatibility.\n')
+          PY
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --verify-tag --target "$GITHUB_SHA" --draft --latest=false \
+              --title "C0 Core ${GITHUB_REF_NAME#core-v}" --notes-file release-notes.md \
+              ./*.whl ./*.tar.gz SHA256SUMS
+          fi
+          # Never clobber a version. Replays must match every published byte.
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir ../published
+          cmp SHA256SUMS ../published/SHA256SUMS
+          (cd ../published && sha256sum --check SHA256SUMS)
+          if [[ $(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft) == true ]]; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
+          fi
