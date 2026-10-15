@@ -352,6 +352,31 @@
       "path": "scripts/normalize-core-sdist.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "scripts/select-core-source.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": ".github/workflows/test-core-renovate.yml",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/development/core-renovate.mjs",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": ".github/workflows/test-core-consumer.yml",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/core_consumer_runtime_probe.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

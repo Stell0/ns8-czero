@@ -1,0 +1,43 @@
+name: Released Core image
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - app/**
+      - containers/czero-app/**
+      - scripts/select-core-source.py
+      - tests/audit_runtime.py
+      - tests/core_consumer_runtime_probe.py
+      - .github/workflows/test-core-consumer.yml
+  pull_request:
+    paths:
+      - app/**
+      - containers/czero-app/**
+      - scripts/select-core-source.py
+      - tests/audit_runtime.py
+      - tests/core_consumer_runtime_probe.py
+      - .github/workflows/test-core-consumer.yml
+permissions:
+  contents: read
+jobs:
+  image:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the default released source independently
+        run: buildah build --file containers/czero-app/Containerfile --build-arg CZERO_CORE_SOURCE=released --tag localhost/c0-core-consumer .
+      - name: Verify actual runtime content and license
+        run: podman run --rm --interactive --entrypoint python localhost/c0-core-consumer - < tests/audit_runtime.py
+      - name: Verify the installed immutable Git source
+        run: |
+          python3 - <<'PY' > /tmp/core-expected
+          import re, tomllib
+          from pathlib import Path
+          lock=tomllib.loads(Path('app/uv.lock').read_text())
+          core=next(item for item in lock['package'] if item['name']=='czero-core')
+          version=core['version']; commit=core['source']['git'].rsplit('#',1)[1]
+          assert re.fullmatch(r'0\.24\.[0-9]+',version) and re.fullmatch(r'[0-9a-f]{40}',commit)
+          print(version,commit)
+          PY
+          read -r version commit < /tmp/core-expected
+          podman run --rm --interactive --entrypoint python localhost/c0-core-consumer - "$version" "$commit" < tests/core_consumer_runtime_probe.py

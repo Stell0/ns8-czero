@@ -30,7 +30,7 @@ def create(destination: Path, repository: Path) -> None:
         shutil.copy2(example / name, destination / name)
     if (example / "uv.lock").exists():
         shutil.copy2(example / "uv.lock", destination / "uv.lock")
-    (destination / "tests").mkdir()
+    (destination / "tests").mkdir(exist_ok=True)
     for name in ("test_consumer.py", "test_managed.py", "test_persistence.py"):
         shutil.copy2(example / name, destination / "tests" / name)
     # This fixture is a Core consumer, not a newly configured NS8 runtime module.
