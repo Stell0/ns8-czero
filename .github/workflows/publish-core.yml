@@ -52,6 +52,8 @@ jobs:
           echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
           SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD) \
             uv build --no-sources packages/czero-core --out-dir dist/core
+          SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD) \
+            python scripts/normalize-core-sdist.py dist/core/*.tar.gz
       - name: Verify exact artifacts and packaged migrations
         env:
           CZERO_CORE_DISTRIBUTION_DIR: ${{ github.workspace }}/dist/core

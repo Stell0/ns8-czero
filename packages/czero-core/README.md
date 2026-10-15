@@ -58,3 +58,10 @@ are never clobbered.
 
 The workflow is prepared and locally validated; consult PLAN.md for actual
 executed publication and consumer tests before selecting an artifact.
+
+Release builds also normalize generated source-archive ownership, timestamps,
+permissions and gzip metadata with `scripts/normalize-core-sdist.py` and the
+source commit's `SOURCE_DATE_EPOCH`. Wheel and normalized archive rebuild hashes
+are checked; package contents are preserved. Setuptools source archives alone
+retain build-host metadata, so raw uv sdist output is not a replayable release
+artifact. This development helper stays outside the installed Core package.

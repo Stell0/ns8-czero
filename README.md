@@ -224,7 +224,7 @@ stay intact, with `needs_review` flags and `.c0/UPSTREAM_UPDATE.md` instructions
 The scheduled/dispatch workflow prepares a review PR for opted-in forks.
 It never automatically merges. GITHUB_TOKEN-created PRs require explicit CI
 dispatch or an approved GitHub App before merging. Twenty-six real Git-history
-checks pass. The manifest registers 69 infrastructure files at immutable baseline
+checks pass. The manifest registers 70 infrastructure paths at immutable baseline
 130b3eb; real proposal acceptance remains pending.
 
 The four repository-only skills in `.agents/skills` cover feature development,
@@ -246,3 +246,9 @@ Unresolved customized updates retain their original `review_from` revision
 across later proposals, including updates to other files. Reports keep every
 unresolved file's full migration range. Remove its `needs_review` and
 `review_from` markers only after resolving and testing that migration.
+
+Core release archives are normalized with the commit epoch before upload,
+removing build-host tar/gzip ownership and timestamps while retaining content
+and executable bits. Actual independently built archives initially differed;
+normalization makes their hashes identical. Both archive and wheel rebuilds
+are checked, and existing published versions are never overwritten.

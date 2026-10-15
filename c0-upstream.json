@@ -347,6 +347,11 @@
       "path": "imageroot/update-module.d/80restart",
       "mode": "100755",
       "sha256": "4097d79a5cf6314f14ca15a638963837d6c3d8bf3afda118e4d3466f51d3f7c7"
+    },
+    {
+      "path": "scripts/normalize-core-sdist.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

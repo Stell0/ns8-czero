@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M13 distribution conventions
 
+- Normalize generated Core source archives with scripts/normalize-core-sdist.py and the immutable commit epoch before release. Setuptools retains gzip/tar build-host timestamps and owner metadata despite SOURCE_DATE_EPOCH. Preserve every package byte and executable bit while normalizing metadata; compare both wheel and archive rebuild hashes and test exact supplied artifacts. Never publish raw nonreproducible archives and then clobber them on retry.
+
 - The initial manifest registers 69 tracked infrastructure files against 130b3eb. Do not add ignored caches or private fixtures by walking the filesystem; use tracked files. An original standalone consumer generator copies only registered infrastructure, preflights unsafe paths/symlinks before destination creation and replaces module publishers with focused CI. A second repository must never publish the template registry tags. Local checks now support explicit dispatch for token-created PRs. The example still awaits verified tag/lock/remote acceptance.
 
 - Repository-only .agents/skills/c0-* route feature/Core/contribution/upgrade work and delegate native operations to installed NethServer skills. Preserve fork-only changes and unfinished drafts when isolating contributions. Independent isolated forward-tests of contribution and semantic upgrade pass; they do not establish remote PR/CI or native persistence acceptance. No skills ship in runtime images.

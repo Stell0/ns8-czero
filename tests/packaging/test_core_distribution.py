@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import sys
 import subprocess
 import shutil
 import tarfile
@@ -35,6 +36,7 @@ def distributions(tmp_path_factory):
         shutil.copytree(Path(supplied).resolve(),directory/'dist')
         return directory,env
     command(['uv','build','--no-sources',str(ROOT/'packages/czero-core'),'--out-dir',str(directory/'dist')],cwd=directory,env=env)
+    command([sys.executable,str(ROOT/'scripts/normalize-core-sdist.py'),str(next((directory/'dist').glob('*.tar.gz')))],cwd=directory,env=env)
     return directory, env
 
 
@@ -59,12 +61,14 @@ def test_distributions_have_license_runtime_metadata_and_complete_migrations(dis
         assert f'czero_core-{version}/README.md' in names
 
 
-def test_wheel_rebuild_has_identical_hash(distributions):
+def test_wheel_and_source_rebuild_have_identical_hashes(distributions):
     directory,env=distributions
-    command(['uv','build','--no-sources','--wheel',str(ROOT/'packages/czero-core'),'--out-dir',str(directory/'repeat')],cwd=directory,env=env)
-    first=next((directory/'dist').glob('*.whl'))
-    second=next((directory/'repeat').glob('*.whl'))
-    assert hashlib.sha256(first.read_bytes()).digest()==hashlib.sha256(second.read_bytes()).digest()
+    command(['uv','build','--no-sources',str(ROOT/'packages/czero-core'),'--out-dir',str(directory/'repeat')],cwd=directory,env=env)
+    command([sys.executable,str(ROOT/'scripts/normalize-core-sdist.py'),str(next((directory/'repeat').glob('*.tar.gz')))],cwd=directory,env=env)
+    for first in (directory/'dist').iterdir():
+        if first.name.endswith(('.whl','.tar.gz')):
+            second=directory/'repeat'/first.name
+            assert hashlib.sha256(first.read_bytes()).digest()==hashlib.sha256(second.read_bytes()).digest()
 
 
 @pytest.fixture(scope='module')
