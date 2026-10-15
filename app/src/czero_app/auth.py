@@ -203,6 +203,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
                 '<title>C0 access denied</title><main><h1>Access denied</h1>'
                 '<p>This account does not have access to C0. '
                 'Sign in with an authorized account or ask an administrator for access.</p>'
+                '<p>If the sign-in provider keeps your current name, use its '
+                'restart or switch-account control to choose another account.</p>'
                 f'<p><a href="{retry}">Sign in with another account</a></p>'
                 '</main></html>', status_code=403,
                 headers={"Referrer-Policy": "no-referrer"})

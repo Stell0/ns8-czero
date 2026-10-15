@@ -190,7 +190,11 @@ class CzeroSso:
             run('Get Text','h1','==','Access denied')
             run('Get Attribute','a','href','==','/auth/login?switch_account=true')
             run('Click','a')
-            # The provider's denied-account SSO session must not skip this form.
+            # Keycloak reauthentication can retain the selected username.
+            # Its own restart control permits choosing another account.
+            run('Wait For Elements State','input[name="password"]','visible','timeout=30s')
+            if browser.get_element_count('#reset-login'):
+                run('Click','#reset-login')
             run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
             browser.fill_text('input[name="username"]','c0owner')
             browser.fill_text('input[name="password"]',self._browser_password)

@@ -198,3 +198,21 @@ def test_sso_dependency_installation_can_use_a_longer_bounded_deadline(monkeypat
     assert namespace['command'](['safe-fixture-command'])=='installed'
     assert namespace['command'](['add-module','fixture-image','1'],timeout=480)=='installed'
     assert durations==[180,480]
+
+
+def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeypatch):
+    calls=[];filled=[];private='private-switch-fixture-value'
+    def execute(command,**kwargs):
+        if command.startswith('cat '): return json.dumps({'password':private})
+        return '',0
+    ssh=SimpleNamespace(execute_command=execute)
+    browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
+        get_element_count=lambda selector:1 if selector=='#reset-login' else 0)
+    monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
+    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
+    monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:calls.append((name,args)))
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    library.verify_disposable_account_switch_browser('czero7','czero7.test')
+    assert ('Browser.Click',('#reset-login',)) in calls
+    assert filled.count(('input[name="password"]',private))==2
+    assert all(private not in str(call) for call in calls)
