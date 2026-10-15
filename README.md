@@ -44,7 +44,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Development Core/app versions are **0.24.0/0.37.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is 3939575 at these versions, with all seven Rocky browser workflows, Debian/Rocky native recovery and permitted live owner update/full-manager restart persistence. The stronger timer-recovery gate also passes on both distributions; completion-marker CI is the next gate before M13. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.24.1/0.37.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is 3939575 at Core/app 0.24.0/0.37.0, with all seven Rocky browser workflows, Debian/Rocky native recovery and permitted live owner update/full-manager restart persistence. The stronger timer-recovery gate also passes on both distributions; completion-marker CI is the next gate before M13. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
@@ -174,7 +174,7 @@ Object CRUD, deterministic ingestion and jobs work without AI credentials. Deter
 Install development dependencies in a virtualenv:
 
 ```sh
-pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
+pip install uv==0.12.20 pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
 python -m pytest -q app/tests packages/czero-core/tests tests/unit
 ```
 
@@ -208,3 +208,5 @@ Czero derives from [ns8-kickstart](https://github.com/NethServer/ns8-kickstart).
 See [LICENSE](LICENSE) (GPL-3.0). Preserve attribution and verify license compatibility when copying code or distributing C0 Core.
 
 Retrieval limitations: embeddings support at most 2000 full-precision dimensions; old profile/generation vectors remain stored until future derivative maintenance. Graph context is supplemental and unscored. C0 produces no generated answer. Real provider quality and model thresholds require corpus-specific evaluation. Live retrieval checks used the configured owner with providers disabled; disposable tests cover all roles and configured mock HTTPS providers. Stable IdP/proxy availability and the recorded image/UI vulnerabilities remain release-review work.
+
+Core 0.24.1 is a packaging patch: its wheel declares and contains the repository GPL license, and the application builder supplies that file before installing Core. The runtime audit checks for exactly one Core license with matching metadata. Schema and runtime APIs are unchanged. Installed/live acceptance above remains the earlier 0.24.0 implementation; this packaging change still requires image/native verification.

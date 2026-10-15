@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
+      - run: pip install uv==0.12.20 pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
       - run: python -m pytest -q app/tests packages/czero-core/tests tests/unit tests/integration
       - uses: actions/setup-node@v6
         with:

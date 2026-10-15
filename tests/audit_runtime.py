@@ -26,5 +26,20 @@ def audit(root: Path) -> None:
     print("Application runtime contains no development files or build/test tools")
 
 
+def audit_core_distribution(root: Path) -> None:
+    licenses=list(root.glob('.venv/lib/python*/site-packages/czero_core-*.dist-info/licenses/LICENSE'))
+    if len(licenses)!=1:
+        raise SystemExit('Core runtime license is missing or ambiguous')
+    license=licenses[0]
+    metadata=(license.parent.parent/'METADATA').read_text()
+    if ('License-Expression: GPL-3.0-or-later' not in metadata
+            or 'GNU GENERAL PUBLIC LICENSE' not in license.read_text()
+            or 'Version 3, 29 June 2007' not in license.read_text()):
+        raise SystemExit('Core runtime license metadata is incomplete')
+    print('Core runtime includes its declared GPL license')
+
+
 if __name__ == "__main__":
-    audit(Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/opt/czero"))
+    root=Path(sys.argv[1]) if len(sys.argv)>1 else Path('/opt/czero')
+    audit(root)
+    audit_core_distribution(root)

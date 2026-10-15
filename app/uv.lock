@@ -258,7 +258,7 @@ provides-extras = ["test"]
 
 [[package]]
 name = "czero-core"
-version = "0.24.0"
+version = "0.24.1"
 source = { directory = "../packages/czero-core" }
 dependencies = [
     { name = "alembic" },

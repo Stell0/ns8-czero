@@ -7,10 +7,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "czero-core"
-version = "0.24.0"
+version = "0.24.1"
 description = "Reusable runtime services for C0 applications"
 requires-python = ">=3.12,<3.15"
 license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = ["SQLAlchemy==2.1.4", "alembic==1.20.0", "psycopg[binary]==3.3.6", "joserfc==1.7.5", "Authlib==1.8.0", "httpx2==2.13.1", "jsonschema==4.26.0", "pypdf==6.20.1", "python-docx==1.2.0"]
 
 [tool.setuptools]

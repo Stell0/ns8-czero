@@ -44,7 +44,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.24.0",
+        "core_version": "0.24.1",
         "app_version": "0.37.0",
         "database": DATABASE_READY,
     }

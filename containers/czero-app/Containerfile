@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir uv==0.12.20
 # Copy only the package manifests and runtime sources needed to build wheels.
 COPY app/pyproject.toml app/uv.lock /build/app/
 COPY app/src /build/app/src
-COPY packages/czero-core/pyproject.toml /build/packages/czero-core/
+COPY packages/czero-core/pyproject.toml packages/czero-core/LICENSE /build/packages/czero-core/
 COPY packages/czero-core/src /build/packages/czero-core/src
 WORKDIR /build/app
 # Dependency wheels can bundle authoring skills and extension build sources.
