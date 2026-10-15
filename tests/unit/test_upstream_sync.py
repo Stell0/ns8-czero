@@ -201,3 +201,26 @@ def test_corrupt_unresolved_range_fails_before_updates(history):
     with pytest.raises(ValueError):
         SYNC.synchronize(fork, upstream, later, apply=True)
     assert (fork / "managed.txt").read_text() == "updated\n"
+
+
+@pytest.mark.parametrize("allow", [False, True])
+def test_workflow_updates_require_explicit_maintainer_permission(history, allow):
+    upstream, fork, _, _ = history
+    path = ".github/workflows/check.yml"
+    for root in (upstream, fork):
+        (root / path).parent.mkdir(parents=True)
+        (root / path).write_text("name: original\n")
+    base = commit(upstream, "register workflow baseline")
+    manifest = {"format": 1, "upstream": TRUSTED, "revision": base,
+                "files": [{"path": path, "mode": "100644", "sha256": hashlib.sha256((upstream/path).read_bytes()).hexdigest()}]}
+    (fork / SYNC.MANIFEST).write_text(json.dumps(manifest))
+    (upstream / path).write_text("name: reviewed update\n")
+    target = commit(upstream, "update workflow")
+    SYNC.synchronize(fork, upstream, target, apply=True, allow_workflow_updates=allow)
+    if allow:
+        assert (fork / path).read_text() == "name: reviewed update\n"
+    else:
+        assert (fork / path).read_text() == "name: original\n"
+        assert "workflows permission" in (fork / SYNC.REPORT).read_text()
+        entry = json.loads((fork / SYNC.MANIFEST).read_text())["files"][0]
+        assert entry["needs_review"] and entry["review_reason"] == "workflow-permission"

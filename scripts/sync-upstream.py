@@ -82,7 +82,7 @@ def atomic_write(path: Path, data: bytes, mode: int = 0o644) -> None:
             os.unlink(temporary)
 
 
-def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = False) -> dict:
+def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = False, allow_workflow_updates: bool = False) -> dict:
     root, upstream = root.resolve(), upstream.resolve()
     manifest_path = root / MANIFEST
     local_blob(root, MANIFEST)
@@ -107,7 +107,7 @@ def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = Fals
         raise ValueError("Managed paths overlap")
     seen, changes, updated_entries = set(), [], []
     for entry in manifest["files"]:
-        if not isinstance(entry, dict) or set(entry) - {"path", "mode", "sha256", "needs_review", "review_from"}:
+        if not isinstance(entry, dict) or set(entry) - {"path", "mode", "sha256", "needs_review", "review_from", "review_reason"}:
             raise ValueError("Invalid managed file entry")
         path = safe_path(entry.get("path"))
         if path in seen:
@@ -123,15 +123,21 @@ def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = Fals
             if not isinstance(review_from, str) or not SHA.fullmatch(review_from):
                 raise ValueError("Unresolved review requires its original baseline")
             git(upstream, "merge-base", "--is-ancestor", review_from, base)
-            updated.update(needs_review=True, review_from=review_from)
+            reason = entry.get("review_reason", "customized")
+            if reason not in {"customized", "workflow-permission"}:
+                raise ValueError("Invalid unresolved review reason")
+            updated.update(needs_review=True, review_from=review_from, review_reason=reason)
         if before != after:
-            action = "apply" if current == before else "already-current" if current == after else "review"
+            protected = path.startswith(".github/workflows/") and not allow_workflow_updates
+            action = "already-current" if current == after else "review" if protected else "apply" if current == before else "review"
             changes.append({"path": path, "action": action, "before": before, "current": current, "after": after})
             if action == "review":
-                updated.update(needs_review=True, review_from=updated.get("review_from", base))
+                updated.update(needs_review=True, review_from=updated.get("review_from", base),
+                               review_reason="workflow-permission" if protected else "customized")
             else:
                 updated.pop("needs_review", None)
                 updated.pop("review_from", None)
+                updated.pop("review_reason", None)
         updated_entries.append(updated)
     if not changes:
         return {"changed": False, "files": []}
@@ -149,9 +155,14 @@ def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = Fals
         path, action = change["path"], change["action"]
         comparison_base = identities[path].get("review_from", base)
         lines.extend([f"## `{path}`: {action}", ""])
-        if action == "review":
+        if action == "review" and identities[path].get("review_reason") == "workflow-permission":
+            lines.extend(["The current workflow was preserved: the native GitHub token cannot update workflow files.",
+                          "Review and port this change in a maintainer checkout with workflows permission, preserving customizations.",
+                          "Only use --allow-workflow-updates when the publishing credential has that permission.",
+                          "After testing, remove needs_review, review_from and review_reason for the resolved migration.", ""])
+        elif action == "review":
             lines.extend(["Your customized file was preserved. Compare the upstream change and port the relevant behavior manually.",
-                          "After testing, remove this file's needs_review and review_from markers; do not replace application customizations blindly.", ""])
+                          "After testing, remove this file's needs_review, review_from and review_reason markers; do not replace application customizations blindly.", ""])
         lines.extend(["Inspect the upstream change in a trusted upstream checkout:", "", "```sh",
                       f"git diff {comparison_base} {revision} -- {path}", "```", ""])
     report = "\n".join(lines).encode()
@@ -179,9 +190,11 @@ def main() -> None:
     parser.add_argument("--upstream-dir", type=Path, required=True)
     parser.add_argument("--revision", required=True)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--allow-workflow-updates", action="store_true",
+                        help="Maintainer publishing credential must have workflows write permission")
     args = parser.parse_args()
     try:
-        result = synchronize(args.root, args.upstream_dir, args.revision, apply=args.apply)
+        result = synchronize(args.root, args.upstream_dir, args.revision, apply=args.apply, allow_workflow_updates=args.allow_workflow_updates)
     except (ValueError, KeyError, TypeError, OSError, subprocess.CalledProcessError):
         parser.exit(1, "Upstream sync failed preflight; inspect the manifest and trusted checkout.\n")
     print(json.dumps(result))

@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M13 distribution conventions
 
+- Native GITHUB_TOKEN cannot publish changes to .github/workflows. Default updater behavior preserves workflow bytes and records review_reason=workflow-permission with the full migration range, while ordinary untouched managed files update. --allow-workflow-updates is only for a maintainer publishing with the required workflows permission; it grants no permission itself. Do not replicate a broad personal token into fork secrets to evade this restriction. Public example acceptance is staged: managed CI first, released Core CI only with its verified tag and lock.
+
 - Normalize generated Core source archives with scripts/normalize-core-sdist.py and the immutable commit epoch before release. Setuptools retains gzip/tar build-host timestamps and owner metadata despite SOURCE_DATE_EPOCH. Preserve every package byte and executable bit while normalizing metadata; compare both wheel and archive rebuild hashes and test exact supplied artifacts. Never publish raw nonreproducible archives and then clobber them on retry.
 
 - The initial manifest registers 69 tracked infrastructure files against 130b3eb. Do not add ignored caches or private fixtures by walking the filesystem; use tracked files. An original standalone consumer generator copies only registered infrastructure, preflights unsafe paths/symlinks before destination creation and replaces module publishers with focused CI. A second repository must never publish the template registry tags. Local checks now support explicit dispatch for token-created PRs. The example still awaits verified tag/lock/remote acceptance.

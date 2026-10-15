@@ -50,3 +50,9 @@ For reusable contributions, isolate only Core/infrastructure improvements in a
 clean worktree based on upstream's current default branch. Keep application
 branding, custom schemas, deployment data and unfinished drafts in the fork.
 Use `c0-contribute-upstream` and the installed NethServer commit/PR skills.
+
+Native Actions tokens cannot push workflow-file changes. Those files are
+preserved with `review_reason=workflow-permission` and exact migration ranges.
+A maintainer with an appropriate publishing credential may explicitly use
+`--allow-workflow-updates`; review customizations before enabling that option.
+Resolve all three review markers only after testing the manual migration.

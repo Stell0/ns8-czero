@@ -245,10 +245,19 @@ external installation and real Renovate/update/conflict PRs are not yet proven.
 Unresolved customized updates retain their original `review_from` revision
 across later proposals, including updates to other files. Reports keep every
 unresolved file's full migration range. Remove its `needs_review` and
-`review_from` markers only after resolving and testing that migration.
+`review_from`/`review_reason` markers only after resolving and testing that migration.
 
 Core release archives are normalized with the commit epoch before upload,
 removing build-host tar/gzip ownership and timestamps while retaining content
 and executable bits. Actual independently built archives initially differed;
 normalization makes their hashes identical. Both archive and wheel rebuilds
 are checked, and existing published versions are never overwritten.
+
+The public [original example](https://github.com/Stell0/c0-m13-example) currently
+runs independent managed-update checks; Core consumer CI is explicitly pending
+the verified public tag and lock. Its first sync run exposed GitHub's native
+token restriction on workflow-file writes. The updater now preserves workflow
+files with explicit permission/migration instructions, while ordinary managed
+files remain automatic. Use `--allow-workflow-updates` only in a maintainer
+checkout whose publishing credential has workflows permission. This option
+does not grant permissions. No broad personal token is stored in fork secrets.
