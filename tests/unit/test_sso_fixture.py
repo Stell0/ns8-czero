@@ -216,3 +216,18 @@ def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeyp
     assert ('Browser.Click',('#reset-login',)) in calls
     assert filled.count(('input[name="password"]',private))==2
     assert all(private not in str(call) for call in calls)
+
+
+def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatch):
+    calls=[]
+    browser=SimpleNamespace(get_text=lambda selector:json.dumps({'id':'00000000-0000-4000-8000-000000000001','state':'succeeded'}))
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    library._verify_admin_controls(browser,lambda name,*args:calls.append((name,args)),'admin','czero7.test')
+    assert ('Select Options By',('#job-handler','value','health')) in calls
+    assert ('Uncheck Checkbox',('#schedule-enabled',)) in calls
+    assert ('Reload',()) in calls
+    for role in ('reader','editor'):
+        denied=[]
+        library._verify_admin_controls(browser,lambda name,*args:denied.append((name,args)),role,'czero7.test')
+        assert ('Wait For Elements State',('#admin-workspace','hidden')) in denied
+        assert all(name not in ('Click','Fill Text') for name,_ in denied)

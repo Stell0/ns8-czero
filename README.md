@@ -43,7 +43,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Development Core/app versions are **0.24.0/0.33.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is Core/app 0.23.0/0.29.0 at aa26512, with all six disposable browser workflows and active-grant recovery. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.24.0/0.34.0**, with migrations through `0013_oauth_consent`. The verified installed/live implementation is Core/app 0.23.0/0.29.0 at aa26512, with all six disposable browser workflows and active-grant recovery. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
@@ -63,6 +63,9 @@ Grants last at most one hour and no later than the originating sign-in expiry; a
 M12 development adds consistent local navigation and keyboard focus across the home, records, sources, Wiki, search and agent pages. Home links the main human workflows and retains service/API details. The agent page offers canonical URL copying with manual fallback. Sharing and availability refreshes ignore older responses, and role writes preserve newer selections. Local scripts/pages pass; native/live verification of this slice remains pending.
 
 Development records now offer labelled fields derived from the registered schema, including optional omission, numeric limits, typed choices/constants and nested JSON. Use “Advanced JSON editor” for direct JSON, with the same authoritative server validation. Newer drafts survive earlier saves; record revisions still detect conflicts. Browse target records of the selected type or enter an ID to add a typed relation. Reader fields are disabled. Local tests pass; installed/browser/live verification of this forms slice is pending.
+
+M12 development adds an Administration page for application Admins: approve exact public-client callbacks/scopes, enable/disable with revision checks, queue registered deterministic handlers with replay protection, inspect attempts, and create/pause UTC interval schedules. It uses existing REST/CSRF permissions; Readers and Editors cannot manage these controls. Hostname, identity and optional-provider credentials stay in NS8 settings. Job/schedule lists show at most fifty rows; refresh to inspect recent state. Local checks pass; installed browser/worker and live acceptance are pending.
+
 
 ## Install and configure
 

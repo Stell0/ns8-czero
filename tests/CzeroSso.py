@@ -571,6 +571,7 @@ class CzeroSso:
                 _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
                     ' browser-complete',return_stderr=True,return_rc=True,timeout='300 seconds')
                 if rc: raise AssertionError('Real OAuth browser/token assertions failed')
+                self._verify_admin_controls(browser, run, role, host)
                 run('Close Context')
             _, rc=ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs '+shlex.quote(module_id),
                                      return_rc=True,timeout='180 seconds')
@@ -579,6 +580,58 @@ class CzeroSso:
             raise AssertionError('Disposable OAuth browser failed ('+type(error).__name__+')') from None
         finally:
             builtin.set_log_level(previous)
+
+    @staticmethod
+    def _verify_admin_controls(browser, run, role, host):
+        run('Go To', 'https://' + host + '/admin')
+        if role != 'admin':
+            run('Get Text', '#admin-account', 'contains', 'Only application Admins')
+            run('Wait For Elements State', '#admin-workspace', 'hidden')
+            run('Wait For Elements State', 'nav a[data-admin-link]', 'hidden')
+            return
+        run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
+        run('Wait For Elements State', 'nav a[data-admin-link]', 'visible', 'timeout=30s')
+        run('Get Element Count', 'nav a[aria-current="page"]', '==', 1)
+        name = 'browser-client-' + secrets.token_hex(4)
+        run('Fill Text', '#client-name', name)
+        run('Fill Text', '#client-callbacks', 'https://client.example.test/callback')
+        run('Click', '#approve-client')
+        row = '#client-list li:has-text("' + name + '")'
+        run('Wait For Elements State', row, 'visible', 'timeout=30s')
+        run('Click', row + ' button:text-is("Disable client")')
+        run('Wait For Elements State', row + ' button:text-is("Enable client")', 'visible', 'timeout=30s')
+        run('Select Options By', '#job-handler', 'value', 'health')
+        run('Fill Text', '#job-payload', '{}')
+        run('Click', '#enqueue-job')
+        run('Wait For Elements State', '#job-detail', 'visible', 'timeout=30s')
+        # Capture only a public job UUID, never credentials or authorization URLs.
+        job_id = json.loads(browser.get_text('#job-data'))['id']
+        for _ in range(45):
+            if json.loads(browser.get_text('#job-data'))['state'] == 'succeeded':
+                break
+            run('Click', '#refresh-jobs')
+            run('Wait For Elements State', '#job-status:text-matches("latest jobs shown")', 'visible', 'timeout=30s')
+            run('Click', '#job-list li:has-text("' + job_id + '") button')
+            run('Wait For Elements State', '#job-data:has-text("' + job_id + '")', 'visible', 'timeout=30s')
+            BuiltIn().run_keyword('Sleep', '2s')
+        run('Get Text', '#job-data', 'contains', '"state": "succeeded"')
+        name = 'browser-schedule-' + secrets.token_hex(4)
+        run('Fill Text', '#schedule-name', name)
+        run('Select Options By', '#schedule-handler', 'value', 'health')
+        run('Fill Text', '#schedule-payload', '{}')
+        run('Fill Text', '#schedule-interval', '3600')
+        run('Click', '#create-schedule')
+        run('Wait For Elements State', '#schedule-identity:has-text("' + name + '")', 'visible', 'timeout=30s')
+        run('Uncheck Checkbox', '#schedule-enabled')
+        run('Fill Text', '#schedule-edit-interval', '7200')
+        run('Click', '#save-schedule')
+        row = '#schedule-list li:has-text("' + name + '")'
+        run('Get Text', row, 'contains', 'paused · every 7200 seconds')
+        run('Reload')
+        run('Wait For Elements State', row, 'visible', 'timeout=30s')
+        run('Click', row + ' button')
+        run('Get Property', '#schedule-enabled', 'checked', '==', False)
+        run('Get Property', '#schedule-edit-interval', 'value', '==', '7200')
 
     @keyword
     def assert_disposable_sso_browser_password_is_private(self):

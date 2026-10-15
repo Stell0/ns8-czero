@@ -2,6 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 'use strict';
 (() => {
+  const adminLinks = document.querySelectorAll('a[data-admin-link]');
+  if (adminLinks.length) {
+    fetch('./api/v1/me', {cache: 'no-store'}).then(async response => {
+      if (!response.ok) return;
+      const profile = await response.json();
+      for (const link of adminLinks) link.hidden = profile.role !== 'admin';
+    }).catch(() => {});
+  }
   const clean = (path) => path.replace(/\/+$/, '') || '/';
   for (const link of document.querySelectorAll('nav[aria-label="C0 navigation"] a')) {
     if (clean(new URL(link.href, window.location.href).pathname) === clean(window.location.pathname)) {

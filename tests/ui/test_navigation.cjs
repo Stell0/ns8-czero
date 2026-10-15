@@ -10,7 +10,7 @@ function setup(write) {
   const links=['./','./objects','./sources'].map(href=>({href,attributes:{},setAttribute(k,v){this.attributes[k]=v;}}));
   const field={value:'https://c0.example.test/mcp',focus(){this.focused=true;},select(){this.selected=true;}};
   const status={textContent:''}; const button={dataset:{copyTarget:'url'},disabled:false,addEventListener(_,fn){this.click=fn;}};
-  const document={querySelectorAll(selector){return selector.startsWith('nav')?links:[button];},getElementById(id){return id==='copy-status'?status:field;}};
+  const document={querySelectorAll(selector){return selector.startsWith('nav')?links:selector==='a[data-admin-link]'?[]:[button];},getElementById(id){return id==='copy-status'?status:field;}};
   vm.runInNewContext(source,{document,URL,navigator:{clipboard:{writeText:write}},window:{location:{href:'https://c0.example.test/czero/czero17/objects',pathname:'/czero/czero17/objects'}}});
   return {links,field,status,button};
 }
@@ -27,4 +27,13 @@ test('clipboard refusal offers manual copy without claiming success',async()=>{
   const h=setup(async()=>{throw new Error('denied');});await h.button.click();
   assert.equal(h.field.focused,true);assert.equal(h.field.selected,true);
   assert.match(h.status.textContent,/Select and copy/);assert.equal(h.button.disabled,false);
+});
+
+test('administration navigation is shown only after a verified Admin reply', async()=>{
+  for(const role of ['admin','reader','editor',null]){
+    const link={hidden:true};
+    const document={querySelectorAll(selector){return selector==='a[data-admin-link]'?[link]:[];}};
+    vm.runInNewContext(source,{document,URL,window:{location:{href:'https://c0.test/',pathname:'/'}},fetch:async()=>({ok:role!==null,json:async()=>({role})})});
+    await tick();assert.equal(link.hidden,role!=='admin');
+  }
 });

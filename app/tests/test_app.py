@@ -45,7 +45,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
         "status": "ok",
         "service": "czero",
         "core_version": "0.24.0",
-        "app_version": "0.33.0",
+        "app_version": "0.34.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -85,7 +85,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.33.0"
+    assert document["info"]["version"] == "0.34.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
@@ -138,7 +138,7 @@ def test_objects_page_uses_local_assets_and_accessible_editor(client):
     assert 'innerHTML' not in script.text
 
 
-@pytest.mark.parametrize('page', ['', 'objects', 'sources', 'wiki', 'search', 'agents'])
+@pytest.mark.parametrize('page', ['', 'objects', 'sources', 'wiki', 'search', 'agents', 'admin'])
 def test_user_pages_share_local_navigation_and_keyboard_focus(client, page):
     response=client('/czero/czero17/'+page)
     assert response.status_code==200
@@ -160,3 +160,13 @@ def test_records_offer_schema_fields_and_explicit_json_editor(client):
     script=client('/czero/czero17/record-fields.js')
     assert script.status_code==200 and 'Object.defineProperty' in script.text
     assert 'innerHTML' not in script.text and 'fetch(' not in script.text
+
+
+def test_admin_page_uses_existing_role_guarded_apis_and_local_assets(client):
+    page=client('/czero/czero17/admin')
+    assert page.status_code==200 and 'id="admin-workspace" hidden' in page.text
+    assert './admin.js' in page.text and 'UTC interval schedules' in page.text
+    script=client('/czero/czero17/admin.js')
+    assert script.status_code==200 and 'innerHTML' not in script.text
+    assert 'expected_revision' in script.text and 'idempotency_key' in script.text
+    assert 'X-C0-CSRF' in script.text

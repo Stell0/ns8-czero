@@ -120,6 +120,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def shared_navigation() -> FileResponse:
         return FileResponse(static_dir / 'navigation.js', media_type='text/javascript')
 
+    @instance_app.get('/admin', include_in_schema=False)
+    async def admin_page() -> FileResponse:
+        return FileResponse(static_dir / 'admin.html', media_type='text/html')
+
+    @instance_app.get('/admin.js', include_in_schema=False)
+    async def admin_script() -> FileResponse:
+        return FileResponse(static_dir / 'admin.js', media_type='text/javascript')
+
     @instance_app.get("/objects", include_in_schema=False)
     async def objects_page() -> FileResponse:
         return FileResponse(static_dir / "objects.html", media_type="text/html")
@@ -214,7 +222,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         return (
             "<!doctype html><html lang='en'><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-            '<title>C0 agent capabilities</title><link rel="stylesheet" href="./app.css"><body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a></nav><h1>C0 agent capabilities</h1>'
+            '<title>C0 agent capabilities</title><link rel="stylesheet" href="./app.css"><body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a><a href="./admin" data-admin-link hidden>Administration</a></nav><h1>C0 agent capabilities</h1>'
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "

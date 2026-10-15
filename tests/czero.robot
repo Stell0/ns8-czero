@@ -544,7 +544,7 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${host}/
     Get Text    h1    ==    Your shared workspace.
-    Get Element Count    nav[aria-label="C0 navigation"] a    ==    6
+    Get Element Count    nav[aria-label="C0 navigation"] a    ==    7
     Get Element Count    nav a[aria-current="page"]    ==    1
     Press Keys    body    Tab
     Wait For Elements State    .skip-link    focused
