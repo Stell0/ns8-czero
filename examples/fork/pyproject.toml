@@ -1,0 +1,11 @@
+[project]
+name = "c0-example-consumer"
+version = "0.1.0"
+requires-python = ">=3.12,<3.15"
+dependencies = ["czero-core>=0.24.1,<0.25.0"]
+
+[tool.uv]
+required-version = "==0.12.20"
+
+[tool.uv.sources]
+czero-core = { git = "https://github.com/Stell0/ns8-czero.git", tag = "core-v0.24.1", subdirectory = "packages/czero-core" }

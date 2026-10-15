@@ -1,5 +1,6 @@
 name: Local checks
 on:
+  workflow_dispatch:
   push:
     branches-ignore: ["apidoc-**"]
   pull_request:

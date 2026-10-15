@@ -224,7 +224,8 @@ stay intact, with `needs_review` flags and `.c0/UPSTREAM_UPDATE.md` instructions
 The scheduled/dispatch workflow prepares a review PR for opted-in forks.
 It never automatically merges. GITHUB_TOKEN-created PRs require explicit CI
 dispatch or an approved GitHub App before merging. Twenty-six real Git-history
-checks pass; manifest initialization and real proposal acceptance are pending.
+checks pass. The manifest registers 69 infrastructure files at immutable baseline
+130b3eb; real proposal acceptance remains pending.
 
 The four repository-only skills in `.agents/skills` cover feature development,
 Core development, reusable upstream contributions and customized fork upgrades.
@@ -233,3 +234,10 @@ for native module, container, commit, PR and release operations; their manuals
 are not vendored here. All four skills pass structural validation. Independent
 isolated exercises preserve customer changes while preparing a reusable Core
 patch and resolving a managed-file upgrade; remote PR acceptance remains pending.
+
+An original standalone consumer fixture is in [examples/fork](examples/fork).
+Its generator copies explicit managed infrastructure and no application/private
+data, replacing module publishers with focused consumer CI. Five generator
+cases pass, including unsafe-path/symlink preflight and existing-draft protection.
+The example dependency awaits the verified Core tag and generated lockfile;
+external installation and real Renovate/update/conflict PRs are not yet proven.

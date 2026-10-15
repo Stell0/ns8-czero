@@ -52,7 +52,7 @@ jobs:
           UPSTREAM: ${{ steps.selection.outputs.upstream }}
           REQUESTED_REVISION: ${{ steps.selection.outputs.revision }}
         run: |
-          git clone --filter=blob:none --no-checkout "$UPSTREAM" "$RUNNER_TEMP/c0-upstream"
+          git clone --no-checkout "$UPSTREAM" "$RUNNER_TEMP/c0-upstream"
           revision="${REQUESTED_REVISION:-$(git -C "$RUNNER_TEMP/c0-upstream" rev-parse HEAD)}"
           python scripts/sync-upstream.py --upstream-dir "$RUNNER_TEMP/c0-upstream" --revision "$revision" --apply
       - name: Open reviewable update proposal

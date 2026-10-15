@@ -1,0 +1,16 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["pep621"],
+  "packageRules": [
+    {
+      "matchManagers": ["pep621"],
+      "matchDatasources": ["github-tags"],
+      "matchPackageNames": ["Stell0/ns8-czero"],
+      "extractVersion": "^core-v(?<version>\\d+\\.\\d+\\.\\d+)$",
+      "versioning": "pep440",
+      "allowedVersions": ">=0.24.1,<0.25.0",
+      "automerge": false
+    }
+  ]
+}

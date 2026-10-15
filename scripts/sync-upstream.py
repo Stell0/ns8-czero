@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Review explicit upstream Git blobs; never execute upstream code or merge local edits."""
 from __future__ import annotations
 

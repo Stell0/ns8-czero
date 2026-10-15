@@ -1,0 +1,352 @@
+{
+  "format": 1,
+  "upstream": "https://github.com/Stell0/ns8-czero.git",
+  "revision": "130b3eb285c99216b20ab144515e12500fcce94e",
+  "files": [
+    {
+      "path": "build-images.sh",
+      "mode": "100644",
+      "sha256": "613e0bedb6a5bc991bf5a00574195d03afc8f6d27e722be4e77617537661b15f"
+    },
+    {
+      "path": "containers/czero-app/Containerfile",
+      "mode": "100644",
+      "sha256": "2b23ce065a395661bb7f75fb48c0f0b6ba2bd8dbac66db498a8643fd7166b64c"
+    },
+    {
+      "path": "containers/czero-postgres/Containerfile",
+      "mode": "100644",
+      "sha256": "f2c05e583689b79df8fd6050bbbc23db9f2826e7b826279db38f0dfda26de578"
+    },
+    {
+      "path": "scripts/sync-upstream.py",
+      "mode": "100755",
+      "sha256": "337accf00849fe320a6e53acd9f00b44958f726e1ca0a0ad21ee1b06bf85090a"
+    },
+    {
+      "path": "scripts/check-core-release.py",
+      "mode": "100755",
+      "sha256": "1590fc6397908970df398ced2b0a19a447332611e20977b4a768da3afbf2d99a"
+    },
+    {
+      "path": ".github/workflows/sync-upstream.yml",
+      "mode": "100644",
+      "sha256": "8b854f0b111f94ebb8f5eea43f0fcabbe7199bcbbb5d5d500a172283793cebee"
+    },
+    {
+      "path": ".github/workflows/test-local.yml",
+      "mode": "100644",
+      "sha256": "b983f95ff5f692f4e3fedcf2042943e39c827a115d09a4e55fbccb145c060969"
+    },
+    {
+      "path": ".github/workflows/publish-images.yml",
+      "mode": "100644",
+      "sha256": "c93a683a198b4fa9aa046d07f79821ac2831617aae12a518ed594e9e393d41cf"
+    },
+    {
+      "path": ".github/workflows/test-module.yml",
+      "mode": "100644",
+      "sha256": "e4e004ea5bdf6f35c87d346443aa6fdc137def74c2556eeb0a2acb6c0c856b1b"
+    },
+    {
+      "path": ".github/workflows/publish-core.yml",
+      "mode": "100644",
+      "sha256": "189877ee43df9e3e40ccd36be78ca22409c9605680da804c159f1395bf0b57ed"
+    },
+    {
+      "path": ".agents/skills/c0-contribute-upstream/SKILL.md",
+      "mode": "100644",
+      "sha256": "3e9647659f6b0d75c111d1d1922ce169d2648ee8c186d67b5064be6df514a24f"
+    },
+    {
+      "path": ".agents/skills/c0-create-feature/SKILL.md",
+      "mode": "100644",
+      "sha256": "623e1e8d6109419438f29739da2b9c0d75de43ae349b81564f9d9e11288877d5"
+    },
+    {
+      "path": ".agents/skills/c0-develop-core/SKILL.md",
+      "mode": "100644",
+      "sha256": "ea937baf7d46b041fdc7d56b3f677bd06dce8b3e139f7829f506dd7c10c3e879"
+    },
+    {
+      "path": ".agents/skills/c0-upgrade-from-upstream/SKILL.md",
+      "mode": "100644",
+      "sha256": "bfa60f62fa54efcc5a2cdeb009f7668575691db39fe160b412a91f0e205ed713"
+    },
+    {
+      "path": "imageroot/actions/configure-module/10validate",
+      "mode": "100755",
+      "sha256": "fbc54776316c26f231c8a3d8aee7d3c6a32101ac530ba16c92b42c2c08630714"
+    },
+    {
+      "path": "imageroot/actions/configure-module/12validate-retrieval",
+      "mode": "100755",
+      "sha256": "b37ebdf1a31d2269cf2e276e3ec171f7e1486ac58f7876f4af38cde4085da772"
+    },
+    {
+      "path": "imageroot/actions/configure-module/15validate-auth",
+      "mode": "100755",
+      "sha256": "e0fe6781b59f18901c03efdf53a873e1fa9000a6372403f7a45f6740eeb06fd5"
+    },
+    {
+      "path": "imageroot/actions/configure-module/20configure-route",
+      "mode": "100755",
+      "sha256": "7c039edba8c7eb5dc79f9a56032d59d252f021cf34b81adca69332f2285b9463"
+    },
+    {
+      "path": "imageroot/actions/configure-module/25bind-user-domain",
+      "mode": "100755",
+      "sha256": "789b8c7cf572f6621b57c1891ecd6e348ceaa3c2c22eb27da620be7bb26351e2"
+    },
+    {
+      "path": "imageroot/actions/configure-module/30register-client",
+      "mode": "100755",
+      "sha256": "f57a505786601d613097ce44ef89d5d47af794f624c9554c8033c249be936d33"
+    },
+    {
+      "path": "imageroot/actions/configure-module/35persist-retrieval",
+      "mode": "100755",
+      "sha256": "19ef592a44c015e7af96592f5bc37555699c5713bafe154d842f4ede278a9420"
+    },
+    {
+      "path": "imageroot/actions/configure-module/40persist",
+      "mode": "100755",
+      "sha256": "b78d35ef0f8ca81fcdd358ed5dda64ebd990eaa081ac066ccb1538febc673bd6"
+    },
+    {
+      "path": "imageroot/actions/configure-module/80start_services",
+      "mode": "100755",
+      "sha256": "2704bd380313be4acd157ceaf38a282a7abbc48d0cbfbae7e417c126b5746bfe"
+    },
+    {
+      "path": "imageroot/actions/configure-module/90wait-ready",
+      "mode": "100755",
+      "sha256": "c52b41df938b47fbe35d1fbfa38cb005603b29596043f2245419445e891d7cce"
+    },
+    {
+      "path": "imageroot/actions/configure-module/validate-input.json",
+      "mode": "100644",
+      "sha256": "5d1650b646a74d2fd44c512e3e2578495b9bddaf9730a634038efa857224f7e0"
+    },
+    {
+      "path": "imageroot/actions/create-module/20database-secrets",
+      "mode": "100755",
+      "sha256": "9694e294c2f5a45fcaa2104f82e27cab226d102536deacd7f8d42251675faf7b"
+    },
+    {
+      "path": "imageroot/actions/create-module/30auth-state",
+      "mode": "100755",
+      "sha256": "54cac448c7358bc0f2807f6e5f22c9ac740fd2209ac8bd43206ddec88bf5f548"
+    },
+    {
+      "path": "imageroot/actions/create-module/35retrieval-state",
+      "mode": "100755",
+      "sha256": "a2c27a6a91a6def8435f5fdfaaf4af2d43bf625f583c213710a065b1c306e6fc"
+    },
+    {
+      "path": "imageroot/actions/create-module/40scheduler",
+      "mode": "100755",
+      "sha256": "1f98d933a2ae0b8b7c37af51f6fafb074d148bdde1379e77ffcada33ae2018d8"
+    },
+    {
+      "path": "imageroot/actions/get-auth-options/20read",
+      "mode": "100755",
+      "sha256": "008d0ebed5b25c701e495d69850cc71e6f68995d2dabb3dc3820ee2e444e4bd7"
+    },
+    {
+      "path": "imageroot/actions/get-auth-options/validate-output.json",
+      "mode": "100644",
+      "sha256": "d9a2cff9ee66f998e9475006a4c4078193a3ca6d13200baf95a07948f45d3619"
+    },
+    {
+      "path": "imageroot/actions/get-authentication-status/20check",
+      "mode": "100755",
+      "sha256": "00a9673116b5980c5f12df2cbb73689b6d24f873ac584dc534049008325de9ea"
+    },
+    {
+      "path": "imageroot/actions/get-authentication-status/validate-input.json",
+      "mode": "100644",
+      "sha256": "d29f51b6218d633cb9411a05fb399ba081539a361ab54b8dc1dc8d49e3449505"
+    },
+    {
+      "path": "imageroot/actions/get-authentication-status/validate-output.json",
+      "mode": "100644",
+      "sha256": "6680c0d152e010d49eaf25f87164a3bea04f08cf46ebc90d2698366cefe91c8d"
+    },
+    {
+      "path": "imageroot/actions/get-configuration/20read",
+      "mode": "100755",
+      "sha256": "5a6ef0270ca48a70186b97fdf6858203e06af01d40436ab26d0a09f71f413da3"
+    },
+    {
+      "path": "imageroot/actions/get-configuration/validate-output.json",
+      "mode": "100644",
+      "sha256": "91dfc956b4817077b830fca786004b382bdcbaadbcb0d5d0c9b1aaa4697a3b12"
+    },
+    {
+      "path": "imageroot/actions/get-runtime-status/20check",
+      "mode": "100755",
+      "sha256": "33576bfcf862a3a4be3b56c60ed8612b850a14e1691180ba5a4a94157d7388ea"
+    },
+    {
+      "path": "imageroot/actions/get-runtime-status/validate-input.json",
+      "mode": "100644",
+      "sha256": "b3b26dedfde68ac8bf0fb6096cd0c5f875906de55eb2531ddd409f9cad2a7204"
+    },
+    {
+      "path": "imageroot/actions/get-runtime-status/validate-output.json",
+      "mode": "100644",
+      "sha256": "8e10dc9e6dd37bb97696a28e5ada5676f4f4d66816902f62c50b48f03175a250"
+    },
+    {
+      "path": "imageroot/actions/get-scheduler-status/20read",
+      "mode": "100755",
+      "sha256": "de4933b42163d194b05f99c36d91928b5452ae734fb6b142f9dcf3f9d8bc7f05"
+    },
+    {
+      "path": "imageroot/actions/get-scheduler-status/validate-input.json",
+      "mode": "100644",
+      "sha256": "3551b6ac9ee2583dd066930691b9aacf833ec17675b6648ab88e97cc5b6d6a55"
+    },
+    {
+      "path": "imageroot/actions/get-scheduler-status/validate-output.json",
+      "mode": "100644",
+      "sha256": "288d71139001f0ca3e4184c4c1fe762782c8dec819493a043c59ce9cf77211e7"
+    },
+    {
+      "path": "imageroot/actions/restore-module/20persist-settings",
+      "mode": "100755",
+      "sha256": "0a022f5d660c3a2def1451ecf3459f81fe4cba0367bf78b65f43578acda6b75c"
+    },
+    {
+      "path": "imageroot/actions/restore-module/30validate-backup",
+      "mode": "100755",
+      "sha256": "fe29fefaa0e91fd4311fc8939a9e7d743e1d40dcc755c34e019e656ccd56256c"
+    },
+    {
+      "path": "imageroot/actions/restore-module/35retrieval-state",
+      "mode": "100755",
+      "sha256": "a2c27a6a91a6def8435f5fdfaaf4af2d43bf625f583c213710a065b1c306e6fc"
+    },
+    {
+      "path": "imageroot/actions/restore-module/40restore-database",
+      "mode": "100755",
+      "sha256": "d6c51afa4d30200c3263960ab304378f7d8443c7f8a9e94d8371f3b81eb9b77a"
+    },
+    {
+      "path": "imageroot/actions/restore-module/50configure-route",
+      "mode": "100755",
+      "sha256": "217cad33c77a0b7dbafc1114f0063daf606fa7bfd877ce252c5d3912de806c9f"
+    },
+    {
+      "path": "imageroot/actions/restore-module/60register-identity",
+      "mode": "100755",
+      "sha256": "4f6b1d21a3986a32d247ab5c5d0103bbb0d1483fdab365d83184a3b6b96aa59a"
+    },
+    {
+      "path": "imageroot/actions/restore-module/80start-services",
+      "mode": "100755",
+      "sha256": "9cb765157a17485db220b97fcb4df220aa78a92c3556d1a2127ee1bcbe1d211c"
+    },
+    {
+      "path": "imageroot/bin/czero-create-auth-state",
+      "mode": "100755",
+      "sha256": "9e8a36bd047a59ca7be74d14f7c98ad1fa89043434065341e47b49fdb9a82961"
+    },
+    {
+      "path": "imageroot/bin/czero-create-db-secrets",
+      "mode": "100755",
+      "sha256": "561f5530957637080ec22ac420a53bde9c3e734b8f28c79c57ce368ccf7338ea"
+    },
+    {
+      "path": "imageroot/bin/czero-create-retrieval-state",
+      "mode": "100755",
+      "sha256": "5a79ea9f87f93b0d1371e12510626a5b335cf41dbb68e0b7043741f533a17b2f"
+    },
+    {
+      "path": "imageroot/bin/czero_retrieval_config.py",
+      "mode": "100644",
+      "sha256": "c44a58a58a4c369b50a103603ed26ee0d42a3a6cbdc7921e87083cf0d22096d7"
+    },
+    {
+      "path": "imageroot/bin/module-cleanup-state",
+      "mode": "100755",
+      "sha256": "4f92255bc0976a70ab921dfabc39d1b231734408e89606795872718d755e9dc7"
+    },
+    {
+      "path": "imageroot/bin/module-dump-state",
+      "mode": "100755",
+      "sha256": "a54bf3e4e915d21728673abc3bfdd4a28b5c65671ed59822344d287f5eb1ebad"
+    },
+    {
+      "path": "imageroot/etc/state-include.conf",
+      "mode": "100644",
+      "sha256": "cc0e23d73d1042b104141246d96c15970296b78822c5948bb8437f3db1f183a3"
+    },
+    {
+      "path": "imageroot/events/service-oidc-changed/20reconcile",
+      "mode": "100755",
+      "sha256": "801b354045b36199b2c99549b920c970638404743f7fdf9dd74b4a87530c2c48"
+    },
+    {
+      "path": "imageroot/events/user-domain-changed/20reconcile",
+      "mode": "100755",
+      "sha256": "7708d3164179eca79a3731adba8a155b7932029fec8af35ee59b664653156eea"
+    },
+    {
+      "path": "imageroot/systemd/user/czero-pod.service",
+      "mode": "100644",
+      "sha256": "69692d55477d0a1f62958b82acd5a51f50c8f3b7f40e2d5281db2368ed0095e7"
+    },
+    {
+      "path": "imageroot/systemd/user/czero-postgres.service",
+      "mode": "100644",
+      "sha256": "3b086e2131c0969eaabeb0be35a3841259f93422879e646eca65450f95b10647"
+    },
+    {
+      "path": "imageroot/systemd/user/czero-worker.service",
+      "mode": "100644",
+      "sha256": "0e7c1d899c31909ddcfd71e3d980e882310dc1eb521a34b0b42ab281b1510ae1"
+    },
+    {
+      "path": "imageroot/systemd/user/czero-worker.timer",
+      "mode": "100644",
+      "sha256": "50e9be3d221a2ea4ff3fe928ee32231ff9ff846492d25556224cefec6a4bbdb4"
+    },
+    {
+      "path": "imageroot/systemd/user/czero.service",
+      "mode": "100644",
+      "sha256": "dddc7f365a496bcb354df8c97f309b3add26538dc354e30f7a0f49e6cfc87ede"
+    },
+    {
+      "path": "imageroot/update-module.d/20instance-id",
+      "mode": "100755",
+      "sha256": "58afa6b007206dc073df4bca976b66f91db460ea85f8d187ab538672ed7bc1a2"
+    },
+    {
+      "path": "imageroot/update-module.d/30database-secrets",
+      "mode": "100755",
+      "sha256": "9694e294c2f5a45fcaa2104f82e27cab226d102536deacd7f8d42251675faf7b"
+    },
+    {
+      "path": "imageroot/update-module.d/50auth-state",
+      "mode": "100755",
+      "sha256": "517b53203e1bdc06ff4336033c2f668fac95538487d074a22bb085ec5cfbb5f6"
+    },
+    {
+      "path": "imageroot/update-module.d/55retrieval-state",
+      "mode": "100755",
+      "sha256": "a2c27a6a91a6def8435f5fdfaaf4af2d43bf625f583c213710a065b1c306e6fc"
+    },
+    {
+      "path": "imageroot/update-module.d/60scheduler",
+      "mode": "100755",
+      "sha256": "4adbc2e1077b9b55030e67f315a270a47bb918738f99c50550fbcdbfb2051a39"
+    },
+    {
+      "path": "imageroot/update-module.d/80restart",
+      "mode": "100755",
+      "sha256": "4097d79a5cf6314f14ca15a638963837d6c3d8bf3afda118e4d3466f51d3f7c7"
+    }
+  ]
+}
