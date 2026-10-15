@@ -886,6 +886,8 @@ The realistic upgrade evaluator's final report additionally verifies thirty-two 
 
 Scoped contribution Debian installation report is downloaded and inspected: fourteen passes/three expected skips, exact recovery/backup observers and zero password/OAuth artifact candidates. Rocky update remains running. Permitted dedicated live pre-update OAuth check passes normal-TLS SSO/consent, official SDK current/legacy parity, read-scope denial, refresh/replay and revocation. A fresh bounded read grant is retained only in a mode-0600 private checkpoint for update/full-manager restart; its test client will be disabled after verification. No M13 live image update has occurred yet.
 
+**M13 example license review correction:** The public/generated original example contains GPL infrastructure but omitted the root license. Explicitly register LICENSE at its actual immutable baseline hash/mode, taking managed scope to seventy-six, and assert exact generated license bytes in the existing real generator case. Publish that unchanged GPL file to the original example. This is source-distribution compliance work; no runtime or API change. Native exact-source patch verification remains running.
+
 ### M14 — End-to-end hardening, compatibility and release gate [ ]
 
 **Goal:** Prove C0 is installable, restorable, independently usable, expandable and safe for other developers to fork.

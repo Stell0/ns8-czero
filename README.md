@@ -219,7 +219,7 @@ Core 0.24.2 is a controlled documentation/packaging candidate with unchanged sch
 
 The public [original consumer](https://github.com/Stell0/c0-m13-example) installs released Core with no local package tree. Its CI checks an original application schema, records, stale revisions, persisted Reader authorization and repeated packaged migrations in disposable PostgreSQL. Test identities are trusted fixture inputs, not SSO evidence. Generate another isolated example with `python examples/fork/create.py /tmp/c0-example`, then follow its README. Choose independent image/module names before using copied packaging files for an actual NS8 application fork.
 
-Managed infrastructure uses `c0-upstream.json`: a trusted repository, immutable baseline and seventy-five explicitly registered paths with hash/mode identities. Preview from a maintainer checkout:
+Managed infrastructure uses `c0-upstream.json`: a trusted repository, immutable baseline and seventy-six explicitly registered paths with hash/mode identities. Preview from a maintainer checkout:
 
 ```sh
 python scripts/sync-upstream.py --upstream-dir /path/to/trusted/upstream --revision FULL_SHA

@@ -20,6 +20,7 @@ def test_original_example_has_only_explicit_infrastructure_and_consumer(tmp_path
         if entry["path"].startswith(".github/workflows/"):
             continue  # The consumer has focused CI, not an unconfigured module publisher.
         assert (destination / entry["path"]).read_bytes() == (ROOT / entry["path"]).read_bytes()
+    assert (destination / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
     assert not (destination / "app").exists()
     assert not (destination / "packages").exists()
     assert not (destination / ".git").exists()
