@@ -1,4 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>NethServer/.github:ns8-automerge"]
+  "extends": [
+    "local>NethServer/.github:ns8-automerge"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchDatasources": [
+        "github-tags"
+      ],
+      "matchPackageNames": [
+        "Stell0/ns8-czero"
+      ],
+      "extractVersion": "^core-v(?<version>\\d+\\.\\d+\\.\\d+)$",
+      "versioning": "pep440",
+      "allowedVersions": ">=0.24.1,<0.25.0",
+      "automerge": false
+    }
+  ]
 }

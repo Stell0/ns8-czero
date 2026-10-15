@@ -25,6 +25,7 @@ jobs:
     env:
       REPOBASE: ghcr.io/${{ github.repository_owner }}
       BRANCH_TAG: ${{ github.ref_name }}
+      CZERO_CORE_SOURCE: ${{ github.repository == 'Stell0/ns8-czero' && 'local' || 'released' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/cache@v6

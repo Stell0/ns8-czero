@@ -226,7 +226,7 @@ wheels = [
 
 [[package]]
 name = "czero-app"
-version = "0.38.0"
+version = "0.39.0"
 source = { editable = "." }
 dependencies = [
     { name = "czero-core" },
@@ -245,7 +245,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "czero-core", directory = "../packages/czero-core" },
+    { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.24.1" },
     { name = "fastapi", specifier = "==0.143.0" },
     { name = "httpx", marker = "extra == 'test'", specifier = "==0.28.1" },
     { name = "jsonschema", marker = "extra == 'test'", specifier = "==4.26.0" },
@@ -259,7 +259,7 @@ provides-extras = ["test"]
 [[package]]
 name = "czero-core"
 version = "0.24.1"
-source = { directory = "../packages/czero-core" }
+source = { git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.24.1#ec940a931bbdd43bf2defe655934a3a3702edb3f" }
 dependencies = [
     { name = "alembic" },
     { name = "authlib" },
@@ -270,19 +270,6 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-docx" },
     { name = "sqlalchemy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = "==1.20.0" },
-    { name = "authlib", specifier = "==1.8.0" },
-    { name = "httpx2", specifier = "==2.13.1" },
-    { name = "joserfc", specifier = "==1.7.5" },
-    { name = "jsonschema", specifier = "==4.26.0" },
-    { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
-    { name = "pypdf", specifier = "==6.20.1" },
-    { name = "python-docx", specifier = "==1.2.0" },
-    { name = "sqlalchemy", specifier = "==2.1.4" },
 ]
 
 [[package]]

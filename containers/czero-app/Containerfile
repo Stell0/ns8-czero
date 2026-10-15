@@ -8,16 +8,23 @@ ENV UV_LINK_MODE=copy \
     UV_CACHE_DIR=/tmp/uv-cache
 
 WORKDIR /build
-RUN pip install --no-cache-dir uv==0.12.20
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv==0.12.20
 
 # Copy only the package manifests and runtime sources needed to build wheels.
 COPY app/pyproject.toml app/uv.lock /build/app/
 COPY app/src /build/app/src
 COPY packages/czero-core/pyproject.toml packages/czero-core/README.md packages/czero-core/LICENSE /build/packages/czero-core/
 COPY packages/czero-core/src /build/packages/czero-core/src
+COPY scripts/select-core-source.py /build/select-core-source.py
+ARG CZERO_CORE_SOURCE=released
 WORKDIR /build/app
 # Dependency wheels can bundle authoring skills and extension build sources.
-RUN uv sync --frozen --no-dev --no-editable \
+RUN python /build/select-core-source.py --project pyproject.toml --source "$CZERO_CORE_SOURCE" \
+    && if [ "$CZERO_CORE_SOURCE" = local ]; then uv lock; fi \
+    && uv sync --frozen --no-dev --no-editable \
     && find /opt/czero/.venv -type d \( -name .agents -o -name testing -o -name tests \) -prune -exec rm -rf {} + \
     && find /opt/czero/.venv -type f \( -name '*.h' -o -name '*.pxd' -o -name '*.pxi' -o -name '*.pyx' \) -delete \
     && rm -rf /opt/czero/.venv/lib/python*/site-packages/alembic/templates \

@@ -2,8 +2,9 @@
 
 This example is repository development material, never runtime image content.
 It demonstrates a standalone Core consumer plus explicit managed-file updates.
-Core 0.24.1 publication is under M13 verification; do not treat this example as
-released until PLAN.md records the actual public artifacts and consumer tests.
+Core 0.24.1 is published with verified assets. The public original consumer
+at https://github.com/Stell0/c0-m13-example passes frozen tagged installation CI;
+see PLAN.md for exact source and update-proposal evidence.
 
 Create an isolated example checkout with:
 

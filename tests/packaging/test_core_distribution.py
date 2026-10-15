@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def command(arguments, *, cwd, env=None):
-    result = subprocess.run(arguments, cwd=cwd, env=env, capture_output=True, text=True, timeout=240)
+    result = subprocess.run(arguments, cwd=cwd, env=env, capture_output=True, text=True, timeout=240, umask=0o022)
     (cwd / 'last-package-command.log').write_text(result.stdout + result.stderr)
     assert result.returncode == 0, 'Package command failed; inspect the isolated command log'
     return result.stdout
@@ -37,6 +37,7 @@ def distributions(tmp_path_factory):
         return directory,env
     command(['uv','build','--no-sources',str(ROOT/'packages/czero-core'),'--out-dir',str(directory/'dist')],cwd=directory,env=env)
     command([sys.executable,str(ROOT/'scripts/normalize-core-sdist.py'),str(next((directory/'dist').glob('*.tar.gz')))],cwd=directory,env=env)
+    command(['uv','build','--no-sources','--wheel',str(next((directory/'dist').glob('*.tar.gz'))),'--out-dir',str(directory/'dist')],cwd=directory,env=env)
     return directory, env
 
 
@@ -65,6 +66,7 @@ def test_wheel_and_source_rebuild_have_identical_hashes(distributions):
     directory,env=distributions
     command(['uv','build','--no-sources',str(ROOT/'packages/czero-core'),'--out-dir',str(directory/'repeat')],cwd=directory,env=env)
     command([sys.executable,str(ROOT/'scripts/normalize-core-sdist.py'),str(next((directory/'repeat').glob('*.tar.gz')))],cwd=directory,env=env)
+    command(['uv','build','--no-sources','--wheel',str(next((directory/'repeat').glob('*.tar.gz'))),'--out-dir',str(directory/'repeat')],cwd=directory,env=env)
     for first in (directory/'dist').iterdir():
         if first.name.endswith(('.whl','.tar.gz')):
             second=directory/'repeat'/first.name

@@ -44,7 +44,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
 
-Development Core/app versions are **0.24.1/0.38.0**, with migrations through `0013_oauth_consent`. The verified installed/live M12 implementation is 3939575 at 0.24.0/0.37.0, with all seven Rocky browser workflows, Debian/Rocky native recovery and permitted live owner update/full-manager restart persistence. The stronger timer-recovery gate also passes on both distributions; the completion marker also passes and M13 is active. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Development Core/app versions are **0.24.1/0.39.0**, with migrations through `0013_oauth_consent`. The verified installed/live M12 implementation is 3939575 at 0.24.0/0.37.0, with all seven Rocky browser workflows, Debian/Rocky native recovery and permitted live owner update/full-manager restart persistence. The stronger timer-recovery gate also passes on both distributions; the completion marker also passes and M13 is active. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
@@ -213,7 +213,7 @@ M13 is implementing independent Core distribution. The first packaging slice add
 
 The container builder now copies Core's declared README/license inputs, and the runtime audit checks the installed Core GPL metadata. Standalone wheel success alone does not prove the assembled image contains its license. The first M13 image exposed this gap; the corrected published image passes the strengthened license audit.
 
-The prepared Core artifact workflow uses `core-v<version>` tags, validates the exact checkout against local and Debian/Rocky CI, and tests the actual supplied wheel/archive before publication. Its separate publisher checks uploaded SHA256SUMS and preserves existing versions. This is Python library distribution, separate from an NS8 module release. Local guard/artifact tests and Actionlint pass; actual publication is still pending the recorded source CI gates.
+The prepared Core artifact workflow uses `core-v<version>` tags, validates the exact checkout against local and Debian/Rocky CI, and tests the actual supplied wheel/archive before publication. Its separate publisher checks uploaded SHA256SUMS and preserves existing versions. This is Python library distribution, separate from an NS8 module release. Local guard/artifact tests and Actionlint pass; Core 0.24.1 publication and public checksum verification pass; subsequent versions retain the same source gates.
 
 Managed-file upgrade tooling is under M13 acceptance. `scripts/sync-upstream.py`
 compares only files explicitly registered in a version-1 `c0-upstream.json`
@@ -224,9 +224,9 @@ stay intact, with `needs_review` flags and `.c0/UPSTREAM_UPDATE.md` instructions
 The scheduled/dispatch workflow prepares a review PR for opted-in forks.
 It never automatically merges. Native-token pushes do not trigger push builds. Token-created PR checks
 require workflow approval or explicit dispatch; an approved GitHub App can
-trigger them directly. Dispatch image publication for the module/QEMU checks. Twenty-six real Git-history
+trigger them directly. Dispatch image publication for the module/QEMU checks. Thirty-one real Git-history
 checks pass. The manifest registers 70 infrastructure paths at immutable baseline
-130b3eb; real proposal acceptance remains pending.
+130b3eb; actual untouched/conflict proposal and repeat-delivery acceptance pass in the public example.
 
 The four repository-only skills in `.agents/skills` cover feature development,
 Core development, reusable upstream contributions and customized fork upgrades.
@@ -270,3 +270,5 @@ Since [June 2026](https://github.blog/changelog/2026-06-11-bot-created-pull-requ
 GitHub creates approval-required PR checks for native-token proposals, rather
 than suppressing those checks entirely. Review the exact diff and approve the
 workflow run or dispatch the checks explicitly; inspect completed results.
+
+Core [0.24.1 artifacts](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) are published with verified checksums. The reference app now pins that Git tag/subdirectory in uv.lock and accepts compatible 0.24.x patches. Default image builds use the released source. For an intentional producer build, set `CZERO_CORE_SOURCE=local bash build-images.sh`; this changes only the temporary builder source/lock. Upstream development CI explicitly uses this mode. Git, uv and source-selection tooling stay outside runtime images. Native Renovate rules propose compatible Core patches with automatic merge disabled; actual patch-update acceptance remains pending.

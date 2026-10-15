@@ -19,10 +19,15 @@ imagetag="${IMAGETAG:-latest}"
 imagetag="${imagetag//\//-}"
 revision="${GITHUB_SHA:-$(git rev-parse HEAD)}"
 
+# Released/tagged Core is the default. Upstream development CI opts in to local.
+core_source="${CZERO_CORE_SOURCE:-released}"
+case "$core_source" in released|local) ;; *) echo "Invalid Core source" >&2; exit 2 ;; esac
+
 # Build the versioned C0 application separately so the NS8 module image stays
 # a small shell containing actions, metadata and its administrator UI.
 buildah build \
     --file containers/czero-app/Containerfile \
+    --build-arg "CZERO_CORE_SOURCE=${core_source}" \
     --force-rm \
     --layers \
     --jobs "$(nproc)" \
