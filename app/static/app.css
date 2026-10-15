@@ -15,3 +15,6 @@ section,details{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--li
 @media(max-width:48rem){.menu .menu-items{position:static;width:min(16rem,calc(100vw - 2rem));min-width:0;box-shadow:none}}
 
 .source-library .byline{display:block;margin-top:.2rem}
+
+.source-library-toggle{border:0;margin:0;padding:0}.source-library-toggle>summary{display:none}
+@media(max-width:48rem){.source-library-toggle{margin-bottom:1rem}.source-library-toggle>summary{display:list-item;margin-bottom:1rem}}

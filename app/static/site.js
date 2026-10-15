@@ -146,7 +146,7 @@
   }
   window.C0={params,toolsMode,uuid,node,link,button,pageURL,sourceURL,safeURL,date,copyPanel,task,markdown,values,tree};
   document.documentElement.dataset.view=toolsMode ? 'tools' : 'read';
-  if(window.matchMedia){const compact=window.matchMedia('(max-width:48rem)');const toggle=document.querySelector('.navigation-toggle');if(toggle){toggle.open=!compact.matches;compact.addEventListener('change',event=>{toggle.open=!event.matches;});}}
+  if(window.matchMedia){const compact=window.matchMedia('(max-width:48rem)');for(const toggle of document.querySelectorAll('.navigation-toggle, .source-library-toggle')){const browsingSources=toggle.classList.contains('source-library-toggle') && !params.has('source');toggle.open=!compact.matches || browsingSources;compact.addEventListener('change',event=>{toggle.open=!event.matches || browsingSources;});}}
   for(const element of document.querySelectorAll('[data-tools-only]'))element.hidden=!toolsMode;
   for(const element of document.querySelectorAll('[data-reading-only]'))element.hidden=toolsMode;
   for(const element of document.querySelectorAll('[data-account-panel]'))element.hidden=params.get('view')!=='account';
