@@ -27,8 +27,8 @@ uv build --no-sources packages/czero-core --out-dir /tmp/czero-core-dist
 python -m pytest tests/packaging
 ```
 
-Packaging checks install the built wheel into a clean environment outside the
-checkout and exercise its imports, metadata and migrations. PostgreSQL/pgvector
+Packaging checks install both wheel and source archive into separate clean
+environments outside the checkout and exercise imports, metadata and migrations. PostgreSQL/pgvector
 checks require an isolated `CZERO_TEST_DATABASE_URL`; never point tests at live data.
 Only Core is installed: the NS8 SDK and reference FastAPI application are separate.
 
@@ -39,7 +39,8 @@ packaged schema: set `CZERO_DATABASE_URL` privately and run
 the knowledge-space identity. Never place a database URL or identity/provider
 secret in source code or application logs.
 
-Version `0.24.1` is the initial distribution packaging patch, with the existing
+Version `0.24.2` corrects distribution instructions after the initial verified
+`0.24.1` release, with the existing
 `0013_oauth_consent` schema and unchanged runtime contracts. The compatible consumer range is `>=0.24.1,<0.25.0`. Publication and automatic
 fork-update evidence is recorded in the repository PLAN.md.
 
@@ -56,8 +57,10 @@ checks its uploaded hashes and publishes it without replacing the module's
 latest release. Replays must match existing artifact bytes; published files
 are never clobbered.
 
-The workflow is prepared and locally validated; consult PLAN.md for actual
-executed publication and consumer tests before selecting an artifact.
+Core 0.24.1 is published with verified checksums at
+https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1.
+Consult PLAN.md for subsequent exact-source publication gates and actual
+consumer/Renovate evidence; a started workflow does not establish acceptance.
 
 Release builds also normalize generated source-archive ownership, timestamps,
 permissions and gzip metadata with `scripts/normalize-core-sdist.py` and the
@@ -65,3 +68,21 @@ source commit's `SOURCE_DATE_EPOCH`. Wheel and normalized archive rebuild hashes
 are checked; package contents are preserved. Setuptools source archives alone
 retain build-host metadata, so raw uv sdist output is not a replayable release
 artifact. This development helper stays outside the installed Core package.
+Build the final wheel from the normalized archive under umask 022 to avoid
+checkout group-write modes changing ZIP metadata. Its bytes reproduce the
+published wheel across build hosts.
+
+## Independent installation
+
+Use a Python 3.12–3.14 virtual environment and the verified release assets, or
+the immutable Git tag/subdirectory source:
+
+```sh
+uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.24.1#subdirectory=packages/czero-core"
+```
+
+For applications, declare the compatible range `>=0.24.1,<0.25.0` and the
+reviewed Git tag in `[tool.uv.sources]`, then commit uv.lock. Never replace the
+released source with a local checkout implicitly. The template producer can
+opt in with `CZERO_CORE_SOURCE=local`; this affects only its build environment.
+Minor/breaking releases require separate compatibility and migration review.

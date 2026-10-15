@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M13 distribution conventions
 
+- Native Renovate PEP 440 rejects complete core-v tags despite successful extraction/config validation. Use prefix-aware regex versioning, keep the complete tag and enforce comparator patch bounds. Test its actual API and authenticated lookup before claiming update support. Native rule regression dependencies are development-only.
+
 - Root app now pins released core-v0.24.1/subdirectory/uv.lock by default, with compatible >=0.24.1,<0.25.0. CZERO_CORE_SOURCE=local is an explicit producer-development builder override, selected only by upstream CI; independent forks retain released default. Source validation fails without fallback. Builder-only Git/uv/selector never enter runtime images. Package patch, actual Renovate PR and final installed/live gates remain required.
 
 - Native GITHUB_TOKEN cannot publish changes to .github/workflows. Default updater behavior preserves workflow bytes and records review_reason=workflow-permission with the full migration range, while ordinary untouched managed files update. --allow-workflow-updates is only for a maintainer publishing with the required workflows permission; it grants no permission itself. Do not replicate a broad personal token into fork secrets to evade this restriction. Public example acceptance is staged: managed CI first, released Core CI only with its verified tag and lock.

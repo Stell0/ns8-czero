@@ -1,0 +1,29 @@
+name: Core Renovate rules
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - renovate.json
+      - examples/fork/renovate.json
+      - tests/development/core-renovate.mjs
+      - .github/workflows/test-core-renovate.yml
+  pull_request:
+    paths:
+      - renovate.json
+      - examples/fork/renovate.json
+      - tests/development/core-renovate.mjs
+      - .github/workflows/test-core-renovate.yml
+permissions:
+  contents: read
+jobs:
+  versioning:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.21.0'
+      - run: npm install --ignore-scripts --prefix /tmp/czero-renovate renovate@44.161.0
+      - run: node tests/development/core-renovate.mjs
+        env:
+          RENOVATE_PACKAGE_ROOT: /tmp/czero-renovate/node_modules/renovate
