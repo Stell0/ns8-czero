@@ -80,7 +80,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:c475a7c6bd4d7cee2687904932ed83c7d0c71594cdf814dd52e7ea29e904d039
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:f07b2d04b3515f932614038cc95d7a739a71516a3d88fe1b4e5e3168a9194e0c
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -92,7 +92,7 @@ Install Czero with its own identity
     IF    $SCENARIO == 'update'
         # Freeze the older component images too, not just the module shell.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:fed7815cf131b966f9e082d4f6d1802e3e80872b80b3a26713773c80bb49e98a','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:9e7ef99709cb4ce75cd9a8fc786c5e102bd952005d428f0424aee9541914c3e9'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:4f7b7c893c9a952942835ca72c9b0ca70f6fdcb5afe86fa3f39f13ceb7109821','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:6675458321037ca4a972b81f1d43986673c2572efb80608012ceb97fe72fb872'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
