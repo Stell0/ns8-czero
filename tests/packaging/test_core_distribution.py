@@ -71,22 +71,24 @@ def test_wheel_and_source_rebuild_have_identical_hashes(distributions):
             assert hashlib.sha256(first.read_bytes()).digest()==hashlib.sha256(second.read_bytes()).digest()
 
 
-@pytest.fixture(scope='module')
-def installed(distributions):
+@pytest.fixture(scope='module',params=['wheel','source'])
+def installed(distributions,request):
     directory,env=distributions
-    command(['uv','venv','--python','3.12',str(directory/'venv')],cwd=directory,env=env)
-    command(['uv','pip','install','--python',str(directory/'venv/bin/python'),str(next((directory/'dist').glob('*.whl')))],cwd=directory,env=env)
-    return directory,env,directory/'venv/bin/python'
+    environment=directory/('venv-'+request.param)
+    artifact=next((directory/'dist').glob('*.whl' if request.param=='wheel' else '*.tar.gz'))
+    command(['uv','venv','--python','3.12',str(environment)],cwd=directory,env=env)
+    command(['uv','pip','install','--python',str(environment/'bin/python'),str(artifact)],cwd=directory,env=env)
+    return directory,env,environment/'bin/python'
 
 
 def test_clean_install_is_independent_of_checkout_and_ns8_sdk(installed):
     directory,env,python=installed
     value=command([str(python),'-I','-c',
-        "import json,importlib.util,importlib.metadata;from pathlib import Path;import czero_core;"
+        "import sys,json,importlib.util,importlib.metadata;from pathlib import Path;import czero_core;"
         "from czero_core.jobs import default_registry;from czero_core.objects import ObjectService;"
         "from czero_core.wiki import WikiService;from czero_core.sources import SourceService;"
         "assert importlib.util.find_spec('agent') is None;assert importlib.util.find_spec('czero_app') is None;"
-        "assert Path(czero_core.__file__).is_relative_to(Path('venv').resolve());"
+        "assert Path(czero_core.__file__).is_relative_to(Path(sys.prefix).resolve());"
         "assert default_registry().get('health').name=='health';"
         "assert czero_core.core_version==importlib.metadata.version('czero-core');"
         "print(json.dumps(czero_core.core_health()))"],cwd=directory,env=env)
