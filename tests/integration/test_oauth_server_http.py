@@ -42,16 +42,160 @@ def oauth_app(application):
         connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id': UUID(saved['client_id'])})
 
 
-async def authorize(client, saved, *, scope='c0:read'):
+async def authorize(client, saved, *, scope='c0:read', method='GET', optional=()):
     verifier = secrets.token_urlsafe(32)
     state = secrets.token_urlsafe(32)
-    response = await client.get('/oauth/authorize', params={'client_id':saved['client_id'],
+    parameters = {'client_id':saved['client_id'],
         'redirect_uri':CALLBACK,'response_type':'code','code_challenge':pkce_challenge(verifier),
-        'code_challenge_method':'S256','state':state,'scope':scope,'resource':RESOURCE})
+        'code_challenge_method':'S256','state':state,'scope':scope,'resource':RESOURCE}
+    response = await authorization_request(client, method, list(parameters.items()) + list(optional))
     assert response.status_code == 302 and response.headers['location'] == ORIGIN + '/oauth/consent'
     flags = response.headers['set-cookie']
     assert 'HttpOnly' in flags and 'Secure' in flags and 'SameSite=lax' in flags
     return PrivateFixture((verifier,state))
+
+
+async def authorization_request(client, method, parameters):
+    encoded = urlencode(parameters)
+    if method == 'GET':
+        return await client.get('/oauth/authorize?' + encoded)
+    return await client.post('/oauth/authorize', content=encoded,
+        headers={'Content-Type':'application/x-www-form-urlencoded'})
+
+
+@pytest.mark.parametrize('method', ['GET', 'POST'])
+@pytest.mark.parametrize('optional', [
+    [('ui_locales', 'en-US')],
+    [('future_extension', 'ignored value')],
+    [('ui_locales', 'en-US'), ('future_extension', '<untrusted>&value'), ('empty_extension', '')],
+])
+@pytest.mark.parametrize('scope', ['c0:read', 'c0:read c0:write c0:admin'])
+def test_optional_authorization_fields_are_ignored_before_core(oauth_app, monkeypatch, method, optional, scope):
+    from czero_app.oauth_provider import raw_request
+    app, saved, grants, consent = oauth_app
+    begin = consent.begin
+    captured = []
+    def checked_begin(*args, **kwargs):
+        captured.append(dict(raw_request.get()))
+        return begin(*args, **kwargs)
+    monkeypatch.setattr(consent, 'begin', checked_begin)
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            verifier, state = await authorize(client, saved, scope=scope, method=method, optional=optional)
+            assert len(captured) == 1
+            assert set(captured[0]) == {'client_id', 'redirect_uri', 'response_type', 'code_challenge',
+                'code_challenge_method', 'state', 'scope', 'resource'}
+            assert captured[0]['state'] == state and captured[0]['scope'] == scope
+            profile = await login(client)
+            view = (await client.get('/oauth/consent/request')).json()
+            assert set(view['scopes']) == set(scope.split())
+            assert set(view['eligible_scopes']) == set(scope.split())
+            response = await client.post('/oauth/consent', json={'approve':True, 'scopes':['c0:read']},
+                headers={'Origin':ORIGIN, 'X-C0-CSRF':profile['csrf_token']})
+            assert response.status_code == 200
+            callback = urlsplit(response.json()['redirect_uri'])
+            values = parse_qs(callback.query)
+            assert values['state'] == [state] and set(values) == {'code', 'state'}
+            assert callback._replace(query='').geturl() == CALLBACK
+            response = await client.post('/oauth/token', data={'grant_type':'authorization_code',
+                'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'code':values['code'][0],
+                'code_verifier':verifier, 'resource':RESOURCE})
+            assert response.status_code == 200
+            pair = response.json()
+            assert pair['scope'] == 'c0:read'
+            assert grants.verify(pair['access_token'], resource=RESOURCE).scopes == frozenset({'c0:read'})
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('method', ['GET', 'POST'])
+@pytest.mark.parametrize('duplicate', ['client_id', 'resource', 'scope', 'state', 'ui_locales', 'future_extension'])
+def test_duplicate_authorization_fields_remain_rejected(oauth_app, method, duplicate):
+    async def check():
+        app, saved, _, _ = oauth_app
+        parameters = {'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'response_type':'code',
+            'code_challenge':pkce_challenge('x' * 43), 'code_challenge_method':'S256',
+            'state':'preserved-state', 'scope':'c0:read', 'resource':RESOURCE,
+            'ui_locales':'en-US', 'future_extension':''}
+        values = list(parameters.items()) + [(duplicate, parameters[duplicate])]
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            response = await authorization_request(client, method, values)
+            assert response.status_code == 400 and response.json() == {'error':'invalid_request'}
+            assert 'location' not in response.headers and 'set-cookie' not in response.headers
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('method', ['GET', 'POST'])
+@pytest.mark.parametrize('overrides', [
+    {'code_challenge_method':'plain'}, {'code_challenge':'short'},
+    {'resource':ORIGIN + '/other'}, {'client_id':str(UUID(int=0))},
+    {'redirect_uri':CALLBACK + '/'}, {'scope':'c0:unknown'},
+    {'scope':'c0:read unknown'}, {'state':'invalid\x01state'},
+])
+def test_optional_authorization_fields_do_not_relax_security(oauth_app, method, overrides):
+    async def check():
+        app, saved, _, _ = oauth_app
+        parameters = {'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'response_type':'code',
+            'code_challenge':pkce_challenge('x' * 43), 'code_challenge_method':'S256',
+            'state':'preserved-state', 'scope':'c0:read', 'resource':RESOURCE, 'ui_locales':'en-US', **overrides}
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            response = await authorization_request(client, method, parameters)
+            assert response.status_code in (400, 302)
+            assert 'set-cookie' not in response.headers
+            if response.status_code == 302:
+                callback = urlsplit(response.headers['location'])
+                assert callback._replace(query='').geturl() == CALLBACK
+                assert 'error' in parse_qs(callback.query)
+            else:
+                assert 'error' in response.json() and 'location' not in response.headers
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('method', ['GET', 'POST'])
+def test_optional_authorization_fields_cannot_exceed_request_limit(oauth_app, method):
+    async def check():
+        app, saved, _, _ = oauth_app
+        parameters = {'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'response_type':'code',
+            'code_challenge':pkce_challenge('x' * 43), 'code_challenge_method':'S256',
+            'state':'preserved-state', 'scope':'c0:read', 'resource':RESOURCE, 'future_extension':'x' * 16385}
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            response = await authorization_request(client, method, parameters)
+            assert response.status_code == (400 if method == 'GET' else 413)
+            assert 'set-cookie' not in response.headers and 'location' not in response.headers
+            if method == 'POST':
+                encoded = urlencode(parameters).encode()
+                async def chunks():
+                    yield encoded[:8192]
+                    yield encoded[8192:]
+                response = await client.post('/oauth/authorize', content=chunks(),
+                    headers={'Content-Type':'application/x-www-form-urlencoded'})
+                assert response.status_code == 413
+    asyncio.run(check())
+
+
+def test_optional_fields_remain_rejected_on_token_and_revocation(oauth_app):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            verifier, _ = await authorize(client, saved)
+            profile = await login(client)
+            response = await client.post('/oauth/consent', json={'approve':True, 'scopes':['c0:read']},
+                headers={'Origin':ORIGIN, 'X-C0-CSRF':profile['csrf_token']})
+            code = parse_qs(urlsplit(response.json()['redirect_uri']).query)['code'][0]
+            token = {'grant_type':'authorization_code', 'client_id':saved['client_id'], 'redirect_uri':CALLBACK,
+                'code':code, 'code_verifier':verifier, 'resource':RESOURCE}
+            for name in ('ui_locales', 'future_extension'):
+                response = await client.post('/oauth/token', data={**token, name:'ignored-only-at-authorize'})
+                assert response.status_code == 400 and response.json() == {'error':'invalid_request'}
+            response = await client.post('/oauth/token', data=token)
+            assert response.status_code == 200  # Invalid optional fields did not consume the code.
+            pair = response.json()
+            revoke = {'client_id':saved['client_id'], 'token':pair['refresh_token'], 'resource':RESOURCE}
+            for name in ('ui_locales', 'future_extension'):
+                response = await client.post('/oauth/revoke', data={**revoke, name:'ignored-only-at-authorize'})
+                assert response.status_code == 400 and response.json() == {'error':'invalid_request'}
+                assert grants.verify(pair['access_token'], resource=RESOURCE).scopes == frozenset({'c0:read'})
+            assert (await client.post('/oauth/revoke', data=revoke)).status_code == 200
+    asyncio.run(check())
 
 
 async def login(client):
@@ -243,7 +387,7 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
         result=[None]
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as browser:
             async def redirect(url):
-                response=await browser.get(url)
+                response=await browser.get(url + '&' + urlencode({'ui_locales':'en-US', 'future_extension':'ignored'}))
                 assert response.status_code==302
                 profile=await login(browser)
                 response=await browser.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},

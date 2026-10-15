@@ -82,10 +82,13 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
                 return JSONResponse({'error':'invalid_request'}, status_code=413)
             form = await request.form()
         fields = {'authorize':AUTHORIZE_FIELDS,'token':TOKEN_FIELDS,'revoke':REVOKE_FIELDS}[kind]
-        if (set(form) - fields or any(len(form.getlist(key)) != 1 or not isinstance(form[key], str) for key in form)
+        if ((kind != 'authorize' and set(form) - fields)
+                or any(len(form.getlist(key)) != 1 or not isinstance(form[key], str) for key in form)
                 or form.get('client_secret') or request.headers.get('authorization')):
             return JSONResponse({'error':'invalid_request'}, status_code=400)
-        raw = dict(form)
+        # RFC 6749 section 3.1: ignore unknown authorization parameters only
+        # after checking every raw name for duplicates. Core receives known fields.
+        raw = {key: form[key] for key in form if key in fields}
         if raw.get('resource') != grants.resource:
             return JSONResponse({'error':'invalid_target'}, status_code=400)
         if kind == 'authorize':

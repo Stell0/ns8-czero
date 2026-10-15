@@ -27,7 +27,16 @@ def issue(browser, profile, client, *, scope='c0:read'):
     challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
     parameters={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],
         'response_type':'code','code_challenge':challenge,'code_challenge_method':'S256',
-        'state':state,'scope':scope,'resource':browser.origin+'/mcp'}
+        'state':state,'scope':scope,'resource':browser.origin+'/mcp',
+        'ui_locales':'en-US','future_extension':'ignored'}
+    for name in ('resource', 'ui_locales', 'future_extension'):
+        duplicate=urlencode(list(parameters.items())+[(name,parameters[name])])
+        assert browser.request('/oauth/authorize?'+duplicate)[0]==400,'Installed duplicate authorization field accepted'
+        assert browser.request('/oauth/authorize',duplicate.encode(),'POST',
+            {'Content-Type':'application/x-www-form-urlencoded'})[0]==400,'Installed duplicate authorization form field accepted'
+    # Both methods ignore future optional fields while retaining explicit consent.
+    assert browser.request('/oauth/authorize',urlencode(parameters).encode(),'POST',
+        {'Content-Type':'application/x-www-form-urlencoded'})[0]==200,'Installed optional authorization form failed'
     status, _, _=browser.request('/oauth/authorize?'+urlencode(parameters))
     assert status==200,'Installed OAuth consent page unavailable'
     status, body, _=browser.api('/oauth/consent/request')
