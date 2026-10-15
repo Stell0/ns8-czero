@@ -161,3 +161,43 @@ def test_local_mode_customization_is_not_silently_overwritten(history):
     assert (fork / "managed.txt").read_text() == "original\n"
     assert (fork / "managed.txt").stat().st_mode & 0o111
     assert "`managed.txt`: review" in (fork / SYNC.REPORT).read_text()
+
+
+def test_later_proposal_retains_original_unresolved_migration_range(history):
+    upstream, fork, base, target = history
+    SYNC.synchronize(fork, upstream, target, apply=True)
+    (upstream / "managed.txt").write_text("another unrelated infrastructure update\n")
+    later = commit(upstream, "update another managed file")
+    SYNC.synchronize(fork, upstream, later, apply=True)
+    report = (fork / SYNC.REPORT).read_text()
+    assert f"git diff {base} {later} -- custom.txt" in report
+    assert "`custom.txt`: review" in report
+    manifest = json.loads((fork / SYNC.MANIFEST).read_text())
+    entry = next(e for e in manifest["files"] if e["path"] == "custom.txt")
+    assert entry["needs_review"] and entry["review_from"] == base
+    assert (fork / "custom.txt").read_text() == "private customization\n"
+    assert not SYNC.synchronize(fork, upstream, later, apply=True)["changed"]
+
+
+def test_repeated_conflict_compares_from_first_unresolved_baseline(history):
+    upstream, fork, base, target = history
+    SYNC.synchronize(fork, upstream, target, apply=True)
+    (upstream / "custom.txt").write_text("second upstream behavior\n")
+    later = commit(upstream, "extend conflicting behavior")
+    SYNC.synchronize(fork, upstream, later, apply=True)
+    assert f"git diff {base} {later} -- custom.txt" in (fork / SYNC.REPORT).read_text()
+    assert (fork / "custom.txt").read_text() == "private customization\n"
+
+
+def test_corrupt_unresolved_range_fails_before_updates(history):
+    upstream, fork, _, target = history
+    SYNC.synchronize(fork, upstream, target, apply=True)
+    manifest_path = fork / SYNC.MANIFEST
+    manifest = json.loads(manifest_path.read_text())
+    next(e for e in manifest["files"] if e["path"] == "custom.txt")["review_from"] = "invalid"
+    manifest_path.write_text(json.dumps(manifest))
+    (upstream / "managed.txt").write_text("next update\n")
+    later = commit(upstream, "another infrastructure update")
+    with pytest.raises(ValueError):
+        SYNC.synchronize(fork, upstream, later, apply=True)
+    assert (fork / "managed.txt").read_text() == "updated\n"

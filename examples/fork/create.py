@@ -26,7 +26,7 @@ def create(destination: Path, repository: Path) -> None:
         shutil.copy2(source, target)
     shutil.copy2(repository / "c0-upstream.json", destination / "c0-upstream.json")
     example = repository / "examples/fork"
-    for name in ("README.md", "pyproject.toml", "renovate.json"):
+    for name in ("AGENTS.md", "PLAN.md", "README.md", ".gitignore", "pyproject.toml", "renovate.json"):
         shutil.copy2(example / name, destination / name)
     if (example / "uv.lock").exists():
         shutil.copy2(example / "uv.lock", destination / "uv.lock")

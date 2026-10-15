@@ -107,7 +107,7 @@ def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = Fals
         raise ValueError("Managed paths overlap")
     seen, changes, updated_entries = set(), [], []
     for entry in manifest["files"]:
-        if not isinstance(entry, dict) or set(entry) - {"path", "mode", "sha256", "needs_review"}:
+        if not isinstance(entry, dict) or set(entry) - {"path", "mode", "sha256", "needs_review", "review_from"}:
             raise ValueError("Invalid managed file entry")
         path = safe_path(entry.get("path"))
         if path in seen:
@@ -119,14 +119,19 @@ def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = Fals
         current, after = local_blob(root, path), upstream_blob(upstream, revision, path)
         updated = {"path": path, **identity(after)}
         if entry.get("needs_review") is True:
-            updated["needs_review"] = True
+            review_from = entry.get("review_from")
+            if not isinstance(review_from, str) or not SHA.fullmatch(review_from):
+                raise ValueError("Unresolved review requires its original baseline")
+            git(upstream, "merge-base", "--is-ancestor", review_from, base)
+            updated.update(needs_review=True, review_from=review_from)
         if before != after:
             action = "apply" if current == before else "already-current" if current == after else "review"
             changes.append({"path": path, "action": action, "before": before, "current": current, "after": after})
             if action == "review":
-                updated["needs_review"] = True
+                updated.update(needs_review=True, review_from=updated.get("review_from", base))
             else:
                 updated.pop("needs_review", None)
+                updated.pop("review_from", None)
         updated_entries.append(updated)
     if not changes:
         return {"changed": False, "files": []}
@@ -135,14 +140,20 @@ def synchronize(root: Path, upstream: Path, revision: str, *, apply: bool = Fals
     lines = ["# Upstream update review", "", f"Upstream: {manifest['upstream']}", "",
              f"Baseline: `{base}`", f"Target: `{revision}`", "",
              "Only registered files are considered. Review tests before merging.", ""]
-    for change in changes:
+    report_entries = [{"path": c["path"], "action": c["action"]} for c in changes]
+    reported = {c["path"] for c in changes}
+    report_entries += [{"path": e["path"], "action": "review"} for e in updated_entries
+                       if e.get("needs_review") and e["path"] not in reported]
+    identities = {entry["path"]: entry for entry in updated_entries}
+    for change in report_entries:
         path, action = change["path"], change["action"]
+        comparison_base = identities[path].get("review_from", base)
         lines.extend([f"## `{path}`: {action}", ""])
         if action == "review":
             lines.extend(["Your customized file was preserved. Compare the upstream change and port the relevant behavior manually.",
-                          "After testing, remove this file's needs_review flag; do not replace application customizations blindly.", ""])
+                          "After testing, remove this file's needs_review and review_from markers; do not replace application customizations blindly.", ""])
         lines.extend(["Inspect the upstream change in a trusted upstream checkout:", "", "```sh",
-                      f"git diff {base} {revision} -- {path}", "```", ""])
+                      f"git diff {comparison_base} {revision} -- {path}", "```", ""])
     report = "\n".join(lines).encode()
     if apply:
         if manifest_path.read_bytes() != original or any(local_blob(root, c["path"]) != c["current"] for c in changes):

@@ -241,3 +241,8 @@ data, replacing module publishers with focused consumer CI. Five generator
 cases pass, including unsafe-path/symlink preflight and existing-draft protection.
 The example dependency awaits the verified Core tag and generated lockfile;
 external installation and real Renovate/update/conflict PRs are not yet proven.
+
+Unresolved customized updates retain their original `review_from` revision
+across later proposals, including updates to other files. Reports keep every
+unresolved file's full migration range. Remove its `needs_review` and
+`review_from` markers only after resolving and testing that migration.
