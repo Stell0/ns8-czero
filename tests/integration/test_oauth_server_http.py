@@ -198,18 +198,18 @@ def test_optional_fields_remain_rejected_on_token_and_revocation(oauth_app):
     asyncio.run(check())
 
 
-async def login(client):
+async def login(client, *, code='unit-only-code'):
     response = await client.get('/auth/login')
     state = parse_qs(urlsplit(response.headers['location']).query)['state'][0]
-    response = await client.get('/auth/callback', params={'state':state,'code':'unit-only-code'})
+    response = await client.get('/auth/callback', params={'state':state,'code':code})
     assert response.status_code == 302 and response.headers['location'] == '/oauth/consent'
     return (await client.get('/api/v1/me')).json()
 
 
-async def issued_pair(client, saved):
-    verifier,_ = await authorize(client,saved)
-    profile = await login(client)
-    response = await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},
+async def issued_pair(client, saved, *, scope='c0:read', login_code='unit-only-code'):
+    verifier,_ = await authorize(client,saved,scope=scope)
+    profile = await login(client,code=login_code)
+    response = await client.post('/oauth/consent',json={'approve':True,'scopes':scope.split()},
         headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
     assert response.status_code == 200
     code=parse_qs(urlsplit(response.json()['redirect_uri']).query)['code'][0]
@@ -217,6 +217,46 @@ async def issued_pair(client, saved):
         'code':code,'redirect_uri':CALLBACK,'code_verifier':verifier,'resource':RESOURCE})
     assert response.status_code==200
     return response.json()
+
+
+@pytest.mark.parametrize('role', [Role.READER, Role.EDITOR, Role.ADMIN])
+def test_scope_upgrade_requires_new_role_eligible_explicit_consent(oauth_app, application, role):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        _, owner_token, member_token, *_ = application
+        access = app.state.auth.access
+        owner = access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
+        with pytest.raises(PermissionDenied):
+            access.resolve(app.state.auth.oidc.verify_access_token(member_token))
+        member_id = next(row['id'] for row in access.list_accounts(owner) if row['username'] == 'member')
+        access.set_role(owner, member_id, role)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            pair = await issued_pair(client, saved, login_code='unit-only-forbidden-code')
+            original = grants.verify(pair['access_token'], resource=RESOURCE)
+            refresh = {'grant_type':'refresh_token', 'client_id':saved['client_id'],
+                'refresh_token':pair['refresh_token'], 'resource':RESOURCE, 'scope':'c0:read c0:write'}
+            assert (await client.post('/oauth/token', data=refresh)).status_code == 400
+            assert grants.verify(pair['access_token'], resource=RESOURCE).scopes == {'c0:read'}
+            verifier, state = await authorize(client, saved, scope='c0:read c0:write')
+            view = (await client.get('/oauth/consent/request')).json()
+            assert set(view['eligible_scopes']) == ({'c0:read'} if role is Role.READER else {'c0:read','c0:write'})
+            profile = (await client.get('/api/v1/me')).json()
+            response = await client.post('/oauth/consent', json={'approve':True,'scopes':['c0:read','c0:write']},
+                headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
+            if role is Role.READER:
+                assert response.status_code == 403
+                return
+            assert response.status_code == 200
+            callback = parse_qs(urlsplit(response.json()['redirect_uri']).query)
+            assert callback['state'] == [state]
+            response = await client.post('/oauth/token', data={'grant_type':'authorization_code',
+                'client_id':saved['client_id'], 'code':callback['code'][0], 'redirect_uri':CALLBACK,
+                'code_verifier':verifier, 'resource':RESOURCE})
+            assert response.status_code == 200
+            upgraded = grants.verify(response.json()['access_token'], resource=RESOURCE)
+            assert upgraded.actor == original.actor and upgraded.scopes == {'c0:read','c0:write'}
+            assert grants.verify(pair['access_token'], resource=RESOURCE).scopes == {'c0:read'}
+    asyncio.run(check())
 
 
 def test_explicit_cookie_csrf_consent_s256_token_refresh_replay_and_metadata(oauth_app):
@@ -305,7 +345,7 @@ def test_real_sdk_and_rest_share_issued_scopes_and_public_revocation(oauth_app):
                         headers={'Authorization':'Bearer '+pair['access_token']}) as http:
                     async with Client(streamable_http_client(RESOURCE,http_client=http)) as sdk:
                         names={tool.name for tool in (await sdk.list_tools()).tools}
-                        assert 'object_types_list' in names and 'objects_create' not in names
+                        assert 'object_types_list' in names and 'objects_create' in names
                         result=await sdk.call_tool('object_types_list',{})
                         assert not result.is_error and result.structured_content==expected
                         assert (await sdk.call_tool('objects_create',{'data':{'type_name':'absent','data':{}}})).is_error
@@ -404,7 +444,7 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
                 async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app),base_url=ORIGIN,auth=auth) as http:
                     async with Client(streamable_http_client(RESOURCE,http_client=http)) as client:
                         names={tool.name for tool in (await client.list_tools()).tools}
-                        assert 'object_types_list' in names and 'objects_create' not in names
+                        assert 'object_types_list' in names and 'objects_create' in names
                         assert not (await client.call_tool('object_types_list',{})).is_error
             assert storage.tokens is not None and storage.tokens.scope=='c0:read'
     asyncio.run(check())
@@ -466,8 +506,13 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                 browser.login=lambda *_:profile
                 browser.logout=lambda *_:None
                 monkeypatch.setattr(fixture,'Browser',lambda *_:browser)
-                monkeypatch.setattr(fixture,'sdk',lambda module,origin,pair,**_:sdk(module,origin,pair))
+                def sdk_scoped(_module, _origin, pair, *, scope='c0:read'):
+                    assert app.state.delegated_grants.verify(pair['access_token'],resource=RESOURCE).scopes==frozenset(scope.split())
+                    assert client.get('/api/v1/object-types',headers={
+                        'Authorization':'Bearer '+pair['access_token']}).status_code==200
+                monkeypatch.setattr(fixture,'sdk',sdk_scoped)
                 (tmp_path/'personas.json').write_text(json.dumps({'host':'c0.example.test','password':'unused'}))
+                fixture.run('czero1')
                 fixture.prepare_browser('czero1','admin')
                 request_path=tmp_path/'browser-oauth.json'
                 value=json.loads(request_path.read_text())

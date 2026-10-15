@@ -28,7 +28,7 @@ from starlette.responses import JSONResponse
 
 from czero_core.identity import PermissionDenied
 from czero_core.oauth_grants import GrantRejected
-from czero_core.operations import OperationRejected, SCOPES
+from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -52,6 +52,20 @@ def _json(value):
     if len(encoded.encode('ascii')) > MAX_RESPONSE_BYTES:
         raise OperationRejected()
     return encoded
+
+
+async def oauth_tool_metadata(ctx, call_next):
+    """Preserve the optional OAuth extension through MCP 2.3's wire sieve.
+
+    The SDK's public middleware receives the already validated wire result.
+    Copy only our trusted tool metadata; do not change any request or grant.
+    Both protocol eras otherwise discard unknown top-level Tool properties.
+    """
+    result = await call_next(ctx)
+    if ctx.method == 'tools/list':
+        result = {**result, 'tools': [{**tool,
+            'securitySchemes': tool['_meta']['securitySchemes']} for tool in result['tools']]}
+    return result
 
 
 class TransportLimits:
@@ -107,9 +121,12 @@ def create_mcp_app(registry, grants, *, issuer_url):
         # Revocation/expiry is checked again at the operation boundary.
         return await verified(token.token)
 
-    async def describe():
+    async def describe(*, include_scope_upgrades=False):
         current = await principal()
-        return await to_thread.run_sync(partial(registry.describe, current.actor, scopes=current.scopes))
+        # Discovery may show a role-eligible operation requiring fresh consent.
+        # Execution and resource discovery always use the token's actual scopes.
+        scopes = SCOPES if include_scope_upgrades else current.scopes
+        return await to_thread.run_sync(partial(registry.describe, current.actor, scopes=scopes))
 
     async def execute(name, arguments):
         current = await principal()
@@ -120,7 +137,9 @@ def create_mcp_app(registry, grants, *, issuer_url):
         return types.ListToolsResult(tools=[types.Tool(name=item['name'], description=item['description'],
             input_schema=item['input_schema'],
             output_schema=item['output_schema'] if item['output_schema'].get('type') == 'object' else None,
-            annotations=types.ToolAnnotations(read_only_hint=item['read_only'])) for item in await describe()])
+            annotations=types.ToolAnnotations(read_only_hint=item['read_only']),
+            meta={'securitySchemes':[{'type':'oauth2', 'scopes':[item['required_scope']]}]})
+            for item in await describe(include_scope_upgrades=True)])
 
     async def call(ctx, params):
         try:
@@ -128,6 +147,15 @@ def create_mcp_app(registry, grants, *, issuer_url):
             encoded = _json(result)
             return types.CallToolResult(content=[types.TextContent(type='text', text=encoded)],
                 structured_content=result if isinstance(result, dict) else None)
+        except ScopeDenied as error:
+            # Core checks persisted membership/role before delegated scopes.
+            # A role denial must never suggest that extra consent can admit it.
+            challenge = (f'Bearer resource_metadata="{parsed.scheme}://{parsed.netloc}{path}", '
+                'error="insufficient_scope", error_description="Additional OAuth scope is required", '
+                f'scope="{error.scope}"')
+            return types.CallToolResult(is_error=True,
+                content=[types.TextContent(type='text', text='insufficient_scope')],
+                meta={'mcp/www_authenticate':[challenge]})
         except (PermissionDenied, GrantRejected):
             message = 'permission_denied'
         except (OperationRejected, HTTPException, ValueError):
@@ -171,16 +199,17 @@ def create_mcp_app(registry, grants, *, issuer_url):
 
     server = Server('Czero', version=__version__, on_list_tools=tools, on_call_tool=call,
         on_list_resources=resources, on_list_resource_templates=templates, on_read_resource=read)
+    server.middleware.append(oauth_tool_metadata)
     child = server.streamable_http_app(stateless_http=True, json_response=True,
         max_request_body_size=1024 * 1024,
         auth=AuthSettings(issuer_url=issuer_url, resource_server_url=resource,
             validate_token_resource=True, required_scopes=[]), token_verifier=Verifier(),
         transport_security=TransportSecuritySettings(allowed_hosts=[parsed.netloc],
             allowed_origins=[parsed.scheme + '://' + parsed.netloc]))
-    # Supported scopes describe capabilities; requiring all of them globally
-    # would deny Readers. Replace the SDK default with its public route helper.
+    # Start discovery with basic read access. Per-tool requirements/challenges
+    # describe upgrades; no scope is globally mandatory for write/admin tokens.
     metadata = create_protected_resource_routes(AnyHttpUrl(resource), [AnyHttpUrl(issuer_url)],
-        scopes_supported=sorted(SCOPES), resource_name='Czero')
+        scopes_supported=['c0:read'], resource_name='Czero')
     path = metadata[0].path
     child.router.routes = [route for route in child.router.routes if route.path != path] + metadata
     child.add_middleware(TransportLimits)

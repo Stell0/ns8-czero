@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import secrets
+import time
 from uuid import UUID, uuid4
 
 import httpx2
@@ -49,13 +50,15 @@ def transport(application):
     pair = token(owner_identity, {'c0:read', 'c0:write', 'c0:admin'})
     yield PrivateFixture((app, child, grants, client, pair, token, owner_token, member_token))
     with access.database.engine.begin() as connection:
-        pages = connection.execute(text('SELECT DISTINCT page_id FROM c0_wiki_revisions WHERE actor_id=:actor'),
-            {'actor': owner.user_id}).scalars().all()
+        actors = {'issuer': access.issuer}
+        pages = connection.execute(text('''SELECT DISTINCT page_id FROM c0_wiki_revisions
+            WHERE actor_id IN (SELECT id FROM c0_accounts WHERE issuer=:issuer)'''), actors).scalars().all()
         for page in pages:
             connection.execute(text('DELETE FROM c0_wiki_revisions WHERE page_id=:id'), {'id': page})
             connection.execute(text('DELETE FROM c0_wiki_pages WHERE id=:id'), {'id': page})
-        connection.execute(text('DELETE FROM c0_knowledge_receipts WHERE actor_id=:actor'), {'actor': owner.user_id})
-        connection.execute(text('DELETE FROM c0_knowledge_events WHERE actor_id=:actor'), {'actor': owner.user_id})
+        for table in ('c0_knowledge_receipts', 'c0_knowledge_events'):
+            connection.execute(text(f'''DELETE FROM {table} WHERE actor_id IN
+                (SELECT id FROM c0_accounts WHERE issuer=:issuer)'''), actors)
         connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id': UUID(client['client_id'])})
 
 
@@ -117,10 +120,130 @@ def test_reader_scope_and_current_revocation_are_enforced_by_real_sdk(transport)
                     assert 'wiki_pages_create' not in {t.name for t in tools}
                     result = await client.call_tool('objects_create', {'data':{'type_name':'not_registered','data':{}}})
                     assert result.is_error and result.content[0].text == 'permission_denied'
+                    assert not result.meta or 'mcp/www_authenticate' not in result.meta
                     access.set_role(owner, member_id, None)
                     response = await http.post('/mcp', json={})
                     assert response.status_code == 401 and 'resource_metadata=' in response.headers['www-authenticate']
         assert grants.verify(owner_pair.access_token, resource=RESOURCE).actor == owner
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('mode', ['auto', 'legacy'])
+@pytest.mark.parametrize('role', [Role.READER, Role.EDITOR, Role.ADMIN])
+def test_role_eligible_discovery_and_explicit_scope_upgrade(transport, mode, role):
+    async def check():
+        app, child, _, _, _, token, owner_token, member_token = transport
+        access = app.state.auth.access
+        owner = access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
+        identity = app.state.auth.oidc.verify_access_token(member_token)
+        with pytest.raises(PermissionDenied):
+            access.resolve(identity)
+        member_id = next(row['id'] for row in access.list_accounts(owner) if row['username'] == 'member')
+        access.set_role(owner, member_id, role)
+        pair = token(identity, {'c0:read'})
+        wire_tools = []
+        async def capture(response):
+            if response.status_code == 200 and response.request.url.path == '/mcp':
+                body = json.loads(await response.aread())
+                if 'tools' in body.get('result', {}):
+                    wire_tools.extend(body['result']['tools'])
+        async with child.router.lifespan_context(child):
+            async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
+                    headers={'Authorization':'Bearer ' + pair.access_token},
+                    event_hooks={'response':[capture]}) as http:
+                async with Client(streamable_http_client(RESOURCE, http_client=http), mode=mode) as client:
+                    tools = (await client.list_tools()).tools
+                    names = {tool.name for tool in tools}
+                    assert ('wiki_pages_create' in names) == (role is not Role.READER)
+                    assert ('job_handlers_list' in names) == (role is Role.ADMIN)
+                    assert len(wire_tools) == len(tools)
+                    for tool, wire in zip(tools, wire_tools):
+                        scope = app.state.operations.definition(tool.name)['required_scope']
+                        schemes = [{'type':'oauth2', 'scopes':[scope]}]
+                        assert tool.meta['securitySchemes'] == schemes
+                        assert wire['securitySchemes'] == wire['_meta']['securitySchemes'] == schemes
+                    assert not (await client.call_tool('object_types_list', {})).is_error
+                    # Resource and REST capabilities still reflect actual authority.
+                    capabilities = json.loads((await client.read_resource('c0://capabilities')).contents[0].text)
+                    assert all(item['required_scope'] == 'c0:read' for item in capabilities['operations'])
+                    denied = await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})
+                    assert denied.is_error
+                    if role is Role.READER:
+                        assert denied.content[0].text == 'permission_denied'
+                        assert not denied.meta or 'mcp/www_authenticate' not in denied.meta
+                        with pytest.raises(PermissionDenied):
+                            token(identity, {'c0:read', 'c0:write'})
+                    else:
+                        assert denied.content[0].text == 'insufficient_scope'
+                        challenge, = denied.meta['mcp/www_authenticate']
+                        assert challenge.startswith('Bearer ')
+                        for field in ('error="insufficient_scope"', 'error_description="',
+                                'scope="c0:write"', 'resource_metadata="' + ORIGIN + '/.well-known/oauth-protected-resource/mcp"'):
+                            assert field in challenge
+                        assert 'c0:admin' not in challenge
+                    admin = await client.call_tool('job_handlers_list', {})
+                    assert admin.is_error
+                    if role is Role.ADMIN:
+                        assert 'scope="c0:admin"' in admin.meta['mcp/www_authenticate'][0]
+                    else:
+                        assert admin.content[0].text == 'permission_denied'
+                        assert not admin.meta or 'mcp/www_authenticate' not in admin.meta
+                # A newly consented token is needed; an existing token cannot gain scopes.
+                if role is not Role.READER:
+                    upgraded = token(identity, {'c0:read', 'c0:write'})
+                    http.headers['Authorization'] = 'Bearer ' + upgraded.access_token
+                    async with Client(streamable_http_client(RESOURCE, http_client=http), mode=mode) as client:
+                        result = await client.call_tool('wiki_pages_create', {'data':{
+                            'slug':'scope-' + uuid4().hex, 'title':'Scoped write', 'body':'Isolated fixture.',
+                            'idempotency_key':'scope-' + uuid4().hex}})
+                        assert not result.is_error and result.structured_content['title'] == 'Scoped write'
+                if role is Role.ADMIN:
+                    admin_pair = token(identity, {'c0:admin'})
+                    http.headers['Authorization'] = 'Bearer ' + admin_pair.access_token
+                    async with Client(streamable_http_client(RESOURCE, http_client=http), mode=mode) as client:
+                        assert not (await client.call_tool('job_handlers_list', {})).is_error
+                        read = await client.call_tool('object_types_list', {})
+                        assert read.is_error and 'scope="c0:read"' in read.meta['mcp/www_authenticate'][0]
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('failure', ['revoked', 'expired', 'audience', 'role_downgrade', 'client_disabled'])
+def test_invalidated_tokens_cannot_discover_or_request_scope_upgrades(transport, monkeypatch, failure):
+    async def check():
+        app, child, grants, saved, pair, _, owner_token, _ = transport
+        access = app.state.auth.access
+        owner = access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
+        if failure == 'revoked':
+            grants.revoke(pair.access_token, saved['client_id'], resource=RESOURCE)
+        elif failure == 'expired':
+            monkeypatch.setattr(grants, '_now', lambda: time.time() + 301)
+        elif failure == 'audience':
+            # A different configured audience must reject a real, otherwise valid token.
+            other = OAuthGrantService(access, grants.native_client, ORIGIN + '/other-mcp')
+            monkeypatch.setattr(grants, 'verify', lambda value, *, resource: other.verify(value, resource=other.resource))
+        elif failure == 'client_disabled':
+            OAuthClientService(access).set_enabled(owner, UUID(saved['client_id']), enabled=False,
+                expected_revision=saved['revision'])
+        else:
+            # An ordinary member's grants are removed atomically on role downgrade.
+            # The fixture owner itself cannot be downgraded.
+            _, _, _, _, _, issue, _, member_token = transport
+            identity = app.state.auth.oidc.verify_access_token(member_token)
+            with pytest.raises(PermissionDenied):
+                access.resolve(identity)
+            member_id = next(row['id'] for row in access.list_accounts(owner) if row['username'] == 'member')
+            access.set_role(owner, member_id, Role.EDITOR)
+            pair = issue(identity, {'c0:read', 'c0:write'})
+            access.set_role(owner, member_id, Role.READER)
+        async with child.router.lifespan_context(child):
+            async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
+                    headers={'Authorization':'Bearer ' + pair.access_token}) as http:
+                for method in ('tools/list', 'tools/call'):
+                    response = await http.post('/mcp', json={'jsonrpc':'2.0','id':1,'method':method,
+                        'params':{} if method == 'tools/list' else {'name':'objects_create','arguments':{}}})
+                    assert response.status_code == 401
+                    assert 'resource_metadata=' in response.headers['www-authenticate']
+                    assert 'securitySchemes' not in response.text and 'mcp/www_authenticate' not in response.text
     asyncio.run(check())
 
 
@@ -133,7 +256,7 @@ def test_protected_metadata_host_origin_body_and_cookie_do_not_bypass_bearer(tra
                 assert response.status_code == 401 and response.headers['cache-control'] == 'no-store'
                 metadata = (await http.get('/.well-known/oauth-protected-resource/mcp')).json()
                 assert metadata['resource'] == RESOURCE and metadata['authorization_servers'] == [ISSUER]
-                assert set(metadata['scopes_supported']) == {'c0:read', 'c0:write', 'c0:admin'}
+                assert metadata['scopes_supported'] == ['c0:read']
                 assert (await http.post('/mcp', json={}, headers={'Cookie':'c0_session=unverified'})).status_code == 401
                 http.headers['Authorization'] = 'Bearer ' + pair.access_token
                 for headers in [{'Host':'unauthorized.invalid'}, {'Origin':'https://unauthorized.invalid'}]:
@@ -166,13 +289,21 @@ def test_token_database_failure_has_static_diagnostics(transport, monkeypatch, c
 
 
 @pytest.mark.parametrize('bypass_origin', [False, True])
-def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejection(transport, monkeypatch, bypass_origin):
+@pytest.mark.parametrize('role,scope', [(Role.READER,'c0:read'), (Role.EDITOR,'c0:read'),
+    (Role.ADMIN,'c0:read'), (Role.EDITOR,'c0:read c0:write'), (Role.ADMIN,'c0:read c0:write')])
+def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejection(transport, monkeypatch, bypass_origin, role, scope):
     import importlib.util
     from pathlib import Path
     from starlette.responses import Response
-    app,child,_,_,pair,token,owner_token,_=transport
-    identity=app.state.auth.oidc.verify_access_token(owner_token)
-    read_pair=token(identity,{'c0:read'})
+    app,child,_,_,pair,token,owner_token,member_token=transport
+    access=app.state.auth.access
+    owner=access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
+    identity=app.state.auth.oidc.verify_access_token(member_token)
+    with pytest.raises(PermissionDenied):
+        access.resolve(identity)
+    member_id=next(row['id'] for row in access.list_accounts(owner) if row['username']=='member')
+    access.set_role(owner,member_id,role)
+    read_pair=token(identity,set(scope.split()))
     path=Path(__file__).resolve().parents[1]/'mcp_tls_probe.py'
     spec=importlib.util.spec_from_file_location('installed_tls_probe',path)
     probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
@@ -186,7 +317,7 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
     monkeypatch.setattr(probe,'NodeTransport',lambda *_:httpx2.ASGITransport(app=proxy))
     async def check():
         async with app.router.lifespan_context(app):
-            value={'origin':ORIGIN,'address':None,'ca':None,'access_token':read_pair.access_token,'scope':'c0:read'}
+            value={'origin':ORIGIN,'address':None,'ca':None,'access_token':read_pair.access_token,'scope':scope}
             if bypass_origin:
                 with pytest.raises(AssertionError,match='^Installed origin guard returned HTTP 200$'):
                     await probe.check(value)

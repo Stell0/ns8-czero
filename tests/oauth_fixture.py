@@ -190,6 +190,14 @@ def run(module_id):
     client=registered(browser,profile);pair=issue(browser,profile,client)
     sdk(module_id,browser.origin,pair)
     headers={'Content-Type':'application/x-www-form-urlencoded'}
+    # An upgrade is a separate, explicit SSO/CSRF consent, never a refresh
+    # escalation. The read-only grant remains read-only afterward.
+    upgrade={'grant_type':'refresh_token','client_id':client['client_id'],
+        'refresh_token':pair['refresh_token'],'resource':browser.origin+'/mcp','scope':'c0:read c0:write'}
+    assert browser.request('/oauth/token',urlencode(upgrade).encode(),'POST',headers)[0]==400,'Installed refresh increased scopes'
+    upgraded=issue(browser,profile,client,scope='c0:read c0:write')
+    sdk(module_id,browser.origin,upgraded,scope='c0:read c0:write')
+    sdk(module_id,browser.origin,pair)
     refresh={'grant_type':'refresh_token','client_id':client['client_id'],
         'refresh_token':pair['refresh_token'],'resource':browser.origin+'/mcp'}
     status, body, _=browser.request('/oauth/token',urlencode(refresh).encode(),'POST',headers)
