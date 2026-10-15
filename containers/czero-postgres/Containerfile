@@ -4,7 +4,12 @@
 # PostgreSQL 17.11 + pgvector 0.8.7, from the maintained upstream build.
 FROM docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
 
-# PGXS is an extension-development framework, not required to run vector.
-RUN rm -rf /usr/lib/postgresql/17/lib/pgxs \
-    && rm -f /usr/lib/postgresql/17/bin/pg_config /usr/bin/pg_config
+# Apply supported OS security updates without changing the PostgreSQL packages.
+# gosu serves only the upstream entrypoint's root branch; this image runs as
+# postgres. Keep package metadata/licenses for the complete vulnerability SBOM.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade \
+       libpcre2-8-0 libperl5.36 perl perl-base perl-modules-5.36 \
+    && rm -rf /var/lib/apt/lists/* /usr/lib/postgresql/17/lib/pgxs \
+    && rm -f /usr/local/bin/gosu /usr/lib/postgresql/17/bin/pg_config /usr/bin/pg_config
 USER postgres

@@ -54,6 +54,11 @@ jobs:
             test ! -e /usr/lib/postgresql/17/lib/pgxs
             ! command -v gcc
             ! command -v make
+            ! command -v gosu
+            dpkg --compare-versions "$(dpkg-query -W libpcre2-8-0 | cut -f2)" ge 10.42-1+deb12u2
+            for package in libperl5.36 perl perl-base perl-modules-5.36; do
+              dpkg --compare-versions "$(dpkg-query -W "$package" | cut -f2)" ge 5.36.0-7+deb12u4
+            done
           '
       - name: Publish module images
         env:
