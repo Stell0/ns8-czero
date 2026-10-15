@@ -200,6 +200,8 @@ def run(module_id):
     assert browser.request('/oauth/token',urlencode(upgrade).encode(),'POST',headers)[0]==400,'Installed refresh increased scopes'
     upgraded=issue(browser,profile,client,scope='c0:read c0:write')
     sdk(module_id,browser.origin,upgraded,scope='c0:read c0:write')
+    full=issue(browser,profile,client,scope='c0:admin c0:read c0:write')
+    sdk(module_id,browser.origin,full,scope=full['scope'])
     sdk(module_id,browser.origin,pair)
     refresh={'grant_type':'refresh_token','client_id':client['client_id'],
         'refresh_token':pair['refresh_token'],'resource':browser.origin+'/mcp'}

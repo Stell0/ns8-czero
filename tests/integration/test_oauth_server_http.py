@@ -506,13 +506,16 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                 browser.login=lambda *_:profile
                 browser.logout=lambda *_:None
                 monkeypatch.setattr(fixture,'Browser',lambda *_:browser)
+                seen_scopes=[]
                 def sdk_scoped(_module, _origin, pair, *, scope='c0:read'):
+                    seen_scopes.append(frozenset(scope.split()))
                     assert app.state.delegated_grants.verify(pair['access_token'],resource=RESOURCE).scopes==frozenset(scope.split())
                     assert client.get('/api/v1/object-types',headers={
                         'Authorization':'Bearer '+pair['access_token']}).status_code==200
                 monkeypatch.setattr(fixture,'sdk',sdk_scoped)
                 (tmp_path/'personas.json').write_text(json.dumps({'host':'c0.example.test','password':'unused'}))
                 fixture.run('czero1')
+                assert frozenset(('c0:read','c0:write','c0:admin')) in seen_scopes
                 fixture.prepare_browser('czero1','admin')
                 request_path=tmp_path/'browser-oauth.json'
                 value=json.loads(request_path.read_text())
