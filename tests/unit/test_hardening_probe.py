@@ -12,7 +12,7 @@ spec = importlib.util.spec_from_file_location('hardening_probe', Path(__file__).
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 VALID = ('uid 10001\nNoNewPrivs: 1\nCapEff: 0000000000000000\n'
-         'memory 1073741824\nswap 1073741824\ncpu 200000 100000\npids 256\nrss_kib 65536\n')
+         'memory 1073741824\nswap 1073741824\npids 256\nrss_kib 65536\n')
 
 
 def test_accepts_effective_bounds_and_only_returns_safe_measurements():
@@ -24,6 +24,7 @@ def test_accepts_effective_bounds_and_only_returns_safe_measurements():
     result = probe.probe(run)
     assert set(result) == {'czero', 'czero-postgres'}
     assert all(v['rss_kib'] == 65536 and v['no_new_privileges'] for v in result.values())
+    assert all(v['cpu_quota_status'] == 'deferred' and 'cpus' not in v for v in result.values())
     assert all(command[:2] == ['podman', 'exec'] for command in calls)
     assert all('inspect' not in command for command in calls)
 
@@ -32,8 +33,7 @@ def test_accepts_effective_bounds_and_only_returns_safe_measurements():
     ('uid 10001', 'uid 0'), ('NoNewPrivs: 1', 'NoNewPrivs: 0'),
     ('CapEff: 0000000000000000', 'CapEff: 0000000000000001'),
     ('memory 1073741824', 'memory max'), ('memory 1073741824', 'memory 2147483648'),
-    ('swap 1073741824', 'swap max'), ('cpu 200000 100000', 'cpu max 100000'),
-    ('cpu 200000 100000', 'cpu 300000 100000'), ('pids 256', 'pids max'),
+    ('swap 1073741824', 'swap max'), ('pids 256', 'pids max'),
     ('pids 256', 'pids 2048'), ('rss_kib 65536', 'rss_kib 262145'),
     ('rss_kib 65536', 'rss_kib 0'), ('rss_kib 65536', 'rss_kib 1\nuid 10001'),
 ])

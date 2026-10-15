@@ -236,3 +236,5 @@ Four repository-only `.agents/skills/c0-*` skills cover feature development, Cor
 Core artifact publication is separate from an NS8 module release. The `core-v<version>` workflow requires successful local and both native checks for that exact source, builds/test artifacts read-only, then publishes with narrowly scoped write permission. Normalize archive ownership/timestamps/permissions with the commit epoch and rebuild wheels from that archive under umask 022. Verify uploaded hashes and never overwrite a published version. Runtime audits also require Core's license: standalone artifact success alone does not prove an assembled image contains it.
 
 M13 is complete, including documentation CI. M14 release hardening follows. Image scans report findings rather than a clean security result; see PLAN.md for current counts and limitations.
+
+M14 CPU-rate enforcement is deferred by operator request after the rootless test host rejected CPU quotas. The deployment candidate omits container CPU quotas; parser CPU/time limits remain. Memory/process limits and privilege restrictions retain their acceptance checks.

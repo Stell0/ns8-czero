@@ -11,7 +11,6 @@ printf 'uid '; id -u
 awk '/^(NoNewPrivs|CapEff):/ {print $1, $2}' /proc/self/status
 printf 'memory '; cat /sys/fs/cgroup/memory.max
 printf 'swap '; cat /sys/fs/cgroup/memory.swap.max
-printf 'cpu '; cat /sys/fs/cgroup/cpu.max
 printf 'pids '; cat /sys/fs/cgroup/pids.max
 rss=0
 for status in /proc/[0-9]*/status; do
@@ -32,26 +31,24 @@ def validate(output, rss_limit_kib):
             if key in fields:
                 raise ValueError()
             fields[key] = value
-        if set(fields) != {'uid', 'NoNewPrivs:', 'CapEff:', 'memory', 'swap', 'cpu', 'pids', 'rss_kib'}:
+        if set(fields) != {'uid', 'NoNewPrivs:', 'CapEff:', 'memory', 'swap', 'pids', 'rss_kib'}:
             raise ValueError()
         uid = int(fields['uid'])
         privileges = int(fields['NoNewPrivs:'])
         capabilities = int(fields['CapEff:'], 16)
         memory = int(fields['memory'])
         swap = int(fields['swap'])
-        quota, period = (int(value) for value in fields['cpu'].split())
         pids = int(fields['pids'])
         rss = int(fields['rss_kib'])
     except (ValueError, TypeError):
         raise AssertionError('Invalid bounded runtime measurement') from None
     if not (uid > 0 and privileges == 1 and capabilities == 0):
         raise AssertionError('Container privilege protection is missing')
-    if not (memory == 1024**3 and swap == 1024**3 and period > 0
-            and quota == 2 * period and pids == 256):
+    if not (memory == 1024**3 and swap == 1024**3 and pids == 256):
         raise AssertionError('Effective container resource bounds differ')
     if not 0 < rss <= rss_limit_kib:
         raise AssertionError('Container resident-memory target exceeded')
-    return {'memory_bytes': memory, 'swap_bytes': swap, 'cpus': 2,
+    return {'memory_bytes': memory, 'swap_bytes': swap, 'cpu_quota_status': 'deferred',
             'tasks': pids, 'rss_kib': rss, 'nonroot': True,
             'no_new_privileges': True, 'effective_capabilities': 0}
 
