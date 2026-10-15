@@ -222,8 +222,9 @@ manifest against a matching trusted Git checkout. Preview with
 add `--apply` to prepare a proposal. Untouched files update; customized files
 stay intact, with `needs_review` flags and `.c0/UPSTREAM_UPDATE.md` instructions.
 The scheduled/dispatch workflow prepares a review PR for opted-in forks.
-It never automatically merges. GITHUB_TOKEN-created PRs require explicit CI
-dispatch or an approved GitHub App before merging. Twenty-six real Git-history
+It never automatically merges. Native-token pushes do not trigger push builds. Token-created PR checks
+require workflow approval or explicit dispatch; an approved GitHub App can
+trigger them directly. Dispatch image publication for the module/QEMU checks. Twenty-six real Git-history
 checks pass. The manifest registers 70 infrastructure paths at immutable baseline
 130b3eb; real proposal acceptance remains pending.
 
@@ -261,3 +262,11 @@ files with explicit permission/migration instructions, while ordinary managed
 files remain automatic. Use `--allow-workflow-updates` only in a maintainer
 checkout whose publishing credential has workflows permission. This option
 does not grant permissions. No broad personal token is stored in fork secrets.
+
+Enable the example repository's Actions setting that allows workflow-created
+PRs; GitHub combines creation and review approval in that setting, but this
+workflow never approves or merges PRs. Default token permissions remain read.
+Since [June 2026](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/),
+GitHub creates approval-required PR checks for native-token proposals, rather
+than suppressing those checks entirely. Review the exact diff and approve the
+workflow run or dispatch the checks explicitly; inspect completed results.

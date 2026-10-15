@@ -74,6 +74,7 @@ jobs:
             Customized files are preserved; resolve `needs_review` entries
             and run the normal build, local and native tests before merging.
 
-            GitHub does not trigger push/PR workflows for changes made with
-            GITHUB_TOKEN. Dispatch the normal CI workflows on this branch
-            before merging, or use an approved GitHub App for this automation.
+            Native-token pushes do not start push builds. Bot-created PR
+            checks require workflow approval or explicit dispatch. Review the
+            diff, run local checks and dispatch image publication for native
+            QEMU acceptance before merging, or use an approved GitHub App.

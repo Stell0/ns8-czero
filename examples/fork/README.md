@@ -41,9 +41,9 @@ do not publish the template's `czero:main` tag from a second repository.
 For the full NS8 application template, fork the repository itself, retain its
 native tests, and use the installed NethServer skills plus the four C0 skills.
 
-GitHub prevents GITHUB_TOKEN-generated PRs from recursively triggering CI.
-Dispatch Local checks and Publish images explicitly on a real module's proposal
-branch (publication triggers QEMU), or use an approved GitHub App. The minimal
+Native-token pushes do not trigger push builds. Token-created PR checks need
+workflow approval or explicit dispatch. Dispatch Publish images on a real
+module proposal branch for QEMU, or use an approved GitHub App. The minimal
 standalone consumer has its own focused checks. A started workflow is not a pass.
 
 For reusable contributions, isolate only Core/infrastructure improvements in a
@@ -56,3 +56,9 @@ preserved with `review_reason=workflow-permission` and exact migration ranges.
 A maintainer with an appropriate publishing credential may explicitly use
 `--allow-workflow-updates`; review customizations before enabling that option.
 Resolve all three review markers only after testing the manual migration.
+
+Repository setup must allow Actions-created PRs (Settings → Actions → General).
+GitHub combines PR creation and approval in that setting; this updater only
+creates proposals and never approves or merges them. Keep default token
+permissions read. Bot-created PR checks require workflow approval or manual
+dispatch, as documented in GitHub's June 2026 Actions behavior.
