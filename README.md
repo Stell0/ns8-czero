@@ -1,5 +1,7 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
+**M15 reader UI candidate:** Source b528d4a implements the knowledge website below using existing APIs. It passes 695 Python/PostgreSQL/packaging tests, 106 script cases, producer/released-Core builds and Debian/Rocky native acceptance, including all seven Rocky browser workflows. This work is on `feat/knowledge-website`; main and the dedicated live instance retain the M14 baseline. See PLAN.md for exact evidence and candidate image digests.
+
 **Status (15 October 2026): M00–M14 candidate implementation and acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Source 5be82b7 passes 675 Python/PostgreSQL/packaging tests, eighty-six script cases, producer/released-image CI, Debian/Rocky recovery, all seven real Rocky browser workflows and dedicated live owner update/full-manager restart with data, OAuth/MCP and worker persistence. Final main completion-marker CI must also be inspected before calling that marker verified. Container CPU-rate enforcement is deferred; other protections pass installed checks.** Czero has a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and encrypted backup, and a separately versioned C0 Core package. Interactive Playwright remains waived; targeted live testing is authorized only on the dedicated Czero instance. See [PLAN.md](PLAN.md) for commits, CI, tests and limitations, and [AGENTS.md](AGENTS.md) for development rules. No stable release is ready.
 
 ## Purpose and boundaries
@@ -74,7 +76,7 @@ M12 provides native Status cards for actual database/schema/vector readiness, si
 M12 provides an Administration page for application Admins: approve exact public-client callbacks/scopes, enable/disable with revision checks, queue registered deterministic handlers with replay protection, inspect attempts, and create/pause UTC interval schedules. It uses existing REST/CSRF permissions; Readers and Editors cannot manage these controls. Hostname, identity and optional-provider credentials stay in NS8 settings. Job/schedule lists show at most fifty rows; refresh to inspect recent state. Disposable native checks pass on both distributions, with actual worker/client/schedule and all-role browser acceptance on Rocky; permitted live owner normal-TLS asset/API and full-manager restart checks also pass. Interactive live browser testing remains waived.
 
 
-## Knowledge website (M15 development)
+## Knowledge website (M15 candidate)
 
 The end-user application now defaults to reading: compact documentation/wiki navigation, formatted articles, a source library and simple search. Manual creation, upload and editing live in **Tools**. **Account** contains sharing for Admins; Administration retains clients, jobs and schedules. NS8 settings and all domain APIs are unchanged.
 
@@ -86,7 +88,7 @@ Markdown uses locally bundled markdown-it 15.0.2 (MIT), verified against the npm
 
 **Use with AI** explains administrator-approved remote MCP setup and offers copyable research instructions, plus create/update/import recipes for Editors/Admins. Articles offer their own context-specific instructions. These are tasks for an external assistant: there is no integrated chat or generative runtime. Authorized writes publish directly and preserve history. Binary ingestion still needs an authorized REST-upload-capable client; it is not an MCP tool. No particular provider/client interoperability is implied.
 
-This work is on `feat/knowledge-website`. Local and native acceptance evidence belongs to M15 in PLAN.md; the dedicated live M14 deployment remains unchanged until separately validated.
+This work is on `feat/knowledge-website`. M15 in PLAN.md records actual local, database-backed CI and native acceptance, including the initially failing browser cases and their verified correction. The dedicated live M14 deployment remains unchanged; interactive Playwright and CPU-quota waivers persist. The documentation closeout requires its own successful CI.
 
 ## Install and configure
 

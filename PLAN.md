@@ -1002,7 +1002,7 @@ Only after complete acceptance should additional features enter the roadmap. Pre
 
 **M00–M14 candidate implementation and acceptance pass under the recorded waivers.** Preserve the frozen deployed 5be82b7 image identities, all failed evidence and the owner-only live boundary. Verify the final main completion-marker workflows explicitly. The operator has now explicitly authorized the M15 UI redesign below. Its scope is presentation over existing APIs; keep its acceptance separate from the verified M14 baseline. No stable module release is claimed.
 
-### M15 — Reader-first knowledge website [ ]
+### M15 — Reader-first knowledge website [x]
 
 **Goal:** Implement the operator-approved documentation/wiki UI using only existing APIs. People primarily read; external AI maintains articles with direct publication and immutable history. Manual contributions remain in Tools.
 
@@ -1010,10 +1010,27 @@ Only after complete acceptance should additional features enter the roadmap. Pre
 - [x] Shared compact navigation, automatic home, responsive article/tree/context layout and local safe Markdown token renderer.
 - [x] Progressive slug-path tree, canonical article/revision/source/citation links, readable source library and evidence, simple search with contextual advanced details.
 - [x] Role-aware AI connection/task guidance; retain existing manual controllers in explicit Tools views and sharing in account administration.
-- [ ] Meaningful script/HTTP/real disposable browser assertions, full regression and publication/native checks; preserve interactive/CPU waivers and frozen live images.
-- [ ] Reconcile README/AGENTS and actual evidence. No Core/API/schema changes or new generative runtime.
+- [x] Meaningful script/HTTP/real disposable browser assertions, full regression and publication/native checks; preserve interactive/CPU waivers and frozen live images.
+- [x] Reconcile README/AGENTS and actual evidence. No Core/API/schema changes or new generative runtime.
 
 **Evidence:** pending. Implementation on feature branch `feat/knowledge-website`; main marker aee90ce is verified: [local 38701477692](https://github.com/Stell0/ns8-czero/actions/runs/38701477692), [publication 38701477763](https://github.com/Stell0/ns8-czero/actions/runs/38701477763), [released image 38701554107](https://github.com/Stell0/ns8-czero/actions/runs/38701554107), [QEMU 38701819972](https://github.com/Stell0/ns8-czero/actions/runs/38701819972) all completed/successful. Initial local checks: 102 script tests and 43 HTTP/template tests pass; broader Python run 499 passes/176 explicit database/packaging skips without a disposable DB. Automated local synthetic-data rendering covers six screens at five widths (320–1440px), thirty contexts with no horizontal overflow/browser errors; inspected desktop/mobile images. Final local checks use patched markdown-it 15.0.2: 106 script tests, 43 HTTP/template tests and 519 Python passes/176 explicit skips without PostgreSQL; nineteen Robot non-UI dry-run cases parse/pass. Forty final automated local synthetic-data browser contexts also pass numeric accessibility checks, with no overflow/errors including the mobile Tools menu. First implementation 1f1258d is published to the feature branch; released-Core image CI 38719221850 passes. CI/native checks for the final fixes remain pending; no deployment or stable release claimed.
 
 
 **M15 first native correction:** Exact d53bf56 [QEMU 38721341702](https://github.com/Stell0/ns8-czero/actions/runs/38721341702) passes all nineteen Debian update cases, including the genuine frozen M14 predecessor, recovery and real SSO. Rocky installation records twenty-one passes, two failures and three expected update-only skips. The real source browser finds an ambiguous ancestor-summary locator after nested provenance disclosure; search finds malformed query-field wrapping. Retain this failed evidence, fix the source locator to a direct child and correct the actual search template; add seven balanced-element/duplicate-attribute HTTP regressions and exercise advanced search plus both manual editors in forty local automated browser contexts. Final native rerun remains required; the failed source/search cases are not waived.
+
+
+**M15 accepted candidate:** Exact source `b528d4a4b8c47389be1059fb2c7d66cff2b390f1` passes [database/packaging/local checks 38733756082](https://github.com/Stell0/ns8-czero/actions/runs/38733756082) with **695 actual Python/PostgreSQL/packaging cases**, **106 real-script cases**, schema/shell checks and nineteen Robot non-UI dry-run cases. [Producer publication 38733756061](https://github.com/Stell0/ns8-czero/actions/runs/38733756061) and [released-Core image 38733756199](https://github.com/Stell0/ns8-czero/actions/runs/38733756199) pass, retaining independent released/local Core selection and runtime/license audits. Core/app/schema remain 0.24.2/0.39.0/0013.
+
+[Actual QEMU acceptance 38734103395](https://github.com/Stell0/ns8-czero/actions/runs/38734103395) passes **Debian installation: sixteen passes/three expected update-only skips; Rocky genuine M14 upgrade: twenty-six passes, including all seven real browser workflows**. Downloaded XML reports confirm all cases, seven successful browser credential/privacy guards and zero OAuth query candidates across the three actual XML/Pino artifacts. Actual browser output contains **twenty-one numeric accessibility contexts with zero failures**. Source ingestion/retry/archive plus immutable Reader passage viewing, Wiki Tools/revisions/graph plus formatted Reader history and AI context, advanced search/citations, actual all-role AI-guide task counts, native configuration, admission, OAuth/SDK, record controls, recovery, hardening, latency/RSS and timer behavior pass. Failed d53bf56 evidence remains retained; neither failed case was removed or waived.
+
+Local final verification also passes 519 Python cases with 176 explicit PostgreSQL/packaging skips without a disposable DB; CI above executes those database-backed cases. Forty automated local synthetic-data browser contexts across eight screens and five widths (320–1440px) pass actual advanced-search/manual-editor interactions, zero script errors, no horizontal overflow and numeric accessibility checks. Local desktop/mobile preview images use synthetic data and are not live acceptance.
+
+**Frozen M15 candidate images:** Anonymous registry inspection verifies every revision below equals the exact accepted b528d4a source. These are candidate artifacts, not a stable release or a deployed/live upgrade. The dedicated live instance retains the frozen M14 5be82b7 identities from docs/m14-readiness.md; no live operation or interactive Playwright was performed. CPU-quota enforcement remains explicitly deferred.
+
+| Image | Accepted candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:7022a13e4934b35b07e929bac55a51eba8769ea94a852e3b485574aafb26626a` |
+| `ghcr.io/stell0/czero-app` | `sha256:22c7384be726524217beb33fa897795b4cb2f35be8ac7aa67819377b5d9e92c4` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:cbbf348355e35be9b8be77d0a744e701dbbdc7856bb2c505e63f4a856f3d4f2b` |
+
+The following documentation-only closeout records this completed candidate acceptance and must have its own actual local/publication/released-Core/native workflows inspected before calling the marker verified. Its checked milestone records accepted b528d4a behavior; it does not claim a newly started workflow passed. Keep the feature branch separate from main/live; no stable NS8 release is created.
