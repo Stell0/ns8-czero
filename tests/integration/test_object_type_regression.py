@@ -92,3 +92,34 @@ def test_bounded_unique_schema_creation_already_supported(transport, channel):
         finally:
             cleanup(app.state.auth.access.database, [name])
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('channel', ['rest', 'auto', 'legacy'])
+def test_type_guidance_and_unexpected_validation_error_privacy(transport, monkeypatch, channel):
+    async def check():
+        app, child, _, _, pair, _, owner_token, _ = transport
+        name = 'type-private-' + uuid4().hex
+        def unexpected(*args, **kwargs):
+            raise ValueError('synthetic-private-database-diagnostic')
+        monkeypatch.setattr(app.state.objects, 'register_type', unexpected)
+        data = {'name':name, 'label':'Fixture', 'schema':SCHEMA, 'unique_fields':[]}
+        if channel == 'rest':
+            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                    headers={'Authorization':'Bearer ' + owner_token}) as client:
+                response = await client.post('/api/v1/object-types', json=data)
+                assert response.status_code == 422 and response.json() == {'detail':'invalid_object_request'}
+                schema = (await client.get('/openapi.json')).json()['components']['schemas']['TypeCreate']
+                assert 'maxLength <=128' in schema['properties']['unique_fields']['description']
+        else:
+            async with child.router.lifespan_context(child):
+                async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
+                        headers={'Authorization':'Bearer ' + pair.access_token}) as http:
+                    async with Client(streamable_http_client(RESOURCE, http_client=http), mode=channel) as client:
+                        tool = next(t for t in (await client.list_tools()).tools if t.name == 'object_types_create')
+                        assert 'maxLength <=128' in tool.description
+                        assert 'maxLength <=128' in tool.input_schema['$defs']['TypeCreate']['properties']['unique_fields']['description']
+                        response = await client.call_tool('object_types_create', {'data':data})
+                        assert response.is_error and response.content[0].text == 'invalid_object_request'
+                        assert response.meta['c0/error'] == {'code':'invalid_object_request','status':422}
+                        assert 'synthetic-private' not in str(response.model_dump())
+    asyncio.run(check())

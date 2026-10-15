@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from czero_core.identity import PermissionDenied, Role
 from czero_core.objects import ObjectConflict, ObjectNotFound, ObjectService
 from czero_app.auth import RequestAccess
+from czero_app.object_errors import object_validation_code
 
 
 class StrictRequest(BaseModel):
@@ -21,8 +22,12 @@ class StrictRequest(BaseModel):
 class TypeCreate(StrictRequest):
     name: str = Field(min_length=1,max_length=64)
     label: str = Field(min_length=1,max_length=128)
-    json_schema: dict = Field(alias='schema')
-    unique_fields: list[str] = Field(default_factory=list,max_length=8)
+    json_schema: dict = Field(alias='schema', description=(
+        'Bounded object-root Draft 2020-12 schema. Use properties, required and additionalProperties:false. '
+        'References, regexes and combinators are unsupported. Unique string properties require explicit maxLength <=128.'))
+    unique_fields: list[str] = Field(default_factory=list,max_length=8, description=(
+        'Optional top-level scalar properties enforced unique per type. '
+        'Each unique string must explicitly declare maxLength <=128 in schema.properties.'))
 
 
 class TypeView(BaseModel):
@@ -147,7 +152,7 @@ def install_object_routes(app: FastAPI,database,auth,read_context,write_context,
         except ObjectConflict: raise HTTPException(409,'object_conflict') from None
         except ObjectNotFound: raise HTTPException(404,'object_not_found') from None
         except ValueError as error:
-            detail=str(error) if str(error).startswith('record_invalid:') else 'invalid_object_request'
+            detail=object_validation_code(str(error)) or 'invalid_object_request'
             raise HTTPException(422,detail) from None
 
     @app.get('/api/v1/object-types',response_model=TypesView)
@@ -156,7 +161,7 @@ def install_object_routes(app: FastAPI,database,auth,read_context,write_context,
         return {'types':invoke(service.list_types,context.actor,limit=limit,offset=offset)}
 
     @app.post('/api/v1/object-types',response_model=TypeView,status_code=201)
-    @operation('object_types_create', 'Register an immutable bounded object schema', Role.ADMIN, TypeView, read_only=False)
+    @operation('object_types_create', 'Register an immutable bounded object schema. Unique strings require explicit maxLength <=128.', Role.ADMIN, TypeView, read_only=False)
     def register(data: TypeCreate,context: RequestAccess=Depends(write_context)):
         return invoke(service.register_type,context.actor,data.name,data.label,data.json_schema,data.unique_fields)
 

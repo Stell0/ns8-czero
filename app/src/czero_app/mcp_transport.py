@@ -30,6 +30,7 @@ from czero_core.identity import PermissionDenied
 from czero_core.oauth_grants import GrantRejected
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
+from czero_app.object_errors import mcp_object_error
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 RESOURCES = {
@@ -158,7 +159,14 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 meta={'mcp/www_authenticate':[challenge]})
         except (PermissionDenied, GrantRejected):
             message = 'permission_denied'
-        except (OperationRejected, HTTPException, ValueError):
+        except HTTPException as error:
+            code = mcp_object_error(params.name, error.status_code, error.detail)
+            if code is not None:
+                return types.CallToolResult(is_error=True,
+                    content=[types.TextContent(type='text', text=code)],
+                    meta={'c0/error':{'code':code, 'status':error.status_code}})
+            message = 'invalid_operation_request'
+        except (OperationRejected, ValueError):
             message = 'invalid_operation_request'
         except (SQLAlchemyError, TransportUnavailable):
             message = 'service_unavailable'
