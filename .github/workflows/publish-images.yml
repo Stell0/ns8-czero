@@ -151,3 +151,17 @@ jobs:
           path: |
             trivy-results.sarif
             sbom.cdx.json
+      # Retain the complete reports above even when this narrower gate fails.
+      - name: Reject fixable critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: ${{ matrix.scan_type || 'image' }}
+          scan-ref: ${{ matrix.target }}
+          image-ref: ${{ matrix.target }}
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
