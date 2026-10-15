@@ -209,66 +209,30 @@ See [LICENSE](LICENSE) (GPL-3.0). Preserve attribution and verify license compat
 
 Retrieval limitations: embeddings support at most 2000 full-precision dimensions; old profile/generation vectors remain stored until future derivative maintenance. Graph context is supplemental and unscored. C0 produces no generated answer. Real provider quality and model thresholds require corpus-specific evaluation. Live retrieval checks used the configured owner with providers disabled; disposable tests cover all roles and configured mock HTTPS providers. Stable IdP/proxy availability and the recorded image/UI vulnerabilities remain release-review work.
 
-M13 is implementing independent Core distribution. The first packaging slice adds a complete GPL license/readme, version metadata and packaged migration verification; the initial Core packaging patch is 0.24.1 with no schema/API behavior change. Local isolated wheel/archive checks pass. Package publication, the released-package consumer/Renovate path and upstream update automation are not available until their recorded acceptance passes. See PLAN.md for the active subplan.
+## Forks and Core distribution
 
-The container builder now copies Core's declared README/license inputs, and the runtime audit checks the installed Core GPL metadata. Standalone wheel success alone does not prove the assembled image contains its license. The first M13 image exposed this gap; the corrected published image passes the strengthened license audit.
+[C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The prepared Core artifact workflow uses `core-v<version>` tags, validates the exact checkout against local and Debian/Rocky CI, and tests the actual supplied wheel/archive before publication. Its separate publisher checks uploaded SHA256SUMS and preserves existing versions. This is Python library distribution, separate from an NS8 module release. Local guard/artifact tests and Actionlint pass; Core 0.24.1 publication and public checksum verification pass; subsequent versions retain the same source gates.
+The reference app and original consumer pin `core-v0.24.1` plus its subdirectory/commit in `uv.lock`, with compatible range `>=0.24.1,<0.25.0`. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
-Managed-file upgrade tooling is under M13 acceptance. `scripts/sync-upstream.py`
-compares only files explicitly registered in a version-1 `c0-upstream.json`
-manifest against a matching trusted Git checkout. Preview with
-`python scripts/sync-upstream.py --upstream-dir /path/to/upstream --revision FULL_SHA`;
-add `--apply` to prepare a proposal. Untouched files update; customized files
-stay intact, with `needs_review` flags and `.c0/UPSTREAM_UPDATE.md` instructions.
-The scheduled/dispatch workflow prepares a review PR for opted-in forks.
-It never automatically merges. Native-token pushes do not trigger push builds. Token-created PR checks
-require workflow approval or explicit dispatch; an approved GitHub App can
-trigger them directly. Dispatch image publication for the module/QEMU checks. Thirty-one real Git-history
-checks pass. The manifest registers 70 infrastructure paths at immutable baseline
-130b3eb; actual untouched/conflict proposal and repeat-delivery acceptance pass in the public example.
+Core 0.24.2 is a controlled documentation/packaging candidate with unchanged schema/API. Its tag remains gated on exact-source local and both native successes. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. A real compatible-patch Renovate PR remains pending this candidate's publication.
 
-The four repository-only skills in `.agents/skills` cover feature development,
-Core development, reusable upstream contributions and customized fork upgrades.
-Install the relevant [NethServer skills](https://github.com/NethServer/agents)
-for native module, container, commit, PR and release operations; their manuals
-are not vendored here. All four skills pass structural validation. Independent
-isolated exercises preserve customer changes while preparing a reusable Core
-patch and resolving a managed-file upgrade; remote PR acceptance remains pending.
+The public [original consumer](https://github.com/Stell0/c0-m13-example) installs released Core with no local package tree. Its CI checks an original application schema, records, stale revisions, persisted Reader authorization and repeated packaged migrations in disposable PostgreSQL. Test identities are trusted fixture inputs, not SSO evidence. Generate another isolated example with `python examples/fork/create.py /tmp/c0-example`, then follow its README. Choose independent image/module names before using copied packaging files for an actual NS8 application fork.
 
-An original standalone consumer fixture is in [examples/fork](examples/fork).
-Its generator copies explicit managed infrastructure and no application/private
-data, replacing module publishers with focused consumer CI. Five generator
-cases pass, including unsafe-path/symlink preflight and existing-draft protection.
-The example dependency awaits the verified Core tag and generated lockfile;
-external installation and real Renovate/update/conflict PRs are not yet proven.
+Managed infrastructure uses `c0-upstream.json`: a trusted repository, immutable baseline and seventy-five explicitly registered paths with hash/mode identities. Preview from a maintainer checkout:
 
-Unresolved customized updates retain their original `review_from` revision
-across later proposals, including updates to other files. Reports keep every
-unresolved file's full migration range. Remove its `needs_review` and
-`review_from`/`review_reason` markers only after resolving and testing that migration.
+```sh
+python scripts/sync-upstream.py --upstream-dir /path/to/trusted/upstream --revision FULL_SHA
+```
 
-Core release archives are normalized with the commit epoch before upload,
-removing build-host tar/gzip ownership and timestamps while retaining content
-and executable bits. Actual independently built archives initially differed;
-normalization makes their hashes identical. Both archive and wheel rebuilds
-are checked, and existing published versions are never overwritten.
+Add `--apply` to prepare changes. Untouched files update; customized files stay intact with `needs_review`, `review_from`, `review_reason` and exact migration commands in `.c0/UPSTREAM_UPDATE.md`. Unresolved files retain the earliest comparison range across later proposals. Clear their markers only after resolving and testing the migration. Register required new helpers explicitly. Pre-distribution forks must also review their application dependency/lock transition; automatic infrastructure scope excludes application choices.
 
-The public [original example](https://github.com/Stell0/c0-m13-example) currently
-runs independent managed-update checks; Core consumer CI is explicitly pending
-the verified public tag and lock. Its first sync run exposed GitHub's native
-token restriction on workflow-file writes. The updater now preserves workflow
-files with explicit permission/migration instructions, while ordinary managed
-files remain automatic. Use `--allow-workflow-updates` only in a maintainer
-checkout whose publishing credential has workflows permission. This option
-does not grant permissions. No broad personal token is stored in fork secrets.
+The scheduled/dispatch workflow opens review PRs and never merges them. Real [untouched](https://github.com/Stell0/c0-m13-example/pull/2) and [customized](https://github.com/Stell0/c0-m13-example/pull/1) proposals pass explicitly dispatched checks; repeat delivery preserves the proposal head. The customized exercise is closed unmerged. Default-upstream scheduling still awaits promotion of verified M13 changes to main; explicit immutable-revision dispatch is proven.
 
-Enable the example repository's Actions setting that allows workflow-created
-PRs; GitHub combines creation and review approval in that setting, but this
-workflow never approves or merges PRs. Default token permissions remain read.
-Since [June 2026](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/),
-GitHub creates approval-required PR checks for native-token proposals, rather
-than suppressing those checks entirely. Review the exact diff and approve the
-workflow run or dispatch the checks explicitly; inspect completed results.
+Native Actions tokens cannot push workflow-file changes. The updater preserves those bytes and records permission/migration instructions. Use `--allow-workflow-updates` only in a reviewed maintainer checkout whose existing publishing credential has workflows permission; it grants no permission. Do not copy broad tokens into fork secrets. Enable the fork's Actions setting for workflow-created PRs, retaining default read permissions. Since [June 2026](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/), token-created PR checks require approval or explicit dispatch; token-created push builds remain suppressed. Dispatch module image publication for native QEMU acceptance and inspect completed results.
 
-Core [0.24.1 artifacts](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) are published with verified checksums. The reference app now pins that Git tag/subdirectory in uv.lock and accepts compatible 0.24.x patches. Default image builds use the released source. For an intentional producer build, set `CZERO_CORE_SOURCE=local bash build-images.sh`; this changes only the temporary builder source/lock. Upstream development CI explicitly uses this mode. Git, uv and source-selection tooling stay outside runtime images. Native Renovate rules propose compatible Core patches with automatic merge disabled; actual patch-update acceptance remains pending.
+Four repository-only `.agents/skills/c0-*` skills cover feature development, Core development, reusable contributions and customized upgrades. They delegate native module/container/commit/PR/release operations to installed [NethServer skills](https://github.com/NethServer/agents). Independent exercises preserve branding, schemas and drafts while isolating a reusable [packaging contribution](https://github.com/Stell0/ns8-czero/pull/2) and porting real build dependencies. The contribution's native CI and final milestone gates remain pending; no development skills ship in runtime images.
+
+Core artifact publication is separate from an NS8 module release. The `core-v<version>` workflow requires successful local and both native checks for that exact source, builds/test artifacts read-only, then publishes with narrowly scoped write permission. Normalize archive ownership/timestamps/permissions with the commit epoch and rebuild wheels from that archive under umask 022. Verify uploaded hashes and never overwrite a published version. Runtime audits also require Core's license: standalone artifact success alone does not prove an assembled image contains it.
+
+M13 remains active until the recorded patch/Renovate, native/live, review and documentation gates pass. M14 release hardening follows. Image scans report findings rather than a clean security result; see PLAN.md for current counts and limitations.
