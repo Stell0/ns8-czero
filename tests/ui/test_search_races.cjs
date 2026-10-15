@@ -24,7 +24,7 @@ test('search renders only newest response and preserves literal untrusted eviden
   assert.equal(h.nodes.get('knowledge-results').children.length,1);
   assert.equal(h.nodes.get('knowledge-results').children[0].children[0].textContent,'New');
   assert.equal(h.nodes.get('knowledge-results').children[0].children[1].textContent,'<script>hostile evidence</script>');
-  assert.match(h.nodes.get('knowledge-search-status').textContent,/Fallback: embeddings_not_configured/);
+  assert.match(h.nodes.get('knowledge-search-status').textContent,/ordinary search results/);
 });
 
 test('editing options invalidates an in-flight result without another search',async()=>{

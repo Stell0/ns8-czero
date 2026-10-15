@@ -12,7 +12,9 @@
   }
   const clean = (path) => path.replace(/\/+$/, '') || '/';
   for (const link of document.querySelectorAll('nav[aria-label="C0 navigation"] a')) {
-    if (clean(new URL(link.href, window.location.href).pathname) === clean(window.location.pathname)) {
+    const destination = new URL(link.href, window.location.href);
+    const current = new URL(window.location.href);
+    if (clean(destination.pathname) === clean(current.pathname) && (destination.searchParams.get('view') || '') === (current.searchParams.get('view') || '')) {
       link.setAttribute('aria-current', 'page');
     }
   }
@@ -20,7 +22,7 @@
     button.addEventListener('click', async () => {
       if (button.disabled) return;
       const field = document.getElementById(button.dataset.copyTarget);
-      const status = document.getElementById('copy-status');
+      const status = document.getElementById(button.dataset.copyStatus || 'copy-status');
       const value = field.value;
       button.disabled = true;
       try {

@@ -80,7 +80,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:f07b2d04b3515f932614038cc95d7a739a71516a3d88fe1b4e5e3168a9194e0c
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:b19f49cdd8d34814cac26606c7b0470335d4392ae20c2e6652fd0c75586fa34d
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -92,7 +92,7 @@ Install Czero with its own identity
     IF    $SCENARIO == 'update'
         # Freeze the older component images too, not just the module shell.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:4f7b7c893c9a952942835ca72c9b0ca70f6fdcb5afe86fa3f39f13ceb7109821','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:6675458321037ca4a972b81f1d43986673c2572efb80608012ceb97fe72fb872'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:257bd88c438a2494d9966d87bbe0ee4a2b4e8da921a76786edfbf2464ac233d1','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:0618d0a78f7aab8aee15f9ad9edf507ceae5c7ffbd66aedbc308b6bd67f7d261'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -585,12 +585,13 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${host}/
-    Get Text    h1    ==    Your shared workspace.
-    Get Element Count    nav[aria-label="C0 navigation"] a    ==    7
+    Get Text    h1    ==    A place to find what we know.
+    Get Element Count    nav[aria-label="C0 navigation"] a    ==    10
     Get Element Count    nav a[aria-current="page"]    ==    1
     Press Keys    body    Tab
     Wait For Elements State    .skip-link    focused
     Get Attribute    .skip-link    href    ==    \#main-content
+    Go To    https://${host}/?view=account
     Get Text    \#database-status    ==    Workspace ready
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-postgres.service
     ...    return_rc=True    return_stdout=False
@@ -607,6 +608,8 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
+    Get Text    h1    ==    Use with AI
+    Go To    https://${host}/agents?view=tools
     Get Text    body    contains    search source text.
     Get Text    body    contains    sourced claims and bounded graph queries are available.
     Get Text    body    contains    MCP is unavailable until NS8 sign-in and hostname-root routing are configured.

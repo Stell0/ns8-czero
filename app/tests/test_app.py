@@ -34,7 +34,7 @@ def client():
 def test_instance_landing_page_and_links(client):
     response = client("/czero/czero17/")
     assert response.status_code == 200
-    assert "Your shared workspace." in response.text
+    assert "A place to find what we know." in response.text
     assert "./api/v1/health" in response.text
 
 
@@ -178,3 +178,69 @@ def test_wiki_graph_offers_readable_nodes_edges_and_references(client):
     for element in ('graph-nodes','graph-edges','graph-references'):
         assert 'id="'+element+'"' in page.text
     assert '<summary>Graph JSON</summary>' in page.text
+
+
+@pytest.mark.parametrize('asset', ['site.js', 'reader.js', 'vendor/markdown-it-15.0.2.min.js'])
+def test_reader_assets_are_local_and_work_under_the_instance_prefix(client, asset):
+    response = client('/czero/czero17/' + asset)
+    assert response.status_code == 200
+    assert response.headers['content-type'].startswith('text/javascript')
+    assert client('/czero/czero18/' + asset).status_code == 404
+
+
+def test_reader_assets_do_not_expand_the_domain_api(client):
+    paths = client('/czero/czero17/openapi.json').json()['paths']
+    assert not any(path.endswith(('.js', '.html')) for path in paths)
+    for script in ('site.js', 'reader.js'):
+        source = client('/czero/czero17/' + script).text
+        assert 'innerHTML' not in source
+        assert "method:'POST'" not in source and "method:'PUT'" not in source
+
+
+@pytest.mark.parametrize('page', ['', 'wiki', 'sources', 'search', 'agents', 'objects', 'admin'])
+def test_reader_templates_have_unique_ids_and_one_page_heading(client, page):
+    from html.parser import HTMLParser
+
+    class Structure(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.ids = []
+            self.headings = 0
+
+        def handle_starttag(self, tag, attrs):
+            attributes = dict(attrs)
+            if 'id' in attributes:
+                self.ids.append(attributes['id'])
+            if tag == 'h1':
+                self.headings += 1
+
+    structure = Structure()
+    structure.feed(client('/czero/czero17/' + page).text)
+    assert len(structure.ids) == len(set(structure.ids))
+    assert structure.headings == 1
+
+
+@pytest.mark.parametrize('page,form', [('wiki', 'wiki-form'), ('sources', 'upload-form')])
+def test_manual_contribution_forms_belong_to_the_tools_view(client, page, form):
+    from html.parser import HTMLParser
+
+    class Ancestors(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.stack = []
+            self.tools = False
+
+        def handle_starttag(self, tag, attrs):
+            attributes = dict(attrs)
+            if attributes.get('id') == form:
+                self.tools = any('data-tools-only' in ancestor for ancestor in self.stack)
+            if tag not in {'input', 'br', 'hr', 'meta', 'link', 'img'}:
+                self.stack.append(attributes)
+
+        def handle_endtag(self, tag):
+            if self.stack:
+                self.stack.pop()
+
+    structure = Ancestors()
+    structure.feed(client('/czero/czero17/' + page).text)
+    assert structure.tools

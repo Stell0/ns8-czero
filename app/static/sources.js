@@ -143,6 +143,7 @@ for (const [id, action] of [
 ]) $(id).addEventListener('click', () => action().catch(error => {$('source-status').textContent = error.message;}));
 $('source-search-form').addEventListener('submit', event => {event.preventDefault(); searchSources().catch(error => {$('search-status').textContent = error.message;});});
 async function initializeSources() {
+  if(typeof window!=='undefined' && window.C0 && !window.C0.toolsMode)return;
   try {
     const status = await (await fetch('./api/v1/auth/status', {cache:'no-store'})).json();
     if (!status.configured) {$('sources-account').textContent = 'Ask the NethServer administrator to configure sign-in.'; return;}

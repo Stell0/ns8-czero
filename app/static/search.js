@@ -22,15 +22,22 @@ async function searchKnowledge() {
     if(sequence!==searchSequence || JSON.stringify(captured)!==JSON.stringify(options()))return;
     $('knowledge-results').replaceChildren();
     for(const hit of result.hits) {
-      const row=document.createElement('article');
-      row.append(text('h2',hit.title),text('pre',hit.excerpt));
-      row.append(text('p',`${hit.kind} · revision ${hit.revision} · offsets ${hit.start_offset}–${hit.end_offset}`));
-      row.append(text('pre',JSON.stringify(hit.citation || hit.wiki,null,2)));
-      if(hit.relevance_score!==null && hit.relevance_score!==undefined)row.append(text('p','Model relevance: '+hit.relevance_score));
+      const row=document.createElement('article'), heading=text('h2',hit.title);
+      const valid=value=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '');
+      let destination=null;
+      if(hit.wiki && valid(hit.wiki.page_id))destination='./wiki?'+new URLSearchParams({page:hit.wiki.page_id,revision:hit.wiki.revision});
+      if(hit.citation && valid(hit.citation.source_id) && valid(hit.citation.version_id) && valid(hit.citation.chunk_id))destination='./sources?'+new URLSearchParams({source:hit.citation.source_id,version:hit.citation.version_id,chunk:hit.citation.chunk_id});
+      if(destination){const anchor=text('a',hit.title);anchor.href=destination;heading.replaceChildren(anchor);}
+      row.append(heading,text('p',hit.excerpt));
+      row.append(text('p',`${hit.kind==='wiki_revision'?'Article':'Source'} · revision ${hit.revision}`));
+      const detail=document.createElement('details');detail.append(text('summary','Citation details'),text('pre',JSON.stringify(hit.citation || hit.wiki,null,2)));
+      if(hit.relevance_score!==null && hit.relevance_score!==undefined)detail.append(text('p','Model relevance: '+hit.relevance_score));
+      row.append(detail);
       $('knowledge-results').append(row);
     }
-    const fallback=result.fallback_reasons.length ? ' Fallback: '+result.fallback_reasons.join(', ')+'.' : '';
-    $('knowledge-search-status').textContent=`${result.hits.length} results · ${result.retrieval_method} · ${result.candidate_count} candidates · ${result.scored_count} scored.${fallback}`;
+    const fallback=result.fallback_reasons.length ? ' Showing ordinary search results because optional search features are unavailable.' : '';
+    $('knowledge-search-status').textContent=`${result.hits.length} results.${fallback}`;
+    $('knowledge-search-details').textContent=`${result.retrieval_method} · ${result.candidate_count} candidates · ${result.scored_count} scored. Fallback: ${result.fallback_reasons.join(', ') || 'none'}.`;
     $('search-graphs').textContent=result.graphs.length ? JSON.stringify(result.graphs,null,2) : 'No supplemental graph.';
   } catch(error) {
     if(sequence!==searchSequence || JSON.stringify(captured)!==JSON.stringify(options()))return;
@@ -46,6 +53,7 @@ async function initialize() {
   try {
     const profile=await read('me');$('search-account').textContent=profile.username+' · '+profile.role;
     $('search-workspace').hidden=false;
+    if(typeof window!=='undefined' && window.C0){const query=window.C0.params.get('query');if(query && query.length<=512){$('knowledge-query').value=query;await searchKnowledge();}}
     try {const index=await read('knowledge/index/status');$('knowledge-index-status').textContent=index.configured ?
       `${index.indexed} derivative chunks indexed for the configured profile. Indexing may be pending.` : 'Embeddings are disabled; text search is available.';
     } catch { $('knowledge-index-status').textContent='Optional index status is unavailable; text search remains available.'; }

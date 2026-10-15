@@ -7,21 +7,21 @@
     <title>C0 — shared workspace</title>
     <link rel="stylesheet" href="./app.css">
   </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a><a href="./admin" data-admin-link hidden>Administration</a></nav>
+  <body data-page="index">
+    <a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav class="topbar" aria-label="C0 navigation">
+<a class="brand" href="./" aria-label="C0 home">C0<span>Knowledge</span></a>
+<form class="header-search" action="./search" method="get"><label class="sr-only" for="site-query">Search knowledge</label><input id="site-query" name="query" type="search" placeholder="Search knowledge…" maxlength="512" required><button type="submit">Search</button></form>
+<a href="./wiki">Knowledge</a><a href="./sources">Sources</a><a href="./agents">Use with AI</a>
+<details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
+<a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
+</nav>
 
-      <h1>Your shared workspace.</h1>
-      <p>Keep shared records, original sources and authored knowledge together. Sign in to browse the workspace; your access determines which changes you can make.</p>
-      <ul class="workflows"><li><a href="./sources">Work with sources</a><p>Upload evidence, inspect extracted text and keep original documents.</p></li><li><a href="./wiki">Build shared knowledge</a><p>Write versioned pages and connect claims to their evidence.</p></li><li><a href="./objects">Manage records</a><p>Browse and edit shared records and their relationships.</p></li><li><a href="./search">Find evidence</a><p>Search sources and Wiki, with citations you can inspect.</p></li></ul>
-      <p id="database-status" role="status" aria-live="polite">Checking workspace availability...</p>
+      <div class="access-strip"><p id="account-status" role="status">Checking sign-in…</p><a id="sign-in" href="./auth/login" hidden>Sign in with NethServer</a><button id="sign-out" type="button" class="secondary" hidden>Sign out</button></div>
+<header class="hero"><p class="eyebrow">Shared knowledge</p><h1 id="page-title">A place to find what we know.</h1><p class="lead">Browse articles, follow their sources, and explore the knowledge your team maintains.</p><a class="action-link" href="./wiki">Browse knowledge</a><a class="action-link secondary" href="./agents">Use with AI</a></header>
+<div id="reader-root" hidden><div class="home-columns"><section><h2>Explore sections</h2><div id="home-sections" class="section-grid"></div><p id="home-sections-note" class="muted"></p><a href="./wiki">Browse all articles →</a></section><section><h2>Recently updated</h2><ul id="home-recent" class="recent-list"></ul></section></div><p id="reader-status" role="status" aria-live="polite"></p></div>
+<div data-account-panel hidden><h2>Account and shared access</h2><p id="database-status" role="status" aria-live="polite">Checking workspace availability...</p>
       <button id="refresh-status" type="button">Check again</button>
-      <section aria-labelledby="account-heading">
-        <h2 id="account-heading">Your account</h2>
-        <p id="account-status" role="status" aria-live="polite">Checking sign-in...</p>
-        <a id="sign-in" href="./auth/login" hidden>Sign in with NethServer</a>
-        <button id="sign-out" type="button" hidden>Sign out</button>
-        <button id="refresh-account" type="button">Refresh access</button>
-      </section>
+      <section aria-labelledby="account-heading"><h2 id="account-heading">Your access</h2><button id="refresh-account" type="button">Refresh access</button></section>
       <section id="sharing" aria-labelledby="sharing-heading" hidden>
         <h2 id="sharing-heading">Shared access</h2>
         <p>Accounts appear after their first sign-in attempt. Choose Reader, Editor or Admin access for a verified account. The owner is selected in NethServer settings.</p>
@@ -30,8 +30,8 @@
       </section>
 
       <details><summary>Service and integration details</summary><p><a href="./api/v1/health">Service health</a> · <a href="./docs">REST API</a> · <a href="./agents">Agent capabilities</a></p></details>
-    </main>
-    <script src="./status.js" defer></script>
+    </div></main>
+    <script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./status.js" defer></script>
     <script src="./auth.js" defer></script>
   <script src="./navigation.js" defer></script></body>
 </html>

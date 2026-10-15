@@ -1001,3 +1001,16 @@ Only after complete acceptance should additional features enter the roadmap. Pre
 ## Current next action
 
 **M00–M14 candidate implementation and acceptance pass under the recorded waivers.** Preserve the frozen deployed 5be82b7 image identities, all failed evidence and the owner-only live boundary. Verify the final main completion-marker workflows explicitly. Future work is maintenance/release work in the readiness report, not an invented untested milestone. No stable module release is claimed.
+
+### M15 — Reader-first knowledge website [ ]
+
+**Goal:** Implement the operator-approved documentation/wiki UI using only existing APIs. People primarily read; external AI maintains articles with direct publication and immutable history. Manual contributions remain in Tools.
+
+**Work plan (15 October 2026):**
+- [x] Shared compact navigation, automatic home, responsive article/tree/context layout and local safe Markdown token renderer.
+- [x] Progressive slug-path tree, canonical article/revision/source/citation links, readable source library and evidence, simple search with contextual advanced details.
+- [x] Role-aware AI connection/task guidance; retain existing manual controllers in explicit Tools views and sharing in account administration.
+- [ ] Meaningful script/HTTP/real disposable browser assertions, full regression and publication/native checks; preserve interactive/CPU waivers and frozen live images.
+- [ ] Reconcile README/AGENTS and actual evidence. No Core/API/schema changes or new generative runtime.
+
+**Evidence:** pending. Implementation on feature branch `feat/knowledge-website`; main marker aee90ce is verified: [local 38701477692](https://github.com/Stell0/ns8-czero/actions/runs/38701477692), [publication 38701477763](https://github.com/Stell0/ns8-czero/actions/runs/38701477763), [released image 38701554107](https://github.com/Stell0/ns8-czero/actions/runs/38701554107), [QEMU 38701819972](https://github.com/Stell0/ns8-czero/actions/runs/38701819972) all completed/successful. Initial local checks: 102 script tests and 36 HTTP/template tests pass; broader Python run 499 passes/176 explicit database/packaging skips without a disposable DB. Automated local synthetic-data rendering covers six screens at five widths (320–1440px), thirty contexts with no horizontal overflow/browser errors; inspected desktop/mobile images. Patched Markdown dependency and final changes require rechecking. CI/native checks pending; no deployment or stable release claimed.

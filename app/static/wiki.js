@@ -149,6 +149,7 @@ for(const [form,path,makeData,success] of [
   catch(error){if(selection===entitySequence)$('graph-status').textContent=error.message;}
 });
 async function initializeWiki() {
+  if(typeof window!=='undefined' && window.C0 && !window.C0.toolsMode)return;
   try{const status=await(await fetch('./api/v1/auth/status',{cache:'no-store'})).json();if(!status.configured){$('wiki-account').textContent='Ask the NethServer administrator to configure sign-in.';return;}$('wiki-signin').hidden=false;profile=await api('me');$('wiki-signin').hidden=true;$('wiki-account').textContent=`Signed in as ${profile.username} · ${profile.role}`;$('wiki-workspace').hidden=false;
     for(const id of ['new-page','entity-create','claim-form','knowledge-relation-form','knowledge-reference-form'])$(id).hidden=!canWrite();await Promise.all([loadPages(),loadEntities()]);
   }catch(error){$('wiki-account').textContent=error.message;}

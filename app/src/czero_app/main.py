@@ -120,6 +120,19 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def shared_navigation() -> FileResponse:
         return FileResponse(static_dir / 'navigation.js', media_type='text/javascript')
 
+    # Presentation assets only; the domain REST/MCP interfaces stay unchanged.
+    @instance_app.get('/site.js', include_in_schema=False)
+    async def site_script() -> FileResponse:
+        return FileResponse(static_dir / 'site.js', media_type='text/javascript')
+
+    @instance_app.get('/reader.js', include_in_schema=False)
+    async def reader_script() -> FileResponse:
+        return FileResponse(static_dir / 'reader.js', media_type='text/javascript')
+
+    @instance_app.get('/vendor/markdown-it-15.0.2.min.js', include_in_schema=False)
+    async def markdown_script() -> FileResponse:
+        return FileResponse(static_dir / 'vendor' / 'markdown-it-15.0.2.min.js', media_type='text/javascript')
+
     @instance_app.get('/admin', include_in_schema=False)
     async def admin_page() -> FileResponse:
         return FileResponse(static_dir / 'admin.html', media_type='text/html')
@@ -214,15 +227,12 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             'Use S256 and the exact server URL as the resource; no client secret or dynamic registration.</p>'
             '<p>Scopes: <code>c0:read</code>, <code>c0:write</code>, <code>c0:admin</code>. '
             'Your current role also limits every operation.</p>'
-            '<label for="agent-mcp-url">Server URL</label><input id="agent-mcp-url" readonly value="' + escape(current['mcp_url'], quote=True) + '"><button type="button" data-copy-target="agent-mcp-url">Copy server URL</button><p id="copy-status" role="status" aria-live="polite"></p>'
+            '<label for="technical-mcp-url">Server URL</label><input id="technical-mcp-url" readonly value="' + escape(current['mcp_url'], quote=True) + '"><button type="button" data-copy-target="technical-mcp-url" data-copy-status="technical-copy-status">Copy server URL</button><p id="technical-copy-status" role="status" aria-live="polite"></p>'
             '<ul><li><a href="' + escape(current['oauth']['protected_resource_metadata'], quote=True) + '">Protected-resource metadata</a></li>'
             '<li><a href="' + escape(current['oauth']['authorization_metadata'], quote=True) + '">OAuth authorization metadata</a></li></ul>'
         ) if current['interfaces']['mcp'] else (
             '<p>MCP is unavailable until NS8 sign-in and hostname-root routing are configured.</p>')
-        return (
-            "<!doctype html><html lang='en'><meta charset='utf-8'>"
-            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-            '<title>C0 agent capabilities</title><link rel="stylesheet" href="./app.css"><body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a><a href="./admin" data-admin-link hidden>Administration</a></nav><h1>C0 agent capabilities</h1>'
+        reference = (
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
@@ -231,8 +241,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li>"
             "<li><a href='./agents/capabilities.json'>Caller-aware capability JSON</a></li></ul>"
-            + connection + "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul></main><script src='./navigation.js' defer></script></body></html>"
+            + connection + "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul>"
         )
+        return (static_dir / 'agents.html').read_text().replace('<!--CAPABILITIES-->', reference)
 
     @instance_app.get("/api/v1/health", name="health", response_model=HealthResponse,
                       response_model_exclude_none=True,

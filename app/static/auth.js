@@ -81,7 +81,7 @@
       csrfToken = user.csrf_token; role = user.role;
       accountStatus.textContent = `Signed in as ${user.username} · ${user.is_owner ? 'Owner (Admin)' : user.role}`;
       signIn.hidden = true; signOut.hidden = false;
-      if (role === 'admin') { sharing.hidden = false; await loadAccounts(generation); }
+      if (role === 'admin' && (!window.C0 || window.C0.params.get('view') === 'account')) { sharing.hidden = false; await loadAccounts(generation); }
     } catch (_) {
       if (current(generation)) accountStatus.textContent = 'Sign-in is unavailable. Try again later.';
     } finally { if (current(generation)) refreshAccount.disabled = false; }

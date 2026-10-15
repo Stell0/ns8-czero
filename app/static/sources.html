@@ -1,20 +1,28 @@
 <!doctype html>
 <!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>C0 — sources</title><link rel="stylesheet" href="./app.css"></head><body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav aria-label="C0 navigation"><a href="./">Home and sharing</a><a href="./objects">Records</a><a href="./sources">Sources</a><a href="./wiki">Wiki</a><a href="./search">Knowledge search</a><a href="./agents">Agent access</a><a href="./admin" data-admin-link hidden>Administration</a></nav>
+<title>C0 — sources</title><link rel="stylesheet" href="./app.css"></head><body data-page="sources"><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav class="topbar" aria-label="C0 navigation">
+<a class="brand" href="./" aria-label="C0 home">C0<span>Knowledge</span></a>
+<form class="header-search" action="./search" method="get"><label class="sr-only" for="site-query">Search knowledge</label><input id="site-query" name="query" type="search" placeholder="Search knowledge…" maxlength="512" required><button type="submit">Search</button></form>
+<a href="./wiki">Knowledge</a><a href="./sources">Sources</a><a href="./agents">Use with AI</a>
+<details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
+<a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
+</nav>
 
-<h1>Sources</h1><p id="sources-account" role="status">Checking sign-in...</p><a id="sources-signin" href="./auth/login" hidden>Sign in with NethServer</a>
-<div id="sources-workspace" hidden>
+<p id="sources-account" role="status">Checking sign-in...</p><a id="sources-signin" href="./auth/login" hidden>Sign in with NethServer</a>
+<h1 id="page-title">Sources</h1><div id="reader-root" data-reading-only hidden><p class="lead">The documents behind the knowledge. Read extracted text and follow evidence back to its source.</p>
+<div class="source-layout"><div class="source-list-column"><ul id="reader-sources" class="source-library"></ul><div class="article-actions"><button id="reader-sources-previous" type="button" class="secondary">Previous</button><button id="reader-sources-next" type="button" class="secondary">Next</button></div><p id="library-status" role="status"></p></div>
+<div class="article-column"><h2 id="reader-source-title">Choose a source</h2><p id="reader-source-description" class="byline"></p><label for="reader-version" id="reader-version-label" hidden>Document version</label><select id="reader-version" hidden></select><button id="reader-versions-more" type="button" class="secondary" hidden>Load more versions</button><div id="reader-download"></div><div id="reader-excerpt" class="citation" hidden></div><p id="reader-source-notice" class="notice" hidden></p><div id="reader-document" class="document-body"></div><details id="reader-source-details" hidden><summary>Provenance and technical details</summary><pre id="reader-source-metadata"></pre></details><p id="reader-status" role="status" aria-live="polite"></p></div></div></div><div id="tools-root" data-tools-only hidden><div id="sources-workspace" hidden><div class="tools-banner">Manual maintenance<a href="./sources">Return to reading</a></div>
 <details id="source-upload" hidden><summary>Upload evidence</summary>
 <p>Text, Markdown, PDF and DOCX, up to 10 MiB. Extraction runs in the background, usually within a minute. Failed files remain available for recovery.</p>
 <form id="upload-form">
 <label for="upload-source">Source</label><select id="upload-source"><option value="">New source</option></select>
 <label for="upload-title">Title</label><input id="upload-title" maxlength="256" required>
 <label for="upload-file">Document</label><input id="upload-file" type="file" accept=".txt,.md,.pdf,.docx" required>
-<label for="upload-media">Format</label><select id="upload-media"><option value="text/plain">Text</option><option value="text/markdown">Markdown</option><option value="application/pdf">PDF</option><option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">DOCX</option></select>
+<details><summary>Format and provenance</summary><label for="upload-media">Format</label><select id="upload-media"><option value="text/plain">Text</option><option value="text/markdown">Markdown</option><option value="application/pdf">PDF</option><option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">DOCX</option></select>
 <label for="upload-metadata">Provenance metadata (JSON object)</label><textarea id="upload-metadata" rows="3" maxlength="16384">{}</textarea>
-<label for="upload-retain"><input id="upload-retain" type="checkbox"> Retain this original after successful extraction</label>
-<button id="upload-submit" type="submit">Upload document</button>
+</details><label for="upload-retain"><input id="upload-retain" type="checkbox"> Keep the original file after extraction</label>
+<p class="muted">Extracted text is kept. Unless you keep the original, the file is removed after successful extraction.</p><button id="upload-submit" type="submit">Upload document</button>
 </form><p id="upload-status" role="status" aria-live="polite"></p></details>
 <section aria-labelledby="source-list-heading"><h2 id="source-list-heading">Browse sources</h2>
 <button id="refresh-sources" type="button">Refresh sources</button><ul id="source-list"></ul>
@@ -30,4 +38,4 @@
 <h3>Extracted full text</h3><p id="document-status" role="status"></p><pre id="document-text"></pre>
 <h3>Chunks and citations</h3><ul id="source-chunks"></ul><button id="chunks-previous" type="button">Previous chunks</button><button id="chunks-next" type="button">Next chunks</button>
 <pre id="source-citation"></pre></section>
-</div></main><script src="./sources.js" defer></script><script src="./navigation.js" defer></script></body></html>
+</div></div></main><script src="./vendor/markdown-it-15.0.2.min.js" defer></script><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./sources.js" defer></script><script src="./navigation.js" defer></script></body></html>

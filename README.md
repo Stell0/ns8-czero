@@ -16,10 +16,10 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 
 | Path | Available behavior |
 | --- | --- |
-| `/` | Landing page, database status, sign-in status and Admin sharing controls |
-| `/sources` | Minimal upload/history/evidence/search/retry/archive UI with Reader controls; repeatable native browser verified; interactive live browser waived |
-| /search | Minimal knowledge query/options, literal evidence/citations and fallback metadata; local tests pass, installed owner/Reader browser acceptance passes |
-| `/wiki` | Minimal authored page/revision/entity/claim/graph UI; repeatable native owner/Reader browser acceptance passes; interactive Playwright waived |
+| `/` | Automatic knowledge home with sections and recent articles; account/sharing and service details at `/?view=account` |
+| `/sources` | Readable source library, versioned extracted text and citation links; manual upload/retry/archive at `/sources?view=tools` |
+| `/search` | Article/source search with linked excerpts; retrieval tuning and citation diagnostics under details |
+| `/wiki` | Article reader, progressive page tree, linked facts/evidence and history; manual knowledge editing at `/wiki?view=tools` |
 | `/api/v1/wiki/pages`, `/api/v1/entities`, `/api/v1/claims`, `/api/v1/knowledge/graph/<id>`, `/api/v1/knowledge/changes` | Versioned Wiki, aliases, sourced assertions, bounded graph and change cursors; signed local REST, real disposable SSO/update/restore and permitted live owner acceptance verified |
 | `/objects` | Schema-derived record fields, explicit advanced JSON, revisions and typed relation browsing; real disposable browser verified |
 | `/admin` | Admin-only public-client approval/disable, deterministic jobs/attempts and UTC schedules; real disposable all-role browser verified |
@@ -42,7 +42,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/mcp` | OAuth-protected Streamable HTTP tools and bounded knowledge resources, for configured hostname-root instances |
 | `/oauth/authorize`, `/oauth/consent`, `/oauth/token`, `/oauth/revoke` | Explicit native-SSO consent, S256 codes, scoped tokens, rotating refresh and revocation |
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
-| `/agents`, `/agents/capabilities.json` | Caller-aware operation descriptions, schemas, roles and scopes; local parity, disposable roles/recovery and permitted live owner acceptance verified |
+| `/agents`, `/agents/capabilities.json` | Use with AI guide and role-aware task instructions; original caller-aware technical reference at `/agents?view=tools`; capability JSON unchanged |
 
 Core/app versions are **0.24.2/0.39.0**, with migrations through `0013_oauth_consent`. The deployed M14 candidate is 5be82b7 at these versions. Its dedicated live owner update/full-manager restart, exact persistence and OAuth/MCP/worker checks pass. The exact M14 candidate also passes Debian installation and a genuine Rocky M13 upgrade with all seven browser workflows and measured latency/memory targets. The final main marker records that acceptance and requires its own successful CI; it does not imply a stable release. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
@@ -73,6 +73,20 @@ M12 provides native Status cards for actual database/schema/vector readiness, si
 
 M12 provides an Administration page for application Admins: approve exact public-client callbacks/scopes, enable/disable with revision checks, queue registered deterministic handlers with replay protection, inspect attempts, and create/pause UTC interval schedules. It uses existing REST/CSRF permissions; Readers and Editors cannot manage these controls. Hostname, identity and optional-provider credentials stay in NS8 settings. Job/schedule lists show at most fifty rows; refresh to inspect recent state. Disposable native checks pass on both distributions, with actual worker/client/schedule and all-role browser acceptance on Rocky; permitted live owner normal-TLS asset/API and full-manager restart checks also pass. Interactive live browser testing remains waived.
 
+
+## Knowledge website (M15 development)
+
+The end-user application now defaults to reading: compact documentation/wiki navigation, formatted articles, a source library and simple search. Manual creation, upload and editing live in **Tools**. **Account** contains sharing for Admins; Administration retains clients, jobs and schedules. NS8 settings and all domain APIs are unchanged.
+
+Home automatically shows sections represented by the latest page summaries and up to eight recently updated articles. Knowledge builds a tree from existing slash-separated slugs, loading 100 summaries per batch with **Load more articles** while incomplete. Flat slugs stay at the top level; absent parent pages become navigation groups. Slugs are fixed: this UI does not move existing pages. Search works across the collection independently of the loaded tree, with Articles, Sources and All filters.
+
+Article URLs use `/wiki?page=<id>` and optional `revision=<number>`. The reader safely formats Markdown, with a table of contents and page-linked sourced assertions. Conflicting assertions remain separate; evidence links pin their source version and passage. Historical revisions retain their own title/body and omit current assertions. Source links use `/sources?source=<id>&version=<id>&chunk=<id>`; extraction text remains literal and citation identity is checked before displaying the passage. Originals are downloadable only when actually retained/available. Histories and lists have explicit paging.
+
+Markdown uses locally bundled markdown-it 15.0.2 (MIT), verified against the npm archive integrity with its license included. An allowlisted token renderer creates DOM elements; raw HTML, remote images and executable/credentialed links stay inactive. No external UI assets are required. Narrow layouts collapse navigation and move article context below the reading column.
+
+**Use with AI** explains administrator-approved remote MCP setup and offers copyable research instructions, plus create/update/import recipes for Editors/Admins. Articles offer their own context-specific instructions. These are tasks for an external assistant: there is no integrated chat or generative runtime. Authorized writes publish directly and preserve history. Binary ingestion still needs an authorized REST-upload-capable client; it is not an MCP tool. No particular provider/client interoperability is implied.
+
+This work is on `feat/knowledge-website`. Local and native acceptance evidence belongs to M15 in PLAN.md; the dedicated live M14 deployment remains unchanged until separately validated.
 
 ## Install and configure
 
@@ -139,7 +153,7 @@ M09 adds authored Wiki pages with immutable revisions, optimistic edits, replay-
 
 Claim values/entity/predicate/time are immutable assertions; record conflicting values as additional claims. Annotation adds metadata/evidence and retraction preserves it. Traversal is bounded to 1–3 hops, thirty-two active incident entity relations, at most one hundred returned entities/references and an explicit truncated flag. Typed references retain a missing-object marker after object deletion.
 
-Wiki typed REST and the minimal page pass local, installed and permitted live acceptance. Open Wiki, create a fixed slug/title/Markdown page, save with metadata and inspect immutable revisions or export Markdown/JSON. Reader controls permit inspection; Editors author pages/entities/claims/relationships. Every claim requires real evidence chunk IDs from Sources; conflicting values coexist and retraction preserves provenance. Select an entity to inspect its claims/citations and 1–3-hop graph. Names/data render as text; Markdown is not executed or rendered as HTML.
+Wiki typed REST and the minimal page pass local, installed and permitted live acceptance. Open Tools → Articles and knowledge model, create a fixed slug/title/Markdown page, save with metadata and inspect immutable revisions or export Markdown/JSON. Reader controls permit inspection; Editors author pages/entities/claims/relationships. Every claim requires real evidence chunk IDs from Sources; conflicting values coexist and retraction preserves provenance. Select an entity to inspect its claims/citations and 1–3-hop graph. Names/data render as text; Markdown is not executed or rendered as HTML.
 
 Knowledge POST/PUT bodies require `idempotency_key`; edits/archive/retraction require `expected_revision`. A replay returns its original snapshot; reused keys with changed payload and stale edits return 409. Page bodies cap at 128 KiB, metadata/value at 16 KiB, entity aliases at sixteen, active incident edges and typed references at thirty-two, reads at one hundred. Graph results report truncation. Entities show the first one hundred entries in the picker; bounded graph results offer entity navigation and readable relationships/references, with missing resources marked explicitly and exact JSON under details. Native update/encrypted backup/clean restore preserve exact Wiki data. Permitted live owner CRUD/exports/replay/CAS/CSRF and full native restart preserve knowledge, prior sources/objects/jobs, configuration and unrelated inventory. Interactive Playwright remains waived; only the owner persona was used live, with all roles verified in disposable tests.
 

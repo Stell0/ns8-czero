@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C0 — Use with AI</title><link rel="stylesheet" href="./app.css"></head>
+<body data-page="agents"><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1"><nav class="topbar" aria-label="C0 navigation">
+<a class="brand" href="./" aria-label="C0 home">C0<span>Knowledge</span></a>
+<form class="header-search" action="./search" method="get"><label class="sr-only" for="site-query">Search knowledge</label><input id="site-query" name="query" type="search" placeholder="Search knowledge…" maxlength="512" required><button type="submit">Search</button></form>
+<a href="./wiki">Knowledge</a><a href="./sources">Sources</a><a href="./agents">Use with AI</a>
+<details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
+<a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
+</nav>
+<h1 id="page-title">Use with AI</h1><div id="reader-root" class="guide" data-reading-only>
+<p class="lead">Read, add, and maintain knowledge from your external AI assistant. C0 keeps the articles, evidence, and history together.</p>
+<section><p class="eyebrow">Get connected</p><h2>Connect your assistant</h2><ol class="guide-steps"><li>Choose an assistant that supports remote MCP with OAuth and an administrator-approved public client.</li><li>Ask an application Admin to approve its exact callback URLs and the permissions you need. Approval does not grant membership.</li><li>Add the server URL below in your assistant. Sign in and approve access. Reader access supports research; Editor access is needed to publish content.</li><li>Copy a task below into the connected assistant and describe what you want it to do.</li></ol>
+<p id="guide-connection-status" role="status">Checking connection availability…</p><div id="guide-mcp" hidden><label for="agent-mcp-url">Server URL</label><input id="agent-mcp-url" readonly><button type="button" data-copy-target="agent-mcp-url">Copy server URL</button><p id="copy-status" role="status" aria-live="polite"></p></div>
+<p id="guide-status" role="status" aria-live="polite"></p><a id="guide-signin" href="./auth/login" hidden>Sign in with NethServer</a></section>
+<section><p class="eyebrow">Give it a task</p><h2>Instructions for your assistant</h2><p>Replace the bracketed text with your request. Articles also offer instructions for reading or updating that particular page.</p><div id="guide-tasks"></div></section>
+<section><h2>How changes work</h2><p>Authorized edits publish immediately and are recorded in article history. Ask your assistant to check existing articles first, preserve source evidence, and verify the saved result.</p><p>Use paths such as <code>product/installation</code> for new articles to place them in the page tree. Existing page paths cannot be changed.</p><p>Document files are uploaded through the REST interface, not an MCP tool. Your assistant needs an authorized upload-capable integration for file ingestion. Editors can also upload manually from <a href="./sources?view=tools">Source tools</a>.</p></section>
+</div><div id="tools-root" data-tools-only hidden><!--CAPABILITIES--></div>
+</main><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./navigation.js" defer></script></body></html>
