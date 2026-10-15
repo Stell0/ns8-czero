@@ -7,7 +7,8 @@
   const {node,link,button} = C;
   let profile=null, epoch=0, selection=0, article=null, capabilities={}, pages=new Map(), pageOffset=0, indexFlight=false;
   let factsOffset=0, factFlight=false, historyOffset=0, historyFlight=false, source=null, versions=[], versionOffset=0, versionSequence=0, sourceOffset=0, librarySequence=0, pollTimer;
-  const openPaths=new Set(), evidence=new Map();
+  const openPaths=new Set(), evidence=new Map(), sectionPath=C.params.get('section') || '';
+  if(/^[a-z0-9][a-z0-9/-]{0,127}$/.test(sectionPath)){let path='';for(const part of sectionPath.split('/')){path+=(path?'/':'')+part;openPaths.add(path);}}
   const writable=()=>profile && ['editor','admin'].includes(profile.role);
   function status(message) {if($('reader-status'))$('reader-status').textContent=message;}
   function revoke() {
@@ -53,8 +54,10 @@
       pageOffset=start+result.pages.length;tree();$('tree-more').hidden=result.pages.length<100;
       if(!article && !C.params.has('page')) {
         const list=node('ul','', 'recent-list');
-        for(const page of [...pages.values()].slice(0,12)){const li=node('li');li.append(link(page.title,C.pageURL(page.id)),node('span','Updated '+C.date(page.updated_at),'byline'));list.append(li);}
-        $('reader-content').replaceChildren(node('p',pages.size?'Choose an article from the tree, or search the full knowledge collection.':'No articles yet. Use the AI connection guide to begin building your knowledge.'),list);
+        const matching=[...pages.values()].filter(page=>!sectionPath || page.slug===sectionPath || page.slug.startsWith(sectionPath+'/'));
+        if(sectionPath)$('page-title').textContent=sectionPath.split('/').pop().replace(/-/g,' ');
+        for(const page of matching.slice(0,50)){const li=node('li');li.append(link(page.title,C.pageURL(page.id)),node('span','Updated '+C.date(page.updated_at),'byline'));list.append(li);}
+        $('reader-content').replaceChildren(node('p',sectionPath?(matching.length?'Articles in this section. Load more navigation to discover older articles.':'No articles in this section have loaded yet. Load more articles or search the full collection.'):(pages.size?'Choose an article from the tree, or search the full knowledge collection.':'No articles yet. Use the AI connection guide to begin building your knowledge.')),list);
       }
     } catch(error){if(captured===epoch)$('tree-status').textContent=error.message;}
     finally{indexFlight=false;$('tree-more').disabled=false;}
@@ -130,8 +133,8 @@
   }
   async function home() {
     const result=await read('wiki/pages?limit=100');showRoot();
-    const groups=new Map();for(const page of result.pages){const section=page.slug.split('/')[0];if(!groups.has(section))groups.set(section,{title:section.replace(/-/g,' '),id:page.id});if(page.slug===section)groups.set(section,{title:page.title,id:page.id});}
-    for(const entry of [...groups.values()].slice(0,8))$('home-sections').append(link(entry.title,C.pageURL(entry.id)));
+    const groups=new Map();for(const page of result.pages){const section=page.slug.split('/')[0];if(!groups.has(section))groups.set(section,{title:section.replace(/-/g,' '),path:section});if(page.slug===section)groups.set(section,{title:page.title,path:section,id:page.id});}
+    for(const entry of [...groups.values()].slice(0,8))$('home-sections').append(link(entry.title,entry.id?C.pageURL(entry.id):'./wiki?'+new URLSearchParams({section:entry.path})));
     for(const item of $('home-sections').children)item.className='section-link';
     for(const page of result.pages.slice(0,8)){const li=node('li');li.append(link(page.title,C.pageURL(page.id)),node('span','Updated '+C.date(page.updated_at),'byline'));$('home-recent').append(li);}
     $('home-sections-note').textContent=result.pages.length===100?'Find more sections in Browse knowledge.':'';
@@ -224,6 +227,7 @@
       showRoot();
       if(kind==='index'){if(C.params.get('view')!=='account')await home();else{$('reader-root').hidden=true;$('page-title').textContent='Account and shared access';}return;}
       if(kind==='wiki') {
+        if(sectionPath && (!/^[a-z0-9][a-z0-9/-]{0,127}$/.test(sectionPath) || sectionPath.includes('//') || sectionPath.endsWith('/'))){status('This section link is invalid.');return;}
         $('tree-more').addEventListener('click',loadIndex);$('facts-more').addEventListener('click',loadFacts);$('history-more').addEventListener('click',loadHistory);
         $('reader-history-panel').addEventListener('toggle',()=>{if($('reader-history-panel').open && historyOffset===0)loadHistory();});
         for(const [id,kind] of [['article-read-task','read'],['article-update-task','update']])$(id).addEventListener('click',()=>{if(article && (kind==='read'||writable()))C.copyPanel($('article-task'),C.task(kind,article,capabilities));});

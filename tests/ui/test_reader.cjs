@@ -99,3 +99,19 @@ test('AI guide gives Editors maintenance instructions without claiming universal
   assert.match(h.node('guide-tasks').textContent,/Create an article/);assert.match(h.node('guide-tasks').textContent,/Import a document/);
   assert.match(h.node('guide-connection-status').textContent,/MCP is unavailable/);
 });
+
+
+test('automatic home links missing parent pages to section browsing rather than an arbitrary article',async()=>{
+  const h=fixture('index'),r=h.reader(),loading=r.home();h.requests[0].resolve(reply({pages:[page(1,'operations/backups'),page(2,'operations/monitoring')]}));await loading;
+  assert.equal(h.node('home-sections').children[0].href,'./wiki?section=operations');
+});
+test('section browsing opens the requested navigation group and lists only that section',async()=>{
+  const h=fixture('wiki','?section=operations'),r=h.reader(),loading=r.loadIndex();
+  h.requests[0].resolve(reply({pages:[page(1,'operations/backups'),page(2,'getting-started')]}));await loading;
+  assert.match(h.node('reader-content').textContent,/Article 1/);assert.doesNotMatch(h.node('reader-content').textContent,/Article 2/);
+  assert(descendants(h.node('reader-tree')).some(n=>n.tagName==='DETAILS' && n.dataset.path==='operations' && n.open));
+});
+test('AI research tasks pin the displayed historical revision',()=>{
+  const h=fixture(),historical=page();historical.content.number=1;
+  assert.match(h.C.task('read',historical),/Read article revision 1/);
+});
