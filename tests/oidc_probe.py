@@ -461,10 +461,29 @@ def browser_reader():
     owner.logout(profile)
 
 
+def performance():
+    import os
+    from performance_probe import measure
+    payload = json.loads((STATE / 'personas.json').read_text())
+    expected = json.loads((STATE / 'expected-identities.json').read_text())
+    owner = Browser('https://' + payload['host'])
+    profile = owner.login('c0owner', payload['password'])
+    try:
+        result = measure(owner, expected['knowledge']['page'])
+        result['seed_source_versions'] = len(expected['sources'])
+        result['runner'] = {'logical_cpus': os.cpu_count(),
+                            'memory_bytes': os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')}
+        print(json.dumps(result, sort_keys=True))
+    finally:
+        owner.logout(profile)
+
+
 if __name__ == "__main__":
     try:
         if len(sys.argv)>1 and sys.argv[1]=="browser-reader":
             browser_reader()
+        elif len(sys.argv)>1 and sys.argv[1]=='performance':
+            performance()
         elif len(sys.argv) > 1:
             persistence(sys.argv[1])
         else:

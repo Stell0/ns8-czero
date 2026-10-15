@@ -670,6 +670,18 @@ Preserve admitted identities through update and clean restore
     Verify Disposable Identity Persistence    ${module_id}
     Wait Until Keyword Succeeds    30s    2s    Check application route
 
+Measure restored HTTPS latency and resident-memory targets
+    [Timeout]    3 minutes
+    ${output}    ${errors}    ${rc} =    Execute Command    python3 /tmp/oidc_probe.py performance
+    ...    return_stderr=True    return_rc=True    timeout=150s
+    Should Be Equal As Integers    ${rc}    0    msg=${errors}
+    Log    ${output}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-hardening-probe.py
+    ...    return_rc=True    timeout=45s
+    Should Be Equal As Integers    ${rc}    0
+    Log    ${output}
+
 Check rejected sign-in can switch accounts in a browser
     [Tags]    ui
     [Timeout]    4 minutes

@@ -48,6 +48,35 @@ def knowledge_http(application, tmp_path):
         for row in schedules: c.execute(text('UPDATE c0_scheduled_tasks SET enabled=:enabled,next_run_at=:next_run_at WHERE id=:id'), row)
 
 
+def test_installed_performance_probe_through_real_signed_http(knowledge_http):
+    import importlib.util
+    from pathlib import Path
+    from types import SimpleNamespace
+    spec = importlib.util.spec_from_file_location('installed_performance', Path(__file__).parents[1] / 'performance_probe.py')
+    probe = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(probe)
+    async def check():
+        app, owner, *_ = knowledge_http
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                               headers={'Authorization': 'Bearer ' + owner}) as client:
+            created = await client.post('/api/v1/wiki/pages', json={'slug': 'performance-' + uuid4().hex,
+                'title': 'Independent authored benchmark', 'body': 'Independent authored first revision',
+                'idempotency_key': 'performance-create'})
+            assert created.status_code == 201
+            updated = await client.put('/api/v1/wiki/pages/' + created.json()['id'], json={
+                'title': 'Independent authored benchmark', 'body': 'Independent authored current revision',
+                'expected_revision': 1, 'idempotency_key': 'performance-update'})
+            assert updated.status_code == 200
+            loop = asyncio.get_running_loop()
+            def api(path):
+                response = asyncio.run_coroutine_threadsafe(client.get(path), loop).result(timeout=15)
+                return response.status_code, response.content, str(response.url)
+            metrics = await asyncio.to_thread(probe.measure, SimpleNamespace(api=api), updated.json())
+            assert metrics['health']['requests'] == 50
+            assert metrics['wiki_text_search']['requests'] == 20
+    asyncio.run(check())
+
+
 def test_external_agent_rest_workflow_wiki_aliases_sourced_claims_graph_exports_and_changes(knowledge_http):
     async def check():
         app, owner, *_ = knowledge_http

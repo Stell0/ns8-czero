@@ -12,6 +12,14 @@ from robot.libraries.BuiltIn import BuiltIn
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.fixture
+def accessibility_measurement(monkeypatch):
+    monkeypatch.setattr(BuiltIn, 'log_to_console', lambda self, *args: None)
+    return lambda *args: {'controls_checked': 4, 'links_checked': 7,
+        'unnamed_controls': 0, 'unnamed_links': 0, 'missing_language': 0,
+        'missing_main': 0, 'missing_h1': 0, 'missing_navigation': 0, 'missing_skip_target': 0}
+
+
 def test_sso_password_uploaded_privately_never_in_argv(monkeypatch):
     commands, uploads, levels = [], [], []
     def upload(source, destination, **kwargs):
@@ -155,7 +163,7 @@ def test_identity_backup_reuses_existing_encryption_repository(monkeypatch):
     assert len(commands)==2
 
 
-def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monkeypatch):
+def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monkeypatch, accessibility_measurement):
     invocations=[]; filled=[]; commands=[]; secret='private-browser-fixture-value'
     def execute(command,**kwargs):
         commands.append(command)
@@ -163,7 +171,8 @@ def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monke
         return '', '', 0
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
-        get_text=lambda selector:'00000000-0000-4000-8000-000000000001 · revision 1')
+        get_text=lambda selector:'00000000-0000-4000-8000-000000000001 · revision 1',
+        evaluate_javascript=accessibility_measurement)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))
@@ -173,13 +182,14 @@ def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monke
     assert all(secret not in str(item) for item in invocations+commands)
 
 
-def test_search_browser_keeps_credentials_out_of_robot_arguments(monkeypatch):
+def test_search_browser_keeps_credentials_out_of_robot_arguments(monkeypatch, accessibility_measurement):
     invocations=[]; filled=[]; commands=[]; secret='private-search-fixture-value'
     def execute(command, **kwargs):
         commands.append(command)
         return json.dumps({'password':secret}) if command.startswith('cat ') else ('', '', 0)
     ssh=SimpleNamespace(execute_command=execute)
-    browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)))
+    browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
+        evaluate_javascript=accessibility_measurement)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))
@@ -218,9 +228,10 @@ def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeyp
     assert all(private not in str(call) for call in calls)
 
 
-def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatch):
+def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatch, accessibility_measurement):
     calls=[]
-    browser=SimpleNamespace(get_text=lambda selector:json.dumps({'id':'00000000-0000-4000-8000-000000000001','state':'succeeded'}))
+    browser=SimpleNamespace(get_text=lambda selector:json.dumps({'id':'00000000-0000-4000-8000-000000000001','state':'succeeded'}),
+        evaluate_javascript=accessibility_measurement)
     library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
     library._verify_admin_controls(browser,lambda name,*args:calls.append((name,args)),'admin','czero7.test')
     assert ('Select Options By',('#job-handler','value','health')) in calls
@@ -231,3 +242,25 @@ def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatc
         library._verify_admin_controls(browser,lambda name,*args:denied.append((name,args)),role,'czero7.test')
         assert ('Wait For Elements State',('#admin-workspace','hidden')) in denied
         assert all(name not in ('Click','Fill Text') for name,_ in denied)
+
+
+def test_accessibility_diagnostics_contain_only_counts_and_fixed_context(monkeypatch, accessibility_measurement):
+    messages = []
+    monkeypatch.setattr(BuiltIn, 'log_to_console', lambda self, value: messages.append(value))
+    check = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['assert_accessibility']
+    check(SimpleNamespace(evaluate_javascript=accessibility_measurement), 'home', 'admin')
+    assert len(messages) == 1 and '"page": "home"' in messages[0]
+    assert '"controls_checked": 4' in messages[0]
+
+
+@pytest.mark.parametrize('changes', [
+    {'controls_checked': 'private fixture value'}, {'private fixture key': 1}, {'unnamed_controls': 1},
+])
+def test_accessibility_rejects_private_or_failing_results(monkeypatch, accessibility_measurement, changes):
+    messages = []
+    monkeypatch.setattr(BuiltIn, 'log_to_console', lambda self, value: messages.append(value))
+    check = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['assert_accessibility']
+    browser = SimpleNamespace(evaluate_javascript=lambda *args: {**accessibility_measurement(), **changes})
+    with pytest.raises(AssertionError) as error:
+        check(browser, 'sources', 'reader')
+    assert 'private fixture' not in str(error.value) + ''.join(messages)

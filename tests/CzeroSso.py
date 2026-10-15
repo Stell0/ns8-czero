@@ -12,6 +12,20 @@ from robot.libraries.BuiltIn import BuiltIn
 from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
 
 
+def assert_accessibility(browser, page, role):
+    fields = {'controls_checked', 'links_checked', 'unnamed_controls', 'unnamed_links',
+              'missing_language', 'missing_main', 'missing_h1', 'missing_navigation', 'missing_skip_target'}
+    result = browser.evaluate_javascript(None, Path(__file__).with_name('accessibility_probe.js').read_text())
+    if (page not in {'home', 'records', 'sources', 'wiki', 'search', 'agents', 'admin'}
+            or role not in {'admin', 'reader', 'editor'} or not isinstance(result, dict)
+            or set(result) != fields or any(type(v) is not int or not 0 <= v <= 10000 for v in result.values())):
+        raise AssertionError('Accessibility smoke measurement invalid')
+    # This remains safe with Robot's private-login log level NONE.
+    BuiltIn().log_to_console('C0 accessibility: ' + json.dumps({'page': page, 'role': role, **result}, sort_keys=True))
+    if result['links_checked'] == 0 or any(result[key] for key in fields if not key.endswith('_checked')):
+        raise AssertionError('Accessibility names or landmarks failed')
+
+
 class CzeroSso:
     @keyword
     def provision_disposable_sso(self, module_id, host):
@@ -20,7 +34,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -230,6 +244,7 @@ class CzeroSso:
                 run('Wait For Elements State','#sign-out','visible','timeout=30s')
                 run('Go To','https://'+host+'/objects')
                 run('Wait For Elements State','#records-workspace','visible','timeout=30s')
+                assert_accessibility(browser, 'records', 'admin' if username == 'c0owner' else 'reader')
             login('c0owner')
             type_name='browser-inventory-'+secrets.token_hex(4)
             run('Click','#type-registration summary')
@@ -288,6 +303,7 @@ class CzeroSso:
             run('Click','#relation-form button[type=submit]')
             run('Get Text','#record-status','==','Relation saved.')
             run('Get Text','#record-relations','contains','related-to')
+            assert_accessibility(browser, 'records', 'admin')
             # Change membership through real owner-authenticated HTTP on the VM.
             _,errors,rc=ssh.execute_command('python3 /tmp/oidc_probe.py browser-reader',return_stderr=True,return_rc=True,timeout='180 seconds')
             if rc: raise AssertionError('Cannot prepare disposable Reader browser')
@@ -327,6 +343,7 @@ class CzeroSso:
                 run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
                 run('Go To', 'https://' + host + '/sources')
                 run('Wait For Elements State', '#sources-workspace', 'visible', 'timeout=30s')
+                assert_accessibility(browser, 'sources', 'admin' if username == 'c0owner' else 'reader')
             def view(number, expected):
                 selector = '#source-versions button:text-is("View version ' + str(number) + '")'
                 run('Wait For Elements State', selector, 'visible', 'timeout=100s')
@@ -441,6 +458,7 @@ class CzeroSso:
                 run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
                 run('Go To', 'https://' + host + '/wiki')
                 run('Wait For Elements State', '#wiki-workspace', 'visible', 'timeout=30s')
+                assert_accessibility(browser, 'wiki', 'admin' if username == 'c0owner' else 'reader')
             login('c0owner')
             run('Click', '#new-page')
             slug = 'browser-wiki-' + secrets.token_hex(4)
@@ -513,6 +531,7 @@ class CzeroSso:
                 run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
                 run('Go To', 'https://' + host + '/search')
                 run('Wait For Elements State', '#search-workspace', 'visible', 'timeout=30s')
+                assert_accessibility(browser, 'search', 'admin' if username == 'c0owner' else 'reader')
                 run('Fill Text', '#knowledge-query', 'independent authored')
                 run('Select Options By', '#knowledge-mode', 'value', 'hybrid')
                 run('Select Options By', '#knowledge-rerank', 'value', 'filter')
@@ -575,6 +594,12 @@ class CzeroSso:
                 _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
                     ' browser-complete',return_stderr=True,return_rc=True,timeout='300 seconds')
                 if rc: raise AssertionError('Real OAuth browser/token assertions failed')
+                run('Go To', 'https://' + host + '/')
+                run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
+                assert_accessibility(browser, 'home', role)
+                run('Go To', 'https://' + host + '/agents')
+                run('Get Text', 'h1', '==', 'C0 agent capabilities')
+                assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host)
                 run('Close Context')
             _, rc=ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs '+shlex.quote(module_id),
@@ -592,6 +617,7 @@ class CzeroSso:
             run('Get Text', '#admin-account', 'contains', 'Only application Admins')
             run('Wait For Elements State', '#admin-workspace', 'hidden')
             run('Wait For Elements State', 'nav a[data-admin-link]', 'hidden')
+            assert_accessibility(browser, 'admin', role)
             return
         run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
         run('Wait For Elements State', 'nav a[data-admin-link]', 'visible', 'timeout=30s')
@@ -636,6 +662,7 @@ class CzeroSso:
         run('Click', row + ' button')
         run('Get Property', '#schedule-enabled', 'checked', '==', False)
         run('Get Property', '#schedule-edit-interval', 'value', '==', '7200')
+        assert_accessibility(browser, 'admin', role)
 
     @keyword
     def assert_disposable_sso_browser_password_is_private(self):
