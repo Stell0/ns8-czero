@@ -82,3 +82,15 @@ test('rejects missing document language', () => {
   const fixture = documentFixture(); fixture.document.documentElement.lang = '';
   assert.equal(run(fixture).missing_language, 1);
 });
+
+test('survives Robot Browser function conversion with leading license comments', () => {
+  // Browser 19.14.2 applies new Function("return " + script) before page.evaluate.
+  // A leading line comment after return causes automatic semicolon insertion.
+  const fixture = documentFixture();
+  const check = vm.runInNewContext('new Function(' + JSON.stringify('return ' + source) + ')()',
+    {document: fixture.document, getComputedStyle: () => ({visibility: 'visible'})});
+  assert.equal(typeof check, 'function');
+  assert.equal(check().unnamed_controls, 0);
+  const unwrapped = source.slice(source.indexOf('\n') + 1, source.lastIndexOf('\n)'));
+  assert.equal(vm.runInNewContext('new Function(' + JSON.stringify('return ' + unwrapped) + ')()'), undefined);
+});

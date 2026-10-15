@@ -1,3 +1,4 @@
+(
 // Copyright (C) 2026 C0 contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Browser-only smoke check. Return counts, never DOM text, URLs or identities.
@@ -39,3 +40,5 @@
     missing_skip_target: target.startsWith('#') && document.getElementById(target.slice(1)) ? 0 : 1,
   };
 }
+
+)
