@@ -290,7 +290,8 @@ def test_token_database_failure_has_static_diagnostics(transport, monkeypatch, c
 
 @pytest.mark.parametrize('bypass_origin', [False, True])
 @pytest.mark.parametrize('role,scope', [(Role.READER,'c0:read'), (Role.EDITOR,'c0:read'),
-    (Role.ADMIN,'c0:read'), (Role.EDITOR,'c0:read c0:write'), (Role.ADMIN,'c0:read c0:write')])
+    (Role.ADMIN,'c0:read'), (Role.EDITOR,'c0:read c0:write'), (Role.ADMIN,'c0:read c0:write'),
+    (Role.ADMIN,'c0:read c0:write c0:admin')])
 def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejection(transport, monkeypatch, bypass_origin, role, scope):
     import importlib.util
     from pathlib import Path
@@ -307,6 +308,13 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
     path=Path(__file__).resolve().parents[1]/'mcp_tls_probe.py'
     spec=importlib.util.spec_from_file_location('installed_tls_probe',path)
     probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
+    created_types=[]
+    register_type=app.state.objects.register_type
+    def track_type(*args, **kwargs):
+        value=register_type(*args, **kwargs)
+        created_types.append(value['name'])
+        return value
+    monkeypatch.setattr(app.state.objects,'register_type',track_type)
     async def proxy(scope,receive,send):
         headers=dict(scope.get('headers',[]))
         if headers.get(b'host')==b'unapproved.invalid':
@@ -323,4 +331,8 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
                     await probe.check(value)
             else:
                 await probe.check(value)
-    asyncio.run(check())
+    try:
+        asyncio.run(check())
+    finally:
+        from test_objects_http import cleanup
+        cleanup(access.database,created_types)

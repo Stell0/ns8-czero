@@ -61,8 +61,58 @@ class NodeTransport(httpx2.AsyncBaseTransport):
         await self.pool.aclose()
 
 
+async def typed_objects(client):
+    """Disposable-only typed lifecycle through the real installed MCP wire."""
+    name = 'robot-regression-' + uuid4().hex
+    schema = {'type':'object','required':['name','manufacturer'],'properties':{
+        'name':{'type':'string','maxLength':128}, 'manufacturer':{'type':'string'},
+        'category':{'type':'string'}, 'source_url':{'type':'string'}},'additionalProperties':False}
+    async def call(operation, arguments, error=None, status=None):
+        result = await client.call_tool(operation, arguments)
+        assert result.is_error == bool(error), 'Installed typed operation error state mismatch'
+        if error:
+            assert result.content[0].text == error, 'Installed typed validation/conflict code mismatch'
+            assert result.meta['c0/error'] == {'code':error,'status':status}, 'Installed typed error metadata mismatch'
+        else:
+            assert json.loads(result.content[0].text) == result.structured_content, 'Installed typed result representations differ'
+            return result.structured_content
+    descriptor = {'name':name,'label':'Disposable typed CRUD','schema':schema,'unique_fields':['name']}
+    await call('object_types_create', {'data':{**descriptor,'schema':{
+        'type':'object','properties':{'name':{'type':'string'}}}}}, 'unique_string_too_long', 422)
+    await call('object_types_create', {'data':{**descriptor,'schema':{'type':'array'}}}, 'invalid_schema', 422)
+    created = await call('object_types_create', {'data':descriptor})
+    assert created['schema']['properties']['name']['maxLength'] == 128, 'Installed unique schema changed'
+    assert await call('object_types_get', {'type_name':name}) == created, 'Installed typed schema retrieval mismatch'
+    assert created in (await call('object_types_list', {'limit':100}))['types'], 'Installed new type not discoverable'
+    await call('object_types_create', {'data':descriptor}, 'object_conflict', 409)
+    record = {'name':'Digit 5','manufacturer':'Disposable fixture','source_url':'https://example.invalid/fixture'}
+    row = await call('objects_create', {'data':{'type_name':name,'data':record}})
+    assert row['revision'] == 1 and row['data'] == record, 'Installed typed create mismatch'
+    assert await call('objects_get', {'object_id':row['id']}) == row, 'Installed typed read mismatch'
+    query = {'type_name':name,'where':json.dumps({'name':'Digit 5'})}
+    assert (await call('objects_list', query))['objects'] == [row], 'Installed typed query mismatch'
+    await call('objects_create', {'data':{'type_name':name,'data':record}}, 'object_conflict', 409)
+    updated = await call('objects_update', {'object_id':row['id'],
+        'data':{'expected_revision':1,'data':{**record,'category':'updated'}}})
+    assert updated['revision'] == 2 and updated['data']['category'] == 'updated', 'Installed typed update mismatch'
+    await call('objects_update', {'object_id':row['id'],
+        'data':{'expected_revision':1,'data':record}}, 'object_conflict', 409)
+    for data, error in [({'name':'Missing'},'record_invalid::required'),
+            ({**record,'name':42},'record_invalid:name:type'),
+            ({**record,'extra':'ignored?'},'record_invalid::additionalProperties')]:
+        await call('objects_create', {'data':{'type_name':name,'data':data}}, error, 422)
+    assert await call('objects_get', {'object_id':row['id']}) == updated, 'Installed failed write changed record'
+    deleted = await call('objects_delete', {'object_id':row['id'],'expected_revision':2})
+    assert deleted == {'id':row['id'],'revision':2,'deleted':True}, 'Installed typed delete mismatch'
+    await call('objects_get', {'object_id':row['id']}, 'object_not_found', 404)
+    assert (await call('objects_list', {'type_name':name}))['objects'] == [], 'Installed typed deletion incomplete'
+    # Type definitions and their audit history are immutable; the disposable
+    # installation owns their lifecycle. No direct database cleanup is used.
+
+
 async def check(value):
     origin = value['origin']
+    typed_lifecycles = 0
     transport = NodeTransport(urlsplit(origin).hostname, value['address'], value['ca'])
     async with httpx2.AsyncClient(transport=transport, base_url=origin, timeout=20,
             headers={'Authorization':'Bearer ' + value['access_token']}) as http:
@@ -87,6 +137,10 @@ async def check(value):
             assert authority[field] == origin + '/oauth/' + path, 'Installed OAuth endpoint mismatch'
         assert set(authority['scopes_supported']) == {'c0:read','c0:write','c0:admin'}, 'Installed OAuth scope catalog mismatch'
         for mode in ('auto', 'legacy'):
+            # A preceding mode can register an immutable isolated type.
+            response = await http.get('/api/v1/object-types')
+            assert response.status_code == 200, 'Installed current type discovery failed'
+            expected = response.json()
             async with Client(streamable_http_client(origin + '/mcp', http_client=http), mode=mode) as client:
                 tools = (await client.list_tools()).tools
                 assert 'object_types_list' in {tool.name for tool in tools}, 'Installed MCP read tool missing'
@@ -100,6 +154,22 @@ async def check(value):
                     assert scope != 'c0:write' or role in {'editor','admin'}, 'Installed write tool discovery crossed role'
                 result = await client.call_tool('object_types_list', {})
                 assert not result.is_error and result.structured_content == expected, 'Installed REST/MCP result mismatch'
+                if role != 'admin' or 'c0:admin' not in value['scope'].split():
+                    denied = await client.call_tool('object_types_create', {'data':{
+                        'name':'denied-'+uuid4().hex,'label':'Disposable role boundary','schema':{'type':'object'}}})
+                    assert denied.is_error, 'Installed type registration bypassed authorization'
+                    if role != 'admin':
+                        assert denied.content[0].text == 'permission_denied', 'Installed type role denial mismatch'
+                        assert not denied.meta or 'mcp/www_authenticate' not in denied.meta, 'Type role denial requested scope upgrade'
+                    else:
+                        assert denied.content[0].text == 'insufficient_scope', 'Installed type scope denial mismatch'
+                        assert 'scope="c0:admin"' in denied.meta['mcp/www_authenticate'][0], 'Installed type scope upgrade mismatch'
+                else:
+                    tool = next(t for t in tools if t.name == 'object_types_create')
+                    assert 'maxLength <=128' in tool.description, 'Installed type bound guidance missing'
+                    if 'c0:write' in value['scope'].split():
+                        await typed_objects(client)
+                        typed_lifecycles += 1
                 if value['scope'] == 'c0:read':
                     denied = await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})
                     assert denied.is_error, 'Read token mutation scope not enforced'
@@ -139,6 +209,9 @@ async def check(value):
             # Origin still reaches the canonical route and must fail there.
             status = (await http.post('/mcp', json=guard_body, headers={**guard_headers, **headers})).status_code
             assert status in allowed, 'Installed %s guard returned HTTP %d' % (label, status)
+    expected_typed = 2 if role == 'admin' and {'c0:read','c0:write','c0:admin'} <= set(value['scope'].split()) else 0
+    assert typed_lifecycles == expected_typed, 'Installed typed lifecycle coverage mismatch'
+    print('Installed typed object lifecycles completed: %d' % typed_lifecycles)
     print('Installed TLS SDK current/legacy tools, resources, REST parity, scopes and host/origin checks passed')
 
 
