@@ -225,3 +225,11 @@ The scheduled/dispatch workflow prepares a review PR for opted-in forks.
 It never automatically merges. GITHUB_TOKEN-created PRs require explicit CI
 dispatch or an approved GitHub App before merging. Twenty-six real Git-history
 checks pass; manifest initialization and real proposal acceptance are pending.
+
+The four repository-only skills in `.agents/skills` cover feature development,
+Core development, reusable upstream contributions and customized fork upgrades.
+Install the relevant [NethServer skills](https://github.com/NethServer/agents)
+for native module, container, commit, PR and release operations; their manuals
+are not vendored here. All four skills pass structural validation. Independent
+isolated exercises preserve customer changes while preparing a reusable Core
+patch and resolving a managed-file upgrade; remote PR acceptance remains pending.

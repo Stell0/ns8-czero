@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M13 distribution conventions
 
+- Repository-only .agents/skills/c0-* route feature/Core/contribution/upgrade work and delegate native operations to installed NethServer skills. Preserve fork-only changes and unfinished drafts when isolating contributions. Independent isolated forward-tests of contribution and semantic upgrade pass; they do not establish remote PR/CI or native persistence acceptance. No skills ship in runtime images.
+
 - Managed-file upgrades use scripts/sync-upstream.py and an explicit version-1 manifest, trusted GitHub origin, immutable baseline and per-file hash/mode. Preflight every path/blob before writes. Apply only untouched files; preserve customizations and record needs_review plus exact upstream diff commands. Never execute upstream code. Unregistered files require explicit registration. Repeat delivery and unrelated upstream changes must not churn proposals. GITHUB_TOKEN proposals need explicit CI dispatch before merge because GitHub suppresses recursive workflow triggers. Actual GitHub proposal acceptance remains pending.
 
 - Core artifact publication is distinct from an NS8 module release: core-v<version> tags must match package metadata, checkout and verified source. Require current successful Debian/Rocky contexts and local checks for that exact commit; a previous commit or pending check cannot authorize publication. Build/test with read-only permissions and give contents write only to the artifact publisher. Published wheel/archive checksums must match; never clobber an existing version.
