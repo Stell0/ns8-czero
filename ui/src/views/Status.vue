@@ -105,6 +105,9 @@
         />
       </cv-column>
     </cv-row>
+    <cv-row
+      ><cv-column><RuntimeStatus /></cv-column
+    ></cv-row>
     <!-- services -->
     <cv-row>
       <cv-column class="page-subtitle">
@@ -265,8 +268,11 @@ import {
   PageTitleService,
 } from "@nethserver/ns8-ui-lib";
 
+import RuntimeStatus from "../components/RuntimeStatus.vue";
+
 export default {
   name: "Status",
+  components: { RuntimeStatus },
   mixins: [
     TaskService,
     QueryParamService,
@@ -291,6 +297,7 @@ export default {
         images: [],
         volumes: [],
       },
+      taskListeners: [],
       backupRepositories: [],
       backups: [],
       loading: {
@@ -342,28 +349,44 @@ export default {
       200
     );
   },
-  beforeUnmount() {
+  beforeDestroy() {
     clearTimeout(this.redirectTimeout);
+    clearInterval(this.urlCheckInterval);
+    this.clearTaskListeners();
   },
   created() {
     this.getStatus();
     this.listBackupRepositories();
   },
   methods: {
+    listenTask(event, handler) {
+      this.taskListeners.push({ event, handler });
+      this.core.$root.$once(event, handler);
+    },
+    clearTaskListeners(action = "") {
+      this.taskListeners = this.taskListeners.filter(({ event, handler }) => {
+        if (!action || event.startsWith(action + "-")) {
+          this.core.$root.$off(event, handler);
+          return false;
+        }
+        return true;
+      });
+    },
     async getStatus() {
+      this.clearTaskListeners("get-status");
       this.loading.getStatus = true;
       this.error.getStatus = "";
       const taskAction = "get-status";
       const eventId = this.getUuid();
 
       // register to task error
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-aborted-${eventId}`,
         this.getStatusAborted
       );
 
       // register to task completion
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-completed-${eventId}`,
         this.getStatusCompleted
       );
@@ -381,35 +404,37 @@ export default {
       const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
+        this.clearTaskListeners(taskAction);
         this.error.getStatus = this.getErrorMessage(err);
         this.loading.getStatus = false;
         return;
       }
     },
-    getStatusAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
+    getStatusAborted() {
+      this.clearTaskListeners("get-status");
       this.error.getStatus = this.$t("error.generic_error");
       this.loading.getStatus = false;
     },
     getStatusCompleted(taskContext, taskResult) {
+      this.clearTaskListeners("get-status");
       this.status = taskResult.output;
       this.loading.getStatus = false;
     },
     async listBackupRepositories() {
+      this.clearTaskListeners("list-backup-repositories");
       this.loading.listBackupRepositories = true;
       this.error.listBackupRepositories = "";
       const taskAction = "list-backup-repositories";
       const eventId = this.getUuid();
 
       // register to task error
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-aborted-${eventId}`,
         this.listBackupRepositoriesAborted
       );
 
       // register to task completion
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-completed-${eventId}`,
         this.listBackupRepositoriesCompleted
       );
@@ -427,18 +452,19 @@ export default {
       const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
+        this.clearTaskListeners(taskAction);
         this.error.listBackupRepositories = this.getErrorMessage(err);
         this.loading.listBackupRepositories = false;
         return;
       }
     },
-    listBackupRepositoriesAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
+    listBackupRepositoriesAborted() {
+      this.clearTaskListeners("list-backup-repositories");
       this.error.listBackupRepositories = this.$t("error.generic_error");
       this.loading.listBackupRepositories = false;
     },
     listBackupRepositoriesCompleted(taskContext, taskResult) {
+      this.clearTaskListeners("list-backup-repositories");
       let backupRepositories = taskResult.output.repositories.sort(
         this.sortByProperty("name")
       );
@@ -447,19 +473,20 @@ export default {
       this.listBackups();
     },
     async listBackups() {
+      this.clearTaskListeners("list-backups");
       this.loading.listBackups = true;
       this.error.listBackups = "";
       const taskAction = "list-backups";
       const eventId = this.getUuid();
 
       // register to task error
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-aborted-${eventId}`,
         this.listBackupsAborted
       );
 
       // register to task completion
-      this.core.$root.$once(
+      this.listenTask(
         `${taskAction}-completed-${eventId}`,
         this.listBackupsCompleted
       );
@@ -477,18 +504,19 @@ export default {
       const err = res[0];
 
       if (err) {
-        console.error(`error creating task ${taskAction}`, err);
+        this.clearTaskListeners(taskAction);
         this.error.listBackups = this.getErrorMessage(err);
         this.loading.listBackups = false;
         return;
       }
     },
-    listBackupsAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
+    listBackupsAborted() {
+      this.clearTaskListeners("list-backups");
       this.error.listBackups = this.$t("error.generic_error");
       this.loading.listBackups = false;
     },
     listBackupsCompleted(taskContext, taskResult) {
+      this.clearTaskListeners("list-backups");
       let backups = taskResult.output.backups;
       backups.sort(this.sortByProperty("name"));
 

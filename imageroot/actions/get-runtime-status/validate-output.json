@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C0 bounded runtime readiness",
+  "type": "object", "additionalProperties": false,
+  "required": ["core_version", "app_version", "database", "retrieval"],
+  "properties": {
+    "core_version": {"type": "string", "maxLength": 32},
+    "app_version": {"type": "string", "maxLength": 32},
+    "database": {
+      "type": "object", "additionalProperties": false, "required": ["status"],
+      "properties": {
+        "status": {"enum": ["ok", "unavailable"]},
+        "reason": {"enum": ["database_configuration_invalid", "database_unavailable", "schema_incompatible"]},
+        "schema_revision": {"type": "string", "maxLength": 64},
+        "vector_version": {"type": "string", "maxLength": 32}
+      }
+    },
+    "retrieval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["configuration_valid", "embeddings_configured", "scorer_mode"],
+      "properties": {
+        "configuration_valid": {"type": "boolean"},
+        "embeddings_configured": {"type": "boolean"},
+        "scorer_mode": {"enum": ["off", "rerank", "filter"]}
+      }
+    }
+  }
+}

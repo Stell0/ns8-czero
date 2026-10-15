@@ -517,6 +517,10 @@ Check saved settings and application HTTPS in a browser
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}
     Wait For Elements State    iframe >>> h2 >> text="Status"    visible    timeout=30s
     Get Text    iframe >>> text="czero"    contains    czero
+    Wait For Elements State    iframe >>> \#runtime-database >> text="Database ready"    visible    timeout=30s
+    Wait For Elements State    iframe >>> \#runtime-authentication >> text="Sign-in not configured"    visible    timeout=30s
+    Wait For Elements State    iframe >>> \#runtime-retrieval >> text="Text search configured"    visible    timeout=30s
+    Get Text    iframe >>> \#runtime-scheduler    matches    (?s).*Worker (timer ready|running).*
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=settings
     Wait For Elements State    iframe >>> h2 >> text="Settings"    visible    timeout=30s
     Wait For Elements State    iframe >>> .ns-text-input input >> nth=0    enabled    timeout=30s
