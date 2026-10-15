@@ -3,6 +3,7 @@
 const $ = id => document.getElementById(id);
 let profile = null, currentPage = null, currentEntity = null, offset = 0;
 let listSequence = 0, pageSequence = 0, historySequence = 0, entitySequence = 0, entityListSequence = 0, graphSequence = 0, revisionSequence = 0;
+let draftSequence = 0, saveFlight = null;
 const canWrite = () => profile && ['editor','admin'].includes(profile.role);
 const key = () => crypto.randomUUID();
 async function api(path, options = {}) {
@@ -28,7 +29,8 @@ async function write(path, data, method='POST') {
 function objectInput(id) {const value=JSON.parse($(id).value);if(!value || typeof value!=='object' || Array.isArray(value))throw new Error('Enter a JSON object.');return value;}
 function button(label, action, status='page-status') {const node=document.createElement('button');node.type='button';node.textContent=label;node.addEventListener('click',()=>action().catch(error=>{$(status).textContent=error.message;}));return node;}
 function displayPage(page) {
-  ++pageSequence; ++historySequence; ++revisionSequence; currentPage=page;
+  ++pageSequence; ++historySequence; ++revisionSequence; ++draftSequence; currentPage=page;
+  $('save-page').disabled=false;
   $('wiki-detail').hidden=false; $('wiki-heading').textContent=page ? page.title : 'New page';
   $('wiki-identity').textContent=page ? `${page.id} · revision ${page.revision}${page.deleted?' · archived':''}` : 'New authored page';
   $('wiki-slug').value=page?.slug || ''; $('wiki-title').value=page?.title || ''; $('wiki-body').value=page?.content.body || '';
@@ -55,13 +57,19 @@ async function loadHistory() {
   $('wiki-history').replaceChildren();for(const revision of result.revisions){const row=document.createElement('li');row.append(button('View revision '+revision.number,async()=>{const preview=++revisionSequence,page=await api(`wiki/pages/${id}?revision=${revision.number}`);if(preview===revisionSequence && selection===pageSequence && currentPage?.id===id)$('wiki-revision').textContent=JSON.stringify(page.content,null,2);}));$('wiki-history').append(row);}
 }
 $('wiki-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(!canWrite())return;$('save-page').disabled=true;const page=currentPage,selection=pageSequence;
+  event.preventDefault();if(!canWrite() || $('save-page').disabled)return;
+  const attempt={};saveFlight=attempt;$('save-page').disabled=true;const page=currentPage,selection=pageSequence,draft=draftSequence;
   try{const data={title:$('wiki-title').value,body:$('wiki-body').value,metadata:objectInput('wiki-metadata')};
     const saved=page?await write('wiki/pages/'+page.id,{...data,expected_revision:page.revision},'PUT'):await write('wiki/pages',{...data,slug:$('wiki-slug').value});
-    if(selection===pageSequence){displayPage(saved);$('page-status').textContent='Page saved.';await loadHistory();}await loadPages();
+    if(selection===pageSequence){
+      if(draft===draftSequence){displayPage(saved);$('page-status').textContent='Page saved.';}
+      else {currentPage=saved;$('wiki-heading').textContent=saved.title;$('wiki-identity').textContent=`${saved.id} · revision ${saved.revision}`;$('wiki-slug').value=saved.slug;$('wiki-slug').readOnly=true;$('reload-page').hidden=false;$('archive-page').hidden=!canWrite();for(const [id,format] of [['export-markdown','markdown'],['export-json','json']]){$(id).hidden=false;$(id).href=`./api/v1/wiki/pages/${saved.id}/export?format=${format}`;}$('page-status').textContent='Earlier draft saved. Your newer edits are preserved; save again to keep them.';}
+      await loadHistory();
+    }await loadPages();
   }catch(error){if(selection===pageSequence)$('page-status').textContent=error instanceof SyntaxError?'Metadata must be valid JSON.':error.message;}
-  finally{$('save-page').disabled=false;}
+  finally{if(saveFlight===attempt)$('save-page').disabled=false;}
 });
+for(const id of ['wiki-slug','wiki-title','wiki-body','wiki-metadata'])$(id).addEventListener('input',()=>{++draftSequence;});
 $('new-page').addEventListener('click',()=>displayPage(null));
 for(const [id,action] of [['refresh-pages',loadPages],['pages-previous',async()=>{offset=Math.max(0,offset-50);await loadPages();}],['pages-next',async()=>{offset+=50;await loadPages();}],['reload-page',async()=>{if(currentPage)await selectPage(currentPage.id);}],['archive-page',async()=>{const page=currentPage,selection=pageSequence;if(!page || !canWrite())return;await write('wiki/pages/'+page.id+'/archive',{expected_revision:page.revision});if(selection===pageSequence)await selectPage(page.id);await loadPages();}]])$(id).addEventListener('click',()=>action().catch(error=>{$('page-status').textContent=error.message;}));
 async function loadEntities() {
@@ -70,7 +78,7 @@ async function loadEntities() {
   for(const entity of result.entities){const node=document.createElement('option');node.value=entity.id;node.textContent=entity.label;$('knowledge-entity').append(node);}if(result.entities.some(e=>e.id===selected))$('knowledge-entity').value=selected;
 }
 async function selectEntity(id) {
-  const sequence=++entitySequence;++graphSequence;currentEntity=null;$('entity-data').textContent='';$('claim-citations').textContent='';$('knowledge-graph').textContent='';$('knowledge-claims').replaceChildren();
+  const sequence=++entitySequence;++graphSequence;currentEntity=null;$('entity-data').textContent='';$('claim-citations').textContent='';clearGraph();$('knowledge-claims').replaceChildren();
   if(!id)return;const [entity,result]=await Promise.all([api('entities/'+id),api('claims?'+new URLSearchParams({entity_id:id,limit:100}))]);if(sequence!==entitySequence)return;
   currentEntity=entity;$('entity-identity').textContent=`${entity.id} · revision ${entity.revision}`;$('entity-data').textContent=JSON.stringify(entity,null,2);
   for(const claim of result.claims){const row=document.createElement('li');row.textContent=`${claim.predicate}: ${JSON.stringify(claim.value)} `;
@@ -81,16 +89,65 @@ async function selectEntity(id) {
 }
 $('knowledge-entity').addEventListener('change',()=>selectEntity($('knowledge-entity').value).catch(error=>{$('entity-status').textContent=error.message;}));
 $('refresh-entities').addEventListener('click',()=>loadEntities().catch(error=>{$('entity-status').textContent=error.message;}));
-$('entity-form').addEventListener('submit',async event=>{event.preventDefault();if(!canWrite())return;try{const entity=await write('entities',{kind:$('entity-kind').value,label:$('entity-label').value,aliases:$('entity-aliases').value.split(',').map(v=>v.trim()).filter(Boolean)});await loadEntities();$('knowledge-entity').value=entity.id;await selectEntity(entity.id);$('entity-status').textContent='Entity created.';}catch(error){$('entity-status').textContent=error.message;}});
+$('entity-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!canWrite())return;const selection=entitySequence;
+  try {const entity=await write('entities',{kind:$('entity-kind').value,label:$('entity-label').value,aliases:$('entity-aliases').value.split(',').map(v=>v.trim()).filter(Boolean)});
+    await loadEntities();if(selection!==entitySequence)return;
+    $('knowledge-entity').value=entity.id;await selectEntity(entity.id);
+    if(currentEntity?.id===entity.id)$('entity-status').textContent='Entity created.';
+  } catch(error){if(selection===entitySequence)$('entity-status').textContent=error.message;}
+});
 $('claim-form').addEventListener('submit',async event=>{event.preventDefault();if(!currentEntity || !canWrite())return;const id=currentEntity.id,selection=entitySequence;try{const page=$('claim-page').value.trim();await write('claims',{entity_id:id,predicate:$('claim-predicate').value,value:objectInput('claim-value'),evidence_chunk_ids:$('claim-evidence').value.split(',').map(v=>v.trim()).filter(Boolean),page_id:page || null});if(selection===entitySequence){await selectEntity(id);$('claim-status').textContent='Sourced claim added.';}}catch(error){if(selection===entitySequence)$('claim-status').textContent=error instanceof SyntaxError?'Assertion value must be valid JSON.':error.message;}});
+function clearGraph() {
+  $('knowledge-graph').textContent='';
+  for(const id of ['graph-nodes','graph-edges','graph-references'])$(id).replaceChildren();
+}
+function renderGraph(result) {
+  clearGraph();
+  const names=new Map(result.nodes.map(node=>[node.id,node.label]));
+  for(const node of result.nodes){
+    const row=document.createElement('li');
+    row.append(button(node.label+' · '+node.kind+' · hop '+node.depth,async()=>{
+      const picker=$('knowledge-entity');
+      if(!Array.from(picker.options || picker.children).some(option=>option.value===node.id)){
+        const option=document.createElement('option');option.value=node.id;option.textContent=node.label;picker.append(option);
+      }
+      picker.value=node.id;await selectEntity(node.id);
+    },'entity-status'));
+    $('graph-nodes').append(row);
+  }
+  for(const edge of result.relations){const row=document.createElement('li');row.textContent=(names.get(edge.source_id)||edge.source_id)+' → '+edge.kind+' → '+(names.get(edge.target_id)||edge.target_id);$('graph-edges').append(row);}
+  const routes={page:'wiki/pages/',object:'objects/',source:'sources/',document:'documents/',chunk:'chunks/'};
+  const suffix={document:'/chunks',chunk:'/citation'};
+  for(const reference of result.references || []){
+    const row=document.createElement('li');
+    row.textContent=reference.target_kind+' · '+reference.label_snapshot+' · '+reference.target_id+(reference.missing?' · missing':'');
+    if(!reference.missing && Object.hasOwn(routes,reference.target_kind) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference.target_id)){
+      const link=document.createElement('a');link.textContent=' Inspect reference metadata';link.href='./api/v1/'+routes[reference.target_kind]+reference.target_id+(suffix[reference.target_kind]||'');row.append(link);
+    }
+    $('graph-references').append(row);
+  }
+  $('knowledge-graph').textContent=JSON.stringify(result,null,2);
+}
 async function loadGraph() {
   if(!currentEntity)return;const id=currentEntity.id,selection=entitySequence,sequence=++graphSequence,depth=$('graph-depth').value;
-  const result=await api(`knowledge/graph/${id}?depth=${depth}&limit=100`);if(selection!==entitySequence || sequence!==graphSequence || currentEntity?.id!==id)return;
-  $('knowledge-graph').textContent=JSON.stringify(result,null,2);$('graph-status').textContent=`${result.nodes.length} entities · ${result.relations.length} relationships${result.truncated?' · truncated by safe limits':''}`;
+  const current=()=>selection===entitySequence && sequence===graphSequence && currentEntity?.id===id && $('graph-depth').value===depth;
+  $('graph-status').textContent='Loading graph...';
+  try {
+    const result=await api(`knowledge/graph/${id}?depth=${depth}&limit=100`);if(!current())return;
+    renderGraph(result);$('graph-status').textContent=`${result.nodes.length} entities · ${result.relations.length} relationships${result.truncated?' · truncated by safe limits':''}`;
+  } catch(error) {if(current())$('graph-status').textContent='Cannot load this graph. Check access and try again.';}
 }
-$('graph-form').addEventListener('submit',event=>{event.preventDefault();loadGraph().catch(error=>{$('graph-status').textContent=error.message;});});
-$('knowledge-relation-form').addEventListener('submit',async event=>{event.preventDefault();if(!currentEntity || !canWrite())return;const id=currentEntity.id;try{await write('knowledge/relations',{source_id:id,target_id:$('knowledge-relation-target').value,kind:$('knowledge-relation-kind').value});if(currentEntity?.id===id)await loadGraph();$('graph-status').textContent='Relationship added.';}catch(error){$('graph-status').textContent=error.message;}});
-$('knowledge-reference-form').addEventListener('submit',async event=>{event.preventDefault();if(!currentEntity || !canWrite())return;const id=currentEntity.id;try{await write('entities/'+id+'/references',{target_kind:$('knowledge-reference-kind').value,target_id:$('knowledge-reference-id').value});if(currentEntity?.id===id)await loadGraph();$('graph-status').textContent='Reference linked.';}catch(error){$('graph-status').textContent=error.message;}});
+$('graph-depth').addEventListener('change',()=>{++graphSequence;clearGraph();$('graph-status').textContent='Graph options changed. Inspect graph to refresh.';});
+$('graph-form').addEventListener('submit',event=>{event.preventDefault();loadGraph();});
+for(const [form,path,makeData,success] of [
+  ['knowledge-relation-form',()=> 'knowledge/relations',()=>({source_id:currentEntity.id,target_id:$('knowledge-relation-target').value,kind:$('knowledge-relation-kind').value}),'Relationship added.'],
+  ['knowledge-reference-form',()=> 'entities/'+currentEntity.id+'/references',()=>({target_kind:$('knowledge-reference-kind').value,target_id:$('knowledge-reference-id').value}),'Reference linked.'],
+])$(form).addEventListener('submit',async event=>{
+  event.preventDefault();if(!currentEntity || !canWrite())return;const selection=entitySequence;
+  try {await write(path(),makeData());if(selection!==entitySequence)return;await loadGraph();if(selection===entitySequence)$('graph-status').textContent=success;}
+  catch(error){if(selection===entitySequence)$('graph-status').textContent=error.message;}
+});
 async function initializeWiki() {
   try{const status=await(await fetch('./api/v1/auth/status',{cache:'no-store'})).json();if(!status.configured){$('wiki-account').textContent='Ask the NethServer administrator to configure sign-in.';return;}$('wiki-signin').hidden=false;profile=await api('me');$('wiki-signin').hidden=true;$('wiki-account').textContent=`Signed in as ${profile.username} · ${profile.role}`;$('wiki-workspace').hidden=false;
     for(const id of ['new-page','entity-create','claim-form','knowledge-relation-form','knowledge-reference-form'])$(id).hidden=!canWrite();await Promise.all([loadPages(),loadEntities()]);

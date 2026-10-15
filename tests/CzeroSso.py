@@ -473,6 +473,10 @@ class CzeroSso:
             run('Select Options By', '#graph-depth', 'value', '3')
             run('Click', '#graph-form button')
             run('Get Text', '#graph-status', '==', '4 entities · 3 relationships')
+            run('Get Element Count', '#graph-nodes li', '==', 4)
+            run('Get Element Count', '#graph-edges li', '==', 3)
+            run('Get Element Count', '#graph-references li', '==', 5)
+            run('Get Element Count', '#graph-nodes img, #graph-edges img, #graph-references img', '==', 0)
             _, _, rc = ssh.execute_command('python3 /tmp/oidc_probe.py browser-reader', return_stderr=True, return_rc=True, timeout='180 seconds')
             assert rc == 0, 'Cannot prepare Wiki Reader'
             run('New Context', 'ignoreHTTPSErrors=True'); run('New Page'); login('c0member')

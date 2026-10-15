@@ -45,7 +45,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
         "status": "ok",
         "service": "czero",
         "core_version": "0.24.0",
-        "app_version": "0.35.0",
+        "app_version": "0.36.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -85,7 +85,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.35.0"
+    assert document["info"]["version"] == "0.36.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
@@ -170,3 +170,11 @@ def test_admin_page_uses_existing_role_guarded_apis_and_local_assets(client):
     assert script.status_code==200 and 'innerHTML' not in script.text
     assert 'expected_revision' in script.text and 'idempotency_key' in script.text
     assert 'X-C0-CSRF' in script.text
+
+
+def test_wiki_graph_offers_readable_nodes_edges_and_references(client):
+    page=client('/czero/czero17/wiki')
+    assert page.status_code==200
+    for element in ('graph-nodes','graph-edges','graph-references'):
+        assert 'id="'+element+'"' in page.text
+    assert '<summary>Graph JSON</summary>' in page.text
