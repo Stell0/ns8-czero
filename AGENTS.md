@@ -4,6 +4,8 @@ This repository is the **C0 (Czero)** application template for NethServer 8. Rea
 
 ## Active M13 distribution conventions
 
+- Package metadata inputs must be copied into the container builder as well as available in the repository. Core now declares README/LICENSE, so copy them with pyproject.toml before uv sync. Actual first M13 image lacked Core's license despite the standalone wheel passing; runtime audit now requires exactly one declared GPL license in Core dist-info. Keep legal metadata while excluding instructions/tests/build tools.
+
 - Core distribution must include its GPL license/readme and every migration, match Python/runtime metadata and install outside the checkout without the NS8 SDK/reference app. Test the actual wheel, deterministic rebuild and repeated fresh PostgreSQL migration preserving knowledge-space identity. The initial packaging patch is 0.24.1 with schema 0013 unchanged; compatible fork range is >=0.24.1,<0.25.0. Do not claim artifact publication or automatic updates before execution. Keep source/package development tests out of runtime images.
 - M13 native update tests freeze all three verified 3939575 module/app/database digests from PLAN. This is the fully accepted installed/live M12 predecessor; test-only 792 and documentation-marker tags are not substitutes. Native numbered lifecycle and private credential files remain unchanged.
 
