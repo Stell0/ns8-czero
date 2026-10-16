@@ -1223,3 +1223,167 @@ Freeze the genuine deployed M3 source above and all three digests for subsequent
 - `czero-postgres`: `sha256:6db4092d1a83854b82c8ba251bf3ddce527a054b06378d30a7ccc2102a9db8f4`
 
 **Documentation completion:** This marker records already executed M1/M2/M3 evidence and freezes all three genuine deployed M3 images in the upgrade fixture. Its local full suite passes all 812 cases and its Robot dry-run passes nineteen cases. Verify its own exact-source local/publication/released-Core/native checks and actual final main completion; never infer success from a workflow start. Marker images are not deployed or substituted for the accepted runtime above. Separate Integration M16 operator acceptance is recorded above and is not inferred from the M3 connector exercise.
+
+
+## C0 Agent Memory — additional operator track
+
+This track is accepted for implementation before Windmill Gate. It does not
+renumber or supersede M00–M16 or the planned Integration M17–M20. Execute
+C0-AM0–AM6 in order and retain each milestone's local, exact-source CI,
+publication, disposable native, reviewed-main and targeted deployment gates.
+Windmill Gate stays blocked until final C0 deployment and acceptance.
+
+### C0-AM0 — Baseline and compatibility contracts [ ]
+
+Starting main: `90649de1609f9ad75d4010552d37a89c8f05d0c6` (verified remotely).
+The supplied original worktree remains on `1e14865` with pre-existing document
+edits; preserve it. Work is isolated on `feat/agent-memory-am0`.
+
+- [x] Inspect current main's instructions, product contract, services, operation
+  catalog and REST/MCP adapters; retain the existing deterministic boundaries.
+- [x] Verify current main's actual completed successful local/publication/
+  released-Core/native runs (38960330953 / 38960330948 / 38960332185 /
+  38960603599). These establish predecessor CI, not AM0 acceptance.
+- [x] Read-only native inspection confirms the genuine deployed predecessor is
+  `95825682e00246556f7d0c7314859a6a69e0074b`, with the three frozen digests in
+  the accepted M3 section. Core/app/schema remain 0.24.2/0.39.0/
+  `0013_oauth_consent`; pgvector 0.8.7. Authentication/database/timer are healthy;
+  embeddings are disabled and scorer is off.
+- [x] Capture private read-only preservation inventories for all 27 domain tables,
+  87 terminal jobs and attempts, retained originals, settings/schedules and
+  existing module identities. Keep identities, content and access outside Git.
+- [x] Record current published main digests separately from installed digests
+  in docs/c0-agent-memory-baseline.md; all published revisions match 90649de.
+- [x] Run the unmodified full Python/PostgreSQL/packaging baseline: 812 passed
+  against the pinned disposable PostgreSQL/pgvector database. JavaScript 106,
+  schema/shell and nineteen Robot dry-run cases also pass.
+- [x] Freeze all 63 operation authorization records/schema hashes and REST
+  bindings; normal-HTTPS live metadata matches current main. Two new disposable
+  fixtures pass contract preservation and existing evidence/conflict/history
+  behavior with exact fixture-owned cleanup and no live-data dependencies.
+- [ ] Review, commit/push and inspect AM0's own applicable CI/native reports;
+  promote only after review and verify main publication.
+
+The baseline adds no runtime, API or database change. Existing pilot knowledge,
+structured-object fixtures, approved clients and the working ChatGPT connection
+must survive all later milestones. CPU and interactive-Playwright waivers remain.
+
+### C0-AM1 — MCP-native text evidence ingestion [ ]
+
+Reuse SourceService and its original/version/extraction/cleanup pipeline. Add
+`sources_ingest_text` to the shared typed REST/MCP catalog, Editor/c0:write only.
+Specify a UTF-8 byte limit below the one-MiB serialized MCP request budget,
+strict plain-text/Markdown/metadata validation and actor-scoped fingerprinted
+receipts. Check persisted authorization before replay and serialize retries
+with existing source revision rules. Return queued/ready/failed honestly; resolve
+immutable document/chunk identities with existing reads. Test actual evidence
+claims, duplicate/different-payload keys, concurrency, malformed Unicode, limits,
+revocation, interruption, REST/current/legacy parity and native recovery.
+Core changes require the immutable artifact/released dependency sequence.
+
+### C0-AM2 — Agent-friendly Wiki operations and errors [ ]
+
+Add exact-slug `wiki_pages_resolve` and create-only or expected-revision-checked
+`wiki_pages_upsert`, reusing Wiki receipts/revisions/events. Never infer overwrite
+permission from slug existence. Preserve old tools. Extend the fixed safe MCP
+error allowlist for not-found/conflict/invalid request/unready evidence, retaining
+scope challenges and role denial. Prove independent-writer races, replay,
+archive behavior, history, REST and both SDK protocol modes.
+
+### C0-AM3 — Protected knowledge spaces [ ]
+
+Explicit product-contract extension: preserve legacy shared space/data and APIs;
+add Admin-managed spaces and persisted Reader/Editor grants under the application
+role ceiling. Inventory every Core/REST/MCP read/write, UUID resolver, history,
+original/citation, feed, traversal, extraction and derivative index before schema
+work. Require same-space references and atomic persisted-grant checks; selector
+is never authority. Decide global immutable object-type visibility explicitly.
+Prove migration/preservation, revoked sessions, negative UUID/search/graph/feed/
+semantic/citation paths, disposable native upgrade/backup/restore, and only the
+necessary UI selector/management changes before deployment.
+
+### C0-AM4 — Scoped and structured knowledge retrieval [ ]
+
+Add optional applicability/category/product/component/version/status/time/archive
+filters before candidate limits/ranking. Structured entity/object/claim categories
+are opt-in; preserve default source/Wiki results. Return typed stable references
+and evidence provenance, disclose unverified status, bound pagination and
+ordering, deduplicate, and preserve text-only/optional-provider fallback.
+Benchmark synthetic troubleshooting synonyms/commands/errors/components and
+large scoped corpora without unauthorized counts/excerpts/metadata.
+
+### C0-AM5 — Reliable consolidation and maintenance primitives [ ]
+
+First measure reliability of existing primitives. Add bounded transactional
+`knowledge_bundle_apply` only if necessary, with one authorized transaction,
+expected revisions, receipts, ready-evidence checks and full rollback. Formalize
+applicable knowledge_type/status/confidence/observed_at/verified_at/product/
+applicable_versions/supersedes/source_references metadata, distinguishing unknown
+from verified. Preserve contradictions, history and citations. No execution,
+generative maintenance, inference of conclusions or workflow engine.
+
+### C0-AM6 — Agent documentation and integration tests [ ]
+
+Update human agent instructions, tools/capabilities, OpenAPI and repository docs
+for authorized-space discovery, search, private investigations, evidence ingestion,
+chunk resolution, claims, procedures/entities, supersession, conflicts and indexing
+fallback. Run two independent actual current/legacy SDK sessions through read ->
+evidence -> update -> search -> reuse, retaining original evidence and history.
+
+### Final C0-AM deployment gate [ ]
+
+After applicable disposable/review/main-publication gates, back up and inventory
+only the authorized dedicated C0 instance; freeze all installed/published revisions
+and digests. Use the supported canonical native update. Verify migrations,
+readiness, unchanged pilot/fixture/OAuth/settings/job/schedule data and unrelated
+modules, all-role/scoped MCP, ingestion/extraction/claims, Wiki conflicts,
+structured retrieval, protected-space isolation, text/fallback search,
+cross-session persistence, restart/recovery and bounded positive-control journald
+privacy. Store private evidence outside Git and only use clearly owned new live
+records. Record exact accepted commit/digests/schema and actual test evidence.
+No Windmill Gate implementation starts until this gate passes.
+
+
+**AM0 baseline inspection:** See [source, image and contract report](docs/c0-agent-memory-baseline.md).
+Read-only live PostgreSQL custom-format snapshot (131263 bytes) and preservation
+inventories stay private. This is not a native encrypted-backup acceptance test.
+No live record/client/grant is added or mutated. The first registry inspection
+hit a network timeout; a separate successful retry verified all three actual
+manifests/config revisions. The default SSH configuration had invalid permissions;
+using an explicit empty local SSH config retains normal host-key verification
+without changing client/host settings. The pinned local PostgreSQL image is ready. Downloaded predecessor native
+reports prove Debian installation sixteen passes/three expected skips and Rocky
+genuine upgrade twenty-six passes/all seven browser/privacy guards; three actual
+XML/Pino artifacts contain zero OAuth-query candidates.
+Unmodified Python/PostgreSQL/packaging baseline passes all 812 cases (179.02s).
+The new focused AM0 suite passes two cases. JavaScript passes 106 cases; Go schema,
+applicable shell syntax and nineteen Robot dry-run cases pass.
+
+
+**AM0 implementation review:** The increment adds only three documentation updates,
+a baseline report, two synthetic fixture files and two PostgreSQL-backed tests;
+there is no runtime/Core/dependency/migration/image/native action change. The
+legacy fixture preserves all 63 existing role/scope/read-only requirements and
+REST bindings, with recorded original DTO schema hashes. The investigation uses
+random owned slugs and disposable actors, real immutable extracted chunks,
+conflicting claims, independent service reads, text search, revision history,
+retry receipts, stale-write rejection and original cleanup. This is baseline
+Core behavior, not an actual external-SDK acceptance claim. The combined full suite passes all 814 cases (178.40s), including the new
+fixtures and packaging. There is no skipped PostgreSQL acceptance case.
+
+
+**AM0 read-only preservation recheck:** All 27 domain-table hashes, 87 original
+terminal jobs and attempts, configuration, retained originals and schedule hashes
+remain identical. The bounded root journald query uses the verified module UID
+and app-container filter: 301 actual lines include a health positive control,
+with zero OAuth-query candidates and no tracebacks. No logger/host setting is
+changed and no private log entry is included in repository evidence.
+
+
+**AM0 local result:** 812 unmodified baseline cases and the complete 814-case
+combined Python/PostgreSQL/packaging suite pass, plus 106 script cases, Go action
+schemas, applicable shell syntax and nineteen Robot dry-run cases. Diff review
+confirms only documentation and Git-only test/fixture additions. The existing
+released Core pin, all runtime/API/schema bytes and native upgrade predecessors
+remain unchanged. Exact-source publication/native and reviewed promotion follow;
+AM0 remains unchecked until those required gates pass. AM1 has not started.
