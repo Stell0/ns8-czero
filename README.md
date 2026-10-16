@@ -262,3 +262,27 @@ M00–M15, Integration M15/M16 and the structured-object repair have recorded im
 M14 CPU-rate enforcement is deferred by operator request after the rootless test host rejected CPU quotas. The deployment candidate omits container CPU quotas; parser CPU/time limits remain. Memory/process limits and privilege restrictions retain their acceptance checks.
 
 M14 candidate evidence, security findings and deployment limits are recorded in [the readiness report](docs/m14-readiness.md), with [development deployment notes](docs/m14-release-notes.md).
+
+
+## Agent memory development track
+
+The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers MCP text evidence,
+revision-safe Wiki helpers, protected spaces, applicability-aware retrieval and
+external-agent maintenance guidance. Baseline work is in progress; these features
+are not yet available. Current behavior remains one shared knowledge space with
+application-wide roles and REST file ingestion. Existing knowledge, immutable
+evidence/history and OAuth clients must be preserved. C0 continues to provide
+deterministic storage and retrieval; external agents perform reasoning and
+consolidation. Final deployment and validation precede Windmill Gate work.
+
+The AM0 baseline passes 812 existing and 814 combined Python/PostgreSQL/packaging
+cases, plus the existing script/schema/Robot checks. Read-only deployed health,
+image identity and unchanged-data checks pass; no new feature is deployed. See
+the [baseline report](docs/c0-agent-memory-baseline.md) for frozen public/installed
+images, existing contracts and private-evidence boundaries.
+
+AM0 candidate `ebc38ef` also passes exact-source producer/released-Core CI and
+Debian genuine upgrade (19 cases) plus Rocky installation (23 cases, 3 expected
+skips), including seven browser/privacy workflows and actual artifact audits.
+PR #3 is awaiting operator review and main promotion; this evidence follow-up
+must pass its own checks. The installed runtime and current APIs remain unchanged.

@@ -349,3 +349,31 @@ Do not rely on the Rocky-only UI fixture for native typed MCP CRUD. The non-brow
 M1/M2/M3 repair acceptance passes at deployed source `95825682e00246556f7d0c7314859a6a69e0074b`: 812 actual Python/PostgreSQL/packaging cases, 106 scripts, schema/shell checks, nineteen Robot dry-run cases, exact producer/released-Core checks and both native distributions, including complete typed MCP CRUD in both protocol modes after real explicit Admin consent. Branch and main native artifacts/checkouts were actually audited; all seven browser/privacy workflows and three-artifact OAuth query audits pass. Main publication and supported targeted C0 deployment match all three immutable digests in PLAN. Actual connected MCP creation/discovery/validated CRUD, unique/type/stale conflicts, precise validation errors and delete/absence pass, with independent preservation and journal checks. Existing pilot data and fixtures are unchanged; normal last_seen login bookkeeping is excluded only from the post-MCP observer. Two owned empty immutable regression types and M3's three audit events remain; no regression records remain. No temporary live client was registered. M3 does not itself establish separately operated ChatGPT UI prompts; subsequent M16 operator functional/live OAuth acceptance is recorded above.
 
 Keep Core unique strings explicitly bounded at maxLength <=128; ordinary omitted string bounds remain 8192. `objects.invoke` uses the fixed `object_errors.object_validation_code` allowlist; `create_mcp_app.call` uses `mcp_object_error` for object-only expected statuses. Preserve safe record path/keyword codes, generic private-error fallback, HTTP 409 object_conflict and 404 object_not_found, plus MCP c0/error metadata. Keep scope/role exceptions ahead of HTTP translation. No Core/schema/dependency/auth policy change was made. Freeze all three genuine deployed 9582568 digests together for future upgrades; documentation-marker builds are not its replacement. This final documentation marker requires its own actual CI/main verification.
+
+
+## C0 Agent Memory track
+
+C0-AM0–AM6 is a separate operator-authorized track in PLAN.md; preserve historical
+milestones and planned Integration M17–M20. AM0 establishes current main, genuine
+deployed predecessor, contract/inventory and disposable test baseline before any
+runtime change. Preserve all existing pilot/fixture/client data. Later protected
+spaces deliberately extend the present shared-space contract only after complete
+server-side authorization and migration tests. C0 remains deterministic; external
+agents own reasoning and consolidation. Windmill Gate is gated on accepted C0
+merge/publication/deployment and validation. Never substitute marker images for
+the genuine deployed 9582568 predecessor or ship private baseline evidence.
+
+AM0 local baseline: 812 unchanged and 814 combined Python/PostgreSQL/packaging
+cases pass, with 106 scripts, Go/shell and nineteen Robot dry-run cases. The
+Git-only legacy-contract and synthetic investigation fixtures retain exact
+authorization/REST bindings, evidence identities, conflicting claims and immutable
+history; they are not actual client/space acceptance. See the baseline report
+and exact-source promotion gates in PLAN.md. No runtime/data contract changed.
+
+Exact AM0 candidate ebc38ef passes local/publication/released-Core and both-native
+CI. Actual reports prove Debian upgrade nineteen passes and Rocky installation
+twenty-three passes/three expected skips, seven browser/privacy guards and three
+XML/Pino artifacts with zero query candidates. Candidate digests and exact run
+links are in PLAN.md. The operator intends to review PR 3; that is not approval.
+Verify this documentation follow-up's actual checks and main promotion before
+starting AM1. No baseline marker is deployed; retain actual 9582568 predecessors.
