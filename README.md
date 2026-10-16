@@ -280,3 +280,9 @@ cases, plus the existing script/schema/Robot checks. Read-only deployed health,
 image identity and unchanged-data checks pass; no new feature is deployed. See
 the [baseline report](docs/c0-agent-memory-baseline.md) for frozen public/installed
 images, existing contracts and private-evidence boundaries.
+
+AM0 candidate `ebc38ef` also passes exact-source producer/released-Core CI and
+Debian genuine upgrade (19 cases) plus Rocky installation (23 cases, 3 expected
+skips), including seven browser/privacy workflows and actual artifact audits.
+PR #3 is awaiting operator review and main promotion; this evidence follow-up
+must pass its own checks. The installed runtime and current APIs remain unchanged.

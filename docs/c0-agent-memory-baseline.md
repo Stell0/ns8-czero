@@ -135,3 +135,12 @@ also remain mandatory. The unmodified baseline passes all 812 Python/PostgreSQL/
 nineteen Robot dry-run cases pass. The combined full suite passes all 814 cases in 178.40 seconds. Exact-source CI
 follows in PLAN.md;
 AM0 is incomplete until its required review/CI/promotion checks pass.
+
+The exact baseline candidate `ebc38ef379f38091a26e71feaf786bf933511617` passes
+local, producer, released-Core and both-native CI. Actual reports confirm Debian
+genuine upgrade nineteen passes and Rocky installation twenty-three passes/three
+expected skips, seven browser/privacy workflows and three audited XML/Pino
+artifacts with zero OAuth query candidates. PLAN.md records exact run links and
+all three verified branch digests. These are candidate checks, not main promotion
+or a deployment. PR #3 awaits the operator's review; this documentation follow-up
+requires its own CI verification. The live accepted predecessor remains 9582568.

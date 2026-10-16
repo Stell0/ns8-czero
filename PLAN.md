@@ -1261,8 +1261,10 @@ edits; preserve it. Work is isolated on `feat/agent-memory-am0`.
   bindings; normal-HTTPS live metadata matches current main. Two new disposable
   fixtures pass contract preservation and existing evidence/conflict/history
   behavior with exact fixture-owned cleanup and no live-data dependencies.
-- [ ] Review, commit/push and inspect AM0's own applicable CI/native reports;
-  promote only after review and verify main publication.
+- [x] Commit/push candidate ebc38ef; verify completed successful local,
+  producer, released-Core and both-native checks with actual report privacy audits.
+- [ ] Verify the documentation evidence marker, complete the operator review,
+  promote only reviewed passing source and verify main publication.
 
 The baseline adds no runtime, API or database change. Existing pilot knowledge,
 structured-object fixtures, approved clients and the working ChatGPT connection
@@ -1385,5 +1387,40 @@ combined Python/PostgreSQL/packaging suite pass, plus 106 script cases, Go actio
 schemas, applicable shell syntax and nineteen Robot dry-run cases. Diff review
 confirms only documentation and Git-only test/fixture additions. The existing
 released Core pin, all runtime/API/schema bytes and native upgrade predecessors
-remain unchanged. Exact-source publication/native and reviewed promotion follow;
-AM0 remains unchecked until those required gates pass. AM1 has not started.
+remain unchanged. Exact-source candidate publication/native now pass as recorded below;
+AM0 remains unchecked until marker/review/promotion gates pass. AM1 has not started.
+
+
+**AM0 exact-source candidate evidence:** `ebc38ef379f38091a26e71feaf786bf933511617`
+passes [local 38969601803](https://github.com/Stell0/ns8-czero/actions/runs/38969601803),
+[PR local 38969632762](https://github.com/Stell0/ns8-czero/actions/runs/38969632762),
+[producer publication 38969601814](https://github.com/Stell0/ns8-czero/actions/runs/38969601814),
+[released-Core image 38969634892](https://github.com/Stell0/ns8-czero/actions/runs/38969634892)
+and [both-native 38969906935](https://github.com/Stell0/ns8-czero/actions/runs/38969906935),
+all completed/successful. The actual local log confirms 814 Python/PostgreSQL/
+packaging cases, 106 script cases and nineteen Robot dry-run cases. Downloaded
+native reports prove Debian genuine 9582568 upgrade nineteen passes and Rocky
+installation twenty-three passes/three expected update-only skips, all seven
+real browser workflows and seven privacy guards. Three actual XML/Pino artifacts
+contain zero OAuth-query candidates. Module-info and test-job logs corroborate
+the exact candidate source despite workflow_run's default-branch head SHA.
+
+Anonymous OCI manifest/config inspection verifies these candidate images all
+carry revision `ebc38ef379f38091a26e71feaf786bf933511617` and the module references
+both matching branch siblings. They are not deployed and do not replace the
+accepted installed 9582568 predecessor:
+
+| Image (`feat-agent-memory-am0`) | Verified candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:7b6b6cc1b904b3983176d8ea47e5aa57619a478e5c578eb2bc565ea57e3b1175` |
+| `ghcr.io/stell0/czero-app` | `sha256:ae377213d3d4f3c73f29da50e32c452f41372d245a0ff60b4f463dabc65bff45` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:04eea4fd1d1dfac5bed866fe5df64da5ec37261677d076a49765a2c1532420ec` |
+
+[PR 3](https://github.com/Stell0/ns8-czero/pull/3) is assigned to the author and
+has no requested reviewer; the operator says they will review it. This is a
+review intention, not approval, and no approval is inferred. This documentation
+follow-up records already executed candidate evidence without changing the two
+new tests, fixtures or any runtime/API/schema bytes. Verify its own actual CI
+before promotion. AM0 remains open for marker verification, review and main
+publication. AM1–AM6 and Windmill Gate have not started; no live update is needed
+for a Git-only baseline and none is performed.

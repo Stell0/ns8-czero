@@ -369,3 +369,11 @@ Git-only legacy-contract and synthetic investigation fixtures retain exact
 authorization/REST bindings, evidence identities, conflicting claims and immutable
 history; they are not actual client/space acceptance. See the baseline report
 and exact-source promotion gates in PLAN.md. No runtime/data contract changed.
+
+Exact AM0 candidate ebc38ef passes local/publication/released-Core and both-native
+CI. Actual reports prove Debian upgrade nineteen passes and Rocky installation
+twenty-three passes/three expected skips, seven browser/privacy guards and three
+XML/Pino artifacts with zero query candidates. Candidate digests and exact run
+links are in PLAN.md. The operator intends to review PR 3; that is not approval.
+Verify this documentation follow-up's actual checks and main promotion before
+starting AM1. No baseline marker is deployed; retain actual 9582568 predecessors.
