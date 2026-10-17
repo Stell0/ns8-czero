@@ -1,8 +1,8 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (16 October 2026): Integration M16 runtime and operator acceptance pass.** The dedicated instance runs accepted source `9582568`, including the reader UI, OAuth/MCP permission metadata and completed structured-object repair. The operator reports **20/20 API regression checks passed** across objects, Wiki, graph/references, citations and evidence-backed claims, and separately confirms live OAuth acceptance. Existing pilot data and operator fixtures are reported preserved. The accepted implementation passes 812 Python/PostgreSQL/packaging cases and 106 script cases, exact-source image/native checks and deployed MCP CRUD. See [PLAN.md](PLAN.md) for evidence attribution, the report's coverage limits and frozen image digests.
+**Status (17 October 2026): Agent Memory AM0–AM2 runtime acceptance passes.** The dedicated instance runs main `1a45070`, with Core **0.26.0**, app **0.41.0** and schema **0013**. Agents can ingest bounded text evidence and resolve/create/revise Wiki pages with explicit revision and retry protection. Actual current/legacy SDK workflows, fresh OAuth scope consent, supported update/restart, original-data preservation and bounded journal privacy pass. The existing connector separately reads the new immutable evidence and historical Wiki content. Its cached tool list has not refreshed, so new-tool invocation through that connector is not claimed.
 
-This documentation closeout requires its own successful exact-source CI/native and main verification before Integration M17 starts. Core/app/schema remain **0.24.2/0.39.0/0013**. Interactive Playwright and CPU-quota waivers persist. Czero provides a FastAPI application, dedicated PostgreSQL/pgvector, native NS8 configuration and encrypted backup, and a separately versioned C0 Core package. No stable module release is claimed.
+Main passes 958 Python/PostgreSQL/packaging cases, 106 script cases, released-Core/image checks, Debian installation and genuine Rocky upgrade with all seven automated browser workflows. See [PLAN.md](PLAN.md) for exact source, artifacts, deployed digests and evidence attribution. This documentation closeout needs its own completed checks and reviewed main publication before AM3 starts. Protected spaces and AM3–AM6 remain pending; Windmill Gate remains gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
 
 ## Purpose and boundaries
 
@@ -22,11 +22,13 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/sources` | Readable source library, versioned extracted text and citation links; manual upload/retry/archive at `/sources?view=tools` |
 | `/search` | Article/source search with linked excerpts; retrieval tuning and citation diagnostics under details |
 | `/wiki` | Article reader, progressive page tree, linked facts/evidence and history; manual knowledge editing at `/wiki?view=tools` |
+| `/api/v1/wiki/pages/resolve`, `/api/v1/wiki/pages/upsert` | Exact-slug lookup and create-only or expected-revision-checked updates; immutable history and original retry receipts |
 | `/api/v1/wiki/pages`, `/api/v1/entities`, `/api/v1/claims`, `/api/v1/knowledge/graph/<id>`, `/api/v1/knowledge/changes` | Versioned Wiki, aliases, sourced assertions, bounded graph and change cursors; signed local REST, real disposable SSO/update/restore and permitted live owner acceptance verified |
 | `/objects` | Schema-derived record fields, explicit advanced JSON, revisions and typed relation browsing; real disposable browser verified |
 | `/admin` | Admin-only public-client approval/disable, deterministic jobs/attempts and UTC schedules; real disposable all-role browser verified |
 | `/api/v1/object-types`, `/api/v1/objects`, `/api/v1/objects/batch` | Authenticated type inspection/registration, CRUD, paging/filters and atomic batches |
 | `/api/v1/object-relations`, `/api/v1/objects/<id>/relations`, `/api/v1/object-events`, `/api/v1/references/<kind>/<id>` | Typed object edges, metadata changes and trusted registered reference resolution |
+| `/api/v1/sources/ingest-text` | Bounded plain-text/Markdown evidence through REST and `sources_ingest_text`; poll extraction before using immutable chunks |
 | `/api/v1/sources`, `/api/v1/sources/upload`, `/api/v1/sources/search` | Authenticated source browse, bounded queued uploads and sourced PostgreSQL text search; native and permitted live acceptance verified |
 | `/api/v1/source-versions/<id>/document`, `/api/v1/documents/<id>/chunks`, `/api/v1/chunks/<id>/citation` | Retained full text, offsets/location chunks and stable citations |
 | `/api/v1/knowledge/search` | Source/current-Wiki FTS with stable citations and bounded exact excerpts; installed provider-free acceptance verified; optional configured retrieval passes disposable acceptance |
@@ -46,11 +48,11 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Use with AI guide and role-aware task instructions; original caller-aware technical reference at `/agents?view=tools`; capability JSON unchanged |
 
-Core/app versions are **0.24.2/0.39.0**, with migrations through `0013_oauth_consent`. M14 accepted source 5be82b7 at these versions; its recorded dedicated live owner update/full-manager restart, exact persistence and OAuth/MCP/worker checks pass. Integration M15 source `6c02182` established operator-verified ChatGPT connection/content reading, signed-in Wiki/REST and client revocation/reconnect. The dedicated instance now runs accepted `9582568`, including M16 and the structured-object repair, at unchanged versions; the operator separately confirms M16 live OAuth acceptance. The exact M14 candidate also passes Debian installation and a genuine Rocky M13 upgrade with all seven browser workflows and measured latency/memory targets. The final main marker records that acceptance and requires its own successful CI; it does not imply a stable release. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Core/app versions are **0.26.0/0.41.0**, with migrations through `0013_oauth_consent`. The accepted dedicated runtime is `1a45070`; earlier M14, reader UI, Integration M15/M16 and structured-object acceptance remains recorded in PLAN. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
-Use `/agents` for connection/task guidance; open `/agents?view=tools` or `/agents/capabilities.json` to inspect your current role's operations. The trusted catalog binds sixty-three typed JSON REST operations to the same handlers/DTOs used by MCP. Anonymous discovery lists no private operations; invalid credentials fail closed. OpenAPI contains operation role/scope requirements and `x-c0-interfaces` connection metadata. Multipart uploads, retained-original downloads and Markdown exports remain REST attachments. Legacy instance-prefix and unconfigured instances retain REST and report MCP unavailable.
+Use `/agents` for connection/task guidance; open `/agents?view=tools` or `/agents/capabilities.json` to inspect your current role's operations. The trusted catalog binds sixty-six typed JSON REST operations to the same handlers/DTOs used by MCP. Anonymous discovery lists no private operations; invalid credentials fail closed. OpenAPI contains operation role/scope requirements and `x-c0-interfaces` connection metadata. Multipart uploads, retained-original downloads and Markdown exports remain REST attachments. Legacy instance-prefix and unconfigured instances retain REST and report MCP unavailable.
 
 External-client approval uses Admin GET/POST `/api/v1/oauth/clients` and PUT `/api/v1/oauth/clients/<id>`. Register `client_name`, one to four exact HTTPS `redirect_uris` (HTTP only for literal loopback), and `allowed_scopes` from `c0:read`, `c0:write`, `c0:admin`. Approval grants no user membership or token. Public clients use `token_endpoint_auth_method=none`; no client secret, dynamic registration or callback fetch exists. Identical registrations preserve disabled state; enable/disable requires `expected_revision` and invalidates old authority. Callbacks/scopes are immutable: register a new descriptor to change them. The instance caps registrations at sixty-four, including disabled clients, with sixteen KiB requests.
 
@@ -310,20 +312,29 @@ M14 candidate evidence, security findings and deployment limits are recorded in 
 
 ## Agent memory development track
 
-The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers MCP text evidence,
-revision-safe Wiki helpers, protected spaces, applicability-aware retrieval and
-external-agent maintenance guidance. AM0 and AM1 are accepted and deployed,
-including text ingestion and consent
-recovery at main `ece3e90` (Core 0.25.0/app 0.40.1/schema 0013). Actual main CI,
-both native distributions, targeted backup/update and current/legacy SDK evidence
-and restart checks pass; exact digests and limitations are in PLAN. AM2 Wiki
-helpers are in development. Protected spaces and later retrieval/maintenance work
-remain pending. The installed behavior remains one shared knowledge space with
-application-wide roles, REST file ingestion and MCP/REST text evidence. Existing
-knowledge, immutable
-evidence/history and OAuth clients must be preserved. C0 continues to provide
-deterministic storage and retrieval; external agents perform reasoning and
-consolidation. Final deployment and validation precede Windmill Gate work.
+The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers text evidence,
+revision-safe Wiki operations, protected spaces, applicability-aware retrieval
+and external-agent maintenance guidance. AM0–AM2 runtime acceptance passes at
+main `1a45070` (Core 0.26.0/app 0.41.0/schema 0013), including supported backup,
+update, restart, preservation and live current/legacy SDK checks. The existing
+connector independently reads the new evidence and retained Wiki revision.
+AM3 starts only after this documentation marker's exact checks and main
+publication pass. The installed behavior remains one shared knowledge space
+with application-wide roles, REST file ingestion and MCP/REST text evidence.
+
+The agreed space contract keeps object-type definitions shared across the
+instance. Records, relations, events and annotations will be protected by space;
+Admins access all spaces under actual OAuth scopes, while Readers/Editors need
+explicit protected-space grants capped by their application role. These changes
+are planned, not deployed. Existing knowledge, immutable evidence/history and
+approved clients must survive every milestone. C0 remains deterministic storage,
+retrieval and maintenance infrastructure; external agents perform reasoning and
+consolidation. Windmill Gate remains blocked through AM6 deployment acceptance.
+
+### Earlier implementation evidence
+
+The following entries retain the progression of earlier candidates; the current
+status and deployment are stated above and in PLAN.
 
 The AM0 baseline passes 812 existing and 814 combined Python/PostgreSQL/packaging
 cases, plus the existing script/schema/Robot checks. Read-only deployed health,
@@ -446,3 +457,15 @@ workflows and both current/legacy SDK Wiki maintenance/history checks. Downloade
 reports and both checkout revisions are audited. The final evidence marker still
 requires its own exact CI/native verification before review; the installed service
 remains the accepted consent-fix revision.
+
+
+AM2 runtime acceptance now passes at deployed main `1a45070`. The live owned
+workflow resolves, creates and updates a page, handles a genuine stale revision,
+retains three immutable revisions and original retry receipts, and reuses sourced
+evidence across current/legacy SDK sessions and manager restart. Read-only tokens
+receive a write-scope challenge; fresh explicit consent enables the write replay.
+The temporary client is disabled and rejected; all seventeen earlier client
+descriptors and eleven unrelated modules remain unchanged. Existing connector
+reads of the new citation and historical Wiki content pass separately, including
+after cleanup. This proves SDK new-tool behavior and actual connector reading;
+it does not claim a refreshed connector catalog or live all-role coverage.

@@ -1,6 +1,6 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (16 October 2026):** Integration M16 runtime and operator acceptance pass, with the operator's 20/20 API report and separately confirmed live OAuth checks in PLAN. The accepted deployed runtime is `9582568`; preserve all three frozen digests and existing pilot data/fixtures. Verify this documentation closeout marker before beginning M17, the next milestone. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (17 October 2026):** Agent Memory AM0–AM2 runtime acceptance passes. The dedicated instance runs main `1a45070`, Core/app/schema 0.26.0/0.41.0/0013, after exact main CI/native/artifact verification and supported C0-only backup/update. Current/legacy SDK evidence, revision-safe Wiki writes/conflicts, fresh scope consent and full-manager restart pass. Actual existing-connector reads of the new evidence and historical Wiki content pass separately; its cached catalog remains 63 tools, so new-tool invocation through that connector is not claimed. All original rows across 27 domain tables (only normal account last_seen projected out), 110 original terminal jobs/attempts, seventeen old client descriptors, settings/files/schedules and eleven unrelated modules are preserved. The owned client is disabled and actual bounded root-journal privacy passes. Freeze the three genuinely installed 1a45070 digests in PLAN. Verify this documentation closeout marker's actual checks and reviewed main publication before starting AM3. AM3–AM6 and Windmill Gate remain gated; Integration M17–M20 remain separate. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
 
 ## M15 reader UI conventions (accepted candidate)
 
@@ -353,29 +353,41 @@ Keep Core unique strings explicitly bounded at maxLength <=128; ordinary omitted
 
 ## C0 Agent Memory track
 
-Latest accepted deployment is reviewed PR 5 main ece3e90, Core/app/schema
-0.25.0/0.40.1/0013. PLAN records successful main local/publication/released-Core/
-both-native checks, actual artifacts, C0-only backup/update, exact 27-table and
-104-job preservation, naturally expired live session recovery, fresh explicit
-consent and actual current/legacy SDK evidence cycles before/after manager restart.
-All sixteen old client descriptors and eleven unrelated instances are preserved;
-the owned client is disabled and positive-control root journal privacy passes.
-Freeze all three actually installed ece3e90 digests in PLAN together for AM2.
-The timed-out first consent approval is retained as uncertain consumed-response
-evidence; fresh authorization succeeds. The operator confirms authorization
-completes; actual reconnected citation reading passes. This does not establish
-a refreshed connector tool catalog or a new-tool invocation.
+Latest accepted runtime is PR 6 main `1a45070`, Core/app/schema
+0.26.0/0.41.0/0013. PLAN records exact main local/publication/released-Core/
+Debian installation/Rocky upgrade checks and downloaded native/privacy artifacts,
+supported C0-only backup/update, exact original-data observers and live owned
+current/legacy SDK evidence/Wiki/replay/conflict/scope/restart acceptance. The
+existing connector independently reads the new citation and historical Wiki
+revision, including after owned-client disable. Its cached catalog still has
+63 tools; do not claim actual new-tool invocation or a refreshed catalog.
 
-AM2 is active on feat/agent-memory-wiki. Follow PLAN's Core-first 0.26.0 artifact
-then app 0.41.0 released-pin sequence, schema 0013 unchanged. Exact slugs do not
-imply overwrite authority: absent expected_revision means create-only, present
-means update-only. Preserve old fingerprints/DTOs, receipt snapshots, revisions,
-authorization and lock order. EvidenceNotReady remains a KnowledgeConflict subtype;
-claims still require real ready chunks. Restrict structured MCP errors to known
-knowledge operations with static allowlisted codes; preserve object errors and
-scope challenges. Both actual SDK protocol modes and native history/recovery
-must pass before review. Windmill Gate remains gated through AM6 deployment.
-Historical candidate/deployment statements below retain their dates.
+Preserve the three actually installed 1a45070 digests together as AM3's genuine
+predecessor, seventeen prior clients, original evidence/history and eleven
+unrelated modules. Temporary credentials are removed; private access, fixture
+identities and failed evidence remain outside Git. Native CLI update receipts
+and installed-image observers pass; the inspected recent HTTP API audit rows do
+not contain a corresponding CLI update, so do not claim that audit correlation.
+The bounded root app journal has actual health/authorization/token/MCP controls,
+zero OAuth query/credential/submitted-body matches and zero tracebacks.
+
+Exact slugs do not imply overwrite authority: omitted expected_revision means
+create-only; present means update-only at the current active revision. Preserve
+old fingerprints/DTOs, receipt snapshots, immutable revisions and lock order.
+Replay returns the original snapshot, so resolve again for current content.
+EvidenceNotReady remains a KnowledgeConflict subtype; claims require ready real
+chunks. Keep fixed knowledge MCP errors, generic private-error fallback, object
+errors and role/scope challenge separation. Released Core remains immutable;
+no schema or dependency changed during this closeout.
+
+This closeout marker requires actual exact-source checks and reviewed main
+publication before AM3. Future space work keeps object-type definitions global;
+records, relations, events and annotations are protected by space. Application
+Admins can access every space under actual OAuth scopes; Readers/Editors need
+explicit protected-space grants capped by their application role. Do not infer
+per-client isolation or add a separate grant model without an agreed requirement.
+AM3–AM6 and Windmill Gate remain gated. Earlier entries below are historical
+implementation evidence, not current status.
 
 C0-AM0–AM6 is a separate operator-authorized track in PLAN.md; preserve historical
 milestones and planned Integration M17–M20. AM0 establishes current main, genuine

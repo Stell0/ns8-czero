@@ -1263,7 +1263,7 @@ edits; preserve it. Work is isolated on `feat/agent-memory-am0`.
   behavior with exact fixture-owned cleanup and no live-data dependencies.
 - [x] Commit/push candidate ebc38ef; verify completed successful local,
   producer, released-Core and both-native checks with actual report privacy audits.
-- [ ] Verify the documentation evidence marker, complete the operator review,
+- [x] Verify the documentation evidence marker, complete the operator review,
   promote only reviewed passing source and verify main publication.
 
 The baseline adds no runtime, API or database change. Existing pilot knowledge,
@@ -1283,9 +1283,9 @@ claims, duplicate/different-payload keys, concurrency, malformed Unicode, limits
 revocation, interruption, REST/current/legacy parity and native recovery.
 Core changes require the immutable artifact/released dependency sequence.
 
-### C0-AM2 — Agent-friendly Wiki operations and errors [ ]
+### C0-AM2 — Agent-friendly Wiki operations and errors [x]
 
-**Intervening consent recovery fix:** During AM1 live acceptance, the operator
+**Historical consent recovery (accepted at ece3e90):** During AM1 live acceptance, the operator
 reported `invalid_session` at `/oauth/consent`. An expired browser cookie still
 exists for longer than its native identity, and the consent GET currently
 rejects it instead of restarting sign-in. On `fix/expired-consent-session`, first
@@ -1296,8 +1296,9 @@ expired or consumed consent requests, revoked membership, bearer attempts,
 API writes, database errors and all existing authorization checks must retain
 their rejection behavior. Do not extend any expiry or grant consent implicitly.
 Run the full suite and actual both-native tests before review/main/deployment.
-AM1 live evidence and this reported blocker remain distinct from CI success;
-AM2 and Windmill Gate remain gated while recovery is unresolved.
+The later accepted ece3e90 deployment below resolves this server-side recovery
+gate; operator confirmation and actual connected citation reading are separately
+attributed. AM2 runtime acceptance is recorded at the end of this plan.
 
 Add exact-slug `wiki_pages_resolve` and create-only or expected-revision-checked
 `wiki_pages_upsert`, reusing Wiki receipts/revisions/events. Never infer overwrite
@@ -1313,7 +1314,8 @@ add Admin-managed spaces and persisted Reader/Editor grants under the applicatio
 role ceiling. Inventory every Core/REST/MCP read/write, UUID resolver, history,
 original/citation, feed, traversal, extraction and derivative index before schema
 work. Require same-space references and atomic persisted-grant checks; selector
-is never authority. Decide global immutable object-type visibility explicitly.
+is never authority. Keep immutable object-type definitions global across the
+instance; scope records, relations, events and annotations by space.
 Prove migration/preservation, revoked sessions, negative UUID/search/graph/feed/
 semantic/citation paths, disposable native upgrade/backup/restore, and only the
 necessary UI selector/management changes before deployment.
@@ -1981,3 +1983,101 @@ REST bindings exactly and adds only GET resolve/POST upsert. The first capture
 selected the default wrapper instead of the hostname-root application and yields
 no route metadata; the corrected explicit-root comparison passes. This is route
 metadata verification, not a synthetic-URL database-readiness claim.
+
+
+**AM2 reviewed main and accepted dedicated runtime (17 October 2026):**
+The user authorizes autonomous promotion after documented diff review and passing
+checks. Complete review of Core transaction/receipt compatibility, safe transport
+errors, released dependency, independent-writer/rollback/role/scope tests and
+actual candidate artifacts finds no blocker. No independent human review is
+claimed. PR 6 merges as `1a45070b61fb263b826258a37255a00e12299454`, with the
+exact reviewed 6235f6f tree. Final candidate marker 6235f6f passes completed
+[local 39038784201](https://github.com/Stell0/ns8-czero/actions/runs/39038784201),
+[producer 39038780899](https://github.com/Stell0/ns8-czero/actions/runs/39038780899),
+[released-Core 39038784222](https://github.com/Stell0/ns8-czero/actions/runs/39038784222)
+and [native 39038975377](https://github.com/Stell0/ns8-czero/actions/runs/39038975377).
+Actual downloaded candidate reports verify Debian upgrade nineteen passes,
+Rocky installation twenty-three passes/three expected skips, all seven browser/
+privacy workflows and three artifacts with zero query candidates. Both exact
+checkouts and two real SSO/SDK probes per distribution are audited.
+
+Main 1a45070 passes completed
+[local 39044090505](https://github.com/Stell0/ns8-czero/actions/runs/39044090505),
+[producer 39044090536](https://github.com/Stell0/ns8-czero/actions/runs/39044090536),
+[released-Core 39044090526](https://github.com/Stell0/ns8-czero/actions/runs/39044090526),
+[Renovate 39044090518](https://github.com/Stell0/ns8-czero/actions/runs/39044090518)
+and [native 39044311513](https://github.com/Stell0/ns8-czero/actions/runs/39044311513).
+Actual local logs prove 958 Python/PostgreSQL/packaging, 106 script and nineteen
+Robot dry-run cases. A fresh independent PostgreSQL run passes all 88 AM2 cases;
+the exact private live Wiki/scope helpers also pass two disposable real-transport
+cases. Main native reports prove Debian installation sixteen passes/three
+expected skips, genuine Rocky ece3e90 upgrade twenty-six passes, all seven
+browser/privacy workflows, two real SSO/SDK probes per distribution, both exact
+checkout revisions and three XML/Pino artifacts with zero query candidates.
+Five actual main SARIF/CycloneDX pairs retain 166 app/413 database/7 UI vendor
+findings and zero module/imageroot findings, with component counts
+131/145/142/0/0. The configured fixable-critical gate passes; no clean-security
+claim is made. All three manifests/configs and sibling references match main.
+
+A supported C0-only pre-update backup succeeds and its owned one-off plan is
+disabled afterward; all nine prior backup-plan metadata records remain unchanged. Full Restic read-data verification, required private
+state and pg_restore listing of the 2260790-byte database dump pass. Immediately
+reverified main images precede the canonical supported update of only the
+explicitly authorized dedicated instance. Trusted HTTPS is actually ready at
+Core/app/schema 0.26.0/0.41.0/0013. All 27 original domain-table aggregates, exact
+delegated rows, 110 original terminal jobs/attempts, settings/schedules/retained
+files and eleven unrelated module identities survive before any new fixture.
+Normal HTTPS retains all 64 old operation metadata/bindings and adds only the
+two Wiki operations (66 total).
+
+Fresh ordinary trusted-HTTPS owner SSO and explicit CSRF-protected PKCE consent
+precede isolated current/legacy SDK workflows: text ingestion, actual timer
+extraction, immutable chunks/citations, ready sourced claims, exact-slug lookup,
+create-only upsert, revision-checked updates, real stale-write conflicts and
+three immutable page revisions. Original receipts replay unchanged through
+independent SDK connections and REST parity. Separate read-only grants receive
+the exact write-scope challenge in both protocols; new explicit consent enables
+write replay without refresh escalation. A fresh native sign-in and explicit
+consent provide a verified 299-second token window before the supported
+full-manager restart; immediate new SDK sessions and the signed-in browser
+retain exact evidence/history/receipts after real readiness. The owned client
+is disabled persistently and its just-verified bearer is rejected.
+
+The existing connected integration separately retrieves the exact original AM1
+citation before update, then the new SDK-created citation and historical Wiki
+revision after restart. Citation fields and historical content match exactly;
+that connector still reads after the isolated client is disabled. Its available
+cached catalog remains 63 operations: no refreshed catalog or new-tool invocation
+through that connector is claimed. Live role coverage is the verified owner;
+the complete role/scope matrix remains disposable evidence.
+
+Final observers preserve every original row hash across 27 domain tables,
+projecting out only normal account last_seen bookkeeping. All seventeen old
+client descriptors, 110 original terminal jobs/attempts, private/public settings,
+schedules, retained files and eleven unrelated module identities are unchanged.
+All three exact installed images, database/authentication and enabled/active
+healthy timer survive manager restart. A bounded root journal selected by the
+verified module UID/app container and actual update start has 272 lines, actual
+health/authorization/token/MCP controls, zero OAuth query candidates, zero issued
+credential/token/cookie matches, zero submitted source/Wiki body matches and
+zero tracebacks. The recent HTTP API audit rows were inspected but contain no
+matching native CLI update; action receipt and exact installed-image/preservation
+observers supply the update evidence. No logging policy is changed and no API
+audit correlation is claimed. Failed audit evidence stays private;
+only the temporary credential copy is removed. The original operator auth file,
+older checkouts and their unfinished documentation are preserved.
+
+AM2 runtime acceptance passes. This documentation closeout marker requires its
+own actually completed exact-source checks, review and successful main
+publication before AM3 starts. AM3–AM6 and Windmill Gate remain gated; the
+Integration M17–M20 roadmap stays separate. No documentation-marker image is
+deployed as a substitute for the genuine runtime below.
+
+These three **actually installed 1a45070** images replace ece3e90 together as the
+genuine AM3 upgrade predecessor:
+
+| Image (`main`) | Verified deployed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:181a8ae5eaeb606ad473bf6a029b0901db1840bc9987d8d5485949e58792ee91` |
+| `ghcr.io/stell0/czero-app` | `sha256:133b220f6eaec6bee1f67fa09deaad6489d002b30ac834aafa9234d6576faef2` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:a5c6a0eee9516d0bfff2c216f50e50c38a802f3eb9b676d7f7f4d6bfd6ce14d1` |
