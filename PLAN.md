@@ -1233,7 +1233,7 @@ C0-AM0–AM6 in order and retain each milestone's local, exact-source CI,
 publication, disposable native, reviewed-main and targeted deployment gates.
 Windmill Gate stays blocked until final C0 deployment and acceptance.
 
-### C0-AM0 — Baseline and compatibility contracts [ ]
+### C0-AM0 — Baseline and compatibility contracts [x]
 
 Starting main: `90649de1609f9ad75d4010552d37a89c8f05d0c6` (verified remotely).
 The supplied original worktree remains on `1e14865` with pre-existing document
@@ -1424,3 +1424,89 @@ new tests, fixtures or any runtime/API/schema bytes. Verify its own actual CI
 before promotion. AM0 remains open for marker verification, review and main
 publication. AM1–AM6 and Windmill Gate have not started; no live update is needed
 for a Git-only baseline and none is performed.
+
+
+**AM0 accepted main and operator-requested deployment (16 October 2026):**
+The operator reviewed/merged [PR 3](https://github.com/Stell0/ns8-czero/pull/3)
+at `b66e159960941d6d06e527f71a76966fbff44166`, whose tree equals reviewed
+`189b73e`. Main [local 38976923884](https://github.com/Stell0/ns8-czero/actions/runs/38976923884),
+[publication 38976924021](https://github.com/Stell0/ns8-czero/actions/runs/38976924021),
+[released-Core 38977073247](https://github.com/Stell0/ns8-czero/actions/runs/38977073247)
+and [native 38977184381](https://github.com/Stell0/ns8-czero/actions/runs/38977184381)
+completed/succeeded. Actual local logs confirm 814 Python/PostgreSQL/packaging,
+106 script and nineteen Robot dry-run cases. Downloaded exact-source native
+reports prove Debian genuine upgrade nineteen passes and Rocky installation
+twenty-three passes/three expected skips, all seven browser/privacy workflows;
+three XML/Pino artifacts have zero OAuth-query candidates.
+
+After those gates, the operator explicitly requested deploying merged AM0.
+A supported C0-only native backup to the existing local destination completed;
+its new one-off schedule is disabled and all five existing backup configurations
+are preserved. Restic full data verification, required configuration/source files
+and actual pg_restore listing of the 131573-byte custom dump pass. The supported
+canonical native update targets only the dedicated C0 instance. Installed images
+all match `b66e159`; these are now the genuine AM1 upgrade predecessors:
+
+| Image (`main`) | Verified installed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:aee8db5a18c8f7a03311fdeb15f5f6b5cb11058d6f89ad321a2947f189a9d95a` |
+| `ghcr.io/stell0/czero-app` | `sha256:de337c3a66427a1aa94c20e16632b3a07b4c219fd9533473e0ac0f861d5ce037` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:149159f5d1ce8ead7c01fb29df7c8571ab727b2fa871b6ba41fd8c561251f88c` |
+
+Post-update health/auth/database/timer checks pass. All 27 domain-table hashes,
+89 original terminal jobs/attempts, OAuth grant/token/code/consent rows, settings,
+originals and schedules are preserved, as are eleven unrelated module identities.
+All 63 operation contracts match; Core/app/schema remain 0.24.2/0.39.0/0013.
+Actual connected MCP current/historical Wiki reads and object-type discovery equal
+the saved pre-update results. The connector requested renewed authentication and
+then succeeded on retry, both before and after the update; this is distinguished
+from persisted-row preservation. A bounded root journal sample has 22 actual
+lines, health/OAuth/MCP positive controls, zero OAuth-query candidates and no
+tracebacks. No logger or host configuration changed. An initial post-update
+journal sample preceded the health entry; the subsequent bounded sample contains
+it. Backup verification initially assumed an absent `errors` status field;
+independent verification used the actual native `success` field and snapshot,
+without rerunning or replacing the successful backup. Private evidence stays
+outside Git. AM0 is accepted; no AM1 feature has yet been deployed.
+
+**AM1 implementation subplan:** First extract the existing Wiki receipt
+transaction helper without changing its fingerprint/result/lock contract, then
+add `SourceService.ingest_text` through the same source writer and extraction jobs.
+Bound UTF-8 body to 131072 bytes, require nonempty plain/Markdown text and a
+fingerprinted actor-scoped key, validate metadata/title/revisions, preserve original
+provenance during explicit source versioning, authorize before replay and after
+waiting for the receipt lock, and retain queued receipts as submission snapshots.
+Prove concurrent retries/updates, rollback/interruption/recovery, ready chunks and
+claims in actual PostgreSQL. Publish a compatible additive Core minor 0.25.0 only
+after that exact increment's local/producer/both-native gates; existing app 0.39
+continues using its released 0.24.2 pin until publication. Then require/pin released
+0.25.0 and add app 0.40 `sources_ingest_text` plus typed REST JSON ingestion through
+the shared catalog. Preserve multipart upload and all legacy bindings. Bound raw
+JSON to one MiB and return static validation errors without echoing evidence.
+Exercise real current/legacy SDK Reader/Editor/Admin, scopes, revoked clients,
+REST parity, ready citations and sourced claims. Extend genuine native recovery/
+backup and TLS probes, freeze all three actual deployed b66e159 predecessors,
+run full applicable checks, and document actual results before review/promotion.
+
+
+**AM1 Core increment local validation (17 October 2026):** The additive
+0.25.0 Core candidate implements text submission through the existing source
+writer and jobs, sharing Wiki's unchanged actor/key receipt fingerprints, result
+snapshots and advisory-lock identifier. Authorization is rechecked after lock
+waits. Source title/provenance stay fixed on explicit version additions. There is
+no migration, no application text operation and no deployed feature yet. The
+existing app supports this compatible Core minor while its default Git/tag/lock
+still pins released 0.24.2; no silent local substitution occurs.
+Focused source/Wiki/claim checks pass 72 cases; the complete existing/new suite
+passes **847 Python/PostgreSQL/packaging cases** (233.29s), plus 106 scripts,
+Go schema checks with writable cache, shell syntax and nineteen Robot dry-run
+cases. Six additional independent wheel/archive checks pass with a copied client
+running outside the checkout: actual text ingestion, worker extraction, database
+reconnect/replay, immutable citation/hash and default original cleanup all pass
+without FastAPI or the NS8 SDK. New text validation includes malformed Unicode,
+NUL/empty/oversized content, byte boundary and worst-case JSON envelope budget;
+concurrency, actor/operation key conflicts, revoked/forged actors, revocation
+while waiting, transaction/extraction rollback, and real sourced claims pass.
+Native tests now freeze the three genuinely deployed b66e159 predecessors.
+Exact-source CI/publication/native and immutable Core artifact gates remain
+pending; do not promote this Core-only increment as AM1 acceptance.

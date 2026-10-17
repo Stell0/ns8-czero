@@ -286,3 +286,20 @@ Debian genuine upgrade (19 cases) plus Rocky installation (23 cases, 3 expected
 skips), including seven browser/privacy workflows and actual artifact audits.
 PR #3 is awaiting operator review and main promotion; this evidence follow-up
 must pass its own checks. The installed runtime and current APIs remain unchanged.
+
+
+AM0 is now merged and accepted at `b66e159`, including successful main CI,
+Debian upgrade/Rocky installation, native C0-only backup and operator-requested
+dedicated deployment. Current APIs and versions remain unchanged. Existing data,
+OAuth rows and unrelated modules are preserved; connected MCP reads pass.
+AM1 text-evidence ingestion is the next implementation, with independent Core
+publication preceding the released application dependency. See PLAN.md for exact
+accepted digests, checks and implementation gates.
+
+
+The AM1 Core portion is implemented on the feature branch and passes 847 local
+Python/PostgreSQL/packaging cases, plus script/schema/Robot and independent
+installed-package checks. Text uses the existing source/extraction pipeline with
+bounded UTF-8 input and retry receipts. Core publication, the application REST/MCP
+operation and final native/review/deployment acceptance are still pending; the
+installed application continues to expose its existing interfaces.

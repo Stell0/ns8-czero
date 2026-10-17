@@ -377,3 +377,29 @@ XML/Pino artifacts with zero query candidates. Candidate digests and exact run
 links are in PLAN.md. The operator intends to review PR 3; that is not approval.
 Verify this documentation follow-up's actual checks and main promotion before
 starting AM1. No baseline marker is deployed; retain actual 9582568 predecessors.
+
+
+AM0 is accepted after operator merge PR 3 and explicit deployment request.
+Main b66e159 passes actual local/publication/released-Core/both-native checks,
+including seven browser/privacy guards and three-artifact query audits. Supported
+C0-only native backup and update pass with 27 domain tables, 89 terminal jobs/
+attempts, exact OAuth rows/settings/files/schedules and eleven unrelated modules
+preserved. Connected MCP reads and positive-control root journal privacy pass.
+Core/app/schema stay 0.24.2/0.39.0/0013. All three **actually deployed b66e159**
+digests in PLAN now replace 9582568 as the genuine AM1 test predecessor, at the
+operator's explicit request; historical marker/deployment statements above remain
+historical evidence. AM1 is active on feat/agent-memory-text-ingestion. Follow its
+Core-first publication then released-pin/transport subplan; do not claim the new
+text tool available before that final application implementation and acceptance.
+
+
+AM1's first Core increment has local validation: 847 complete Python/PostgreSQL/
+packaging cases, 106 scripts, Go/shell and nineteen Robot dry-run cases pass;
+independent wheel/archive clients prove ingestion/extraction/reconnect/replay and
+citation hashes outside the checkout. SourceService.ingest_text is bounded to
+131072 UTF-8 bytes and existing 16 KiB metadata, with same-key snapshot receipts
+shared with Wiki/knowledge mutations. Preserve its static validation errors,
+existing source provenance, ready-chunk claim requirement and after-lock current
+role check. Core/schema candidate are 0.25.0/0013; app stays 0.39 and released
+Core pin stays 0.24.2 until exact-source native/artifact publication passes. No new
+REST/MCP tool is exposed by this increment and AM1 acceptance remains pending.

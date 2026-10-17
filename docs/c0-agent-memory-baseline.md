@@ -144,3 +144,18 @@ artifacts with zero OAuth query candidates. PLAN.md records exact run links and
 all three verified branch digests. These are candidate checks, not main promotion
 or a deployment. PR #3 awaits the operator's review; this documentation follow-up
 requires its own CI verification. The live accepted predecessor remains 9582568.
+
+
+## Subsequent accepted AM0 deployment
+
+The inspection tables above describe the pre-change baseline. The operator then
+merged PR 3 and explicitly requested deploying AM0 main `b66e159`. Its actual main
+local/publication/released-Core/both-native gates pass, followed by native C0-only
+backup, canonical targeted update, strict data/OAuth/inventory preservation,
+connected MCP persistence and positive-control journal privacy. Versions and the
+63-operation contract are unchanged. PLAN.md records all three genuinely installed
+b66e159 digests; use them together for AM1 upgrades. The initial source inspection
+and its private read-only dump remain separate from the subsequent verified native
+Restic snapshot. The backup's one-off schedule is disabled; existing plans remain
+unchanged. No private destination, secret, data inventory or journal entry is
+included here.
