@@ -1,14 +1,14 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (17 October 2026): Agent Memory AM0–AM2 runtime acceptance passes.** The dedicated instance runs main `1a45070`, with Core **0.26.0**, app **0.41.0** and schema **0013**. Agents can ingest bounded text evidence and resolve/create/revise Wiki pages with explicit revision and retry protection. Actual current/legacy SDK workflows, fresh OAuth scope consent, supported update/restart, original-data preservation and bounded journal privacy pass. The existing connector separately reads the new immutable evidence and historical Wiki content. Its cached tool list has not refreshed, so new-tool invocation through that connector is not claimed.
+**Status (17 October 2026): Agent Memory AM0–AM3 runtime acceptance passes.** The dedicated instance runs main `cb60da9`, with Core **0.27.0**, app **0.42.0** and schema **0015**. Agents can use protected spaces, ingest bounded evidence and revise Wiki pages with explicit revision and retry protection. Current/legacy SDK workflows, fresh OAuth consent, supported update/restart, preservation and bounded journal privacy pass. The existing connector separately reads retained Shared evidence and historical Wiki content after reconnecting; new space operations through its cached catalog are not claimed.
 
-Main passes 958 Python/PostgreSQL/packaging cases, 106 script cases, released-Core/image checks, Debian installation and genuine Rocky upgrade with all seven automated browser workflows. Its documentation closeout main 65829d4 also passes its completed checks and artifact audits. See [PLAN.md](PLAN.md) for exact source, artifacts, deployed digests and evidence attribution. AM3 development has started; protected spaces and AM3–AM6 deployment acceptance remain pending. Windmill Gate remains gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
+Main passes 1048 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core checks, Debian installation and genuine Rocky AM2 upgrade with all eight automated browser workflows. Native reports, actual source checkouts and privacy artifacts are audited. See [PLAN.md](PLAN.md) for exact sources, published Core artifacts and frozen installed digests. This documentation closeout marker still needs its own completed checks and reviewed main publication before AM4. AM4–AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
 
 ## Purpose and boundaries
 
 C0 is a deployable application foundation and a forkable GitHub template. External coding agents can extend its shared operations and application UI while retaining native NethServer lifecycle, packaging and tests. C0 Core lives in `packages/czero-core`; fork-specific business logic belongs in `app`.
 
-One installed C0 module owns a dedicated PostgreSQL instance and a permanent legacy Shared space. The AM3 candidate adds protected spaces with explicit Reader/Editor grants; application Admins access all spaces. There is one owner and optional Reader, Editor and Admin application membership. This does not introduce per-document permissions or separate tenants.
+One installed C0 module owns a dedicated PostgreSQL instance and a permanent legacy Shared space. Protected spaces use explicit Reader/Editor grants; application Admins access all spaces. There is one owner and optional Reader, Editor and Admin application membership. This does not introduce per-document permissions or separate tenants.
 
 Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; optional retrieval passes acceptance; authenticated remote MCP and its discovery/OpenAPI connection metadata pass installed and permitted live owner acceptance. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
@@ -22,6 +22,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/sources` | Readable source library, versioned extracted text and citation links; manual upload/retry/archive at `/sources?view=tools` |
 | `/search` | Article/source search with linked excerpts; retrieval tuning and citation diagnostics under details |
 | `/wiki` | Article reader, progressive page tree, linked facts/evidence and history; manual knowledge editing at `/wiki?view=tools` |
+| `/api/v1/spaces`, `/api/v1/spaces/<id>`, `/api/v1/spaces/<id>/grants` | Authorized space discovery, Admin creation and revisioned grant management; protected content uses explicit `space_id` |
 | `/api/v1/wiki/pages/resolve`, `/api/v1/wiki/pages/upsert` | Exact-slug lookup and create-only or expected-revision-checked updates; immutable history and original retry receipts |
 | `/api/v1/wiki/pages`, `/api/v1/entities`, `/api/v1/claims`, `/api/v1/knowledge/graph/<id>`, `/api/v1/knowledge/changes` | Versioned Wiki, aliases, sourced assertions, bounded graph and change cursors; signed local REST, real disposable SSO/update/restore and permitted live owner acceptance verified |
 | `/objects` | Schema-derived record fields, explicit advanced JSON, revisions and typed relation browsing; real disposable browser verified |
@@ -48,11 +49,11 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Use with AI guide and role-aware task instructions; original caller-aware technical reference at `/agents?view=tools`; capability JSON unchanged |
 
-Core/app versions are **0.26.0/0.41.0**, with migrations through `0013_oauth_consent`. The accepted dedicated runtime is `1a45070`; earlier M14, reader UI, Integration M15/M16 and structured-object acceptance remains recorded in PLAN. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Core/app versions are **0.27.0/0.42.0**, with migrations through `0015_content_spaces`. The accepted dedicated runtime is `cb60da9`; earlier M14, reader UI, Integration M15/M16 and structured-object acceptance remains recorded in PLAN. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
-Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect shared data; Editors author/upload; Admins register schemas and manage membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
+Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect permitted content; Editors author/upload within their effective space role; Admins register schemas and manage spaces, grants, membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
-Use `/agents` for connection/task guidance; open `/agents?view=tools` or `/agents/capabilities.json` to inspect your current role's operations. The trusted catalog binds sixty-six typed JSON REST operations to the same handlers/DTOs used by MCP. Anonymous discovery lists no private operations; invalid credentials fail closed. OpenAPI contains operation role/scope requirements and `x-c0-interfaces` connection metadata. Multipart uploads, retained-original downloads and Markdown exports remain REST attachments. Legacy instance-prefix and unconfigured instances retain REST and report MCP unavailable.
+Use `/agents` for connection/task guidance; open `/agents?view=tools` or `/agents/capabilities.json` to inspect your current role's operations. The trusted catalog binds seventy-one typed JSON REST operations to the same handlers/DTOs used by MCP. Anonymous discovery lists no private operations; invalid credentials fail closed. OpenAPI contains operation role/scope requirements and `x-c0-interfaces` connection metadata. Multipart uploads, retained-original downloads and Markdown exports remain REST attachments. Legacy instance-prefix and unconfigured instances retain REST and report MCP unavailable.
 
 External-client approval uses Admin GET/POST `/api/v1/oauth/clients` and PUT `/api/v1/oauth/clients/<id>`. Register `client_name`, one to four exact HTTPS `redirect_uris` (HTTP only for literal loopback), and `allowed_scopes` from `c0:read`, `c0:write`, `c0:admin`. Approval grants no user membership or token. Public clients use `token_endpoint_auth_method=none`; no client secret, dynamic registration or callback fetch exists. Identical registrations preserve disabled state; enable/disable requires `expected_revision` and invalidates old authority. Callbacks/scopes are immutable: register a new descriptor to change them. The instance caps registrations at sixty-four, including disabled clients, with sixteen KiB requests.
 
@@ -281,7 +282,7 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 [C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The AM3 candidate app pins released `core-v0.27.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.27.0,<0.28.0`. The accepted dedicated runtime remains AM2/Core 0.26.0 until application deployment acceptance passes. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
+The app pins released `core-v0.27.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.27.0,<0.28.0`. The accepted dedicated runtime uses Core 0.27.0. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
 [Core 0.24.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.2) is a published documentation/packaging patch with unchanged schema/API. Its exact-source local, image, both-native and artifact verification gates pass. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. The real [compatible-patch Renovate PR](https://github.com/Stell0/c0-m13-example/pull/3) changes only the tag/lock and passes database-backed consumer CI.
 
@@ -314,13 +315,12 @@ M14 candidate evidence, security findings and deployment limits are recorded in 
 
 The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers text evidence,
 revision-safe Wiki operations, protected spaces, applicability-aware retrieval
-and external-agent maintenance guidance. AM0–AM2 runtime acceptance passes at
-main `1a45070` (Core 0.26.0/app 0.41.0/schema 0013), including supported backup,
-update, restart, preservation and live current/legacy SDK checks. The existing
-connector independently reads the new evidence and retained Wiki revision.
-AM2's documentation marker has passed exact checks and main publication; AM3
-development is active. The installed behavior remains one shared knowledge space
-with application-wide roles, REST file ingestion and MCP/REST text evidence.
+and external-agent maintenance guidance. AM0–AM3 runtime acceptance passes at
+main `cb60da9` (Core 0.27.0/app 0.42.0/schema 0015), including supported backup,
+update, full-manager restart, original-data preservation and live current/legacy
+SDK checks. The existing connector independently reads retained Shared evidence
+and a historical Wiki revision after reconnecting. AM3's documentation closeout
+marker remains subject to exact checks and reviewed main publication before AM4.
 
 [Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0)
 is independently published after exact-source local, producer and both-native
@@ -329,18 +329,19 @@ combinations, migration preservation, immutable evidence, private references and
 filtered retrieval. Downloaded wheel/archive checksums, reproducible rebuilds,
 independent installs and packaged migrations pass. App 0.42.0 adds typed
 REST/MCP selectors, qualified resources and space/grant controls; its native and
-deployment acceptance is pending. The dedicated instance continues to run AM2.
+dedicated deployment acceptance passes.
 
 The agreed space contract keeps object-type definitions shared across the
-instance. Records, relations, events and annotations will be protected by space;
+instance. Records, relations, events and annotations are protected by space;
 Admins access all spaces under actual OAuth scopes, while Readers/Editors need
-explicit protected-space grants capped by their application role. These changes
-are planned, not deployed. Existing knowledge, immutable evidence/history and
+explicit protected-space grants capped by their application role. The space
+contract is deployed. Revisioned applicability annotations and structured
+retrieval remain AM4 work. Existing knowledge, immutable evidence/history and
 approved clients must survive every milestone. C0 remains deterministic storage,
 retrieval and maintenance infrastructure; external agents perform reasoning and
 consolidation. Windmill Gate remains blocked through AM6 deployment acceptance.
 
-### Protected-space candidate contract
+### Protected-space contract
 
 The space selector applies to content reads, writes, histories, citations,
 originals, feeds and retrieval. `spaces_list` discovers only permitted spaces;
@@ -364,8 +365,9 @@ mutations to their space while legacy Shared receipts remain compatible.
 The ordinary UI has a space selector; Admin space/grant controls live in
 Administration. Space changes and access loss clear private views and invalidate
 pending responses. Choosing Shared is explicit. Revision and unchanged-retry
-protections still apply within each space. This contract is implemented in the
-candidate and remains subject to the application native/live gates above.
+protections still apply within each space. The deployed workflow preserves
+retained originals, immutable history and original retry receipts across the
+supported full-manager restart.
 
 ### Earlier implementation evidence
 
