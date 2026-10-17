@@ -1307,7 +1307,7 @@ error allowlist for not-found/conflict/invalid request/unready evidence, retaini
 scope challenges and role denial. Prove independent-writer races, replay,
 archive behavior, history, REST and both SDK protocol modes.
 
-### C0-AM3 — Protected knowledge spaces [ ]
+### C0-AM3 — Protected knowledge spaces [x]
 
 Explicit product-contract extension: preserve legacy shared space/data and APIs;
 add Admin-managed spaces and persisted Reader/Editor grants under the application
@@ -2298,3 +2298,109 @@ this reset; reader clearing now restores each page's public heading while
 removing private content. All 125 script cases pass after correction. Fresh
 exact-source publication/native gates remain required; no AM3 promotion or live
 update has occurred, and published Core 0.27.0 is unchanged.
+
+
+### AM3 runtime acceptance — 17 October 2026
+
+Reviewed application source `38c3e08ba5077eca0de483ad6c4db5d5f6d3780d`
+passes actual [local CI](https://github.com/Stell0/ns8-czero/actions/runs/39063970974)
+(1048 Python/PostgreSQL/packaging cases, 125 scripts, twenty non-UI Robot dry runs,
+schema/shell), [producer](https://github.com/Stell0/ns8-czero/actions/runs/39063971000),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39063971134)
+and [Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39063974570).
+Actual [native reports](https://github.com/Stell0/ns8-czero/actions/runs/39064154289)
+pass Debian genuine AM2 upgrade twenty cases and Rocky installation twenty-five
+cases/three expected skips. All eight browser workflows and privacy guards,
+twenty-five numeric accessibility contexts, two actual SSO/SDK probes per
+distribution and both protected update/clean restores pass. Downloaded reports
+and three OAuth-query artifacts are audited; both actual tested checkouts match.
+The prior failing home-heading report remains preserved privately.
+
+The complete reviewed diff preserves all 53 transitive lock packages and exact
+published Core bytes. [PR 8](https://github.com/Stell0/ns8-czero/pull/8) is merged
+autonomously under the operator's promotion authorization; no independent human
+review is claimed. Resulting main `cb60da9fdc3e8c2cac2555e704a9af760999d9ef`
+has the identical reviewed tree and actually completed successful
+[local](https://github.com/Stell0/ns8-czero/actions/runs/39066559757),
+[producer](https://github.com/Stell0/ns8-czero/actions/runs/39066559742),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39066559663),
+[Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39066559698)
+and [native](https://github.com/Stell0/ns8-czero/actions/runs/39066732493) gates.
+Main local counts remain 1048/125/twenty. Actual native reports pass Debian
+installation seventeen cases/three expected skips and genuine Rocky AM2 upgrade
+twenty-eight cases, all eight browsers/privacy guards, twenty-five numeric
+accessibility contexts, two actual SSO/SDK probes per distribution and both
+protected update/clean restores. Both actual main checkouts and three downloaded
+OAuth-query artifacts pass audit. Five actual SARIF/SBOM pairs pass required
+gates; vendor findings remain 166 app, 413 database and seven UI. This is not a
+clean vulnerability result.
+
+Core 0.27.0 remains the immutable independently published source
+`86a7f7f513d971646fc460ae1708cc0e3a8d46f0` at `core-v0.27.0`.
+Downloaded wheel SHA256 is
+`80c4c15d9568186949126c9ee8d648333b0ca7c2153843840783cf03552006dd`;
+normalized source archive SHA256 is
+`85403eeea87e50365a8f9bfb35e48cbbe29a807ddfbe461062b04d1eb99de9dd`.
+All six independent supplied-artifact packaging checks pass, including exact
+rebuild hashes, wheel/archive installations and packaged PostgreSQL migrations.
+App 0.42.0 uses this released tag/subdirectory/commit and 0.27.x compatibility.
+
+Only the authorized dedicated instance was updated through the canonical native
+`main` action after a supported C0-only backup. The disabled one-off backup plan
+preserves every prior plan; full restic read-data verification, required state
+files and the PostgreSQL restore manifest pass. Backup dump SHA256 is
+`230e295e7528c965582f5f077414d29b8f8a54dc6a1a4d390d497ad91ef5a410`.
+Fresh explicit normal-SSO consent precedes update and full-manager restart;
+existing browser/delegated authority passes immediately afterward, at 71.5 and
+25.7 seconds from issue respectively. No lifetime is extended. Trusted HTTPS
+health confirms app/Core/schema 0.42.0/0.27.0/0015 and actual native database,
+authentication and timer readiness passes.
+
+Owned live current/legacy SDK sessions discover/create/read a protected space,
+exercise private text ingestion and polling, immutable chunks/citations/sourced
+claims, qualified resources, default-Shared UUID denials, create-only Wiki writes,
+three immutable revisions, stale-write conflicts and original receipt replay.
+Normal REST parity, retained original hash, explicit read-only write challenges,
+fresh full-scope consent and cross-session reuse pass. The same evidence, history,
+receipts, original document and file survive full-manager restart. The owned
+client is persistently disabled afterward and its prior bearer is rejected.
+Other live personas are not claimed; the full role/grant/scope matrix and grant
+revocation races remain disposable Core/native/browser evidence.
+
+Exact pre/post-update old-column projections preserve domain/OAuth data. Final
+multiset observers preserve all **7,004 original rows across 26 domain tables**,
+**117 terminal jobs and attempts**, **eighteen prior client descriptors**, **three
+original files**, settings/schedules and **eleven unrelated module identities**.
+Only normal account last_seen is excluded; added schema ownership/feed columns
+are projected out. The schema revision advances from 0013 to 0015. Compatibility
+checks preserve all 66 old operation requirements, 61 old paths and 92 component
+schemas; additions are five space/grant operations and 55 optional UUID selectors
+with two corresponding validation responses. Actual existing-connector reads
+of an earlier Shared citation and immutable Wiki revision pass after reconnecting;
+new space operations through its cached catalog are not claimed.
+
+A bounded root journal filtered by verified module UID/container contains 388
+actual lines with health, authorization, token and MCP request positive controls.
+It has zero tested OAuth-query candidates, issued credentials/cookies/tokens,
+submitted source/Wiki bodies or tracebacks. The first journal helper rejected an
+unsupported ISO timestamp; failed evidence is retained and the same actual update
+start is expressed in accepted UTC format before the successful query. Host
+logging is unchanged. Raw access details and failed evidence remain outside Git.
+
+Freeze this genuine installed predecessor for AM4; documentation marker builds
+are not substitutes. All three actual OCI revisions are the full main cb60da9
+commit above, verified immediately before update and again after restart:
+
+| Installed image | Frozen digest |
+| --- | --- |
+| `ghcr.io/stell0/czero:main` | `sha256:181a68d60bda912dfdf685bcdc1e4db11b183e7b25cfb25982c7e310d37bde10` |
+| `ghcr.io/stell0/czero-app:main` | `sha256:26849301916c7682fb6d1b2e97eb6a378924da2f98878bd2090c05fc8f7c31cc` |
+| `ghcr.io/stell0/czero-postgres:main` | `sha256:9f300220dc06ce33c78cf54e88b26cf3daa336ec1fc4cdc6c69148b689a90f22` |
+
+AM3 runtime acceptance passes. This documentation closeout marker still requires
+its own actual local/producer/released-Core/native/artifact checks and reviewed
+main publication before AM4 begins. Retain the CPU-quota and interactive
+Playwright waivers; automated native browsers remain mandatory. AM4–AM6 and
+Windmill Gate remain gated. Integration M17–M20 remain a separate roadmap. No
+stable module release, live alternate persona, provider quality or scheduled
+client interoperability is claimed.
