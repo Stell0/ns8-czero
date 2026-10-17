@@ -122,11 +122,11 @@ class EmbeddingStore(SpaceBound):
             return _view({'configured':True,'profile_id':self.profile_id,'generation':profile['generation'],
                           'model':profile['model'],'dimensions':profile['dimensions'],'indexed':count})
 
-    def nearest(self,connection,vector,*,limit=64,kind='all'):
-        if type(limit) is not int or not 1<=limit<=64 or kind not in ('all','source','wiki'):raise ValueError('invalid_embedding_query')
-        profile=self._profile(connection)
-        if profile is None:return []
-        encoded=vector_literal(vector,profile['dimensions'])
+    def _ready(self,connection,profile):
+        return connection.execute(text('SELECT 1 FROM c0_embeddings WHERE space_id=:space AND profile_id=:id AND generation=:generation LIMIT 1'),
+            {'space':self._space(connection),'id':self.profile_id,'generation':profile['generation']}).scalar_one_or_none() is not None
+
+    def _eligibility(self,connection,profile,kind):
         eligibility='''FROM c0_embeddings e
             WHERE e.space_id=:space AND e.profile_id=:profile AND e.generation=:generation AND (
                 (:sources AND e.source_chunk_id IS NOT NULL AND EXISTS(SELECT 1 FROM c0_chunks c
@@ -135,8 +135,16 @@ class EmbeddingStore(SpaceBound):
                 OR (:wiki AND e.wiki_chunk_id IS NOT NULL AND EXISTS(SELECT 1 FROM c0_wiki_chunks w
                     JOIN c0_wiki_revisions r ON r.id=w.revision_id JOIN c0_wiki_pages p ON p.id=r.page_id
                     WHERE w.id=e.wiki_chunk_id AND NOT p.deleted AND p.revision=r.number)))'''
-        parameters={'space':self._space(connection),'profile':self.profile_id,'generation':profile['generation'],
-            'vector':encoded,'limit':limit,'sources':kind!='wiki','wiki':kind!='source'}
+        return eligibility,{'space':self._space(connection),'profile':self.profile_id,'generation':profile['generation'],
+            'sources':kind!='wiki','wiki':kind!='source'}
+
+    def nearest(self,connection,vector,*,limit=64,kind='all'):
+        if type(limit) is not int or not 1<=limit<=64 or kind not in ('all','source','wiki'):raise ValueError('invalid_embedding_query')
+        profile=self._profile(connection)
+        if profile is None:return []
+        encoded=vector_literal(vector,profile['dimensions'])
+        eligibility,parameters=self._eligibility(connection,profile,kind)
+        parameters={**parameters,'vector':encoded,'limit':limit}
         connection.execute(text("SET LOCAL hnsw.iterative_scan='strict_order'"))
         connection.execute(text('SET LOCAL hnsw.ef_search=64'))
         connection.execute(text('SET LOCAL hnsw.max_scan_tuples=1000'))

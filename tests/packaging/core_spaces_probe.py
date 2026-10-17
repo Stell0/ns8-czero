@@ -23,6 +23,7 @@ from czero_core.oauth_grants import OAuthGrantService, GrantRejected, pkce_chall
 from czero_core.sessions import SessionContext
 from czero_core.sources import OriginalStore, SourceService, SourceNotFound, register_source_handlers
 from czero_core.spaces import SpaceService
+from czero_core.structured import StructuredFilters, StructuredSearchService
 from czero_core.wiki import KnowledgeNotFound
 
 assert os.environ.get('CZERO_DISPOSABLE_TEST') == '1', 'Disposable fixture marker required'
@@ -88,6 +89,16 @@ try:
         try:AnnotationService(database,access).get(owner,target,'verification')
         except KnowledgeNotFound:pass
         else:raise AssertionError('Shared annotation lookup crossed spaces')
+        structured = StructuredSearchService(database,access).in_space(private['id'])
+        for target,category,query in zip(targets,['source','wiki','entity','object','claim'],
+                                       ['Retained','Unverified','fixture','Same','unknown'],strict=True):
+            result=structured.search(owner,query,filters=StructuredFilters(categories=[category],
+                products=['C0'],version_tags=['0.28']))
+            assert result['candidate_count']==1 and len(result['hits'])==1
+            assert result['hits'][0]['reference']['id']==str(target.id)
+            assert result['hits'][0]['reference']['revision']==target.revision
+        assert structured.search(owner,'Unverified',filters=StructuredFilters(version_tags=['0.2']))['hits']==[]
+        target=targets[1]
         assert objects.in_space(private['id']).resolve_reference(owner,'chunk',chunk['id'],'chunk')['data']['body'] == 'Retained fixture evidence'
         try:objects.get(owner,record['id'])
         except ObjectNotFound:pass
@@ -108,6 +119,7 @@ try:
         delegated = tokens.verify(pair.access_token,resource=resource).actor
         assert selected.get_page(delegated,first['id']) == first
         assert annotations.get(delegated,target,'verification')['status']=='verified'
+        assert structured.search(delegated,'Unverified',filters=StructuredFilters(version_tags=['0.28']))['hits']
         spaces.set_grant(owner,private['id'],editor.user_id,None,expected_revision=1,idempotency_key='revoke')
         spaces.set_grant(owner,private['id'],editor.user_id,Role.EDITOR,expected_revision=2,idempotency_key='regrant')
         try:selected.get_page(delegated,first['id'])
@@ -116,6 +128,9 @@ try:
         try:annotations.get(delegated,target,'verification')
         except PermissionDenied:pass
         else:raise AssertionError('Captured annotation authority revived')
+        try:structured.search(delegated,'Unverified')
+        except PermissionDenied:pass
+        else:raise AssertionError('Captured retrieval authority revived')
         try:tokens.verify(pair.access_token,resource=resource)
         except GrantRejected:pass
         else:raise AssertionError('Revoked token revived')
@@ -133,4 +148,4 @@ finally:
         c.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':type_name})
         c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'),{'issuer':issuer})
     database.close()
-print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True}))
+print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True,'structured_retrieval':True}))

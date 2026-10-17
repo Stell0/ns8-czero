@@ -404,6 +404,7 @@ Verify protected Core spaces in the installed runtime
     Should Be True    ${result}[typed_references]
     Should Be True    ${result}[grant_revocation]
     Should Be True    ${result}[annotations]
+    Should Be True    ${result}[structured_retrieval]
 
 Verify effective container hardening and memory targets
     Put File    ${CURDIR}/hardening_probe.py    /tmp/czero-hardening-probe.py    mode=0644

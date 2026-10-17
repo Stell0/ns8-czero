@@ -49,6 +49,10 @@ def _literal(value, maximum=128):
     if (not isinstance(value, str) or not value.strip() or len(value) > maximum
             or any(ord(character) < 32 for character in value)):
         raise ValueError('invalid_annotation_value')
+    try:
+        value.encode('utf-8')
+    except UnicodeError:
+        raise ValueError('invalid_annotation_value') from None
     # Tags are literal, including case and surrounding nonempty whitespace.
     return value
 

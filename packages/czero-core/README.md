@@ -217,3 +217,41 @@ history through the established same-space retained-reference pattern. Reads
 report whether the target is still current or archived. Annotation writes never
 change strict object data or retained evidence/Wiki provenance. This remains a
 development API until the AM4 publication/deployment gates in PLAN pass.
+
+## Structured retrieval (0.28.0 development)
+
+`StructuredSearchService(database, access, **retrieval_options)` reuses existing
+provider configuration and immutable `in_space` selection. `search(actor, query,
+filters=StructuredFilters(...), limit=20, mode='auto', rerank=None)` is opt-in;
+`SearchService` keeps its existing signature, default behavior and result shape.
+Omitted categories select source and current Wiki evidence. Explicit categories
+also include entity, object and claim, retrieved through deterministic PostgreSQL
+text queries (including entity aliases). Structured records never enter optional
+embedding or relevance-scoring requests.
+
+`StructuredFilters` accepts `categories`, `products`, `components`, `version_tags`,
+`statuses` (applicability), `verification_statuses`, `archive` (`active`, `archived`
+or `all`), and inclusive `created_from/to`, `observed_from/to` and `verified_from/to`
+intervals. Times require a timezone and normalize to UTC; observation time comes
+from applicability and verification time from verification. Lists must be
+nonempty when supplied. Fields combine with AND, values within a field with OR;
+tags match exact literal strings. `8.4` does not match `8.40` or a version range.
+Unannotated content remains unknown and matches an explicit `unknown` status.
+
+Space, archive and applicability eligibility precede candidate limits, counts,
+text ranking, vector pruning and provider inputs. Filtered semantic readiness uses
+the same predicate; underfilled ANN results use a filtered exact-distance fallback.
+The existing provider-unavailable text fallback and post-provider authority
+rechecks apply. Optional providers process only selected source/Wiki evidence;
+each hit reports its actual retrieval method, and mixed results retain the
+`structured_text` distinction. No provider configuration is selected by a request.
+
+Results carry typed `reference` fields (`kind`, `id`, observed `revision`,
+`space_id`, `resource_id`) plus independent applicability/verification revision,
+status and value summaries. Source hits retain immutable chunk citations; Wiki
+hits retain immutable revision references. Mutable entity/object/claim references
+are observations, not immutable evidence citations. Claim `evidence_refs` contain
+bounded immutable chunk/version/hash identities that clients resolve separately.
+Editing content never carries verification from its old revision. Current search
+excludes archived content by default; historical annotations remain explicitly
+readable through the annotation API.

@@ -2572,3 +2572,57 @@ both trusted/untrusted certificate assertions and the separate short deadline
 regressions. All 38 provider cases pass locally after the focused adjustment.
 Production provider limits and OAuth lifetimes are unchanged. Fresh exact-source
 checks are required; this is not AM4 publication or deployment acceptance.
+
+
+AM4 structured retrieval now composes filtered source/Wiki evidence with
+deterministic entity/object/claim full-text queries, including entity aliases.
+Validated immutable filters select exact categories/product/component/version
+tags, separate applicability/verification status, archives and UTC intervals.
+SQL eligibility precedes counts, candidate limits, ranking and optional provider
+inputs. Filtered semantic readiness and ANN queries share those predicates;
+materialized exact-distance fallback preserves eligible distant matches. Ordinary
+search DTOs and default source/Wiki behavior remain unchanged. Structured records
+never enter embedding/scorer requests and each hit labels its retrieval method.
+
+The initial missing structured module and malformed UTF-8 filter are reproduced
+and corrected. The combined focused regression passes 126 cases before the added
+labeled corpus and strict UTF-8 case. The latest structured/migration slice passes
+19 actual cases; the mandatory installed Core probe now requires all seven results,
+including annotations and structured retrieval. A genuine schema-0015 fixture
+migrates twice to 0016 while preserving every old column across all forty old
+tables, protected grants, real opaque OAuth authority, history, receipts and a
+retained original. This local SQL upgrade is separate from required native upgrade
+and backup/clean-restore acceptance.
+
+Five labeled troubleshooting fixtures cover command, error and alias retrieval
+across every category. Recall at one and typed-reference coverage are each 1.0
+for these five small deterministic fixtures; measured local latencies are
+5.1–15.9 ms with zero provider requests. Immutable source citations and mutable
+record references are checked separately. This is not a large-corpus latency
+guarantee or a real-provider quality claim. Cases also cover corpora over the
+64-candidate budget, exact 8.4 versus 8.40 tags, missing/stale annotations, UTC
+and archive filters, cross-space provider isolation, filtered semantic fallback
+and revocation during scoring.
+
+TLS fixture fix 87cd743 passes both actual push and PR local checks, producer
+publication and released-Core builds. The earlier failing run remains recorded.
+The complete structured increment still requires its own full local/exact CI,
+actual native/artifact review and immutable Core publication before application
+adoption. No AM4 deployment has occurred; all three genuine cb60da9 predecessor
+images and original data remain installed.
+
+
+The complete local structured increment passes **1084 actual Python/PostgreSQL/
+packaging cases** (270.29 seconds), **125 scripts**, schema/shell checks and
+**twenty Robot dry runs**. Both independent distribution installations execute
+the mandatory annotation/structured probe. A final strengthened regression also
+requires an actual filtered HNSW plan and forces scan underfill to exercise the
+eligible exact-distance fallback; its result and rebuilt package proof are
+checked again before committing. Exact-source CI/native/publication and the
+released application/live gates remain required.
+
+The strengthened actual filtered-HNSW/forced-underfill regression and all six
+rebuilt distribution checks pass together: **seven actual cases**, including
+independent wheel/archive installs and repeated packaged migration. No runtime
+source changed after the complete 1084-case regression; the final package rebuild
+includes the structured API documentation.
