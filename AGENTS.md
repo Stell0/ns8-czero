@@ -353,6 +353,33 @@ Keep Core unique strings explicitly bounded at maxLength <=128; ordinary omitted
 
 ## C0 Agent Memory track
 
+Latest deployment: reviewed AM1 main 48937e1 is installed through the supported
+C0-only native update after actual local/publication/released-Core/Renovate and
+both-native success. PLAN records all three verified installed digests, backup,
+27-table/101-job preservation, real OAuth/current+legacy SDK text evidence,
+full-manager restart/replay, disabled owned client and positive-control journal
+privacy. Core/app/schema are 0.25.0/0.40.0/0013. These genuine deployed images
+replace b66e159 as the next native upgrade predecessor.
+
+Operator acceptance exposed an existing stale-cookie 401 at /oauth/consent.
+The focused app 0.40.1 recovery fix on fix/expired-consent-session catches only
+SessionRejected on the consent browser GET after pending-request validation,
+clears the stale cookie and redirects to normal sign-in. Preserve consent
+binding/deadline, explicit CSRF approval, PKCE, current roles and all grant/session
+expiry limits. Invalid/expired requests, role denial, bearer attempts and database
+errors must keep their existing rejections; API reads/writes do not gain browser
+redirects. Native probes expire only their own session via private SQL stdin,
+then require actual SSO recovery, a new cookie and explicit consent. AM2 and
+Windmill Gate wait for this reported blocker to pass review/main/deployment/live
+acceptance. Historical candidate/deployment statements below retain their dates.
+
+The app-only consent recovery candidate passes 870 complete local Python/
+PostgreSQL/packaging tests, 106 scripts, Go/schema/shell and nineteen Robot
+dry-run cases. The regression first reproduces the actual 401 with a valid
+pending request and expired stored session. Native recovery helper is also
+tested through signed local HTTP; actual Debian/Rocky SSO must still pass before
+review and promotion. No Core/schema/transitive dependency change is needed.
+
 C0-AM0–AM6 is a separate operator-authorized track in PLAN.md; preserve historical
 milestones and planned Integration M17–M20. AM0 establishes current main, genuine
 deployed predecessor, contract/inventory and disposable test baseline before any

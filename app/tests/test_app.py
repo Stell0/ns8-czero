@@ -45,7 +45,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
         "status": "ok",
         "service": "czero",
         "core_version": "0.25.0",
-        "app_version": "0.40.0",
+        "app_version": "0.40.1",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -85,7 +85,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.40.0"
+    assert document["info"]["version"] == "0.40.1"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 

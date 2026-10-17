@@ -149,7 +149,7 @@ M08 now adds isolated deterministic Text/Markdown/PDF/DOCX extraction, source/ve
 
 Use authenticated `POST /api/v1/sources/upload` multipart fields `file`, `title`, `media_type`, optional `metadata` JSON and `retain_original=true|false`. The four MIME types are text/plain, text/markdown, application/pdf and application/vnd.openxmlformats-officedocument.wordprocessingml.document. Upload returns HTTP 202 and a version UUID; poll `/api/v1/sources/<source-id>/versions` for queued/ready/failed state. Initial identical uploads with matching title/metadata/media deduplicate. To add changed content, include `source_id` and `expected_revision`; conflicts return 409. Different provenance remains a separate source. Source title/provenance are established by the first upload; existing-source uploads add versions and retain that source metadata. Version content/retention are immutable.
 
-The AM1 candidate adds `sources_ingest_text` for selected, sanitized text evidence.
+AM1 adds `sources_ingest_text` for selected, sanitized text evidence.
 It requires Editor permission and delegated `c0:write`; use `c0:read` to inspect
 extraction and citations. MCP arguments use the catalog's `data` object:
 
@@ -179,8 +179,19 @@ To append a version, fetch the source's current revision and send `source_id`,
 text. A stale revision conflicts; replaying the winning request remains safe.
 Existing source provenance, old versions and citations are preserved. The new
 operation uses the same extraction, cleanup, restart and native backup pipeline
-as file ingestion. The installed AM0 instance does not expose it until AM1's
-reviewed main publication and deployment gates pass.
+as file ingestion. Reviewed main `48937e1` is deployed with this operation;
+the older 63 operation contracts are preserved.
+
+If reconnecting an external client shows `invalid_session` at `/oauth/consent`,
+start a fresh sign-in at `/auth/login?switch_account=true`, then restart the
+client's authorization flow. A pending consent request expires after five
+minutes. App 0.40.1's proposed recovery fix sends a stale C0 browser cookie through
+normal sign-in while retaining a valid pending request; it does not extend
+session/grant lifetimes or approve consent. That fix still needs reviewed CI,
+main promotion and deployment; the deployed app remains 0.40.0.
+The recovery candidate passes 870 local Python/PostgreSQL/packaging tests,
+106 script tests, schema/shell checks and nineteen Robot dry-run cases. Its
+actual image/native checks and review remain required before deployment.
 
 Readers browse sources, documents, chunks, citations and retained/failed original attachments. Editors ingest, retry with `expected_generation`, and archive with `expected_revision`. Source deletion archives it from browse/search while preserving historical evidence and citations. Get full text at `/api/v1/source-versions/<id>/document`, chunks at `/api/v1/documents/<id>/chunks`, a citation at `/api/v1/chunks/<id>/citation`, and bounded FTS at `/api/v1/sources/search?query=inventory`. Downloads at `/api/v1/source-versions/<id>/original` use attachments/octet-stream. Uncertain database commit failures preserve generated originals for operator recovery; automatic orphan reconciliation is not yet implemented. The separate Sources page now offers upload/retention, history/full text/citations, FTS, quarantine/retry and archive controls; ten record/source Node race tests pass. Repeatable native owner/Reader browser workflows pass; interactive Playwright remains waived.
 

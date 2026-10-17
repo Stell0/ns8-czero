@@ -24,6 +24,7 @@ from czero_core.identity import PermissionDenied, Role
 from czero_core.oauth_grants import OAuthGrantService
 from czero_core.oauth_consent import ConsentRejected, OAuthConsentService
 from czero_core.operations import SCOPES
+from czero_core.sessions import SessionRejected
 from czero_app.oauth_provider import OAuthProvider, raw_request, pending_response
 
 COOKIE = 'c0_consent'
@@ -141,7 +142,16 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
         consent.view(*pending_cookie(request))
         if not request.cookies.get('c0_session'):
             return RedirectResponse('/auth/login', status_code=302)
-        browser_session(request)
+        try:
+            browser_session(request)
+        except SessionRejected:
+            # The browser cookie can outlive its native identity. Preserve the
+            # validated pending request, but require a fresh ordinary sign-in.
+            response = RedirectResponse('/auth/login', status_code=302,
+                headers={'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer'})
+            response.delete_cookie('c0_session', path='/', secure=True,
+                httponly=True, samesite='lax')
+            return response
         return FileResponse(static_dir / 'consent.html', media_type='text/html', headers={'Cache-Control':'no-store'})
 
     @app.get('/oauth/consent.js', include_in_schema=False)
