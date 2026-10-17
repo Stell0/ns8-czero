@@ -2527,3 +2527,38 @@ and full-manager restart, disable owned clients and audit bounded root journald
 with actual request controls. Reconcile the three documents with actual evidence
 and verify closeout-marker checks before AM5. Keep failed private evidence outside
 Git, existing waivers, release limitations and the separate Integration roadmap.
+
+
+AM4 annotation foundation implements separate applicability/verification roots
+and immutable histories, exact-content anchors with same-space typed constraints,
+retained object links, current delegated authorization and existing receipt/event
+transactions. The initial regression reproduces the missing module. Seventeen
+focused annotation cases cover all five target kinds, unknown metadata, literal
+extensions/statuses, independent namespace revisions, one-winner races, original
+replay, stale content, unchanged strict payloads/provenance, ready source evidence,
+real opaque-token scope/revocation and cross-space SQL constraints. The combined
+annotation/space/retrieval/object/knowledge/migration regression passes 113 cases.
+A stale schema expectation and oversized-number validation issue were reproduced
+and corrected; failed private evidence is retained. Core 0.28.0 is not published.
+
+As in the AM3 producer sequence, app dependency metadata temporarily admits
+`>=0.27.0,<0.29.0` for explicit local-Core development. Its released tag, immutable
+locked Core 0.27.0 source and all 53 transitive packages stay fixed; the lockfile
+bytes are unchanged and updater bounds remain 0.27.x. Actual uv lock verification
+passes. This does not select unpublished Core for default released builds. After
+Core publication the app will adopt the verified 0.28 source and narrow its
+production dependency/updater bounds. Native fixtures now freeze all three genuine
+installed cb60da9 predecessor digests. Structured retrieval, remaining annotation
+race/migration/package proof and all exact CI/publication/native/app/live gates
+remain required before AM4 acceptance. The dedicated instance is unchanged.
+
+
+The AM4 annotation increment now passes the full local suite: **1065 actual
+Python/PostgreSQL/packaging cases**, **125 scripts**, schema/shell checks and
+**twenty non-UI Robot dry runs**. Both actual wheel and source-archive installation
+paths execute the updated owned Core space/annotation probe outside the checkout;
+all six packaging checks pass, including reproducible artifacts and repeated
+packaged migration. The native probe requires its new annotation result, but no
+actual AM4 native or live acceptance is claimed from this local proof. The exact
+released app lock remains unchanged. Structured retrieval and the remaining AM4
+publication/application/deployment gates remain open.

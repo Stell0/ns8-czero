@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from czero_app.main import create_app
 
 STATIC = Path(__file__).resolve().parents[1] / "static"
-DATABASE_READY = {"status": "ok", "schema_revision": "0015_content_spaces", "vector_version": "0.8.7"}
+DATABASE_READY = {"status": "ok", "schema_revision": "0016_annotations", "vector_version": "0.8.7"}
 
 
 def ready_database():
@@ -44,7 +44,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.27.0",
+        "core_version": "0.28.0",
         "app_version": "0.42.0",
         "database": DATABASE_READY,
     }

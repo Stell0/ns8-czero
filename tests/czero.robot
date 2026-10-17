@@ -59,7 +59,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.27.0"
+    Should Contain    ${output}    "core_version":"0.28.0"
 
 Check worker timer recovered
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
@@ -80,7 +80,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:181a8ae5eaeb606ad473bf6a029b0901db1840bc9987d8d5485949e58792ee91
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:181a68d60bda912dfdf685bcdc1e4db11b183e7b25cfb25982c7e310d37bde10
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -90,9 +90,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 1a45070 AM2 predecessor images.
+        # Freeze all three actually deployed cb60da9 AM3 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:133b220f6eaec6bee1f67fa09deaad6489d002b30ac834aafa9234d6576faef2','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:a5c6a0eee9516d0bfff2c216f50e50c38a802f3eb9b676d7f7f4d6bfd6ce14d1'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:26849301916c7682fb6d1b2e97eb6a378924da2f98878bd2090c05fc8f7c31cc','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:9f300220dc06ce33c78cf54e88b26cf3daa336ec1fc4cdc6c69148b689a90f22'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -403,6 +403,7 @@ Verify protected Core spaces in the installed runtime
     Should Be True    ${result}[immutable_evidence]
     Should Be True    ${result}[typed_references]
     Should Be True    ${result}[grant_revocation]
+    Should Be True    ${result}[annotations]
 
 Verify effective container hardening and memory targets
     Put File    ${CURDIR}/hardening_probe.py    /tmp/czero-hardening-probe.py    mode=0644
@@ -619,7 +620,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.27.0"
+    Get Text    body    contains    "core_version":"0.28.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents

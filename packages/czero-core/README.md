@@ -42,12 +42,13 @@ packaged schema: set `CZERO_DATABASE_URL` privately and run
 the knowledge-space identity. Never place a database URL or identity/provider
 secret in source code or application logs.
 
-Version `0.27.0` is the unpublished AM3 development candidate, adding packaged
-forward migrations `0014_spaces` and `0015_content_spaces`. Publication gates and
-the last verified released dependency are recorded in PLAN.md; do not treat a
-candidate version or a started workflow as a published artifact. The application
-retains its immutable released 0.26.0 dependency until the Core release sequence
-passes.
+Version `0.28.0` is the unpublished AM4 development candidate, adding packaged
+forward migration `0016_annotations` for separate exact-content applicability and
+verification histories. Core 0.27.0 is independently published and accepted at
+`core-v0.27.0`; the reference app retains that immutable released dependency until
+the new Core release sequence passes. PLAN.md records exact source, artifact,
+native and dedicated-instance evidence. A candidate version or started workflow
+does not establish publication or acceptance.
 
 Trusted callers use `SpaceService` for discovery, creation and revisioned grant
 management. Content services select a space with `service.in_space(space_id)`;
@@ -81,8 +82,8 @@ checks its uploaded hashes and publishes it without replacing the module's
 latest release. Replays must match existing artifact bytes; published files
 are never clobbered.
 
-The last accepted runtime uses verified released Core 0.26.0:
-https://github.com/Stell0/ns8-czero/releases/tag/core-v0.26.0.
+The last accepted runtime uses verified released Core 0.27.0:
+https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0.
 Consult PLAN.md for subsequent exact-source publication gates and actual
 consumer/Renovate evidence; a started workflow does not establish acceptance.
 
@@ -102,10 +103,10 @@ Use a Python 3.12–3.14 virtual environment and the verified release assets, or
 the immutable Git tag/subdirectory source:
 
 ```sh
-uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.26.0#subdirectory=packages/czero-core"
+uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.27.0#subdirectory=packages/czero-core"
 ```
 
-For that released generation, declare the compatible range `>=0.26.0,<0.27.0` and the
+For that released generation, declare the compatible range `>=0.27.0,<0.28.0` and the
 reviewed Git tag in `[tool.uv.sources]`, then commit uv.lock. Never replace the
 released source with a local checkout implicitly. The template producer can
 opt in with `CZERO_CORE_SOURCE=local`; this affects only its build environment.
@@ -180,3 +181,39 @@ relax sourced assertion requirements or introduce inference.
 During publication preparation the reference app still pins released Core
 0.25.0; its explicit local producer override alone uses the 0.26.0 candidate.
 The released application increment follows verified immutable artifact publication.
+
+## Content annotations (0.28.0 development)
+
+`AnnotationService(database, access)` uses the same immutable `in_space` selector
+as content services. `ContentTarget(kind, id, revision)` identifies an exact
+`source_version`, `wiki_revision`, `entity`, `object` or `claim`. Source/Wiki IDs
+are their immutable version/revision UUIDs; `revision` is their stored number.
+Other kinds use the record UUID and observed revision. Reads return a typed
+reference with its parent resource, content hash and space.
+
+`get(actor, target, namespace)` and `history(...)` read `applicability` and
+`verification` separately. Missing metadata has annotation revision zero,
+`value=None` and status `unknown`; it does not create a row. `update(actor,
+target, namespace, value, expected_revision=..., idempotency_key=...)` requires
+an explicit annotation revision, with zero for create-only. Each successful
+update creates an immutable history entry and commit-ordered metadata event in
+the existing receipt transaction. Independent writers have one winner; retry
+returns the original successful snapshot after fresh authorization.
+
+Applicability values support literal `products`, `components`, `version_tags`,
+`status`, `observed_at`, `confidence` and bounded `extensions`. Verification has
+its own `status`, `observed_at`, `verified_at`, `confidence` and `extensions`.
+Times require an offset and normalize to UTC. Tags are exact strings, not version
+ranges or prefixes. Status strings remain literal, including unknown future
+values. Missing fields remain unknown; no inference adds verification. Values
+retain the existing sixteen-KiB JSON budget. Ready extraction is required before
+marking a source version verified.
+
+Changing a mutable entity/object/claim makes an old observed revision stale for
+new writes. Existing annotations remain readable at their exact old target;
+new content has no inherited verification. Historical immutable source/Wiki
+targets remain explicit. Object removal retains its annotation anchor and
+history through the established same-space retained-reference pattern. Reads
+report whether the target is still current or archived. Annotation writes never
+change strict object data or retained evidence/Wiki provenance. This remains a
+development API until the AM4 publication/deployment gates in PLAN pass.
