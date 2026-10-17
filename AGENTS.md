@@ -430,3 +430,19 @@ validation errors without the transport fix; preserve the bounded error-body
 buffer, standard protocol codes, fixed public resource messages and correct 503
 fallback if an error response is interrupted. Final app CI/native/review/live
 acceptance remains required and is not inferred from local results.
+
+
+AM1 app candidate 84f64b1 passes exact local/producer/released-Core/Renovate and
+both-native checks. Actual logs prove 862 Python/PostgreSQL/packaging and 106
+script cases; downloaded Debian installation has sixteen passes/three expected
+skips and genuine Rocky b66e159 upgrade twenty-six passes/all seven browsers and
+privacy guards. Both checkouts match source, real SSO/SDK probes pass and three
+XML/Pino artifacts have zero OAuth queries. Text receipts/versions/citations now
+pass actual native restart/update/restore. The default released-source image
+passes actual runtime/license/source audits and Dive analysis; five inspected
+Trivy/SBOM pairs retain documented vendor findings while the fixable-critical
+gate passes. PLAN freezes the candidate digests separately from genuine installed
+b66e159. This docs-only evidence marker needs its own actual checks before PR 4
+review/main promotion. AM1 is not accepted/deployed and AM2 must wait for its
+reviewed main publication, targeted update and live validation. No new ChatGPT
+UI/provider-quality/stable-module-release or CPU-quota claim is made.

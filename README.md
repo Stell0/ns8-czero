@@ -356,3 +356,15 @@ cases, 106 scripts and schema/shell/Robot checks. The actual published Core
 artifacts separately pass all six independent packaging checks. Candidate
 publication, native tests and review/deployment are still required before AM1
 is accepted on the dedicated installation.
+
+
+AM1 application candidate `84f64b1` also passes exact-source producer, released
+Core, Renovate and native CI. Downloaded reports prove Debian installation
+(16 passes, 3 expected skips) and genuine Rocky upgrade (26 passes), including
+seven browser/privacy workflows and actual text-receipt/evidence recovery.
+Actual artifacts pass the OAuth-query audit. The default released-source image
+passes runtime/license/source checks and Dive analysis. Vulnerability reports
+retain vendor findings; a passing critical gate does not mean a clean scan.
+[PR #4](https://github.com/Stell0/ns8-czero/pull/4) remains a draft until this
+evidence marker is verified; review, main publication and dedicated deployment
+are still required. The live installation remains AM0 `b66e159`.

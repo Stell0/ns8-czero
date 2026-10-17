@@ -1581,3 +1581,55 @@ only app 0.40.0 and Core 0.25.0/02d3e49 changes, with no transitive dependency
 upgrade. The default released-source local image assembly/audit is running; exact
 final application publication/released-image/Renovate/both-native CI, review,
 main promotion and live validation still gate AM1 acceptance.
+
+
+**AM1 exact application candidate evidence:**
+`84f64b11ece90fc3d0891688c6b994eb03070979` passes
+[push local 39018677609](https://github.com/Stell0/ns8-czero/actions/runs/39018677609),
+[PR local 39018681483](https://github.com/Stell0/ns8-czero/actions/runs/39018681483),
+[producer publication 39018677621](https://github.com/Stell0/ns8-czero/actions/runs/39018677621),
+[push released-Core 39018677635](https://github.com/Stell0/ns8-czero/actions/runs/39018677635),
+[PR released-Core 39018681487](https://github.com/Stell0/ns8-czero/actions/runs/39018681487),
+[push Renovate 39018677616](https://github.com/Stell0/ns8-czero/actions/runs/39018677616),
+[PR Renovate 39018681530](https://github.com/Stell0/ns8-czero/actions/runs/39018681530)
+and [both-native 39018828794](https://github.com/Stell0/ns8-czero/actions/runs/39018828794),
+all completed/successful. Actual local logs confirm 862 Python/PostgreSQL/
+packaging and 106 script cases. Downloaded native reports prove Debian install
+sixteen passes/three expected upgrade-only skips and genuine Rocky b66e159
+upgrade twenty-six passes, including all seven real browser/privacy workflows.
+Each distribution's test-job checkout independently contains the exact candidate
+SHA. Both have two passing real-SSO/SDK verification keywords; the exact probe
+requires two complete text-evidence lifecycles for each write grant, including
+ready chunks, sourced claims and replay through current/legacy SDK modes.
+Native seed/recovery now preserves two text versions, their queued submission
+receipts, immutable documents/chunks/citations and conflict behavior across
+restart, update and encrypted clean restore. Three actual XML/Pino artifacts
+contain zero OAuth-query candidates. No live feature acceptance is inferred.
+
+Anonymous OCI manifest/config checks verify all three candidate revisions and
+matching sibling references. These **candidate** digests are not deployed and
+do not replace the actual b66e159 predecessor:
+
+| Image (`feat-agent-memory-core`) | Verified 84f64b1 candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:a1b3439f6ffa842d01b5834107b5ae397bc6094ac5296d0ec53524de18aa0665` |
+| `ghcr.io/stell0/czero-app` | `sha256:ceaf829a137b6c003c21aba10113ce548c842329af262be967144dee4b37bcf8` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:03f080ec76b46fd6fa0b928011960d8b6c106b38ae88e34b9aea643ad665bc86` |
+
+The actual local default released-source image builds and passes runtime/license
+and immutable Core-source audits: installed Core is released 0.25.0/02d3e49, not
+an implicit local substitution. Official-checksum-verified Dive 0.13.1 completes
+layer analysis with 98.12% efficiency (local image 203191932 bytes, 5657573
+inefficient bytes). Five actual producer SARIF/CycloneDX pairs are inspected:
+166 app/413 database/7 UI findings, zero module/imageroot findings; respective
+SBOM component counts are 131/145/142/0/0. All finding IDs are vulnerability
+advisories; no secret findings appear. The fixable-critical gate passes, but
+vendor findings remain release/maintenance work, not a clean-security claim.
+
+[Draft PR 4](https://github.com/Stell0/ns8-czero/pull/4) tracks this complete AM1
+candidate, assigned to the author with no requested reviewer. This evidence-only
+documentation follow-up changes no runtime/API/dependency/schema/test bytes.
+Verify its own exact-source checks before requesting review, then require
+reviewed main promotion/publication and the authorized dedicated deployment /
+live preservation and evidence cycle before accepting AM1 or starting AM2.
+The installation remains accepted AM0 b66e159; Windmill Gate remains gated.
