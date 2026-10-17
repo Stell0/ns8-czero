@@ -6,6 +6,7 @@ import json
 from uuid import UUID,uuid5,NAMESPACE_URL
 from sqlalchemy import text
 from .identity import PermissionDenied,Role
+from .spaces import require_scope
 from .jobs import Handler,empty_payload
 from .providers import normalized_vector
 from .wiki import KnowledgeConflict,_view
@@ -114,7 +115,8 @@ class EmbeddingStore:
     def status(self,actor):
         with self.database.engine.connect() as connection:
             if self.access is None:raise PermissionDenied()
-            self.access._actor(connection,actor.user_id).require(Role.READER)
+            current=self.access.checked_actor(connection,actor);current.require(Role.READER)
+            require_scope(current,Role.READER)
             profile=self._profile(connection) if self.client else None
             if profile is None:return {'configured':self.client is not None,'profile_id':None,'generation':None,'indexed':0}
             count=connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE profile_id=:id AND generation=:generation'),

@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from .identity import PermissionDenied, Role
+from .spaces import require_scope
 from .object_schema import bounded_json, name, schema_validator, tags, validate_record
 
 
@@ -37,8 +38,9 @@ class ObjectService:
 
     def _authorize(self,c,actor,role):
         if self.access is None: raise PermissionDenied()
-        current=self.access._actor(c,actor.user_id)
+        current=self.access.checked_actor(c,actor)
         current.require(role)
+        require_scope(current, role)
         return current
 
     def register_type(self,actor,type_name,label,schema,unique_fields=None):

@@ -2,7 +2,7 @@
 
 **Status (17 October 2026): Agent Memory AM0–AM2 runtime acceptance passes.** The dedicated instance runs main `1a45070`, with Core **0.26.0**, app **0.41.0** and schema **0013**. Agents can ingest bounded text evidence and resolve/create/revise Wiki pages with explicit revision and retry protection. Actual current/legacy SDK workflows, fresh OAuth scope consent, supported update/restart, original-data preservation and bounded journal privacy pass. The existing connector separately reads the new immutable evidence and historical Wiki content. Its cached tool list has not refreshed, so new-tool invocation through that connector is not claimed.
 
-Main passes 958 Python/PostgreSQL/packaging cases, 106 script cases, released-Core/image checks, Debian installation and genuine Rocky upgrade with all seven automated browser workflows. See [PLAN.md](PLAN.md) for exact source, artifacts, deployed digests and evidence attribution. This documentation closeout needs its own completed checks and reviewed main publication before AM3 starts. Protected spaces and AM3–AM6 remain pending; Windmill Gate remains gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
+Main passes 958 Python/PostgreSQL/packaging cases, 106 script cases, released-Core/image checks, Debian installation and genuine Rocky upgrade with all seven automated browser workflows. Its documentation closeout main 65829d4 also passes its completed checks and artifact audits. See [PLAN.md](PLAN.md) for exact source, artifacts, deployed digests and evidence attribution. AM3 development has started; protected spaces and AM3–AM6 deployment acceptance remain pending. Windmill Gate remains gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
 
 ## Purpose and boundaries
 
@@ -318,8 +318,8 @@ and external-agent maintenance guidance. AM0–AM2 runtime acceptance passes at
 main `1a45070` (Core 0.26.0/app 0.41.0/schema 0013), including supported backup,
 update, restart, preservation and live current/legacy SDK checks. The existing
 connector independently reads the new evidence and retained Wiki revision.
-AM3 starts only after this documentation marker's exact checks and main
-publication pass. The installed behavior remains one shared knowledge space
+AM2's documentation marker has passed exact checks and main publication; AM3
+development is active. The installed behavior remains one shared knowledge space
 with application-wide roles, REST file ingestion and MCP/REST text evidence.
 
 The agreed space contract keeps object-type definitions shared across the

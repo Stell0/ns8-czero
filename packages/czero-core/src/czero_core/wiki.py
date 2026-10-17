@@ -10,6 +10,7 @@ from uuid import uuid4
 from sqlalchemy import text
 
 from .identity import PermissionDenied, Role
+from .spaces import require_scope
 from .object_schema import name
 from .objects import page
 from .sources import _label, _metadata, _uuid
@@ -58,8 +59,9 @@ class WikiService:
     def _authorize(self, connection, actor, role=Role.READER):
         if self.access is None:
             raise PermissionDenied()
-        current = self.access._actor(connection, actor.user_id)
+        current = self.access.checked_actor(connection, actor)
         current.require(role)
+        require_scope(current, role)
         return current
 
     def _mutate(self, actor, operation, payload, key, execute):

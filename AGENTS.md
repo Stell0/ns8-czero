@@ -380,13 +380,21 @@ chunks. Keep fixed knowledge MCP errors, generic private-error fallback, object
 errors and role/scope challenge separation. Released Core remains immutable;
 no schema or dependency changed during this closeout.
 
-This closeout marker requires actual exact-source checks and reviewed main
-publication before AM3. Future space work keeps object-type definitions global;
+AM2 closeout main 65829d4 has completed successful local/producer/released-Core/
+both-native checks and actual artifact audits (PLAN.md). AM3 is active on its
+feature branch; the first Core foundation adds the preserved shared-space
+catalog, revisioned grants and captured delegated-token revalidation. Local
+967 Python/PostgreSQL/packaging cases, 106 scripts, schema/shell checks and
+nineteen Robot dry runs pass. Protected content scoping, transports, UI and
+deployment acceptance are still pending. Do not expose or publish this partial
+Core candidate as a completed protected-space implementation.
+
+Space work keeps object-type definitions global;
 records, relations, events and annotations are protected by space. Application
 Admins can access every space under actual OAuth scopes; Readers/Editors need
 explicit protected-space grants capped by their application role. Do not infer
 per-client isolation or add a separate grant model without an agreed requirement.
-AM3–AM6 and Windmill Gate remain gated. Earlier entries below are historical
+AM3 acceptance, AM4–AM6 and Windmill Gate remain gated. Earlier entries below are historical
 implementation evidence, not current status.
 
 C0-AM0–AM6 is a separate operator-authorized track in PLAN.md; preserve historical

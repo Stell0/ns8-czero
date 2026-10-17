@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Bounded delegated grants for trusted consent and OAuth transport adapters."""
 import base64
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 import hashlib
 import hmac
@@ -33,6 +33,18 @@ class DelegatedAccess:
     expires_at: datetime
     resource: str
     issuer: str
+
+
+@dataclass(frozen=True, repr=False)
+class DelegationBinding:
+    """Private Core attestation; no raw token and no request-selected callback."""
+    service: object = field(repr=False)
+    digest: str = field(repr=False)
+
+    def validate(self, connection):
+        if not isinstance(self.service, OAuthGrantService):
+            raise GrantRejected()
+        return self.service._verify_digest(connection, self.digest, self.service.resource, bind=False)
 
 
 @dataclass(frozen=True)
@@ -287,15 +299,21 @@ class OAuthGrantService:
     def verify(self, token, *, resource):
         digest = _digest(token)
         with self.access.database.engine.connect() as connection:
-            row = connection.execute(text('''SELECT t.*,g.client_id FROM c0_oauth_tokens t
-                JOIN c0_oauth_grants g ON g.id=t.grant_id
-                WHERE t.hash=:hash AND t.kind='access' AND NOT t.consumed AND t.expires_at>:now'''),
-                {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
-            if row is None:
-                raise GrantRejected()
-            grant, actor = self._grant(connection, row['grant_id'], str(row['client_id']), resource)
-            return DelegatedAccess(actor, str(grant['client_id']), frozenset(grant['scopes']),
-                row['expires_at'], self.resource, self.access.issuer)
+            return self._verify_digest(connection, digest, resource, bind=True)
+
+    def _verify_digest(self, connection, digest, resource, *, bind):
+        row = connection.execute(text('''SELECT t.*,g.client_id FROM c0_oauth_tokens t
+            JOIN c0_oauth_grants g ON g.id=t.grant_id
+            WHERE t.hash=:hash AND t.kind='access' AND NOT t.consumed AND t.expires_at>:now'''),
+            {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
+        if row is None:
+            raise GrantRejected()
+        grant, actor = self._grant(connection, row['grant_id'], str(row['client_id']), resource)
+        scopes = frozenset(grant['scopes'])
+        if bind:
+            actor = replace(actor, delegation=DelegationBinding(self, digest), delegated_scopes=scopes)
+        return DelegatedAccess(actor, str(grant['client_id']), scopes,
+            row['expires_at'], self.resource, self.access.issuer)
 
     def revoke(self, token, client_id, *, resource):
         """An unknown/malformed token is an idempotent revocation success."""

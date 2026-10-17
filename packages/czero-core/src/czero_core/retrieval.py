@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import Uuid,bindparam,text
 from sqlalchemy.exc import SQLAlchemyError
 from .identity import PermissionDenied,Role
+from .spaces import require_scope
 from .sources import SourceService,_label
 from .wiki import _view,KnowledgeNotFound
 from .embeddings import EmbeddingStore
@@ -64,7 +65,8 @@ class SearchService:
 
     def _authorize(self,connection,actor):
         if self.access is None:raise PermissionDenied()
-        current=self.access._actor(connection,actor.user_id);current.require(Role.READER)
+        current=self.access.checked_actor(connection,actor);current.require(Role.READER)
+        require_scope(current,Role.READER)
         return current
 
     @staticmethod

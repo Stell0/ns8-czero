@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from .access import AccessService
 from .database import Database
 from .identity import Actor, PermissionDenied, Role
+from .spaces import require_scope
 
 _NAME = re.compile(r"[a-z][a-z0-9_.-]{0,63}\Z")
 _KEY = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
@@ -122,7 +123,9 @@ class JobService:
     def _authorize(self, connection, actor: Actor):
         if self.access is None:
             raise PermissionDenied()
-        self.access._actor(connection, actor.user_id).require(Role.ADMIN)
+        current = self.access.checked_actor(connection, actor)
+        current.require(Role.ADMIN)
+        require_scope(current, Role.ADMIN)
 
     @staticmethod
     def _limit(limit):

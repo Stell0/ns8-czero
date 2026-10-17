@@ -13,6 +13,7 @@ from sqlalchemy import text
 
 from .extraction import MEDIA_TYPES, MAX_UPLOAD, ExtractionError, extract_isolated, chunks
 from .identity import PermissionDenied, Role
+from .spaces import require_scope
 from .jobs import Handler, JobService, bounded_json
 from .receipts import mutate
 
@@ -145,8 +146,9 @@ class SourceService:
     def _authorize(self, connection, actor, role=Role.READER):
         if self.access is None:
             raise PermissionDenied()
-        current = self.access._actor(connection, actor.user_id)
+        current = self.access.checked_actor(connection, actor)
         current.require(role)
+        require_scope(current, role)
         return current
 
     @staticmethod
