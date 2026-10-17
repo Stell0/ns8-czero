@@ -1933,3 +1933,51 @@ efficiency. The synthetic import probe does not establish database readiness.
 All 64 old schemas/roles/scopes and bindings remain unchanged; two operations
 are added. PR 6 remains draft until this complete app source's CI, native,
 artifact/privacy and review gates pass. The installation remains ece3e90.
+
+**AM2 application exact-source candidate:**
+`cf3e9c9e0f2bb276f456deec26a4b6fc10ae34c1` passes completed
+[local 39036120655](https://github.com/Stell0/ns8-czero/actions/runs/39036120655),
+[producer 39036120607](https://github.com/Stell0/ns8-czero/actions/runs/39036120607),
+[released-Core 39036120595](https://github.com/Stell0/ns8-czero/actions/runs/39036120595)
+and [Renovate 39036120620](https://github.com/Stell0/ns8-czero/actions/runs/39036120620).
+The downloaded local report confirms 958 actual Python/PostgreSQL/packaging and
+106 script cases. Five actual SARIF/CycloneDX pairs retain 166 app/413 database/
+7 UI vendor findings, zero module/imageroot findings and component counts
+131/145/142/0/0. All rule IDs are vulnerability advisories; the fixable-critical
+gate passes. No clean-security claim is made.
+
+All three actual OCI manifests/configs match cf3e9c9, including dependency
+metadata. These are candidate images, not deployed predecessors:
+
+| Image (feat-agent-memory-wiki at cf3e9c9) | Verified candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:43747ea5246db2a05a0e166cb0f2957c1f0ebbc8c54b6f34e67e41513031702b` |
+| `ghcr.io/stell0/czero-app` | `sha256:2861ffc6ba0ffe7acd3f0883e294558d698125ab6f5b2413635c07c3435d2f23` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:13079f2dc4e2ba04efa82d606aba0f029e69d34d07fffe1befc138623a370abd` |
+
+Native [39036302061](https://github.com/Stell0/ns8-czero/actions/runs/39036302061)
+completes successfully. Actual downloaded reports pass Debian installation sixteen
+cases/three expected skips and genuine Rocky ece3e90 upgrade twenty-six cases,
+including all seven browser/privacy workflows and two real SSO/SDK probes per
+distribution. Three actual XML/Pino artifacts contain zero OAuth query candidates;
+the actual checkout logs independently match cf3e9c9 for each distribution.
+The checked helper requires two current/legacy Wiki resolve/upsert/conflict/replay/
+history/archive lifecycles for each write-capable probe, retaining the old tools;
+installed recovery also verifies original actor-owned receipts and revisions.
+SDK stdout is intentionally suppressed by the private native fixture: successful
+probe keywords and checked exact helper assertions supply this coverage evidence.
+
+This final evidence marker requires its own exact CI/native checks before human
+review. Reviewed main publication and dedicated C0-only backup/update/live
+acceptance remain mandatory. No AM2 deployment is claimed; genuine ece3e90 images
+remain the deployed predecessor. AM3 and Windmill Gate remain gated.
+
+The retained 150-line positive-control live ingestion journal is also checked
+against the submitted text and its unique prefix: zero matches. This extends
+the earlier query/token privacy audit without changing logging configuration.
+
+A separate baseline/current OpenAPI binding comparison also retains all 64 old
+REST bindings exactly and adds only GET resolve/POST upsert. The first capture
+selected the default wrapper instead of the hostname-root application and yields
+no route metadata; the corrected explicit-root comparison passes. This is route
+metadata verification, not a synthetic-URL database-readiness claim.

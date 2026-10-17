@@ -436,3 +436,13 @@ default image verifies the released Core Git pin, runtime contents and license.
 All 64 existing operation schemas/roles/scopes remain fixed with two additions.
 [PR 6](https://github.com/Stell0/ns8-czero/pull/6) tracks exact CI/native/review
 promotion; this is not yet a deployed feature.
+
+The AM2 application source `cf3e9c9` passes actual local, image publication,
+released-Core and dependency-update checks. Published candidate images match
+that source; retained vendor vulnerability findings are recorded in PLAN.
+Actual native reports pass Debian installation (sixteen cases/three expected
+skips) and genuine Rocky upgrade (twenty-six cases), all seven browser/privacy
+workflows and both current/legacy SDK Wiki maintenance/history checks. Downloaded
+reports and both checkout revisions are audited. The final evidence marker still
+requires its own exact CI/native verification before review; the installed service
+remains the accepted consent-fix revision.

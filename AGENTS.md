@@ -362,7 +362,9 @@ All sixteen old client descriptors and eleven unrelated instances are preserved;
 the owned client is disabled and positive-control root journal privacy passes.
 Freeze all three actually installed ece3e90 digests in PLAN together for AM2.
 The timed-out first consent approval is retained as uncertain consumed-response
-evidence; fresh authorization succeeds. Do not claim separate ChatGPT UI acceptance.
+evidence; fresh authorization succeeds. The operator confirms authorization
+completes; actual reconnected citation reading passes. This does not establish
+a refreshed connector tool catalog or a new-tool invocation.
 
 AM2 is active on feat/agent-memory-wiki. Follow PLAN's Core-first 0.26.0 artifact
 then app 0.41.0 released-pin sequence, schema 0013 unchanged. Exact slugs do not
@@ -515,3 +517,16 @@ consumer fixture remains unchanged. All 64 old schemas/roles/scopes stay fixed,
 with two additive operations and no schema change. PR 6 is draft pending exact
 application CI/native/artifact/privacy and human review/main/deployment gates.
 Do not substitute these candidate images for the genuine deployed ece3e90.
+
+AM2 app source cf3e9c9 passes actual exact-source local/producer/released-Core
+and Renovate checks. Downloaded scan/SBOM reports retain the vendor findings
+recorded in PLAN; the fixable-critical gate passes. Three OCI manifests/configs
+match this source and its released dependency. Native 39036302061 passes actual
+Debian installation sixteen cases/three expected skips and genuine Rocky ece3e90
+upgrade twenty-six cases, all seven browsers/privacy guards and two real SSO/SDK
+probes per distribution. Three downloaded XML/Pino artifacts have zero OAuth query
+candidates; both actual checkout logs match cf3e9c9. These probes require both
+current/legacy Wiki maintenance lifecycles and retained history/retry receipts.
+This final evidence marker needs its own exact CI/native verification before
+human review. Reviewed main publication and supported dedicated deployment remain
+required; genuine deployed ece3e90 digests remain frozen. AM2 is not accepted.
