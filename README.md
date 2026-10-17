@@ -312,10 +312,15 @@ M14 candidate evidence, security findings and deployment limits are recorded in 
 
 The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers MCP text evidence,
 revision-safe Wiki helpers, protected spaces, applicability-aware retrieval and
-external-agent maintenance guidance. AM0 is accepted and deployed. AM1 text ingestion is implemented as a review
-candidate; protected spaces and later retrieval/maintenance work remain pending.
-The installed AM0 behavior remains one shared knowledge space with
-application-wide roles and REST file ingestion. Existing knowledge, immutable
+external-agent maintenance guidance. AM0 and AM1 are accepted and deployed,
+including text ingestion and consent
+recovery at main `ece3e90` (Core 0.25.0/app 0.40.1/schema 0013). Actual main CI,
+both native distributions, targeted backup/update and current/legacy SDK evidence
+and restart checks pass; exact digests and limitations are in PLAN. AM2 Wiki
+helpers are in development. Protected spaces and later retrieval/maintenance work
+remain pending. The installed behavior remains one shared knowledge space with
+application-wide roles, REST file ingestion and MCP/REST text evidence. Existing
+knowledge, immutable
 evidence/history and OAuth clients must be preserved. C0 continues to provide
 deterministic storage and retrieval; external agents perform reasoning and
 consolidation. Final deployment and validation precede Windmill Gate work.
@@ -379,3 +384,9 @@ retain vendor findings; a passing critical gate does not mean a clean scan.
 [PR #4](https://github.com/Stell0/ns8-czero/pull/4) remains a draft until this
 evidence marker is verified; review, main publication and dedicated deployment
 are still required. The live installation remains AM0 `b66e159`.
+
+AM2's Core candidate passes 904 complete Python/PostgreSQL/packaging and 106
+script cases locally, including independent installed wheel/archive Wiki
+revision/retry checks. It does not yet expose new REST/MCP operations. The
+installed version remains accepted ece3e90; CI/native, immutable Core publication,
+application integration and reviewed deployment remain required for AM2.

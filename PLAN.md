@@ -1270,7 +1270,7 @@ The baseline adds no runtime, API or database change. Existing pilot knowledge,
 structured-object fixtures, approved clients and the working ChatGPT connection
 must survive all later milestones. CPU and interactive-Playwright waivers remain.
 
-### C0-AM1 — MCP-native text evidence ingestion [ ]
+### C0-AM1 — MCP-native text evidence ingestion [x]
 
 Reuse SourceService and its original/version/extraction/cleanup pipeline. Add
 `sources_ingest_text` to the shared typed REST/MCP catalog, Editor/c0:write only.
@@ -1727,3 +1727,97 @@ These are local results, not yet exact-source CI/native/review/deployment of the
 recovery fix. Its PR opens without a requested reviewer and waits for operator
 review after actual CI succeeds. The reported live consent failure is not
 silently marked accepted; AM2 remains gated.
+
+
+**AM1 and consent recovery accepted deployment (17 October 2026):** The operator
+reviewed and merged PR 5 as `ece3e90848886b6d975037445daa34224c92dcbd`.
+Its tree matches reviewed `3156f0f`. Actual main checks pass:
+[local 39029321531](https://github.com/Stell0/ns8-czero/actions/runs/39029321531),
+[producer 39029321540](https://github.com/Stell0/ns8-czero/actions/runs/39029321540),
+[released-Core 39029321541](https://github.com/Stell0/ns8-czero/actions/runs/39029321541)
+and [native 39029498664](https://github.com/Stell0/ns8-czero/actions/runs/39029498664).
+Local logs prove 870 Python/PostgreSQL/packaging and 106 script cases. Actual
+native reports prove Debian installation sixteen passes/three expected skips,
+genuine Rocky 48937e1 upgrade twenty-six passes, seven browser/privacy workflows,
+two successful real-SSO probes per distribution, exact checkouts and three
+XML/Pino artifacts with zero OAuth query candidates.
+
+A new supported C0-only backup succeeds; its plan is disabled afterward and all
+eight existing plans remain unchanged. Full Restic read-data verification, required
+state files and pg_restore listing of the 135898-byte database dump pass. Canonical
+native update targets only the authorized dedicated C0 instance after immediate
+three-image verification. Installed Core/app/schema are 0.25.0/0.40.1/
+`0013_oauth_consent`. All 27 domain-table aggregates, exact delegated rows, original
+104 terminal jobs/attempts, private configuration, retained originals, schedules
+and eleven unrelated module identities survive the update. Trusted HTTPS retains
+all 63 legacy operation metadata records and the additive text operation.
+
+The live fixture lets its own native session expire naturally, proving the stale
+cookie and actual invalid_session response before deployment. After deployment,
+normal trusted-HTTPS sign-in returns a new cookie and resumes the same pending
+consent with exact client/user/scopes. Missing-CSRF approval fails. The first
+positive approval response times out after consumption; that private failure is
+retained, and a fresh explicit PKCE/state/resource-bound authorization succeeds.
+Both current and legacy actual SDK clients pass ingestion, real timer extraction,
+immutable documents/chunks/citations, a sourced claim, REST replay and changed-body
+conflict. Fresh normal native sign-in and explicit consent precede a supported
+full-manager restart; readiness then fresh SDK replay/browser session pass.
+The owned client is disabled and bearer reuse rejected. All sixteen existing
+client descriptors, original jobs/attempts, configuration/files/schedules and
+unrelated modules remain unchanged after the new isolated records and restart.
+Fifteen domain-table aggregates are unchanged; excluding only the new fixture
+source/entity/claim IDs proves exact original aggregates in ten further content
+tables. The remaining account/client changes are normal owner last_seen and the
+owned client disable; all old client descriptors are compared independently.
+A bounded root app journal contains 150 actual lines, health/MCP positive controls,
+zero OAuth query candidates, zero submitted credential/token matches and zero
+tracebacks. Private credentials are removed after cleanup; private fixture IDs,
+URLs and failed evidence stay outside Git. This proves the reported server-side
+recovery path, not an independently observed ChatGPT UI reconnection or a live
+all-role matrix. AM1 is accepted; AM2 may start. Windmill Gate remains gated.
+
+These three actually installed `ece3e90` images replace 48937e1 together as the
+genuine AM2 native predecessor; no documentation-marker image is substituted:
+
+| Image (`main`) | Verified deployed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:4a511797d4943771b1b30e022b76567a2705ac2bc2538d91ca5b3751eb489c6f` |
+| `ghcr.io/stell0/czero-app` | `sha256:b3b926b7050b79cf46ef31c21fc51ff310659688ed55f5dfaa75ba3a3f40db19` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:bfba1acd571b3b151f8198579beac4734dcbb946e79ed3b290c1bb4dc979fc91` |
+
+**AM2 implementation subplan:** First release additive Core 0.26.0 with schema
+0013 unchanged. Resolve only exact validated slugs; archived pages require explicit
+include_deleted. Upsert without expected_revision is create-only; with it,
+update-only. Existing/archived create and stale/archived update conflict; missing
+update is not-found. Reuse actor-scoped global receipt serialization, persisted
+Editor rechecks, immutable revisions/events and existing DTO/hash semantics.
+Keep old create/update fingerprints unchanged. Add a KnowledgeConflict subtype
+for real chunks whose parent evidence version is not ready, checking readiness
+inside the claim transaction. Prove races across two persisted Editors, loser
+reload/retry, original snapshot replay, rollback, revocation during lock waits,
+limits and old-operation/history/reference compatibility. Independent installed
+wheel/archive clients exercise resolve/upsert/reconnect/history outside checkout.
+
+After exact Core local/producer/released-consumer/both-native successes, publish
+immutable core-v0.26.0 and verify downloaded artifacts before app 0.41.0 pins its
+exact tag/subdirectory/commit. Add shared wiki_pages_resolve/upsert REST/MCP
+operations (66 total), preserving all 64 old contracts. New routes use static
+validation errors and bounded JSON; old route validation remains unchanged.
+Map only trusted knowledge operations to fixed safe error codes, preserving
+scope challenges, role denial and existing object errors. Test REST and actual
+current/legacy SDK clients, role/scope/revocation matrices and private-error
+fallback. Extend native SSO/SDK and persistence for immutable Wiki history and
+receipts through restart/update/restore. No UI, generative operation or automatic
+maintenance is needed. Full local/exact-source image/released-Core/both-native
+and privacy gates precede human review, main publication and C0-only deployment.
+
+**AM2 Core increment local result:** Core 0.26.0/schema 0013 candidate passes
+904 complete Python/PostgreSQL/packaging cases (236.72 seconds), including 34 new
+Wiki/readiness cases. Independent wheel/archive installations prove exact slug
+resolution, create-only conflict, revision history and original receipt replay
+after reconnect, alongside text evidence. All 106 JavaScript cases, Go/schema,
+shell syntax and nineteen Robot dry-run cases pass. App remains 0.40.1 and its
+released Core tag/lock remain 0.25.0; the temporary compatible range permits the
+explicit local 0.26 producer. Genuine ece3e90 predecessors are frozen together.
+No new REST/MCP operation is exposed yet. Exact-source CI/native and immutable
+artifact publication must pass before the application increment.

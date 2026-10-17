@@ -353,32 +353,27 @@ Keep Core unique strings explicitly bounded at maxLength <=128; ordinary omitted
 
 ## C0 Agent Memory track
 
-Latest deployment: reviewed AM1 main 48937e1 is installed through the supported
-C0-only native update after actual local/publication/released-Core/Renovate and
-both-native success. PLAN records all three verified installed digests, backup,
-27-table/101-job preservation, real OAuth/current+legacy SDK text evidence,
-full-manager restart/replay, disabled owned client and positive-control journal
-privacy. Core/app/schema are 0.25.0/0.40.0/0013. These genuine deployed images
-replace b66e159 as the next native upgrade predecessor.
+Latest accepted deployment is reviewed PR 5 main ece3e90, Core/app/schema
+0.25.0/0.40.1/0013. PLAN records successful main local/publication/released-Core/
+both-native checks, actual artifacts, C0-only backup/update, exact 27-table and
+104-job preservation, naturally expired live session recovery, fresh explicit
+consent and actual current/legacy SDK evidence cycles before/after manager restart.
+All sixteen old client descriptors and eleven unrelated instances are preserved;
+the owned client is disabled and positive-control root journal privacy passes.
+Freeze all three actually installed ece3e90 digests in PLAN together for AM2.
+The timed-out first consent approval is retained as uncertain consumed-response
+evidence; fresh authorization succeeds. Do not claim separate ChatGPT UI acceptance.
 
-Operator acceptance exposed an existing stale-cookie 401 at /oauth/consent.
-The focused app 0.40.1 recovery fix on fix/expired-consent-session catches only
-SessionRejected on the consent browser GET after pending-request validation,
-clears the stale cookie and redirects to normal sign-in. Preserve consent
-binding/deadline, explicit CSRF approval, PKCE, current roles and all grant/session
-expiry limits. Invalid/expired requests, role denial, bearer attempts and database
-errors must keep their existing rejections; API reads/writes do not gain browser
-redirects. Native probes expire only their own session via private SQL stdin,
-then require actual SSO recovery, a new cookie and explicit consent. AM2 and
-Windmill Gate wait for this reported blocker to pass review/main/deployment/live
-acceptance. Historical candidate/deployment statements below retain their dates.
-
-The app-only consent recovery candidate passes 870 complete local Python/
-PostgreSQL/packaging tests, 106 scripts, Go/schema/shell and nineteen Robot
-dry-run cases. The regression first reproduces the actual 401 with a valid
-pending request and expired stored session. Native recovery helper is also
-tested through signed local HTTP; actual Debian/Rocky SSO must still pass before
-review and promotion. No Core/schema/transitive dependency change is needed.
+AM2 is active on feat/agent-memory-wiki. Follow PLAN's Core-first 0.26.0 artifact
+then app 0.41.0 released-pin sequence, schema 0013 unchanged. Exact slugs do not
+imply overwrite authority: absent expected_revision means create-only, present
+means update-only. Preserve old fingerprints/DTOs, receipt snapshots, revisions,
+authorization and lock order. EvidenceNotReady remains a KnowledgeConflict subtype;
+claims still require real ready chunks. Restrict structured MCP errors to known
+knowledge operations with static allowlisted codes; preserve object errors and
+scope challenges. Both actual SDK protocol modes and native history/recovery
+must pass before review. Windmill Gate remains gated through AM6 deployment.
+Historical candidate/deployment statements below retain their dates.
 
 C0-AM0–AM6 is a separate operator-authorized track in PLAN.md; preserve historical
 milestones and planned Integration M17–M20. AM0 establishes current main, genuine
@@ -473,3 +468,10 @@ b66e159. This docs-only evidence marker needs its own actual checks before PR 4
 review/main promotion. AM1 is not accepted/deployed and AM2 must wait for its
 reviewed main publication, targeted update and live validation. No new ChatGPT
 UI/provider-quality/stable-module-release or CPU-quota claim is made.
+
+AM2's first Core increment passes 904 full Python/PostgreSQL/packaging cases,
+106 scripts, Go/schema/shell and nineteen Robot dry runs locally. The independent
+wheel/archive probe proves safe Wiki revisions/replay after reconnect outside
+the checkout. Core/schema candidate are 0.26.0/0013; app/released pin remain
+0.40.1/0.25.0 until exact-source CI/native and immutable publication. There are
+still 64 public operations. Do not claim new Wiki helpers deployed or AM2 accepted.
