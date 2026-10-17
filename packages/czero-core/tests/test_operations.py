@@ -62,3 +62,35 @@ def test_untrusted_arguments_cannot_select_code_or_bypass_byte_limits():
         with pytest.raises(OperationRejected, match='^invalid_operation_request$'):
             registry.execute(name, actor, arguments)
     assert calls == []
+
+
+def test_scope_filters_cannot_expand_bound_invocation_authority():
+    actor = Actor(uuid4(), Role.ADMIN, delegated_scopes=frozenset({'c0:read'}))
+    calls = []
+    registry = OperationRegistry(lambda actor, role: actor)
+    registry.register(Operation('edit', 'Edit', Role.EDITOR, 'c0:write', {}, {},
+        lambda actor, arguments: calls.append(arguments), False))
+    assert registry.describe(actor, scopes={'c0:read','c0:write'})[0]['name'] == 'edit'
+    for scopes in (None, {'c0:read','c0:write','c0:admin'}):
+        with pytest.raises(ScopeDenied) as denied:
+            registry.execute('edit', actor, {}, scopes=scopes)
+        assert denied.value.scope == 'c0:write'
+    assert calls == []
+
+
+def test_trusted_operation_policy_denial_precedes_scope_challenge():
+    from dataclasses import replace
+    actor = Actor(uuid4(), Role.ADMIN, delegated_scopes=frozenset({'c0:read'}))
+    calls = []
+    registry = OperationRegistry(lambda actor, role: actor)
+    def policy(current, arguments):
+        calls.append(arguments['space_id'])
+        result = replace(current, role=Role.READER)
+        result.require(Role.EDITOR)
+        return result
+    registry.register(Operation('edit', 'Edit', Role.EDITOR, 'c0:write', {}, {},
+        lambda actor, arguments: pytest.fail('Denied operation invoked'), False, preauthorize=policy))
+    with pytest.raises(PermissionDenied) as denied:
+        registry.execute('edit', actor, {'space_id':'denied'}, scopes={'c0:read'})
+    assert not isinstance(denied.value, ScopeDenied) and calls == ['denied']
+    assert registry.describe(actor, scopes={'c0:read','c0:write'})[0]['name'] == 'edit'

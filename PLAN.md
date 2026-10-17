@@ -2173,3 +2173,36 @@ development candidate; the application retains its exact released 0.26.0 pin
 and lock. The catalog is not exposed by application transports. Content
 ownership/authorization, jobs/indexing, transport/UI, native/main/publication
 and live deployment acceptance remain required before AM3 can close.
+
+AM3 Core content increment implements the immutable `in_space` service selector,
+forward ownership migration 0015, scoped root/derivative reads and writes,
+per-space slug/alias/source/object uniqueness and composite same-space references.
+Types remain global. Shared receipts keep their exact fingerprint and snapshot;
+protected keys/fingerprints bind their space. Separate public feed cursors retain
+old IDs and sequence positions while hiding private activity. A focused regression
+first reproduces a backwards cursor when the old sequence exceeds retained rows,
+then passes the corrected migration. Source job ownership follows stored parents;
+documents/chunks/Wiki chunks/embeddings retain that space. Content writes hold
+role/client/grant authority through commit after mutation waits, and captured
+delegations cannot survive revocation/regrant. Trusted operation preauthorization
+precedes scope challenges, and expanded discovery filters cannot grant invocation
+authority. Retrieval filters before limits/counts/provider inputs and uses a
+scoped exact-distance fallback for underfilled approximate scans.
+
+Local validation passes 1040 Python/PostgreSQL/packaging cases, 106 scripts,
+schema/shell checks and twenty Robot dry runs. Seventy new content cases include
+63 actual role/grant/scope combinations (unsupported consent requests are denied),
+direct UUID/history/original/citation/graph/reference negatives, same-space SQL
+constraints, a queued writer spanning revoke/regrant, and seventy private pages
+beyond candidate limits with isolated provider input/counts. The fresh schema-0013
+upgrade fixture compares every old column of every predecessor table after two
+migrations, preserving real OAuth grant/token authority, shared UUIDs and old
+receipt replay. Targeted cursor/job-reference migration regressions pass after
+review fixes. Failed private logs are retained. Actual wheel/archive installations
+exercise private evidence/Wiki/reconnect and a separate owned Core space workflow.
+The latter is added to disposable native Robot acceptance; its dry run is not a
+native pass or a real SSO observation. Core 0.27.0 is not published, app remains
+0.41.0 with its exact released 0.26.0 source/lock, and the dedicated instance is
+unchanged. Exact-source CI/native/artifact gates and Core publication remain
+required before the app imports the new space API; final AM3 transport/UI,
+main/deployment/live/restart/backup/preservation gates remain open.

@@ -6,7 +6,7 @@ import json
 from uuid import UUID,uuid5,NAMESPACE_URL
 from sqlalchemy import text
 from .identity import PermissionDenied,Role
-from .spaces import require_scope
+from .spaces import SpaceBound
 from .jobs import Handler,empty_payload
 from .providers import normalized_vector
 from .wiki import KnowledgeConflict,_view
@@ -27,7 +27,7 @@ def vector_literal(value,dimensions):
     return '['+','.join(format(v,'.10g') for v in vector)+']'
 
 
-class EmbeddingStore:
+class EmbeddingStore(SpaceBound):
     def __init__(self,database,client,access=None):
         self.database,self.client,self.access=database,client,access
         self.profile_id,self.fingerprint=profile_identity(client.settings) if client else (None,None)
@@ -59,7 +59,7 @@ class EmbeddingStore:
 
     @staticmethod
     def _wiki_chunks(connection):
-        pages=connection.execute(text('''SELECT r.id,r.body FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
+        pages=connection.execute(text('''SELECT r.id,r.body,r.space_id FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
             WHERE NOT p.deleted AND p.revision=r.number AND NOT EXISTS(SELECT 1 FROM c0_wiki_chunks w WHERE w.revision_id=r.id)
             ORDER BY r.id LIMIT 2''')).mappings().all()
         for row in pages:
@@ -67,9 +67,9 @@ class EmbeddingStore:
             # does not apply. Even a blank page has a title to embed.
             for ordinal,start in enumerate(range(0,max(1,len(row['body'])),3600)):
                 end=min(len(row['body']),start+3800);body=row['body'][start:end]
-                connection.execute(text('''INSERT INTO c0_wiki_chunks(id,revision_id,ordinal,start_offset,end_offset,body,content_hash)
-                    VALUES(:id,:revision,:ordinal,:start,:end,:body,:hash) ON CONFLICT(revision_id,ordinal) DO NOTHING'''),
-                    {'id':uuid5(row['id'],'wiki-chunk/'+str(ordinal)),'revision':row['id'],'ordinal':ordinal,
+                connection.execute(text('''INSERT INTO c0_wiki_chunks(space_id,id,revision_id,ordinal,start_offset,end_offset,body,content_hash)
+                    VALUES(:space,:id,:revision,:ordinal,:start,:end,:body,:hash) ON CONFLICT(revision_id,ordinal) DO NOTHING'''),
+                    {'space':row['space_id'],'id':uuid5(row['id'],'wiki-chunk/'+str(ordinal)),'revision':row['id'],'ordinal':ordinal,
                      'start':start,'end':end,'body':body,'hash':hashlib.sha256(body.encode()).hexdigest()})
                 if end==len(row['body']):break
 
@@ -77,11 +77,11 @@ class EmbeddingStore:
         if self.client is None:return {'status':'disabled','indexed':0}
         profile=self._profile(connection,create=True);self._wiki_chunks(connection)
         parameters={'profile':self.profile_id,'generation':profile['generation']}
-        sources=connection.execute(text('''SELECT c.id,c.body FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
+        sources=connection.execute(text('''SELECT c.id,c.body,c.space_id FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
             WHERE NOT s.deleted AND NOT EXISTS(SELECT 1 FROM c0_embeddings e WHERE e.profile_id=:profile
                 AND e.generation=:generation AND e.source_chunk_id=c.id) ORDER BY c.id LIMIT 8'''),parameters).mappings().all()
-        wiki=connection.execute(text('''SELECT w.id,w.body,r.title FROM c0_wiki_chunks w JOIN c0_wiki_revisions r ON r.id=w.revision_id
+        wiki=connection.execute(text('''SELECT w.id,w.body,w.space_id,r.title FROM c0_wiki_chunks w JOIN c0_wiki_revisions r ON r.id=w.revision_id
             JOIN c0_wiki_pages p ON p.id=r.page_id WHERE NOT p.deleted AND p.revision=r.number
             AND NOT EXISTS(SELECT 1 FROM c0_embeddings e WHERE e.profile_id=:profile AND e.generation=:generation
                 AND e.wiki_chunk_id=w.id) ORDER BY w.id LIMIT 8'''),parameters).mappings().all()
@@ -94,11 +94,11 @@ class EmbeddingStore:
         inputs=[row['body'] if kind=='source' else row['title']+'\n'+row['body'] for kind,row in pending]
         result=self.client.embed(inputs)
         for (kind,row),input_text,vector in zip(pending,inputs,result['vectors'],strict=True):
-            connection.execute(text('''INSERT INTO c0_embeddings(id,profile_id,generation,source_chunk_id,wiki_chunk_id,input_hash,embedding)
-                VALUES(:id,:profile,:generation,:source,:wiki,:hash,CAST(:vector AS vector))
+            connection.execute(text('''INSERT INTO c0_embeddings(space_id,id,profile_id,generation,source_chunk_id,wiki_chunk_id,input_hash,embedding)
+                VALUES(:space,:id,:profile,:generation,:source,:wiki,:hash,CAST(:vector AS vector))
                 ON CONFLICT(id) DO UPDATE SET generation=EXCLUDED.generation,input_hash=EXCLUDED.input_hash,
                     embedding=EXCLUDED.embedding,created_at=now()'''),
-                {**parameters,'id':uuid5(self.profile_id,kind+'/'+str(row['id'])),
+                {**parameters,'space':row['space_id'],'id':uuid5(self.profile_id,kind+'/'+str(row['id'])),
                  'source':row['id'] if kind=='source' else None,'wiki':row['id'] if kind=='wiki' else None,
                  'hash':hashlib.sha256(input_text.encode()).hexdigest(),'vector':vector_literal(vector,profile['dimensions'])})
         return {'status':'indexed','indexed':len(pending),'profile_id':str(self.profile_id),'generation':profile['generation'],'usage':result['usage']}
@@ -114,13 +114,11 @@ class EmbeddingStore:
 
     def status(self,actor):
         with self.database.engine.connect() as connection:
-            if self.access is None:raise PermissionDenied()
-            current=self.access.checked_actor(connection,actor);current.require(Role.READER)
-            require_scope(current,Role.READER)
+            self._space_authorize(connection,actor)
             profile=self._profile(connection) if self.client else None
             if profile is None:return {'configured':self.client is not None,'profile_id':None,'generation':None,'indexed':0}
-            count=connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE profile_id=:id AND generation=:generation'),
-                {'id':self.profile_id,'generation':profile['generation']}).scalar_one()
+            count=connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE space_id=:space AND profile_id=:id AND generation=:generation'),
+                {'space':self._space(connection),'id':self.profile_id,'generation':profile['generation']}).scalar_one()
             return _view({'configured':True,'profile_id':self.profile_id,'generation':profile['generation'],
                           'model':profile['model'],'dimensions':profile['dimensions'],'indexed':count})
 
@@ -129,22 +127,33 @@ class EmbeddingStore:
         profile=self._profile(connection)
         if profile is None:return []
         encoded=vector_literal(vector,profile['dimensions'])
-        connection.execute(text("SET LOCAL hnsw.iterative_scan='strict_order'"))
-        connection.execute(text('SET LOCAL hnsw.ef_search=64'))
-        connection.execute(text('SET LOCAL hnsw.max_scan_tuples=1000'))
-        query=text('''WITH nearest AS MATERIALIZED (
-            SELECT e.id,e.source_chunk_id,e.wiki_chunk_id,e.embedding <=> CAST(:vector AS vector) AS distance
-            FROM c0_embeddings e WHERE e.profile_id=:profile AND e.generation=:generation AND (
+        eligibility='''FROM c0_embeddings e
+            WHERE e.space_id=:space AND e.profile_id=:profile AND e.generation=:generation AND (
                 (:sources AND e.source_chunk_id IS NOT NULL AND EXISTS(SELECT 1 FROM c0_chunks c
                     JOIN c0_documents d ON d.id=c.document_id JOIN c0_source_versions v ON v.id=d.version_id
                     JOIN c0_sources s ON s.id=v.source_id WHERE c.id=e.source_chunk_id AND NOT s.deleted))
                 OR (:wiki AND e.wiki_chunk_id IS NOT NULL AND EXISTS(SELECT 1 FROM c0_wiki_chunks w
                     JOIN c0_wiki_revisions r ON r.id=w.revision_id JOIN c0_wiki_pages p ON p.id=r.page_id
-                    WHERE w.id=e.wiki_chunk_id AND NOT p.deleted AND p.revision=r.number)))
-            ORDER BY e.embedding <=> CAST(:vector AS vector) LIMIT :limit)
+                    WHERE w.id=e.wiki_chunk_id AND NOT p.deleted AND p.revision=r.number)))'''
+        parameters={'space':self._space(connection),'profile':self.profile_id,'generation':profile['generation'],
+            'vector':encoded,'limit':limit,'sources':kind!='wiki','wiki':kind!='source'}
+        connection.execute(text("SET LOCAL hnsw.iterative_scan='strict_order'"))
+        connection.execute(text('SET LOCAL hnsw.ef_search=64'))
+        connection.execute(text('SET LOCAL hnsw.max_scan_tuples=1000'))
+        query=text('''WITH nearest AS MATERIALIZED (
+            SELECT e.id,e.source_chunk_id,e.wiki_chunk_id,e.embedding <=> CAST(:vector AS vector) AS distance
+            '''+eligibility+''' ORDER BY e.embedding <=> CAST(:vector AS vector) LIMIT :limit)
             SELECT * FROM nearest ORDER BY distance,id''')
-        return [dict(row) for row in connection.execute(query,{'profile':self.profile_id,'generation':profile['generation'],
-            'vector':encoded,'limit':limit,'sources':kind!='wiki','wiki':kind!='source'}).mappings()]
+        rows=[dict(row) for row in connection.execute(query,parameters).mappings()]
+        if len(rows)<limit:
+            # Global ANN pruning can starve a small authorized space. Materialize
+            # its eligible rows before exact ordering when the scan underfills.
+            exact=text('''WITH candidates AS MATERIALIZED (
+                SELECT e.id,e.source_chunk_id,e.wiki_chunk_id,e.embedding '''+eligibility+''')
+                SELECT id,source_chunk_id,wiki_chunk_id,embedding <=> CAST(:vector AS vector) AS distance
+                FROM candidates ORDER BY distance,id LIMIT :limit''')
+            rows=[dict(row) for row in connection.execute(exact,parameters).mappings()]
+        return rows
 
 
 def reindex_payload(value):

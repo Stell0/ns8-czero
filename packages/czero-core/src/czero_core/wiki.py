@@ -9,8 +9,8 @@ from uuid import uuid4
 
 from sqlalchemy import text
 
-from .identity import PermissionDenied, Role
-from .spaces import require_scope
+from .identity import Role
+from .spaces import SpaceBound, content_row, next_cursor
 from .object_schema import name
 from .objects import page
 from .sources import _label, _metadata, _uuid
@@ -52,60 +52,52 @@ def markdown(value):
     return value
 
 
-class WikiService:
+class WikiService(SpaceBound):
     def __init__(self, database, access):
         self.database, self.access = database, access
 
     def _authorize(self, connection, actor, role=Role.READER):
-        if self.access is None:
-            raise PermissionDenied()
-        current = self.access.checked_actor(connection, actor)
-        current.require(role)
-        require_scope(current, role)
-        return current
+        return self._space_authorize(connection, actor, role)
 
     def _mutate(self, actor, operation, payload, key, execute):
         return mutate(self.database, self._authorize, actor, operation, payload,
                       key, execute, conflict=KnowledgeConflict)
 
-    @staticmethod
-    def _event(connection, actor, kind, resource_id, revision, operation):
-        connection.execute(text('''INSERT INTO c0_knowledge_events(kind,resource_id,operation,revision,actor_id)
-            VALUES (:kind,:id,:operation,:revision,:actor)'''),
-            {'kind': kind, 'id': resource_id, 'operation': operation, 'revision': revision, 'actor': actor.user_id})
+    def _event(self, connection, actor, kind, resource_id, revision, operation):
+        connection.execute(text('''INSERT INTO c0_knowledge_events(space_id,feed_cursor,kind,resource_id,operation,revision,actor_id)
+            VALUES (:space,:cursor,:kind,:id,:operation,:revision,:actor)'''),
+            {'space': self._space(connection), 'cursor': next_cursor(connection, self._space(connection), 'knowledge'), 'kind': kind, 'id': resource_id, 'operation': operation, 'revision': revision, 'actor': actor.user_id})
 
-    @staticmethod
-    def _page(connection, page_id, *, lock=False):
-        row = connection.execute(text('SELECT * FROM c0_wiki_pages WHERE id=:id' + (' FOR UPDATE' if lock else '')),
-            {'id': _uuid(page_id)}).mappings().one_or_none()
+    def _page(self, connection, page_id, *, lock=False):
+        row = connection.execute(text('SELECT * FROM c0_wiki_pages WHERE space_id=:space AND id=:id' + (' FOR UPDATE' if lock else '')),
+            {'space': self._space(connection), 'id': _uuid(page_id)}).mappings().one_or_none()
         if row is None: raise KnowledgeNotFound()
-        return dict(row)
+        return content_row(row)
 
-    @staticmethod
-    def _revision(connection, page_id, number):
-        row = connection.execute(text('SELECT * FROM c0_wiki_revisions WHERE page_id=:id AND number=:number'),
-            {'id': _uuid(page_id), 'number': number}).mappings().one_or_none()
+    def _revision(self, connection, page_id, number):
+        row = connection.execute(text('SELECT * FROM c0_wiki_revisions WHERE space_id=:space AND page_id=:id AND number=:number'),
+            {'space': self._space(connection), 'id': _uuid(page_id), 'number': number}).mappings().one_or_none()
         if row is None: raise KnowledgeNotFound()
-        return dict(row)
+        return content_row(row)
 
     def _write_revision(self, connection, actor, row, title, body, metadata):
-        connection.execute(text('''INSERT INTO c0_wiki_revisions(id,page_id,number,title,body,content_hash,metadata,actor_id)
-            VALUES (:id,:page,:number,:title,:body,:hash,CAST(:metadata AS jsonb),:actor)'''),
-            {'id': uuid4(), 'page': row['id'], 'number': row['revision'], 'title': title, 'body': body,
+        connection.execute(text('''INSERT INTO c0_wiki_revisions(space_id,id,page_id,number,title,body,content_hash,metadata,actor_id)
+            VALUES (:space,:id,:page,:number,:title,:body,:hash,CAST(:metadata AS jsonb),:actor)'''),
+            {'space': self._space(connection), 'id': uuid4(), 'page': row['id'], 'number': row['revision'], 'title': title, 'body': body,
              'hash': hashlib.sha256(body.encode()).hexdigest(), 'metadata': metadata, 'actor': actor.user_id})
         return {**row, 'content': self._revision(connection, row['id'], row['revision'])}
 
     def _create_page(self, connection, actor, slug, title, body, encoded):
-        row = dict(connection.execute(text('INSERT INTO c0_wiki_pages(id,slug,title) VALUES (:id,:slug,:title) RETURNING *'),
-            {'id': uuid4(), 'slug': slug, 'title': title}).mappings().one())
+        row = content_row(connection.execute(text('INSERT INTO c0_wiki_pages(space_id,id,slug,title) VALUES (:space,:id,:slug,:title) RETURNING *'),
+            {'space': self._space(connection), 'id': uuid4(), 'slug': slug, 'title': title}).mappings().one())
         result = self._write_revision(connection, actor, row, title, body, encoded)
         self._event(connection, actor, 'page', row['id'], 1, 'create')
         return result
 
     def _update_page(self, connection, actor, row, title, body, encoded, expected_revision):
         if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
-        row = dict(connection.execute(text('''UPDATE c0_wiki_pages SET title=:title,revision=revision+1,
-            updated_at=now() WHERE id=:id RETURNING *'''), {'id': row['id'], 'title': title}).mappings().one())
+        row = content_row(connection.execute(text('''UPDATE c0_wiki_pages SET title=:title,revision=revision+1,
+            updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'''), {'space': self._space(connection), 'id': row['id'], 'title': title}).mappings().one())
         result = self._write_revision(connection, actor, row, title, body, encoded)
         self._event(connection, actor, 'page', row['id'], row['revision'], 'update')
         return result
@@ -133,10 +125,10 @@ class WikiService:
         if type(include_deleted) is not bool: raise ValueError('invalid_filter')
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            row = connection.execute(text('''SELECT * FROM c0_wiki_pages WHERE slug=:slug
-                AND (:deleted OR NOT deleted)'''), {'slug': slug, 'deleted': include_deleted}).mappings().one_or_none()
+            row = connection.execute(text('''SELECT * FROM c0_wiki_pages WHERE space_id=:space AND slug=:slug
+                AND (:deleted OR NOT deleted)'''), {'space': self._space(connection), 'slug': slug, 'deleted': include_deleted}).mappings().one_or_none()
             if row is None: raise KnowledgeNotFound()
-            return _view({**row, 'content': self._revision(connection, row['id'], row['revision'])})
+            return _view({**content_row(row), 'content': self._revision(connection, row['id'], row['revision'])})
 
     def upsert_page(self, actor, slug, title, body, *, expected_revision=None, metadata=None, idempotency_key):
         """Create-only without a revision; otherwise update-only with that revision."""
@@ -147,8 +139,8 @@ class WikiService:
         def execute(connection, current):
             if expected_revision is None:
                 return self._create_page(connection, current, slug, title, body, encoded)
-            row = connection.execute(text('SELECT * FROM c0_wiki_pages WHERE slug=:slug FOR UPDATE'),
-                                     {'slug': slug}).mappings().one_or_none()
+            row = connection.execute(text('SELECT * FROM c0_wiki_pages WHERE space_id=:space AND slug=:slug FOR UPDATE'),
+                                     {'space': self._space(connection), 'slug': slug}).mappings().one_or_none()
             if row is None: raise KnowledgeNotFound()
             return self._update_page(connection, current, row, title, body, encoded, expected_revision)
         return self._mutate(actor, 'page.upsert', {'slug': slug, 'title': title, 'body': body,
@@ -166,17 +158,17 @@ class WikiService:
         if type(include_deleted) is not bool: raise ValueError('invalid_filter')
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return _view([dict(row) for row in connection.execute(text('''SELECT * FROM c0_wiki_pages
-                WHERE :deleted OR NOT deleted ORDER BY updated_at DESC,id LIMIT :limit OFFSET :offset'''),
-                {'deleted': include_deleted, 'limit': limit, 'offset': offset}).mappings()])
+            return _view([content_row(row) for row in connection.execute(text('''SELECT * FROM c0_wiki_pages
+                WHERE space_id=:space AND (:deleted OR NOT deleted) ORDER BY updated_at DESC,id LIMIT :limit OFFSET :offset'''),
+                {'space': self._space(connection), 'deleted': include_deleted, 'limit': limit, 'offset': offset}).mappings()])
 
     def page_history(self, actor, page_id, *, limit=50, offset=0):
         page(limit, offset)
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor); self._page(connection, page_id)
-            return _view([dict(row) for row in connection.execute(text('''SELECT id,page_id,number,title,content_hash,actor_id,created_at
-                FROM c0_wiki_revisions WHERE page_id=:id ORDER BY number DESC LIMIT :limit OFFSET :offset'''),
-                {'id': _uuid(page_id), 'limit': limit, 'offset': offset}).mappings()])
+            return _view([content_row(row) for row in connection.execute(text('''SELECT id,page_id,number,title,content_hash,actor_id,created_at
+                FROM c0_wiki_revisions WHERE space_id=:space AND page_id=:id ORDER BY number DESC LIMIT :limit OFFSET :offset'''),
+                {'space': self._space(connection), 'id': _uuid(page_id), 'limit': limit, 'offset': offset}).mappings()])
 
     def delete_page(self, actor, page_id, *, expected_revision, idempotency_key):
         page_id = _uuid(page_id)
@@ -187,8 +179,8 @@ class WikiService:
             if not row['deleted']:
                 # Archive is a new immutable revision, preserving citation targets.
                 previous = self._revision(connection, page_id, row['revision'])
-                row = dict(connection.execute(text('''UPDATE c0_wiki_pages SET deleted=true,
-                    revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'''), {'id': page_id}).mappings().one())
+                row = content_row(connection.execute(text('''UPDATE c0_wiki_pages SET deleted=true,
+                    revision=revision+1,updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'''), {'space': self._space(connection), 'id': page_id}).mappings().one())
                 self._write_revision(connection, current, row, row['title'], previous['body'], _metadata(previous['metadata']))
                 self._event(connection, current, 'page', page_id, row['revision'], 'delete')
             return row
@@ -199,24 +191,22 @@ class WikiService:
         row = self.get_page(actor, page_id, revision=revision)
         return row['content']['body'] if format == 'markdown' else json.loads(json.dumps(row, default=_json))
 
-    @staticmethod
-    def _entity(connection, entity_id, *, lock=False):
-        row = connection.execute(text('SELECT * FROM c0_entities WHERE id=:id' + (' FOR UPDATE' if lock else '')),
-            {'id': _uuid(entity_id)}).mappings().one_or_none()
+    def _entity(self, connection, entity_id, *, lock=False):
+        row = connection.execute(text('SELECT * FROM c0_entities WHERE space_id=:space AND id=:id' + (' FOR UPDATE' if lock else '')),
+            {'space': self._space(connection), 'id': _uuid(entity_id)}).mappings().one_or_none()
         if row is None: raise KnowledgeNotFound()
-        return dict(row)
+        return content_row(row)
 
-    @staticmethod
-    def _alias(connection, entity_id, value):
+    def _alias(self, connection, entity_id, value):
         normalized, label = alias_key(value)
-        existing = connection.execute(text('SELECT entity_id FROM c0_entity_aliases WHERE normalized=:key'), {'key': normalized}).scalar_one_or_none()
+        existing = connection.execute(text('SELECT entity_id FROM c0_entity_aliases WHERE space_id=:space AND normalized=:key'), {'space': self._space(connection), 'key': normalized}).scalar_one_or_none()
         if existing is not None:
             if existing != entity_id: raise KnowledgeConflict()
             return False
-        if connection.execute(text('SELECT count(*) FROM c0_entity_aliases WHERE entity_id=:id'), {'id': entity_id}).scalar_one() >= 16:
+        if connection.execute(text('SELECT count(*) FROM c0_entity_aliases WHERE space_id=:space AND entity_id=:id'), {'space': self._space(connection), 'id': entity_id}).scalar_one() >= 16:
             raise ValueError('alias_limit')
-        connection.execute(text('INSERT INTO c0_entity_aliases(normalized,entity_id,label) VALUES (:key,:id,:label)'),
-            {'key': normalized, 'id': entity_id, 'label': label})
+        connection.execute(text('INSERT INTO c0_entity_aliases(space_id,normalized,entity_id,label) VALUES (:space,:key,:id,:label)'),
+            {'space': self._space(connection), 'key': normalized, 'id': entity_id, 'label': label})
         return True
 
     def create_entity(self, actor, kind, label, *, aliases=None, metadata=None, idempotency_key):
@@ -226,9 +216,9 @@ class WikiService:
         labels = [alias_key(value)[1] for value in [label, *aliases]]
         encoded = _metadata({} if metadata is None else metadata)
         def execute(connection, current):
-            row = dict(connection.execute(text('''INSERT INTO c0_entities(id,kind,label,metadata)
-                VALUES (:id,:kind,:label,CAST(:metadata AS jsonb)) RETURNING *'''),
-                {'id': uuid4(), 'kind': kind, 'label': label, 'metadata': encoded}).mappings().one())
+            row = content_row(connection.execute(text('''INSERT INTO c0_entities(space_id,id,kind,label,metadata)
+                VALUES (:space,:id,:kind,:label,CAST(:metadata AS jsonb)) RETURNING *'''),
+                {'space': self._space(connection), 'id': uuid4(), 'kind': kind, 'label': label, 'metadata': encoded}).mappings().one())
             for alias in labels: self._alias(connection, row['id'], alias)
             self._event(connection, current, 'entity', row['id'], 1, 'create')
             return row
@@ -238,25 +228,25 @@ class WikiService:
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
             row = self._entity(connection, entity_id)
-            return _view({**row, 'aliases': [dict(alias) for alias in connection.execute(text('SELECT normalized,label FROM c0_entity_aliases WHERE entity_id=:id ORDER BY normalized'), {'id': row['id']}).mappings()]})
+            return _view({**row, 'aliases': [dict(alias) for alias in connection.execute(text('SELECT normalized,label FROM c0_entity_aliases WHERE space_id=:space AND entity_id=:id ORDER BY normalized'), {'space': self._space(connection), 'id': row['id']}).mappings()]})
 
     def resolve_alias(self, actor, value):
         normalized, _ = alias_key(value)
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
             row = connection.execute(text('''SELECT e.* FROM c0_entity_aliases a JOIN c0_entities e ON e.id=a.entity_id
-                WHERE a.normalized=:key AND NOT e.deleted'''), {'key': normalized}).mappings().one_or_none()
+                WHERE a.space_id=:space AND a.normalized=:key AND NOT e.deleted'''), {'space': self._space(connection), 'key': normalized}).mappings().one_or_none()
             if row is None: raise KnowledgeNotFound()
-            return _view(dict(row))
+            return _view(content_row(row))
 
     def list_entities(self, actor, *, kind=None, limit=50, offset=0):
         page(limit, offset)
         if kind is not None: kind = name(kind)
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return _view([dict(row) for row in connection.execute(text('''SELECT * FROM c0_entities WHERE NOT deleted
+            return _view([content_row(row) for row in connection.execute(text('''SELECT * FROM c0_entities WHERE space_id=:space AND NOT deleted
                 AND (CAST(:kind AS text) IS NULL OR kind=:kind) ORDER BY label,id LIMIT :limit OFFSET :offset'''),
-                {'kind': kind, 'limit': limit, 'offset': offset}).mappings()])
+                {'space': self._space(connection), 'kind': kind, 'limit': limit, 'offset': offset}).mappings()])
 
     def update_entity(self, actor, entity_id, label, *, expected_revision, metadata=None, idempotency_key):
         entity_id, label = _uuid(entity_id), _label(label, 128)
@@ -266,9 +256,9 @@ class WikiService:
             row = self._entity(connection, entity_id, lock=True)
             if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
             self._alias(connection, entity_id, label)
-            row = dict(connection.execute(text('''UPDATE c0_entities SET label=:label,metadata=CAST(:metadata AS jsonb),
-                revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'''),
-                {'id': entity_id, 'label': label, 'metadata': encoded}).mappings().one())
+            row = content_row(connection.execute(text('''UPDATE c0_entities SET label=:label,metadata=CAST(:metadata AS jsonb),
+                revision=revision+1,updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'''),
+                {'space': self._space(connection), 'id': entity_id, 'label': label, 'metadata': encoded}).mappings().one())
             self._event(connection, current, 'entity', entity_id, row['revision'], 'update')
             return row
         return self._mutate(actor, 'entity.update', {'id': str(entity_id), 'label': label, 'metadata': json.loads(encoded),
@@ -281,7 +271,7 @@ class WikiService:
             row = self._entity(connection, entity_id, lock=True)
             if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
             if self._alias(connection, entity_id, label):
-                row = dict(connection.execute(text('UPDATE c0_entities SET revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'), {'id': entity_id}).mappings().one())
+                row = content_row(connection.execute(text('UPDATE c0_entities SET revision=revision+1,updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'), {'space': self._space(connection), 'id': entity_id}).mappings().one())
                 self._event(connection, current, 'entity', entity_id, row['revision'], 'alias_add')
             return row
         return self._mutate(actor, 'entity.alias_add', {'id': str(entity_id), 'alias': normalized, 'expected_revision': expected_revision}, idempotency_key, execute)
@@ -293,7 +283,7 @@ class WikiService:
             row = self._entity(connection, entity_id, lock=True)
             if row['revision'] != expected_revision: raise KnowledgeConflict()
             if not row['deleted']:
-                row = dict(connection.execute(text('UPDATE c0_entities SET deleted=true,revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'), {'id': entity_id}).mappings().one())
+                row = content_row(connection.execute(text('UPDATE c0_entities SET deleted=true,revision=revision+1,updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'), {'space': self._space(connection), 'id': entity_id}).mappings().one())
                 self._event(connection, current, 'entity', entity_id, row['revision'], 'delete')
             return row
         return self._mutate(actor, 'entity.delete', {'id': str(entity_id), 'expected_revision': expected_revision}, idempotency_key, execute)
@@ -303,4 +293,4 @@ class WikiService:
         if type(after) is not int or not 0 <= after <= 9223372036854775807: raise ValueError('invalid_cursor')
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return _view([dict(row) for row in connection.execute(text('SELECT * FROM c0_knowledge_events WHERE id>:after ORDER BY id LIMIT :limit'), {'after': after, 'limit': limit}).mappings()])
+            return _view([content_row(row) for row in connection.execute(text('SELECT feed_cursor AS id,kind,resource_id,operation,revision,actor_id,created_at FROM c0_knowledge_events WHERE space_id=:space AND feed_cursor>:after ORDER BY feed_cursor LIMIT :limit'), {'space': self._space(connection), 'after': after, 'limit': limit}).mappings()])

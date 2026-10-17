@@ -3,18 +3,63 @@
 """Persisted space policies; a selector is never proof of membership."""
 import hashlib
 import json
+from copy import copy
 from dataclasses import replace
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from .identity import Actor, PermissionDenied, Role
+from .identity import PermissionDenied, Role
 from .operations import ScopeDenied
 from .receipts import _KEY, snapshot
 
 SPACE_LOCK = 49381
 _RANK = {Role.READER: 1, Role.EDITOR: 2, Role.ADMIN: 3}
+
+
+def content_row(row):
+    """Remove storage ownership only at the SQL row boundary, never in payloads."""
+    return {key: value for key, value in row.items() if key != 'space_id'}
+
+
+def hold_authority(connection):
+    """Linearize a content write with role, client and token invalidation.
+
+    Call after the content mutex, before refreshing authority and touching rows.
+    Administrative policy writers never acquire content mutexes. Shared locks
+    allow independent content transactions while a revocation waits for their
+    commits; after revocation commits a captured token cannot start a write.
+    """
+    for lock in (49372, 49378, 49379):
+        connection.execute(text('SELECT pg_advisory_xact_lock_shared(:key)'), {'key': lock})
+
+
+def next_cursor(connection, space_id, kind):
+    return connection.execute(text('''INSERT INTO c0_space_cursors(space_id,kind,value)
+        VALUES (:space,:kind,1) ON CONFLICT(space_id,kind)
+        DO UPDATE SET value=c0_space_cursors.value+1 RETURNING value'''),
+        {'space': space_id, 'kind': kind}).scalar_one()
+
+
+class SpaceBound:
+    """A trusted service copy carries selection, never mutable request state."""
+    _space_id = None
+    _space_children = ()
+
+    def in_space(self, space_id):
+        selected = copy(self)
+        selected._space_id = space_uuid(space_id)
+        for child in self._space_children:
+            setattr(selected, child, getattr(self, child).in_space(space_id))
+        return selected
+
+    def _space(self, connection):
+        return self._space_id if self._space_id is not None else SpaceService.shared_id(connection)
+
+    def _space_authorize(self, connection, actor, role=Role.READER):
+        return SpaceService(self.database, self.access).authorize(
+            connection, actor, role, space_id=self._space_id)
 
 
 def require_scope(actor, role):

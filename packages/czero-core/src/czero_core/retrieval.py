@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import Uuid,bindparam,text
 from sqlalchemy.exc import SQLAlchemyError
 from .identity import PermissionDenied,Role
-from .spaces import require_scope
+from .spaces import SpaceBound
 from .sources import SourceService,_label
 from .wiki import _view,KnowledgeNotFound
 from .embeddings import EmbeddingStore
@@ -53,7 +53,8 @@ def reciprocal_rank_fusion(*rankings):
     return [{**hits[key],'score':scores[key]} for key in sorted(hits,key=lambda k:(-scores[k],k))]
 
 
-class SearchService:
+class SearchService(SpaceBound):
+    _space_children = ('embeddings', 'knowledge')
     def __init__(self,database,access,*,embedding_client=None,scorer=None,scorer_mode='off',limits=None):
         if scorer_mode not in ('off','rerank','filter'):raise ValueError('invalid_scorer_mode')
         self.database,self.access=database,access
@@ -64,25 +65,20 @@ class SearchService:
         self.configuration_issue=None
 
     def _authorize(self,connection,actor):
-        if self.access is None:raise PermissionDenied()
-        current=self.access.checked_actor(connection,actor);current.require(Role.READER)
-        require_scope(current,Role.READER)
-        return current
+        return self._space_authorize(connection,actor)
 
-    @staticmethod
-    def _source_hit(connection,key,query):
-        citation=SourceService._citation(connection,key)
+    def _source_hit(self,connection,key,query):
+        citation=SourceService._citation(connection,key,space_id=self._space(connection))
         return {'id':citation['chunk_id'],'kind':'chunk','resource_id':citation['source_id'],
             'revision':citation['version'],'title':citation['title'],'content_hash':citation['content_hash'],
             **excerpt(citation['body'],query,origin=citation['start_offset']),'citation':citation,'wiki':None}
 
-    @staticmethod
-    def _wiki_hit(connection,key,query,*,chunk_id=None):
+    def _wiki_hit(self,connection,key,query,*,chunk_id=None):
         data=connection.execute(text('''SELECT r.*,p.slug FROM c0_wiki_revisions r
-            JOIN c0_wiki_pages p ON p.id=r.page_id WHERE r.id=:id'''),{'id':key}).mappings().one()
+            JOIN c0_wiki_pages p ON p.id=r.page_id WHERE p.space_id=:space AND r.id=:id'''),{'space':self._space(connection),'id':key}).mappings().one()
         window=excerpt(data['body'],query)
         if chunk_id is not None:
-            piece=connection.execute(text('SELECT body,start_offset FROM c0_wiki_chunks WHERE id=:id'),{'id':chunk_id}).mappings().one()
+            piece=connection.execute(text('SELECT body,start_offset FROM c0_wiki_chunks WHERE space_id=:space AND id=:id'),{'space':self._space(connection),'id':chunk_id}).mappings().one()
             window=excerpt(piece['body'],query,origin=piece['start_offset'])
         return {'id':data['id'],'kind':'wiki_revision','resource_id':data['page_id'],
             'revision':data['number'],'title':data['title'],'content_hash':data['content_hash'],
@@ -94,14 +90,14 @@ class SearchService:
             SELECT c.id,'chunk' AS kind,ts_rank_cd(c.search_vector,websearch_to_tsquery('simple',:query)) AS rank
             FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            WHERE :chunks AND NOT s.deleted AND c.search_vector @@ websearch_to_tsquery('simple',:query)
+            WHERE s.space_id=:space AND :chunks AND NOT s.deleted AND c.search_vector @@ websearch_to_tsquery('simple',:query)
             UNION ALL
             SELECT r.id,'wiki_revision' AS kind,ts_rank_cd(r.search_vector,websearch_to_tsquery('simple',:query)) AS rank
             FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
-            WHERE :wiki AND NOT p.deleted AND p.revision=r.number
+            WHERE p.space_id=:space AND :wiki AND NOT p.deleted AND p.revision=r.number
                 AND r.search_vector @@ websearch_to_tsquery('simple',:query)
             ) matches ORDER BY rank DESC,kind,id LIMIT :limit'''),
-            {'query':query,'chunks':kind!='wiki','wiki':kind!='source','limit':limit}).mappings().all()
+            {'space':self._space(connection),'query':query,'chunks':kind!='wiki','wiki':kind!='source','limit':limit}).mappings().all()
         return [{**(self._source_hit(connection,row['id'],query) if row['kind']=='chunk'
                     else self._wiki_hit(connection,row['id'],query)),'score':float(row['rank'])} for row in rows]
 
@@ -112,8 +108,8 @@ class SearchService:
             if row['source_chunk_id'] is not None:
                 hit=self._source_hit(connection,row['source_chunk_id'],query)
             else:
-                revision=connection.execute(text('SELECT revision_id FROM c0_wiki_chunks WHERE id=:id'),
-                    {'id':row['wiki_chunk_id']}).scalar_one()
+                revision=connection.execute(text('SELECT revision_id FROM c0_wiki_chunks WHERE space_id=:space AND id=:id'),
+                    {'space':self._space(connection),'id':row['wiki_chunk_id']}).scalar_one()
                 hit=self._wiki_hit(connection,revision,query,chunk_id=row['wiki_chunk_id'])
             key=hit_key(hit)
             if key in seen:continue
@@ -128,13 +124,13 @@ class SearchService:
                 targets.add(str(hit['citation']['document_id']));chunks.append(str(hit['id']))
         with self.database.engine.connect() as connection:
             self._authorize(connection,actor)
-            roots=connection.execute(text('''SELECT id FROM c0_entities e WHERE NOT deleted AND (
+            roots=connection.execute(text('''SELECT id FROM c0_entities e WHERE e.space_id=:space AND NOT deleted AND (
                 to_tsvector('simple',label) @@ websearch_to_tsquery('simple',:query)
                 OR EXISTS(SELECT 1 FROM c0_entity_links l WHERE l.entity_id=e.id AND l.target_id IN :targets)
                 OR EXISTS(SELECT 1 FROM c0_claims c JOIN c0_evidence_links l ON l.claim_id=c.id
                     WHERE c.entity_id=e.id AND NOT c.deleted AND l.chunk_id IN :chunks))
                 ORDER BY id LIMIT 3''').bindparams(bindparam('targets',expanding=True,type_=Uuid()),bindparam('chunks',expanding=True,type_=Uuid())),
-                {'query':query,'targets':[UUID(k) for k in targets],'chunks':[UUID(k) for k in chunks]}).scalars().all()
+                {'space':self._space(connection),'query':query,'targets':[UUID(k) for k in targets],'chunks':[UUID(k) for k in chunks]}).scalars().all()
         return [self.knowledge.graph(actor,key,depth=depth,limit=16) for key in roots]
 
     def search(self,actor,query,*,limit=None,mode='auto',kind='all',graph_depth=0,rerank=None):
@@ -154,8 +150,8 @@ class SearchService:
             self._authorize(connection,actor)
             ordinary=self._text(connection,query,limit=self.limits.candidates,kind=kind)
             profile=self.embeddings._profile(connection) if self.embeddings.client else None
-            ready=profile is not None and connection.execute(text('SELECT 1 FROM c0_embeddings WHERE profile_id=:id AND generation=:generation LIMIT 1'),
-                {'id':self.embeddings.profile_id,'generation':profile['generation']}).scalar_one_or_none() is not None
+            ready=profile is not None and connection.execute(text('SELECT 1 FROM c0_embeddings WHERE space_id=:space AND profile_id=:id AND generation=:generation LIMIT 1'),
+                {'space':self._space(connection),'id':self.embeddings.profile_id,'generation':profile['generation']}).scalar_one_or_none() is not None
         hits=ordinary
         if desired in ('semantic','hybrid'):
             if self.embeddings.client is None:failures.append('embeddings_not_configured')
@@ -179,6 +175,7 @@ class SearchService:
             else:
                 candidates=hits[:self.limits.scorer_candidates]
                 try:
+                    with self.database.engine.connect() as connection:self._authorize(connection,actor)
                     scored=self.scorer.score(query,[{'id':hit_key(hit),'text':hit['title']+'\n'+hit['excerpt']} for hit in candidates])
                     usage['systemone']=scored['usage'];truncated=scored['truncated_candidates'];scored_count=len(candidates)
                     ranked=[{**hit,'relevance_score':scored['scores'][hit_key(hit)]} for hit in candidates]

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from sqlalchemy import bindparam, text
 
+from .spaces import content_row
 from .object_schema import name
 from .objects import page
 from .sources import SourceService, SourceNotFound, _metadata, _uuid
@@ -36,45 +37,46 @@ def _revision(value):
 class KnowledgeService(WikiService):
     def reference_resolvers(self):
         def page_reference(connection, actor, key):
-            self._authorize(connection, actor)
+            bound = self.in_space(actor.space_id) if actor.space_id is not None else self
+            bound._authorize(connection, actor)
             try:
-                row = self._page(connection, key)
-                revision = self._revision(connection, key, row['revision'])
+                row = bound._page(connection, key)
+                revision = bound._revision(connection, key, row['revision'])
             except KnowledgeNotFound:
                 return None
             return {'type_name': 'page', 'data': {'slug': row['slug'], 'title': row['title'],
                 'revision': row['revision'], 'content_hash': revision['content_hash'], 'deleted': row['deleted']}}
         def entity_reference(connection, actor, key):
-            self._authorize(connection, actor)
-            try: row = self._entity(connection, key)
+            bound = self.in_space(actor.space_id) if actor.space_id is not None else self
+            bound._authorize(connection, actor)
+            try: row = bound._entity(connection, key)
             except KnowledgeNotFound: return None
             return {'type_name': 'entity', 'data': {'kind': row['kind'], 'label': row['label'],
                 'revision': row['revision'], 'deleted': row['deleted']}}
         def claim_reference(connection, actor, key):
-            self._authorize(connection, actor)
-            try: row = self._claim(connection, key)
+            bound = self.in_space(actor.space_id) if actor.space_id is not None else self
+            bound._authorize(connection, actor)
+            try: row = bound._claim(connection, key)
             except KnowledgeNotFound: return None
             return {'type_name': 'claim', 'data': {'entity_id': str(row['entity_id']), 'predicate': row['predicate'],
                 'revision': row['revision'], 'deleted': row['deleted']}}
         return {'page': page_reference, 'entity': entity_reference, 'claim': claim_reference}
 
-    @staticmethod
-    def _claim(connection, claim_id, *, lock=False):
-        row = connection.execute(text('SELECT * FROM c0_claims WHERE id=:id' + (' FOR UPDATE' if lock else '')),
-            {'id': _uuid(claim_id)}).mappings().one_or_none()
+    def _claim(self, connection, claim_id, *, lock=False):
+        row = connection.execute(text('SELECT * FROM c0_claims WHERE space_id=:space AND id=:id' + (' FOR UPDATE' if lock else '')),
+            {'space': self._space(connection), 'id': _uuid(claim_id)}).mappings().one_or_none()
         if row is None: raise KnowledgeNotFound()
-        return dict(row)
+        return content_row(row)
 
-    @staticmethod
-    def _evidence(connection, values):
+    def _evidence(self, connection, values):
         if not isinstance(values, list) or not 1 <= len(values) <= 32:
             raise ValueError('invalid_evidence')
         keys = sorted(set(_uuid(value) for value in values), key=str)
         for key in keys:
-            try: citation = SourceService._citation(connection, key)
+            try: citation = SourceService._citation(connection, key, space_id=self._space(connection))
             except SourceNotFound: raise KnowledgeNotFound() from None
-            state = connection.execute(text('SELECT state FROM c0_source_versions WHERE id=:id FOR SHARE'),
-                                       {'id': citation['version_id']}).scalar_one()
+            state = connection.execute(text('SELECT state FROM c0_source_versions WHERE space_id=:space AND id=:id FOR SHARE'),
+                                       {'space': self._space(connection), 'id': citation['version_id']}).scalar_one()
             if state != 'ready': raise EvidenceNotReady()
         return keys
 
@@ -93,14 +95,14 @@ class KnowledgeService(WikiService):
             if self._entity(connection, entity_id)['deleted']: raise KnowledgeConflict()
             if page_id is not None and self._page(connection, page_id)['deleted']: raise KnowledgeConflict()
             evidence = self._evidence(connection, keys)
-            row = dict(connection.execute(text('''INSERT INTO c0_claims
-                (id,entity_id,page_id,predicate,value,metadata,actor_id,valid_from,valid_to)
-                VALUES (:id,:entity,:page,:predicate,CAST(:value AS jsonb),CAST(:metadata AS jsonb),:actor,:start,:end) RETURNING *'''),
-                {'id': uuid4(), 'entity': entity_id, 'page': page_id, 'predicate': predicate,
+            row = content_row(connection.execute(text('''INSERT INTO c0_claims
+                (space_id,id,entity_id,page_id,predicate,value,metadata,actor_id,valid_from,valid_to)
+                VALUES (:space,:id,:entity,:page,:predicate,CAST(:value AS jsonb),CAST(:metadata AS jsonb),:actor,:start,:end) RETURNING *'''),
+                {'space': self._space(connection), 'id': uuid4(), 'entity': entity_id, 'page': page_id, 'predicate': predicate,
                  'value': encoded_value, 'metadata': encoded_meta, 'actor': current.user_id,
                  'start': valid_from, 'end': valid_to}).mappings().one())
-            connection.execute(text('INSERT INTO c0_evidence_links(claim_id,chunk_id) VALUES (:claim,:chunk)'),
-                [{'claim': row['id'], 'chunk': key} for key in evidence])
+            connection.execute(text('INSERT INTO c0_evidence_links(space_id,claim_id,chunk_id) VALUES (:space,:claim,:chunk)'),
+                [{'space': self._space(connection), 'claim': row['id'], 'chunk': key} for key in evidence])
             self._event(connection, current, 'claim', row['id'], 1, 'create')
             return row
         return self._mutate(actor, 'claim.create', {'entity_id': str(entity_id), 'page_id': str(page_id) if page_id else None,
@@ -112,8 +114,8 @@ class KnowledgeService(WikiService):
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
             row = self._claim(connection, claim_id)
-            keys = connection.execute(text('SELECT chunk_id FROM c0_evidence_links WHERE claim_id=:id ORDER BY chunk_id'), {'id': row['id']}).scalars().all()
-            return _view({**row, 'evidence': [SourceService._citation(connection, key) for key in keys]})
+            keys = connection.execute(text('SELECT chunk_id FROM c0_evidence_links WHERE space_id=:space AND claim_id=:id ORDER BY chunk_id'), {'space': self._space(connection), 'id': row['id']}).scalars().all()
+            return _view({**row, 'evidence': [SourceService._citation(connection, key, space_id=self._space(connection)) for key in keys]})
 
     def list_claims(self, actor, *, entity_id=None, page_id=None, predicate=None, limit=50, offset=0, include_deleted=False):
         page(limit, offset)
@@ -123,12 +125,12 @@ class KnowledgeService(WikiService):
         if type(include_deleted) is not bool: raise ValueError('invalid_filter')
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return _view([dict(row) for row in connection.execute(text('''SELECT * FROM c0_claims
-                WHERE (:deleted OR NOT deleted) AND (CAST(:entity AS uuid) IS NULL OR entity_id=:entity)
+            return _view([content_row(row) for row in connection.execute(text('''SELECT * FROM c0_claims
+                WHERE space_id=:space AND (:deleted OR NOT deleted) AND (CAST(:entity AS uuid) IS NULL OR entity_id=:entity)
                 AND (CAST(:page AS uuid) IS NULL OR page_id=:page)
                 AND (CAST(:predicate AS text) IS NULL OR predicate=:predicate)
                 ORDER BY created_at,id LIMIT :limit OFFSET :offset'''),
-                {'deleted': include_deleted, 'entity': entity_id, 'page': page_id, 'predicate': predicate,
+                {'space': self._space(connection), 'deleted': include_deleted, 'entity': entity_id, 'page': page_id, 'predicate': predicate,
                  'limit': limit, 'offset': offset}).mappings()])
 
     def update_claim(self, actor, claim_id, *, expected_revision, metadata, evidence_chunk_ids=None, idempotency_key):
@@ -142,13 +144,13 @@ class KnowledgeService(WikiService):
             row = self._claim(connection, claim_id, lock=True)
             if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
             if keys is not None:
-                existing = connection.execute(text('SELECT chunk_id FROM c0_evidence_links WHERE claim_id=:id'), {'id': claim_id}).scalars().all()
+                existing = connection.execute(text('SELECT chunk_id FROM c0_evidence_links WHERE space_id=:space AND claim_id=:id'), {'space': self._space(connection), 'id': claim_id}).scalars().all()
                 combined = sorted(set(existing + self._evidence(connection, keys)), key=str)
                 if len(combined) > 32: raise ValueError('invalid_evidence')
-                connection.execute(text('INSERT INTO c0_evidence_links(claim_id,chunk_id) VALUES (:claim,:chunk) ON CONFLICT DO NOTHING'),
-                    [{'claim': claim_id, 'chunk': key} for key in combined])
-            row = dict(connection.execute(text('''UPDATE c0_claims SET metadata=CAST(:metadata AS jsonb),revision=revision+1
-                WHERE id=:id RETURNING *'''), {'id': claim_id, 'metadata': encoded}).mappings().one())
+                connection.execute(text('INSERT INTO c0_evidence_links(space_id,claim_id,chunk_id) VALUES (:space,:claim,:chunk) ON CONFLICT DO NOTHING'),
+                    [{'space': self._space(connection), 'claim': claim_id, 'chunk': key} for key in combined])
+            row = content_row(connection.execute(text('''UPDATE c0_claims SET metadata=CAST(:metadata AS jsonb),revision=revision+1
+                WHERE space_id=:space AND id=:id RETURNING *'''), {'space': self._space(connection), 'id': claim_id, 'metadata': encoded}).mappings().one())
             self._event(connection, current, 'claim', claim_id, row['revision'], 'update')
             return row
         return self._mutate(actor, 'claim.update', {'id': str(claim_id), 'expected_revision': expected_revision,
@@ -160,20 +162,18 @@ class KnowledgeService(WikiService):
             row = self._claim(connection, claim_id, lock=True)
             if row['revision'] != expected_revision: raise KnowledgeConflict()
             if not row['deleted']:
-                row = dict(connection.execute(text('UPDATE c0_claims SET deleted=true,revision=revision+1 WHERE id=:id RETURNING *'), {'id': claim_id}).mappings().one())
+                row = content_row(connection.execute(text('UPDATE c0_claims SET deleted=true,revision=revision+1 WHERE space_id=:space AND id=:id RETURNING *'), {'space': self._space(connection), 'id': claim_id}).mappings().one())
                 self._event(connection, current, 'claim', claim_id, row['revision'], 'delete')
             return row
         return self._mutate(actor, 'claim.delete', {'id': str(claim_id), 'expected_revision': expected_revision}, idempotency_key, execute)
 
-    @staticmethod
-    def _relation(connection, relation_id):
-        row = connection.execute(text('SELECT * FROM c0_relations WHERE id=:id FOR UPDATE'), {'id': _uuid(relation_id)}).mappings().one_or_none()
+    def _relation(self, connection, relation_id):
+        row = connection.execute(text('SELECT * FROM c0_relations WHERE space_id=:space AND id=:id FOR UPDATE'), {'space': self._space(connection), 'id': _uuid(relation_id)}).mappings().one_or_none()
         if row is None: raise KnowledgeNotFound()
-        return dict(row)
+        return content_row(row)
 
-    @staticmethod
-    def _degree(connection, entity_id):
-        return connection.execute(text('SELECT count(*) FROM c0_relations WHERE NOT deleted AND (source_id=:id OR target_id=:id)'), {'id': entity_id}).scalar_one()
+    def _degree(self, connection, entity_id):
+        return connection.execute(text('SELECT count(*) FROM c0_relations WHERE space_id=:space AND NOT deleted AND (source_id=:id OR target_id=:id)'), {'space': self._space(connection), 'id': entity_id}).scalar_one()
 
     def add_relation(self, actor, source_id, target_id, kind, *, metadata=None, idempotency_key):
         source_id, target_id, kind = _uuid(source_id), _uuid(target_id), name(kind)
@@ -182,16 +182,16 @@ class KnowledgeService(WikiService):
         def execute(connection, current):
             for key in (source_id, target_id):
                 if self._entity(connection, key)['deleted']: raise KnowledgeConflict()
-            existing = connection.execute(text('SELECT * FROM c0_relations WHERE source_id=:source AND target_id=:target AND kind=:kind'),
-                {'source': source_id, 'target': target_id, 'kind': kind}).mappings().one_or_none()
+            existing = connection.execute(text('SELECT * FROM c0_relations WHERE space_id=:space AND source_id=:source AND target_id=:target AND kind=:kind'),
+                {'space': self._space(connection), 'source': source_id, 'target': target_id, 'kind': kind}).mappings().one_or_none()
             if existing:
                 if existing['deleted'] or existing['metadata'] != json.loads(encoded): raise KnowledgeConflict()
-                return dict(existing)
+                return content_row(existing)
             if any(self._degree(connection, key) >= 32 for key in (source_id, target_id)):
                 raise ValueError('relation_degree_limit')
-            row = dict(connection.execute(text('''INSERT INTO c0_relations(id,source_id,target_id,kind,metadata,actor_id)
-                VALUES (:id,:source,:target,:kind,CAST(:metadata AS jsonb),:actor) RETURNING *'''),
-                {'id': uuid4(), 'source': source_id, 'target': target_id, 'kind': kind,
+            row = content_row(connection.execute(text('''INSERT INTO c0_relations(space_id,id,source_id,target_id,kind,metadata,actor_id)
+                VALUES (:space,:id,:source,:target,:kind,CAST(:metadata AS jsonb),:actor) RETURNING *'''),
+                {'space': self._space(connection), 'id': uuid4(), 'source': source_id, 'target': target_id, 'kind': kind,
                  'metadata': encoded, 'actor': current.user_id}).mappings().one())
             self._event(connection, current, 'relation', row['id'], 1, 'create')
             return row
@@ -209,9 +209,9 @@ class KnowledgeService(WikiService):
                 for key in (row['source_id'], row['target_id']):
                     if self._entity(connection, key)['deleted']: raise KnowledgeConflict()
                     if row['deleted'] and self._degree(connection, key) >= 32: raise ValueError('relation_degree_limit')
-            row = dict(connection.execute(text('''UPDATE c0_relations SET metadata=CAST(:metadata AS jsonb),
-                deleted=:deleted,revision=revision+1 WHERE id=:id RETURNING *'''),
-                {'id': relation_id, 'metadata': encoded, 'deleted': deleted}).mappings().one())
+            row = content_row(connection.execute(text('''UPDATE c0_relations SET metadata=CAST(:metadata AS jsonb),
+                deleted=:deleted,revision=revision+1 WHERE space_id=:space AND id=:id RETURNING *'''),
+                {'space': self._space(connection), 'id': relation_id, 'metadata': encoded, 'deleted': deleted}).mappings().one())
             self._event(connection, current, 'relation', relation_id, row['revision'], 'delete' if deleted else 'update')
             return row
         return self._mutate(actor, 'relation.update', {'id': str(relation_id), 'expected_revision': expected_revision,
@@ -222,17 +222,16 @@ class KnowledgeService(WikiService):
         if type(include_deleted) is not bool: raise ValueError('invalid_filter')
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor); self._entity(connection, entity_id)
-            return _view([dict(row) for row in connection.execute(text('''SELECT * FROM c0_relations
-                WHERE (:deleted OR NOT deleted) AND (source_id=:id OR target_id=:id)
+            return _view([content_row(row) for row in connection.execute(text('''SELECT * FROM c0_relations
+                WHERE space_id=:space AND (:deleted OR NOT deleted) AND (source_id=:id OR target_id=:id)
                 ORDER BY created_at,id LIMIT :limit OFFSET :offset'''),
-                {'deleted': include_deleted, 'id': _uuid(entity_id), 'limit': limit, 'offset': offset}).mappings()])
+                {'space': self._space(connection), 'deleted': include_deleted, 'id': _uuid(entity_id), 'limit': limit, 'offset': offset}).mappings()])
 
-    @staticmethod
-    def _link_target(connection, kind, resource_id):
+    def _link_target(self, connection, kind, resource_id):
         if kind not in _LINKS: raise ValueError('invalid_reference_kind')
         table, column = _LINKS[kind]
         # Identifiers are trusted constants; request data is only bound UUIDs.
-        row = connection.execute(text('SELECT * FROM ' + table + ' WHERE id=:id'), {'id': _uuid(resource_id)}).mappings().one_or_none()
+        row = connection.execute(text('SELECT * FROM ' + table + ' WHERE space_id=:space AND id=:id'), {'space': self._space(connection), 'id': _uuid(resource_id)}).mappings().one_or_none()
         if row is None: raise KnowledgeNotFound()
         if kind == 'object': label = row['type_name']
         elif kind in ('page', 'source'): label = row['title']
@@ -246,14 +245,14 @@ class KnowledgeService(WikiService):
             entity = self._entity(connection, entity_id)
             if entity['deleted']: raise KnowledgeConflict()
             column, label = self._link_target(connection, target_kind, target_id)
-            existing = connection.execute(text('SELECT * FROM c0_entity_links WHERE entity_id=:entity AND target_kind=:kind AND target_id=:target'),
-                {'entity': entity_id, 'kind': target_kind, 'target': target_id}).mappings().one_or_none()
-            if existing: return dict(existing)
-            if connection.execute(text('SELECT count(*) FROM c0_entity_links WHERE entity_id=:id'), {'id': entity_id}).scalar_one() >= 32:
+            existing = connection.execute(text('SELECT * FROM c0_entity_links WHERE space_id=:space AND entity_id=:entity AND target_kind=:kind AND target_id=:target'),
+                {'space': self._space(connection), 'entity': entity_id, 'kind': target_kind, 'target': target_id}).mappings().one_or_none()
+            if existing: return content_row(existing)
+            if connection.execute(text('SELECT count(*) FROM c0_entity_links WHERE space_id=:space AND entity_id=:id'), {'space': self._space(connection), 'id': entity_id}).scalar_one() >= 32:
                 raise ValueError('reference_limit')
-            row = dict(connection.execute(text('INSERT INTO c0_entity_links(id,entity_id,target_kind,target_id,label_snapshot,' + column + ',actor_id) '
-                'VALUES (:id,:entity,:kind,:target,:label,:target,:actor) RETURNING *'),
-                {'id': uuid4(), 'entity': entity_id, 'kind': target_kind, 'target': target_id,
+            row = content_row(connection.execute(text('INSERT INTO c0_entity_links(space_id,id,entity_id,target_kind,target_id,label_snapshot,' + column + ',actor_id) '
+                'VALUES (:space,:id,:entity,:kind,:target,:label,:target,:actor) RETURNING *'),
+                {'space': self._space(connection), 'id': uuid4(), 'entity': entity_id, 'kind': target_kind, 'target': target_id,
                  'label': label, 'actor': current.user_id}).mappings().one())
             self._event(connection, current, 'entity', entity_id, entity['revision'], 'reference_add')
             return row
@@ -264,16 +263,16 @@ class KnowledgeService(WikiService):
         page(limit, offset)
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor); self._entity(connection, entity_id)
-            rows = connection.execute(text('SELECT * FROM c0_entity_links WHERE entity_id=:id ORDER BY created_at,id LIMIT :limit OFFSET :offset'),
-                {'id': _uuid(entity_id), 'limit': limit, 'offset': offset}).mappings().all()
-            return _view([{**dict(row), 'missing': row[_LINKS[row['target_kind']][1]] is None} for row in rows])
+            rows = connection.execute(text('SELECT * FROM c0_entity_links WHERE space_id=:space AND entity_id=:id ORDER BY created_at,id LIMIT :limit OFFSET :offset'),
+                {'space': self._space(connection), 'id': _uuid(entity_id), 'limit': limit, 'offset': offset}).mappings().all()
+            return _view([{**content_row(row), 'missing': row[_LINKS[row['target_kind']][1]] is None} for row in rows])
 
     def unlink_entity(self, actor, entity_id, link_id, *, idempotency_key):
         entity_id, link_id = _uuid(entity_id), _uuid(link_id)
         def execute(connection, current):
             row = self._entity(connection, entity_id)
-            deleted = connection.execute(text('DELETE FROM c0_entity_links WHERE entity_id=:entity AND id=:id RETURNING id'),
-                {'entity': entity_id, 'id': link_id}).scalar_one_or_none()
+            deleted = connection.execute(text('DELETE FROM c0_entity_links WHERE space_id=:space AND entity_id=:entity AND id=:id RETURNING id'),
+                {'space': self._space(connection), 'entity': entity_id, 'id': link_id}).scalar_one_or_none()
             if deleted is None: raise KnowledgeNotFound()
             self._event(connection, current, 'entity', entity_id, row['revision'], 'reference_remove')
             return {'id': deleted, 'deleted': True}
@@ -291,23 +290,23 @@ class KnowledgeService(WikiService):
                 SELECT CAST(:root AS uuid),0
                 UNION
                 SELECT CASE WHEN r.source_id=q.entity_id THEN r.target_id ELSE r.source_id END,q.depth+1
-                FROM reachable q JOIN c0_relations r ON NOT r.deleted AND
+                FROM reachable q JOIN c0_relations r ON r.space_id=:space AND NOT r.deleted AND
                     ((:outward AND r.source_id=q.entity_id) OR (:inward AND r.target_id=q.entity_id))
                 JOIN c0_entities next ON next.id=CASE WHEN r.source_id=q.entity_id THEN r.target_id ELSE r.source_id END
-                WHERE q.depth<:depth AND NOT next.deleted)
+                WHERE q.depth<:depth AND next.space_id=:space AND NOT next.deleted)
                 SELECT e.*,min(q.depth) AS depth FROM reachable q JOIN c0_entities e ON e.id=q.entity_id
                 GROUP BY e.id ORDER BY min(q.depth),e.id LIMIT :limit'''),
-                {'root': entity_id, 'outward': direction != 'in', 'inward': direction != 'out',
+                {'space': self._space(connection), 'root': entity_id, 'outward': direction != 'in', 'inward': direction != 'out',
                  'depth': depth, 'limit': limit + 1}).mappings().all()
-            truncated = len(rows) > limit; nodes = [dict(row) for row in rows[:limit]]
+            truncated = len(rows) > limit; nodes = [content_row(row) for row in rows[:limit]]
             ids = [row['id'] for row in nodes]
-            edges = connection.execute(text('''SELECT * FROM c0_relations WHERE NOT deleted
-                AND source_id IN :ids AND target_id IN :ids ORDER BY source_id,target_id,kind''').bindparams(bindparam('ids', expanding=True)), {'ids': ids}).mappings().all()
+            edges = connection.execute(text('''SELECT * FROM c0_relations WHERE space_id=:space AND NOT deleted
+                AND source_id IN :ids AND target_id IN :ids ORDER BY source_id,target_id,kind''').bindparams(bindparam('ids', expanding=True)), {'space': self._space(connection), 'ids': ids}).mappings().all()
             # Cross-domain references are leaves; do not invent object/Wiki
             # relationship semantics or traverse arbitrary registered code.
-            links = connection.execute(text('SELECT * FROM c0_entity_links WHERE entity_id IN :ids ORDER BY entity_id,id LIMIT 101').bindparams(bindparam('ids', expanding=True)),
-                {'ids': [row['id'] for row in nodes if row['depth'] < depth]}).mappings().all()
+            links = connection.execute(text('SELECT * FROM c0_entity_links WHERE space_id=:space AND entity_id IN :ids ORDER BY entity_id,id LIMIT 101').bindparams(bindparam('ids', expanding=True)),
+                {'space': self._space(connection), 'ids': [row['id'] for row in nodes if row['depth'] < depth]}).mappings().all()
             truncated = truncated or len(links) > 100
             return _view({'root': entity_id, 'depth': depth, 'direction': direction, 'nodes': nodes,
-                'relations': [dict(row) for row in edges], 'references': [{**dict(row),
+                'relations': [content_row(row) for row in edges], 'references': [{**content_row(row),
                     'missing': row[_LINKS[row['target_kind']][1]] is None} for row in links[:100]], 'truncated': truncated})

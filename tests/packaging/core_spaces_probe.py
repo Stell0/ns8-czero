@@ -1,0 +1,109 @@
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Trusted, owned Core fixtures for disposable installations only; no live SSO claim."""
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import secrets
+import tempfile
+import time
+from uuid import UUID, uuid4
+
+from sqlalchemy import text
+from czero_core import Database
+from czero_core.access import AccessService
+from czero_core.identity import PermissionDenied, Role, VerifiedIdentity
+from czero_core.jobs import default_registry
+from czero_core.knowledge import KnowledgeService
+from czero_core.objects import ObjectService, ObjectNotFound
+from czero_core.oauth_clients import OAuthClientService
+from czero_core.oauth_grants import OAuthGrantService, GrantRejected, pkce_challenge
+from czero_core.sessions import SessionContext
+from czero_core.sources import OriginalStore, SourceService, SourceNotFound, register_source_handlers
+from czero_core.spaces import SpaceService
+from czero_core.wiki import KnowledgeNotFound
+
+assert os.environ.get('CZERO_DISPOSABLE_TEST') == '1', 'Disposable fixture marker required'
+database = Database()
+issuer = 'https://fixture.example.invalid/' + uuid4().hex
+owner_key, editor_key = uuid4(), uuid4()
+access = AccessService(database, issuer, owner_key)
+owner = access.resolve(VerifiedIdentity(issuer,'owner',str(owner_key),'owner','Owner',time.time()+600))
+spaces = SpaceService(database, access)
+created, type_name, client_id = [], 'space-fixture-' + uuid4().hex, None
+try:
+    private = spaces.create(owner,'Private fixture '+uuid4().hex,idempotency_key='private')
+    created.append(UUID(private['id']))
+    other = spaces.create(owner,'Other fixture '+uuid4().hex,idempotency_key='other')
+    created.append(UUID(other['id']))
+    knowledge = KnowledgeService(database,access)
+    selected = knowledge.in_space(private['id'])
+    first = selected.upsert_page(owner,'same-slug','Private fixture','Unverified observation',idempotency_key='same-key')
+    second = knowledge.in_space(other['id']).upsert_page(owner,'same-slug','Other fixture','Other observation',idempotency_key='same-key')
+    assert first['id'] != second['id']
+    assert selected.upsert_page(owner,'same-slug','Private fixture','Unverified observation',idempotency_key='same-key') == first
+    try:knowledge.get_page(owner,first['id'])
+    except KnowledgeNotFound:pass
+    else:raise AssertionError('Shared page lookup crossed spaces')
+    entity = selected.create_entity(owner,'investigation','Private fixture entity',idempotency_key='entity')
+    with tempfile.TemporaryDirectory(prefix='core-spaces-') as directory:
+        originals = OriginalStore(Path(directory)/'originals')
+        registry = default_registry(); register_source_handlers(registry,database,originals)
+        sources = SourceService(database,access,registry,originals)
+        source = sources.in_space(private['id'])
+        receipt = source.ingest_text(owner,title='Private evidence',body='Retained fixture evidence',idempotency_key='evidence')
+        with database.engine.begin() as c:registry.get('source.extract').execute(c,{'version_id':receipt['id']})
+        document = source.document(owner,receipt['id']); chunk = source.chunks(owner,document['id'])[0]
+        assert source.citation(owner,chunk['id'])['body'] == 'Retained fixture evidence'
+        try:sources.citation(owner,chunk['id'])
+        except SourceNotFound:pass
+        else:raise AssertionError('Shared citation lookup crossed spaces')
+        claim = selected.create_claim(owner,entity['id'],'observed',{'unknown':True},page_id=first['id'],evidence_chunk_ids=[str(chunk['id'])],idempotency_key='claim')
+        assert selected.get_claim(owner,claim['id'])['evidence'][0]['chunk_id'] == str(chunk['id'])
+        objects = ObjectService(database,access,reference_resolvers={**knowledge.reference_resolvers(),**sources.reference_resolvers()})
+        objects.register_type(owner,type_name,'Fixture',{'type':'object','properties':{'name':{'type':'string','maxLength':64}},'required':['name']},['name'])
+        record = objects.in_space(private['id']).create(owner,type_name,{'name':'Same unique value'})
+        objects.in_space(other['id']).create(owner,type_name,{'name':'Same unique value'})
+        assert objects.in_space(private['id']).resolve_reference(owner,'chunk',chunk['id'],'chunk')['data']['body'] == 'Retained fixture evidence'
+        try:objects.get(owner,record['id'])
+        except ObjectNotFound:pass
+        else:raise AssertionError('Shared object lookup crossed spaces')
+        try:access.resolve(VerifiedIdentity(issuer,'editor',str(editor_key),'editor','Editor',time.time()+600))
+        except PermissionDenied:pass
+        account = next(row for row in access.list_accounts(owner) if row['account_key'] == editor_key)
+        access.set_role(owner,account['id'],Role.EDITOR)
+        editor = access.resolve(VerifiedIdentity(issuer,'editor',str(editor_key),'editor','Editor',time.time()+600))
+        spaces.set_grant(owner,private['id'],editor.user_id,Role.EDITOR,expected_revision=0,idempotency_key='grant')
+        callback, resource = 'https://fixture.example.invalid/callback','https://fixture.example.invalid/mcp'
+        client = OAuthClientService(access).register(owner,'Space probe '+uuid4().hex,[callback],scopes=['c0:read','c0:write'])
+        client_id = UUID(client['client_id'])
+        tokens = OAuthGrantService(access,'disposable-space-probe',resource)
+        verifier = secrets.token_urlsafe(32)
+        code = tokens.issue_code(SessionContext(editor,datetime.fromtimestamp(time.time()+600,timezone.utc),'fixture-csrf'),client['client_id'],callback=callback,scopes={'c0:read','c0:write'},challenge=pkce_challenge(verifier),resource=resource)
+        pair = tokens.exchange_code(code,client['client_id'],callback=callback,verifier=verifier,resource=resource)
+        delegated = tokens.verify(pair.access_token,resource=resource).actor
+        assert selected.get_page(delegated,first['id']) == first
+        spaces.set_grant(owner,private['id'],editor.user_id,None,expected_revision=1,idempotency_key='revoke')
+        spaces.set_grant(owner,private['id'],editor.user_id,Role.EDITOR,expected_revision=2,idempotency_key='regrant')
+        try:selected.get_page(delegated,first['id'])
+        except PermissionDenied:pass
+        else:raise AssertionError('Captured authority survived revocation/regrant')
+        try:tokens.verify(pair.access_token,resource=resource)
+        except GrantRejected:pass
+        else:raise AssertionError('Revoked token revived')
+        with database.engine.begin() as c:registry.get('source.cleanup').execute(c,{'version_id':receipt['id']})
+finally:
+    with database.engine.begin() as c:
+        if client_id:c.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':client_id})
+        for identifier in created:
+            for table in ('c0_evidence_links','c0_entity_links','c0_relations','c0_claims','c0_knowledge_receipts',
+                          'c0_knowledge_events','c0_entity_aliases','c0_entities','c0_wiki_revisions','c0_wiki_pages',
+                          'c0_chunks','c0_documents','c0_source_versions','c0_sources','c0_jobs','c0_object_relations',
+                          'c0_object_keys','c0_objects','c0_object_events','c0_space_grants'):
+                c.execute(text('DELETE FROM '+table+' WHERE space_id=:space'),{'space':identifier})
+            c.execute(text('DELETE FROM c0_spaces WHERE id=:id'),{'id':identifier})
+        c.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':type_name})
+        c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'),{'issuer':issuer})
+    database.close()
+print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True}))

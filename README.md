@@ -322,6 +322,13 @@ AM2's documentation marker has passed exact checks and main publication; AM3
 development is active. The installed behavior remains one shared knowledge space
 with application-wide roles, REST file ingestion and MCP/REST text evidence.
 
+The unpublished Core 0.27.0 candidate now implements content isolation, revisioned
+space grants and token revalidation. Its local 1040 Python/PostgreSQL/packaging
+cases include role/grant/scope combinations, migration preservation, immutable
+evidence, private references and filtered retrieval. Application space selectors,
+REST/MCP exposure, native/publication and deployment acceptance are still pending;
+the dedicated instance continues to run accepted AM2.
+
 The agreed space contract keeps object-type definitions shared across the
 instance. Records, relations, events and annotations will be protected by space;
 Admins access all spaces under actual OAuth scopes, while Readers/Editors need

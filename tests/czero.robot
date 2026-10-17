@@ -389,6 +389,21 @@ Exercise the native module update
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
 
+Verify protected Core spaces in the installed runtime
+    [Timeout]    90 seconds
+    # Owned trusted Core fixtures are separate from real SSO/SDK acceptance.
+    Put File    ${CURDIR}/packaging/core_spaces_probe.py    /tmp/czero-core-spaces-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 czero python - < /tmp/czero-core-spaces-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0
+    ${result} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${result}[spaces]
+    Should Be True    ${result}[scoped_names]
+    Should Be True    ${result}[immutable_evidence]
+    Should Be True    ${result}[typed_references]
+    Should Be True    ${result}[grant_revocation]
+
 Verify effective container hardening and memory targets
     Put File    ${CURDIR}/hardening_probe.py    /tmp/czero-hardening-probe.py    mode=0644
     ${output}    ${rc} =    Execute Command

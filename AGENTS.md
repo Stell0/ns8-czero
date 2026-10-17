@@ -384,10 +384,16 @@ AM2 closeout main 65829d4 has completed successful local/producer/released-Core/
 both-native checks and actual artifact audits (PLAN.md). AM3 is active on its
 feature branch; the first Core foundation adds the preserved shared-space
 catalog, revisioned grants and captured delegated-token revalidation. Local
-967 Python/PostgreSQL/packaging cases, 106 scripts, schema/shell checks and
-nineteen Robot dry runs pass. Protected content scoping, transports, UI and
-deployment acceptance are still pending. Do not expose or publish this partial
-Core candidate as a completed protected-space implementation.
+Core content isolation now passes 1040 Python/PostgreSQL/packaging cases,
+106 scripts, schema/shell checks and twenty Robot dry runs. Forward migration
+0015 scopes content, uniqueness, same-space references, receipts, derivatives
+and feed cursors while preserving every predecessor column and OAuth authority.
+The 63 role/grant/scope combinations, captured-token wait/regrant, 70-private-page
+retrieval/provider isolation and independent installed package probes pass.
+Preserve legacy shared fingerprints/DTOs and old sequence positions, even when
+retained event rows have smaller IDs. Exact-source CI/native/publication,
+application transports/UI and deployed acceptance remain pending. Do not expose
+or deploy this candidate as a completed AM3 implementation.
 
 Space work keeps object-type definitions global;
 records, relations, events and annotations are protected by space. Application

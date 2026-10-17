@@ -116,12 +116,17 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0014_spaces'
+        assert results[0]==results[1] and results[0][1]=='0015_content_spaces'
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,
                          env={**env,'CZERO_DATABASE_URL':target})
         assert all(json.loads(evidence).values())
+        spaces_probe=directory/'core_spaces_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_spaces_probe.py',spaces_probe)
+        scoped=command([str(python),'-I',str(spaces_probe)],cwd=directory,
+                       env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
+        assert all(json.loads(scoped).values())
     finally:
         with engine.connect().execution_options(isolation_level='AUTOCOMMIT') as connection:
             connection.execute(text('DROP DATABASE IF EXISTS '+name+' WITH (FORCE)'))

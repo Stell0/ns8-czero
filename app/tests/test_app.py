@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from czero_app.main import create_app
 
 STATIC = Path(__file__).resolve().parents[1] / "static"
-DATABASE_READY = {"status": "ok", "schema_revision": "0014_spaces", "vector_version": "0.8.7"}
+DATABASE_READY = {"status": "ok", "schema_revision": "0015_content_spaces", "vector_version": "0.8.7"}
 
 
 def ready_database():

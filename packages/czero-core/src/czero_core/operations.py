@@ -6,7 +6,7 @@ Handlers and schemas come from application Python code, never requests.
 Domain services remain responsible for transactional authorization.
 """
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 import re
 from typing import Callable
@@ -38,6 +38,8 @@ class Operation:
     output_schema: dict
     handler: Callable
     read_only: bool = True
+    # Trusted resource/space policy runs before a scope-upgrade challenge.
+    preauthorize: Callable | None = None
 
 
 class OperationRegistry:
@@ -54,6 +56,7 @@ class OperationRegistry:
                 or operation.scope not in SCOPES
                 or type(operation.read_only) is not bool
                 or not callable(operation.handler)
+                or (operation.preauthorize is not None and not callable(operation.preauthorize))
                 or not isinstance(operation.input_schema, dict)
                 or not isinstance(operation.output_schema, dict)):
             raise ValueError('invalid_operation_registration')
@@ -66,12 +69,29 @@ class OperationRegistry:
         self._operations[operation.name] = Operation(
             operation.name, operation.description, operation.role, operation.scope,
             deepcopy(operation.input_schema), deepcopy(operation.output_schema),
-            operation.handler, operation.read_only)
+            operation.handler, operation.read_only, operation.preauthorize)
 
-    def _current(self, actor: Actor, operation: Operation, scopes):
+    def _current(self, actor: Actor, operation: Operation, scopes, arguments):
         self._validate_scopes(scopes)
         current = self._authorize(actor, operation.role)
-        if scopes is not None and operation.scope not in scopes:
+        try:
+            if not isinstance(arguments, dict):
+                raise ValueError()
+            if len(json.dumps(arguments, allow_nan=False).encode()) > MAX_ARGUMENT_BYTES:
+                raise ValueError()
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            raise OperationRejected() from None
+        if operation.preauthorize is not None:
+            selected = operation.preauthorize(current, arguments)
+            if not isinstance(selected, Actor) or selected.user_id != current.user_id:
+                raise PermissionDenied()
+            selected.require(operation.role)
+            # A policy may narrow the effective role/space, but cannot discard
+            # the invocation's actual delegation while refreshing that Actor.
+            current = replace(selected, delegation=current.delegation,
+                              delegated_scopes=current.delegated_scopes)
+        if ((scopes is not None and operation.scope not in scopes)
+                or (current.delegated_scopes is not None and operation.scope not in current.delegated_scopes)):
             raise ScopeDenied(operation.scope)
         return current
 
@@ -107,14 +127,7 @@ class OperationRegistry:
         operation = self._operations.get(name) if isinstance(name, str) else None
         if operation is None:
             raise OperationRejected()
-        current = self._current(actor, operation, scopes)
-        try:
-            if not isinstance(arguments, dict):
-                raise ValueError()
-            if len(json.dumps(arguments, allow_nan=False).encode()) > MAX_ARGUMENT_BYTES:
-                raise ValueError()
-        except (ValueError, TypeError, UnicodeError, RecursionError):
-            raise OperationRejected() from None
+        current = self._current(actor, operation, scopes, arguments)
         return operation.handler(current, arguments)
 
     def definition(self, name):
