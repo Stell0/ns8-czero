@@ -36,7 +36,7 @@ jobs:
           lock=tomllib.loads(Path('app/uv.lock').read_text())
           core=next(item for item in lock['package'] if item['name']=='czero-core')
           version=core['version']; commit=core['source']['git'].rsplit('#',1)[1]
-          assert re.fullmatch(r'0\.25\.[0-9]+',version) and re.fullmatch(r'[0-9a-f]{40}',commit)
+          assert re.fullmatch(r'0\.26\.[0-9]+',version) and re.fullmatch(r'[0-9a-f]{40}',commit)
           print(version,commit)
           PY
           read -r version commit < /tmp/core-expected

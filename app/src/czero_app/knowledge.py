@@ -6,11 +6,12 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field
 
 from czero_core.identity import PermissionDenied, Role
-from czero_core.knowledge import KnowledgeService
+from czero_core.knowledge import KnowledgeService, EvidenceNotReady
 from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound
 from czero_app.auth import RequestAccess
 
@@ -25,6 +26,20 @@ class PageCreate(Mutation):
     title: str = Field(min_length=1, max_length=256)
     body: str = Field(max_length=131072)
     metadata: dict = Field(default_factory=dict)
+
+
+class PageUpsert(PageCreate):
+    title: str = Field(min_length=1, max_length=256, repr=False)
+    body: str = Field(max_length=131072, repr=False,
+        description='Authored Markdown, at most 131072 UTF-8 bytes. C0 does not execute its contents.')
+    metadata: dict = Field(default_factory=dict, repr=False,
+        description='JSON metadata, at most 16384 UTF-8 bytes.')
+    expected_revision: int | None = Field(default=None, ge=1, lt=2147483647,
+        description='Omit for create-only. Supply the current revision for update-only; conflicts never overwrite.')
+
+
+class KnowledgeRequestError(BaseModel):
+    detail: Literal['invalid_knowledge_request']
 
 
 class PageUpdate(Mutation):
@@ -236,9 +251,17 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
         if auth is None: raise HTTPException(503, 'authentication_not_configured')
         try: return operation(*args, **kwargs)
         except PermissionDenied: raise
+        except EvidenceNotReady: raise HTTPException(409, 'evidence_not_ready') from None
         except KnowledgeConflict: raise HTTPException(409, 'knowledge_conflict') from None
         except KnowledgeNotFound: raise HTTPException(404, 'knowledge_not_found') from None
         except ValueError: raise HTTPException(422, 'invalid_knowledge_request') from None
+
+    previous_validation_handler = app.exception_handlers[RequestValidationError]
+    @app.exception_handler(RequestValidationError)
+    async def wiki_validation_error(request, error):
+        if request.url.path.endswith(('/api/v1/wiki/pages/resolve', '/api/v1/wiki/pages/upsert')):
+            return JSONResponse({'detail':'invalid_knowledge_request'}, status_code=422)
+        return await previous_validation_handler(request, error)
 
     @app.get('/api/v1/wiki/pages', response_model=PagesView)
     @operation('wiki_pages_list', 'Browse authored Wiki page metadata', Role.READER, PagesView, read_only=True)
@@ -249,6 +272,22 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
     @operation('wiki_pages_create', 'Create an authored page with a replay key', Role.EDITOR, PageView, read_only=False)
     def create(data: PageCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.create_page, context.actor, **data.model_dump())
+
+    @app.get('/api/v1/wiki/pages/resolve', response_model=PageView,
+        responses={422:{'model':KnowledgeRequestError}, 404:{'description':'Exact slug not found'}})
+    @operation('wiki_pages_resolve', 'Resolve an exact Wiki slug; archived pages require include_deleted',
+        Role.READER, PageView, read_only=True)
+    def resolve_page(slug: str, include_deleted: bool = False, context: RequestAccess = Depends(read_context)):
+        return invoke(service.resolve_page, context.actor, slug, include_deleted=include_deleted)
+
+    @app.post('/api/v1/wiki/pages/upsert', response_model=PageView,
+        responses={422:{'model':KnowledgeRequestError}, 409:{'description':'Revision or retry conflict'},
+                   413:{'description':'Serialized request exceeds one MiB'}})
+    @operation('wiki_pages_upsert',
+        'Create by exact slug only when absent, or update with expected_revision. Never silently overwrites; retry an unchanged request with its original key.',
+        Role.EDITOR, PageView, read_only=False)
+    def upsert_page(data: PageUpsert, context: RequestAccess = Depends(write_context)):
+        return invoke(service.upsert_page, context.actor, **data.model_dump())
 
     @app.get('/api/v1/wiki/pages/{page_id}', response_model=PageView)
     @operation('wiki_pages_get', 'Read current or historical immutable Wiki content', Role.READER, PageView, read_only=True)

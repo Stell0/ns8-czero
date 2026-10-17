@@ -369,6 +369,34 @@ def knowledge_request(browser, profile, path, data=None, method=None, expected=2
     return json.loads(body)
 
 
+def seed_wiki_memory(browser, profile):
+    create = {'slug':'persistent-memory', 'title':'Persistent procedure',
+        'body':'Original selected observation café 東京', 'metadata':{'status':'unverified'},
+        'idempotency_key':'persistent-memory-create'}
+    update = {**create, 'body':create['body']+'\nLater observation retained.',
+        'expected_revision':1, 'idempotency_key':'persistent-memory-update'}
+    receipts=[]
+    for data in (create,update):
+        status,body,_=browser.api('/api/v1/wiki/pages/upsert',data,'POST',profile['csrf_token'])
+        assert status==200, 'Cannot seed revision-safe Wiki memory'
+        receipts.append(json.loads(body))
+    return {'requests':[create,update],'receipts':receipts}
+
+
+def verify_wiki_memory_receipts(browser, profile, expected):
+    for data,receipt in zip(expected['requests'],expected['receipts']):
+        status,body,_=browser.api('/api/v1/wiki/pages/upsert',data,'POST',profile['csrf_token'])
+        assert status==200 and json.loads(body)==receipt, 'Recovered Wiki retry receipt changed'
+    status,_,_=browser.api('/api/v1/wiki/pages/upsert',{**expected['requests'][1],
+        'idempotency_key':'persistent-stale-'+uuid4().hex},'POST',profile['csrf_token'])
+    assert status==409, 'Recovered Wiki accepted stale overwrite'
+    status,body,_=browser.api('/api/v1/wiki/pages/resolve?slug=persistent-memory')
+    assert status==200 and json.loads(body)==expected['receipts'][1], 'Recovered Wiki slug/revision changed'
+    for receipt in expected['receipts']:
+        status,body,_=browser.api('/api/v1/wiki/pages/'+receipt['id']+'?revision='+str(receipt['revision']))
+        assert status==200 and json.loads(body)['content']==receipt['content'], 'Recovered immutable memory revision changed'
+
+
 def seed_knowledge(browser, profile, sources, objects):
     page = knowledge_request(browser, profile, 'wiki/pages', {
         'slug': 'persistent-wiki', 'title': 'Persistent Wiki', 'body': '# Inventory\n\nOriginal authored café 東京',
@@ -395,9 +423,10 @@ def seed_knowledge(browser, profile, sources, objects):
     entities = [knowledge_request(browser, profile, 'entities/' + entity['id']) for entity in entities]
     claims = [knowledge_request(browser, profile, 'claims/' + claim['id']) for claim in claims]
     references = knowledge_request(browser, profile, 'entities/' + entities[0]['id'] + '/references')['references']
+    memory = seed_wiki_memory(browser, profile)
     changes = knowledge_request(browser, profile, 'knowledge/changes?limit=100')['changes']
     return {'page': page, 'original': original, 'entities': entities, 'relations': relations,
-            'claims': claims, 'references': references, 'changes': changes}
+            'claims': claims, 'references': references, 'changes': changes, 'memory': memory}
 
 
 def verify_knowledge(browser, profile, expected):
@@ -460,6 +489,7 @@ def persistence(operation):
     assert profile["id"] == expected["owner"], "Recovered owner identity changed"
     verify_oauth_clients(owner, expected['oauth_clients'])
     verify_text_receipts(owner, profile, expected['sources'])
+    verify_wiki_memory_receipts(owner, profile, expected['knowledge']['memory'])
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"

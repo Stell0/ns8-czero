@@ -120,3 +120,39 @@ publication preparation; the REST/MCP text operation will require released 0.25.
 in the subsequent application increment. No external provider or generative
 operation is needed to store or extract text. Submit only selected, sanitized
 session evidence; C0 does not redact it or execute instructions in its contents.
+
+
+## Safe Wiki maintenance (0.26.0)
+
+`WikiService.resolve_page(actor, slug, include_deleted=False)` returns the exact
+existing page and current immutable content revision. Slugs retain the existing
+lowercase ASCII grammar and 128-character bound; no fuzzy lookup, case folding or
+implicit normalization occurs. Archived pages require explicit `include_deleted`.
+Persisted Reader membership is checked on every lookup.
+
+`WikiService.upsert_page(actor, slug, title, body, metadata={},
+expected_revision=None, idempotency_key=...)` creates only when the revision is
+omitted. An existing slug, including an archived page, conflicts. Supplying an
+expected revision updates only that existing page: absent slugs raise
+`KnowledgeNotFound`; stale or archived pages raise `KnowledgeConflict`. After a
+conflict, resolve again, reconcile the observations outside C0 and submit the
+new expected revision with a new key. C0 never decides how to merge prose.
+
+The return shape matches the existing page API: `id`, `revision` and immutable
+`content`, including `content_hash`. The body limit remains 131072 UTF-8 bytes,
+metadata 16 KiB JSON and title 256 characters. Same-actor/key retries return the
+original snapshot even after later edits or archive. A changed request or another
+operation under that key conflicts. Fresh persisted Editor checks occur before
+and after the existing receipt lock. Failed writes roll back page, revision,
+event and receipt together. Existing create/update operations and fingerprints
+are unchanged; no schema migration is needed.
+
+`czero_core.knowledge.EvidenceNotReady` subclasses `KnowledgeConflict`. Claim
+creation and evidence attachment require actual immutable chunks and verify the
+parent source version is ready within the authorized transaction. Missing chunks
+remain `KnowledgeNotFound`; archived ready evidence remains valid. This does not
+relax sourced assertion requirements or introduce inference.
+
+During publication preparation the reference app still pins released Core
+0.25.0; its explicit local producer override alone uses the 0.26.0 candidate.
+The released application increment follows verified immutable artifact publication.

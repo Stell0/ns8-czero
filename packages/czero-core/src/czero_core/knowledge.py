@@ -17,6 +17,10 @@ _LINKS = {'object': ('c0_objects', 'object_id'), 'page': ('c0_wiki_pages', 'page
           'chunk': ('c0_chunks', 'chunk_id')}
 
 
+class EvidenceNotReady(KnowledgeConflict):
+    """An existing evidence chunk belongs to a version that is not ready."""
+
+
 def _time(value):
     if value is None: return None
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
@@ -67,8 +71,11 @@ class KnowledgeService(WikiService):
             raise ValueError('invalid_evidence')
         keys = sorted(set(_uuid(value) for value in values), key=str)
         for key in keys:
-            try: SourceService._citation(connection, key)
+            try: citation = SourceService._citation(connection, key)
             except SourceNotFound: raise KnowledgeNotFound() from None
+            state = connection.execute(text('SELECT state FROM c0_source_versions WHERE id=:id FOR SHARE'),
+                                       {'id': citation['version_id']}).scalar_one()
+            if state != 'ready': raise EvidenceNotReady()
         return keys
 
     def create_claim(self, actor, entity_id, predicate, value, *, evidence_chunk_ids, page_id=None,

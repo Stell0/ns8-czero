@@ -163,10 +163,48 @@ async def text_evidence(client, http, previous=None):
     return {'request':data,'receipt':receipt,'document':document.structured_content,'citation':citation,'claim_id':claim_id}
 
 
+async def wiki_memory(client, http):
+    """Installed safe maintenance using real current or legacy SDK serialization."""
+    data = {'slug':'sdk-memory/'+uuid4().hex, 'title':'Reusable procedure',
+        'body':'Original selected observation café 東京', 'metadata':{'status':'unverified'},
+        'idempotency_key':'sdk-wiki-'+uuid4().hex}
+    first = await client.call_tool('wiki_pages_upsert', {'data':data})
+    assert not first.is_error, 'Installed create-only Wiki upsert failed'
+    first = first.structured_content
+    assert first['revision']==1 and first['content']['content_hash']==hashlib.sha256(data['body'].encode()).hexdigest(), 'Installed Wiki receipt mismatch'
+    resolved = await client.call_tool('wiki_pages_resolve', {'slug':data['slug']})
+    assert not resolved.is_error and resolved.structured_content==first, 'Installed exact-slug lookup failed'
+    async def denied(name, arguments, code, status):
+        result = await client.call_tool(name, arguments)
+        assert result.is_error and result.content[0].text==code, 'Installed Wiki error code mismatch'
+        assert result.meta['c0/error']=={'code':code,'status':status}, 'Installed Wiki structured error missing'
+    await denied('wiki_pages_upsert', {'data':{**data,'idempotency_key':uuid4().hex}}, 'knowledge_conflict', 409)
+    update = {**data,'body':data['body']+'\nLater observation retained.', 'expected_revision':1,
+        'idempotency_key':'sdk-revise-'+uuid4().hex}
+    second = await client.call_tool('wiki_pages_upsert', {'data':update})
+    assert not second.is_error and second.structured_content['revision']==2, 'Installed revision-checked upsert failed'
+    second = second.structured_content
+    await denied('wiki_pages_upsert', {'data':{**update,'idempotency_key':uuid4().hex}}, 'knowledge_conflict', 409)
+    assert (await client.call_tool('wiki_pages_upsert', {'data':data})).structured_content==first, 'Installed create receipt changed'
+    assert (await client.call_tool('wiki_pages_upsert', {'data':update})).structured_content==second, 'Installed update receipt changed'
+    assert (await http.get('/api/v1/wiki/pages/resolve',params={'slug':data['slug']})).json()==second, 'Installed Wiki REST/SDK parity failed'
+    assert (await client.call_tool('wiki_pages_get', {'page_id':first['id'],'revision':1})).structured_content['content']==first['content'], 'Installed Wiki history lost'
+    history = await client.call_tool('wiki_revisions_list', {'page_id':first['id']})
+    assert [r['number'] for r in history.structured_content['revisions']]==[2,1], 'Installed Wiki revisions missing'
+    archived = await client.call_tool('wiki_pages_archive', {'page_id':first['id'],
+        'data':{'expected_revision':2,'idempotency_key':uuid4().hex}})
+    assert not archived.is_error and archived.structured_content['deleted'], 'Installed Wiki archive failed'
+    await denied('wiki_pages_resolve', {'slug':data['slug']}, 'knowledge_not_found', 404)
+    retained = await client.call_tool('wiki_pages_resolve', {'slug':data['slug'],'include_deleted':True})
+    assert not retained.is_error and retained.structured_content['revision']==3, 'Installed archived Wiki lookup failed'
+    await denied('wiki_pages_upsert', {'data':{'body':'PRIVATE synthetic marker'}}, 'invalid_knowledge_request', 422)
+
+
 async def check(value):
     origin = value['origin']
     typed_lifecycles = 0
     text_lifecycles, text_state = 0, None
+    wiki_lifecycles = 0
     transport = NodeTransport(urlsplit(origin).hostname, value['address'], value['ca'])
     async with httpx2.AsyncClient(transport=transport, base_url=origin, timeout=20,
             headers={'Authorization':'Bearer ' + value['access_token']}) as http:
@@ -239,6 +277,11 @@ async def check(value):
                         assert 'scope="c0:write"' in challenge and 'c0:admin' not in challenge, 'Scope upgrade requested excess authority'
                         assert 'resource_metadata="' + origin + '/.well-known/oauth-protected-resource/mcp"' in challenge, 'Scope upgrade metadata route mismatch'
                 if value['scope'] == 'c0:read':
+                    denied_wiki = await client.call_tool('wiki_pages_upsert', {'data':{
+                        'slug':'denied-'+uuid4().hex,'title':'Denied','body':'Synthetic','idempotency_key':uuid4().hex}})
+                    expected_code = 'permission_denied' if role=='reader' else 'insufficient_scope'
+                    assert denied_wiki.is_error and denied_wiki.content[0].text==expected_code, 'Installed Wiki role/scope denial mismatch'
+                    assert denied_wiki.meta['c0/error']=={'code':expected_code,'status':403}, 'Installed Wiki authorization metadata missing'
                     denied_text = await client.call_tool('sources_ingest_text', {'data':{
                         'title':'Denied text probe','body':'Synthetic evidence','idempotency_key':uuid4().hex}})
                     assert denied_text.is_error, 'Installed text operation bypassed role/scope checks'
@@ -249,6 +292,8 @@ async def check(value):
                         assert denied_text.content[0].text == 'insufficient_scope', 'Installed text scope challenge missing'
                         assert 'scope="c0:write"' in denied_text.meta['mcp/www_authenticate'][0], 'Installed text requested wrong scope'
                 if 'c0:write' in value['scope'].split():
+                    await wiki_memory(client, http)
+                    wiki_lifecycles += 1
                     text_state = await text_evidence(client, http, text_state)
                     text_lifecycles += 1
                     # Disposable-only fixture records; archive through the same
@@ -278,6 +323,8 @@ async def check(value):
     expected_typed = 2 if role == 'admin' and {'c0:read','c0:write','c0:admin'} <= set(value['scope'].split()) else 0
     assert typed_lifecycles == expected_typed, 'Installed typed lifecycle coverage mismatch'
     print('Installed typed object lifecycles completed: %d' % typed_lifecycles)
+    assert wiki_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed Wiki lifecycle coverage mismatch'
+    print('Installed Wiki memory lifecycles completed: %d' % wiki_lifecycles)
     assert text_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'
     print('Installed text evidence lifecycles completed: %d' % text_lifecycles)
     print('Installed TLS SDK current/legacy tools, resources, REST parity, scopes and host/origin checks passed')

@@ -26,6 +26,12 @@ class KnowledgeNotFound(Exception):
     pass
 
 
+def page_slug(value):
+    if not isinstance(value, str) or not _SLUG.fullmatch(value) or '//' in value or value.endswith('/'):
+        raise ValueError('invalid_slug')
+    return value
+
+
 def alias_key(value):
     label = _label(value, 128)
     normalized = unicodedata.normalize('NFKC', label).casefold()
@@ -87,17 +93,26 @@ class WikiService:
              'hash': hashlib.sha256(body.encode()).hexdigest(), 'metadata': metadata, 'actor': actor.user_id})
         return {**row, 'content': self._revision(connection, row['id'], row['revision'])}
 
+    def _create_page(self, connection, actor, slug, title, body, encoded):
+        row = dict(connection.execute(text('INSERT INTO c0_wiki_pages(id,slug,title) VALUES (:id,:slug,:title) RETURNING *'),
+            {'id': uuid4(), 'slug': slug, 'title': title}).mappings().one())
+        result = self._write_revision(connection, actor, row, title, body, encoded)
+        self._event(connection, actor, 'page', row['id'], 1, 'create')
+        return result
+
+    def _update_page(self, connection, actor, row, title, body, encoded, expected_revision):
+        if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
+        row = dict(connection.execute(text('''UPDATE c0_wiki_pages SET title=:title,revision=revision+1,
+            updated_at=now() WHERE id=:id RETURNING *'''), {'id': row['id'], 'title': title}).mappings().one())
+        result = self._write_revision(connection, actor, row, title, body, encoded)
+        self._event(connection, actor, 'page', row['id'], row['revision'], 'update')
+        return result
+
     def create_page(self, actor, slug, title, body, *, metadata=None, idempotency_key):
-        if not isinstance(slug, str) or not _SLUG.fullmatch(slug) or '//' in slug or slug.endswith('/'):
-            raise ValueError('invalid_slug')
-        title, body = _label(title, 256), markdown(body)
+        slug, title, body = page_slug(slug), _label(title, 256), markdown(body)
         encoded = _metadata({} if metadata is None else metadata)
         def execute(connection, current):
-            row = dict(connection.execute(text('INSERT INTO c0_wiki_pages(id,slug,title) VALUES (:id,:slug,:title) RETURNING *'),
-                {'id': uuid4(), 'slug': slug, 'title': title}).mappings().one())
-            result = self._write_revision(connection, current, row, title, body, encoded)
-            self._event(connection, current, 'page', row['id'], 1, 'create')
-            return result
+            return self._create_page(connection, current, slug, title, body, encoded)
         return self._mutate(actor, 'page.create', {'slug': slug, 'title': title, 'body': body, 'metadata': json.loads(encoded)}, idempotency_key, execute)
 
     def update_page(self, actor, page_id, title, body, *, expected_revision, metadata=None, idempotency_key):
@@ -106,14 +121,35 @@ class WikiService:
             raise ValueError('invalid_revision')
         encoded = _metadata({} if metadata is None else metadata)
         def execute(connection, current):
-            row = self._page(connection, page_id, lock=True)
-            if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
-            row = dict(connection.execute(text('''UPDATE c0_wiki_pages SET title=:title,revision=revision+1,
-                updated_at=now() WHERE id=:id RETURNING *'''), {'id': page_id, 'title': title}).mappings().one())
-            result = self._write_revision(connection, current, row, title, body, encoded)
-            self._event(connection, current, 'page', page_id, row['revision'], 'update')
-            return result
+            return self._update_page(connection, current, self._page(connection, page_id, lock=True),
+                                     title, body, encoded, expected_revision)
         return self._mutate(actor, 'page.update', {'id': str(page_id), 'title': title, 'body': body,
+            'expected_revision': expected_revision, 'metadata': json.loads(encoded)}, idempotency_key, execute)
+
+    def resolve_page(self, actor, slug, *, include_deleted=False):
+        slug = page_slug(slug)
+        if type(include_deleted) is not bool: raise ValueError('invalid_filter')
+        with self.database.engine.connect() as connection:
+            self._authorize(connection, actor)
+            row = connection.execute(text('''SELECT * FROM c0_wiki_pages WHERE slug=:slug
+                AND (:deleted OR NOT deleted)'''), {'slug': slug, 'deleted': include_deleted}).mappings().one_or_none()
+            if row is None: raise KnowledgeNotFound()
+            return _view({**row, 'content': self._revision(connection, row['id'], row['revision'])})
+
+    def upsert_page(self, actor, slug, title, body, *, expected_revision=None, metadata=None, idempotency_key):
+        """Create-only without a revision; otherwise update-only with that revision."""
+        slug, title, body = page_slug(slug), _label(title, 256), markdown(body)
+        if expected_revision is not None and (type(expected_revision) is not int or not 1 <= expected_revision < 2147483647):
+            raise ValueError('invalid_revision')
+        encoded = _metadata({} if metadata is None else metadata)
+        def execute(connection, current):
+            if expected_revision is None:
+                return self._create_page(connection, current, slug, title, body, encoded)
+            row = connection.execute(text('SELECT * FROM c0_wiki_pages WHERE slug=:slug FOR UPDATE'),
+                                     {'slug': slug}).mappings().one_or_none()
+            if row is None: raise KnowledgeNotFound()
+            return self._update_page(connection, current, row, title, body, encoded, expected_revision)
+        return self._mutate(actor, 'page.upsert', {'slug': slug, 'title': title, 'body': body,
             'expected_revision': expected_revision, 'metadata': json.loads(encoded)}, idempotency_key, execute)
 
     def get_page(self, actor, page_id, *, revision=None):
