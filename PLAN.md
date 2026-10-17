@@ -2276,3 +2276,10 @@ dry runs and eight browser dry runs. The protected native recovery helper also
 passes independently against signed local HTTP, including its retained original.
 All new native fixtures remain unaccepted until exact-source image/native runs
 execute; no live AM3 update has occurred.
+
+
+The initial application released-image run built and audited its runtime, then
+failed because its independent runtime probe still required Core 0.26.x. The
+probe now requires 0.27.x, matching the released pin, workflow and updater bounds.
+The failed report is retained privately; fresh exact-source CI is required for
+the focused fix. The immutable published Core source/artifacts are unchanged.
