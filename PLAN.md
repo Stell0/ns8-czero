@@ -2562,3 +2562,13 @@ packaged migration. The native probe requires its new annotation result, but no
 actual AM4 native or live acceptance is claimed from this local proof. The exact
 released app lock remains unchanged. Structured retrieval and the remaining AM4
 publication/application/deployment gates remain open.
+
+
+Annotation source `086105f` passes its actual push local/producer/released-Core
+checks. Its parallel PR local run records 1064 passes and one real HTTPS trust
+fixture timeout at its one-second deadline; failed private output is retained.
+That fixture now uses the existing five-second provider-test budget, preserving
+both trusted/untrusted certificate assertions and the separate short deadline
+regressions. All 38 provider cases pass locally after the focused adjustment.
+Production provider limits and OAuth lifetimes are unchanged. Fresh exact-source
+checks are required; this is not AM4 publication or deployment acceptance.
