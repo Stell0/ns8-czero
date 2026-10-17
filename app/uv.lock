@@ -226,7 +226,7 @@ wheels = [
 
 [[package]]
 name = "czero-app"
-version = "0.40.1"
+version = "0.41.0"
 source = { editable = "." }
 dependencies = [
     { name = "czero-core" },
@@ -245,7 +245,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.25.0" },
+    { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.26.0" },
     { name = "fastapi", specifier = "==0.143.0" },
     { name = "httpx", marker = "extra == 'test'", specifier = "==0.28.1" },
     { name = "jsonschema", marker = "extra == 'test'", specifier = "==4.26.0" },
@@ -258,8 +258,8 @@ provides-extras = ["test"]
 
 [[package]]
 name = "czero-core"
-version = "0.25.0"
-source = { git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.25.0#02d3e49409f3b1de5cbaaa8e71aa3651fc6d97ae" }
+version = "0.26.0"
+source = { git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.26.0#609321953602b8364075528fc80d8ab3169f612b" }
 dependencies = [
     { name = "alembic" },
     { name = "authlib" },

@@ -31,6 +31,7 @@ from czero_core.oauth_grants import GrantRejected
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 from czero_app.object_errors import mcp_object_error
+from czero_app.knowledge_errors import KNOWLEDGE_OPERATIONS, mcp_knowledge_error
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 RESOURCES = {
@@ -201,26 +202,31 @@ def create_mcp_app(registry, grants, *, issuer_url):
             challenge = (f'Bearer resource_metadata="{parsed.scheme}://{parsed.netloc}{path}", '
                 'error="insufficient_scope", error_description="Additional OAuth scope is required", '
                 f'scope="{error.scope}"')
+            metadata = {'mcp/www_authenticate':[challenge]}
+            if params.name in KNOWLEDGE_OPERATIONS:
+                metadata['c0/error'] = {'code':'insufficient_scope', 'status':403}
             return types.CallToolResult(is_error=True,
-                content=[types.TextContent(type='text', text='insufficient_scope')],
-                meta={'mcp/www_authenticate':[challenge]})
+                content=[types.TextContent(type='text', text='insufficient_scope')], meta=metadata)
         except (PermissionDenied, GrantRejected):
-            message = 'permission_denied'
+            message, status = 'permission_denied', 403
         except HTTPException as error:
             code = mcp_object_error(params.name, error.status_code, error.detail)
             if code is not None:
                 return types.CallToolResult(is_error=True,
                     content=[types.TextContent(type='text', text=code)],
                     meta={'c0/error':{'code':code, 'status':error.status_code}})
-            message = 'invalid_operation_request'
+            mapped = mcp_knowledge_error(params.name, error.status_code, error.detail)
+            message, status = mapped if mapped is not None else ('invalid_operation_request', 422)
         except (OperationRejected, ValueError):
-            message = 'invalid_operation_request'
+            message = 'invalid_knowledge_request' if params.name in KNOWLEDGE_OPERATIONS else 'invalid_operation_request'
+            status = 422
         except (SQLAlchemyError, TransportUnavailable):
-            message = 'service_unavailable'
+            message, status = 'service_unavailable', 503
         except Exception as error:
             logging.getLogger('czero.mcp').error('Operation failed (%s)', type(error).__name__)
-            message = 'service_unavailable'
-        return types.CallToolResult(is_error=True, content=[types.TextContent(type='text', text=message)])
+            message, status = 'service_unavailable', 503
+        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS else None
+        return types.CallToolResult(is_error=True, content=[types.TextContent(type='text', text=message)], meta=metadata)
 
     async def resources(ctx, params):
         await describe()

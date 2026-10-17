@@ -475,3 +475,43 @@ wheel/archive probe proves safe Wiki revisions/replay after reconnect outside
 the checkout. Core/schema candidate are 0.26.0/0013; app/released pin remain
 0.40.1/0.25.0 until exact-source CI/native and immutable publication. There are
 still 64 public operations. Do not claim new Wiki helpers deployed or AM2 accepted.
+
+AM2's uncommitted REST/MCP adapters pass 956 full local Python/PostgreSQL/
+packaging cases and 52 focused adapter cases, plus the unchanged 106 script and
+nineteen Robot dry-run checks. All 64 old schemas/metadata are frozen; the new
+catalog adds exact resolve/upsert only. New knowledge errors use an explicit
+thirty-operation allowlist, preserve object errors and role/scope behavior, and
+never expose private exception detail. Native probes add two actual SDK Wiki
+lifecycles plus persistence receipts/history; explicit hostname-root reconstruction
+and UUID client fixtures must match their real interfaces. App version/released
+pin remain 0.40.1/0.25.0 pending exact Core native/artifact gates. No new feature
+is deployed and AM2 still requires final application CI/review/main/live gates.
+
+The operator confirms fresh connector authorization completes after the consent
+fix. Actual reconnected MCP citation reading returns the exact prior immutable
+chunk/source hash. Keep this distinct from the session's currently available 63-tool metadata;
+fresh SDK discovery proves all 64 deployed operations. Do not infer a refreshed
+connector catalog or new-tool invocation from that observed read.
+
+Core 0.26.0 is immutably published from 6093219 after completed exact local/
+producer/released-Core/both-native checks and actual artifact/privacy audits.
+Debian genuine ece3e90 upgrade has nineteen passes; Rocky installation has
+23 passes/3 expected skips, all seven browsers/privacy guards and two real
+SSO/SDK probes per distribution. Actual downloaded wheel/archive checksums and
+six independent packaging checks pass. PLAN records digests, assets and runs.
+App 0.41.0 now pins that exact released tag/subdirectory/commit, compatible
+>=0.26.0,<0.27.0, with all 53 transitive lock records unchanged. Preserve the
+explicit malformed-status/private-error fallback and existing scope/object error
+contracts. Final application promotion still requires its own exact CI/native,
+human review, successful main publication and dedicated deployment. Live remains
+ece3e90, Core/app/schema 0.25.0/0.40.1/0013; AM2 and Windmill Gate are not accepted.
+
+AM2 final app 0.41.0/released Core 0.26.0 local suite passes 958 cases,
+106 scripts, real Renovate API bounds, Go/schema/shell and nineteen Robot dry
+runs. The real released-source image passes runtime/license/source verification
+and packages both routes; actual Dive efficiency is 98.12%. Both consumer version
+bounds must follow minor 0.26 (workflow and runtime probe); the original 0.24
+consumer fixture remains unchanged. All 64 old schemas/roles/scopes stay fixed,
+with two additive operations and no schema change. PR 6 is draft pending exact
+application CI/native/artifact/privacy and human review/main/deployment gates.
+Do not substitute these candidate images for the genuine deployed ece3e90.

@@ -9,7 +9,7 @@ import sys
 from czero_core import core_version
 
 version, commit = sys.argv[1:]
-assert re.fullmatch(r'0\.25\.[0-9]+', version)
+assert re.fullmatch(r'0\.26\.[0-9]+', version)
 assert re.fullmatch(r'[0-9a-f]{40}', commit)
 package = importlib.metadata.distribution('czero-core')
 assert package.version == core_version == version

@@ -1821,3 +1821,115 @@ released Core tag/lock remain 0.25.0; the temporary compatible range permits the
 explicit local 0.26 producer. Genuine ece3e90 predecessors are frozen together.
 No new REST/MCP operation is exposed yet. Exact-source CI/native and immutable
 artifact publication must pass before the application increment.
+
+**AM2 transport preparation:** While exact Core source `6093219` runs native
+acceptance, uncommitted application adapters add exact-slug GET before the UUID
+route and bounded POST upsert. Thirty explicitly registered knowledge operations
+use fixed safe MCP errors; other domains and the object mapper are unchanged.
+All 64 accepted operation metadata/input/output schemas are frozen and compared,
+with only the two new operations added. Actual current/legacy SDK tests exercise
+two persisted Editors racing, loser reload/retry, original receipt snapshots,
+immutable history, old tools, role/scope/revocation and private-error fallback.
+Native helpers exercise both SDK lifecycles plus retained upsert receipts/history
+through app reconstruction and installed update/backup/restore. Released pin and
+app version remain unchanged pending verified Core publication.
+
+**AM2 adapter local result before released pin:** The corrected full suite passes
+956 Python/PostgreSQL/packaging cases (236.51 seconds), with 106 scripts,
+Go/schema/shell and nineteen Robot dry runs. Fifty-two new adapter cases pass
+separately. Both real SDK modes retain sourced claims, immutable citations and
+entity-page references while upsert creates a new Wiki revision (two additional
+focused assertions pass). The first helper reconstruction test used the default
+legacy prefix and is corrected to explicit hostname-root routing. Two client-
+disable tests initially supplied a string instead of the existing Core UUID
+parameter; correction passes both focused and full runs. Failed evidence stays
+private. This is the explicit local Core development setup, not a released-pin
+image or native acceptance of the application adapters. Core source 6093219's
+producer/released-image/local CI pass; both-native acceptance is still pending.
+Actual five SARIF/CycloneDX pairs retain 166 app/413 database/7 UI vulnerability
+findings and zero module/imageroot findings; component counts are 131/145/142/0/0.
+All rule IDs are vulnerability advisories and the fixable-critical gate passes.
+These are retained vendor findings, not a clean-security claim.
+
+The explicit local-Core prototype image also builds and passes runtime/development-
+file and declared Core-license audits. With its required assigned module ID and
+synthetic database URL, both new routes and the typed readiness exception import
+from the actual installed packages (app 0.40.1/Core 0.26.0). An initial import
+without required startup configuration rejects as designed; no database-readiness
+claim is made for that synthetic URL. Actual Dive analysis reports 203202881-byte
+image size, 5657573 inefficient bytes and 98.12% efficiency. This prototype is not
+published or deployed; final released-pin checks remain required.
+
+**Operator consent confirmation:** The operator now confirms a fresh connector
+authorization completes. An actual call through the reconnected MCP connector
+retrieves the previously created immutable evidence citation with the exact same
+chunk identity and source hash. This is observed connector reading, in addition
+to the normal-SSO current/legacy SDK write/evidence/restart tests above. No claim
+is made that the session's available pre-AM1 tool descriptions have refreshed; fresh
+SDK discovery independently verifies the deployed 64-operation catalog.
+
+After that observed reconnect/read, a separate bounded root app journal has 28
+actual lines with health/MCP positive controls, zero OAuth query candidates,
+zero bearer-token candidates, zero submitted evidence-marker matches and zero
+tracebacks. No logging configuration is changed.
+
+**AM2 Core exact-source/native and immutable publication:** Source
+`609321953602b8364075528fc80d8ab3169f612b` passes actual
+[local 39032938828](https://github.com/Stell0/ns8-czero/actions/runs/39032938828),
+[producer 39032938672](https://github.com/Stell0/ns8-czero/actions/runs/39032938672),
+[released-Core 39032938687](https://github.com/Stell0/ns8-czero/actions/runs/39032938687)
+and [native 39033114798](https://github.com/Stell0/ns8-czero/actions/runs/39033114798).
+Actual reports prove genuine Debian ece3e90 upgrade nineteen passes, Rocky
+installation twenty-three passes/three expected skips, all seven browser/privacy
+workflows and two actual SSO/SDK probes per distribution. Three XML/Pino artifacts
+have zero OAuth query candidates; both actual checkout logs match 6093219. A
+partial Debian log request before the run completed is unavailable and retained
+privately; the final downloaded complete logs supply the source proof.
+
+These Core-increment branch images are verified candidate artifacts, not deployed
+predecessors; ece3e90 remains installed and frozen for genuine AM2 upgrades:
+
+| Image (feat-agent-memory-wiki at 6093219) | Verified candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:df1d99edafba83941c020dac8ae5b1419e58a8cec031e01d0526bb806c42abc1` |
+| `ghcr.io/stell0/czero-app` | `sha256:af46fe37caf309ef39ba2a0793f9085f6ec414d45a6b40cb370bdc1b23da7cec` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:f494f88561424eafd8af8f230a1adfe1b7a92b6f5b07beb5e210746da455a59d` |
+
+The exact-source publication verifier passes before creating `core-v0.26.0` at
+6093219. [Publication 39035418922](https://github.com/Stell0/ns8-czero/actions/runs/39035418922)
+completes successfully and [Core 0.26.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.26.0)
+is published immutably, independently of an NS8 module release. Downloaded assets
+match SHA256SUMS and all six checks of those actual artifacts pass (46.32 seconds):
+clean wheel/archive installs without app/NS8 SDK, repeated fresh PostgreSQL
+migrations preserving identity, exact text evidence plus Wiki revisions/replay
+through reconnect, license/metadata and reproducible rebuild hashes.
+
+| Actual released asset | Verified SHA-256 |
+| --- | --- |
+| `czero_core-0.26.0-py3-none-any.whl` | `8035afd5510b91ffbb3ae7fa67fda98b532e97b2f9d77d790f4680a4de3bac59` |
+| `czero_core-0.26.0.tar.gz` | `4d9ef2ad03c4b9bfe82db70c10a7ca24a421c9e31da17c2faf0b30ab930b249c` |
+
+**AM2 application increment:** App 0.41.0 now pins released core-v0.26.0,
+subdirectory and exact 6093219 commit, compatible `>=0.26.0,<0.27.0`. All 53 other
+locked package records remain unchanged. The current consumer CI and actual
+Renovate API test follow the new compatible patch line; the original independent
+0.24 consumer is unchanged. Thirty trusted knowledge operation names receive
+fixed structured MCP errors; unknown HTTP status/detail, including malformed
+status types, falls back to service_unavailable. Existing object mapping and
+scope challenges remain intact. Final local/image/CI/native/review/main/live
+gates remain required; this is not an AM2 deployment or acceptance claim.
+
+**AM2 released-pin final local result:** App 0.41.0/released Core 0.26.0/
+schema 0013 passes 958 full Python/PostgreSQL/packaging cases (221.76 seconds),
+106 scripts, actual Renovate API bounds, Go/schema/shell and nineteen Robot
+dry-run cases. The two additional SDK cases prove malformed HTTP status types
+cannot escape the fixed service_unavailable fallback. The real default released-
+source image builds and passes runtime/license and immutable Core Git-source
+verification; installed app/Core are 0.41.0/0.26.0 and both new routes are present.
+The separate consumer probe initially still allowed only minor 0.25; its bound
+is updated with the CI bound and verification passes against the same image.
+Actual Dive reports 203202744 bytes, 5657573 inefficient bytes and 98.12%
+efficiency. The synthetic import probe does not establish database readiness.
+All 64 old schemas/roles/scopes and bindings remain unchanged; two operations
+are added. PR 6 remains draft until this complete app source's CI, native,
+artifact/privacy and review gates pass. The installation remains ece3e90.

@@ -35,7 +35,7 @@ def test_signed_discovery_and_direct_operations_match_rest_and_recheck_roles(app
             try:
                 capabilities = (await client.get('/agents/capabilities.json')).json()
                 definitions = {op['name']:op for op in capabilities['operations']}
-                assert capabilities['role'] == 'admin' and len(definitions) == 64
+                assert capabilities['role'] == 'admin' and len(definitions) == 66
                 assert definitions['objects_create']['required_scope'] == 'c0:write'
                 assert definitions['schedules_list']['minimum_role'] == 'admin'
                 assert 'multipart source upload' in capabilities['rest_attachments']

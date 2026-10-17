@@ -390,3 +390,49 @@ script cases locally, including independent installed wheel/archive Wiki
 revision/retry checks. It does not yet expose new REST/MCP operations. The
 installed version remains accepted ece3e90; CI/native, immutable Core publication,
 application integration and reviewed deployment remain required for AM2.
+
+AM2 adds two optional Wiki operations for external agents. Resolve an exact path
+with `wiki_pages_resolve({"slug":"procedures/network"})`. To create a page, call
+`wiki_pages_upsert` with `data` containing `slug`, `title`, `body`, applicable
+`metadata` and an `idempotency_key`. Omit `expected_revision` only for create-only
+behavior. To revise it, include the current revision and a new key. A stale writer
+must resolve again, reconcile observations externally and submit the new revision;
+C0 never merges or overwrites another writer's content implicitly.
+
+Successful receipts include the page `id`, `revision` and immutable
+`content.content_hash`. Retry an unchanged request with its original key after an
+uncertain response. The original receipt remains unchanged after later revisions;
+resolve again to read the current page. Archived pages are hidden by default;
+`include_deleted:true` permits authorized lookup of retained content. Existing
+UUID-based Wiki operations remain supported. Authored Markdown is bounded to
+131072 UTF-8 bytes, metadata to 16 KiB JSON and serialized requests to one MiB.
+
+Knowledge tools expose fixed text codes and matching `c0/error` metadata with
+`code` and `status`. `knowledge_not_found` means the target was not found;
+`knowledge_conflict` requires reloading; `invalid_knowledge_request` requires a
+valid bounded request; `evidence_not_ready` requires completed extraction of real
+chunks. `permission_denied` requires membership/role authorization, while
+`insufficient_scope` retains the existing fresh-consent challenge for an eligible
+role. `service_unavailable` is safe to retry when service returns. Private database
+or submitted content is never used as an error message. Ordinary transport
+authentication failures retain their HTTP 401 behavior. These additions remain a
+development candidate until the AM2 gates recorded in PLAN pass.
+
+The operator confirms connector authorization now completes after the consent
+recovery fix. Actual reconnected MCP reading retrieves the same immutable evidence
+citation created by the separate SDK session; history and provenance persist.
+
+[Core 0.26.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.26.0) is
+published from verified 6093219 after actual exact-source Debian/Rocky, image,
+local and artifact/privacy checks. Downloaded wheel/archive checksums and all six
+independent packaging checks pass. App 0.41.0 candidate pins its exact released
+tag/subdirectory/commit with compatible range `>=0.26.0,<0.27.0`; all transitive
+packages stay unchanged. The installed instance remains accepted ece3e90 until
+AM2's application review, main publication and deployment gates pass.
+
+The final AM2 app 0.41.0 candidate passes 958 full Python/PostgreSQL/packaging
+cases, 106 scripts, schema/shell and nineteen Robot dry runs locally. Its actual
+default image verifies the released Core Git pin, runtime contents and license.
+All 64 existing operation schemas/roles/scopes remain fixed with two additions.
+[PR 6](https://github.com/Stell0/ns8-czero/pull/6) tracks exact CI/native/review
+promotion; this is not yet a deployed feature.
