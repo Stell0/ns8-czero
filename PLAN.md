@@ -2283,3 +2283,18 @@ failed because its independent runtime probe still required Core 0.26.x. The
 probe now requires 0.27.x, matching the released pin, workflow and updater bounds.
 The failed report is retained privately; fresh exact-source CI is required for
 the focused fix. The immutable published Core source/artifacts are unchanged.
+
+
+Application source `f263ad7` passes actual local CI (1048 Python/PostgreSQL/
+packaging cases, 124 scripts, twenty Robot dry runs), producer, released-Core and
+Renovate checks. Its three actual OCI revisions/digests/sibling references and
+five downloaded SARIF/SBOM pairs are verified; vendor findings remain. Native
+run 39061168752 passes Debian installation (seventeen passes, three expected
+skips), both real SSO/SDK probes and protected native update/clean restore. Rocky
+passes twenty-seven cases, including the new protected-space browser, but fails
+the existing home workflow: anonymous space discovery resets its public heading
+to "Knowledge". The failed report is retained. A focused regression reproduces
+this reset; reader clearing now restores each page's public heading while
+removing private content. All 125 script cases pass after correction. Fresh
+exact-source publication/native gates remain required; no AM3 promotion or live
+update has occurred, and published Core 0.27.0 is unchanged.

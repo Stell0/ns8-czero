@@ -132,3 +132,12 @@ test('late Administration bootstrap cannot reopen private global panels after a 
   assert.equal(h.node('client-status').textContent,'');
   assert.equal(h.requests.length,2);
 });
+
+test('anonymous space discovery preserves the public page headings',async()=>{
+  for(const [kind,title] of [['index','A place to find what we know.'],['wiki','Knowledge'],['sources','Sources'],['agents','Use with AI']]){
+    const h=spaces(kind,'');h.reader();h.node('page-title').textContent=title;
+    h.requests[0].resolve(reply({},401));await tick();
+    assert.equal(h.node('page-title').textContent,title);
+    assert.equal(h.node('reader-root').hidden,true);
+  }
+});
