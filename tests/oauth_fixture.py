@@ -22,6 +22,42 @@ def registered(browser, profile, *, client_name='Disposable TLS MCP client'):
     return json.loads(body)
 
 
+def recover_consent_session(module_id, browser, client, *, expire_session=None):
+    """Keep a real pending request while its disposable C0 session expires."""
+    verifier = secrets.token_urlsafe(32)
+    parameters = {'client_id':client['client_id'], 'redirect_uri':client['redirect_uris'][0],
+        'response_type':'code', 'code_challenge_method':'S256',
+        'code_challenge':base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode(),
+        'state':secrets.token_urlsafe(32), 'scope':'c0:read', 'resource':browser.origin+'/mcp'}
+    assert browser.request('/oauth/authorize?'+urlencode(parameters))[0] == 200, 'Installed recovery request failed'
+    cookies = [cookie for cookie in browser.cookies if cookie.name == 'c0_session']
+    assert len(cookies) == 1, 'Disposable recovery session missing'
+    old_cookie = cookies[0].value
+    if expire_session is not None:
+        expire_session(old_cookie)
+    else:
+        # Expire only this fixture-owned session. Private SQL travels on stdin,
+        # and no raw cookie, token or query enters arguments or Robot output.
+        hashed = hashlib.sha256(old_cookie.encode()).hexdigest()
+        sql = "UPDATE c0_sessions SET expires_at=now()-interval '1 second' WHERE token_hash='"+hashed+"';"
+        result = subprocess.run(['runagent','-m',module_id,'podman','exec','-i','czero-postgres',
+            'psql','-U','czero','-d','czero','-v','ON_ERROR_STOP=1'],
+            input=sql.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        assert result.returncode == 0 and b'UPDATE 1' in result.stdout, 'Disposable session expiry failed'
+    assert browser.api('/oauth/consent/request')[0] == 401, 'Installed expired session remained valid'
+    assert browser.request('/oauth/consent')[0] == 200, 'Installed expired consent session did not recover through SSO'
+    cookies = [cookie for cookie in browser.cookies if cookie.name == 'c0_session']
+    assert len(cookies) == 1 and cookies[0].value != old_cookie, 'Installed recovery reused expired session'
+    status, body, _ = browser.api('/api/v1/me')
+    assert status == 200, 'Installed recovered profile unavailable'
+    profile = json.loads(body)
+    status, body, _ = browser.api('/oauth/consent/request')
+    assert status == 200 and json.loads(body)['client_id'] == client['client_id'], 'Installed recovery lost pending consent'
+    assert browser.api('/oauth/consent', {'approve':True}, 'POST')[0] == 403, 'Installed recovery bypassed explicit CSRF consent'
+    print('Disposable expired consent session recovered through real SSO; explicit consent still required')
+    return profile
+
+
 def issue(browser, profile, client, *, scope='c0:read'):
     verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32)
     challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
@@ -193,7 +229,9 @@ def complete_browser(module_id):
 def run(module_id):
     personas=json.loads((STATE/'personas.json').read_text())
     browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
-    client=registered(browser,profile);pair=issue(browser,profile,client)
+    client=registered(browser,profile)
+    profile=recover_consent_session(module_id,browser,client)
+    pair=issue(browser,profile,client)
     sdk(module_id,browser.origin,pair)
     headers={'Content-Type':'application/x-www-form-urlencoded'}
     # An upgrade is a separate, explicit SSO/CSRF consent, never a refresh

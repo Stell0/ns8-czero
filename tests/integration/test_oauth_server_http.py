@@ -219,6 +219,149 @@ async def issued_pair(client, saved, *, scope='c0:read', login_code='unit-only-c
     return response.json()
 
 
+@pytest.mark.parametrize('stale', ['expired', 'unknown', 'malformed'])
+def test_consent_get_recovers_stale_cookie_through_explicit_login(oauth_app, stale):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            verifier, state = await authorize(client, saved)
+            await login(client)
+            old_cookie = client.cookies.get('c0_session')
+            pending_cookie = client.cookies.get('c0_consent')
+            with grants.access.database.engine.begin() as connection:
+                connection.execute(text("UPDATE c0_sessions SET expires_at=now()-interval '1 second' "
+                    "WHERE issuer=:issuer"), {'issuer':grants.access.issuer})
+            client.cookies.clear()
+            client.cookies.set('c0_consent', pending_cookie, domain='c0.example.test', path='/')
+            cookie = old_cookie if stale == 'expired' else ('x'*43 if stale == 'unknown' else 'malformed!')
+            client.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
+            assert (await client.get('/oauth/consent/request')).status_code == 401
+            assert (await client.post('/oauth/consent', json={'approve':True},
+                headers={'Origin':ORIGIN})).status_code == 401
+            response = await client.get('/oauth/consent')
+            assert response.status_code == 302 and response.headers['location'] == '/auth/login'
+            assert response.headers['cache-control'] == 'no-store'
+            assert response.headers['referrer-policy'] == 'no-referrer'
+            flags = response.headers['set-cookie']
+            assert 'c0_session=' in flags and 'Max-Age=0' in flags and 'Path=/' in flags
+            assert 'Secure' in flags and 'HttpOnly' in flags and 'SameSite=lax' in flags
+            assert client.cookies.get('c0_session') is None
+            profile = await login(client)
+            assert client.cookies.get('c0_session') != old_cookie
+            assert (await client.get('/oauth/consent')).status_code == 200
+            view = (await client.get('/oauth/consent/request')).json()
+            assert view['client_id'] == saved['client_id'] and view['scopes'] == ['c0:read']
+            assert (await client.post('/oauth/consent', json={'approve':True})).status_code == 403
+            response = await client.post('/oauth/consent', json={'approve':True,'scopes':['c0:read']},
+                headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
+            assert response.status_code == 200
+            callback = parse_qs(urlsplit(response.json()['redirect_uri']).query)
+            assert callback['state'] == [state]
+            response = await client.post('/oauth/token', data={'grant_type':'authorization_code',
+                'client_id':saved['client_id'],'redirect_uri':CALLBACK,'code':callback['code'][0],
+                'code_verifier':verifier,'resource':RESOURCE})
+            assert response.status_code == 200
+            assert grants.verify(response.json()['access_token'], resource=RESOURCE).scopes == {'c0:read'}
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('pending', ['missing', 'expired', 'disabled-client'])
+def test_stale_session_recovery_requires_valid_pending_consent(oauth_app, pending):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            if pending != 'missing':
+                await authorize(client, saved)
+                with grants.access.database.engine.begin() as connection:
+                    if pending == 'expired':
+                        connection.execute(text("UPDATE c0_oauth_consent SET expires_at=now()-interval '1 second' "
+                            'WHERE client_id=:client'), {'client':UUID(saved['client_id'])})
+                    else:
+                        connection.execute(text('UPDATE c0_oauth_clients SET enabled=false WHERE id=:client'),
+                            {'client':UUID(saved['client_id'])})
+            client.cookies.set('c0_session', 'x'*43, domain='c0.example.test', path='/')
+            response = await client.get('/oauth/consent')
+            assert response.status_code == 400 and response.json() == {'detail':'invalid_consent'}
+            assert 'location' not in response.headers and 'set-cookie' not in response.headers
+    asyncio.run(check())
+
+
+def test_consent_session_recovery_does_not_catch_other_authorization_failures(oauth_app, application, monkeypatch):
+    async def check():
+        from sqlalchemy.exc import SQLAlchemyError
+        app, saved, grants, _ = oauth_app
+        _, owner_token, member_token, *_ = application
+        access = grants.access
+        owner = access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
+        with pytest.raises(PermissionDenied):
+            access.resolve(app.state.auth.oidc.verify_access_token(member_token))
+        member = next(row for row in access.list_accounts(owner) if row['username'] == 'member')
+        access.set_role(owner, member['id'], Role.READER)
+        cookie = app.state.auth.sessions.create(app.state.auth.oidc.verify_access_token(member_token))
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            await authorize(client, saved)
+            client.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
+            response = await client.get('/oauth/consent')
+            assert response.status_code == 200 and 'set-cookie' not in response.headers
+            response = await client.get('/oauth/consent', headers={'Authorization':'Bearer invalid'})
+            assert response.status_code == 403 and 'location' not in response.headers
+            access.set_role(owner, member['id'], None)
+            response = await client.get('/oauth/consent')
+            assert response.status_code == 403 and 'location' not in response.headers
+            def unavailable(_):
+                raise SQLAlchemyError('private database error')
+            monkeypatch.setattr(app.state.auth.sessions, 'get', unavailable)
+            response = await client.get('/oauth/consent')
+            assert response.status_code == 503 and response.json() == {'detail':'service_unavailable'}
+            assert 'location' not in response.headers and 'set-cookie' not in response.headers
+    asyncio.run(check())
+
+
+def test_exact_native_consent_recovery_fixture_with_signed_http(oauth_app, application):
+    import hashlib
+    import sys
+    app, saved, grants, _ = oauth_app
+    _, owner_token, *_ = application
+    path = Path(__file__).resolve().parents[1] / 'oauth_fixture.py'
+    sys.path.insert(0, str(path.parent))
+    try:
+        spec = importlib.util.spec_from_file_location('native_consent_recovery', path)
+        fixture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixture)
+    finally:
+        sys.path.remove(str(path.parent))
+    with TestClient(app, base_url=ORIGIN) as http:
+        cookie = app.state.auth.sessions.create(app.state.auth.oidc.verify_access_token(owner_token))
+        http.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
+        class Browser:
+            origin = ORIGIN
+            cookies = http.cookies.jar
+            def request(self, path, data=None, method=None, headers=None):
+                response = http.request(method or 'GET', path, content=data, headers=headers, follow_redirects=False)
+                for _ in range(8):
+                    if response.status_code != 302:
+                        return response.status_code, response.content, str(response.url)
+                    location = response.headers['location']
+                    if urlsplit(location).hostname == 'idp.example.test':
+                        # The normal callback verifies the fixture's signed ID token.
+                        state = parse_qs(urlsplit(location).query)['state'][0]
+                        response = http.get('/auth/callback', params={'state':state,'code':'unit-only-code'}, follow_redirects=False)
+                    else:
+                        response = http.get(location, follow_redirects=False)
+                raise AssertionError('Consent recovery redirect loop')
+            def api(self, path, data=None, method=None, csrf=None):
+                response = http.request(method or 'GET', path, json=data,
+                    headers={'Origin':ORIGIN, **({'X-C0-CSRF':csrf} if csrf else {})})
+                return response.status_code, response.content, str(response.url)
+        def expire(cookie):
+            with grants.access.database.engine.begin() as connection:
+                result = connection.execute(text("UPDATE c0_sessions SET expires_at=now()-interval '1 second' "
+                    'WHERE token_hash=:hash'), {'hash':hashlib.sha256(cookie.encode()).hexdigest()})
+                assert result.rowcount == 1
+        profile = fixture.recover_consent_session('czero900', Browser(), saved, expire_session=expire)
+        assert profile['is_owner'] and profile['csrf_token']
+
+
 @pytest.mark.parametrize('role', [Role.READER, Role.EDITOR, Role.ADMIN])
 def test_scope_upgrade_requires_new_role_eligible_explicit_consent(oauth_app, application, role):
     async def check():
@@ -470,9 +613,19 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
         profile=client.get('/api/v1/me').json()
         class Browser:
             origin=ORIGIN
+            cookies=client.cookies.jar
             def request(self,path,data=None,method=None,headers=None):
-                response=client.request(method or 'GET',path,content=data,headers=headers,follow_redirects=True)
-                return response.status_code,response.content,str(response.url)
+                response=client.request(method or 'GET',path,content=data,headers=headers,follow_redirects=False)
+                for _ in range(8):
+                    if response.status_code != 302:
+                        return response.status_code,response.content,str(response.url)
+                    location=response.headers['location']
+                    if urlsplit(location).hostname == 'idp.example.test':
+                        state=parse_qs(urlsplit(location).query)['state'][0]
+                        response=client.get('/auth/callback',params={'state':state,'code':'unit-only-code'},follow_redirects=False)
+                    else:
+                        response=client.get(location,follow_redirects=False)
+                raise AssertionError('Consent recovery redirect loop')
             def api(self,path,data=None,method=None,csrf=None):
                 headers={'Origin':ORIGIN}
                 if csrf:headers['X-C0-CSRF']=csrf
@@ -513,6 +666,18 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                     assert client.get('/api/v1/object-types',headers={
                         'Authorization':'Bearer '+pair['access_token']}).status_code==200
                 monkeypatch.setattr(fixture,'sdk',sdk_scoped)
+                recover=fixture.recover_consent_session
+                def expire(cookie):
+                    import hashlib
+                    with app.state.auth.access.database.engine.begin() as connection:
+                        result=connection.execute(text("UPDATE c0_sessions SET expires_at=now()-interval '1 second' "
+                            'WHERE token_hash=:hash'), {'hash':hashlib.sha256(cookie.encode()).hexdigest()})
+                        assert result.rowcount == 1
+                def recover_with_database(module, browser, descriptor):
+                    current=recover(module,browser,descriptor,expire_session=expire)
+                    profile.clear();profile.update(current)
+                    return current
+                monkeypatch.setattr(fixture,'recover_consent_session',recover_with_database)
                 (tmp_path/'personas.json').write_text(json.dumps({'host':'c0.example.test','password':'unused'}))
                 fixture.run('czero1')
                 assert frozenset(('c0:read','c0:write','c0:admin')) in seen_scopes

@@ -1285,6 +1285,20 @@ Core changes require the immutable artifact/released dependency sequence.
 
 ### C0-AM2 — Agent-friendly Wiki operations and errors [ ]
 
+**Intervening consent recovery fix:** During AM1 live acceptance, the operator
+reported `invalid_session` at `/oauth/consent`. An expired browser cookie still
+exists for longer than its native identity, and the consent GET currently
+rejects it instead of restarting sign-in. On `fix/expired-consent-session`, first
+prove the failure using a valid pending request and an actually expired stored
+session. Recover only that browser GET through the fixed normal login route,
+clearing the stale cookie and retaining the valid consent binding. Missing,
+expired or consumed consent requests, revoked membership, bearer attempts,
+API writes, database errors and all existing authorization checks must retain
+their rejection behavior. Do not extend any expiry or grant consent implicitly.
+Run the full suite and actual both-native tests before review/main/deployment.
+AM1 live evidence and this reported blocker remain distinct from CI success;
+AM2 and Windmill Gate remain gated while recovery is unresolved.
+
 Add exact-slug `wiki_pages_resolve` and create-only or expected-revision-checked
 `wiki_pages_upsert`, reusing Wiki receipts/revisions/events. Never infer overwrite
 permission from slug existence. Preserve old tools. Extend the fixed safe MCP
@@ -1633,3 +1647,83 @@ Verify its own exact-source checks before requesting review, then require
 reviewed main promotion/publication and the authorized dedicated deployment /
 live preservation and evidence cycle before accepting AM1 or starting AM2.
 The installation remains accepted AM0 b66e159; Windmill Gate remains gated.
+
+**AM1 reviewed main and targeted deployment (17 October 2026):** The operator
+merged PR 4 as `48937e1195589285876b49ff601a5f7df9534545`. Its tree matches
+reviewed bfb9745. Actual completed/successful checks are
+[local 39023485414](https://github.com/Stell0/ns8-czero/actions/runs/39023485414),
+[producer 39023485411](https://github.com/Stell0/ns8-czero/actions/runs/39023485411),
+[released-Core 39023485404](https://github.com/Stell0/ns8-czero/actions/runs/39023485404),
+[Renovate 39023485438](https://github.com/Stell0/ns8-czero/actions/runs/39023485438)
+and [both-native 39023648148](https://github.com/Stell0/ns8-czero/actions/runs/39023648148).
+Downloaded reports prove Debian installation sixteen passes/three expected skips,
+genuine Rocky b66e159 upgrade twenty-six passes, all seven real browser/privacy
+workflows, both exact source checkouts and three actual XML/Pino artifacts with
+zero OAuth query candidates.
+
+A supported C0-only native backup on the existing local destination succeeds;
+the new one-off plan is disabled afterward and all seven original plans remain
+unchanged. Restic full data check, required state files and actual pg_restore
+listing of the 133395-byte PostgreSQL dump pass. A follow-up verifier initially
+expected the whole repository's snapshot count to equal this one plan's count;
+correct timestamp-based verification passes without rerunning the backup.
+Anonymous registry checks time out twice; retained failures and successful retry
+are distinct. All three main manifests/config revisions are verified immediately
+before `update-module` targets only the authorized C0 instance with canonical
+main. The native command succeeds; installed versions are Core 0.25.0/app 0.40.0/
+schema `0013_oauth_consent`, vector 0.8.7. Normal trusted HTTPS proves all 63 old
+operation metadata records unchanged and the additive 64th operation present.
+
+These three **actually installed 48937e1** images are frozen together for future
+genuine native upgrades, replacing b66e159; no marker images are substituted:
+
+| Image (`main`) | Verified deployed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:125f424880bb810c3ae1e62e15709d89f51b1ca2624b0ccbbb8793de41896512` |
+| `ghcr.io/stell0/czero-app` | `sha256:b2a35e7e5f0d24e9c7d61c038e912a3bd5b89dcb91d7e78b01b8ddbf515f7c1e` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:ae408cdafc483f238ede89697f9110b5300d4b1a31aec8650721a6b5825b4391` |
+
+Exact update inventories preserve all 27 domain-table aggregates, 101 original
+terminal jobs/attempts, OAuth grants/tokens/codes, retained originals, private
+configuration, schedules and eleven unrelated module identities. A reconnect
+adds one pending consent; filtering by its bounded creation interval separately
+proves the three original consent rows' exact aggregate remains unchanged.
+Nothing is deleted to force a comparison pass.
+
+Actual normal-SSO OAuth authorization and both current/legacy SDK sessions pass
+text ingestion, real timer extraction, immutable chunks/citation, a sourced claim,
+REST replay parity and changed-payload conflict using new isolated synthetic
+records. A supported full module-manager restart succeeds. Initial probes before
+readiness fail and remain private; after normal readiness, two fresh SDK sessions
+retrieve the exact receipt/chunks/citation/claim again. The owned temporary client
+is disabled and its subsequent authenticated read is rejected. Original jobs,
+attempts, configuration and schedules also pass post-manager-restart comparison.
+A bounded actual root journal has 119 lines, health and MCP positive controls,
+zero OAuth query candidates, zero submitted credential/token matches and zero
+tracebacks. Private credentials, URLs, client/fixture identities and failed probe
+evidence remain outside Git. No new ChatGPT UI, live Reader/Editor matrix,
+provider quality, stable module release or CPU-quota acceptance is claimed.
+
+The operator reports `invalid_session` on the consent page after reconnecting.
+Server diagnostics show the native identity bounds both browser and delegated
+authority to about five minutes, with zero refresh-expiry mismatches. A stale
+cookie causes the consent GET to reject instead of initiating normal login;
+three real database-backed regressions reproduce this 401. AM1's deployed text
+cycle passes, but this reported connection blocker must be resolved before
+AM2. The intervening focused recovery subplan above is active; no live hotpatch
+or authorization lifetime extension has been made.
+
+**Consent recovery local result:** App 0.40.1/Core 0.25.0/schema 0013 passes
+870 complete Python/PostgreSQL/packaging cases (173.70 seconds), 106 script
+cases, Go/schema and shell checks, and nineteen Robot dry-run cases. The eight
+new cases cover expired/unknown/malformed cookies, invalid/expired/disabled-client
+pending requests, valid session/role/bearer/database rejection behavior and the
+exact installed recovery helper through signed local HTTP. The initial full run
+finds stale app-version assertions and an older native-helper adapter; those
+are corrected and the final full run passes. Native acceptance additionally
+requires real disposable SSO after fixture-only session expiry. Only app patch
+metadata changes; released Core dependency/transitives and schema remain fixed.
+These are local results, not yet exact-source CI/native/review/deployment of the
+recovery fix. Its PR opens without a requested reviewer and waits for operator
+review after actual CI succeeds. The reported live consent failure is not
+silently marked accepted; AM2 remains gated.
