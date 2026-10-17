@@ -2,7 +2,7 @@
 
 **Status (17 October 2026): Agent Memory AM0–AM3 runtime acceptance passes.** The dedicated instance runs main `cb60da9`, with Core **0.27.0**, app **0.42.0** and schema **0015**. Agents can use protected spaces, ingest bounded evidence and revise Wiki pages with explicit revision and retry protection. Current/legacy SDK workflows, fresh OAuth consent, supported update/restart, preservation and bounded journal privacy pass. The existing connector separately reads retained Shared evidence and historical Wiki content after reconnecting; new space operations through its cached catalog are not claimed.
 
-Main passes 1048 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core checks, Debian installation and genuine Rocky AM2 upgrade with all eight automated browser workflows. Native reports, actual source checkouts and privacy artifacts are audited. See [PLAN.md](PLAN.md) for exact sources, published Core artifacts and frozen installed digests. This documentation closeout marker still needs its own completed checks and reviewed main publication before AM4. AM4–AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
+Main passes 1048 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core checks, Debian installation and genuine Rocky AM2 upgrade with all eight automated browser workflows. Native reports, actual source checkouts and privacy artifacts are audited. See [PLAN.md](PLAN.md) for exact sources, published Core artifacts and frozen installed digests. AM3 closeout source 6402026 and resulting main 7fcc39b pass their completed checks and native/artifact audits. AM4 development is active; AM4–AM6 deployment acceptance and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
 
 ## Purpose and boundaries
 
@@ -320,7 +320,9 @@ main `cb60da9` (Core 0.27.0/app 0.42.0/schema 0015), including supported backup,
 update, full-manager restart, original-data preservation and live current/legacy
 SDK checks. The existing connector independently reads retained Shared evidence
 and a historical Wiki revision after reconnecting. AM3's documentation closeout
-marker remains subject to exact checks and reviewed main publication before AM4.
+marker and main 7fcc39b pass their actual checks and reviewed publication. AM4 is
+active for separate revisioned applicability/verification annotations and opt-in
+structured retrieval; none of that new behavior is deployed yet.
 
 [Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0)
 is independently published after exact-source local, producer and both-native

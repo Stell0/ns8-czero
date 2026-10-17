@@ -2404,3 +2404,126 @@ Playwright waivers; automated native browsers remain mandatory. AM4–AM6 and
 Windmill Gate remain gated. Integration M17–M20 remain a separate roadmap. No
 stable module release, live alternate persona, provider quality or scheduled
 client interoperability is claimed.
+
+
+### AM3 documentation closeout and AM4 start — 18 October 2026
+
+AM3 closeout source `6402026133e2580050f5d655f50f637f5a2b3acb` passes actual
+[local](https://github.com/Stell0/ns8-czero/actions/runs/39070257066),
+[producer](https://github.com/Stell0/ns8-czero/actions/runs/39070257065),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39070285802),
+[Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39070285819)
+and [native](https://github.com/Stell0/ns8-czero/actions/runs/39070422109) checks.
+Actual native reports pass Debian genuine AM2 upgrade twenty cases and Rocky
+installation twenty-five cases/three documented installation skips, all eight
+browsers/privacy guards, twenty-five numeric accessibility contexts and both
+protected update/clean restores. Both actual Git checkout heads and three
+OAuth-query artifacts are audited. The complete three-document diff is reviewed;
+[PR 9](https://github.com/Stell0/ns8-czero/pull/9) is merged under the agreed
+autonomous promotion authorization. No independent human review is claimed.
+
+Resulting main `7fcc39b049693bcaa84032c0372ab943d510e6a2` has the identical
+reviewed tree. Its actual [local](https://github.com/Stell0/ns8-czero/actions/runs/39073039995),
+[producer](https://github.com/Stell0/ns8-czero/actions/runs/39073039738),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39073068778),
+[Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39073068513)
+and [native](https://github.com/Stell0/ns8-czero/actions/runs/39073229043) checks
+complete successfully. Local evidence is 1048 Python/PostgreSQL/packaging cases,
+125 scripts, twenty non-UI Robot dry runs and schema/shell checks. Three OCI
+revisions/digests/sibling references and five actual SARIF/SBOM pairs pass audit;
+vendor findings remain. Actual main native reports pass Debian installation
+seventeen cases/three documented skips and genuine Rocky AM2 upgrade twenty-eight
+cases, all eight browsers/privacy guards, twenty-five numeric accessibility
+contexts, two real SSO/SDK probes per distribution and both protected update/clean
+restores. Exact checkout commands/HEADs and three actual OAuth-query artifacts
+pass audit. AM3 closeout is complete; documentation-marker images are not deployed.
+Additional read-only AM3 backup observers preserve all ninety-two original
+scheduler-run rows and all ten prior backup plans, without restoring live data.
+
+AM4 starts from verified main `7fcc39b`; fresh native inspection confirms the
+accepted dedicated runtime remains `cb60da9`, Core/app/schema 0.27.0/0.42.0/0015,
+with all three genuinely installed digests frozen above. Original checkout and
+unfinished documentation remain preserved. Only AM4 is expanded below. AM5/AM6,
+final integration acceptance and Windmill Gate remain gated.
+
+**AM4 implementation subplan:** Prepare additive Core 0.28.0 with forward
+migration `0016_annotations` and schema health update. Keep app 0.42.0 on its exact
+released Core 0.27.0 pin/lock until exact Core CI/native/artifact gates and immutable
+publication pass. Only then prepare app 0.43.0 against the independently verified
+released Core source and compatible 0.28.x updater range. Preserve existing types,
+records, source provenance, immutable chunks/citations, Wiki/claim history, receipts,
+space UUIDs/grants, OAuth data and default search contracts. Never deploy local
+Core implicitly or replace a published artifact.
+
+Add separate `applicability` and `verification` annotation namespaces with their
+own immutable revisions. Targets are exact source-version and Wiki-revision
+identities, or observed entity/object/claim revisions. Retained anchors bind
+kind/identity/revision/hash and space; references use same-space constraints,
+including the established retained-link pattern for physically deleted objects.
+Do not add fields to strict object payloads or rewrite retained source/Wiki data.
+Missing metadata returns explicit unknown with annotation revision zero. Known
+values are typed/bounded; unknown status values and bounded extension metadata
+remain literal. Applicability includes product/component/exact version tags,
+status and observation time; verification separately records status, confidence
+and observation/verification times. Missing metadata is never inferred verified.
+
+Require Editor/current-space role and actual write scope for annotation changes,
+Reader/read scope for reads/history, with current delegated authority checks after
+waits. Writes require an observed content revision, an expected annotation revision
+(zero is create-only) and one existing space-bound fingerprinted receipt. A stale
+mutable content revision or annotation revision conflicts. Immutable historical
+source/Wiki targets remain addressable. Retained annotation history stays readable
+at its exact old target revision, but never transfers to newly edited content.
+Replays return the original successful snapshot after current authorization, so
+clients must re-read for current state. Transactions retain commit-ordered events;
+failed writes leave no annotation revision, event or receipt.
+
+Expose an opt-in structured search operation and typed REST/MCP annotation
+read/update/history operations after Core publication. Leave existing default
+source/Wiki search DTOs, behavior and legacy wire output unchanged. Structured
+categories are source, Wiki, entity, object and claim; omitted categories retain
+source/Wiki selection. Return typed resource references with space and observed
+content/annotation revisions, literal applicability/verification states and
+accurate retrieval methods. Immutable evidence citations remain separate from
+mutable structured-record references. Structured records use deterministic text
+retrieval; optional semantic/hybrid/reranking remains confined to the existing
+evidence categories and accurately labeled. No reasoning or consolidation runs
+inside C0.
+
+Filters combine supplied fields with AND and values within one field with OR.
+Support exact product/component/version/status tags, category, explicit archive
+selection and timezone-aware UTC creation/observation/verification intervals.
+Never interpret version ranges or substring matches as exact tag matches. With a supplied status filter, missing metadata matches explicit unknown;
+unfiltered results retain unknown metadata without guessed applicability.
+Filter by authorized space, current content and applicability before candidate
+limits, counts, ranking, reranker inputs and vector pruning. Reuse a filtered
+exact-distance fallback when ANN scans underfill. Preserve provider-unavailable
+text fallback and recheck authorization after provider I/O; observed revisions
+must prevent stale metadata from appearing attached to changed content.
+
+First reproduce missing annotation/structured-search behavior with meaningful
+PostgreSQL regressions, then implement small Core slices. Cover all five target
+kinds, independent namespace histories, revision races/replay/conflicts, bounded
+invalid input, unchanged strict payloads/provenance, role/grant/scope denials,
+revocation/regrant and same-space constraints. Add labeled troubleshooting fixtures
+and corpora larger than candidate limits, exact-versus-prefix versions, missing
+and stale annotations, archive/time combinations, isolated counts/provider inputs,
+semantic/ANN fallback and default-search equivalence. Repeated packaged migration
+from the genuine schema-0015 predecessor must preserve every old column/identity
+and OAuth authority. Wheel/archive independent installations and reproducibility
+remain required.
+
+After exact-source Core local/producer/released-consumer/both-native and actual
+artifact/privacy gates, publish immutable Core artifacts and verify downloaded
+checksums and independent installations. Add the released app pin/lock, typed
+transport/error/resource metadata and focused guidance/tests. Freeze all three
+accepted cb60da9 digests in genuine upgrade fixtures; extend native installed-Core,
+normal SSO/current/legacy SDK, backup/clean restore and automated browser evidence
+without weakening existing eight workflows. Review the complete diff and exact
+main checks/publication before any dedicated deployment. Back up only the
+permitted C0 instance, preserve original data/settings/clients/unrelated instances,
+exercise owned annotations/filtered retrieval, verify fresh authority after update
+and full-manager restart, disable owned clients and audit bounded root journald
+with actual request controls. Reconcile the three documents with actual evidence
+and verify closeout-marker checks before AM5. Keep failed private evidence outside
+Git, existing waivers, release limitations and the separate Integration roadmap.
