@@ -13,9 +13,10 @@ from czero_core import Database
 from czero_core.access import AccessService
 from czero_core.identity import VerifiedIdentity
 from czero_core.jobs import default_registry
-from czero_core.sources import OriginalStore, SourceService, register_source_handlers
+from czero_core.sources import OriginalStore, SourceService, SourceNotFound, register_source_handlers
+from czero_core.spaces import SpaceService
 from czero_core.worker import Worker
-from czero_core.wiki import WikiService, KnowledgeConflict
+from czero_core.wiki import WikiService, KnowledgeConflict, KnowledgeNotFound
 
 assert importlib.util.find_spec('agent') is None
 assert importlib.util.find_spec('czero_app') is None
@@ -38,6 +39,11 @@ with tempfile.TemporaryDirectory(prefix='core-text-') as directory:
     first=wiki.upsert_page(actor,**page_values)
     second=wiki.upsert_page(actor,**{**page_values,'body':'Revised observation','expected_revision':1,
                                    'idempotency_key':'packaged-revise'})
+    space=SpaceService(database,access).create(actor,'Packaged private space',idempotency_key='packaged-space')
+    private_wiki=wiki.in_space(space['id'])
+    hidden_page=private_wiki.upsert_page(actor,**page_values)
+    hidden=service.in_space(space['id']).ingest_text(actor,**values)
+    assert hidden['source_id']!=receipt['source_id'] and hidden_page['id']!=first['id']
     Worker(database,registry).tick()
     database.close()
     later=Database()
@@ -59,6 +65,19 @@ with tempfile.TemporaryDirectory(prefix='core-text-') as directory:
         assert document['body']==body
         citation=service.citation(actor,service.chunks(actor,document['id'])[0]['id'])
         assert citation['source_hash']==hashlib.sha256(body.encode()).hexdigest()
+        private_source=service.in_space(space['id'])
+        private_wiki=wiki.in_space(space['id'])
+        assert private_source.ingest_text(actor,**values)==hidden
+        assert private_wiki.upsert_page(actor,**page_values)==hidden_page
+        private_document=private_source.document(actor,hidden['id'])
+        private_chunk=private_source.chunks(actor,private_document['id'])[0]
+        assert private_source.citation(actor,private_chunk['id'])['body']==body
+        assert private_wiki.get_page(actor,hidden_page['id'])==hidden_page
+        for call in (lambda:service.citation(actor,private_chunk['id']),
+                     lambda:wiki.get_page(actor,hidden_page['id'])):
+            try:call()
+            except (SourceNotFound,KnowledgeNotFound):pass
+            else:raise AssertionError('Installed Core leaked another space')
         assert not list(originals.root.iterdir())
     finally: later.close()
-print(json.dumps({'ready_evidence':True,'replay_after_reconnect':True,'original_cleanup':True,'independent_package':True,'wiki_revisions_replay_reconnect':True}))
+print(json.dumps({'ready_evidence':True,'replay_after_reconnect':True,'original_cleanup':True,'independent_package':True,'wiki_revisions_replay_reconnect':True,'protected_space_reconnect':True}))

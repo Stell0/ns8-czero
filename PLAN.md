@@ -2081,3 +2081,220 @@ genuine AM3 upgrade predecessor:
 | `ghcr.io/stell0/czero` | `sha256:181a8ae5eaeb606ad473bf6a029b0901db1840bc9987d8d5485949e58792ee91` |
 | `ghcr.io/stell0/czero-app` | `sha256:133b220f6eaec6bee1f67fa09deaad6489d002b30ac834aafa9234d6576faef2` |
 | `ghcr.io/stell0/czero-postgres` | `sha256:a5c6a0eee9516d0bfff2c216f50e50c38a802f3eb9b676d7f7f4d6bfd6ce14d1` |
+
+
+**AM2 closeout marker verified on main (17 October 2026):** PR 7 merges the
+reviewed documentation marker d87321d as main
+`65829d4676e68005f5c03fbcfe084d492d613aaf`, with an identical tree. Its exact
+branch checks and actual native reports pass (local 39047452670, producer
+39047449001, released-Core 39047501317, Renovate 39047504222, native
+39047651934: Debian upgrade nineteen passes, Rocky installation twenty-three
+passes/three expected skips, all seven browsers/privacy guards and zero query
+candidates across three actual artifacts). Final main passes
+[local 39051174303](https://github.com/Stell0/ns8-czero/actions/runs/39051174303),
+[producer 39050203421](https://github.com/Stell0/ns8-czero/actions/runs/39050203421),
+[released-Core 39050216936](https://github.com/Stell0/ns8-czero/actions/runs/39050216936),
+[Renovate 39050219112](https://github.com/Stell0/ns8-czero/actions/runs/39050219112)
+and [native 39050419623](https://github.com/Stell0/ns8-czero/actions/runs/39050419623).
+The first local job completes successfully but its workflow aggregate remains
+pending; its retained metadata is separate from the fresh completed/successful
+same-source local dispatch used here. Actual final main logs prove 958 full
+cases/106 scripts/nineteen Robot dry runs. Downloaded native reports prove Debian
+installation sixteen passes/three expected skips and genuine Rocky upgrade
+twenty-six passes, all seven browser/privacy workflows, two actual SSO/SDK probes
+per distribution, both tested checkout revisions and three artifacts with zero
+query candidates. All three main manifests/configs and five scan/SBOM pairs are
+verified; vendor findings remain unchanged. The dedicated instance is rechecked
+and retains every exact 1a45070 deployed digest and healthy database/authentication/
+timer. The documentation marker is not deployed. AM2 closeout passes; AM3 starts
+from verified 65829d4, freezing the actual 1a45070 images above as predecessor.
+
+**AM3 implementation subplan:** Release additive Core 0.27.0 with packaged forward
+migrations 0014 for the space catalog and 0015 for content ownership, and app
+0.42.0 only after the Core artifact
+sequence. Preserve instance_metadata.knowledge_space_id as the permanent legacy
+shared identity, existing identifiers/content/history and old omitted-selector
+semantics. Object-type definitions stay global. All other content ownership,
+uniqueness, derivative rows, references, events and receipts are space-bound.
+No invalid/unauthorized selector may fall back to shared. Reader/Editor grants
+are explicit for protected spaces and capped by current application membership;
+application Admins have access to every space under actual OAuth scopes. No
+per-client grant model is introduced.
+
+First prove persisted space discovery/creation and revisioned Admin grant
+management, then cover objects/relations/history, source versions/documents/chunks/
+originals, Wiki/revisions/aliases, claims/evidence/graph/feeds/receipts, retrieval
+and indexing. Use a trusted immutable service selector rather than mutable global
+request state; selectors never supply authority. Recheck current application and
+space roles in Core reads/mutations and after lock waits/provider work. Preserve
+verified delegated authority through fresh Actor reconstruction so grant deletion
+cannot be defeated by a queued invocation or later regrant. Denied space roles
+must precede insufficient-scope challenges. Grant changes serialize with existing
+role/grant lock ordering and invalidate affected delegated grants atomically.
+Retain old shared fingerprints and receipt snapshots; protected receipt keys and
+fingerprints bind their space. Same-space parent/target checks and database
+constraints must reject cross-space references even for an Admin able to read both.
+Historical/deleted events retain their own ownership, and private writes must not
+leak through shared feed counts/cursors.
+
+Before transport exposure, execute a full application-role x grant x OAuth-scope
+matrix and negative direct-UUID/history/feed/original/citation/graph/retrieval
+paths, replay/revocation races and same-name/key/content in separate spaces.
+Carry trusted parent ownership through extraction/index jobs, never authority
+from arbitrary payload fields. Filter authorization before candidates/provider
+inputs and recheck after optional external work. Test actual wheel/archive
+installations outside checkout, repeated migration and old-column projections
+that prove every pre-migration field/ID unchanged despite added ownership fields.
+
+After exact Core local/producer/released-consumer/both-native and artifact/privacy
+gates, publish immutable Core artifacts and verify checksums/independent installs.
+Only then pin its exact released tag/subdirectory/commit and compatible updater
+range in the app. Add optional space selectors to typed content REST/MCP, discovery/
+creation/grant operations and space-qualified resources while retaining legacy
+resource semantics and shared schemas. The application selector and Admin grant
+controls must clear private content on changes/access loss and reject late replies;
+retain existing Tools drafts/replay/CSRF/current-role guards and no new NS8 actions.
+Extend actual native TLS/SSO/browser/update/backup/restore fixtures, preserving
+private stdin/URLs and inspecting real output artifacts/checkouts. Complete diff
+review, exact main publication and canonical C0-only backup/update/live owner
+fixtures/restart/privacy/preservation precede AM3 acceptance. Other personas stay
+disposable; preserve all pilot data and existing clients/working connection. No
+CPU-quota change, inference behavior or stable module release is included.
+
+AM3 foundation local evidence: the initial catalog regression fails on the
+missing service; the captured-token and missing-scope regressions fail before
+the authority fix. Corrected Core catalog/grant/delegation tests pass, including
+write-only tokens, current-role caps, tombstone replay and independent-admin
+revision races. The full local suite passes 967 Python/PostgreSQL/packaging
+cases, 106 scripts, actual Go schema compilation, shell syntax and nineteen
+Robot dry runs. A stale schema assertion found by the first full run is fixed;
+failed output is retained privately. Core 0.27.0 remains an unpublished
+development candidate; the application retains its exact released 0.26.0 pin
+and lock. The catalog is not exposed by application transports. Content
+ownership/authorization, jobs/indexing, transport/UI, native/main/publication
+and live deployment acceptance remain required before AM3 can close.
+
+AM3 Core content increment implements the immutable `in_space` service selector,
+forward ownership migration 0015, scoped root/derivative reads and writes,
+per-space slug/alias/source/object uniqueness and composite same-space references.
+Types remain global. Shared receipts keep their exact fingerprint and snapshot;
+protected keys/fingerprints bind their space. Separate public feed cursors retain
+old IDs and sequence positions while hiding private activity. A focused regression
+first reproduces a backwards cursor when the old sequence exceeds retained rows,
+then passes the corrected migration. Source job ownership follows stored parents;
+documents/chunks/Wiki chunks/embeddings retain that space. Content writes hold
+role/client/grant authority through commit after mutation waits, and captured
+delegations cannot survive revocation/regrant. Trusted operation preauthorization
+precedes scope challenges, and expanded discovery filters cannot grant invocation
+authority. Retrieval filters before limits/counts/provider inputs and uses a
+scoped exact-distance fallback for underfilled approximate scans.
+
+Local validation passes 1040 Python/PostgreSQL/packaging cases, 106 scripts,
+schema/shell checks and twenty Robot dry runs. Seventy new content cases include
+63 actual role/grant/scope combinations (unsupported consent requests are denied),
+direct UUID/history/original/citation/graph/reference negatives, same-space SQL
+constraints, a queued writer spanning revoke/regrant, and seventy private pages
+beyond candidate limits with isolated provider input/counts. The fresh schema-0013
+upgrade fixture compares every old column of every predecessor table after two
+migrations, preserving real OAuth grant/token authority, shared UUIDs and old
+receipt replay. Targeted cursor/job-reference migration regressions pass after
+review fixes. Failed private logs are retained. Actual wheel/archive installations
+exercise private evidence/Wiki/reconnect and a separate owned Core space workflow.
+The latter is added to disposable native Robot acceptance; its dry run is not a
+native pass or a real SSO observation. Core 0.27.0 is not published, app remains
+0.41.0 with its exact released 0.26.0 source/lock, and the dedicated instance is
+unchanged. Exact-source CI/native/artifact gates and Core publication remain
+required before the app imports the new space API; final AM3 transport/UI,
+main/deployment/live/restart/backup/preservation gates remain open.
+
+
+**AM3 Core released, application acceptance pending (17 October 2026):**
+Immutable `core-v0.27.0` names source
+`86a7f7f513d971646fc460ae1708cc0e3a8d46f0`. Its completed exact-source
+[local checks](https://github.com/Stell0/ns8-czero/actions/runs/39057044012)
+pass 1040 Python/PostgreSQL/packaging cases, 106 script cases, schema/shell
+checks and twenty non-UI Robot dry-run cases. Actual
+[producer images](https://github.com/Stell0/ns8-czero/actions/runs/39057044055),
+released-consumer and Renovate checks pass. All three image configurations,
+revisions and sibling references were inspected. The five downloaded SARIF/SBOM
+pairs pass their required audits; retained findings are not a clean-scan claim.
+
+The completed [native run](https://github.com/Stell0/ns8-czero/actions/runs/39057223957)
+tests that actual checkout on Debian installation (seventeen passes, three
+expected skips) and genuine AM2 Rocky upgrade (twenty-seven passes, including
+all seven browser workflows). Both actual reports pass the new installed Core
+space probe and two genuine SSO/SDK probes each. Seven browser privacy guards
+and all three downloaded query-audit artifacts pass with zero query candidates.
+The installed Core probe uses trusted disposable fixture authority; it is
+separate from browser and delegated-token observations. The earlier foundation
+native run was superseded, not passed.
+
+[Publication](https://github.com/Stell0/ns8-czero/actions/runs/39059770936)
+passes independent artifact verification before publishing
+[Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0).
+The downloaded wheel SHA-256 is
+`80c4c15d9568186949126c9ee8d648333b0ca7c2153843840783cf03552006dd`;
+the normalized archive SHA-256 is
+`85403eeea87e50365a8f9bfb35e48cbbe29a807ddfbe461062b04d1eb99de9dd`.
+Both match published SHA256SUMS. All six independent checks pass again against
+those exact downloaded assets, including reproducible rebuilds, separate clean
+wheel/archive installs and packaged PostgreSQL migrations.
+
+Application 0.42.0 now pins this exact released tag/subdirectory/commit; its
+compatible dependency and Renovate bounds allow only 0.27.x patches. Transitive
+versions remain unchanged. Its pending transport/UI increment adds five typed
+space/grant operations, optional content selectors and three qualified resource
+templates while preserving old omitted-selector behavior. UI tests cover
+selector changes, role loss, delayed replies, literal names and grant revision/
+retry guards. Native recovery now seeds protected grants, Wiki history, evidence
+and records before encrypted backup, and verifies exact identities after update
+and clean restore. A new independent-session browser fixture exercises creation,
+role caps, Reader/Editor grants, manager restart and revoked-view clearing.
+These new native application fixtures still require execution; this is not an
+AM3 application/deployment acceptance claim. The dedicated instance remains the
+accepted AM2 runtime `1a45070` with its frozen predecessor digests above.
+
+
+Application review also reproduced private headings/drafts and catalog labels
+remaining after access loss, plus guide actions using the broader application
+role. Focused regressions fail before fixes and all 124 UI cases pass afterward.
+The guide now reads the effective selected-space role and rejects late capability
+responses. Private catalog labels, article headings/navigation, Tools drafts and
+result counts clear together. Recovery fixtures include a protected retained
+original with exact hash and cross-space negative download checks. The new
+application fixture/CI/live gates remain pending.
+
+The final UI review also closes delayed Administration bootstrap responses and
+clears derived counts when context changes. All 124 script cases pass. Pinned
+Renovate 44.161.0 accepts only the new 0.27.x patch range while retaining the
+independent original consumer's 0.24.x range. Twenty non-UI and eight browser
+Robot dry runs pass locally; browser dry runs are not runtime acceptance.
+
+Final application development validation passes **1048 actual Python/PostgreSQL/
+packaging cases**, **124 script cases**, schema/shell checks, twenty non-UI Robot
+dry runs and eight browser dry runs. The protected native recovery helper also
+passes independently against signed local HTTP, including its retained original.
+All new native fixtures remain unaccepted until exact-source image/native runs
+execute; no live AM3 update has occurred.
+
+
+The initial application released-image run built and audited its runtime, then
+failed because its independent runtime probe still required Core 0.26.x. The
+probe now requires 0.27.x, matching the released pin, workflow and updater bounds.
+The failed report is retained privately; fresh exact-source CI is required for
+the focused fix. The immutable published Core source/artifacts are unchanged.
+
+
+Application source `f263ad7` passes actual local CI (1048 Python/PostgreSQL/
+packaging cases, 124 scripts, twenty Robot dry runs), producer, released-Core and
+Renovate checks. Its three actual OCI revisions/digests/sibling references and
+five downloaded SARIF/SBOM pairs are verified; vendor findings remain. Native
+run 39061168752 passes Debian installation (seventeen passes, three expected
+skips), both real SSO/SDK probes and protected native update/clean restore. Rocky
+passes twenty-seven cases, including the new protected-space browser, but fails
+the existing home workflow: anonymous space discovery resets its public heading
+to "Knowledge". The failed report is retained. A focused regression reproduces
+this reset; reader clearing now restores each page's public heading while
+removing private content. All 125 script cases pass after correction. Fresh
+exact-source publication/native gates remain required; no AM3 promotion or live
+update has occurred, and published Core 0.27.0 is unchanged.

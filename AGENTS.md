@@ -380,13 +380,27 @@ chunks. Keep fixed knowledge MCP errors, generic private-error fallback, object
 errors and role/scope challenge separation. Released Core remains immutable;
 no schema or dependency changed during this closeout.
 
-This closeout marker requires actual exact-source checks and reviewed main
-publication before AM3. Future space work keeps object-type definitions global;
+AM2 closeout main 65829d4 has completed successful local/producer/released-Core/
+both-native checks and actual artifact audits (PLAN.md). AM3 is active on its
+feature branch; the first Core foundation adds the preserved shared-space
+catalog, revisioned grants and captured delegated-token revalidation. Local
+Core content isolation now passes 1040 Python/PostgreSQL/packaging cases,
+106 scripts, schema/shell checks and twenty Robot dry runs. Forward migration
+0015 scopes content, uniqueness, same-space references, receipts, derivatives
+and feed cursors while preserving every predecessor column and OAuth authority.
+The 63 role/grant/scope combinations, captured-token wait/regrant, 70-private-page
+retrieval/provider isolation and independent installed package probes pass.
+Preserve legacy shared fingerprints/DTOs and old sequence positions, even when
+retained event rows have smaller IDs. Exact-source CI/native/publication,
+application transports/UI and deployed acceptance remain pending. Do not expose
+or deploy this candidate as a completed AM3 implementation.
+
+Space work keeps object-type definitions global;
 records, relations, events and annotations are protected by space. Application
 Admins can access every space under actual OAuth scopes; Readers/Editors need
 explicit protected-space grants capped by their application role. Do not infer
 per-client isolation or add a separate grant model without an agreed requirement.
-AM3–AM6 and Windmill Gate remain gated. Earlier entries below are historical
+AM3 acceptance, AM4–AM6 and Windmill Gate remain gated. Earlier entries below are historical
 implementation evidence, not current status.
 
 C0-AM0–AM6 is a separate operator-authorized track in PLAN.md; preserve historical
@@ -542,3 +556,32 @@ current/legacy Wiki maintenance lifecycles and retained history/retry receipts.
 This final evidence marker needs its own exact CI/native verification before
 human review. Reviewed main publication and supported dedicated deployment remain
 required; genuine deployed ece3e90 digests remain frozen. AM2 is not accepted.
+
+
+## AM3 released Core and application conventions (pending acceptance)
+
+Core 0.27.0 is published at immutable 86a7f7f after exact local/image/both-native
+checks and downloaded artifact reproducibility/installation/migration gates.
+See PLAN.md for actual reports and SHA-256 identities. App 0.42.0 pins that exact
+released tag/subdirectory/commit and restricts compatible updates to 0.27.x.
+The live predecessor remains accepted AM2 1a45070; do not deploy the Core-only
+candidate or documentation images as a substitute.
+
+Space selection is explicit immutable service state. Omitted selectors always
+mean legacy Shared; unauthorized/invalid selectors never fall back or infer a
+space from a UUID. Object-type definitions stay global. Actual role/space/scope
+checks, captured-token revalidation after waits, same-space references and legacy
+receipt snapshots remain Core contracts. UI helpers are explicit per-controller
+requests, never a global fetch patch. Clear private DOM/cache/drafts before
+navigation or on access loss and reject both late headers and parsed JSON.
+Admin grants use revisions, tombstones and unchanged uncertain-request keys;
+ordinary home must not fetch Admin account lists. Preserve source/session/grant
+lifetimes, current role checks, CSRF and existing Tools safeguards.
+
+New native protected recovery fixtures are seeded through normal SSO/public HTTP
+before encrypted backup. Compare immutable evidence, authored history, grants
+and record identities after update/clean restore; a trusted Core CLI probe alone
+is not an application SSO observation. Retain all seven existing native browser
+workflows and execute the additional independent-session protected-space case.
+AM3 acceptance requires actual new application native/artifact/main/live gates;
+AM4 and Windmill Gate remain gated. Existing CPU and interactive waivers persist.

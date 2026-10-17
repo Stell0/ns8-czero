@@ -11,6 +11,7 @@ class Element {
   addEventListener(name,handler){this.listeners[name]=handler;}
   setAttribute(name,value){this.attributes[name]=String(value);}
   getAttribute(name){return this.attributes[name] ?? null;}
+  removeAttribute(name){delete this.attributes[name];delete this[name];}
   focus(){this.focused=true;}
   select(){this.selected=true;}
   set innerHTML(_){throw new Error('Untrusted HTML assignment');}

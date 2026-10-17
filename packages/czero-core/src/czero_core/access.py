@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Persist verified accounts and application-wide memberships in PostgreSQL."""
 import time
+from dataclasses import replace
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
 
 from .database import Database
 from .identity import Actor, PermissionDenied, Role, VerifiedIdentity
+from .spaces import require_scope
 
 
 class AccessService:
@@ -59,15 +61,42 @@ class AccessService:
     def authorize(self, actor: Actor, minimum: Role) -> Actor:
         """Revalidate a caller at a shared service boundary."""
         with self.database.engine.connect() as connection:
-            current = self._actor(connection, actor.user_id)
+            current = self.checked_actor(connection, actor)
             current.require(minimum)
             return current
+
+    def checked_actor(self, connection, actor):
+        """Refresh membership without losing a captured delegated token binding.
+
+        Native adapters still supply trusted first-party Actors. A delegated
+        Actor retains only a masked hash and trusted Core verifier; its original
+        access token/grant must remain valid in this very transaction. A later
+        role/space regrant cannot revive a token already deleted by revocation.
+        """
+        if not isinstance(actor, Actor):
+            raise PermissionDenied()
+        current = self._actor(connection, actor.user_id)
+        if actor.delegation is not None:
+            from .oauth_grants import DelegationBinding, GrantRejected
+            if not isinstance(actor.delegation, DelegationBinding):
+                raise PermissionDenied()
+            try:
+                delegated = actor.delegation.validate(connection)
+            except GrantRejected:
+                raise PermissionDenied() from None
+            if delegated.actor.user_id != current.user_id or delegated.issuer != self.issuer:
+                raise PermissionDenied()
+            current = replace(current, delegation=actor.delegation,
+                              delegated_scopes=delegated.scopes)
+        return current
 
     def list_accounts(self, actor: Actor, *, limit: int = 100) -> list[dict]:
         if type(limit) is not int or not 1 <= limit <= 1000:
             raise ValueError("invalid_limit")
         with self.database.engine.connect() as connection:
-            self._actor(connection, actor.user_id).require(Role.ADMIN)
+            current = self.checked_actor(connection, actor)
+            current.require(Role.ADMIN)
+            require_scope(current, Role.ADMIN)
             rows = connection.execute(text("""
                 SELECT a.id, a.username, a.display_name, a.account_key, a.last_seen,
                        CASE WHEN a.account_key = :owner THEN 'admin' ELSE m.role END AS role,
@@ -79,8 +108,9 @@ class AccessService:
 
     def profile(self, actor: Actor) -> dict:
         with self.database.engine.connect() as connection:
-            current = self._actor(connection, actor.user_id)
+            current = self.checked_actor(connection, actor)
             current.require(Role.READER)
+            require_scope(current, Role.READER)
             row = connection.execute(text("""
                 SELECT id, username, display_name FROM c0_accounts
                 WHERE id = :id AND issuer = :issuer
@@ -94,7 +124,9 @@ class AccessService:
             # Rare administrative changes serialize before acquiring account
             # locks, avoiding opposing-admin deadlocks and stale-role writes.
             connection.execute(text("SELECT pg_advisory_xact_lock(49372)"))
-            self._actor(connection, actor.user_id).require(Role.ADMIN)
+            current = self.checked_actor(connection, actor)
+            current.require(Role.ADMIN)
+            require_scope(current, Role.ADMIN)
             target = connection.execute(text("""
                 SELECT account_key FROM c0_accounts WHERE id = :id AND issuer = :issuer
                 FOR UPDATE

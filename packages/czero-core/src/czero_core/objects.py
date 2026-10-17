@@ -1,6 +1,6 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Shared-space object CRUD: bounded schemas, atomic revisions and references."""
+"""Space-bound records, global schemas, atomic revisions and typed references."""
 import json
 from uuid import UUID, uuid4
 
@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from .identity import PermissionDenied, Role
+from .spaces import SpaceBound, require_scope, content_row, hold_authority, next_cursor
 from .object_schema import bounded_json, name, schema_validator, tags, validate_record
 
 
@@ -24,7 +25,7 @@ def page(limit,offset=0):
         raise ValueError('invalid_paging')
 
 
-class ObjectService:
+class ObjectService(SpaceBound):
     def __init__(self,database,access,*,reference_resolvers=None):
         self.database=database
         self.access=access
@@ -36,9 +37,13 @@ class ObjectService:
                 raise ValueError('invalid_reference_resolver')
 
     def _authorize(self,c,actor,role):
+        return self._space_authorize(c,actor,role)
+
+    def _authorize_types(self,c,actor,role):
         if self.access is None: raise PermissionDenied()
-        current=self.access._actor(c,actor.user_id)
+        current=self.access.checked_actor(c,actor)
         current.require(role)
+        require_scope(current, role)
         return current
 
     def register_type(self,actor,type_name,label,schema,unique_fields=None):
@@ -58,7 +63,7 @@ class ObjectService:
                 raise ValueError('unique_string_too_long')
         try:
             with self.database.engine.begin() as c:
-                self._authorize(c,actor,Role.ADMIN)
+                self._authorize_types(c,actor,Role.ADMIN)
                 row=c.execute(text('''INSERT INTO c0_object_types(name,label,schema,unique_fields)
                     VALUES(:name,:label,CAST(:schema AS jsonb),:fields) RETURNING *'''),
                     {'name':type_name,'label':label.strip(),'schema':json.dumps(schema),'fields':unique_fields}).mappings().one()
@@ -68,7 +73,7 @@ class ObjectService:
     def list_types(self,actor,*,limit=100,offset=0):
         page(limit,offset)
         with self.database.engine.connect() as c:
-            self._authorize(c,actor,Role.READER)
+            self._authorize_types(c,actor,Role.READER)
             return [dict(r) for r in c.execute(text('SELECT * FROM c0_object_types ORDER BY name LIMIT :limit OFFSET :offset'),
                 {'limit':limit,'offset':offset}).mappings()]
 
@@ -79,14 +84,14 @@ class ObjectService:
 
     def get_type(self,actor,type_name):
         with self.database.engine.connect() as c:
-            self._authorize(c,actor,Role.READER)
+            self._authorize_types(c,actor,Role.READER)
             return dict(self._type(c,type_name))
 
     def _get(self,c,object_id,*,lock=False):
-        sql='SELECT * FROM c0_objects WHERE id=:id'+(' FOR UPDATE' if lock else '')
-        row=c.execute(text(sql),{'id':UUID(str(object_id))}).mappings().one_or_none()
+        sql='SELECT * FROM c0_objects WHERE space_id=:space AND id=:id'+(' FOR UPDATE' if lock else '')
+        row=c.execute(text(sql),{'space':self._space(c),'id':UUID(str(object_id))}).mappings().one_or_none()
         if row is None: raise ObjectNotFound()
-        return row
+        return content_row(row)
 
     def get(self,actor,object_id):
         with self.database.engine.connect() as c:
@@ -103,16 +108,17 @@ class ObjectService:
             spec=self._type(c,type_name)
             if set(where)-set(spec['schema'].get('properties',{})):
                 raise ValueError('invalid_filter')
-            return [dict(r) for r in c.execute(text('''SELECT * FROM c0_objects
-                WHERE type_name=:name AND data @> CAST(:filter AS jsonb)
+            return [content_row(r) for r in c.execute(text('''SELECT * FROM c0_objects
+                WHERE space_id=:space AND type_name=:name AND data @> CAST(:filter AS jsonb)
                 AND (CAST(:tag AS varchar) IS NULL OR tags @> ARRAY[CAST(:tag AS varchar)])
                 ORDER BY created_at,id LIMIT :limit OFFSET :offset'''),
-                {'name':type_name,'filter':json.dumps(where),'tag':tag,'limit':limit,'offset':offset}).mappings()]
+                {'space':self._space(c),'name':type_name,'filter':json.dumps(where),'tag':tag,'limit':limit,'offset':offset}).mappings()]
 
     def _event(self,c,actor,row,operation):
-        c.execute(text('''INSERT INTO c0_object_events(object_id,type_name,revision,operation,actor_id)
-            VALUES(:id,:type,:revision,:operation,:actor)'''),
-            {'id':row['id'],'type':row['type_name'],'revision':row['revision'],'operation':operation,'actor':actor.user_id})
+        c.execute(text('''INSERT INTO c0_object_events(space_id,feed_cursor,object_id,type_name,revision,operation,actor_id)
+            VALUES(:space,:cursor,:id,:type,:revision,:operation,:actor)'''),
+            {'space':self._space(c),'cursor':next_cursor(c,self._space(c),'object'),
+             'id':row['id'],'type':row['type_name'],'revision':row['revision'],'operation':operation,'actor':actor.user_id})
 
     def _keys(self,c,row,spec):
         c.execute(text('DELETE FROM c0_object_keys WHERE object_id=:id'),{'id':row['id']})
@@ -121,9 +127,9 @@ class ObjectService:
             if value is None: continue # Missing/optional null values are not unique keys.
             encoded=json.dumps(value,ensure_ascii=False,allow_nan=False)
             if len(encoded.encode('utf-8'))>1024: raise ValueError('unique_value_too_large')
-            c.execute(text('''INSERT INTO c0_object_keys(object_id,type_name,field,value)
-                VALUES(:id,:type,:field,CAST(:value AS jsonb))'''),
-                {'id':row['id'],'type':row['type_name'],'field':field,'value':encoded})
+            c.execute(text('''INSERT INTO c0_object_keys(space_id,object_id,type_name,field,value)
+                VALUES(:space,:id,:type,:field,CAST(:value AS jsonb))'''),
+                {'space':self._space(c),'id':row['id'],'type':row['type_name'],'field':field,'value':encoded})
 
     def _write(self,c,actor,operation):
         action=operation.get('operation')
@@ -134,9 +140,9 @@ class ObjectService:
         if action=='create':
             spec=self._type(c,operation.get('type_name'))
             data=validate_record(spec['schema'],operation.get('data'))
-            row=c.execute(text('''INSERT INTO c0_objects(id,type_name,data,tags)
-                VALUES(:id,:type,CAST(:data AS jsonb),:tags) RETURNING *'''),
-                {'id':uuid4(),'type':spec['name'],'data':json.dumps(data),'tags':tags(operation.get('tags',[]))}).mappings().one()
+            row=c.execute(text('''INSERT INTO c0_objects(space_id,id,type_name,data,tags)
+                VALUES(:space,:id,:type,CAST(:data AS jsonb),:tags) RETURNING *'''),
+                {'space':self._space(c),'id':uuid4(),'type':spec['name'],'data':json.dumps(data),'tags':tags(operation.get('tags',[]))}).mappings().one()
         else:
             row=self._get(c,operation.get('id'),lock=True)
             revision=operation.get('expected_revision')
@@ -153,7 +159,7 @@ class ObjectService:
                 {'id':row['id'],'data':json.dumps(data),'tags':tags(operation.get('tags',list(row['tags'])))}).mappings().one()
         self._keys(c,row,spec)
         self._event(c,actor,row,action)
-        return dict(row)
+        return content_row(row)
 
     def batch(self,actor,operations):
         if type(operations) is not list or not 1<=len(operations)<=25 or any(type(op) is not dict for op in operations):
@@ -163,6 +169,7 @@ class ObjectService:
         try:
             with self.database.engine.begin() as c:
                 c.execute(text("SELECT pg_advisory_xact_lock(49375)"))
+                hold_authority(c)
                 self._authorize(c,actor,Role.EDITOR)
                 # Serialize commit order before allocating event IDs, so a cursor
                 # cannot skip an older uncommitted event. Lock rows consistently.
@@ -187,6 +194,7 @@ class ObjectService:
         try:
             with self.database.engine.begin() as c:
                 c.execute(text("SELECT pg_advisory_xact_lock(49375)"))
+                hold_authority(c)
                 self._authorize(c,actor,Role.EDITOR)
                 ids=sorted({UUID(str(source_id)),UUID(str(target_id))},key=str)
                 rows={i:self._get(c,i,lock=True) for i in ids}
@@ -197,19 +205,19 @@ class ObjectService:
                 existing=c.execute(text('''SELECT * FROM c0_object_relations
                     WHERE source_id=:source AND target_id=:target AND kind=:kind'''),
                     {'source':source['id'],'target':target['id'],'kind':kind}).mappings().one_or_none()
-                if existing: return dict(existing)
-                row=c.execute(text('''INSERT INTO c0_object_relations(id,source_id,target_id,kind)
-                    VALUES(:id,:source,:target,:kind) RETURNING *'''),
-                    {'id':uuid4(),'source':source['id'],'target':target['id'],'kind':kind}).mappings().one()
+                if existing: return content_row(existing)
+                row=c.execute(text('''INSERT INTO c0_object_relations(space_id,id,source_id,target_id,kind)
+                    VALUES(:space,:id,:source,:target,:kind) RETURNING *'''),
+                    {'space':self._space(c),'id':uuid4(),'source':source['id'],'target':target['id'],'kind':kind}).mappings().one()
                 self._event(c,actor,source,'relation_add')
-                return dict(row)
+                return content_row(row)
         except IntegrityError: raise ObjectConflict() from None
 
     def relations(self,actor,object_id,*,limit=50,offset=0):
         page(limit,offset)
         with self.database.engine.connect() as c:
             self._authorize(c,actor,Role.READER); self._get(c,object_id)
-            return [dict(r) for r in c.execute(text('''SELECT r.*,s.type_name AS source_type,t.type_name AS target_type
+            return [content_row(r) for r in c.execute(text('''SELECT r.*,s.type_name AS source_type,t.type_name AS target_type
                 FROM c0_object_relations r JOIN c0_objects s ON s.id=r.source_id JOIN c0_objects t ON t.id=r.target_id
                 WHERE r.source_id=:id OR r.target_id=:id ORDER BY r.created_at,r.id LIMIT :limit OFFSET :offset'''),
                 {'id':UUID(str(object_id)),'limit':limit,'offset':offset}).mappings()]
@@ -217,9 +225,10 @@ class ObjectService:
     def remove_relation(self,actor,relation_id):
         with self.database.engine.begin() as c:
             c.execute(text("SELECT pg_advisory_xact_lock(49375)"))
+            hold_authority(c)
             self._authorize(c,actor,Role.EDITOR)
-            row=c.execute(text('DELETE FROM c0_object_relations WHERE id=:id RETURNING source_id'),
-                {'id':UUID(str(relation_id))}).mappings().one_or_none()
+            row=c.execute(text('DELETE FROM c0_object_relations WHERE space_id=:space AND id=:id RETURNING source_id'),
+                {'space':self._space(c),'id':UUID(str(relation_id))}).mappings().one_or_none()
             if row is None: raise ObjectNotFound()
             source=self._get(c,row['source_id'],lock=True)
             self._event(c,actor,source,'relation_remove')
@@ -229,15 +238,16 @@ class ObjectService:
         if type(after) is not int or after<0: raise ValueError('invalid_cursor')
         with self.database.engine.connect() as c:
             self._authorize(c,actor,Role.READER)
-            return [dict(r) for r in c.execute(text('SELECT * FROM c0_object_events WHERE id>:after ORDER BY id LIMIT :limit'),
-                {'after':after,'limit':limit}).mappings()]
+            return [dict(r) for r in c.execute(text('''SELECT feed_cursor AS id,object_id,type_name,revision,operation,actor_id,created_at
+                FROM c0_object_events WHERE space_id=:space AND feed_cursor>:after ORDER BY feed_cursor LIMIT :limit'''),
+                {'space':self._space(c),'after':after,'limit':limit}).mappings()]
 
     def resolve_reference(self,actor,kind,resource_id,type_name):
         """Resolve a typed object or an explicitly registered relational domain.
 
         A trusted resolver(connection, current_actor, UUID) returns a mapping
         with type_name and bounded JSON data, or None. It must honor its domain
-        role, use this transaction and coordinate its own deletion policy.
+        role and canonical space, use this transaction and coordinate its own deletion policy.
         M08/M09 can register their real storage after it exists. Current durable
         object relations deliberately retain real object foreign keys.
         """

@@ -7,7 +7,7 @@ function options() {
     kind:$('knowledge-kind').value,rerank:$('knowledge-rerank').value,graph_depth:$('knowledge-depth').value};
 }
 async function read(path) {
-  const response = await fetch('./api/v1/' + path, {cache:'no-store'});
+  const response = await (typeof window!=='undefined' && window.C0Space ? window.C0Space.request(path) : fetch('./api/v1/' + path, {cache:'no-store'}));
   if (!response.ok) throw new Error([401,403].includes(response.status) ? 'Sign-in or permitted access is required.' :
     response.status===422 ? 'The selected options exceed instance policy or are invalid.' : 'Search is unavailable. Try again.');
   return response.json();
@@ -27,7 +27,7 @@ async function searchKnowledge() {
       let destination=null;
       if(hit.wiki && valid(hit.wiki.page_id))destination='./wiki?'+new URLSearchParams({page:hit.wiki.page_id,revision:hit.wiki.revision});
       if(hit.citation && valid(hit.citation.source_id) && valid(hit.citation.version_id) && valid(hit.citation.chunk_id))destination='./sources?'+new URLSearchParams({source:hit.citation.source_id,version:hit.citation.version_id,chunk:hit.citation.chunk_id});
-      if(destination){const anchor=text('a',hit.title);anchor.href=destination;heading.replaceChildren(anchor);}
+      if(destination){const anchor=text('a',hit.title);anchor.href=typeof window!=='undefined' && window.C0Space?window.C0Space.pageURL(destination):destination;heading.replaceChildren(anchor);}
       row.append(heading,text('p',hit.excerpt));
       row.append(text('p',`${hit.kind==='wiki_revision'?'Article':'Source'} · revision ${hit.revision}`));
       const detail=document.createElement('details');detail.append(text('summary','Citation details'),text('pre',JSON.stringify(hit.citation || hit.wiki,null,2)));
@@ -60,3 +60,10 @@ async function initialize() {
   } catch(error) {$('search-account').textContent=error.message;$('search-signin').hidden=false;}
 }
 initialize();
+
+if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
+  ++searchSequence;$('knowledge-results').replaceChildren();
+  for(const id of ['search-graphs','knowledge-search-status','knowledge-search-details','knowledge-index-status'])$(id).textContent='';
+  $('search-workspace').hidden=true;$('knowledge-query').value='';
+  $('search-account').textContent='Space access changed. Choose a permitted space.';
+});

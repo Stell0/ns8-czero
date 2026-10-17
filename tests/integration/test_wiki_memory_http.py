@@ -53,7 +53,7 @@ def owner_and_member(fixture, role):
     return owner, identity, issue
 
 
-def test_all_64_accepted_schemas_roles_scopes_and_bindings_unchanged(application):
+def test_accepted_contracts_only_add_optional_space_selectors(application):
     app, owner_token, *_=application
     registry=app.state.operations
     baseline=json.loads((Path(__file__).parents[1]/'fixtures/agent_memory/am1_contract.json').read_text())
@@ -61,11 +61,20 @@ def test_all_64_accepted_schemas_roles_scopes_and_bindings_unchanged(application
         actual=registry.definition(expected['name'])
         for key,value in expected.items():
             if key in ('input_schema','output_schema'):
-                value_at_key=hashlib.sha256(json.dumps(actual[key],sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                projected=json.loads(json.dumps(actual[key]))
+                if key=='input_schema':
+                    for candidate in (projected,projected.get('$defs',{}).get('SearchOptions',{})):
+                        properties=candidate.get('properties',{})
+                        if 'space_id' in properties:
+                            assert 'space_id' not in candidate.get('required',[])
+                            assert properties.pop('space_id')=={
+                                'anyOf':[{'format':'uuid','type':'string'},{'type':'null'}],
+                                'default':None,'title':'Space Id'}
+                value_at_key=hashlib.sha256(json.dumps(projected,sort_keys=True,separators=(',',':')).encode()).hexdigest()
             else: value_at_key=actual[key]
             assert value_at_key==value, (expected['name'],key)
     owner=app.state.auth.access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
-    assert len(registry.describe(owner))==66
+    assert len(registry.describe(owner))==71
     schema=app.openapi()
     assert schema['paths'][RESOLVE]['get']['x-c0-operation']=={
         'name':'wiki_pages_resolve','minimum_role':'reader','required_scope':'c0:read','read_only':True}

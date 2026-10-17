@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from .access import AccessService
 from .database import Database
 from .identity import Actor, PermissionDenied, Role
+from .spaces import require_scope
 
 _NAME = re.compile(r"[a-z][a-z0-9_.-]{0,63}\Z")
 _KEY = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
@@ -122,28 +123,40 @@ class JobService:
     def _authorize(self, connection, actor: Actor):
         if self.access is None:
             raise PermissionDenied()
-        self.access._actor(connection, actor.user_id).require(Role.ADMIN)
+        current = self.access.checked_actor(connection, actor)
+        current.require(Role.ADMIN)
+        require_scope(current, Role.ADMIN)
 
     @staticmethod
     def _limit(limit):
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("invalid_limit")
 
-    def _enqueue(self, connection, name, payload, key):
+    def _enqueue(self, connection, name, payload, key, *, space_id=None):
         handler = self.registry.get(name)
         bounded_json(payload)
         encoded = bounded_json(handler.validate(payload))
+        # Source ownership comes from trusted parent state (or its creation
+        # transaction), never a caller-supplied payload selector. Admin queued
+        # retries and schedules still derive the real parent's space here.
+        if name in ('source.extract', 'source.cleanup'):
+            parent = connection.execute(text('SELECT space_id FROM c0_source_versions WHERE id=:id'),
+                {'id': UUID(json.loads(encoded)['version_id'])}).scalar_one_or_none()
+            if parent is not None:
+                if space_id is not None and space_id != parent:
+                    raise ValueError('job_space_mismatch')
+                space_id = parent
         fingerprint = hashlib.sha256((name + "\n" + encoded).encode()).hexdigest()
         if not isinstance(key, str) or not 1 <= len(key) <= 192:
             raise ValueError("invalid_idempotency_key")
         row = connection.execute(text("""INSERT INTO c0_jobs
-            (id,idempotency_key,handler,payload,fingerprint,max_attempts,timeout_seconds)
-            VALUES (:id,:key,:handler,CAST(:payload AS jsonb),:fingerprint,:attempts,:timeout)
+            (id,idempotency_key,handler,payload,fingerprint,max_attempts,timeout_seconds,space_id)
+            VALUES (:id,:key,:handler,CAST(:payload AS jsonb),:fingerprint,:attempts,:timeout,:space)
             ON CONFLICT (idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
             RETURNING *"""), {"id":uuid4(), "key":key, "handler":name, "payload":encoded,
                 "fingerprint":fingerprint, "attempts":handler.max_attempts,
-                "timeout":handler.timeout_seconds}).mappings().one()
-        if row["fingerprint"] != fingerprint:
+                "timeout":handler.timeout_seconds,"space":space_id}).mappings().one()
+        if row["fingerprint"] != fingerprint or row['space_id'] != space_id:
             raise JobConflict()
         return dict(row)
 

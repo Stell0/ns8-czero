@@ -3,9 +3,17 @@
 'use strict';
 (() => {
   const el = id => document.getElementById(id);
-  let profile = null, clientSeq = 0, jobSeq = 0, scheduleSeq = 0;
+  let profile = null, clientSeq = 0, jobSeq = 0, scheduleSeq = 0, adminEpoch = 0;
   let jobDetailSeq = 0, scheduleDetailSeq = 0, selectedSchedule = null, pendingJob = null;
   const allowed = () => profile && profile.role === 'admin';
+  if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
+    ++adminEpoch;++clientSeq;++jobSeq;++scheduleSeq;++jobDetailSeq;++scheduleDetailSeq;
+    profile=null;selectedSchedule=null;pendingJob=null;el('admin-workspace').hidden=true;
+    for(const id of ['client-list','job-list','schedule-list','job-handler','schedule-handler'])el(id).replaceChildren();
+    el('admin-account').textContent='Space access changed. Choose a permitted space.';
+    for(const id of ['client-status','job-status','schedule-status','job-data','job-runs','schedule-runs','schedule-identity'])el(id).textContent='';
+    for(const id of ['client-name','client-callbacks','job-payload','schedule-name','schedule-payload'])el(id).value='';
+  });
   const message = (id, text) => { el(id).textContent = text; };
   const jsonObject = text => {
     const value = JSON.parse(text);
@@ -15,6 +23,7 @@
   const inputError = error => error instanceof SyntaxError ? 'Enter valid JSON.' : error.message;
   async function api(path, method = 'GET', body = null) {
     if (!allowed()) throw new Error('Only application Admins can manage these settings.');
+    const captured=adminEpoch;
     const headers = body === null ? {} : {'Content-Type': 'application/json'};
     if (method !== 'GET') headers['X-C0-CSRF'] = profile.csrf_token;
     let response;
@@ -23,8 +32,10 @@
         method, headers, cache: 'no-store', body: body === null ? null : JSON.stringify(body)
       });
     } catch (_) { throw new Error('The request did not complete. Refresh to check saved state before retrying.'); }
+    if(captured!==adminEpoch || !allowed())throw new Error('Access changed. Refresh your account.');
     if (!response.ok) {
       if ([401, 403].includes(response.status)) {
+        if(typeof window!=='undefined' && window.C0Space)window.C0Space.clear('Application access changed. Refresh your account.');
         profile = null;
         el('admin-workspace').hidden = true;
         el('admin-signin').hidden = false;
@@ -39,7 +50,9 @@
       };
       throw new Error(errors[response.status] || 'The request did not complete.');
     }
-    return response.status === 204 ? null : response.json();
+    let value;try{value=response.status===204?null:await response.json();}catch{throw new Error('The response is unavailable. Refresh to check saved state.');}
+    if(captured!==adminEpoch || !allowed())throw new Error('Access changed. Refresh your account.');
+    return value;
   }
   function item(title) {
     const li = document.createElement('li'), text = document.createElement('p');
@@ -188,10 +201,11 @@
     finally { if (seq === scheduleDetailSeq) save.disabled = false; }
   });
   (async () => {
+    const captured=adminEpoch;
     try {
       const response = await fetch('./api/v1/me', {cache: 'no-store'});
       if (!response.ok) throw new Error('Sign in with an admitted application Admin account.');
-      profile = await response.json();
+      const current=await response.json();if(captured!==adminEpoch)return;profile=current;
       message('admin-account', 'Signed in as ' + profile.username + ' · ' + profile.role);
       if (!allowed()) { message('admin-account', 'Only application Admins can manage clients and tasks.'); return; }
       el('admin-workspace').hidden = false;
@@ -205,6 +219,6 @@
           option.textContent = handler.name + ' · ' + handler.timeout_seconds + ' second limit'; el(id).append(option);
         }
       }
-    } catch (_) { message('admin-account', 'Administration is unavailable. Sign in or try again later.'); el('admin-signin').hidden = false; }
+    } catch (_) { if(captured!==adminEpoch)return;message('admin-account', 'Administration is unavailable. Sign in or try again later.'); el('admin-signin').hidden = false; }
   })();
 })();

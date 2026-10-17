@@ -4,8 +4,11 @@ Reusable Python services for C0 applications, independent of the NethServer
 agent SDK and the FastAPI transport. This package owns the PostgreSQL schema,
 shared application operations and trusted deterministic worker.
 
-One database represents one shared knowledge space. Services implement persisted
-Reader/Editor/Admin membership, browser/OIDC sessions, objects and typed relations,
+One database retains its original shared knowledge space and supports protected
+spaces with explicit Reader/Editor grants capped by current application roles.
+Application Admins can access every space under actual delegated OAuth scopes.
+Object-type definitions remain shared across the instance. Services implement
+persisted Reader/Editor/Admin membership, browser/OIDC sessions, objects and typed relations,
 immutable document evidence/citations, authored Wiki/claims/graph, text and optional
 semantic retrieval, deterministic jobs and bounded external-client grants.
 The application supplies trusted adapters, authenticated actors and HTTP/MCP
@@ -39,10 +42,31 @@ packaged schema: set `CZERO_DATABASE_URL` privately and run
 the knowledge-space identity. Never place a database URL or identity/provider
 secret in source code or application logs.
 
-Version `0.24.2` corrects distribution instructions after the initial verified
-`0.24.1` release, with the existing
-`0013_oauth_consent` schema and unchanged runtime contracts. The compatible consumer range is `>=0.24.1,<0.25.0`. Publication and automatic
-fork-update evidence is recorded in the repository PLAN.md.
+Version `0.27.0` is the unpublished AM3 development candidate, adding packaged
+forward migrations `0014_spaces` and `0015_content_spaces`. Publication gates and
+the last verified released dependency are recorded in PLAN.md; do not treat a
+candidate version or a started workflow as a published artifact. The application
+retains its immutable released 0.26.0 dependency until the Core release sequence
+passes.
+
+Trusted callers use `SpaceService` for discovery, creation and revisioned grant
+management. Content services select a space with `service.in_space(space_id)`;
+this returns a separate service copy and never mutates shared request state.
+Omitting selection always uses the original shared UUID. Invalid or unauthorized
+selectors fail; direct resource UUIDs never select or authorize another space.
+Core checks current membership, selected-space grants and actual bound OAuth
+authority inside service transactions, including receipt replay and after waits
+or optional provider calls. Revocation/regrant cannot revive captured tokens.
+
+Existing shared mutation fingerprints, response shapes and receipt snapshots are
+preserved. Protected receipts and uniqueness are space-bound. Re-read current
+content before revisioned writes; replay returns the original result. Immutable
+source citations retain their identities and exact evidence. Space-qualified
+transport references are an application responsibility; registered trusted
+reference resolvers must honor the canonical caller space. Workers derive
+ownership from stored parents. Optional retrieval filters candidates, counts and
+provider input by space and falls back to exact vector distance when a filtered
+approximate scan underfills. Configuration does not establish provider quality.
 
 Licensed GPL-3.0-or-later; the complete license is included in both distributions.
 
@@ -57,8 +81,8 @@ checks its uploaded hashes and publishes it without replacing the module's
 latest release. Replays must match existing artifact bytes; published files
 are never clobbered.
 
-Core 0.24.1 is published with verified checksums at
-https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1.
+The last accepted runtime uses verified released Core 0.26.0:
+https://github.com/Stell0/ns8-czero/releases/tag/core-v0.26.0.
 Consult PLAN.md for subsequent exact-source publication gates and actual
 consumer/Renovate evidence; a started workflow does not establish acceptance.
 
@@ -78,10 +102,10 @@ Use a Python 3.12–3.14 virtual environment and the verified release assets, or
 the immutable Git tag/subdirectory source:
 
 ```sh
-uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.24.1#subdirectory=packages/czero-core"
+uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.26.0#subdirectory=packages/czero-core"
 ```
 
-For applications, declare the compatible range `>=0.24.1,<0.25.0` and the
+For that released generation, declare the compatible range `>=0.26.0,<0.27.0` and the
 reviewed Git tag in `[tool.uv.sources]`, then commit uv.lock. Never replace the
 released source with a local checkout implicitly. The template producer can
 opt in with `CZERO_CORE_SOURCE=local`; this affects only its build environment.

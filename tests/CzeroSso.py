@@ -538,6 +538,109 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
+    def verify_disposable_spaces_browser(self, module_id, host):
+        """Independent normal SSO sessions exercise actual protected-space UI."""
+        from urllib.parse import parse_qs, urlsplit
+        builtin=BuiltIn(); previous=builtin.set_log_level('NONE'); stage='sign-in'
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary'); browser=builtin.get_library_instance('Browser')
+            payload=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/personas.json'))
+            retained=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/expected-identities.json'))['protected']
+            self._browser_password=payload['password']
+            def run(name,*args): return builtin.run_keyword('Browser.'+name,*args)
+            def login(username):
+                run('Go To','https://'+host+'/auth/login')
+                run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
+                browser.fill_text('input[name="username"]',username)
+                browser.fill_text('input[name="password"]',self._browser_password)
+                run('Click','#kc-login');run('Wait For Elements State','#sign-out','visible','timeout=30s')
+            def admin_role(role):
+                run('Go To','https://'+host+'/?view=account')
+                run('Select Options By','select[aria-label="Access for c0member"]','value',role)
+                run('Click','button[aria-label="Save access for c0member"]')
+                run('Get Text','#sharing-status','==','Access saved')
+            owner_context=run('New Context','ignoreHTTPSErrors=True');run('New Page');login('c0owner')
+            stage='space-creation';admin_role('editor')
+            run('Go To','https://'+host+'/admin')
+            name='<img src=x onerror=alert(1)> protected-'+secrets.token_hex(4)
+            run('Fill Text','#space-name',name);run('Click','#create-space')
+            run('Get Text','#managed-space','==','Protected space: '+name)
+            identifier=parse_qs(urlsplit(browser.get_url()).query)['space_id'][0]
+            run('Get Element Count','#managed-space img, #space-selector img','==',0)
+            row='#space-grant-list tr:has(select[aria-label="Space access for c0member"])'
+            def grant(role):
+                run('Select Options By',row+' select','value',role)
+                run('Click',row+' button')
+                run('Get Text',row+' [role="status"]','contains','Grant saved.')
+            grant('reader')
+            assert_accessibility(browser,'admin','admin')
+            tools='https://'+host+'/wiki?view=tools&space_id='+identifier
+            run('Go To',tools);run('Wait For Elements State','#wiki-workspace','visible','timeout=30s')
+            run('Click','#new-page');run('Fill Text','#wiki-slug','private/'+secrets.token_hex(4))
+            title='Private browser article '+secrets.token_hex(4)
+            run('Fill Text','#wiki-title',title);run('Fill Text','#wiki-body','# Private original')
+            run('Click','#save-page');run('Get Text','#page-status','==','Page saved.')
+            run('Fill Text','#wiki-body','# Private revised');run('Click','#save-page')
+            run('Get Text','#wiki-identity','contains','revision 2')
+            page=browser.get_text('#wiki-identity').split(' · ')[0]
+            stage='reader-role-cap'
+            member_context=run('New Context','ignoreHTTPSErrors=True');run('New Page');login('c0member')
+            run('Go To',tools);run('Wait For Elements State','#wiki-workspace','visible','timeout=30s')
+            run('Click','#wiki-pages button:text-is('+json.dumps(title)+')')
+            run('Get Property','#wiki-body','readOnly','==',True)
+            run('Wait For Elements State','#save-page','hidden')
+            run('Get Property','#wiki-body','value','contains','Private revised')
+            run('Click','#wiki-history button:text-is("View revision 1")')
+            run('Get Text','#wiki-revision','contains','Private original')
+            assert_accessibility(browser,'wiki','reader')
+            # Same user, same UUID, explicit Shared choice: no private fallback.
+            stage='shared-selection'
+            shared=browser.get_property('#space-selector option:text-matches("shared")','value')
+            run('Select Options By','#space-selector','value',shared)
+            run('Wait For Elements State','#wiki-workspace','visible','timeout=30s')
+            assert 'space_id=' not in browser.get_url(), 'Shared choice retained a private selector'
+            run('Get Element Count','#wiki-pages button:text-is('+json.dumps(title)+')','==',0)
+            # Read the evidence created BEFORE native backup/clean restore.
+            stage='restored-evidence'
+            citation=retained['sources'][0]['citation'];source=retained['sources'][0]['version']
+            run('Go To','https://'+host+'/sources?space_id='+retained['space']['id']+
+                '&source='+source['source_id']+'&version='+source['id']+'&chunk='+citation['chunk_id'])
+            run('Get Text','#reader-document','contains','Selected native memory evidence')
+            run('Get Text','#reader-excerpt','contains','Selected native memory evidence')
+            assert_accessibility(browser,'sources','reader')
+            run('Switch Context',owner_context);run('Go To','https://'+host+'/admin?space_id='+identifier)
+            stage='editor-grant';grant('editor')
+            run('Switch Context',member_context);run('Go To',tools)
+            run('Click','#wiki-pages button:text-is('+json.dumps(title)+')')
+            run('Get Property','#wiki-body','readOnly','==',False)
+            run('Fill Text','#wiki-body','# Independent private update');run('Click','#save-page')
+            run('Get Text','#wiki-identity','contains','revision 3')
+            assert_accessibility(browser,'wiki','editor')
+            stage='manager-restart'
+            _,rc=ssh.execute_command('runagent -m '+shlex.quote(module_id)+' systemctl --user restart czero-pod.service',return_rc=True,timeout='180 seconds')
+            assert rc==0, 'Protected browser manager restart failed'
+            builtin.run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route')
+            article='https://'+host+'/wiki?space_id='+identifier+'&page='+page
+            run('Go To',article);run('Get Text','#reader-content h2','==','Independent private update')
+            run('Click','#reader-history-panel > summary')
+            run('Click','#reader-history a:text-matches("Revision 1")')
+            run('Get Text','#reader-content h2','==','Private original')
+            stage='revoked-view-clearing'
+            run('Switch Context',owner_context);run('Reload');grant('')
+            run('Switch Context',member_context);run('Click','#refresh-space')
+            run('Get Text','#space-status','contains','unavailable')
+            run('Get Element Count','#reader-content h2','==',0)
+            run('Get Text','#page-title','==','Knowledge')
+            run('Get Element Count','#reader-export[href]','==',0)
+            run('Get Element Count','#reader-history a','==',0)
+            assert 'space_id='+identifier in browser.get_url(), 'Revoked space silently fell back'
+            run('Reload');run('Get Element Count','#reader-content h2','==',0)
+        except Exception as error:
+            raise AssertionError('Disposable spaces browser failed at '+stage+' ('+type(error).__name__+')') from None
+        finally:
+            builtin.set_log_level(previous)
+
+    @keyword
     def verify_disposable_search_browser(self, host):
         builtin = BuiltIn(); previous = builtin.set_log_level('NONE')
         try:

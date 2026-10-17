@@ -6,7 +6,7 @@ The caller supplies trusted issuer keys. Token headers never select a remote
 key source, and token role claims never assign C0 permissions.
 """
 import base64
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 import hashlib
 import hmac
@@ -43,6 +43,11 @@ class Actor:
     user_id: UUID
     role: Role
     is_owner: bool = False
+    # Internal trusted context, never request arguments or identity authority.
+    # Exclude from identity equality and representations; services refresh it.
+    delegation: object | None = field(default=None, repr=False, compare=False)
+    delegated_scopes: frozenset[str] | None = field(default=None, repr=False, compare=False)
+    space_id: UUID | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):
         if not isinstance(self.user_id, UUID) or not isinstance(self.role, Role) or type(self.is_owner) is not bool:

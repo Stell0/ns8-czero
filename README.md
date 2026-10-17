@@ -2,13 +2,13 @@
 
 **Status (17 October 2026): Agent Memory AM0–AM2 runtime acceptance passes.** The dedicated instance runs main `1a45070`, with Core **0.26.0**, app **0.41.0** and schema **0013**. Agents can ingest bounded text evidence and resolve/create/revise Wiki pages with explicit revision and retry protection. Actual current/legacy SDK workflows, fresh OAuth scope consent, supported update/restart, original-data preservation and bounded journal privacy pass. The existing connector separately reads the new immutable evidence and historical Wiki content. Its cached tool list has not refreshed, so new-tool invocation through that connector is not claimed.
 
-Main passes 958 Python/PostgreSQL/packaging cases, 106 script cases, released-Core/image checks, Debian installation and genuine Rocky upgrade with all seven automated browser workflows. See [PLAN.md](PLAN.md) for exact source, artifacts, deployed digests and evidence attribution. This documentation closeout needs its own completed checks and reviewed main publication before AM3 starts. Protected spaces and AM3–AM6 remain pending; Windmill Gate remains gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
+Main passes 958 Python/PostgreSQL/packaging cases, 106 script cases, released-Core/image checks, Debian installation and genuine Rocky upgrade with all seven automated browser workflows. Its documentation closeout main 65829d4 also passes its completed checks and artifact audits. See [PLAN.md](PLAN.md) for exact source, artifacts, deployed digests and evidence attribution. AM3 development has started; protected spaces and AM3–AM6 deployment acceptance remain pending. Windmill Gate remains gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
 
 ## Purpose and boundaries
 
 C0 is a deployable application foundation and a forkable GitHub template. External coding agents can extend its shared operations and application UI while retaining native NethServer lifecycle, packaging and tests. C0 Core lives in `packages/czero-core`; fork-specific business logic belongs in `app`.
 
-One installed C0 module owns one dedicated PostgreSQL instance and one shared knowledge space. Access uses one owner and optional Reader, Editor and Admin memberships. There is no per-document ACL system or multi-tenancy.
+One installed C0 module owns a dedicated PostgreSQL instance and a permanent legacy Shared space. The AM3 candidate adds protected spaces with explicit Reader/Editor grants; application Admins access all spaces. There is one owner and optional Reader, Editor and Admin application membership. This does not introduce per-document permissions or separate tenants.
 
 Generic JSON Schema objects and deterministic jobs work now. M08 document evidence/source FTS pass local, native and permitted live tests; authored Wiki/claims and bounded PostgreSQL graph pass local, native and permitted live acceptance; optional retrieval passes acceptance; authenticated remote MCP and its discovery/OpenAPI connection metadata pass installed and permitted live owner acceptance. C0 stores and serves knowledge; external harnesses perform reasoning, research and wiki synthesis. No generative LLM, autonomous agent, scheduled AI prompts, local inference, arbitrary user shell jobs or second graph database belongs in the runtime.
 
@@ -281,7 +281,7 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 [C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The AM1 reference app pins released `core-v0.25.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.25.0,<0.26.0`. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
+The AM3 candidate app pins released `core-v0.27.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.27.0,<0.28.0`. The accepted dedicated runtime remains AM2/Core 0.26.0 until application deployment acceptance passes. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
 [Core 0.24.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.2) is a published documentation/packaging patch with unchanged schema/API. Its exact-source local, image, both-native and artifact verification gates pass. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. The real [compatible-patch Renovate PR](https://github.com/Stell0/c0-m13-example/pull/3) changes only the tag/lock and passes database-backed consumer CI.
 
@@ -318,9 +318,18 @@ and external-agent maintenance guidance. AM0–AM2 runtime acceptance passes at
 main `1a45070` (Core 0.26.0/app 0.41.0/schema 0013), including supported backup,
 update, restart, preservation and live current/legacy SDK checks. The existing
 connector independently reads the new evidence and retained Wiki revision.
-AM3 starts only after this documentation marker's exact checks and main
-publication pass. The installed behavior remains one shared knowledge space
+AM2's documentation marker has passed exact checks and main publication; AM3
+development is active. The installed behavior remains one shared knowledge space
 with application-wide roles, REST file ingestion and MCP/REST text evidence.
+
+[Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0)
+is independently published after exact-source local, producer and both-native
+gates. Its 1040 Python/PostgreSQL/packaging cases include role/grant/scope
+combinations, migration preservation, immutable evidence, private references and
+filtered retrieval. Downloaded wheel/archive checksums, reproducible rebuilds,
+independent installs and packaged migrations pass. App 0.42.0 adds typed
+REST/MCP selectors, qualified resources and space/grant controls; its native and
+deployment acceptance is pending. The dedicated instance continues to run AM2.
 
 The agreed space contract keeps object-type definitions shared across the
 instance. Records, relations, events and annotations will be protected by space;
@@ -330,6 +339,33 @@ are planned, not deployed. Existing knowledge, immutable evidence/history and
 approved clients must survive every milestone. C0 remains deterministic storage,
 retrieval and maintenance infrastructure; external agents perform reasoning and
 consolidation. Windmill Gate remains blocked through AM6 deployment acceptance.
+
+### Protected-space candidate contract
+
+The space selector applies to content reads, writes, histories, citations,
+originals, feeds and retrieval. `spaces_list` discovers only permitted spaces;
+application Admins create spaces and manage revisioned Reader/Editor grants.
+Object-type definitions remain global. An omitted `space_id` always selects the
+legacy shared space. Invalid or denied selectors fail without falling back.
+REST content endpoints accept a `space_id` query parameter. MCP content tools
+accept top-level `space_id`; `knowledge_search` uses `options.space_id`.
+Qualified resources use `c0://spaces/{space_id}/...`; legacy URIs retain Shared
+semantics. A UUID lookup never infers another space.
+
+Application Admins have every-space access under their actual OAuth scopes.
+Readers and Editors need an explicit protected grant, capped by their current
+application role. Changing a grant invalidates affected delegated tokens; later
+regrant does not revive them. Sign in and explicitly consent again when needed.
+Shared types do not grant access to their private records. References and
+citations must stay within their selected space. Same slugs, object keys and
+source content in different spaces do not conflict. Retry keys bind protected
+mutations to their space while legacy Shared receipts remain compatible.
+
+The ordinary UI has a space selector; Admin space/grant controls live in
+Administration. Space changes and access loss clear private views and invalidate
+pending responses. Choosing Shared is explicit. Revision and unchanged-retry
+protections still apply within each space. This contract is implemented in the
+candidate and remains subject to the application native/live gates above.
 
 ### Earlier implementation evidence
 

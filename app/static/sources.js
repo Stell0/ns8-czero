@@ -7,7 +7,7 @@ let citationSequence = 0, uploadDraftSequence = 0;
 const canWrite = () => profile && ['editor', 'admin'].includes(profile.role);
 const errors = {unsupported_docx:"Unsupported DOCX text structures. Convert this file; its original is retained.",invalid_text:'Invalid UTF-8 text.', no_text:'No extractable text; the original is retained.', unsupported_scan:'Scanned PDFs need OCR outside C0.', encrypted_pdf:'Encrypted PDFs are unsupported.', archive_limit:'DOCX archive expansion exceeds the safe limit.', too_large:'The file or extracted text exceeds the safe limit.', parser_timeout:'Extraction reached its time limit.', invalid_file:'The stored original is missing or changed.', invalid_docx:'Unsupported or malformed DOCX.', invalid_pdf:'Malformed PDF.'};
 async function api(path, options = {}) {
-  const response = await fetch('./api/v1/' + path, {cache:'no-store', ...options});
+  const response = await (typeof window!=='undefined' && window.C0Space ? window.C0Space.request(path, options) : fetch('./api/v1/' + path, {cache:'no-store', ...options}));
   if (!response.ok) {
     if (response.status === 409) throw new Error('Conflict. Refresh the source and retry; your upload is preserved.');
     if ([401,403].includes(response.status)) throw new Error('Sign-in or permitted access is required.');
@@ -60,7 +60,7 @@ async function selectSource(id) {
       }));
     }
     if (version.original_present && (version.retain_original || version.state === 'failed')) {
-      const link = document.createElement('a'); link.textContent = 'Download original'; link.href = './api/v1/source-versions/' + version.id + '/original'; row.append(link);
+      const link = document.createElement('a'); link.textContent = 'Download original'; link.href = typeof window!=='undefined' && window.C0Space?window.C0Space.apiURL('source-versions/'+version.id+'/original'):'./api/v1/source-versions/' + version.id + '/original'; row.append(link);
     }
     $('source-versions').append(row);
   }
@@ -152,3 +152,13 @@ async function initializeSources() {
   } catch (error) {$('sources-account').textContent = error.message;}
 }
 initializeSources();
+
+if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
+  ++sourcesSequence;++selectionSequence;++documentSequence;++searchSequence;++citationSequence;++uploadDraftSequence;
+  clearTimeout(pollTimer);profile=null;currentSource=null;currentDocument=null;
+  $('sources-workspace').hidden=true;$('source-detail').hidden=true;
+  for(const id of ['source-list','source-versions','source-chunks','source-results','upload-source']){const element=$(id);if(element)element.replaceChildren();}
+  for(const id of ['source-heading','sources-status','upload-status','document-text','source-citation','source-identity','source-metadata','source-status','document-status','search-status']){const element=$(id);if(element)element.textContent='';}
+  for(const id of ['source-query','upload-title','upload-metadata','upload-file']){const element=$(id);if(element)element.value='';}
+  $('sources-account').textContent='Space access changed. Choose a permitted space.';
+});

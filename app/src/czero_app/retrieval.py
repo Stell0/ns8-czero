@@ -61,6 +61,7 @@ class IndexStatus(BaseModel):
 class SearchOptions(BaseModel):
     model_config = ConfigDict(extra='forbid')
     query: str = Field(min_length=1, max_length=512)
+    space_id: UUID | None = None
     limit: int | None = Field(default=None, ge=1, le=50)
     mode: Literal['auto','text','semantic','hybrid'] = 'auto'
     kind: Literal['all','source','wiki'] = 'all'
@@ -79,15 +80,17 @@ def install_retrieval_routes(app, database, auth, read_context, *, settings=None
     app.state.search = service
 
     @app.get('/api/v1/knowledge/search', response_model=SearchResult)
-    @operation('knowledge_search', 'Search source and Wiki evidence with bounded optional providers', Role.READER, SearchResult, read_only=True)
+    @operation('knowledge_search', 'Search source and Wiki evidence with bounded optional providers', Role.READER, SearchResult, read_only=True, space_field='options.space_id')
     def search(options: Annotated[SearchOptions, Query()], context: RequestAccess = Depends(read_context)):
         if auth is None: raise HTTPException(503,'authentication_not_configured')
-        try: return service.search(context.actor,**options.model_dump())
+        selected = service.in_space(options.space_id) if options.space_id is not None else service
+        try: return selected.search(context.actor,**options.model_dump(exclude={'space_id'}))
         except PermissionDenied: raise
         except ValueError: raise HTTPException(422,'invalid_retrieval_request') from None
 
     @app.get('/api/v1/knowledge/index/status', response_model=IndexStatus)
-    @operation('knowledge_index_status', 'Inspect optional derivative indexing state', Role.READER, IndexStatus, read_only=True)
-    def index_status(context: RequestAccess = Depends(read_context)):
-        return service.embeddings.status(context.actor)
+    @operation('knowledge_index_status', 'Inspect optional derivative indexing state', Role.READER, IndexStatus, read_only=True, space_field='space_id')
+    def index_status(space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        selected = service.in_space(space_id) if space_id is not None else service
+        return selected.embeddings.status(context.actor)
     return service

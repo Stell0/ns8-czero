@@ -28,6 +28,7 @@ def snapshot(value):
 
 
 def mutate(database, authorize, actor, operation, payload, key, execute, *, conflict):
+    from .spaces import SpaceService, hold_authority
     if not isinstance(key, str) or not _KEY.fullmatch(key):
         raise ValueError('invalid_idempotency_key')
     encoded = json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False)
@@ -37,17 +38,22 @@ def mutate(database, authorize, actor, operation, payload, key, execute, *, conf
             authorize(connection, actor, Role.EDITOR)
             # Preserve Wiki's existing cursor/receipt serialization and lock order.
             connection.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': MUTATION_LOCK})
+            hold_authority(connection)
             # A caller can lose membership while waiting for an earlier writer.
             current = authorize(connection, actor, Role.EDITOR)
-            receipt = connection.execute(text('SELECT fingerprint,result FROM c0_knowledge_receipts WHERE actor_id=:actor AND key=:key'),
-                {'actor': current.user_id, 'key': key}).mappings().one_or_none()
+            shared = SpaceService.shared_id(connection)
+            space = current.space_id or shared
+            scoped_fingerprint = (fingerprint if space == shared else hashlib.sha256(
+                (str(space) + '\n' + operation + '\n' + encoded).encode()).hexdigest())
+            receipt = connection.execute(text('SELECT fingerprint,result FROM c0_knowledge_receipts WHERE space_id=:space AND actor_id=:actor AND key=:key'),
+                {'space': space, 'actor': current.user_id, 'key': key}).mappings().one_or_none()
             if receipt:
-                if receipt['fingerprint'] != fingerprint: raise conflict()
+                if receipt['fingerprint'] != scoped_fingerprint: raise conflict()
                 return receipt['result']
             result = snapshot(execute(connection, current))
-            connection.execute(text('''INSERT INTO c0_knowledge_receipts(actor_id,key,fingerprint,result)
-                VALUES (:actor,:key,:fingerprint,CAST(:result AS jsonb))'''),
-                {'actor': current.user_id, 'key': key, 'fingerprint': fingerprint, 'result': json.dumps(result, ensure_ascii=False)})
+            connection.execute(text('''INSERT INTO c0_knowledge_receipts(space_id,actor_id,key,fingerprint,result)
+                VALUES (:space,:actor,:key,:fingerprint,CAST(:result AS jsonb))'''),
+                {'space': space, 'actor': current.user_id, 'key': key, 'fingerprint': scoped_fingerprint, 'result': json.dumps(result, ensure_ascii=False)})
             return result
     except IntegrityError:
         raise conflict() from None

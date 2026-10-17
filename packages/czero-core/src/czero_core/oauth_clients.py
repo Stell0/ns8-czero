@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 
 from .identity import Actor, PermissionDenied, Role
+from .spaces import require_scope
 from .operations import SCOPES
 
 
@@ -51,7 +52,9 @@ class OAuthClientService:
     def _authorize(self, connection, actor):
         if self.access is None:
             raise PermissionDenied()
-        self.access._actor(connection, actor.user_id).require(Role.ADMIN)
+        current = self.access.checked_actor(connection, actor)
+        current.require(Role.ADMIN)
+        require_scope(current, Role.ADMIN)
 
     def register(self, actor: Actor, name: str, redirect_uris: list[str], *, scopes=('c0:read',)):
         if self.access is None:

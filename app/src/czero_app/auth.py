@@ -141,10 +141,18 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         return {"configured": auth is not None}
 
     @app.get("/api/v1/me")
-    def current_user(context: RequestAccess = Depends(read_context)):
+    def current_user(space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         if context.scopes is not None and 'c0:read' not in context.scopes:
             raise PermissionDenied()
         result = configured().access.profile(context.actor)
+        if space_id is not None:
+            from czero_core.spaces import SpaceService
+            active = configured().access
+            with active.database.engine.connect() as connection:
+                current = SpaceService(active.database, active).authorize(connection, context.actor, space_id=space_id)
+            result['application_role'] = result['role']
+            result['role'] = current.role.value
+            result['space_id'] = str(current.space_id)
         if context.csrf_token is not None:
             result["csrf_token"] = context.csrf_token
         return result
