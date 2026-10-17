@@ -403,3 +403,30 @@ existing source provenance, ready-chunk claim requirement and after-lock current
 role check. Core/schema candidate are 0.25.0/0013; app stays 0.39 and released
 Core pin stays 0.24.2 until exact-source native/artifact publication passes. No new
 REST/MCP tool is exposed by this increment and AM1 acceptance remains pending.
+
+
+Core 0.25.0 is now immutably published from 02d3e49 after its actual exact-source
+local/producer/released-Core/both-native/artifact gates; asset checksums are in
+PLAN. App 0.40.0 candidate pins that released tag/subdirectory/commit and requires
+>=0.25.0,<0.26.0. `sources_ingest_text` is an additive shared REST/MCP Editor write
+operation with 131072 UTF-8 body/16 KiB metadata/one-MiB request bounds. Replays
+return original state snapshots; poll versions then resolve actual document and
+chunk IDs. Preserve all 63 old operations, source provenance, ready-chunk claims,
+independent scopes and persisted roles. SDK envelope HTTP 400 diagnostics can echo
+input; sanitize only those bounded error responses, preserving standard codes and
+the fixed invalid_resource_request/service_unavailable messages and correlation.
+Do not patch SDK globals or skip validation. Native SDK/SSO probes now verify text
+receipts, actual timer extraction/chunks/claims in both modes, while persistence
+checks cover exact receipts and citations across restart/update/restore. Final
+application CI/review/deployment gates remain open; the live instance stays AM0
+b66e159 and its three frozen digests remain the genuine predecessor.
+
+
+AM1 app 0.40.0/Core 0.25.0 final local suite passes 862 cases, with 106 scripts,
+Go/shell/nineteen Robot dry-run passes and six checks of the actual published
+wheel/archive. The default released source is pinned exactly; transitive packages
+are unchanged. The SDK-envelope regression proves submitted text would appear in
+validation errors without the transport fix; preserve the bounded error-body
+buffer, standard protocol codes, fixed public resource messages and correct 503
+fallback if an error response is interrupted. Final app CI/native/review/live
+acceptance remains required and is not inferred from local results.

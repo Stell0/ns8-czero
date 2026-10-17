@@ -21,6 +21,7 @@ from czero_core.oauth_clients import OAuthClientService
 from czero_core.oauth_grants import OAuthGrantService, pkce_challenge
 from czero_app.mcp_transport import create_mcp_app
 from test_auth_http import application, ORIGIN, PrivateFixture
+from test_knowledge_http import knowledge_http
 
 pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason='isolated PostgreSQL required')
 RESOURCE = ORIGIN + '/mcp'
@@ -81,7 +82,7 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                 for mode in ('auto', 'legacy'):
                     async with Client(streamable_http_client(RESOURCE, http_client=http), mode=mode) as client:
                         tools = (await client.list_tools()).tools
-                        assert len(tools) == 63 and any(t.name == 'wiki_pages_create' for t in tools)
+                        assert len(tools) == 64 and any(t.name == 'wiki_pages_create' for t in tools)
                         assert next(t for t in tools if t.name == 'objects_list').annotations.read_only_hint
                         result = await client.call_tool('object_types_list', {})
                         assert not result.is_error and result.structured_content == expected_types
@@ -93,7 +94,7 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                         resource = await client.read_resource('c0://wiki/pages/' + expected_page['id'])
                         assert json.loads(resource.contents[0].text) == expected_page
                         descriptions = json.loads((await client.read_resource('c0://capabilities')).contents[0].text)
-                        assert len(descriptions['operations']) == 63
+                        assert len(descriptions['operations']) == 64
                         assert (await client.call_tool('unregistered_operation', {})).is_error
                         assert (await client.call_tool('object_types_list', {'unknown':1})).is_error
                         with pytest.raises(MCPError, match='invalid_resource_request'):
@@ -292,7 +293,7 @@ def test_token_database_failure_has_static_diagnostics(transport, monkeypatch, c
 @pytest.mark.parametrize('role,scope', [(Role.READER,'c0:read'), (Role.EDITOR,'c0:read'),
     (Role.ADMIN,'c0:read'), (Role.EDITOR,'c0:read c0:write'), (Role.ADMIN,'c0:read c0:write'),
     (Role.ADMIN,'c0:read c0:write c0:admin')])
-def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejection(transport, monkeypatch, bypass_origin, role, scope):
+def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejection(transport, knowledge_http, monkeypatch, bypass_origin, role, scope):
     import importlib.util
     from pathlib import Path
     from starlette.responses import Response
@@ -322,6 +323,10 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
         if bypass_origin:
             scope={**scope,'headers':[(k,v) for k,v in scope.get('headers',[]) if k!=b'origin']}
         await app(scope,receive,send)
+        # Local signed HTTP drives the real deterministic worker; native probes
+        # independently wait for the actual installed one-minute timer.
+        from czero_core.worker import Worker
+        Worker(access.database,app.state.jobs.registry).tick()
     monkeypatch.setattr(probe,'NodeTransport',lambda *_:httpx2.ASGITransport(app=proxy))
     async def check():
         async with app.router.lifespan_context(app):

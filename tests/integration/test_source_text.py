@@ -216,3 +216,37 @@ def test_text_evidence_must_commit_real_chunks_before_sourced_claim(knowledge,te
         evidence_chunk_ids=[str(future_chunk)],idempotency_key='sourced')
     citation=knowledge_service.get_claim(owner,claim['id'])['evidence'][0]
     assert citation['version_id']==row['id'] and citation['source_hash']==row['content_hash']
+
+
+def test_actual_worker_interruption_recovery_keeps_receipt_and_retries_evidence(text_sources):
+    from dataclasses import replace
+    from czero_core.jobs import Registry
+    from czero_core.worker import WorkerInterrupted
+    service,owner,registry,_=text_sources
+    row=submit(text_sources,idempotency_key='worker-interruption')
+    spec=registry.get('source.extract')
+    def interrupt(connection,payload):
+        spec.execute(connection,payload)
+        raise WorkerInterrupted()
+    broken=Registry([registry.get('health'),registry.get('maintenance'),
+        replace(spec,execute=interrupt),registry.get('source.cleanup')])
+    with pytest.raises(WorkerInterrupted): Worker(service.database,broken).tick()
+    assert service.versions(owner,row['source_id'])[0]['state']=='queued'
+    assert service.originals.path(row['id']).exists()
+    with pytest.raises(SourceNotFound):service.document(owner,row['id'])
+    assert submit(text_sources,idempotency_key='worker-interruption')==row
+    restarted=Worker(service.database,registry)
+    restarted.tick()  # recover the committed running attempt with ordinary backoff
+    with service.database.engine.begin() as c:
+        job=c.execute(text('SELECT state,error_code,attempts FROM c0_jobs WHERE id=:id'),{'id':row['job_id']}).mappings().one()
+        assert dict(job)=={'state':'queued','error_code':'interrupted','attempts':1}
+        # Only this isolated test job becomes due; no system clock/authority changes.
+        c.execute(text("UPDATE c0_jobs SET available_at=now()-interval '1 second' WHERE id=:id"),{'id':row['job_id']})
+    restarted.tick()
+    assert service.versions(owner,row['source_id'])[0]['state']=='ready'
+    document=service.document(owner,row['id'])
+    assert service.chunks(owner,document['id'])[0]['body']=='Selected evidence café 東京 🔧'
+    with service.database.engine.connect() as c:
+        runs=c.execute(text('SELECT attempt,state,error_code FROM c0_job_runs WHERE job_id=:id ORDER BY attempt'),{'id':row['job_id']}).mappings().all()
+        assert [dict(r) for r in runs]==[{'attempt':1,'state':'failed','error_code':'interrupted'},
+            {'attempt':2,'state':'succeeded','error_code':None}]

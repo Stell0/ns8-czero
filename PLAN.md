@@ -1510,3 +1510,74 @@ while waiting, transaction/extraction rollback, and real sourced claims pass.
 Native tests now freeze the three genuinely deployed b66e159 predecessors.
 Exact-source CI/publication/native and immutable Core artifact gates remain
 pending; do not promote this Core-only increment as AM1 acceptance.
+
+
+**AM1 immutable Core publication:** Source
+`02d3e49409f3b1de5cbaaa8e71aa3651fc6d97ae` passes actual
+[push local 39015983794](https://github.com/Stell0/ns8-czero/actions/runs/39015983794),
+[PR local 39016021789](https://github.com/Stell0/ns8-czero/actions/runs/39016021789),
+[producer 39015983797](https://github.com/Stell0/ns8-czero/actions/runs/39015983797),
+[released-Core 39015983814](https://github.com/Stell0/ns8-czero/actions/runs/39015983814),
+[PR released-Core 39016021881](https://github.com/Stell0/ns8-czero/actions/runs/39016021881)
+and [both-native 39016144918](https://github.com/Stell0/ns8-czero/actions/runs/39016144918).
+Actual local logs confirm 847 Python/PostgreSQL/packaging, 106 script and nineteen
+Robot dry-run passes. Audited native reports/checkouts prove exact source,
+Debian genuine b66e159 upgrade nineteen passes and Rocky installation twenty-three
+passes/three expected skips, all seven browser/privacy workflows and three
+XML/Pino artifacts with zero OAuth-query candidates. All three producer OCI
+manifest/config revisions match this source.
+
+[Core artifact publication 39017891130](https://github.com/Stell0/ns8-czero/actions/runs/39017891130)
+completed successfully after independently rechecking exact-source local/native
+statuses. [core-v0.25.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.25.0)
+is immutable and published, distinct from an NS8 module release. Actual downloaded
+assets match their published SHA256SUMS:
+
+- `czero_core-0.25.0-py3-none-any.whl`: `07b3412924399f43d77d883d04ce8350c4f008aa4a9467a885e3c01f73de738e`
+- `czero_core-0.25.0.tar.gz`: `8c6bb130a812a44efbe9b25c3c4afebe8cef24e5d9e8bf17f4e281f9a80e31d1`
+
+The Core increment was moved to a new branch after a commit-body formatting check;
+old duplicate jobs were cancelled and no remote history was force rewritten.
+Only exact corrected source 02d3e49 above authorizes the release. No private
+credentials, destination details or report entries are committed.
+
+**AM1 application implementation:** App candidate 0.40.0 requires released Core
+>=0.25.0,<0.26.0 and pins core-v0.25.0/subdirectory/02d3e49 in uv.lock. Schema
+remains 0013. The shared catalog exposes Editor/c0:write `sources_ingest_text`
+through typed REST JSON and both MCP modes; legacy multipart/63 bindings remain.
+One-MiB raw JSON bounds and static validation errors cover malformed Unicode,
+JSON, metadata, extra fields and oversized text without echoing evidence. A new
+regression reproduces the SDK's malformed-envelope diagnostics reflecting input;
+the existing transport guard now bounds/sanitizes those HTTP 400 responses,
+retaining standard error codes and fixed resource-error/correlation semantics.
+It does not replace or bypass SDK validation. Existing scope/role challenges,
+Host/Origin guards and successful output remain unchanged.
+
+Actual local current/legacy Editor SDK sessions ingest, poll, retrieve real
+immutable chunks, create sourced claims, compare REST responses, revise, reject
+stale writers and replay across independent client sessions. Reader, write-only,
+scope-upgrade, disabled-client, CSRF and safe-error cases pass. Native fixture code
+adds real timer-driven extraction and current/legacy claim/replay proof, plus
+source versions/receipt/citation verification after restart/update/backup/restore;
+its exact signed-HTTP/SDK helper tests pass locally. No native pass for these new
+application probes is claimed until the final application's actual CI completes.
+A full pre-envelope-fix local run passes 859 cases; targeted final protocol checks
+pass 89 cases. The actual worker-interruption regression recovers a running failed
+attempt, preserves the receipt and completes real evidence on retry. Root native
+Renovate API tests pass 0.25.x patch/minor/prerelease bounds while preserving the
+original example's 0.24.x range. UI/scripts, Go/shell and nineteen Robot dry-run
+checks pass. Final full-suite/artifact checks and application CI remain pending.
+
+
+**AM1 final application local result:** Complete current app 0.40.0/Core 0.25.0
+source passes **862 Python/PostgreSQL/packaging cases** (317.79s), including the
+SDK malformed-envelope red regression and bounded static-response fix, preserved
+resource errors and service-failure recovery. All 89 targeted final protocol/app
+cases passed before the additional fallback-response case; the full 862-case run
+includes it. Actual downloaded release assets separately pass all six packaging
+checks (79.98s) with the immutable source epoch, reproducibility, independent
+wheel/archive clients and real packaged PostgreSQL migrations. UV lock resolves
+only app 0.40.0 and Core 0.25.0/02d3e49 changes, with no transitive dependency
+upgrade. The default released-source local image assembly/audit is running; exact
+final application publication/released-image/Renovate/both-native CI, review,
+main promotion and live validation still gate AM1 acceptance.

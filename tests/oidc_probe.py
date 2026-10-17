@@ -134,6 +134,35 @@ def source_state(browser, version, expected, *, seconds=95):
     raise AssertionError('Source extraction or post-persistence cleanup did not complete')
 
 
+def seed_text_sources(owner, profile, *, title='Disposable text evidence'):
+    request = {'idempotency_key':'native-text-'+uuid4().hex, 'title':title,
+        'body':'Selected native memory evidence café 東京', 'media_type':'text/plain',
+        'metadata':{'origin':'disposable investigation'}}
+    records = []
+    for index in range(2):
+        status, body, _ = owner.api('/api/v1/sources/ingest-text', request, 'POST', profile['csrf_token'])
+        assert status == 202, 'Native text ingestion failed'
+        receipt = json.loads(body)
+        assert receipt['state'] == 'queued', 'Native text receipt claimed extraction completion'
+        assert receipt['content_hash'] == hashlib.sha256(request['body'].encode()).hexdigest(), 'Native text hash mismatch'
+        records.append({'version':receipt, 'text':request['body'], 'text_request':request})
+        request = {**request, 'idempotency_key':'native-text-'+uuid4().hex,
+            'source_id':receipt['source_id'], 'expected_revision':1,
+            'body':request['body']+'\nAdditional observation retained as a new version.'}
+    return records
+
+
+def verify_text_receipts(browser, profile, records):
+    for record in records:
+        if 'text_request' not in record:
+            continue
+        request = record['text_request']
+        status, body, _ = browser.api('/api/v1/sources/ingest-text', request, 'POST', profile['csrf_token'])
+        assert status == 202 and json.loads(body) == record['version'], 'Recovered text receipt/revision changed'
+        status, _, _ = browser.api('/api/v1/sources/ingest-text', {**request,'body':'Conflicting retry'}, 'POST', profile['csrf_token'])
+        assert status == 409, 'Recovered text receipt accepted changed content'
+
+
 def seed_sources(owner, profile):
     manifest = json.loads(Path('/tmp/czero-evidence-manifest.json').read_text())
     uploaded = []
@@ -161,6 +190,7 @@ def seed_sources(owner, profile):
         row = json.loads(body)
         uploaded.append({'version': row, 'text': content.decode() if expected == 'ready' else None,
             'original_hash': hashlib.sha256(content).hexdigest(), 'expected_state': expected})
+    uploaded.extend(seed_text_sources(owner, profile))
     for record in uploaded:
         row = record['version']; expected = record.get('expected_state', 'ready')
         source_state(owner, row, expected)
@@ -429,6 +459,7 @@ def persistence(operation):
     expected = json.loads(expected_file.read_text())
     assert profile["id"] == expected["owner"], "Recovered owner identity changed"
     verify_oauth_clients(owner, expected['oauth_clients'])
+    verify_text_receipts(owner, profile, expected['sources'])
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
