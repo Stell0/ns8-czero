@@ -86,3 +86,37 @@ reviewed Git tag in `[tool.uv.sources]`, then commit uv.lock. Never replace the
 released source with a local checkout implicitly. The template producer can
 opt in with `CZERO_CORE_SOURCE=local`; this affects only its build environment.
 Minor/breaking releases require separate compatibility and migration review.
+
+
+## Text evidence submission (0.25.0)
+
+`SourceService.ingest_text(actor, idempotency_key=..., title=..., body=...,
+media_type="text/plain", metadata={})` adds UTF-8 text through the existing
+immutable source-version, extraction-job and original-cleanup pipeline. Plain
+text and Markdown are accepted, up to 131072 UTF-8 bytes; empty/whitespace-only,
+NUL and malformed Unicode are rejected. Titles use the existing 256-character
+bound and metadata the existing 16 KiB JSON bound. Keys are 1–128 ASCII letters,
+digits, underscores, periods, colons or hyphens. Persisted Editor authorization
+is checked inside the receipt transaction, including after waiting for its lock.
+
+The result contains `source_id`, version `id`, `content_hash`, `job_id` and actual
+state at submission. A same-actor/key replay returns that original receipt, even
+after extraction finishes; poll `versions`, then use `document`, `chunks` and
+`citation` to obtain immutable ready evidence. A changed payload under the same
+key conflicts. This actor/key namespace is shared with Wiki/knowledge writes;
+use distinct keys for separate operations. Content hashes also reuse identical
+versions across distinct keys. Extraction and evidence claims retain their existing readiness checks.
+
+To append an immutable version, supply `source_id` and `expected_revision`, plus
+the existing source's exact title/metadata. Provenance is not silently changed.
+Concurrent stale updates conflict; replay of the winning key remains safe.
+Originals are handled by the existing storage/cleanup/backup pipeline. As with
+file ingestion, uncertain database commit failures retain potentially committed
+originals rather than deleting recoverable evidence.
+
+This additive Core minor keeps schema `0013_oauth_consent` and existing service
+contracts. The reference app's released dependency remains 0.24.2 during Core
+publication preparation; the REST/MCP text operation will require released 0.25.0
+in the subsequent application increment. No external provider or generative
+operation is needed to store or extract text. Submit only selected, sanitized
+session evidence; C0 does not redact it or execute instructions in its contents.

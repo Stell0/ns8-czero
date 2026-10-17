@@ -388,7 +388,7 @@ preserved. Connected MCP reads and positive-control root journal privacy pass.
 Core/app/schema stay 0.24.2/0.39.0/0013. All three **actually deployed b66e159**
 digests in PLAN now replace 9582568 as the genuine AM1 test predecessor, at the
 operator's explicit request; historical marker/deployment statements above remain
-historical evidence. AM1 is active on feat/agent-memory-text-ingestion. Follow its
+historical evidence. AM1 is active on feat/agent-memory-core. Follow its
 Core-first publication then released-pin/transport subplan; do not claim the new
 text tool available before that final application implementation and acceptance.
 

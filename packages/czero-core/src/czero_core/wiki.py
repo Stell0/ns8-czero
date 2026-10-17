@@ -1,24 +1,21 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Versioned authored knowledge, separate from immutable extracted evidence."""
-from datetime import datetime
 import hashlib
 import json
 import re
 import unicodedata
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 
 from .identity import PermissionDenied, Role
 from .object_schema import name
 from .objects import page
 from .sources import _label, _metadata, _uuid
+from .receipts import MUTATION_LOCK as KNOWLEDGE_LOCK, json_value as _json, snapshot as _view, mutate
 
-KNOWLEDGE_LOCK = 49376
 _SLUG = re.compile(r'[a-z0-9][a-z0-9/-]{0,127}\Z')
-_KEY = re.compile(r'[A-Za-z0-9_.:-]{1,128}\Z')
 
 
 class KnowledgeConflict(Exception):
@@ -48,17 +45,6 @@ def markdown(value):
     return value
 
 
-def _json(value):
-    if isinstance(value, UUID): return str(value)
-    if isinstance(value, datetime): return value.isoformat()
-    raise TypeError('invalid_result')
-
-
-def _view(value):
-    """Reads and receipt replays share a stable JSON-compatible public shape."""
-    return json.loads(json.dumps(value, default=_json, ensure_ascii=False, allow_nan=False))
-
-
 class WikiService:
     def __init__(self, database, access):
         self.database, self.access = database, access
@@ -71,28 +57,8 @@ class WikiService:
         return current
 
     def _mutate(self, actor, operation, payload, key, execute):
-        if not isinstance(key, str) or not _KEY.fullmatch(key):
-            raise ValueError('invalid_idempotency_key')
-        encoded = json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False)
-        fingerprint = hashlib.sha256((operation + '\n' + encoded).encode()).hexdigest()
-        try:
-            with self.database.engine.begin() as connection:
-                current = self._authorize(connection, actor, Role.EDITOR)
-                # As with object events, allocate cursors only after serializing
-                # mutations, so a later committed event cannot precede a gap.
-                connection.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': KNOWLEDGE_LOCK})
-                receipt = connection.execute(text('SELECT fingerprint,result FROM c0_knowledge_receipts WHERE actor_id=:actor AND key=:key'),
-                    {'actor': current.user_id, 'key': key}).mappings().one_or_none()
-                if receipt:
-                    if receipt['fingerprint'] != fingerprint: raise KnowledgeConflict()
-                    return receipt['result']
-                result = _view(execute(connection, current))
-                connection.execute(text('''INSERT INTO c0_knowledge_receipts(actor_id,key,fingerprint,result)
-                    VALUES (:actor,:key,:fingerprint,CAST(:result AS jsonb))'''),
-                    {'actor': current.user_id, 'key': key, 'fingerprint': fingerprint, 'result': json.dumps(result, ensure_ascii=False)})
-                return result
-        except IntegrityError:
-            raise KnowledgeConflict() from None
+        return mutate(self.database, self._authorize, actor, operation, payload,
+                      key, execute, conflict=KnowledgeConflict)
 
     @staticmethod
     def _event(connection, actor, kind, resource_id, revision, operation):
