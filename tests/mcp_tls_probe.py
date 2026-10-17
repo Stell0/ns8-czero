@@ -6,6 +6,7 @@ Route only the synthetic application vhost to the disposable node gateway.
 TLS/SNI/Host/resource identities stay canonical; provider DNS is untouched.
 """
 import asyncio
+import hashlib
 import json
 import ssl
 import sys
@@ -110,9 +111,62 @@ async def typed_objects(client):
     # installation owns their lifecycle. No direct database cleanup is used.
 
 
+async def text_evidence(client, http, previous=None):
+    """One real timer extraction, then replay/read it in both SDK protocol modes."""
+    data = previous['request'] if previous else {'title':'HTTP Wiki evidence '+uuid4().hex,
+        'body':'Selected MCP memory evidence café 東京', 'media_type':'text/markdown',
+        'metadata':{'origin':'disposable SDK investigation'}, 'idempotency_key':'sdk-text-'+uuid4().hex}
+    response = await client.call_tool('sources_ingest_text', {'data':data})
+    assert not response.is_error, 'Installed SDK text ingestion failed'
+    receipt = response.structured_content
+    assert receipt['state'] == 'queued', 'Installed new text receipt claimed extraction completion'
+    assert receipt['content_hash'] == hashlib.sha256(data['body'].encode()).hexdigest(), 'Installed text receipt hash mismatch'
+    if previous:
+        assert receipt == previous['receipt'], 'Installed SDK text replay changed receipt'
+    deadline = asyncio.get_running_loop().time()+75
+    while True:
+        versions = await client.call_tool('source_versions_list', {'source_id':receipt['source_id']})
+        assert not versions.is_error, 'Installed text version lookup failed'
+        version = next(v for v in versions.structured_content['versions'] if v['id']==receipt['id'])
+        if version['state'] == 'ready':
+            break
+        assert version['state'] == 'queued', 'Installed text extraction failed'
+        assert asyncio.get_running_loop().time() < deadline, 'Installed text extraction did not finish'
+        await asyncio.sleep(1)
+    document = await client.call_tool('documents_get', {'version_id':receipt['id']})
+    assert not document.is_error and document.structured_content['body']==data['body'], 'Installed text document mismatch'
+    chunks = await client.call_tool('document_chunks_list', {'document_id':document.structured_content['id']})
+    assert not chunks.is_error and chunks.structured_content['chunks'], 'Installed text chunks unavailable'
+    chunk = chunks.structured_content['chunks'][0]
+    citation = await client.call_tool('citations_get', {'chunk_id':chunk['id']})
+    assert not citation.is_error, 'Installed text citation unavailable'
+    citation = citation.structured_content
+    assert citation['version_id']==receipt['id'] and citation['source_hash']==receipt['content_hash'], 'Installed text provenance mismatch'
+    rest = await http.post('/api/v1/sources/ingest-text', json=data)
+    assert rest.status_code==202 and rest.json()==receipt, 'Installed text REST/MCP replay differs'
+    conflict = await http.post('/api/v1/sources/ingest-text', json={**data,'body':'Conflicting retry'})
+    assert conflict.status_code==409, 'Installed text replay accepted changed content'
+    if previous:
+        assert document.structured_content==previous['document'] and citation==previous['citation'], 'Installed evidence changed across SDK sessions'
+        claim_id = previous['claim_id']
+    else:
+        entity = await client.call_tool('entities_create', {'data':{'kind':'system','label':'SDK evidence '+uuid4().hex,
+            'idempotency_key':'sdk-entity-'+uuid4().hex}})
+        assert not entity.is_error, 'Installed evidence entity creation failed'
+        claim = await client.call_tool('claims_create', {'data':{'entity_id':entity.structured_content['id'],
+            'predicate':'observed-evidence','value':{'recorded':True}, 'evidence_chunk_ids':[chunk['id']],
+            'idempotency_key':'sdk-claim-'+uuid4().hex}})
+        assert not claim.is_error, 'Installed ready-evidence claim creation failed'
+        claim_id = claim.structured_content['id']
+    claim = await client.call_tool('claims_get', {'claim_id':claim_id})
+    assert not claim.is_error and claim.structured_content['evidence'][0]['chunk_id']==chunk['id'], 'Installed sourced claim lost evidence'
+    return {'request':data,'receipt':receipt,'document':document.structured_content,'citation':citation,'claim_id':claim_id}
+
+
 async def check(value):
     origin = value['origin']
     typed_lifecycles = 0
+    text_lifecycles, text_state = 0, None
     transport = NodeTransport(urlsplit(origin).hostname, value['address'], value['ca'])
     async with httpx2.AsyncClient(transport=transport, base_url=origin, timeout=20,
             headers={'Authorization':'Bearer ' + value['access_token']}) as http:
@@ -184,7 +238,19 @@ async def check(value):
                         assert 'error="insufficient_scope"' in challenge and 'error_description="' in challenge, 'Invalid scope upgrade challenge'
                         assert 'scope="c0:write"' in challenge and 'c0:admin' not in challenge, 'Scope upgrade requested excess authority'
                         assert 'resource_metadata="' + origin + '/.well-known/oauth-protected-resource/mcp"' in challenge, 'Scope upgrade metadata route mismatch'
+                if value['scope'] == 'c0:read':
+                    denied_text = await client.call_tool('sources_ingest_text', {'data':{
+                        'title':'Denied text probe','body':'Synthetic evidence','idempotency_key':uuid4().hex}})
+                    assert denied_text.is_error, 'Installed text operation bypassed role/scope checks'
+                    if role == 'reader':
+                        assert denied_text.content[0].text == 'permission_denied', 'Installed Reader ingested text'
+                        assert not denied_text.meta or 'mcp/www_authenticate' not in denied_text.meta, 'Reader text denial requested scope upgrade'
+                    else:
+                        assert denied_text.content[0].text == 'insufficient_scope', 'Installed text scope challenge missing'
+                        assert 'scope="c0:write"' in denied_text.meta['mcp/www_authenticate'][0], 'Installed text requested wrong scope'
                 if 'c0:write' in value['scope'].split():
+                    text_state = await text_evidence(client, http, text_state)
+                    text_lifecycles += 1
                     # Disposable-only fixture records; archive through the same
                     # delegated transport after checking the actual write result.
                     key = 'mcp-scope-' + uuid4().hex
@@ -212,6 +278,8 @@ async def check(value):
     expected_typed = 2 if role == 'admin' and {'c0:read','c0:write','c0:admin'} <= set(value['scope'].split()) else 0
     assert typed_lifecycles == expected_typed, 'Installed typed lifecycle coverage mismatch'
     print('Installed typed object lifecycles completed: %d' % typed_lifecycles)
+    assert text_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'
+    print('Installed text evidence lifecycles completed: %d' % text_lifecycles)
     print('Installed TLS SDK current/legacy tools, resources, REST parity, scopes and host/origin checks passed')
 
 

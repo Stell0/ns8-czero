@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Shared evidence operations; originals are separate from immutable text."""
 import hashlib
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,10 @@ from sqlalchemy import text
 from .extraction import MEDIA_TYPES, MAX_UPLOAD, ExtractionError, extract_isolated, chunks
 from .identity import PermissionDenied, Role
 from .jobs import Handler, JobService, bounded_json
+from .receipts import mutate
+
+MAX_INGEST_TEXT_BYTES = 131072
+TEXT_MEDIA_TYPES = frozenset(('text/plain', 'text/markdown'))
 
 
 class SourceConflict(ValueError):
@@ -140,7 +145,9 @@ class SourceService:
     def _authorize(self, connection, actor, role=Role.READER):
         if self.access is None:
             raise PermissionDenied()
-        return self.access._actor(connection, actor.user_id).require(role)
+        current = self.access._actor(connection, actor.user_id)
+        current.require(role)
+        return current
 
     @staticmethod
     def _page(limit, offset):
@@ -160,51 +167,97 @@ class SourceService:
         if media_type not in MEDIA_TYPES or type(retain_original) is not bool:
             raise ValueError('invalid_upload')
         encoded = _metadata({} if metadata is None else metadata)
-        version_id = uuid4()
         with self.database.engine.begin() as connection:
             self._authorize(connection, actor, Role.EDITOR)
-            if source_id is None:
-                if expected_revision is not None:
-                    raise ValueError('invalid_revision')
-            else:
+            return self._ingest(connection, stream, title=title, filename=filename,
+                media_type=media_type, retain_original=retain_original, encoded=encoded,
+                source_id=source_id, expected_revision=expected_revision)
+
+    def ingest_text(self, actor, *, idempotency_key, title, body, media_type='text/plain',
+                    metadata=None, source_id=None, expected_revision=None):
+        """Submit bounded text to the ordinary immutable evidence pipeline.
+
+        The receipt is the original submission snapshot; poll versions for current
+        extraction state. Explicit versions retain the source's title/provenance.
+        """
+        if not isinstance(body, str) or not body.strip() or '\0' in body or len(body) > MAX_INGEST_TEXT_BYTES:
+            raise ValueError('invalid_source_text')
+        title = _label(title, 256)
+        try:
+            content = body.encode('utf-8')
+            title.encode('utf-8')
+        except UnicodeError:
+            raise ValueError('invalid_source_text') from None
+        if len(content) > MAX_INGEST_TEXT_BYTES or not isinstance(media_type, str) or media_type not in TEXT_MEDIA_TYPES:
+            raise ValueError('invalid_source_text')
+        # Normalize JSON containers before the shared NUL/UTF-8/size checks.
+        encoded = _metadata(json.loads(bounded_json({} if metadata is None else metadata)))
+        source_id = None if source_id is None else _uuid(source_id)
+        if ((source_id is None and expected_revision is not None)
+                or (source_id is not None and (type(expected_revision) is not int
+                    or not 1 <= expected_revision < 2147483647))):
+            raise ValueError('invalid_revision')
+        payload = {'title': title, 'content_hash': hashlib.sha256(content).hexdigest(),
+            'media_type': media_type, 'metadata': json.loads(encoded),
+            'source_id': str(source_id) if source_id else None, 'expected_revision': expected_revision}
+        def execute(connection, current):
+            if source_id is not None:
                 source = self._source(connection, source_id, lock=True)
-                if source['deleted'] or type(expected_revision) is not int or source['revision'] != expected_revision:
+                if source['title'] != title or source['metadata'] != json.loads(encoded):
                     raise SourceConflict()
-            # On uncertain database COMMIT failure, keep the original. Do not
-            # remove a possibly committed version's only recoverable evidence.
-            digest, size = self.originals.write(version_id, stream)
-            if source_id is None:
-                # Identical first uploads with the same provenance deduplicate,
-                # including concurrent deliveries. Different provenance stays
-                # a separate source; changed bytes require explicit versioning.
-                ingest_key = hashlib.sha256(json.dumps([title, encoded, media_type, digest], ensure_ascii=False).encode()).hexdigest()
-                source = connection.execute(text('''INSERT INTO c0_sources(id,ingest_key,title,metadata)
-                    VALUES (:id,:key,:title,CAST(:metadata AS jsonb))
-                    ON CONFLICT(ingest_key) DO UPDATE SET ingest_key=EXCLUDED.ingest_key RETURNING *'''),
-                    {'id': uuid4(), 'key': ingest_key, 'title': title, 'metadata': encoded}).mappings().one()
-                source_id = source['id']
-                if source['deleted']:
-                    self.originals.remove(version_id)
-                    raise SourceConflict()
-            existing = connection.execute(text('SELECT * FROM c0_source_versions WHERE source_id=:source AND content_hash=:hash'),
-                {'source': source_id, 'hash': digest}).mappings().one_or_none()
-            if existing:
+            return self._ingest(connection, BytesIO(content), title=title,
+                filename='evidence.md' if media_type == 'text/markdown' else 'evidence.txt',
+                media_type=media_type, retain_original=False, encoded=encoded,
+                source_id=source_id, expected_revision=expected_revision)
+        return mutate(self.database, self._authorize, actor, 'source.ingest_text', payload,
+                      idempotency_key, execute, conflict=SourceConflict)
+
+    def _ingest(self, connection, stream, *, title, filename, media_type,
+                retain_original, encoded, source_id, expected_revision):
+        """Trusted writer; callers own validation, authorization and transaction."""
+        version_id = uuid4()
+        if source_id is None:
+            if expected_revision is not None:
+                raise ValueError('invalid_revision')
+        else:
+            source = self._source(connection, source_id, lock=True)
+            if source['deleted'] or type(expected_revision) is not int or source['revision'] != expected_revision:
+                raise SourceConflict()
+        # On uncertain database COMMIT failure, keep the original. Do not
+        # remove a possibly committed version's only recoverable evidence.
+        digest, size = self.originals.write(version_id, stream)
+        if source_id is None:
+            # Identical first uploads with the same provenance deduplicate,
+            # including concurrent deliveries. Different provenance stays
+            # a separate source; changed bytes require explicit versioning.
+            ingest_key = hashlib.sha256(json.dumps([title, encoded, media_type, digest], ensure_ascii=False).encode()).hexdigest()
+            source = connection.execute(text('''INSERT INTO c0_sources(id,ingest_key,title,metadata)
+                VALUES (:id,:key,:title,CAST(:metadata AS jsonb))
+                ON CONFLICT(ingest_key) DO UPDATE SET ingest_key=EXCLUDED.ingest_key RETURNING *'''),
+                {'id': uuid4(), 'key': ingest_key, 'title': title, 'metadata': encoded}).mappings().one()
+            source_id = source['id']
+            if source['deleted']:
                 self.originals.remove(version_id)
-                if existing['media_type'] != media_type or existing['retain_original'] != retain_original:
-                    raise SourceConflict()
-                return dict(existing)
-            number = connection.execute(text('SELECT COALESCE(max(number),0)+1 FROM c0_source_versions WHERE source_id=:source'),
-                {'source': source_id}).scalar_one()
-            job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(version_id)},
-                'source:' + str(version_id) + ':extract:1')
-            row = connection.execute(text('''INSERT INTO c0_source_versions
-                (id,source_id,number,filename,media_type,content_hash,size_bytes,retain_original,job_id)
-                VALUES (:id,:source,:number,:filename,:media,:hash,:size,:retain,:job) RETURNING *'''),
-                {'id': version_id, 'source': source_id, 'number': number, 'filename': filename,
-                 'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job['id']}).mappings().one()
-            if number > 1:
-                connection.execute(text('UPDATE c0_sources SET revision=revision+1,updated_at=now() WHERE id=:id'), {'id': source_id})
-            return dict(row)
+                raise SourceConflict()
+        existing = connection.execute(text('SELECT * FROM c0_source_versions WHERE source_id=:source AND content_hash=:hash'),
+            {'source': source_id, 'hash': digest}).mappings().one_or_none()
+        if existing:
+            self.originals.remove(version_id)
+            if existing['media_type'] != media_type or existing['retain_original'] != retain_original:
+                raise SourceConflict()
+            return dict(existing)
+        number = connection.execute(text('SELECT COALESCE(max(number),0)+1 FROM c0_source_versions WHERE source_id=:source'),
+            {'source': source_id}).scalar_one()
+        job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(version_id)},
+            'source:' + str(version_id) + ':extract:1')
+        row = connection.execute(text('''INSERT INTO c0_source_versions
+            (id,source_id,number,filename,media_type,content_hash,size_bytes,retain_original,job_id)
+            VALUES (:id,:source,:number,:filename,:media,:hash,:size,:retain,:job) RETURNING *'''),
+            {'id': version_id, 'source': source_id, 'number': number, 'filename': filename,
+             'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job['id']}).mappings().one()
+        if number > 1:
+            connection.execute(text('UPDATE c0_sources SET revision=revision+1,updated_at=now() WHERE id=:id'), {'id': source_id})
+        return dict(row)
 
     def list(self, actor, *, limit=50, offset=0, include_deleted=False):
         self._page(limit, offset)

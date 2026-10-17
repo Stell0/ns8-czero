@@ -75,6 +75,9 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
                      if line.startswith(('Installed MCP client failed: ', 'Installed MCP assertion failed: '))), '')
         raise AssertionError(safe or 'Installed TLS SDK protocol assertions failed')
     assert result.stdout.strip().endswith(b'checks passed'),'Installed TLS SDK success marker missing'
+    if 'c0:write' in scope.split():
+        assert b'Installed text evidence lifecycles completed: 2' in result.stdout, 'Installed text evidence lifecycle proof missing'
+        print('Disposable installed text ingestion, chunks and sourced claims: current and legacy')
     if {'c0:read','c0:write','c0:admin'} <= set(scope.split()):
         assert b'Installed typed object lifecycles completed: 2' in result.stdout, 'Installed full typed CRUD evidence missing'
         print('Disposable installed typed CRUD: current and legacy (two complete lifecycles)')

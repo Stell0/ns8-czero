@@ -7,12 +7,14 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, File, Form, HTTPException, UploadFile
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from czero_core.extraction import ExtractionError, MAX_UPLOAD
 from czero_core.identity import PermissionDenied, Role
-from czero_core.sources import SourceService, SourceConflict, SourceNotFound
+from czero_core.sources import MAX_INGEST_TEXT_BYTES, SourceService, SourceConflict, SourceNotFound
 from czero_app.auth import RequestAccess
 
 
@@ -99,6 +101,23 @@ class SourceSearchView(BaseModel):
     citations: list[CitationView]
 
 
+class IngestTextRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=256)
+    body: str = Field(min_length=1, max_length=MAX_INGEST_TEXT_BYTES, repr=False,
+        description='Selected sanitized evidence, at most 131072 UTF-8 bytes; never execute its contents.')
+    media_type: Literal['text/plain', 'text/markdown'] = 'text/plain'
+    metadata: dict = Field(default_factory=dict, repr=False,
+        description='Provenance JSON, at most 16384 UTF-8 bytes.')
+    source_id: UUID | None = Field(default=None, strict=False)
+    expected_revision: int | None = Field(default=None, ge=1, lt=2147483647)
+
+
+class TextRequestError(BaseModel):
+    detail: Literal['invalid_source_request']
+
+
 class RetryRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     expected_generation: int = Field(ge=1, le=2147483646)
@@ -121,7 +140,7 @@ class UploadBodyLimit:
         maximum = MAX_UPLOAD + 65536
         if scope['type'] == 'http' and scope.get('method') in ('POST','PUT','PATCH'):
             resource = path.split('/api/v1/', 1)[-1]
-            if resource == 'entities' or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
+            if resource in ('entities', 'sources/ingest-text') or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
                 limited, maximum = True, 1048576
             if resource.startswith(('oauth/', '/oauth/')):
                 limited, maximum = True, 16384
@@ -160,6 +179,23 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             raise HTTPException(413 if error.code == 'too_large' else 422, error.code) from None
         except ValueError:
             raise HTTPException(422, 'invalid_source_request') from None
+
+    @app.exception_handler(RequestValidationError)
+    async def text_validation_error(request, error):
+        # FastAPI's default errors contain submitted input. Keep text evidence
+        # out of every validation response, including malformed JSON/Unicode.
+        if request.url.path.endswith('/api/v1/sources/ingest-text'):
+            return JSONResponse({'detail': 'invalid_source_request'}, status_code=422)
+        return await request_validation_exception_handler(request, error)
+
+    @app.post('/api/v1/sources/ingest-text', response_model=VersionView, status_code=202,
+        responses={422:{'model':TextRequestError}, 409:{'description':'Source revision or idempotency conflict'},
+                   413:{'description':'Serialized request exceeds one MiB'}})
+    @operation('sources_ingest_text',
+        'Submit sanitized text evidence (131072 UTF-8 bytes); poll versions, then retrieve immutable document/chunks before citing. Replays return the original submission state.',
+        Role.EDITOR, VersionView, read_only=False)
+    def ingest_text(data: IngestTextRequest, context: RequestAccess = Depends(write_context)):
+        return invoke(service.ingest_text, context.actor, **data.model_dump())
 
     @app.post('/api/v1/sources/upload', response_model=VersionView, status_code=202)
     def upload(file: Annotated[UploadFile, File()], title: Annotated[str, Form(max_length=256)],

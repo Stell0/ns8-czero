@@ -377,3 +377,72 @@ XML/Pino artifacts with zero query candidates. Candidate digests and exact run
 links are in PLAN.md. The operator intends to review PR 3; that is not approval.
 Verify this documentation follow-up's actual checks and main promotion before
 starting AM1. No baseline marker is deployed; retain actual 9582568 predecessors.
+
+
+AM0 is accepted after operator merge PR 3 and explicit deployment request.
+Main b66e159 passes actual local/publication/released-Core/both-native checks,
+including seven browser/privacy guards and three-artifact query audits. Supported
+C0-only native backup and update pass with 27 domain tables, 89 terminal jobs/
+attempts, exact OAuth rows/settings/files/schedules and eleven unrelated modules
+preserved. Connected MCP reads and positive-control root journal privacy pass.
+Core/app/schema stay 0.24.2/0.39.0/0013. All three **actually deployed b66e159**
+digests in PLAN now replace 9582568 as the genuine AM1 test predecessor, at the
+operator's explicit request; historical marker/deployment statements above remain
+historical evidence. AM1 is active on feat/agent-memory-core. Follow its
+Core-first publication then released-pin/transport subplan; do not claim the new
+text tool available before that final application implementation and acceptance.
+
+
+AM1's first Core increment has local validation: 847 complete Python/PostgreSQL/
+packaging cases, 106 scripts, Go/shell and nineteen Robot dry-run cases pass;
+independent wheel/archive clients prove ingestion/extraction/reconnect/replay and
+citation hashes outside the checkout. SourceService.ingest_text is bounded to
+131072 UTF-8 bytes and existing 16 KiB metadata, with same-key snapshot receipts
+shared with Wiki/knowledge mutations. Preserve its static validation errors,
+existing source provenance, ready-chunk claim requirement and after-lock current
+role check. Core/schema candidate are 0.25.0/0013; app stays 0.39 and released
+Core pin stays 0.24.2 until exact-source native/artifact publication passes. No new
+REST/MCP tool is exposed by this increment and AM1 acceptance remains pending.
+
+
+Core 0.25.0 is now immutably published from 02d3e49 after its actual exact-source
+local/producer/released-Core/both-native/artifact gates; asset checksums are in
+PLAN. App 0.40.0 candidate pins that released tag/subdirectory/commit and requires
+>=0.25.0,<0.26.0. `sources_ingest_text` is an additive shared REST/MCP Editor write
+operation with 131072 UTF-8 body/16 KiB metadata/one-MiB request bounds. Replays
+return original state snapshots; poll versions then resolve actual document and
+chunk IDs. Preserve all 63 old operations, source provenance, ready-chunk claims,
+independent scopes and persisted roles. SDK envelope HTTP 400 diagnostics can echo
+input; sanitize only those bounded error responses, preserving standard codes and
+the fixed invalid_resource_request/service_unavailable messages and correlation.
+Do not patch SDK globals or skip validation. Native SDK/SSO probes now verify text
+receipts, actual timer extraction/chunks/claims in both modes, while persistence
+checks cover exact receipts and citations across restart/update/restore. Final
+application CI/review/deployment gates remain open; the live instance stays AM0
+b66e159 and its three frozen digests remain the genuine predecessor.
+
+
+AM1 app 0.40.0/Core 0.25.0 final local suite passes 862 cases, with 106 scripts,
+Go/shell/nineteen Robot dry-run passes and six checks of the actual published
+wheel/archive. The default released source is pinned exactly; transitive packages
+are unchanged. The SDK-envelope regression proves submitted text would appear in
+validation errors without the transport fix; preserve the bounded error-body
+buffer, standard protocol codes, fixed public resource messages and correct 503
+fallback if an error response is interrupted. Final app CI/native/review/live
+acceptance remains required and is not inferred from local results.
+
+
+AM1 app candidate 84f64b1 passes exact local/producer/released-Core/Renovate and
+both-native checks. Actual logs prove 862 Python/PostgreSQL/packaging and 106
+script cases; downloaded Debian installation has sixteen passes/three expected
+skips and genuine Rocky b66e159 upgrade twenty-six passes/all seven browsers and
+privacy guards. Both checkouts match source, real SSO/SDK probes pass and three
+XML/Pino artifacts have zero OAuth queries. Text receipts/versions/citations now
+pass actual native restart/update/restore. The default released-source image
+passes actual runtime/license/source audits and Dive analysis; five inspected
+Trivy/SBOM pairs retain documented vendor findings while the fixable-critical
+gate passes. PLAN freezes the candidate digests separately from genuine installed
+b66e159. This docs-only evidence marker needs its own actual checks before PR 4
+review/main promotion. AM1 is not accepted/deployed and AM2 must wait for its
+reviewed main publication, targeted update and live validation. No new ChatGPT
+UI/provider-quality/stable-module-release or CPU-quota claim is made.

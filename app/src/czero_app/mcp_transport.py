@@ -55,6 +55,27 @@ def _json(value):
     return encoded
 
 
+def _bad_request_body(body):
+    """SDK envelope validation can include input_value; expose only fixed text."""
+    code, message, request_id = -32600, 'invalid_mcp_request', None
+    try:
+        value = json.loads(body)
+        error = value.get('error', {})
+        candidate = error.get('code')
+        if type(candidate) is int and candidate in (-32700, -32600, -32601, -32602, -32603):
+            code = candidate
+        # Existing resource errors have fixed application text and need normal
+        # response correlation. Never pass through SDK validation diagnostics.
+        if error.get('message') in ('invalid_resource_request', 'service_unavailable'):
+            message = error['message']
+            if value.get('id') is None or type(value.get('id')) in (str, int):
+                request_id = value.get('id')
+    except (ValueError, TypeError, AttributeError, RecursionError):
+        pass
+    return json.dumps({'jsonrpc':'2.0','id':request_id,
+        'error':{'code':code,'message':message}}, separators=(',', ':')).encode()
+
+
 async def oauth_tool_metadata(ctx, call_next):
     """Preserve the optional OAuth extension through MCP 2.3's wire sieve.
 
@@ -77,9 +98,35 @@ class TransportLimits:
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':
             return await self.app(scope, receive, send)
+        bad_start, bad_body, bad_overflow = None, bytearray(), False
         async def private_send(message):
+            nonlocal bad_start, bad_overflow
             if message['type'] == 'http.response.start':
-                message['headers'] = list(message.get('headers', [])) + [(b'cache-control', b'no-store')]
+                bad_start, bad_overflow = None, False
+                bad_body.clear()
+                message = {**message, 'headers':list(message.get('headers', [])) + [(b'cache-control', b'no-store')]}
+                if message['status'] == 400:
+                    # Keep SDK request validation intact. Buffer only its bounded
+                    # error response, never successful evidence/tool output.
+                    bad_start = message
+                    return
+            if bad_start is not None and message['type'] == 'http.response.body':
+                part = message.get('body', b'')
+                if not bad_overflow and len(bad_body) + len(part) <= 16384:
+                    bad_body.extend(part)
+                else:
+                    bad_overflow = True
+                    bad_body.clear()
+                if message.get('more_body', False):
+                    return
+                body = _bad_request_body(bytes(bad_body))
+                headers = [(key,value) for key,value in bad_start['headers']
+                    if key.lower() not in (b'content-length', b'content-type', b'transfer-encoding')]
+                headers += [(b'content-type', b'application/json'), (b'content-length', str(len(body)).encode())]
+                await send({**bad_start, 'headers':headers})
+                await send({'type':'http.response.body', 'body':body, 'more_body':False})
+                bad_start = None
+                return
             await send(message)
         if self.capacity.locked():
             return await JSONResponse({'error': 'server_busy'}, status_code=503)(scope, receive, private_send)

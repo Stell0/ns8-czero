@@ -63,7 +63,7 @@ To connect a compatible MCP client:
 
 Grants last at most one hour and no later than the originating sign-in expiry; access tokens/codes last at most five minutes. Signing out of the browser does not revoke delegated client access. Native update/restart preserves bounded refresh authority; clean restore allocates a new native client and rejects old grants, requiring fresh sign-in/consent. Real SDK 2.3.0 current/legacy transport and local automatic OAuth discovery/exchange pass. The operator first confirmed actual ChatGPT connection/content reading on M15 source `6c02182`; current M16 acceptance is recorded below. Bounded application logs corroborate successful token exchange and MCP requests without OAuth-query leakage. Scheduled-run interoperability remains unverified; no scheduled task was created. The accepted Integration M15 compatibility fix accepts optional authorization parameters (for example `ui_locales`) on GET and form POST, ignores them before trusted authorization processing, and still rejects duplicate names. Token and revocation endpoints continue rejecting unknown fields. Exact callback/resource matching, S256, explicit consent and role-limited scope selection remain required. The fix was merged to main and originally deployed as `6c02182`; it remains in current runtime `9582568`. Exact-source CI and native upgrade/install/browser checks pass. Trusted-HTTPS checks now reach consent, preserve duplicate rejection and retain all existing data/settings and unrelated applications. The real ChatGPT connection/authenticated-read gate now passes. The operator also confirms signed-in Wiki/REST and client-disable/rejected-read/re-enable/reconnect acceptance. Integration M15 runtime acceptance is complete; completion marker `86c8b0a` passed its exact native/artifact checks and main local/publication before Integration M16 began. Exact granted scopes and the specific read tool used were not separately reported. Later milestones cover stable profiles, tool guidance, optional secure CIMD and measured delegated-session reliability; none is claimed implemented.
 
-Integration M16 is accepted: its runtime passed exact-source CI/native checks and dedicated deployment, and the operator confirms the live OAuth checks in addition to the comprehensive 20/20 API report. Each MCP tool advertises its existing required OAuth scope in `securitySchemes` and a matching `_meta.securitySchemes` compatibility mirror. Tools available to your persisted role remain discoverable when your current token needs additional consent. Calling such a tool returns an `insufficient_scope` error with `_meta["mcp/www_authenticate"]`; a role denial remains denied without a scope-upgrade challenge. Initial resource discovery requests read access, while authorization-server metadata lists all supported scopes. A client must retain previously granted scopes when requesting a legitimate upgrade through explicit consent; refreshing cannot add authority. Resources and REST capabilities continue reflecting current granted scopes. These optional MCP extensions reuse existing Core authorization and preserve current/legacy SDK compatibility. The live instance retains accepted `9582568`; the separate structured-object repair and its preservation/privacy evidence remain valid. Operator-reported live OAuth acceptance is distinct from CI/SDK checks and server-observed logs. The API exercise itself excludes new multi-format ingestion, batch rollback, invalid-write/conflict tests, replay/deduplication, job/scheduler execution, auth/restart durability and confirmation of the five original pilot sources as retained evidence; independent repository coverage remains valid. The test object was deleted and the claim retracted; immutable schema/history and other isolated regression data are not claimed removed. M17 is next after this documentation marker is verified. See [PLAN.md](PLAN.md) for acceptance gates and official protocol references.
+Integration M16 is accepted: its runtime passed exact-source CI/native checks and dedicated deployment, and the operator confirms the live OAuth checks in addition to the comprehensive 20/20 API report. Each MCP tool advertises its existing required OAuth scope in `securitySchemes` and a matching `_meta.securitySchemes` compatibility mirror. Tools available to your persisted role remain discoverable when your current token needs additional consent. Calling such a tool returns an `insufficient_scope` error with `_meta["mcp/www_authenticate"]`; a role denial remains denied without a scope-upgrade challenge. Initial resource discovery requests read access, while authorization-server metadata lists all supported scopes. A client must retain previously granted scopes when requesting a legitimate upgrade through explicit consent; refreshing cannot add authority. Resources and REST capabilities continue reflecting current granted scopes. These optional MCP extensions reuse existing Core authorization and preserve current/legacy SDK compatibility. Accepted `9582568` remains the historical structured-object runtime evidence; the subsequent AM0 deployment at `b66e159` is recorded below and preserves its behavior and data. Operator-reported live OAuth acceptance is distinct from CI/SDK checks and server-observed logs. The API exercise itself excludes new multi-format ingestion, batch rollback, invalid-write/conflict tests, replay/deduplication, job/scheduler execution, auth/restart durability and confirmation of the five original pilot sources as retained evidence; independent repository coverage remains valid. The test object was deleted and the claim retracted; immutable schema/history and other isolated regression data are not claimed removed. M17 is next after this documentation marker is verified. See [PLAN.md](PLAN.md) for acceptance gates and official protocol references.
 
 M12 provides consistent local navigation and keyboard focus across the home, records, sources, Wiki, search and agent pages. Home links the main human workflows and retains service/API details. The agent page offers canonical URL copying with manual fallback. Sharing and availability refreshes ignore older responses, and role writes preserve newer selections. Installed navigation, focus, sharing and copying pass the disposable browser workflows; permitted live owner normal-TLS asset/API and full-manager restart checks also pass. Interactive live browser testing remains waived.
 
@@ -148,6 +148,39 @@ M08 now adds isolated deterministic Text/Markdown/PDF/DOCX extraction, source/ve
 
 
 Use authenticated `POST /api/v1/sources/upload` multipart fields `file`, `title`, `media_type`, optional `metadata` JSON and `retain_original=true|false`. The four MIME types are text/plain, text/markdown, application/pdf and application/vnd.openxmlformats-officedocument.wordprocessingml.document. Upload returns HTTP 202 and a version UUID; poll `/api/v1/sources/<source-id>/versions` for queued/ready/failed state. Initial identical uploads with matching title/metadata/media deduplicate. To add changed content, include `source_id` and `expected_revision`; conflicts return 409. Different provenance remains a separate source. Source title/provenance are established by the first upload; existing-source uploads add versions and retain that source metadata. Version content/retention are immutable.
+
+The AM1 candidate adds `sources_ingest_text` for selected, sanitized text evidence.
+It requires Editor permission and delegated `c0:write`; use `c0:read` to inspect
+extraction and citations. MCP arguments use the catalog's `data` object:
+
+```json
+{"data":{"idempotency_key":"investigation-42:evidence-1","title":"Service observation","body":"Observed a readiness failure; retain this observation as evidence.","media_type":"text/plain","metadata":{"origin":"external investigation"}}}
+```
+
+REST accepts the inner object at `POST /api/v1/sources/ingest-text` and returns
+202. Plain text and Markdown are limited to **131072 UTF-8 bytes (128 KiB)**;
+metadata uses the existing 16 KiB JSON limit. The serialized REST/MCP request
+remains bounded to one MiB. Empty/whitespace-only text, NUL, invalid Unicode,
+unsupported media and invalid metadata are rejected with safe static errors.
+C0 stores the submitted evidence; it does not sanitize secrets for the caller or
+execute instructions found in it.
+
+The receipt contains source `source_id`, version `id`, content hash, job ID and
+submission state. Reuse an unchanged actor/key after a timeout; a changed payload
+conflicts. Keys share the existing Wiki/knowledge receipt namespace, so use a
+separate key for each intended mutation. A replay returns its original snapshot,
+even when its state is still `queued`. Poll `source_versions_list`, then use
+`documents_get`, `document_chunks_list` and `citations_get` once the version is
+ready. `claims_create` still requires actual immutable evidence chunks. Optional
+indexing is unnecessary for ingestion and text search.
+
+To append a version, fetch the source's current revision and send `source_id`,
+`expected_revision`, its unchanged title/metadata and a fresh key with the new
+text. A stale revision conflicts; replaying the winning request remains safe.
+Existing source provenance, old versions and citations are preserved. The new
+operation uses the same extraction, cleanup, restart and native backup pipeline
+as file ingestion. The installed AM0 instance does not expose it until AM1's
+reviewed main publication and deployment gates pass.
 
 Readers browse sources, documents, chunks, citations and retained/failed original attachments. Editors ingest, retry with `expected_generation`, and archive with `expected_revision`. Source deletion archives it from browse/search while preserving historical evidence and citations. Get full text at `/api/v1/source-versions/<id>/document`, chunks at `/api/v1/documents/<id>/chunks`, a citation at `/api/v1/chunks/<id>/citation`, and bounded FTS at `/api/v1/sources/search?query=inventory`. Downloads at `/api/v1/source-versions/<id>/original` use attachments/octet-stream. Uncertain database commit failures preserve generated originals for operator recovery; automatic orphan reconciliation is not yet implemented. The separate Sources page now offers upload/retention, history/full text/citations, FTS, quarantine/retry and archive controls; ten record/source Node race tests pass. Repeatable native owner/Reader browser workflows pass; interactive Playwright remains waived.
 
@@ -235,7 +268,7 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 [C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The reference app pins `core-v0.24.2`; the controlled original consumer starts at `core-v0.24.1`. Both pin the subdirectory/commit in `uv.lock`, with compatible range `>=0.24.1,<0.25.0`. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
+The AM1 reference app pins released `core-v0.25.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.25.0,<0.26.0`. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
 [Core 0.24.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.2) is a published documentation/packaging patch with unchanged schema/API. Its exact-source local, image, both-native and artifact verification gates pass. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. The real [compatible-patch Renovate PR](https://github.com/Stell0/c0-m13-example/pull/3) changes only the tag/lock and passes database-backed consumer CI.
 
@@ -268,8 +301,9 @@ M14 candidate evidence, security findings and deployment limits are recorded in 
 
 The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers MCP text evidence,
 revision-safe Wiki helpers, protected spaces, applicability-aware retrieval and
-external-agent maintenance guidance. Baseline work is in progress; these features
-are not yet available. Current behavior remains one shared knowledge space with
+external-agent maintenance guidance. AM0 is accepted and deployed. AM1 text ingestion is implemented as a review
+candidate; protected spaces and later retrieval/maintenance work remain pending.
+The installed AM0 behavior remains one shared knowledge space with
 application-wide roles and REST file ingestion. Existing knowledge, immutable
 evidence/history and OAuth clients must be preserved. C0 continues to provide
 deterministic storage and retrieval; external agents perform reasoning and
@@ -284,5 +318,53 @@ images, existing contracts and private-evidence boundaries.
 AM0 candidate `ebc38ef` also passes exact-source producer/released-Core CI and
 Debian genuine upgrade (19 cases) plus Rocky installation (23 cases, 3 expected
 skips), including seven browser/privacy workflows and actual artifact audits.
-PR #3 is awaiting operator review and main promotion; this evidence follow-up
-must pass its own checks. The installed runtime and current APIs remain unchanged.
+The operator merged PR #3 as `b66e159`; its actual main checks, publication and
+requested dedicated deployment pass as recorded below. That baseline deployment
+keeps the existing runtime APIs.
+
+
+AM0 is now merged and accepted at `b66e159`, including successful main CI,
+Debian upgrade/Rocky installation, native C0-only backup and operator-requested
+dedicated deployment. Current APIs and versions remain unchanged. Existing data,
+OAuth rows and unrelated modules are preserved; connected MCP reads pass.
+AM1 text-evidence ingestion is the next implementation, with independent Core
+publication preceding the released application dependency. See PLAN.md for exact
+accepted digests, checks and implementation gates.
+
+
+The AM1 Core portion is implemented on the feature branch and passes 847 local
+Python/PostgreSQL/packaging cases, plus script/schema/Robot and independent
+installed-package checks. Text uses the existing source/extraction pipeline with
+bounded UTF-8 input and retry receipts. Core publication, the application REST/MCP
+operation and final native/review/deployment acceptance are still pending; the
+installed application continues to expose its existing interfaces.
+
+
+[Core 0.25.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.25.0) is now
+published from exact verified source `02d3e49`, with independently checked wheel
+and source-archive hashes. The AM1 app 0.40.0 candidate pins that released source;
+its 64-operation catalog adds bounded `sources_ingest_text` while retaining all
+63 legacy bindings. The application change also keeps malformed JSON-RPC
+validation errors from echoing submitted text, preserving standard protocol
+codes and existing fixed resource errors. Root Renovate bounds cover 0.25.x
+patches; the original example retains 0.24.x bounds and automatic merging stays
+disabled. Review, exact application CI/native tests and deployment remain gates.
+
+
+The final AM1 application candidate passes 862 local Python/PostgreSQL/packaging
+cases, 106 scripts and schema/shell/Robot checks. The actual published Core
+artifacts separately pass all six independent packaging checks. Candidate
+publication, native tests and review/deployment are still required before AM1
+is accepted on the dedicated installation.
+
+
+AM1 application candidate `84f64b1` also passes exact-source producer, released
+Core, Renovate and native CI. Downloaded reports prove Debian installation
+(16 passes, 3 expected skips) and genuine Rocky upgrade (26 passes), including
+seven browser/privacy workflows and actual text-receipt/evidence recovery.
+Actual artifacts pass the OAuth-query audit. The default released-source image
+passes runtime/license/source checks and Dive analysis. Vulnerability reports
+retain vendor findings; a passing critical gate does not mean a clean scan.
+[PR #4](https://github.com/Stell0/ns8-czero/pull/4) remains a draft until this
+evidence marker is verified; review, main publication and dedicated deployment
+are still required. The live installation remains AM0 `b66e159`.
