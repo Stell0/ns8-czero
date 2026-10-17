@@ -8,6 +8,8 @@
 <details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
 <a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
 </nav>
+<section class="space-context" aria-label="Knowledge space"><label for="space-selector">Space</label><select id="space-selector" disabled><option>Checking spaces…</option></select><button id="refresh-space" type="button" class="secondary">Refresh access</button><p id="space-status" role="status" aria-live="polite"></p></section>
+
 <h1>Knowledge search</h1><p id="search-account" role="status">Checking sign-in…</p><a id="search-signin" href="./auth/login" hidden>Sign in with NethServer</a>
 <div id="search-workspace" hidden><p>Find articles and supporting documents across the knowledge collection.</p>
 <form id="knowledge-search-form">
@@ -23,4 +25,4 @@
 <details><summary>Search details</summary><p id="knowledge-index-status" role="status"></p><p id="knowledge-search-details"></p></details>
 <section aria-label="Ranked evidence" id="knowledge-results"></section>
 <details><summary>Supplemental graph</summary><pre id="search-graphs"></pre></details></div>
-</main><script src="./site.js" defer></script><script src="./search.js" defer></script><script src="./navigation.js" defer></script></body></html>
+</main><script src="./spaces.js" defer></script><script src="./site.js" defer></script><script src="./search.js" defer></script><script src="./navigation.js" defer></script></body></html>

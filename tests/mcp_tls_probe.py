@@ -163,6 +163,42 @@ async def text_evidence(client, http, previous=None):
     return {'request':data,'receipt':receipt,'document':document.structured_content,'citation':citation,'claim_id':claim_id}
 
 
+
+async def protected_spaces(client, http, previous=None):
+    """Actual delegated current/legacy writes retain one explicit space."""
+    async def call(name, arguments):
+        result=await client.call_tool(name,arguments)
+        assert not result.is_error, 'Installed protected-space operation failed'
+        assert json.loads(result.content[0].text)==result.structured_content, 'Installed protected representations differ'
+        return result.structured_content
+    request=previous['request'] if previous else {'name':'SDK protected '+uuid4().hex,'idempotency_key':uuid4().hex}
+    space=await call('spaces_create',{'data':request})
+    identifier=space['id']
+    assert space['role']=='admin' and not space['shared'], 'Installed protected Admin policy mismatch'
+    assert any(s['id']==identifier for s in (await call('spaces_list',{}))['spaces']), 'Installed protected discovery missing'
+    data=previous['data'] if previous else {'slug':'sdk-private/'+uuid4().hex,'title':'Protected SDK observation',
+        'body':'Private retained authored revision','idempotency_key':uuid4().hex}
+    first=await call('wiki_pages_upsert',{'space_id':identifier,'data':data})
+    if previous:
+        assert space==previous['space'] and first==previous['first'], 'Installed protected replay changed its snapshot'
+        current=previous['current']
+    else:
+        current=await call('wiki_pages_upsert',{'space_id':identifier,'data':{**data,
+            'body':'Independent protected update','expected_revision':1,'idempotency_key':uuid4().hex}})
+    assert (await call('wiki_pages_resolve',{'space_id':identifier,'slug':data['slug']}))==current, 'Installed protected resolve lost current revision'
+    denied=await client.call_tool('wiki_pages_get',{'page_id':first['id']})
+    assert denied.is_error and denied.content[0].text=='knowledge_not_found', 'Installed private UUID escaped into Shared'
+    result=await client.read_resource('c0://spaces/'+identifier+'/wiki/pages/'+first['id'])
+    assert json.loads(result.contents[0].text)==current, 'Installed space-qualified resource changed identity'
+    response=await http.get('/api/v1/wiki/pages/'+first['id'],params={'space_id':identifier})
+    assert response.status_code==200 and response.json()==current, 'Installed protected REST/MCP parity differs'
+    assert (await http.get('/api/v1/wiki/pages/'+first['id'])).status_code==404, 'Installed protected REST default inferred a space'
+    stale=await client.call_tool('wiki_pages_upsert',{'space_id':identifier,'data':{**data,
+        'expected_revision':1,'idempotency_key':uuid4().hex}})
+    assert stale.is_error and stale.content[0].text=='knowledge_conflict', 'Installed protected stale write overwrote current state'
+    return {'request':request,'space':space,'data':data,'first':first,'current':current}
+
+
 async def wiki_memory(client, http):
     """Installed safe maintenance using real current or legacy SDK serialization."""
     data = {'slug':'sdk-memory/'+uuid4().hex, 'title':'Reusable procedure',
@@ -228,6 +264,7 @@ async def check(value):
                 ('revocation_endpoint','revoke')]:
             assert authority[field] == origin + '/oauth/' + path, 'Installed OAuth endpoint mismatch'
         assert set(authority['scopes_supported']) == {'c0:read','c0:write','c0:admin'}, 'Installed OAuth scope catalog mismatch'
+        protected_state=None; protected_lifecycles=0
         for mode in ('auto', 'legacy'):
             # A preceding mode can register an immutable isolated type.
             response = await http.get('/api/v1/object-types')
@@ -262,6 +299,8 @@ async def check(value):
                     if 'c0:write' in value['scope'].split():
                         await typed_objects(client)
                         typed_lifecycles += 1
+                        protected_state=await protected_spaces(client,http,protected_state)
+                        protected_lifecycles+=1
                 if value['scope'] == 'c0:read':
                     denied = await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})
                     assert denied.is_error, 'Read token mutation scope not enforced'
@@ -323,6 +362,8 @@ async def check(value):
     expected_typed = 2 if role == 'admin' and {'c0:read','c0:write','c0:admin'} <= set(value['scope'].split()) else 0
     assert typed_lifecycles == expected_typed, 'Installed typed lifecycle coverage mismatch'
     print('Installed typed object lifecycles completed: %d' % typed_lifecycles)
+    assert protected_lifecycles==expected_typed, 'Installed protected-space lifecycle coverage mismatch'
+    print('Installed protected space lifecycles completed: %d' % protected_lifecycles)
     assert wiki_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed Wiki lifecycle coverage mismatch'
     print('Installed Wiki memory lifecycles completed: %d' % wiki_lifecycles)
     assert text_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'

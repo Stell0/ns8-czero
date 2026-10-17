@@ -9,7 +9,8 @@ async function api(path, method = "GET", body = null) {
   const headers = {};
   if (method !== "GET") headers["X-C0-CSRF"] = profile.csrf_token;
   if (body !== null) headers["Content-Type"] = "application/json";
-  const response = await fetch(`./api/v1/${path}`, { method, headers, cache: "no-store", body: body === null ? null : JSON.stringify(body) });
+  const options = { method, headers, cache: "no-store", body: body === null ? null : JSON.stringify(body) };
+  const response = await (typeof window!=='undefined' && window.C0Space ? window.C0Space.request(path, options) : fetch(`./api/v1/${path}`, options));
   if (!response.ok) {
     const messages = { 401: "Sign in again.", 403: "Your account cannot perform this operation.", 404: "This record or type no longer exists.", 409: "Conflict: the record changed or a unique value already exists. Load the saved version before retrying.", 503: "The service is unavailable. Try again later." };
     let message = messages[response.status] || "The request could not be completed.";
@@ -194,3 +195,13 @@ el("type-form").addEventListener("submit", async event => {
     await loadTypes(); await loadRecords();
   } catch (error) { el("records-account").textContent = error.message; el("records-signin").hidden = false; }
 })();
+
+if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
+  ++listRequest;++detailRequest;++relationRequest;++draftGeneration;++targetRequest;
+  profile=null;current=null;definitions=[];fieldEditor=null;
+  el('records-workspace').hidden=true;el('record-detail').hidden=true;
+  for(const id of ['record-list','record-relations','relation-picker','record-fields','record-type','relation-type'])el(id).replaceChildren();
+  for(const id of ['record-heading','relation-targets-status','type-status','record-identity','record-schema','records-status','record-status','record-fields-status'])el(id).textContent='';
+  for(const id of ['relation-kind','type-name','type-label','type-schema','type-unique','record-data','record-tags','relation-target'])el(id).value='';
+  el('records-account').textContent='Space access changed. Choose a permitted space.';
+});

@@ -10,18 +10,20 @@ from pydantic import ConfigDict, TypeAdapter, ValidationError, create_model
 
 from czero_core.identity import PermissionDenied, Role
 from czero_core.operations import Operation, OperationRegistry, OperationRejected
+from czero_core.spaces import SpaceService
 from czero_app.auth import RequestAccess
 
 
 class OperationCatalog:
     def __init__(self, auth):
+        self.auth = auth
         def authorize(actor, role):
             if auth is None:
                 raise PermissionDenied()
             return auth.access.authorize(actor, role)
         self.registry = OperationRegistry(authorize)
 
-    def bind(self, name, description, role, result_model, *, read_only=True):
+    def bind(self, name, description, role, result_model, *, read_only=True, space_field=None):
         """Keep FastAPI's signature/CSRF dependencies and reuse its typed handler."""
         def decorate(handler):
             signature = inspect.signature(handler)
@@ -31,6 +33,18 @@ class OperationCatalog:
             model = create_model(name + '_arguments', __config__=ConfigDict(extra='forbid'), **fields)
             output = TypeAdapter(result_model)
             scope = 'c0:admin' if role is Role.ADMIN else ('c0:read' if read_only else 'c0:write')
+
+            def preauthorize(actor, arguments):
+                try:
+                    parsed = model.model_validate(arguments)
+                except ValidationError:
+                    raise OperationRejected() from None
+                selected = parsed
+                for part in space_field.split('.'):
+                    selected = getattr(selected, part)
+                with self.auth.access.database.engine.connect() as connection:
+                    return SpaceService(self.auth.access.database, self.auth.access).authorize(
+                        connection, actor, role, space_id=selected, check_scopes=False)
 
             def invoke(actor, arguments):
                 try:
@@ -46,7 +60,8 @@ class OperationCatalog:
                     raise HTTPException(503, 'invalid_operation_result') from None
 
             self.registry.register(Operation(name, description, role, scope,
-                model.model_json_schema(), output.json_schema(), invoke, read_only))
+                model.model_json_schema(), output.json_schema(), invoke, read_only,
+                preauthorize=preauthorize if space_field else None))
 
             @wraps(handler)
             def route(*args, **kwargs):

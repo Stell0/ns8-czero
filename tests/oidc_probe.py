@@ -71,7 +71,7 @@ class Browser:
             data = json.dumps(data).encode()
         return self.request(path, data, method, headers)
 
-    def upload(self, profile, content, *, filename, title, media_type, retain_original=False, source_id=None, expected_revision=None, metadata=None):
+    def upload(self, profile, content, *, filename, title, media_type, retain_original=False, source_id=None, expected_revision=None, metadata=None, space_id=None):
         boundary = 'czero-' + uuid4().hex
         fields = {'title': title, 'media_type': media_type, 'retain_original': 'true' if retain_original else 'false',
                   'metadata': json.dumps(metadata or {})}
@@ -82,7 +82,8 @@ class Browser:
             parts.append((f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n').encode())
         parts.append((f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{filename}"\r\nContent-Type: application/octet-stream\r\n\r\n').encode() + content + b'\r\n')
         parts.append((f'--{boundary}--\r\n').encode())
-        return self.request('/api/v1/sources/upload', b''.join(parts), 'POST', {
+        path='/api/v1/sources/upload'+('?space_id='+space_id if space_id else '')
+        return self.request(path, b''.join(parts), 'POST', {
             'Content-Type': 'multipart/form-data; boundary=' + boundary, 'Origin': self.origin, 'X-C0-CSRF': profile['csrf_token']})
 
     def logout(self, profile):
@@ -457,6 +458,97 @@ def verify_knowledge(browser, profile, expected):
     assert get('knowledge/changes?limit=100')['changes'] == expected['changes'], 'Knowledge change cursor history changed'
 
 
+
+class ScopedBrowser:
+    """Public HTTP selector, shared by native recovery and signed local tests."""
+    def __init__(self, browser, space_id):
+        self.browser, self.space_id = browser, space_id
+
+    def api(self, path, data=None, method=None, csrf=None):
+        return self.browser.api(path + ('&' if '?' in path else '?') +
+                                'space_id=' + self.space_id, data, method, csrf)
+
+
+def seed_protected_space(browser, profile, member_id):
+    def request(path, data=None, method=None, expected=200):
+        status, body, _ = browser.api('/api/v1/' + path, data, method, profile['csrf_token'])
+        assert status == expected, 'Cannot seed protected recovery fixture'
+        return json.loads(body)
+    space = request('spaces', {'name':'Retained protected recovery',
+        'idempotency_key':'native-protected-space'}, 'POST', 201)
+    scoped = ScopedBrowser(browser, space['id'])
+    grant = request('spaces/' + space['id'] + '/grants/' + member_id,
+        {'role':'reader','expected_revision':0,'idempotency_key':'native-retained-reader'}, 'PUT')
+    memory = seed_wiki_memory(scoped, profile)
+    records = seed_text_sources(scoped, profile, title='Retained protected evidence')
+    original=b'Retained protected original evidence cafe'
+    status, body, _ = browser.upload(profile, original, filename='protected.txt',
+        title='Retained protected original', media_type='text/plain', retain_original=True, space_id=space['id'])
+    assert status == 202, 'Cannot seed protected retained original'
+    records.append({'version':json.loads(body),'original_hash':hashlib.sha256(original).hexdigest()})
+    for record in records:
+        ready = source_state(scoped, record['version'], 'ready')
+        status, body, _ = scoped.api('/api/v1/source-versions/' + ready['id'] + '/document')
+        assert status == 200, 'Protected document is unavailable'
+        record['document'] = json.loads(body)
+        status, body, _ = scoped.api('/api/v1/documents/' + record['document']['id'] + '/chunks')
+        assert status == 200, 'Protected chunks are unavailable'
+        record['chunks'] = json.loads(body)['chunks']
+        assert record['chunks'], 'Protected extraction produced no evidence'
+        status, body, _ = scoped.api('/api/v1/chunks/' + record['chunks'][0]['id'] + '/citation')
+        assert status == 200, 'Protected citation is unavailable'
+        record['citation'] = json.loads(body)
+    status, body, _ = scoped.api('/api/v1/objects', {'type_name':'fixture-inventory',
+        'data':{'name':'persistent-record','count':17}}, 'POST', profile['csrf_token'])
+    assert status == 201, 'Protected uniqueness was not isolated from Shared'
+    return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':json.loads(body)}
+
+
+def verify_protected_space(browser, profile, expected, *, admin=False):
+    identifier = expected['space']['id']
+    scoped = ScopedBrowser(browser, identifier)
+    status, body, _ = scoped.api('/api/v1/me')
+    assert status == 200 and json.loads(body)['role'] == ('admin' if admin else 'reader'), 'Recovered space role changed'
+    status, body, _ = browser.api('/api/v1/spaces')
+    assert status == 200 and any(s['id'] == identifier for s in json.loads(body)['spaces']), 'Recovered space discovery missing'
+    if admin:
+        status, body, _ = browser.api('/api/v1/spaces/' + identifier + '/grants')
+        assert status == 200 and json.loads(body)['grants'] == [expected['grant']], 'Recovered space grant/revision changed'
+        verify_wiki_memory_receipts(scoped, profile, expected['memory'])
+        verify_text_receipts(scoped, profile, expected['sources'])
+    else:
+        status, _, _ = scoped.api('/api/v1/wiki/pages/upsert', {**expected['memory']['requests'][0],
+            'slug':'reader-must-not-create','idempotency_key':'reader-must-not-create'}, 'POST', profile['csrf_token'])
+        assert status == 403, 'Application Editor bypassed its Reader space grant'
+    for page in expected['memory']['receipts']:
+        path = '/api/v1/wiki/pages/' + page['id'] + '?revision=' + str(page['revision'])
+        status, body, _ = scoped.api(path)
+        assert status == 200 and json.loads(body)['content'] == page['content'], 'Protected authored history changed'
+        assert browser.api(path)[0] == 404, 'Private UUID leaked into Shared'
+    for record in expected['sources']:
+        source_state(scoped, record['version'], 'ready', seconds=15)
+        for path, value in [('/api/v1/source-versions/' + record['version']['id'] + '/document', record['document']),
+                            ('/api/v1/chunks/' + record['chunks'][0]['id'] + '/citation', record['citation'])]:
+            status, body, _ = scoped.api(path)
+            assert status == 200 and json.loads(body) == value, 'Protected evidence identity or provenance changed'
+            assert browser.api(path)[0] == 404, 'Protected evidence UUID leaked into Shared'
+        status, body, _ = scoped.api('/api/v1/documents/' + record['document']['id'] + '/chunks')
+        assert status == 200 and json.loads(body)['chunks'] == record['chunks'], 'Protected immutable chunks changed'
+        original_path='/api/v1/source-versions/' + record['version']['id'] + '/original'
+        status, body, _ = scoped.api(original_path)
+        if 'original_hash' in record:
+            assert status == 200 and hashlib.sha256(body).hexdigest() == record['original_hash'], 'Retained protected original changed'
+        else:
+            assert status == 404, 'Unretained protected original became available'
+        assert browser.api(original_path)[0] == 404, 'Protected original leaked into Shared'
+    row = expected['object']
+    status, body, _ = scoped.api('/api/v1/objects/' + row['id'])
+    assert status == 200 and json.loads(body) == row, 'Protected structured record changed'
+    assert browser.api('/api/v1/objects/' + row['id'])[0] == 404, 'Private object leaked into Shared'
+    status, body, _ = scoped.api('/api/v1/knowledge/search?query=native&mode=text&rerank=off')
+    assert status == 200 and json.loads(body)['hits'], 'Recovered protected evidence is not searchable'
+
+
 def persistence(operation):
     payload = json.loads((STATE / "personas.json").read_text())
     origin = "https://" + payload["host"]
@@ -484,16 +576,20 @@ def persistence(operation):
         source_records = seed_sources(owner, profile)
         knowledge = seed_knowledge(owner, profile, source_records, records)
         clients = seed_oauth_clients(owner, profile)
-        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":relation_id,"sources":source_records,"knowledge":knowledge,"oauth_clients":clients}))
+        protected = seed_protected_space(owner, profile, member["id"])
+        expected_file.write_text(json.dumps({"owner":profile["id"],"member":member["id"],"objects":records,"relation":relation_id,"sources":source_records,"knowledge":knowledge,"oauth_clients":clients,"protected":protected}))
+        expected_file.chmod(0o600)
     expected = json.loads(expected_file.read_text())
     assert profile["id"] == expected["owner"], "Recovered owner identity changed"
     verify_oauth_clients(owner, expected['oauth_clients'])
     verify_text_receipts(owner, profile, expected['sources'])
     verify_wiki_memory_receipts(owner, profile, expected['knowledge']['memory'])
+    verify_protected_space(owner, profile, expected['protected'], admin=True)
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
     verify_capabilities(editor, 'editor')
+    verify_protected_space(editor, member_profile, expected['protected'])
     for record in expected["objects"]:
         status,body,_=editor.api("/api/v1/objects/"+record["id"])
         assert status==200,"Recovered object missing"

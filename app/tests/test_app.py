@@ -45,7 +45,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
         "status": "ok",
         "service": "czero",
         "core_version": "0.27.0",
-        "app_version": "0.41.0",
+        "app_version": "0.42.0",
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -85,7 +85,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.41.0"
+    assert document["info"]["version"] == "0.42.0"
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
@@ -180,7 +180,7 @@ def test_wiki_graph_offers_readable_nodes_edges_and_references(client):
     assert '<summary>Graph JSON</summary>' in page.text
 
 
-@pytest.mark.parametrize('asset', ['site.js', 'reader.js', 'vendor/markdown-it-15.0.2.min.js'])
+@pytest.mark.parametrize('asset', ['site.js', 'reader.js', 'spaces.js', 'space-admin.js', 'vendor/markdown-it-15.0.2.min.js'])
 def test_reader_assets_are_local_and_work_under_the_instance_prefix(client, asset):
     response = client('/czero/czero17/' + asset)
     assert response.status_code == 200

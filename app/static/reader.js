@@ -15,7 +15,9 @@
     document.title='C0 — Knowledge';
     ++epoch;++selection;++versionSequence;profile=null;article=null;source=null;pages.clear();versions=[];evidence.clear();clearTimeout(pollTimer);
     if($('reader-root'))$('reader-root').hidden=true;
-    for(const id of ['reader-tree','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks'])if($(id))$(id).replaceChildren();
+    for(const id of ['tree-status','history-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-version-label','reader-version','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
+    if($('page-title'))$('page-title').textContent='Knowledge';
+    for(const id of ['reader-export','reader-json'])if($(id)){$(id).removeAttribute('href');$(id).hidden=true;}
     if($('article-update-task'))$('article-update-task').hidden=true;
     const account=$({wiki:'wiki-account',sources:'sources-account',agents:'guide-status',index:'reader-status'}[kind]);
     if(account)account.textContent='Sign in with a permitted account to continue.';
@@ -24,13 +26,14 @@
   async function read(path) {
     const captured=epoch;
     let response;
-    try{response=await fetch('./api/v1/'+path,{cache:'no-store'});}
+    try{response=await (window.C0Space?window.C0Space.request(path):fetch('./api/v1/'+path,{cache:'no-store'}));}
     catch{throw new Error('Content is unavailable. Try again.');}
     if([401,403].includes(response.status)){revoke();throw new Error('Sign-in or permitted access is required.');}
     if(!response.ok)throw new Error(response.status===404?'This item is no longer available.':'Content is unavailable. Try again.');
     let value;try{value=await response.json();}catch{throw new Error('Content is unavailable. Try again.');}
     if(captured!==epoch)throw new Error('Access changed. Refresh to continue.');return value;
   }
+  if(window.C0Space)window.C0Space.onClear(revoke);
   function showRoot() {if($('reader-root'))$('reader-root').hidden=false;}
   function details(label,value) {const detail=node('details');detail.append(node('summary',label),node('pre',JSON.stringify(value,null,2)));return detail;}
   function tree() {
@@ -87,7 +90,7 @@
       $('reader-actions').hidden=false;$('article-update-task').hidden=!writable() || page.deleted;
       $('reader-history-panel').hidden=false;$('reader-history-panel').open=false;
       $('reader-technical-panel').hidden=false;$('reader-technical').textContent=JSON.stringify({id:page.id,slug:page.slug,revision:displayed,content_hash:page.content.content_hash,metadata:page.content.metadata},null,2);
-      for(const [key,format] of [['reader-export','markdown'],['reader-json','json']])$(key).href='./api/v1/wiki/pages/'+page.id+'/export?'+new URLSearchParams({format,revision:displayed});
+      for(const [key,format] of [['reader-export','markdown'],['reader-json','json']])$(key).href=window.C0Space?window.C0Space.apiURL('wiki/pages/'+page.id+'/export?'+new URLSearchParams({format,revision:displayed})):'./api/v1/wiki/pages/'+page.id+'/export?'+new URLSearchParams({format,revision:displayed});
       if(historical || page.deleted) {
         $('reader-notice').hidden=false;$('reader-notice').replaceChildren(node('span',page.deleted?'This article is archived. Historical content remains available. ':'You are reading revision '+displayed+'. Linked facts for the current article are omitted. '),link('Open latest revision',C.pageURL(page.id)));
       }
@@ -210,12 +213,15 @@
     }catch(error){if(captured===selection && request===versionSequence)status(error.message);}
   }
   async function guide() {
+    const captured=epoch;
     const response=await fetch('./agents/capabilities.json',{cache:'no-store'});if(!response.ok)throw new Error('Connection details are unavailable.');
-    try{capabilities=await response.json();}catch{throw new Error('Connection details are unavailable.');}
+    let described;try{described=await response.json();}catch{throw new Error('Connection details are unavailable.');}
+    if(captured!==epoch)return;capabilities=described;
     $('guide-connection-status').textContent=capabilities.interfaces.mcp?'MCP is available. Connect a compatible external assistant using the server URL below.':'MCP is unavailable until NS8 sign-in and hostname-root routing are configured.';
     if(capabilities.mcp_url){$('agent-mcp-url').value=capabilities.mcp_url;$('guide-mcp').hidden=false;}
     if(!capabilities.authenticated){$('guide-status').textContent='Sign in to see instructions for your current permissions.';$('guide-signin').hidden=false;return;}
-    profile={role:capabilities.role};$('guide-status').textContent='Your current access: '+capabilities.role+'.';
+    profile=window.C0Space?await read('me'):{role:capabilities.role};if(captured!==epoch)return;
+    $('guide-status').textContent='Your current access: '+profile.role+'.';
     const choices=[['read','Read and research']];if(writable())choices.push(['create','Create an article'],['update','Update knowledge'],['ingest','Import a document']);
     $('guide-tasks').replaceChildren();for(const [kind,title]of choices){const panel=node('details');panel.append(node('summary',title));const body=node('div');C.copyPanel(body,C.task(kind,null,capabilities));panel.append(body);$('guide-tasks').append(panel);}
   }

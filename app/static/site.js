@@ -11,10 +11,11 @@
     if (className) element.className = className;
     return element;
   };
-  const link = (label, href) => { const a = node('a', label); a.href = href; return a; };
-  const pageURL = (id, revision) => './wiki?' + new URLSearchParams({page: id, ...(revision ? {revision: String(revision)} : {})});
-  const sourceURL = citation => './sources?' + new URLSearchParams({source: citation.source_id,
-    ...(citation.version_id ? {version: citation.version_id} : {}), ...(citation.chunk_id ? {chunk: citation.chunk_id} : {})});
+  const scopedLink=href=>window.C0Space?(href.startsWith('./api/v1/')?window.C0Space.apiURL(href):window.C0Space.pageURL(href)):href;
+  const link = (label, href) => { const a = node('a', label); a.href = scopedLink(href); return a; };
+  const pageURL = (id, revision) => scopedLink('./wiki?' + new URLSearchParams({page: id, ...(revision ? {revision: String(revision)} : {})}));
+  const sourceURL = citation => scopedLink('./sources?' + new URLSearchParams({source: citation.source_id,
+    ...(citation.version_id ? {version: citation.version_id} : {}), ...(citation.chunk_id ? {chunk: citation.chunk_id} : {})}));
   function safeURL(value) {
     if (!value || /[\x00-\x20\x7f]/.test(value)) return null;
     try {
@@ -58,7 +59,8 @@
     const update = '\nFind and read the existing article, fetch its current revision immediately before editing, and update that same page rather than creating a duplicate. Preserve provenance and evidence. Use the current expected_revision and a fresh idempotency_key for each new change; reuse a key only for an unchanged uncertain retry. Verify the saved article. Authorized changes publish immediately and retain history.\nRequested change: [describe the update]';
     const create = '\nSearch existing articles first. Update an existing page if it covers the same subject; otherwise create a concise article using a hierarchical slug such as subject/subtopic. Slugs are fixed after creation. Link to existing articles using their C0 article URLs and cite supporting evidence. Fetch current state before edits and use the supported revision and replay protections. Verify the saved content.\nNew knowledge: [describe the material and desired article]';
     const ingest = '\nImport the supplied document through C0 multipart REST source upload using an authorized client with upload support. Binary upload is not an MCP tool. Use the advertised REST base and documented upload fields, preserve provenance, and explicitly follow my choice about retaining the original. Check extraction status and read the persisted text before using it. Then search for existing articles and update or create sourced knowledge without duplicates. If your connection cannot upload files, explain that limitation; do not claim the file was ingested.\nDocument and instructions: [attach material; specify whether to retain the original]';
-    return connection + context + ({read, update, create, ingest}[kind] || read) + rules;
+    const space=window.C0Space?.identifier?'\nKnowledge space ID: '+window.C0Space.identifier+'. Use this explicit space_id on every content operation (knowledge_search uses options.space_id). Never fall back to the shared space after denial.':'';
+    return connection + space + context + ({read, update, create, ingest}[kind] || read) + rules;
   }
   // Only allowlisted Markdown tokens become DOM elements. HTML and media never become executable markup.
   function markdown(container, body, toc) {

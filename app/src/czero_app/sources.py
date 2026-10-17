@@ -164,6 +164,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     service = SourceService(database, auth.access if auth else None, registry, originals)
     app.state.sources = service
 
+    def selected(space_id):
+        return service.in_space(space_id) if space_id is not None else service
+
     def invoke(operation, *args, **kwargs):
         if auth is None:
             raise HTTPException(503, 'authentication_not_configured')
@@ -193,9 +196,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
                    413:{'description':'Serialized request exceeds one MiB'}})
     @operation('sources_ingest_text',
         'Submit sanitized text evidence (131072 UTF-8 bytes); poll versions, then retrieve immutable document/chunks before citing. Replays return the original submission state.',
-        Role.EDITOR, VersionView, read_only=False)
-    def ingest_text(data: IngestTextRequest, context: RequestAccess = Depends(write_context)):
-        return invoke(service.ingest_text, context.actor, **data.model_dump())
+        Role.EDITOR, VersionView, read_only=False, space_field='space_id')
+    def ingest_text(data: IngestTextRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
+        return invoke(selected(space_id).ingest_text, context.actor, **data.model_dump())
 
     @app.post('/api/v1/sources/upload', response_model=VersionView, status_code=202)
     def upload(file: Annotated[UploadFile, File()], title: Annotated[str, Form(max_length=256)],
@@ -204,66 +207,66 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
                metadata: Annotated[str, Form(max_length=16384)] = '{}',
                source_id: Annotated[UUID | None, Form()] = None,
                expected_revision: Annotated[int | None, Form(ge=1)] = None,
-               context: RequestAccess = Depends(write_context)):
+               space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         try:
             value = json.loads(metadata)
         except (ValueError, RecursionError):
             raise HTTPException(422, 'invalid_metadata') from None
-        return invoke(service.ingest, context.actor, file.file, title=title,
+        return invoke(selected(space_id).ingest, context.actor, file.file, title=title,
             filename=file.filename or 'document', media_type=media_type,
             retain_original=retain_original == 'true', metadata=value,
             source_id=source_id, expected_revision=expected_revision)
 
     @app.get('/api/v1/sources', response_model=SourcesView)
-    @operation('sources_list', 'Browse source metadata', Role.READER, SourcesView, read_only=True)
+    @operation('sources_list', 'Browse source metadata', Role.READER, SourcesView, read_only=True, space_field='space_id')
     def sources(limit: int = 50, offset: int = 0, include_deleted: bool = False,
-                context: RequestAccess = Depends(read_context)):
-        return {'sources': invoke(service.list, context.actor, limit=limit, offset=offset, include_deleted=include_deleted)}
+                space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return {'sources': invoke(selected(space_id).list, context.actor, limit=limit, offset=offset, include_deleted=include_deleted)}
 
     @app.get('/api/v1/sources/search', response_model=SourceSearchView)
-    @operation('sources_search', 'Search retained source text with citations', Role.READER, SourceSearchView, read_only=True)
-    def search(query: str, limit: int = 20, offset: int = 0, context: RequestAccess = Depends(read_context)):
-        return {'citations': invoke(service.search, context.actor, query, limit=limit, offset=offset)}
+    @operation('sources_search', 'Search retained source text with citations', Role.READER, SourceSearchView, read_only=True, space_field='space_id')
+    def search(query: str, limit: int = 20, offset: int = 0, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return {'citations': invoke(selected(space_id).search, context.actor, query, limit=limit, offset=offset)}
 
     @app.get('/api/v1/sources/{source_id}', response_model=SourceView)
-    @operation('sources_get', 'Inspect source metadata', Role.READER, SourceView, read_only=True)
-    def source(source_id: UUID, context: RequestAccess = Depends(read_context)):
-        return invoke(service.get, context.actor, source_id)
+    @operation('sources_get', 'Inspect source metadata', Role.READER, SourceView, read_only=True, space_field='space_id')
+    def source(source_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return invoke(selected(space_id).get, context.actor, source_id)
 
     @app.delete('/api/v1/sources/{source_id}', response_model=SourceView)
-    @operation('sources_archive', 'Archive a source while retaining evidence', Role.EDITOR, SourceView, read_only=False)
-    def delete(source_id: UUID, expected_revision: int, context: RequestAccess = Depends(write_context)):
-        return invoke(service.delete, context.actor, source_id, expected_revision=expected_revision)
+    @operation('sources_archive', 'Archive a source while retaining evidence', Role.EDITOR, SourceView, read_only=False, space_field='space_id')
+    def delete(source_id: UUID, expected_revision: int, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
+        return invoke(selected(space_id).delete, context.actor, source_id, expected_revision=expected_revision)
 
     @app.get('/api/v1/sources/{source_id}/versions', response_model=VersionsView)
-    @operation('source_versions_list', 'Inspect immutable source version history', Role.READER, VersionsView, read_only=True)
-    def versions(source_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
-        return {'versions': invoke(service.versions, context.actor, source_id, limit=limit, offset=offset)}
+    @operation('source_versions_list', 'Inspect immutable source version history', Role.READER, VersionsView, read_only=True, space_field='space_id')
+    def versions(source_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return {'versions': invoke(selected(space_id).versions, context.actor, source_id, limit=limit, offset=offset)}
 
     @app.post('/api/v1/source-versions/{version_id}/retry', response_model=VersionView, status_code=202)
-    @operation('source_versions_retry', 'Queue retry of retained failed evidence', Role.EDITOR, VersionView, read_only=False)
-    def retry(version_id: UUID, data: RetryRequest, context: RequestAccess = Depends(write_context)):
-        return invoke(service.retry, context.actor, version_id, expected_generation=data.expected_generation)
+    @operation('source_versions_retry', 'Queue retry of retained failed evidence', Role.EDITOR, VersionView, read_only=False, space_field='space_id')
+    def retry(version_id: UUID, data: RetryRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
+        return invoke(selected(space_id).retry, context.actor, version_id, expected_generation=data.expected_generation)
 
     @app.get('/api/v1/source-versions/{version_id}/document', response_model=DocumentView)
-    @operation('documents_get', 'Read complete retained extracted text', Role.READER, DocumentView, read_only=True)
-    def document(version_id: UUID, context: RequestAccess = Depends(read_context)):
-        return invoke(service.document, context.actor, version_id)
+    @operation('documents_get', 'Read complete retained extracted text', Role.READER, DocumentView, read_only=True, space_field='space_id')
+    def document(version_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return invoke(selected(space_id).document, context.actor, version_id)
 
     @app.get('/api/v1/source-versions/{version_id}/original')
-    def original(version_id: UUID, context: RequestAccess = Depends(read_context)):
-        path, version = invoke(service.original, context.actor, version_id)
+    def original(version_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        path, version = invoke(selected(space_id).original, context.actor, version_id)
         filename = version['filename'].replace('\\', '/').rsplit('/', 1)[-1] or 'document'
         return FileResponse(path, media_type='application/octet-stream', filename=filename,
                             headers={'X-Content-Type-Options': 'nosniff'})
 
     @app.get('/api/v1/documents/{document_id}/chunks', response_model=ChunksView)
-    @operation('document_chunks_list', 'Read immutable chunks and offsets', Role.READER, ChunksView, read_only=True)
-    def chunks(document_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
-        return {'chunks': invoke(service.chunks, context.actor, document_id, limit=limit, offset=offset)}
+    @operation('document_chunks_list', 'Read immutable chunks and offsets', Role.READER, ChunksView, read_only=True, space_field='space_id')
+    def chunks(document_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return {'chunks': invoke(selected(space_id).chunks, context.actor, document_id, limit=limit, offset=offset)}
 
     @app.get('/api/v1/chunks/{chunk_id}/citation', response_model=CitationView)
-    @operation('citations_get', 'Read the stable citation of an evidence chunk', Role.READER, CitationView, read_only=True)
-    def citation(chunk_id: UUID, context: RequestAccess = Depends(read_context)):
-        return invoke(service.citation, context.actor, chunk_id)
+    @operation('citations_get', 'Read the stable citation of an evidence chunk', Role.READER, CitationView, read_only=True, space_field='space_id')
+    def citation(chunk_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return invoke(selected(space_id).citation, context.actor, chunk_id)
     return service

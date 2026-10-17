@@ -7,7 +7,7 @@ let draftSequence = 0, saveFlight = null;
 const canWrite = () => profile && ['editor','admin'].includes(profile.role);
 const key = () => crypto.randomUUID();
 async function api(path, options = {}) {
-  const response = await fetch('./api/v1/' + path, {cache:'no-store', ...options});
+  const response = await (typeof window!=='undefined' && window.C0Space ? window.C0Space.request(path, options) : fetch('./api/v1/' + path, {cache:'no-store', ...options}));
   if (!response.ok) {
     if (response.status === 409) throw new Error('Conflict. Your draft is preserved; load the saved version before retrying.');
     if ([401,403].includes(response.status)) throw new Error('Sign-in or permitted access is required.');
@@ -39,7 +39,7 @@ function displayPage(page) {
   $('wiki-slug').readOnly=!!page || !canWrite(); $('save-page').hidden=!canWrite() || !!page?.deleted;
   $('archive-page').hidden=!page || !canWrite() || page.deleted; $('reload-page').hidden=!page;
   $('wiki-history').replaceChildren(); $('wiki-revision').textContent=''; $('page-status').textContent='';
-  for(const [id,format] of [['export-markdown','markdown'],['export-json','json']]) {$(id).hidden=!page;if(page)$(id).href=`./api/v1/wiki/pages/${page.id}/export?format=${format}`;}
+  for(const [id,format] of [['export-markdown','markdown'],['export-json','json']]) {$(id).hidden=!page;if(page)$(id).href=typeof window!=='undefined' && window.C0Space?window.C0Space.apiURL(`wiki/pages/${page.id}/export?format=${format}`):`./api/v1/wiki/pages/${page.id}/export?format=${format}`;}
 }
 async function loadPages() {
   const sequence=++listSequence,start=offset,result=await api(`wiki/pages?limit=50&offset=${start}`);
@@ -63,7 +63,7 @@ $('wiki-form').addEventListener('submit',async event=>{
     const saved=page?await write('wiki/pages/'+page.id,{...data,expected_revision:page.revision},'PUT'):await write('wiki/pages',{...data,slug:$('wiki-slug').value});
     if(selection===pageSequence){
       if(draft===draftSequence){displayPage(saved);$('page-status').textContent='Page saved.';}
-      else {currentPage=saved;$('wiki-heading').textContent=saved.title;$('wiki-identity').textContent=`${saved.id} · revision ${saved.revision}`;$('wiki-slug').value=saved.slug;$('wiki-slug').readOnly=true;$('reload-page').hidden=false;$('archive-page').hidden=!canWrite();for(const [id,format] of [['export-markdown','markdown'],['export-json','json']]){$(id).hidden=false;$(id).href=`./api/v1/wiki/pages/${saved.id}/export?format=${format}`;}$('page-status').textContent='Earlier draft saved. Your newer edits are preserved; save again to keep them.';}
+      else {currentPage=saved;$('wiki-heading').textContent=saved.title;$('wiki-identity').textContent=`${saved.id} · revision ${saved.revision}`;$('wiki-slug').value=saved.slug;$('wiki-slug').readOnly=true;$('reload-page').hidden=false;$('archive-page').hidden=!canWrite();for(const [id,format] of [['export-markdown','markdown'],['export-json','json']]){$(id).hidden=false;$(id).href=typeof window!=='undefined' && window.C0Space?window.C0Space.apiURL(`wiki/pages/${saved.id}/export?format=${format}`):`./api/v1/wiki/pages/${saved.id}/export?format=${format}`;}$('page-status').textContent='Earlier draft saved. Your newer edits are preserved; save again to keep them.';}
       await loadHistory();
     }await loadPages();
   }catch(error){if(selection===pageSequence)$('page-status').textContent=error instanceof SyntaxError?'Metadata must be valid JSON.':error.message;}
@@ -123,7 +123,7 @@ function renderGraph(result) {
     const row=document.createElement('li');
     row.textContent=reference.target_kind+' · '+reference.label_snapshot+' · '+reference.target_id+(reference.missing?' · missing':'');
     if(!reference.missing && Object.hasOwn(routes,reference.target_kind) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference.target_id)){
-      const link=document.createElement('a');link.textContent=' Inspect reference metadata';link.href='./api/v1/'+routes[reference.target_kind]+reference.target_id+(suffix[reference.target_kind]||'');row.append(link);
+      const link=document.createElement('a');link.textContent=' Inspect reference metadata';const target=routes[reference.target_kind]+reference.target_id+(suffix[reference.target_kind]||'');link.href=typeof window!=='undefined' && window.C0Space?window.C0Space.apiURL(target):'./api/v1/'+target;row.append(link);
     }
     $('graph-references').append(row);
   }
@@ -155,3 +155,14 @@ async function initializeWiki() {
   }catch(error){$('wiki-account').textContent=error.message;}
 }
 initializeWiki();
+
+if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
+  ++listSequence;++pageSequence;++historySequence;++entitySequence;++entityListSequence;++graphSequence;++revisionSequence;++draftSequence;
+  profile=null;currentPage=null;currentEntity=null;pendingWrite=null;saveFlight=null;
+  $('wiki-workspace').hidden=true;$('wiki-detail').hidden=true;
+  for(const id of ['wiki-pages','wiki-history','knowledge-entity','knowledge-claims','graph-nodes','graph-edges','graph-references'])$(id).replaceChildren();
+  for(const id of ['wiki-heading','wiki-identity','wiki-revision','wiki-status','page-status','graph-status','entity-status','claim-status','entity-identity','entity-data','claim-citations','knowledge-graph'])$(id).textContent='';
+  for(const id of ['wiki-slug','wiki-title','wiki-body','wiki-metadata','entity-label','entity-aliases','entity-kind','claim-predicate','knowledge-relation-kind','claim-value','claim-evidence','claim-page','knowledge-relation-target','knowledge-reference-id'])$(id).value='';
+  for(const id of ['export-markdown','export-json']){$(id).removeAttribute('href');$(id).hidden=true;}
+  $('wiki-account').textContent='Space access changed. Choose a permitted space.';
+});

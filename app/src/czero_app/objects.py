@@ -145,6 +145,9 @@ def install_object_routes(app: FastAPI,database,auth,read_context,write_context,
     service=ObjectService(database,auth.access if auth else None,reference_resolvers=reference_resolvers)
     app.state.objects=service
 
+    def selected(space_id):
+        return service.in_space(space_id) if space_id is not None else service
+
     def invoke(operation,*args,**kwargs):
         if auth is None: raise HTTPException(503,'authentication_not_configured')
         try: return operation(*args,**kwargs)
@@ -171,64 +174,64 @@ def install_object_routes(app: FastAPI,database,auth,read_context,write_context,
         return invoke(service.get_type,context.actor,type_name)
 
     @app.get('/api/v1/objects',response_model=ObjectsView)
-    @operation('objects_list', 'List and filter typed object records', Role.READER, ObjectsView, read_only=True)
+    @operation('objects_list', 'List and filter typed object records', Role.READER, ObjectsView, read_only=True, space_field='space_id')
     def objects(type_name: str,limit: int=50,offset: int=0,where: str='{}',tag: str | None=None,
-                context: RequestAccess=Depends(read_context)):
+                space_id: UUID | None = None, context: RequestAccess=Depends(read_context)):
         if len(where.encode('utf-8'))>4096: raise HTTPException(422,'invalid_filter')
         try: filters=json.loads(where)
         except (ValueError,RecursionError): raise HTTPException(422,'invalid_filter') from None
-        return {'objects':invoke(service.list,context.actor,type_name,limit=limit,offset=offset,where=filters,tag=tag)}
+        return {'objects':invoke(selected(space_id).list,context.actor,type_name,limit=limit,offset=offset,where=filters,tag=tag)}
 
     @app.post('/api/v1/objects',response_model=ObjectView,status_code=201)
-    @operation('objects_create', 'Create a typed object record', Role.EDITOR, ObjectView, read_only=False)
-    def create(data: ObjectCreate,context: RequestAccess=Depends(write_context)):
-        return invoke(service.create,context.actor,data.type_name,data.data,record_tags=data.tags)
+    @operation('objects_create', 'Create a typed object record', Role.EDITOR, ObjectView, read_only=False, space_field='space_id')
+    def create(data: ObjectCreate,space_id: UUID | None = None, context: RequestAccess=Depends(write_context)):
+        return invoke(selected(space_id).create,context.actor,data.type_name,data.data,record_tags=data.tags)
 
     @app.post('/api/v1/objects/batch',response_model=BatchView)
-    @operation('objects_batch', 'Apply an atomic bounded object mutation batch', Role.EDITOR, BatchView, read_only=False)
-    def batch(data: BatchRequest,context: RequestAccess=Depends(write_context)):
+    @operation('objects_batch', 'Apply an atomic bounded object mutation batch', Role.EDITOR, BatchView, read_only=False, space_field='space_id')
+    def batch(data: BatchRequest,space_id: UUID | None = None, context: RequestAccess=Depends(write_context)):
         operations=[]
         for op in data.operations:
             value=op.model_dump(exclude_none=True)
             operations.append(value)
-        return {'results':invoke(service.batch,context.actor,operations)}
+        return {'results':invoke(selected(space_id).batch,context.actor,operations)}
 
     @app.get('/api/v1/object-events',response_model=EventsView)
-    @operation('objects_changes', 'Read commit-ordered object changes', Role.READER, EventsView, read_only=True)
-    def events(after: int=0,limit: int=50,context: RequestAccess=Depends(read_context)):
-        return {'events':invoke(service.events,context.actor,after=after,limit=limit)}
+    @operation('objects_changes', 'Read commit-ordered object changes', Role.READER, EventsView, read_only=True, space_field='space_id')
+    def events(after: int=0,limit: int=50,space_id: UUID | None = None, context: RequestAccess=Depends(read_context)):
+        return {'events':invoke(selected(space_id).events,context.actor,after=after,limit=limit)}
 
     @app.post('/api/v1/object-relations',response_model=RelationView,status_code=201)
-    @operation('object_relations_create', 'Connect two typed object records', Role.EDITOR, RelationView, read_only=False)
-    def relation(data: RelationCreate,context: RequestAccess=Depends(write_context)):
-        return invoke(service.add_relation,context.actor,**data.model_dump())
+    @operation('object_relations_create', 'Connect two typed object records', Role.EDITOR, RelationView, read_only=False, space_field='space_id')
+    def relation(data: RelationCreate,space_id: UUID | None = None, context: RequestAccess=Depends(write_context)):
+        return invoke(selected(space_id).add_relation,context.actor,**data.model_dump())
 
     @app.delete('/api/v1/object-relations/{relation_id}',status_code=204)
-    @operation('object_relations_delete', 'Remove an object relation', Role.EDITOR, None, read_only=False)
-    def remove_relation(relation_id: UUID,context: RequestAccess=Depends(write_context)):
-        invoke(service.remove_relation,context.actor,relation_id)
+    @operation('object_relations_delete', 'Remove an object relation', Role.EDITOR, None, read_only=False, space_field='space_id')
+    def remove_relation(relation_id: UUID,space_id: UUID | None = None, context: RequestAccess=Depends(write_context)):
+        invoke(selected(space_id).remove_relation,context.actor,relation_id)
 
     @app.get('/api/v1/objects/{object_id}',response_model=ObjectView)
-    @operation('objects_get', 'Read one object record and revision', Role.READER, ObjectView, read_only=True)
-    def detail(object_id: UUID,context: RequestAccess=Depends(read_context)):
-        return invoke(service.get,context.actor,object_id)
+    @operation('objects_get', 'Read one object record and revision', Role.READER, ObjectView, read_only=True, space_field='space_id')
+    def detail(object_id: UUID,space_id: UUID | None = None, context: RequestAccess=Depends(read_context)):
+        return invoke(selected(space_id).get,context.actor,object_id)
 
     @app.put('/api/v1/objects/{object_id}',response_model=ObjectView)
-    @operation('objects_update', 'Update a record with its expected revision', Role.EDITOR, ObjectView, read_only=False)
-    def update(object_id: UUID,data: ObjectUpdate,context: RequestAccess=Depends(write_context)):
-        return invoke(service.update,context.actor,object_id,data.data,expected_revision=data.expected_revision,record_tags=data.tags)
+    @operation('objects_update', 'Update a record with its expected revision', Role.EDITOR, ObjectView, read_only=False, space_field='space_id')
+    def update(object_id: UUID,data: ObjectUpdate,space_id: UUID | None = None, context: RequestAccess=Depends(write_context)):
+        return invoke(selected(space_id).update,context.actor,object_id,data.data,expected_revision=data.expected_revision,record_tags=data.tags)
 
     @app.delete('/api/v1/objects/{object_id}',response_model=DeletedView)
-    @operation('objects_delete', 'Delete a record with its expected revision', Role.EDITOR, DeletedView, read_only=False)
-    def delete(object_id: UUID,expected_revision: int,context: RequestAccess=Depends(write_context)):
-        return invoke(service.delete,context.actor,object_id,expected_revision=expected_revision)
+    @operation('objects_delete', 'Delete a record with its expected revision', Role.EDITOR, DeletedView, read_only=False, space_field='space_id')
+    def delete(object_id: UUID,expected_revision: int,space_id: UUID | None = None, context: RequestAccess=Depends(write_context)):
+        return invoke(selected(space_id).delete,context.actor,object_id,expected_revision=expected_revision)
 
     @app.get('/api/v1/objects/{object_id}/relations',response_model=RelationsView)
-    @operation('object_relations_list', 'List relations of an object record', Role.READER, RelationsView, read_only=True)
-    def relations(object_id: UUID,limit: int=50,offset: int=0,context: RequestAccess=Depends(read_context)):
-        return {'relations':invoke(service.relations,context.actor,object_id,limit=limit,offset=offset)}
+    @operation('object_relations_list', 'List relations of an object record', Role.READER, RelationsView, read_only=True, space_field='space_id')
+    def relations(object_id: UUID,limit: int=50,offset: int=0,space_id: UUID | None = None, context: RequestAccess=Depends(read_context)):
+        return {'relations':invoke(selected(space_id).relations,context.actor,object_id,limit=limit,offset=offset)}
 
     @app.get('/api/v1/references/{kind}/{resource_id}',response_model=ReferenceView)
-    @operation('references_get', 'Resolve a registered typed reference', Role.READER, ReferenceView, read_only=True)
-    def reference(kind: str,resource_id: UUID,type_name: str,context: RequestAccess=Depends(read_context)):
-        return invoke(service.resolve_reference,context.actor,kind,resource_id,type_name)
+    @operation('references_get', 'Resolve a registered typed reference', Role.READER, ReferenceView, read_only=True, space_field='space_id')
+    def reference(kind: str,resource_id: UUID,type_name: str,space_id: UUID | None = None, context: RequestAccess=Depends(read_context)):
+        return invoke(selected(space_id).resolve_reference,context.actor,kind,resource_id,type_name)

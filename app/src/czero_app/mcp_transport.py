@@ -32,6 +32,7 @@ from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 from czero_app.object_errors import mcp_object_error
 from czero_app.knowledge_errors import KNOWLEDGE_OPERATIONS, mcp_knowledge_error
+from czero_app.space_errors import SPACE_OPERATIONS, mcp_space_error
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 RESOURCES = {
@@ -203,7 +204,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 'error="insufficient_scope", error_description="Additional OAuth scope is required", '
                 f'scope="{error.scope}"')
             metadata = {'mcp/www_authenticate':[challenge]}
-            if params.name in KNOWLEDGE_OPERATIONS:
+            if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS:
                 metadata['c0/error'] = {'code':'insufficient_scope', 'status':403}
             return types.CallToolResult(is_error=True,
                 content=[types.TextContent(type='text', text='insufficient_scope')], meta=metadata)
@@ -215,17 +216,19 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 return types.CallToolResult(is_error=True,
                     content=[types.TextContent(type='text', text=code)],
                     meta={'c0/error':{'code':code, 'status':error.status_code}})
-            mapped = mcp_knowledge_error(params.name, error.status_code, error.detail)
+            mapped = (mcp_space_error(params.name, error.status_code, error.detail)
+                or mcp_knowledge_error(params.name, error.status_code, error.detail))
             message, status = mapped if mapped is not None else ('invalid_operation_request', 422)
         except (OperationRejected, ValueError):
-            message = 'invalid_knowledge_request' if params.name in KNOWLEDGE_OPERATIONS else 'invalid_operation_request'
+            message = ('invalid_space_request' if params.name in SPACE_OPERATIONS else
+                ('invalid_knowledge_request' if params.name in KNOWLEDGE_OPERATIONS else 'invalid_operation_request'))
             status = 422
         except (SQLAlchemyError, TransportUnavailable):
             message, status = 'service_unavailable', 503
         except Exception as error:
             logging.getLogger('czero.mcp').error('Operation failed (%s)', type(error).__name__)
             message, status = 'service_unavailable', 503
-        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS else None
+        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS else None
         return types.CallToolResult(is_error=True, content=[types.TextContent(type='text', text=message)], meta=metadata)
 
     async def resources(ctx, params):
@@ -236,9 +239,9 @@ def create_mcp_app(registry, grants, *, issuer_url):
     async def templates(ctx, params):
         names = {item['name'] for item in await describe()}
         return types.ListResourceTemplatesResult(resource_templates=[types.ResourceTemplate(
-            uri_template='c0://' + path + '/{' + argument + '}', name=description,
+            uri_template='c0://' + prefix + path + '/{' + argument + '}', name=description,
             mime_type='application/json') for path, (operation, argument, description) in RESOURCES.items()
-            if operation in names])
+            if operation in names for prefix in ('', 'spaces/{space_id}/')])
 
     async def read(ctx, params):
         uri = str(params.uri)
@@ -247,10 +250,15 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 result = {'operations': await describe()}
             else:
                 match = re.fullmatch(r'c0://(wiki/pages|source-versions|entities)/([0-9a-fA-F-]{36})', uri)
-                if match is None:
-                    raise OperationRejected()
-                operation, argument, _ = RESOURCES[match[1]]
-                result = await execute(operation, {argument: match[2]})
+                if match is not None:
+                    operation, argument, _ = RESOURCES[match[1]]
+                    arguments = {argument: match[2]}
+                else:
+                    match = re.fullmatch(r'c0://spaces/([0-9a-fA-F-]{36})/(wiki/pages|source-versions|entities)/([0-9a-fA-F-]{36})', uri)
+                    if match is None:raise OperationRejected()
+                    operation, argument, _ = RESOURCES[match[2]]
+                    arguments = {argument: match[3], 'space_id': match[1]}
+                result = await execute(operation, arguments)
             return types.ReadResourceResult(contents=[types.TextResourceContents(uri=uri,
                 mime_type='application/json', text=_json(result))])
         except (PermissionDenied, GrantRejected, OperationRejected, HTTPException, ValueError):

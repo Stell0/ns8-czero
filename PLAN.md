@@ -2206,3 +2206,73 @@ native pass or a real SSO observation. Core 0.27.0 is not published, app remains
 unchanged. Exact-source CI/native/artifact gates and Core publication remain
 required before the app imports the new space API; final AM3 transport/UI,
 main/deployment/live/restart/backup/preservation gates remain open.
+
+
+**AM3 Core released, application acceptance pending (17 October 2026):**
+Immutable `core-v0.27.0` names source
+`86a7f7f513d971646fc460ae1708cc0e3a8d46f0`. Its completed exact-source
+[local checks](https://github.com/Stell0/ns8-czero/actions/runs/39057044012)
+pass 1040 Python/PostgreSQL/packaging cases, 106 script cases, schema/shell
+checks and twenty non-UI Robot dry-run cases. Actual
+[producer images](https://github.com/Stell0/ns8-czero/actions/runs/39057044055),
+released-consumer and Renovate checks pass. All three image configurations,
+revisions and sibling references were inspected. The five downloaded SARIF/SBOM
+pairs pass their required audits; retained findings are not a clean-scan claim.
+
+The completed [native run](https://github.com/Stell0/ns8-czero/actions/runs/39057223957)
+tests that actual checkout on Debian installation (seventeen passes, three
+expected skips) and genuine AM2 Rocky upgrade (twenty-seven passes, including
+all seven browser workflows). Both actual reports pass the new installed Core
+space probe and two genuine SSO/SDK probes each. Seven browser privacy guards
+and all three downloaded query-audit artifacts pass with zero query candidates.
+The installed Core probe uses trusted disposable fixture authority; it is
+separate from browser and delegated-token observations. The earlier foundation
+native run was superseded, not passed.
+
+[Publication](https://github.com/Stell0/ns8-czero/actions/runs/39059770936)
+passes independent artifact verification before publishing
+[Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0).
+The downloaded wheel SHA-256 is
+`80c4c15d9568186949126c9ee8d648333b0ca7c2153843840783cf03552006dd`;
+the normalized archive SHA-256 is
+`85403eeea87e50365a8f9bfb35e48cbbe29a807ddfbe461062b04d1eb99de9dd`.
+Both match published SHA256SUMS. All six independent checks pass again against
+those exact downloaded assets, including reproducible rebuilds, separate clean
+wheel/archive installs and packaged PostgreSQL migrations.
+
+Application 0.42.0 now pins this exact released tag/subdirectory/commit; its
+compatible dependency and Renovate bounds allow only 0.27.x patches. Transitive
+versions remain unchanged. Its pending transport/UI increment adds five typed
+space/grant operations, optional content selectors and three qualified resource
+templates while preserving old omitted-selector behavior. UI tests cover
+selector changes, role loss, delayed replies, literal names and grant revision/
+retry guards. Native recovery now seeds protected grants, Wiki history, evidence
+and records before encrypted backup, and verifies exact identities after update
+and clean restore. A new independent-session browser fixture exercises creation,
+role caps, Reader/Editor grants, manager restart and revoked-view clearing.
+These new native application fixtures still require execution; this is not an
+AM3 application/deployment acceptance claim. The dedicated instance remains the
+accepted AM2 runtime `1a45070` with its frozen predecessor digests above.
+
+
+Application review also reproduced private headings/drafts and catalog labels
+remaining after access loss, plus guide actions using the broader application
+role. Focused regressions fail before fixes and all 124 UI cases pass afterward.
+The guide now reads the effective selected-space role and rejects late capability
+responses. Private catalog labels, article headings/navigation, Tools drafts and
+result counts clear together. Recovery fixtures include a protected retained
+original with exact hash and cross-space negative download checks. The new
+application fixture/CI/live gates remain pending.
+
+The final UI review also closes delayed Administration bootstrap responses and
+clears derived counts when context changes. All 124 script cases pass. Pinned
+Renovate 44.161.0 accepts only the new 0.27.x patch range while retaining the
+independent original consumer's 0.24.x range. Twenty non-UI and eight browser
+Robot dry runs pass locally; browser dry runs are not runtime acceptance.
+
+Final application development validation passes **1048 actual Python/PostgreSQL/
+packaging cases**, **124 script cases**, schema/shell checks, twenty non-UI Robot
+dry runs and eight browser dry runs. The protected native recovery helper also
+passes independently against signed local HTTP, including its retained original.
+All new native fixtures remain unaccepted until exact-source image/native runs
+execute; no live AM3 update has occurred.

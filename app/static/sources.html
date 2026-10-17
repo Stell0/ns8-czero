@@ -8,6 +8,8 @@
 <details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
 <a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
 </nav>
+<section class="space-context" aria-label="Knowledge space"><label for="space-selector">Space</label><select id="space-selector" disabled><option>Checking spaces…</option></select><button id="refresh-space" type="button" class="secondary">Refresh access</button><p id="space-status" role="status" aria-live="polite"></p></section>
+
 
 <p id="sources-account" role="status">Checking sign-in...</p><a id="sources-signin" href="./auth/login" hidden>Sign in with NethServer</a>
 <h1 id="page-title">Sources</h1><div id="reader-root" data-reading-only hidden><p class="lead">The documents behind the knowledge. Read extracted text and follow evidence back to its source.</p>
@@ -38,4 +40,4 @@
 <h3>Extracted full text</h3><p id="document-status" role="status"></p><pre id="document-text"></pre>
 <h3>Chunks and citations</h3><ul id="source-chunks"></ul><button id="chunks-previous" type="button">Previous chunks</button><button id="chunks-next" type="button">Next chunks</button>
 <pre id="source-citation"></pre></section>
-</div></div></main><script src="./vendor/markdown-it-15.0.2.min.js" defer></script><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./sources.js" defer></script><script src="./navigation.js" defer></script></body></html>
+</div></div></main><script src="./vendor/markdown-it-15.0.2.min.js" defer></script><script src="./spaces.js" defer></script><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./sources.js" defer></script><script src="./navigation.js" defer></script></body></html>

@@ -15,6 +15,8 @@
 <details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
 <a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
 </nav>
+<section class="space-context" aria-label="Knowledge space"><label for="space-selector">Space</label><select id="space-selector" disabled><option>Checking spaces…</option></select><button id="refresh-space" type="button" class="secondary">Refresh access</button><p id="space-status" role="status" aria-live="polite"></p></section>
+
 
       <div class="access-strip"><p id="account-status" role="status">Checking sign-in…</p><a id="sign-in" href="./auth/login" hidden>Sign in with NethServer</a><button id="sign-out" type="button" class="secondary" hidden>Sign out</button></div>
 <header class="hero"><p class="eyebrow">Shared knowledge</p><h1 id="page-title">A place to find what we know.</h1><p class="lead">Browse articles, follow their sources, and explore the knowledge your team maintains.</p><a class="action-link" href="./wiki">Browse knowledge</a><a class="action-link secondary" href="./agents">Use with AI</a></header>
@@ -31,7 +33,7 @@
 
       <details><summary>Service and integration details</summary><p><a href="./api/v1/health">Service health</a> · <a href="./docs">REST API</a> · <a href="./agents">Agent capabilities</a></p></details>
     </div></main>
-    <script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./status.js" defer></script>
+    <script src="./spaces.js" defer></script><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./status.js" defer></script>
     <script src="./auth.js" defer></script>
   <script src="./navigation.js" defer></script></body>
 </html>

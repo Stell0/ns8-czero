@@ -556,3 +556,32 @@ current/legacy Wiki maintenance lifecycles and retained history/retry receipts.
 This final evidence marker needs its own exact CI/native verification before
 human review. Reviewed main publication and supported dedicated deployment remain
 required; genuine deployed ece3e90 digests remain frozen. AM2 is not accepted.
+
+
+## AM3 released Core and application conventions (pending acceptance)
+
+Core 0.27.0 is published at immutable 86a7f7f after exact local/image/both-native
+checks and downloaded artifact reproducibility/installation/migration gates.
+See PLAN.md for actual reports and SHA-256 identities. App 0.42.0 pins that exact
+released tag/subdirectory/commit and restricts compatible updates to 0.27.x.
+The live predecessor remains accepted AM2 1a45070; do not deploy the Core-only
+candidate or documentation images as a substitute.
+
+Space selection is explicit immutable service state. Omitted selectors always
+mean legacy Shared; unauthorized/invalid selectors never fall back or infer a
+space from a UUID. Object-type definitions stay global. Actual role/space/scope
+checks, captured-token revalidation after waits, same-space references and legacy
+receipt snapshots remain Core contracts. UI helpers are explicit per-controller
+requests, never a global fetch patch. Clear private DOM/cache/drafts before
+navigation or on access loss and reject both late headers and parsed JSON.
+Admin grants use revisions, tombstones and unchanged uncertain-request keys;
+ordinary home must not fetch Admin account lists. Preserve source/session/grant
+lifetimes, current role checks, CSRF and existing Tools safeguards.
+
+New native protected recovery fixtures are seeded through normal SSO/public HTTP
+before encrypted backup. Compare immutable evidence, authored history, grants
+and record identities after update/clean restore; a trusted Core CLI probe alone
+is not an application SSO observation. Retain all seven existing native browser
+workflows and execute the additional independent-session protected-space case.
+AM3 acceptance requires actual new application native/artifact/main/live gates;
+AM4 and Windmill Gate remain gated. Existing CPU and interactive waivers persist.

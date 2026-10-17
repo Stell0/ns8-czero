@@ -7,6 +7,10 @@
   const sharing = byId('sharing'), accounts = byId('accounts'), sharingStatus = byId('sharing-status');
   const refreshAccount = byId('refresh-account');
   let csrfToken = null, role = null, accountGeneration = 0, listGeneration = 0;
+  if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
+    ++accountGeneration;++listGeneration;csrfToken=null;role=null;accounts.replaceChildren();sharing.hidden=true;
+    accountStatus.textContent='Space access changed. Choose a permitted space or refresh access.';
+  });
   const current = (generation) => generation === accountGeneration;
   async function loadAccounts(generation) {
     const sequence = ++listGeneration;

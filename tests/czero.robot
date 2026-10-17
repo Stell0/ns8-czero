@@ -766,6 +766,17 @@ Check hybrid search, citations and Reader behavior in a browser
     Close Browser
     Assert Disposable Sso Browser Password Is Private
 
+Check protected spaces, grants and revocation in a browser
+    [Tags]    ui
+    [Timeout]    8 minutes
+    Import Library    Browser
+    New Browser    chromium    headless=True    args=["--host-resolver-rules=MAP *.test ${NODE_ADDR}", "--no-proxy-server"]
+    New Context    ignoreHTTPSErrors=True
+    New Page
+    Verify Disposable Spaces Browser    ${module_id}    ${host}
+    Close Browser
+    Assert Disposable Sso Browser Password Is Private
+
 Uninstall only the disposable Czero module
     Should Not Be Empty    ${module_id}
     ${removed_id} =    Set Variable    ${module_id}

@@ -26,6 +26,7 @@ from czero_core.retrieval_config import load_settings
 from czero_app.operations import OperationCatalog
 from czero_core.identity import Role
 from czero_app.oauth import install_oauth_routes
+from czero_app.spaces import install_space_routes, ExactSpaceSelector
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -87,6 +88,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         lifespan=lifespan,
     )
     instance_app.state.auth = auth
+    instance_app.add_middleware(ExactSpaceSelector)
     # Keep the body guard inside the existing response-header middleware;
     # multipart errors are handled before crossing its task-group boundary.
     instance_app.add_middleware(UploadBodyLimit)
@@ -96,6 +98,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     catalog = OperationCatalog(auth)
     instance_app.state.operations = catalog.registry
     instance_app.state.operation_catalog = catalog
+    install_space_routes(instance_app, database, auth, read_context, write_context)
     originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
     retrieval_settings=load_settings()
     registry = build_registry(database, originals, settings=retrieval_settings)
@@ -119,6 +122,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get('/navigation.js', include_in_schema=False)
     async def shared_navigation() -> FileResponse:
         return FileResponse(static_dir / 'navigation.js', media_type='text/javascript')
+
+    @instance_app.get('/spaces.js', include_in_schema=False)
+    async def space_script() -> FileResponse:
+        return FileResponse(static_dir / 'spaces.js', media_type='text/javascript')
+
+    @instance_app.get('/space-admin.js', include_in_schema=False)
+    async def space_admin_script() -> FileResponse:
+        return FileResponse(static_dir / 'space-admin.js', media_type='text/javascript')
 
     # Presentation assets only; the domain REST/MCP interfaces stay unchanged.
     @instance_app.get('/site.js', include_in_schema=False)
