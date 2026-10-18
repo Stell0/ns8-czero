@@ -3069,3 +3069,15 @@ directory and absolute import paths; it is the accepted local result. Native
 tests freeze all three genuine 878978d predecessor images and require both new
 installed Core probe flags. Exact-source CI/native/artifact review, immutable
 Core publication, released app adoption and dedicated acceptance remain pending.
+
+**AM5 producer compatibility correction:** First exact Core source `b820253`
+fails [local CI 39113380640](https://github.com/Stell0/ns8-czero/actions/runs/39113380640)
+at pip installation: the app's `<0.29` bound excludes the explicitly installed
+0.29 producer even though the uv local-source override resolves it. A new
+regression reproduces that mismatch. Expand only the declared compatible range
+to `>=0.28.0,<0.30.0`; keep the released `core-v0.28.0` tag, exact locked source
+and all 53 transitive package entries unchanged. Actual lock comparison and the
+source-selection/compatibility regressions pass. App adoption/narrowing and
+updater changes still follow immutable Core publication. Failed evidence remains
+private; no failed source was deployed. The corrected exact source must pass all
+CI/native/artifact gates before publication.
