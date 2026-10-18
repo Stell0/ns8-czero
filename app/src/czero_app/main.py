@@ -23,6 +23,7 @@ from czero_core.sources import OriginalStore
 from czero_app.knowledge import install_knowledge_routes
 from czero_app.retrieval import install_retrieval_routes
 from czero_app.annotations import install_annotation_routes
+from czero_app.bundles import install_bundle_routes
 from czero_core.retrieval_config import load_settings
 from czero_app.operations import OperationCatalog
 from czero_core.identity import Role
@@ -108,6 +109,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     knowledge = install_knowledge_routes(instance_app, database, auth, read_context, write_context)
     install_retrieval_routes(instance_app, database, auth, read_context, settings=retrieval_settings)
     install_annotation_routes(instance_app, database, auth, read_context, write_context)
+    install_bundle_routes(instance_app, database, auth, write_context)
     install_object_routes(instance_app, database, auth, read_context, write_context,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
     install_oauth_routes(instance_app, auth, read_context, write_context)

@@ -197,7 +197,88 @@ async def protected_spaces(client, http, previous=None):
         'expected_revision':1,'idempotency_key':uuid4().hex}})
     assert stale.is_error and stale.content[0].text=='knowledge_conflict', 'Installed protected stale write overwrote current state'
     annotations=await annotated_memory(client,http,space,current,previous['annotations'] if previous else None)
-    return {'request':request,'space':space,'data':data,'first':first,'current':current,'annotations':annotations}
+    consolidation=await consolidated_memory(client,http,space,current,previous['consolidation'] if previous else None)
+    return {'request':request,'space':space,'data':data,'first':first,'current':current,
+            'annotations':annotations,'consolidation':consolidation}
+
+
+async def consolidated_memory(client,http,space,previous_page,previous=None):
+    """One real current/legacy publication retains ready evidence and old history."""
+    identifier=space['id']
+    async def call(name,arguments):
+        result=await client.call_tool(name,arguments)
+        assert not result.is_error,'Installed atomic consolidation operation failed'
+        assert json.loads(result.content[0].text)==result.structured_content,'Installed atomic consolidation representations differ'
+        return result.structured_content
+    def step(operation,**arguments):return {'operation':operation,'arguments':arguments}
+    def ref(index,path='id'):return {'$result':index,'path':path}
+    if previous is None:
+        marker='atomic'+uuid4().hex
+        source_request={'title':'SDK atomic evidence '+uuid4().hex,'body':'Retained atomic evidence '+marker,
+            'media_type':'text/markdown','metadata':{'producer':'sdk-atomic'},'idempotency_key':uuid4().hex}
+        receipt=await call('sources_ingest_text',{'space_id':identifier,'data':source_request})
+        deadline=asyncio.get_running_loop().time()+75
+        while True:
+            versions=await call('source_versions_list',{'space_id':identifier,'source_id':receipt['source_id']})
+            version=next(row for row in versions['versions'] if row['id']==receipt['id'])
+            if version['state']=='ready':break
+            assert version['state']=='queued' and asyncio.get_running_loop().time()<deadline,'Installed atomic evidence did not become ready'
+            await asyncio.sleep(.25)
+        document=await call('documents_get',{'space_id':identifier,'version_id':receipt['id']})
+        chunk=(await call('document_chunks_list',{'space_id':identifier,'document_id':document['id']}))['chunks'][0]
+        citation=await call('citations_get',{'space_id':identifier,'chunk_id':chunk['id']})
+        assert citation['source_hash']==receipt['content_hash'],'Installed atomic evidence hash changed'
+        type_name='sdk-atomic-'+uuid4().hex
+        await call('object_types_create',{'data':{'name':type_name,'label':'Disposable atomic record',
+            'schema':{'type':'object','properties':{'name':{'type':'string','maxLength':128}},'required':['name']}}})
+        applicability={'knowledge_type':'procedure','products':['C0'],'components':['sdk-atomic'],'version_tags':['0.29'],
+            'status':'applicable','confidence':None,'source_references':[{'kind':'chunk','id':chunk['id']}]}
+        request={'space_id':identifier,'idempotency_key':uuid4().hex,'operations':[
+            step('entity.create',kind='procedure',label=marker),
+            step('wiki.upsert',slug='atomic/'+uuid4().hex,title=marker,body='Retained atomic procedure '+marker),
+            step('object.create',type_name=type_name,data={'name':marker}),
+            step('claim.create',entity_id=ref(0),page_id=ref(1),predicate='observed',value={'status':'unknown'},evidence_chunk_ids=[chunk['id']]),
+            step('entity.link',entity_id=ref(0),target_kind='object',target_id=ref(2)),
+            step('annotation.update',target={'kind':'wiki_revision','id':ref(1,'content.id'),'revision':1},namespace='applicability',
+                value={**applicability,'supersedes':[{'kind':'wiki_revision','id':previous_page['content']['id'],'revision':previous_page['revision']}]},expected_revision=0),
+            step('annotation.update',target={'kind':'wiki_revision','id':ref(1,'content.id'),'revision':1},namespace='verification',
+                value={'status':'unverified','verified_at':None,'source_references':[{'kind':'chunk','id':chunk['id']}]},expected_revision=0),
+            step('annotation.update',target={'kind':'object','id':ref(2),'revision':1},namespace='applicability',value=applicability,expected_revision=0),
+            step('annotation.update',target={'kind':'claim','id':ref(3),'revision':1},namespace='applicability',value=applicability,expected_revision=0)]}
+        original=await call('knowledge_bundle_apply',{'data':request})
+        rows=original['results'];assert len(rows)==9,'Installed atomic step results missing'
+        assert rows[3]['entity_id']==rows[0]['id'] and rows[3]['page_id']==rows[1]['id'],'Installed earlier step reference changed'
+        assert rows[5]['value']['confidence'] is None and rows[6]['value']['verified_at'] is None,'Installed atomic null metadata changed'
+        changed=await call('wiki_pages_upsert',{'space_id':identifier,'data':{'slug':rows[1]['slug'],'title':marker,
+            'body':'Later retained atomic observation','expected_revision':1,'idempotency_key':uuid4().hex}})
+        previous={'request':request,'receipt':original,'current':changed,'type_name':type_name,
+            'source_request':source_request,'source_receipt':receipt,'citation':citation,'marker':marker}
+    assert await call('knowledge_bundle_apply',{'data':previous['request']})==previous['receipt'],'Installed whole atomic retry changed its snapshot'
+    assert await call('sources_ingest_text',{'space_id':identifier,'data':previous['source_request']})==previous['source_receipt'],'Installed atomic source retry changed'
+    rows=previous['receipt']['results'];current=previous['current']
+    assert await call('wiki_pages_resolve',{'space_id':identifier,'slug':rows[1]['slug']})==current,'Installed atomic current revision changed'
+    unknown=await call('knowledge_annotations_get',{'space_id':identifier,'kind':'wiki_revision',
+        'target_id':current['content']['id'],'content_revision':current['revision'],'namespace':'verification'})
+    assert unknown['revision']==0 and unknown['status']=='unknown' and unknown['value'] is None,'Installed atomic verification transferred to new content'
+    old=await call('wiki_pages_get',{'space_id':identifier,'page_id':rows[1]['id'],'revision':1})
+    assert old['content']==rows[1]['content'],'Installed atomic prior authored content changed'
+    citation=await call('citations_get',{'space_id':identifier,'chunk_id':previous['citation']['chunk_id']})
+    assert citation==previous['citation'],'Installed atomic immutable citation changed'
+    claim=await call('claims_get',{'space_id':identifier,'claim_id':rows[3]['id']})
+    assert claim['value']=={'status':'unknown'} and claim['evidence'][0]['chunk_id']==citation['chunk_id'],'Installed atomic sourced claim changed'
+    denied=await client.call_tool('wiki_pages_get',{'page_id':rows[1]['id']})
+    assert denied.is_error and denied.content[0].text=='knowledge_not_found','Installed atomic private UUID escaped into Shared'
+    response=await http.post('/api/v1/knowledge/bundles/apply',json=previous['request'])
+    assert response.status_code==200 and response.json()==previous['receipt'],'Installed atomic REST/MCP replay parity differs'
+    failed={'space_id':identifier,'idempotency_key':uuid4().hex,'operations':[
+        step('wiki.upsert',slug='rollback/'+uuid4().hex,title='Never published',body='Never published'),
+        step('wiki.upsert',slug=rows[1]['slug'],title='Stale',body='Stale',expected_revision=1)]}
+    result=await client.call_tool('knowledge_bundle_apply',{'data':failed})
+    assert result.is_error and result.content[0].text=='knowledge_conflict','Installed atomic stale write succeeded'
+    assert result.meta['c0/error']=={'code':'knowledge_conflict','status':409},'Installed atomic conflict metadata missing'
+    absent=await client.call_tool('wiki_pages_resolve',{'space_id':identifier,'slug':failed['operations'][0]['arguments']['slug']})
+    assert absent.is_error and absent.content[0].text=='knowledge_not_found','Installed failed atomic write partially published'
+    return previous
 
 
 async def annotated_memory(client,http,space,page,previous=None):
@@ -287,6 +368,7 @@ async def check(value):
     typed_lifecycles = 0
     text_lifecycles, text_state = 0, None
     wiki_lifecycles = 0
+    consolidation_lifecycles = 0
     transport = NodeTransport(urlsplit(origin).hostname, value['address'], value['ca'])
     async with httpx2.AsyncClient(transport=transport, base_url=origin, timeout=20,
             headers={'Authorization':'Bearer ' + value['access_token']}) as http:
@@ -347,6 +429,8 @@ async def check(value):
                         typed_lifecycles += 1
                         protected_state=await protected_spaces(client,http,protected_state)
                         protected_lifecycles+=1
+                        assert len(protected_state['consolidation']['receipt']['results'])==9,'Installed atomic lifecycle proof incomplete'
+                        consolidation_lifecycles+=1
                 if value['scope'] == 'c0:read':
                     denied = await client.call_tool('objects_create', {'data':{'type_name':'absent','data':{}}})
                     assert denied.is_error, 'Read token mutation scope not enforced'
@@ -362,6 +446,16 @@ async def check(value):
                         assert 'scope="c0:write"' in challenge and 'c0:admin' not in challenge, 'Scope upgrade requested excess authority'
                         assert 'resource_metadata="' + origin + '/.well-known/oauth-protected-resource/mcp"' in challenge, 'Scope upgrade metadata route mismatch'
                 if value['scope'] == 'c0:read':
+                    denied_bundle=await client.call_tool('knowledge_bundle_apply',{'data':{
+                        'idempotency_key':uuid4().hex,'operations':[{'operation':'wiki.upsert','arguments':{
+                            'slug':'denied-'+uuid4().hex,'title':'Denied','body':'Synthetic'}}]}})
+                    expected_code='permission_denied' if role=='reader' else 'insufficient_scope'
+                    assert denied_bundle.is_error and denied_bundle.content[0].text==expected_code,'Installed atomic role/scope denial mismatch'
+                    assert denied_bundle.meta['c0/error']=={'code':expected_code,'status':403},'Installed atomic authorization metadata missing'
+                    if role=='reader':
+                        assert 'mcp/www_authenticate' not in denied_bundle.meta,'Atomic role denial requested scope upgrade'
+                    else:
+                        assert 'scope="c0:write"' in denied_bundle.meta['mcp/www_authenticate'][0],'Installed atomic scope challenge mismatch'
                     denied_wiki = await client.call_tool('wiki_pages_upsert', {'data':{
                         'slug':'denied-'+uuid4().hex,'title':'Denied','body':'Synthetic','idempotency_key':uuid4().hex}})
                     expected_code = 'permission_denied' if role=='reader' else 'insufficient_scope'
@@ -411,6 +505,8 @@ async def check(value):
     assert protected_lifecycles==expected_typed, 'Installed protected-space lifecycle coverage mismatch'
     print('Installed protected space lifecycles completed: %d' % protected_lifecycles)
     print('Installed applicability and structured retrieval lifecycles completed: %d' % protected_lifecycles)
+    assert consolidation_lifecycles==expected_typed,'Installed atomic lifecycle coverage mismatch'
+    print('Installed atomic consolidation lifecycles completed: %d' % consolidation_lifecycles)
     assert wiki_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed Wiki lifecycle coverage mismatch'
     print('Installed Wiki memory lifecycles completed: %d' % wiki_lifecycles)
     assert text_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'

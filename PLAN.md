@@ -3108,3 +3108,86 @@ to the native API/browser checks alongside Core 0.29 expectations. All ten local
 source/compatibility/version cases and twenty Robot dry runs then pass. A
 preceding sequential shell did not stop at the new guard's failure; subsequent
 dependent verification uses fail-fast execution and inspects each actual result.
+
+
+**AM5 immutable Core publication and application candidate:** Corrected exact
+Core source `815709226efec96afe2d411a596464ac9ec365f7` passes
+[local push 39115292505](https://github.com/Stell0/ns8-czero/actions/runs/39115292505),
+[PR local 39115296021](https://github.com/Stell0/ns8-czero/actions/runs/39115296021),
+[producer 39115292509](https://github.com/Stell0/ns8-czero/actions/runs/39115292509),
+[released 39115529133](https://github.com/Stell0/ns8-czero/actions/runs/39115529133),
+[PR released 39115296030](https://github.com/Stell0/ns8-czero/actions/runs/39115296030)
+and [actual Renovate 39115351873](https://github.com/Stell0/ns8-czero/actions/runs/39115351873).
+The fresh local full run passes 1171 Python/PostgreSQL/packaging cases in
+337.39 seconds; CI also passes 125 script cases and twenty Robot dry runs.
+[Native 39115438733](https://github.com/Stell0/ns8-czero/actions/runs/39115438733)
+actually passes Debian genuine `878978d` upgrade twenty cases and Rocky
+installation twenty-five cases/three expected update-only skips, including all
+eight real browser/privacy workflows and twenty-five numeric accessibility
+contexts. Downloaded reports verify both actual tested checkouts, the three
+frozen predecessor digests, installed atomic-consolidation/maintenance probes,
+all five annotation histories/receipts through update and clean restore, both
+SDK protocols and all three actual OAuth-query artifacts with zero candidates.
+All three candidate OCI revisions/sibling references and five actual SARIF/SBOM
+pairs pass audit; existing vendor findings remain unresolved.
+
+Only after these exact gates and complete diff/compatibility review, immutable
+[`core-v0.29.0`](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.29.0)
+is published by [39117777852](https://github.com/Stell0/ns8-czero/actions/runs/39117777852).
+Its six supplied-artifact tests actually pass. Downloaded checksums:
+
+- Wheel: `cab8aee2ac4b1783294c0116a4c760f5289c66c3efa05e39930131f583daf9df`.
+- Source archive: `4f4670784325ff6f067260437f9988d9a1af7bf4cb7a5c66d20ca8dd68154943`.
+
+A separate clean detached checkout of that exact source verifies both assets,
+independent physical wheel/archive installations outside the checkout, identical
+normalized rebuild hashes and repeated fresh PostgreSQL migrations plus installed
+evidence/space/annotation/bundle probes: six passes in 34.42 seconds. No published
+asset is replaced. This library publication is not a stable module release.
+
+Application 0.44 now adopts the actual released tag/commit with compatible range
+`>=0.29.0,<0.30.0`, a frozen lock and matching Renovate/runtime source guards.
+Typed REST `POST /api/v1/knowledge/bundles/apply` and MCP
+`knowledge_bundle_apply` expose the seventeen fixed operations with one body
+space selector, prior-result references, expected revisions, ready-evidence
+checks and the original whole receipt. Each returned step uses its existing
+public DTO; retries normalize stored snapshots without reading current content.
+The catalog adds one operation (76 total); existing response contracts remain
+unchanged and maintenance annotation inputs gain only optional fields.
+
+Local transport proofs include actual lost reply after commit followed by an
+independent delegated SDK retry, all seventeen operations, both raw current and
+legacy metadata/error wires, protected-role/scope/revocation denials, stale
+rollback, immutable citations and unknown verification after changed content.
+The exact native SDK fixture now requires two sourced nine-step consolidation
+cycles; configured-update/clean-restore observers retain their whole receipts,
+supersession, source references and immutable history. Its subprocess deadline
+is 180 seconds for the two existing bounded extraction polls; server, session
+and grant lifetimes are unchanged. These new application native workflows still
+require exact-source CI/deployment acceptance. The dedicated instance remains
+accepted `878978d`; AM5 closeout, AM6 and Windmill Gate remain pending.
+
+
+**AM5 released-install full-suite correction:** A physical frozen app 0.44 /
+released Core 0.29 installation verifies both actual imports and the tag's exact
+Git commit outside the checkout. Its first collection is missing only Robot
+development tools; install those in the test environment without changing
+runtime dependencies. The actual 1201-case run then reports 1197 passes and four
+empty-store failures. They all observe the same Shared fixture entity: inner
+MCP cleanup deletes its events before the outer HTTP fixture uses those events
+to discover and dispose entities. Remove only the current unique test issuer's
+entity aliases/entities before its events. Preserve the failed full report,
+re-run the bundle-to-Core regression sequence and a fresh complete suite; do not
+change production storage/deletion behavior or accept the failed run.
+
+The corrected fixture-order sequence passes all thirty bundle tests followed by
+the four formerly failing Core tests: 34 passes in 18.11 seconds. The dedicated
+live helper independently passes both protocols against the physical released
+installation (one complete workflow in 12.88 seconds). All 125 scripts, Go schema
+checks with a writable cache, shell checks, twenty Robot dry runs and native
+Renovate API bounds pass. All 53 locked transitive package entries are unchanged.
+A fresh isolated full run is in progress; exact application CI/native and
+dedicated update remain required. The read-only preflight confirms genuine
+878978d installed identities/readiness and a fresh observer covering all 44
+tables, 7283 retained rows in 33 tables, 136 terminal jobs/attempts, five originals,
+twenty old clients, twelve old backup plans and eleven unrelated instances.

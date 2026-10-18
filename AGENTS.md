@@ -648,8 +648,10 @@ freeze its three genuine digests from PLAN for AM5, never documentation images.
 Five PostgreSQL experiments prove that individual writes/retry receipts cannot
 make multi-resource publication atomic: racing writers, revocation and injected
 harness failures leave earlier writes committed. Core 0.29.0 therefore adds a
-bounded knowledge bundle and explicit maintenance metadata; the app still pins
-released 0.28.0, schema stays 0016 and publication/deployment remain pending.
+bounded knowledge bundle and explicit maintenance metadata. Exact Core source
+8157092 passes all CI/native/artifact gates and is published as core-v0.29.0;
+app 0.44 adopts that released source with >=0.29.0,<0.30.0. Schema stays 0016;
+application CI/native/deployment acceptance remains pending.
 
 Bundles use one selected space, one to twenty-five fixed trusted content writes,
 the existing 256-KiB JSON budget and one original-result receipt. Only earlier
@@ -677,3 +679,13 @@ local disk quota even when df reports free space; remove only reproducible
 caches/environments, retaining source artifacts and acceptance/privacy evidence.
 Actual exact-source CI/native/Core publication, released app adoption and live
 acceptance still gate AM5. AM6 and Windmill Gate remain pending.
+
+AM5 application bundles expose seventeen fixed typed operations through one
+Editor/c0:write operation, body-selected space and a whole-result receipt.
+Preserve supplied fields/nulls and reserved `$result` references through REST
+model serialization. Normalize each stored result through its existing public
+DTO without re-reading current rows. Require actual native current/legacy
+sourced bundles and receipt/history/citation/supersession recovery; read-only
+roles/tokens must retain their precise denial/challenge behavior. Keep Core
+0.29's immutable publication source and installed predecessor 878978d distinct
+from application and documentation images.

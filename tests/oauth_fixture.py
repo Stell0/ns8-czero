@@ -104,7 +104,7 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
     payload={'origin':origin,'address':'10.0.2.2','ca':'/czero-test-ca.pem',
         'access_token':pair['access_token'],'scope':scope}
     result=subprocess.run(['runagent','-m',module_id,'podman','exec','-i','czero','python','-c',source],
-        input=json.dumps(payload).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=120)
+        input=json.dumps(payload).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180)
     if result.returncode:
         # Emit only our fixed labels or exception class, never SDK traces.
         safe = next((line for line in result.stderr.decode(errors='replace').splitlines()
@@ -117,6 +117,7 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
     if {'c0:read','c0:write','c0:admin'} <= set(scope.split()):
         assert b'Installed typed object lifecycles completed: 2' in result.stdout, 'Installed full typed CRUD evidence missing'
         assert b'Installed applicability and structured retrieval lifecycles completed: 2' in result.stdout, 'Installed annotation/structured retrieval proof missing'
+        assert b'Installed atomic consolidation lifecycles completed: 2' in result.stdout, 'Installed atomic consolidation proof missing'
         print('Disposable installed typed CRUD: current and legacy (two complete lifecycles)')
 
 

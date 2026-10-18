@@ -349,7 +349,7 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 [C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The app pins released `core-v0.27.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.27.0,<0.28.0`. The accepted dedicated runtime uses Core 0.27.0. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
+The application candidate pins released `core-v0.29.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.29.0,<0.30.0`. The accepted dedicated runtime still uses Core 0.28.0 until AM5 deployment acceptance. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
 [Core 0.24.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.2) is a published documentation/packaging patch with unchanged schema/API. Its exact-source local, image, both-native and artifact verification gates pass. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. The real [compatible-patch Renovate PR](https://github.com/Stell0/c0-m13-example/pull/3) changes only the tag/lock and passes database-backed consumer CI.
 
@@ -579,3 +579,16 @@ descriptors and eleven unrelated modules remain unchanged. Existing connector
 reads of the new citation and historical Wiki content pass separately, including
 after cleanup. This proves SDK new-tool behavior and actual connector reading;
 it does not claim a refreshed connector catalog or live all-role coverage.
+
+
+AM5 candidate app 0.44 adopts independently verified released Core 0.29.
+`knowledge_bundle_apply` (`POST /api/v1/knowledge/bundles/apply`) publishes
+1–25 trusted content mutations atomically in one space, within 256 KiB and one
+idempotency receipt. It supports prior-step UUID/revision references and existing
+revision/ready-evidence checks. An unchanged retry returns the original whole
+snapshot; resolve/read again for current state. Optional maintenance annotations
+record knowledge type, superseded content and immutable source-chunk references
+without transferring verification or changing retained evidence. Files, jobs,
+type registration, grants and external I/O remain separate operations. Exact
+application CI/native and dedicated-instance acceptance are pending; Core's
+actual publication/checksums and tested requirements are recorded in PLAN.

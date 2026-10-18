@@ -11,6 +11,7 @@ KNOWLEDGE_OPERATIONS = frozenset({
     'entity_references_create', 'entity_references_list', 'entity_references_remove',
     'knowledge_annotations_get', 'knowledge_annotations_history', 'knowledge_annotations_update',
     'knowledge_search_structured',
+    'knowledge_bundle_apply',
     'knowledge_graph', 'knowledge_changes', 'knowledge_search', 'knowledge_index_status',
 })
 _PUBLIC_HTTP_ERRORS = frozenset({

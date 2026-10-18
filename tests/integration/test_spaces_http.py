@@ -146,9 +146,25 @@ def test_current_and_legacy_sdk_spaces_evidence_resources_and_denial_order(space
                         from pathlib import Path
                         spec=importlib.util.spec_from_file_location('native_protected_sdk',Path(__file__).parents[1]/'mcp_tls_probe.py')
                         probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
-                        state=await probe.protected_spaces(admin,owner_http)
-                        space_http[1].append(state['space']['id'])
-                        assert (await probe.protected_spaces(admin,owner_http,state))==state
+                        before_spaces={s['id'] for s in (await owner_http.get('/api/v1/spaces')).json()['spaces']}
+                        before_types={t['name'] for t in (await owner_http.get('/api/v1/object-types')).json()['types']}
+                        async def wake_worker(request):
+                            poll=request.method=='GET' and request.url.path.endswith('/versions')
+                            if request.method=='POST' and request.url.path.endswith('/mcp'):
+                                message=json.loads(request.content)
+                                poll=message.get('method')=='tools/call' and message.get('params',{}).get('name')=='source_versions_list'
+                            if poll:
+                                Worker(knowledge_http[4],app.state.jobs.registry).tick()
+                        owner_http.event_hooks['request'].append(wake_worker)
+                        try:
+                            state=await probe.protected_spaces(admin,owner_http)
+                            assert (await probe.protected_spaces(admin,owner_http,state))==state
+                        finally:
+                            owner_http.event_hooks['request'].remove(wake_worker)
+                            after_spaces={s['id'] for s in (await owner_http.get('/api/v1/spaces')).json()['spaces']}
+                            after_types={t['name'] for t in (await owner_http.get('/api/v1/object-types')).json()['types']}
+                            space_http[1].extend(after_spaces-before_spaces)
+                            space_http[2].extend(after_types-before_types)
                         listed=await admin.call_tool('spaces_list',{})
                         assert not listed.is_error and identifier in {s['id'] for s in listed.structured_content['spaces']}
                         page_values={'data':{'slug':'sdk-private','title':'Private procedure','body':'Private content','idempotency_key':'same-key'},'space_id':identifier}
