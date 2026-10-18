@@ -501,12 +501,88 @@ def seed_protected_space(browser, profile, member_id):
     status, body, _ = scoped.api('/api/v1/objects', {'type_name':'fixture-inventory',
         'data':{'name':'persistent-record','count':17}}, 'POST', profile['csrf_token'])
     assert status == 201, 'Protected uniqueness was not isolated from Shared'
-    return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':json.loads(body)}
+    record = json.loads(body)
+    annotations = seed_content_annotations(scoped,profile,memory,records,record)
+    return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':record,'annotations':annotations}
 
+
+
+def seed_content_annotations(browser, profile, memory, records, record):
+    """Persist every target through native update, encrypted backup and restore."""
+    entity=knowledge_request(browser,profile,'entities',{
+        'kind':'procedure','label':'Native annotation resolver'},'POST',201)
+    assertion=knowledge_request(browser,profile,'claims',{
+        'entity_id':entity['id'],'predicate':'observed-error','value':{'message':'Native EPIPE observation'},
+        'evidence_chunk_ids':[records[-1]['chunks'][0]['id']]},'POST',201)
+    current=memory['receipts'][-1]; version=records[-1]['version']
+    targets=[('wiki_revision',current['content']['id'],current['revision'],'wiki','observation'),
+        ('source_version',version['id'],version['number'],'source','Retained'),
+        ('entity',entity['id'],entity['revision'],'entity','resolver'),
+        ('object',record['id'],record['revision'],'object','persistent'),
+        ('claim',assertion['id'],assertion['revision'],'claim','EPIPE')]
+    saved=[]
+    for kind,identifier,revision,category,query in targets:
+        path='/api/v1/knowledge/annotations/'+kind+'/'+identifier+'/'+str(revision)
+        entries={}
+        for namespace,value in (
+                ('applicability',{'products':['C0'],'components':['native-recovery'],'version_tags':['0.28'],
+                    'status':'applicable','observed_at':'2026-10-18T00:00:00Z'}),
+                ('verification',{'status':'verified','confidence':.9,'verified_at':'2026-10-18T00:00:00Z'})):
+            request={'value':value,'expected_revision':0,'idempotency_key':'native-'+uuid4().hex}
+            status,body,_=browser.api(path+'/'+namespace,request,'PUT',profile['csrf_token'])
+            assert status==200,'Cannot seed revisioned annotation'
+            entries[namespace]={'request':request,'receipt':json.loads(body)}
+            if namespace=='verification':
+                original=entries[namespace]
+                request={'value':{**value,'extensions':{'retained-observation':'second'}},
+                    'expected_revision':1,'idempotency_key':'native-'+uuid4().hex}
+                status,body,_=browser.api(path+'/'+namespace,request,'PUT',profile['csrf_token'])
+                assert status==200,'Cannot seed a second annotation revision'
+                entries[namespace]={'request':request,'receipt':json.loads(body),
+                    'original_request':original['request'],'original_receipt':original['receipt']}
+        saved.append({'path':path,'category':category,'query':query,'id':identifier,'entries':entries})
+    return saved
+
+
+def verify_content_annotations(browser, profile, expected, space_id, *, admin=False):
+    assert len(expected)==5,'Retained annotation target coverage is incomplete'
+    scoped=ScopedBrowser(browser,space_id)
+    for item in expected:
+        for namespace,entry in item['entries'].items():
+            path=item['path']+'/'+namespace
+            status,body,_=scoped.api(path)
+            assert status==200 and json.loads(body)==entry['receipt'],'Annotation identity/revision changed during recovery'
+            status,body,_=scoped.api(path+'/history')
+            history=json.loads(body) if status==200 else {}
+            assert status==200 and [row['number'] for row in history['revisions']]==list(range(entry['receipt']['revision'],0,-1)),'Annotation history changed during recovery'
+            if 'original_receipt' in entry:
+                assert history['revisions'][-1]['value']==entry['original_receipt']['value'],'Old annotation observation changed during recovery'
+            assert browser.api(path)[0]==404,'Protected annotation UUID leaked into Shared'
+            status,body,_=scoped.api(path,entry['request'],'PUT',profile['csrf_token'])
+            if admin:
+                assert status==200 and json.loads(body)==entry['receipt'],'Annotation retry changed its original snapshot'
+                if 'original_request' in entry:
+                    status,body,_=scoped.api(path,entry['original_request'],'PUT',profile['csrf_token'])
+                    assert status==200 and json.loads(body)==entry['original_receipt'],'Old annotation retry was replaced by current state'
+            else:
+                assert status==403,'Reader grant admitted an annotation write'
+        request={'query':item['query'],'space_id':space_id,'mode':'text','rerank':'off','filters':{
+            'categories':[item['category']],'products':['C0'],'components':['native-recovery'],
+            'version_tags':['0.28'],'verification_statuses':['verified']}}
+        status,body,_=browser.api('/api/v1/knowledge/search/structured',request,'POST')
+        result=json.loads(body) if status==200 else {}
+        assert status==200 and result['candidate_count']==1,'Recovered exact filtered retrieval changed'
+        assert result['hits'][0]['reference']['id']==item['id'],'Recovered typed reference changed'
+        assert result['hits'][0]['verification']['revision']==item['entries']['verification']['receipt']['revision'],'Recovered verification revision changed'
+        request['filters']['version_tags']=['0.2']
+        status,body,_=browser.api('/api/v1/knowledge/search/structured',request,'POST')
+        assert status==200 and json.loads(body)['hits']==[],'Recovered version filter matched a prefix'
+    print('Retained applicability/verification histories and all five structured categories passed')
 
 def verify_protected_space(browser, profile, expected, *, admin=False):
     identifier = expected['space']['id']
     scoped = ScopedBrowser(browser, identifier)
+    verify_content_annotations(browser,profile,expected['annotations'],identifier,admin=admin)
     status, body, _ = scoped.api('/api/v1/me')
     assert status == 200 and json.loads(body)['role'] == ('admin' if admin else 'reader'), 'Recovered space role changed'
     status, body, _ = browser.api('/api/v1/spaces')

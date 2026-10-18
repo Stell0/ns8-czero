@@ -4,6 +4,71 @@
 
 Main passes 1048 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core checks, Debian installation and genuine Rocky AM2 upgrade with all eight automated browser workflows. Native reports, actual source checkouts and privacy artifacts are audited. See [PLAN.md](PLAN.md) for exact sources, published Core artifacts and frozen installed digests. AM3 closeout source 6402026 and resulting main 7fcc39b pass their completed checks and native/artifact audits. AM4 development is active; AM4–AM6 deployment acceptance and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
 
+
+## AM4 development: applicability and structured retrieval
+
+Core 0.28 is independently published and app 0.43 pins its verified immutable
+release. Application acceptance is pending; the dedicated instance remains on
+the accepted AM3 deployment above. Applicability and verification describe
+exact content through separate revisioned annotations. They do not rewrite source
+evidence, article revisions or strict record payloads. Missing metadata is unknown;
+changed content never inherits verification. C0 stores the observations supplied
+by authorized editors; external agents assess and consolidate knowledge.
+
+The candidate adds `knowledge_annotations_get`, `knowledge_annotations_history`,
+`knowledge_annotations_update` and `knowledge_search_structured` with matching
+REST operations. An annotation target uses its kind, content UUID and observed
+revision: source versions and article revisions use their immutable UUIDs;
+entities, objects and claims use their record UUIDs. Annotation reads/history
+need read scope; changes need Editor authority in that space and write scope.
+Zero is create-only for the expected annotation revision. Conflicts require a new
+read, reconciliation and a new retry key; an unchanged retry returns the original
+snapshot. Unknown status/extension values and explicit nullable observations are
+preserved. Source verification requires ready extraction.
+
+`POST /api/v1/knowledge/search/structured` is read-only and accepts `query`,
+optional body `space_id`, `filters`, `limit`, `mode` and `rerank`. Query-string space selectors are rejected on this endpoint. Filters include
+categories (`source`, `wiki`, `entity`, `object`, `claim`), products, components,
+exact version tags, applicability statuses, verification statuses, archive
+selection and inclusive UTC creation/observation/verification intervals. Supplied
+fields combine with AND, values within a field with OR. An empty supplied list
+is invalid. `8.4` matches exactly, without version-range or prefix expansion.
+Unfiltered unknown metadata stays visible; an explicit `unknown` status matches
+missing annotations. Omitted categories retain source/Wiki selection.
+
+Structured results identify their space, observed resource revision and independent
+annotation revisions/statuses. Immutable source citations and article revisions
+remain separate from mutable record references; claim evidence references resolve
+to immutable chunks. Entity/object/claim retrieval uses deterministic text.
+Optional semantic/hybrid/reranking applies to eligible source/Wiki evidence and
+reports its actual method/fallback. Ordinary `/api/v1/knowledge/search` keeps its
+existing behavior and response contract. Space and applicability filters precede
+candidate limits, counts, ranking, vector pruning and provider inputs.
+
+For example, use this body with the structured REST endpoint (or as `data` for
+`knowledge_search_structured`), replacing the space UUID:
+
+```json
+{"query":"getent","space_id":"<space-uuid>","mode":"text","filters":{"categories":["wiki","entity"],"products":["NS8"],"version_tags":["8.4"],"verification_statuses":["verified"]}}
+```
+
+Annotation REST paths are
+`/api/v1/knowledge/annotations/{kind}/{target_id}/{content_revision}/{namespace}`,
+with GET for reads, PUT for changes and GET `/history` for history. Supply the
+same optional `space_id` query selector. A verification update body can be:
+
+```json
+{"value":{"status":"verified","verified_at":"2026-10-18T00:00:00Z","confidence":0.9},"expected_revision":0,"idempotency_key":"verify-observation-1"}
+```
+
+The `applicability` namespace supports literal product/component/version tags,
+status, observation time, confidence and bounded extensions; `verification` has
+its own status, observation/verification times, confidence and extensions. Times
+require a timezone and normalize to UTC. New REST bodies retain the existing one-MiB knowledge request bound;
+annotation values retain the existing 16-KiB JSON budget. Existing MCP request and
+response bounds remain unchanged. Exact CI/native/publication and dedicated-instance
+acceptance remain required before AM4 is closed.
+
 ## Purpose and boundaries
 
 C0 is a deployable application foundation and a forkable GitHub template. External coding agents can extend its shared operations and application UI while retaining native NethServer lifecycle, packaging and tests. C0 Core lives in `packages/czero-core`; fork-specific business logic belongs in `app`.

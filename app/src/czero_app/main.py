@@ -22,6 +22,7 @@ from czero_app.job_handlers import build_registry
 from czero_core.sources import OriginalStore
 from czero_app.knowledge import install_knowledge_routes
 from czero_app.retrieval import install_retrieval_routes
+from czero_app.annotations import install_annotation_routes
 from czero_core.retrieval_config import load_settings
 from czero_app.operations import OperationCatalog
 from czero_core.identity import Role
@@ -106,6 +107,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
     knowledge = install_knowledge_routes(instance_app, database, auth, read_context, write_context)
     install_retrieval_routes(instance_app, database, auth, read_context, settings=retrieval_settings)
+    install_annotation_routes(instance_app, database, auth, read_context, write_context)
     install_object_routes(instance_app, database, auth, read_context, write_context,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
     install_oauth_routes(instance_app, auth, read_context, write_context)
@@ -248,7 +250,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
             "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
             "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. </p>"
+            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Wiki pages, immutable revisions, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. Opt-in structured search applies exact applicability filters and returns observed typed references; structured records use deterministic text. Applicability and verification have independent histories tied to exact content revisions. Missing annotations mean unknown; changed content never inherits verification. </p>"
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li>"
             "<li><a href='./agents/capabilities.json'>Caller-aware capability JSON</a></li></ul>"

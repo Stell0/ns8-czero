@@ -593,3 +593,30 @@ is not an application SSO observation. Retain all seven existing native browser
 workflows and execute the additional independent-session protected-space case.
 AM3 acceptance requires actual new application native/artifact/main/live gates;
 AM4 and Windmill Gate remain gated. Existing CPU and interactive waivers persist.
+
+
+## AM4 applicability and structured retrieval conventions (development)
+
+Keep applicability and verification as separate exact-content annotation histories.
+Mutable targets require the observed content revision; annotation revision zero is
+create-only, and later changes require the current annotation revision. Retry
+receipts are original snapshots. Preserve omitted fields independently of explicit
+null through REST argument serialization; do not change the shared catalog's old
+serialization or old operation schemas. Missing/stale metadata remains unknown.
+
+Structured retrieval is opt-in; ordinary source/Wiki search stays compatible.
+Validate nonempty supplied filters, literal exact tags and timezone-aware times.
+Filter space/archive/applicability before candidates, counts, ranking and provider
+inputs. Only existing evidence categories use optional providers; entity/object/
+claim results use deterministic text and observed references. Preserve immutable
+citations separately and recheck authority after provider I/O.
+
+Core 48ac409 passes actual push/PR local, producer/released-Core and image/artifact
+review; PR checkout is a merge with the identical source tree. Native 39079184903
+passes genuine Debian upgrade and Rocky installation, all eight browsers and
+actual privacy artifacts. Core 0.28 publication 39081511130 and downloaded artifact
+checksums/independent installations pass. App 0.43 now pins that released source
+and frozen lock with all 53 transitive packages unchanged; installed cb60da9
+remains unchanged until the separate application/main/deployment gates pass. Extend native
+SSO/current/legacy probes and all-five-target annotation update/backup/restore
+observers, retaining all eight browser and privacy checks.

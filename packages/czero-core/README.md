@@ -42,13 +42,14 @@ packaged schema: set `CZERO_DATABASE_URL` privately and run
 the knowledge-space identity. Never place a database URL or identity/provider
 secret in source code or application logs.
 
-Version `0.28.0` is the unpublished AM4 development candidate, adding packaged
-forward migration `0016_annotations` for separate exact-content applicability and
-verification histories. Core 0.27.0 is independently published and accepted at
-`core-v0.27.0`; the reference app retains that immutable released dependency until
-the new Core release sequence passes. PLAN.md records exact source, artifact,
-native and dedicated-instance evidence. A candidate version or started workflow
-does not establish publication or acceptance.
+Version `0.28.0` is independently published as `core-v0.28.0` from verified
+source `48ac409`, adding forward migration `0016_annotations`, separate exact-content
+applicability/verification histories and opt-in structured retrieval. Exact-source
+local, producer/released-Core, Debian genuine upgrade and Rocky installation gates
+pass, including all eight browser workflows and audited native/privacy artifacts.
+Published wheel/archive checksums, independent installations, reproducibility and
+repeated migrations pass. The reference app 0.43 adopts that immutable Git source;
+its deployment acceptance remains a separate gate in PLAN.md.
 
 Trusted callers use `SpaceService` for discovery, creation and revisioned grant
 management. Content services select a space with `service.in_space(space_id)`;
@@ -82,8 +83,10 @@ checks its uploaded hashes and publishes it without replacing the module's
 latest release. Replays must match existing artifact bytes; published files
 are never clobbered.
 
-The last accepted runtime uses verified released Core 0.27.0:
-https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0.
+The latest independent Core artifacts are version 0.28.0:
+https://github.com/Stell0/ns8-czero/releases/tag/core-v0.28.0.
+The dedicated accepted AM3 runtime still uses Core 0.27.0 until AM4 application
+acceptance; library publication does not establish deployment acceptance.
 Consult PLAN.md for subsequent exact-source publication gates and actual
 consumer/Renovate evidence; a started workflow does not establish acceptance.
 
@@ -103,10 +106,10 @@ Use a Python 3.12–3.14 virtual environment and the verified release assets, or
 the immutable Git tag/subdirectory source:
 
 ```sh
-uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.27.0#subdirectory=packages/czero-core"
+uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.28.0#subdirectory=packages/czero-core"
 ```
 
-For that released generation, declare the compatible range `>=0.27.0,<0.28.0` and the
+For that released generation, declare the compatible range `>=0.28.0,<0.29.0` and the
 reviewed Git tag in `[tool.uv.sources]`, then commit uv.lock. Never replace the
 released source with a local checkout implicitly. The template producer can
 opt in with `CZERO_CORE_SOURCE=local`; this affects only its build environment.
@@ -182,7 +185,7 @@ During publication preparation the reference app still pins released Core
 0.25.0; its explicit local producer override alone uses the 0.26.0 candidate.
 The released application increment follows verified immutable artifact publication.
 
-## Content annotations (0.28.0 development)
+## Content annotations (0.28.0)
 
 `AnnotationService(database, access)` uses the same immutable `in_space` selector
 as content services. `ContentTarget(kind, id, revision)` identifies an exact
@@ -215,10 +218,10 @@ new content has no inherited verification. Historical immutable source/Wiki
 targets remain explicit. Object removal retains its annotation anchor and
 history through the established same-space retained-reference pattern. Reads
 report whether the target is still current or archived. Annotation writes never
-change strict object data or retained evidence/Wiki provenance. This remains a
-development API until the AM4 publication/deployment gates in PLAN pass.
+change strict object data or retained evidence/Wiki provenance. This API is released in Core 0.28.0; application deployment acceptance remains
+a separate AM4 gate in PLAN.
 
-## Structured retrieval (0.28.0 development)
+## Structured retrieval (0.28.0)
 
 `StructuredSearchService(database, access, **retrieval_options)` reuses existing
 provider configuration and immutable `in_space` selection. `search(actor, query,

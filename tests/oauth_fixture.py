@@ -116,6 +116,7 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
         print('Disposable installed text ingestion, chunks and sourced claims: current and legacy')
     if {'c0:read','c0:write','c0:admin'} <= set(scope.split()):
         assert b'Installed typed object lifecycles completed: 2' in result.stdout, 'Installed full typed CRUD evidence missing'
+        assert b'Installed applicability and structured retrieval lifecycles completed: 2' in result.stdout, 'Installed annotation/structured retrieval proof missing'
         print('Disposable installed typed CRUD: current and legacy (two complete lifecycles)')
 
 

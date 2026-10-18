@@ -20,11 +20,15 @@ class ExactSpaceSelector:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if (scope['type']=='http' and '/api/v1/' in scope['path']
-                and len(QueryParams(scope.get('query_string', b'')).getlist('space_id'))>1):
-            response=JSONResponse({'detail':'invalid_space_request'},status_code=422,
-                                  headers={'Cache-Control':'no-store'})
-            return await response(scope,receive,send)
+        if scope['type']=='http' and '/api/v1/' in scope['path']:
+            selectors=QueryParams(scope.get('query_string', b'')).getlist('space_id')
+            # Structured search has one selector in its typed JSON body. Reject
+            # unsupported query selectors instead of silently using Shared.
+            unsupported=scope['path'].endswith('/api/v1/knowledge/search/structured') and selectors
+            if len(selectors)>1 or unsupported:
+                response=JSONResponse({'detail':'invalid_space_request'},status_code=422,
+                                      headers={'Cache-Control':'no-store'})
+                return await response(scope,receive,send)
         await self.app(scope,receive,send)
 
 
