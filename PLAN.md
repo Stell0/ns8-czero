@@ -1330,7 +1330,7 @@ ordering, deduplicate, and preserve text-only/optional-provider fallback.
 Benchmark synthetic troubleshooting synonyms/commands/errors/components and
 large scoped corpora without unauthorized counts/excerpts/metadata.
 
-### C0-AM5 — Reliable consolidation and maintenance primitives [ ]
+### C0-AM5 — Reliable consolidation and maintenance primitives [x]
 
 First measure reliability of existing primitives. Add bounded transactional
 `knowledge_bundle_apply` only if necessary, with one authorized transaction,
@@ -3331,8 +3331,8 @@ The genuinely installed source is `41864e47c15765dc18b05b03cfedbfe87cbedf93`, Co
 - PostgreSQL `sha256:e4f3cbea39e27389bfa18df286ae12f8b56f5b1b68727fcfa5d6d1c79de56126`.
 
 Freeze these actual installed feature-main images for AM6. Do not substitute
-newly built documentation-marker images. AM5 runtime acceptance passes; verify
-this closeout marker’s actual CI/main publication/native reports before AM6.
+newly built documentation-marker images. AM5 runtime and final c1a90d3 marker
+acceptance pass; the final marker’s actual main/native/artifact gates are recorded below.
 AM6 and Windmill Gate remain gated. Existing CPU-quota and interactive-Playwright
 waivers persist; all eight automated native browser workflows are mandatory.
 
@@ -3344,101 +3344,115 @@ The same authority passed immediately after the supported manager restart. No
 application source, session lifetime or token policy was changed for this retry.
 
 
-## Scoped development CI policy — active implementation
+## Scoped development CI policy — implemented and verified
 
-The operator's 18 October 2026 CI instruction replaces historical requirements
-that every incremental commit and documentation marker run full acceptance.
-Start source: verified main `41864e4`. Preserve the original checkout's three
-unfinished documents and private failed/live/native evidence. AM5 closeout PR 13
-and its frozen native run 39136605761 continue independently; do not cancel or
-modify that branch. This change does not start AM6 or deploy the dedicated app.
+The operator's 18 October 2026 instruction replaces historical demands for full
+acceptance on every incremental commit or documentation marker. The reviewed
+Git-only allowlist applies to documentation-only PRs **and main**. Scoped feedback,
+full merge acceptance and dedicated deployment acceptance are distinct; release,
+backup/restore, genuine predecessors, all automated browsers and live milestone
+gates remain mandatory. No runtime API, version, dependency, schema, lifecycle or
+container source changed. Original unfinished documents and failed evidence are
+preserved; AM5's frozen closeout completed independently without cancellation.
 
-Before code: classify the complete Git PR diff (including old/new rename paths,
-deletions and file modes), using a small explicit documentation allowlist and
-conservative UI/application selections. Core, authentication, migrations, locks,
-containers, lifecycle and CI changes receive broad development feedback;
-unknown paths fail closed to broad/full requirements. Static HTML, generated API
-contracts, package README/LICENSE and build-consumed metadata are runtime inputs.
-Only allowlisted repository guidance is documentation-only.
+AM5 completion [PR 13](https://github.com/Stell0/ns8-czero/pull/13), source `e05ed46`/main `c1a90d3`, passes its actual final gates: [local](https://github.com/Stell0/ns8-czero/actions/runs/39139467063) (1206 Python/PostgreSQL/packaging, 125 scripts and twenty Robot checks), [producer/scans](https://github.com/Stell0/ns8-czero/actions/runs/39139467005), [released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39139469990), [Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39139472225) and [both native systems](https://github.com/Stell0/ns8-czero/actions/runs/39139666064), with actual downloaded privacy/source/image audits. AM5's marker gate is closed. The genuinely installed `41864e4` and its three frozen digests above remain AM6's predecessor. AM6, Windmill Gate and Integration M17–M20 remain separate and pending.
 
-One PR workflow handles opened/reopened/synchronize/ready-for-review/draft
-transitions without duplicate branch-push runs or path-filtered required checks.
-Draft feedback includes affected tests and shared authorization/transport smoke;
-newer drafts cancel obsolete feedback only. Ready runtime PRs require full
-PostgreSQL, scripts, schema/shell, Robot, packaging, producer/released builds,
-runtime/license/scans and real Debian/Rocky browsers/recovery/privacy. Full runs
-are not cancelled by development updates; old results cannot authorize new heads.
-Manual full validation remains available. A stable required merge gate verifies
-classification, exact source, actual required job successes and immutable
-candidate images/native evidence; skipped/cancelled/scoped/stale proof is denied.
+The implementation is merged through [PR 14](https://github.com/Stell0/ns8-czero/pull/14)
+and [publication correction PR 18](https://github.com/Stell0/ns8-czero/pull/18).
+The complete diff includes old/new rename paths, deletions and modes. UI/app
+feedback includes affected checks and shared PostgreSQL authorization/transport
+smoke. Core/auth/migrations/dependencies/build/lifecycle/CI broaden feedback;
+unknown paths select full acceptance. Static HTML, generated API contracts,
+packaged documentation and build metadata retain runtime classification.
 
-Retain immutable Core release, actual main runtime publication and all genuine
-predecessor, backup/restore, artifact privacy and dedicated deployment gates.
-Use isolated databases and cache only reproducible dependency downloads/build
-inputs. Do not change Core/application APIs, versions, schema, installed runtime,
-CPU-quota or interactive-browser waivers. No new schedule or merge-queue trigger
-is needed: current main has no protection/rulesets or configured merge queue;
-verified repository-admin permission allows adding the required merge gate while
-preserving any protection found on the final re-read. The operator confirmed that the reviewed documentation exemption also applies
-to main; runtime changes retain full main validation and publication.
+One classified workflow replaces duplicate push/PR checks. New development
+checks supersede obsolete feedback across mode changes; full acceptance is never
+automatically cancelled. Ready runtime PRs and later commits automatically repeat
+full validation. Manual full dispatch is retained and actually exercised. No new
+schedule, merge queue or merge_group trigger is introduced. Databases are isolated
+per runner; tests remain serial within each mutable database. Pip download caching
+and the existing immutable-input Yarn cache preserve reproducibility.
 
-Regression acceptance must cover docs/UI/app/Core/auth/migrations/workflows,
-unknown paths, renames/deletions and every gate rejection. Exercise real draft,
-ready and subsequent-update GitHub events; inspect actual reports/source/image
-identities and measured timings. Review the PR and conventional commits before
-promotion. Record measured scoped/full/docs results and limitations, never an
-estimated speedup. Milestone and deployment acceptance remain separate.
+Required main protection is configured and re-read: **C0 merge gate**, GitHub
+Actions app 15368, strict up-to-date base, admin enforcement, zero mandatory human
+approvals and no force pushes/deletions. Previous protection/rulesets were absent.
+Primary-agent diff review is recorded without claiming independent human review.
+Scoped, skipped, cancelled, incomplete and stale proof cannot authorize a runtime
+merge. The promotion helper checks actual current source/base/jobs/artifacts.
 
+### Actual development and negative controls
 
-The reviewed implementation now has 59 focused gate/classification/release/image
-cases and 307 broader unit cases passing (6.69 s). The initial intended failure
-was 36 cases before the policy module existed; failed evidence stays private.
-Actionlint 1.7.12 validates all workflows, with its outdated ubuntu-26.04 label
-list explicitly excluded (that existing runner has actual successful builds).
-No runtime/Core source, package metadata, lockfile, container, native lifecycle
-handler or schema changed. Native tests add exact installed-candidate inspection;
-producer and native jobs retain unique source/run image identities and report
-privacy. Actual GitHub paths, protection and timings are not yet accepted.
+- Initial regressions fail before implementation; current full unit tests pass
+  339 cases. Policy/release/native-helper checks pass 98. Actionlint 1.7.12 passes
+  with only its outdated ubuntu-26.04 label table excluded; actual runner builds
+  pass. CLI current/older completed-log capture compatibility is tested.
+- Controlled [docs PR 15](https://github.com/Stell0/ns8-czero/pull/15), source `40358fa`,
+  [run39141211821](https://github.com/Stell0/ns8-czero/actions/runs/39141211821),
+  passes lightweight checks and its gate in **28s**, with images/packaging/QEMU
+  skipped. Promotion accepts docs but rejects full release/deployment promotion.
+- [UI PR 16](https://github.com/Stell0/ns8-czero/pull/16), source `a049eba`,
+  [run39141216790](https://github.com/Stell0/ns8-czero/actions/runs/39141216790),
+  passes 63 PostgreSQL cases and 125 controller checks in **110s**, while its
+  runtime merge gate fails. Actual ready same-head broad feedback 39142577702
+  passes 1256 cases but rejects full_validation_required. Closed unmerged
+  [PR 17](https://github.com/Stell0/ns8-czero/pull/17) actually cancels obsolete UI
+  feedback 39145190485 when changing to docs. All probes are closed unmerged.
+- Actual older e05ed46 docs acceptance spans **2386s** across local/publication/
+  native gates: local push 39136439156 **466s**, duplicate PR 39136456995 **462s**,
+  producer39136439125 **131s**, native 39136605761 **2250s**. Downloaded actual
+  checkouts confirm the native source despite workflow_run's default-branch
+  context. These are single measured samples, not estimates or a general SLA.
+  UI feedback is 76.4% lower in these observations; docs acceptance is 98.8% lower.
 
+### Full acceptance, fixes and canonical publication
 
-**Executed development policy proof:** Source c9f62f4's draft broad feedback
-39140980732 passes 1254 actual Python/PostgreSQL/packaging cases, 125 scripts and
-21 Robot checks; the runtime merge gate stays blocked. Earlier obsolete draft
-feedback runs are actually cancelled, with no acceptance cancellations. Controlled
-PR 15 docs (39141211821/source40358fa) passes in 28 seconds, while draft UI PR 16
-(39141216790/sourcea049eba) passes 63 PostgreSQL and 125 controller cases in a
-110-second workflow with the expected blocked runtime merge gate. Both owned
-probes are closed unmerged. Actual promotion accepts docs but rejects both for
-full release/deployment; complete source/base/job/proof artifacts are inspected.
-Earlier e05ed46 docs acceptance spans 2386 seconds, with duplicate local runs
-466/462 seconds, producer131 seconds and native2250 seconds. These are single
-measured observations, not general performance or full-acceptance speed claims.
+Exact PR 14 head `7554825` [full 39145480486](https://github.com/Stell0/ns8-czero/actions/runs/39145480486)
+passes 1272 cases and native/artifact gates in 2201s. Superseded 3f7264a/613d8c8 full
+runs retain the failed Debian identity probe: the non-browser Robot runner has no
+Git. Five intended failing regressions precede explicit immutable workflow-source
+binding. Actual installed labels/digests now match without adding Git to runtime.
 
-Main protection is actually configured/re-read with required C0 merge gate pinned
-to GitHub Actions app15368, strict up-to-date base and admin enforcement, zero
-mandatory human approvals and no force pushes/deletions. Prior protection and
-rulesets were absent. No queue trigger or schedule was added. The actual completed
-job-log CLI escape guard is reproduced and fixed before full acceptance, with
-private failed evidence and current/older CLI regressions. The existing immutable
-Yarn/node_modules cache is retained and keyed by lock/package/config/builder;
-pip download caching preserves dependency inputs. No runtime build script changed.
-Full ready/main/native and final documentation-only main checks remain required.
+First automatic main `56e384f` [run39148427261](https://github.com/Stell0/ns8-czero/actions/runs/39148427261)
+passes 1271 cases but hits one pre-existing forced-plan SQL timeout. Native and
+artifact checks subsequently pass, but the gate rejects required_job_not_successful
+and publication is skipped. All six canonical refs remain `c1a90d3`. Same-source
+manual [full 39149274270](https://github.com/Stell0/ns8-czero/actions/runs/39149274270)
+passes all 1272 cases/native/audits; publication is unexpectedly skipped through
+GitHub's skipped development ancestors. That is not accepted publication. Raw
+failures are retained outside Git. The five-second runtime deadline is unchanged;
+no automatic retry or validation exception is introduced. The forced-plan fixture
+remains timing-sensitive in retained post-suite diagnostic data; cause is unproved.
 
-### Canonical publication gate correction — 18 October 2026
+PR 18 head `740fd64` fixes the publication status expression, explicitly requiring
+successful classification/gate, full mode, allowed main/module-tag ref and no
+cancellation. Twelve actual-expression cases reproduce skipped-ancestor behavior
+and reject docs/scoped/unsafe refs/failed or cancelled gates. [Exact full PR
+39152442602](https://github.com/Stell0/ns8-czero/actions/runs/39152442602) passes 1284
+cases and all native/artifact gates. Normal protected merges preserve exact reviewed
+trees and expected parents; neither promotion uses an admin bypass.
 
-Full exact-source manual main validation 39149274270 passes at 56e384f, including
-1272 Python/PostgreSQL/packaging cases, 125 controllers, 21 Robot dry runs, both
-native systems, eight browsers, all five scans and actual artifact privacy/source/
-image checks. Its C0 merge gate succeeds, but publish-canonical is unexpectedly
-skipped. Canonical registry reads still show accepted c1a90d3 on all six aliases.
-This is not completed main publication and cannot close the CI-policy task.
+**Final accepted runtime/publication source: 31ca102b6abb7f1fd961d1ad58f6519bba3ba608.**
+[Automatic main full39155318390](https://github.com/Stell0/ns8-czero/actions/runs/39155318390)
+actually passes 1284 Python/PostgreSQL/packaging, 125 controllers, 21 Robot dry runs,
+schema/shell, producer/released-Core, runtime/license/parser audits and five actual
+SARIF/SBOM pairs. Debian's genuine AM4 upgrade passes21 cases; Rocky installation
+passes26/three expected skips/all eight browsers. Actual reports verify both SSO
+probes per distribution, update/clean encrypted restore, eight password privacy
+guards, 25 numeric accessibility contexts, three query-audited artifacts with zero
+candidates, actual checked-out sources and all three installed image identities.
+The full gate **and canonical publication job** actually succeed. Measured main
+active span is **2305s (38m25s)**; no full/native speedup is claimed.
 
-Before code: GitHub's default success condition propagates skipped development
-ancestors through the always-scheduled gate. Make publication's status condition
-explicit, requiring successful classification and gate, full mode, an authorized
-main/module-tag ref and an uncancelled workflow. Preserve the independent
-acceptance proof and immutable candidate copy checks. Add a behavioral regression
-matrix for the actual job condition, including skipped ancestors, failed/skipped/
-cancelled gates, cancellation, docs/scoped modes, main/feature/module/Core refs.
-Run fresh exact-source full PR and resulting main acceptance; do not cancel or
-rewrite completed/failed native evidence or alter runtime/schema/version inputs.
+Fresh registry GETs independently verify all six main/latest refs, exact source,
+digests and immutable module sibling references. Published sibling tag:
+`ci-31ca102b6abb7f1fd961d1ad58f6519bba3ba608-39155318390-1`.
+
+- Module `sha256:e042926e81bd218787d8f3ee5bba411d18ef88d338bfa6e11698cd36793556f2`.
+- Application `sha256:019af88360b302958ea466885992116aa2a4de48b67d6d513a7181f35016753b`.
+- PostgreSQL `sha256:cd68d1624366c444811ebc81c033a36216eab044e59e45960c75988088ebd83d`.
+
+These are accepted CI/main images, not the installed `41864e4` predecessor. No
+Core/module release or dedicated update occurs. The final documentation-only
+closeout uses the explicit allowlist; its PR/main source, gate and timing evidence
+is recorded in that PR after execution. It must not rebuild/publish images or run
+packaging/QEMU, and must leave these accepted runtime aliases intact.

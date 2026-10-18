@@ -81,6 +81,8 @@ The module retains immutable candidate sibling tags. A source superseded by late
 cannot overwrite canonical aliases. A later allowlisted documentation merge does
 not strand an in-flight runtime candidate: its runtime/build inputs are unchanged.
 Documentation-only main commits otherwise leave accepted runtime images in place.
+Use the accepted runtime source from the publication proof for deployment checks;
+a documentation-only main HEAD may have no image or full-acceptance proof of its own.
 
 Manually dispatch **C0 validation** (`validate.yml`) for full validation of any
 exact branch/tag ref, including documentation markers. To validate a ready PR,
@@ -118,23 +120,78 @@ remain frozen independently of documentation images. Destructive restore tests
 remain disposable. Milestone-specific live gates still apply; a lightweight
 closeout marker does not replace the accepted runtime's release/deployment proof.
 
-## Executed development evidence
+## Executed evidence and limits
 
-Source `c9f62f4` has actual broad draft feedback [39140980732](https://github.com/Stell0/ns8-czero/actions/runs/39140980732): 1254 Python/PostgreSQL/packaging cases, 125 scripts and 21 Robot checks pass. The merge gate remains blocked because scoped feedback is not runtime acceptance. Earlier obsolete feedback runs 39140523676, 39140624127 and 39140829879 are actually cancelled; no acceptance run was cancelled.
+The policy is merged through [PR 14](https://github.com/Stell0/ns8-czero/pull/14)
+and [PR 18](https://github.com/Stell0/ns8-czero/pull/18). Exact `740fd64` [full PR
+39152442602](https://github.com/Stell0/ns8-czero/actions/runs/39152442602) and resulting
+`31ca102` [automatic main 39155318390](https://github.com/Stell0/ns8-czero/actions/runs/39155318390)
+pass 1284 Python/PostgreSQL/packaging cases, 125 controllers, 21 Robot checks,
+schema/shell, producer/released-Core, runtime/license/parser audits and five actual
+scan/SBOM pairs. Actual native reports pass Debian's genuine AM4 upgrade (21) and
+Rocky installation (26/three expected skips/all eight browsers), both SSO probes
+per distribution, update/encrypted clean restore, eight privacy guards, 25 numeric
+accessibility contexts and three query-audited artifacts with zero candidates.
+Actual checkouts, installed digests and module sibling references match candidates.
+Main's canonical publication job actually succeeds; six fresh registry reads match
+all main/latest aliases. Exact accepted source/digests are in PLAN.md. The measured
+full main/publication span is 2305s (38m25s); full acceptance cost is retained.
 
-Controlled probes [PR 15](https://github.com/Stell0/ns8-czero/pull/15) and [PR 16](https://github.com/Stell0/ns8-czero/pull/16) target that frozen policy source and are closed unmerged. Actual checkout logs, classifications, jobs and proof artifacts are inspected:
-
-| Observed check | Earlier policy | Scoped policy |
+| Measured observation | Earlier policy | Scoped policy |
 | --- | --- | --- |
-| Local feedback / UI feedback workflow | 466 s, plus a duplicate 462 s run | 110 s, 63 PostgreSQL cases and 125 controller checks |
-| Documentation PR acceptance | 2386 s across local, publication and native gates | 28 s, 44 policy regressions and lightweight docs checks |
+| Local/UI feedback | 466s plus a duplicate 462s | 110s: 63 PostgreSQL and 125 controller cases |
+| Docs PR acceptance | 2386s across local/publication/native | 28s: light docs and 44 policy cases |
 
-These are measured single-run job spans, not estimates or a general performance guarantee. Baseline is documentation source `e05ed46`: [local push](https://github.com/Stell0/ns8-czero/actions/runs/39136439156), [duplicate PR](https://github.com/Stell0/ns8-czero/actions/runs/39136456995), [publication](https://github.com/Stell0/ns8-czero/actions/runs/39136439125) (131 s) and [native](https://github.com/Stell0/ns8-czero/actions/runs/39136605761) (2250 s). Its native checkout is e05ed46 despite workflow_run's different default-branch context. New [docs](https://github.com/Stell0/ns8-czero/actions/runs/39141211821) and [UI](https://github.com/Stell0/ns8-czero/actions/runs/39141216790) sources are 40358fa and a049eba. Runner/cache/load effects remain possible. UI feedback latency is 76.4% lower in these observations; full runtime/native acceptance is still required.
+These are inspected single samples, not estimates or a general performance SLA.
+Baseline e05ed46 [local push 39136439156](https://github.com/Stell0/ns8-czero/actions/runs/39136439156),
+[duplicate PR 39136456995](https://github.com/Stell0/ns8-czero/actions/runs/39136456995),
+[publication 39136439125](https://github.com/Stell0/ns8-czero/actions/runs/39136439125)
+(131s), and [native 39136605761](https://github.com/Stell0/ns8-czero/actions/runs/39136605761)
+(2250s) have actual source checkouts verified, including workflow_run's different
+context SHA. Controlled closed/unmerged [docs PR 15](https://github.com/Stell0/ns8-czero/pull/15)
+([39141211821](https://github.com/Stell0/ns8-czero/actions/runs/39141211821),source `40358fa`)
+and [UI PR 16](https://github.com/Stell0/ns8-czero/pull/16)
+([39141216790](https://github.com/Stell0/ns8-czero/actions/runs/39141216790),source `a049eba`)
+verify jobs/classification/proofs. Observed UI feedback is 76.4% lower and docs
+acceptance 98.8% lower. Runtime/native acceptance is still required.
 
-The docs gate succeeds without image, packaging or QEMU jobs. UI feedback succeeds while its runtime merge gate fails. The actual promotion verifier accepts the ready documentation PR but rejects **both** probes for full release/deployment promotion. A new-source success cannot be inferred from these probes.
+The docs gate passes with images/packaging/QEMU skipped. UI feedback passes but
+its runtime gate fails. Ready same-head broad feedback[39142577702](https://github.com/Stell0/ns8-czero/actions/runs/39142577702)
+passes 1256 cases but rejects full_validation_required. The actual promotion helper
+accepts ready docs and rejects both probes for full deployment/release. Closed
+unmerged [PR 17](https://github.com/Stell0/ns8-czero/pull/17) actually cancels obsolete
+UI feedback 39145190485 on a docs transition. Superseded development runs cancel;
+full or ambiguous runs are preserved. Actual ready/subsequent-update events run full.
 
-Main protection is now actually configured and re-read: required `C0 merge gate`, pinned to GitHub Actions app 15368, strict up-to-date base and admin enforcement, pull requests with zero mandatory human approvals, and no force pushes/deletions. No prior protection/ruleset was overwritten; no merge queue is configured. Primary-agent review is not represented as independent human review.
+Initial regressions fail before implementation. Current policy/release/native-helper
+checks pass 98, all 339 unit cases. Actionlint 1.7.12 passes with only its stale
+ubuntu-26.04 label table excluded; actual builds on that runner pass. Current/older
+GitHub CLI completed-log capture is exercised, with captured terminal controls
+stripped. The new installed-image probe initially fails in the non-browser Robot
+container without Git; five failing regressions precede explicit immutable workflow
+source binding. Both actual distributions now pass. Raw failed evidence remains
+outside Git; no tools are added to runtime to bypass the failure.
 
-Current focused policy/release/image/log-reader regressions pass 63 cases. Broader unit evidence initially passes 309 cases in 4.55 s; the two added CLI compatibility cases also pass. The actual GitHub CLI 2.102 completed-job escape guard was reproduced and corrected with explicit captured reads, older-CLI compatibility and control stripping; raw failed evidence stays private. Actionlint 1.7.12 passes all workflows with only its known ubuntu-26.04 label-table lag excluded. Existing producer jobs actually use that runner successfully.
+First main `56e384f` [39148427261](https://github.com/Stell0/ns8-czero/actions/runs/39148427261)
+hits one pre-existing forced-HNSW-plan SQL timeout (1271 passes). Native/artifact
+checks pass, but the gate rejects required_job_not_successful and publication is
+skipped. Same-source manual [full 39149274270](https://github.com/Stell0/ns8-czero/actions/runs/39149274270)
+passes 1272/native/audits, but publication is unexpectedly skipped through development
+ancestors. This [runner dependency behavior](https://github.com/actions/runner/issues/2205)
+is corrected by explicit status/gate checks; twelve actual-expression cases cover
+skips, cancellation, failed gates, modes and refs. Canonical reads remain c1a90d3
+until corrected `31ca102` full acceptance and publication actually succeed.
 
-Full ready-runtime, resulting main publication/native and final documentation-only main acceptance remain pending. These development timings and scope checks do not replace them. No Core/module release or dedicated-instance update is performed for this policy.
+The forced-plan fixture is timing-sensitive in retained post-suite diagnostic data;
+its cause is unproved. Fresh full runs pass. Runtime SQL, the five-second deadline,
+versions, dependencies and schema are unchanged; no automatic retry or acceptance
+exception is introduced. Main protection is actually configured/re-read: required
+C0 merge gate, Actions app 15368, strict up-to-date base, admin enforcement, zero
+required human approvals and no force pushes/deletions. No former rule is replaced;
+no merge queue exists. Primary-agent review is not independent human review.
+
+The final docs-only closeout must pass its own lightweight PR/main gate and preserve
+31ca102 canonical images. Its actual checked sources, jobs and timings are recorded
+in that PR after execution, avoiding a recursive documentation-marker full build.
+No Core/module release, dedicated-instance update, other live persona, real-provider
+quality or scheduled-client interoperability is claimed. Existing waivers remain.
