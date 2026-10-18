@@ -3018,3 +3018,13 @@ controls and issued-secret/body checks. Destructive failures/restores and other
 roles remain disposable. Reconcile all three project documents and verify their
 actual marker/main gates before AM6. Retain failed private evidence outside Git,
 both waivers and honest provider/live-persona/scheduled/stable-release limits.
+
+**AM5 existing-primitives decision:** Five actual PostgreSQL experiments pass.
+Wiki/entity/claim/annotation retries recover their individual original receipts;
+object creation instead conflicts after a lost response. Two independent writers
+both commit candidate pages before one loses the shared entity revision. Role
+revocation prevents the second write and old receipt replay, but the first page
+remains published. Injected harness failures after one/two writes leave their
+pages/annotations, histories, events and receipts committed. Existing operations
+therefore cannot provide atomic multi-resource publication. Implement the bounded
+bundle above; do not attempt compensating deletes of retained history/evidence.
