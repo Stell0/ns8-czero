@@ -2769,3 +2769,14 @@ versioning API passes updated 0.28 patch/minor/prerelease bounds. Primary-agent
 complete diff review records compatibility, current authority, limits and the
 mandatory new native acceptance; no independent human review is claimed. Exact
 application-source CI/native/artifacts and promotion/deployment remain required.
+
+
+App source 336cfa8 passes producer publication and both native Renovate API
+checks. Both released-image runs (39082655103/39082657095) fail their final
+runtime verifier: a second series guard in `core_consumer_runtime_probe.py`
+still expects 0.27, although the workflow and actual installed dependency are
+0.28. Failed private logs are retained. The exact probe reproduces the failure
+in the separate released environment; updating only its expected series to 0.28
+passes all version/Git-commit/subdirectory/no-NS8-SDK assertions. Image and source
+checks are preserved; fresh exact-source CI/native gates remain required before
+promotion. No deployment occurred.
