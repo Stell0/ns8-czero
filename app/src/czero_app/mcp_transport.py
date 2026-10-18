@@ -30,6 +30,7 @@ from czero_core.identity import PermissionDenied
 from czero_core.oauth_grants import GrantRejected
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
+from czero_app.agent_guidance import agent_guidance, SERVER_INSTRUCTIONS
 from czero_app.object_errors import mcp_object_error
 from czero_app.knowledge_errors import KNOWLEDGE_OPERATIONS, mcp_knowledge_error
 from czero_app.space_errors import SPACE_OPERATIONS, mcp_space_error
@@ -247,7 +248,8 @@ def create_mcp_app(registry, grants, *, issuer_url):
         uri = str(params.uri)
         try:
             if uri == 'c0://capabilities':
-                result = {'operations': await describe()}
+                operations = await describe()
+                result = {'operations': operations, 'guidance': agent_guidance(operations)}
             else:
                 match = re.fullmatch(r'c0://(wiki/pages|source-versions|entities)/([0-9a-fA-F-]{36})', uri)
                 if match is not None:
@@ -266,7 +268,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
         except (SQLAlchemyError, TransportUnavailable):
             raise MCPError(-32603, 'service_unavailable') from None
 
-    server = Server('Czero', version=__version__, on_list_tools=tools, on_call_tool=call,
+    server = Server('Czero', version=__version__, instructions=SERVER_INSTRUCTIONS, on_list_tools=tools, on_call_tool=call,
         on_list_resources=resources, on_list_resource_templates=templates, on_read_resource=read)
     server.middleware.append(oauth_tool_metadata)
     child = server.streamable_http_app(stateless_http=True, json_response=True,

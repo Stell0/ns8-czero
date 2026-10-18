@@ -118,6 +118,7 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
         assert b'Installed typed object lifecycles completed: 2' in result.stdout, 'Installed full typed CRUD evidence missing'
         assert b'Installed applicability and structured retrieval lifecycles completed: 2' in result.stdout, 'Installed annotation/structured retrieval proof missing'
         assert b'Installed atomic consolidation lifecycles completed: 2' in result.stdout, 'Installed atomic consolidation proof missing'
+        assert b'Installed guided agent lifecycles completed: 2' in result.stdout, 'Installed guided independent-session proof missing'
         print('Disposable installed typed CRUD: current and legacy (two complete lifecycles)')
 
 

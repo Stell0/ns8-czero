@@ -216,10 +216,11 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         context = read_context(request) if (request.headers.get('authorization') is not None
             or request.cookies.get('c0_session')) else None
         operations = catalog.registry.describe(context.actor, scopes=context.scopes) if context else []
+        from czero_app.agent_guidance import agent_guidance
         return {'version': 1, 'authenticated': context is not None,
                 'role': auth.access.authorize(context.actor, Role.READER).role.value if context else None,
                 **connection_metadata(),
-                'operations': operations,
+                'operations': operations, 'guidance': agent_guidance(operations),
                 'rest_attachments': ['multipart source upload', 'retained original download', 'Markdown export']}
 
     @instance_app.get('/agents/capabilities.json')
@@ -247,6 +248,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             '<li><a href="' + escape(current['oauth']['authorization_metadata'], quote=True) + '">OAuth authorization metadata</a></li></ul>'
         ) if current['interfaces']['mcp'] else (
             '<p>MCP is unavailable until NS8 sign-in and hostname-root routing are configured.</p>')
+        guidance = '<h2>Agent workflows</h2>' + ''.join('<h3>' + escape(flow['title']) + '</h3><ol>' + ''.join('<li>' + escape(step) + '</li>' for step in flow['steps']) + '</ol>' for flow in current['guidance']['workflows'])
         reference = (
             "<p>This reference runtime exposes a health endpoint and OpenAPI. "
             "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
@@ -256,7 +258,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
             "<li><a href='./docs'>OpenAPI documentation</a></li>"
             "<li><a href='./agents/capabilities.json'>Caller-aware capability JSON</a></li></ul>"
-            + connection + "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul>"
+            + connection + guidance + "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul>"
         )
         return (static_dir / 'agents.html').read_text().replace('<!--CAPABILITIES-->', reference)
 
@@ -285,6 +287,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     def described_openapi():
         schema = default_openapi()
         schema['x-c0-interfaces'] = connection_metadata()
+        from czero_app.agent_guidance import agent_guidance
+        schema['x-c0-agent-guidance'] = agent_guidance()
         return schema
 
     instance_app.openapi = described_openapi

@@ -323,6 +323,13 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
     spec=importlib.util.spec_from_file_location('installed_tls_probe',path)
     probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
     created_types=[]
+    created_spaces=[]
+    create_space=app.state.spaces.create
+    def track_space(*args, **kwargs):
+        value=create_space(*args, **kwargs)
+        if str(value['id']) not in created_spaces:created_spaces.append(str(value['id']))
+        return value
+    monkeypatch.setattr(app.state.spaces,'create',track_space)
     register_type=app.state.objects.register_type
     def track_type(*args, **kwargs):
         value=register_type(*args, **kwargs)
@@ -353,4 +360,12 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
         asyncio.run(check())
     finally:
         from test_objects_http import cleanup
+        from test_spaces_http import dispose_spaces
+        dispose_spaces(access.database,created_spaces)
         cleanup(access.database,created_types)
+        with access.database.engine.connect() as connection:
+            for identifier in created_spaces:
+                assert connection.execute(text('SELECT count(*) FROM c0_sources WHERE space_id=:id'),
+                    {'id':UUID(identifier)}).scalar_one()==0
+                assert connection.execute(text('SELECT count(*) FROM c0_jobs WHERE space_id=:id'),
+                    {'id':UUID(identifier)}).scalar_one()==0
