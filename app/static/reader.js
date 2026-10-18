@@ -254,3 +254,5 @@
   window.addEventListener('pageshow',event=>{if(event.persisted)window.location.reload();});
   initialize();
 })();
+
+// Owned unmerged CI mode-transition probe.
