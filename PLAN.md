@@ -3399,3 +3399,27 @@ No runtime/Core source, package metadata, lockfile, container, native lifecycle
 handler or schema changed. Native tests add exact installed-candidate inspection;
 producer and native jobs retain unique source/run image identities and report
 privacy. Actual GitHub paths, protection and timings are not yet accepted.
+
+
+**Executed development policy proof:** Source c9f62f4's draft broad feedback
+39140980732 passes 1254 actual Python/PostgreSQL/packaging cases, 125 scripts and
+21 Robot checks; the runtime merge gate stays blocked. Earlier obsolete draft
+feedback runs are actually cancelled, with no acceptance cancellations. Controlled
+PR 15 docs (39141211821/source40358fa) passes in 28 seconds, while draft UI PR 16
+(39141216790/sourcea049eba) passes 63 PostgreSQL and 125 controller cases in a
+110-second workflow with the expected blocked runtime merge gate. Both owned
+probes are closed unmerged. Actual promotion accepts docs but rejects both for
+full release/deployment; complete source/base/job/proof artifacts are inspected.
+Earlier e05ed46 docs acceptance spans 2386 seconds, with duplicate local runs
+466/462 seconds, producer131 seconds and native2250 seconds. These are single
+measured observations, not general performance or full-acceptance speed claims.
+
+Main protection is actually configured/re-read with required C0 merge gate pinned
+to GitHub Actions app15368, strict up-to-date base and admin enforcement, zero
+mandatory human approvals and no force pushes/deletions. Prior protection and
+rulesets were absent. No queue trigger or schedule was added. The actual completed
+job-log CLI escape guard is reproduced and fixed before full acceptance, with
+private failed evidence and current/older CLI regressions. The existing immutable
+Yarn/node_modules cache is retained and keyed by lock/package/config/builder;
+pip download caching preserves dependency inputs. No runtime build script changed.
+Full ready/main/native and final documentation-only main checks remain required.

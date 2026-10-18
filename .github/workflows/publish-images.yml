@@ -35,8 +35,8 @@ jobs:
           persist-credentials: false
       - uses: actions/cache@v6
         with:
-          path: ui/.yarn/cache
-          key: yarn-${{ runner.os }}-${{ hashFiles('ui/yarn.lock') }}
+          path: ui/node_modules
+          key: yarn-${{ runner.os }}-${{ hashFiles('ui/yarn.lock', 'ui/package.json', 'ui/.yarnrc.yml', 'build-images.sh') }}
       - id: build
         env:
           EXPECTED_SOURCE: ${{ inputs.source || github.sha }}

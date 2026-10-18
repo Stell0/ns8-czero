@@ -736,3 +736,14 @@ recovery snapshots. Shared-space vector counts cannot measure global indexing.
 Keep the bounded registered-job cap, paused schedule, original receipts and
 installed authority lifetimes. All eight automated browsers remain mandatory;
 interactive Playwright and CPU-quota waivers remain unchanged.
+
+
+## Scoped CI development proof (acceptance pending)
+
+Actual c9f62f4 broad feedback passes1254 PostgreSQL/Python/packaging,125 scripts
+and21 Robot cases; it does not authorize runtime merging. Controlled docs/UI
+PR15/16 are closed unmerged after actual28s/110s checks, explicit skipped full
+jobs and promotion negatives. Main's required C0 merge gate is configured with
+GitHub Actions app15368, strict base/admin enforcement and no bypass in normal
+promotion. Use scripts/verify-promotion.py on the exact ready head; retain full
+ready/main/native and deployment gates. Details/limitations are in docs/ci-policy.md.

@@ -117,10 +117,23 @@ remain frozen independently of documentation images. Destructive restore tests
 remain disposable. Milestone-specific live gates still apply; a lightweight
 closeout marker does not replace the accepted runtime's release/deployment proof.
 
-## Executed evidence
+## Executed development evidence
 
-Initial local policy regressions: 61 passes. The broader unit suite passes 307
-cases in 6.69 seconds. Actionlint 1.7.12 passes the workflows with only its known
-`ubuntu-26.04` label-table lag excluded; actual existing producer jobs use that
-runner successfully. GitHub event, timing, protection and full native evidence
-remain pending and must be recorded before claiming this policy accepted.
+Source `c9f62f4` has actual broad draft feedback [39140980732](https://github.com/Stell0/ns8-czero/actions/runs/39140980732): 1254 Python/PostgreSQL/packaging cases, 125 scripts and 21 Robot checks pass. The merge gate remains blocked because scoped feedback is not runtime acceptance. Earlier obsolete feedback runs 39140523676, 39140624127 and 39140829879 are actually cancelled; no acceptance run was cancelled.
+
+Controlled probes [PR 15](https://github.com/Stell0/ns8-czero/pull/15) and [PR 16](https://github.com/Stell0/ns8-czero/pull/16) target that frozen policy source and are closed unmerged. Actual checkout logs, classifications, jobs and proof artifacts are inspected:
+
+| Observed check | Earlier policy | Scoped policy |
+| --- | --- | --- |
+| Local feedback / UI feedback workflow | 466 s, plus a duplicate 462 s run | 110 s, 63 PostgreSQL cases and 125 controller checks |
+| Documentation PR acceptance | 2386 s across local, publication and native gates | 28 s, 44 policy regressions and lightweight docs checks |
+
+These are measured single-run job spans, not estimates or a general performance guarantee. Baseline is documentation source `e05ed46`: [local push](https://github.com/Stell0/ns8-czero/actions/runs/39136439156), [duplicate PR](https://github.com/Stell0/ns8-czero/actions/runs/39136456995), [publication](https://github.com/Stell0/ns8-czero/actions/runs/39136439125) (131 s) and [native](https://github.com/Stell0/ns8-czero/actions/runs/39136605761) (2250 s). Its native checkout is e05ed46 despite workflow_run's different default-branch context. New [docs](https://github.com/Stell0/ns8-czero/actions/runs/39141211821) and [UI](https://github.com/Stell0/ns8-czero/actions/runs/39141216790) sources are 40358fa and a049eba. Runner/cache/load effects remain possible. UI feedback latency is 76.4% lower in these observations; full runtime/native acceptance is still required.
+
+The docs gate succeeds without image, packaging or QEMU jobs. UI feedback succeeds while its runtime merge gate fails. The actual promotion verifier accepts the ready documentation PR but rejects **both** probes for full release/deployment promotion. A new-source success cannot be inferred from these probes.
+
+Main protection is now actually configured and re-read: required `C0 merge gate`, pinned to GitHub Actions app 15368, strict up-to-date base and admin enforcement, pull requests with zero mandatory human approvals, and no force pushes/deletions. No prior protection/ruleset was overwritten; no merge queue is configured. Primary-agent review is not represented as independent human review.
+
+Current focused policy/release/image/log-reader regressions pass 63 cases. Broader unit evidence initially passes 309 cases in 4.55 s; the two added CLI compatibility cases also pass. The actual GitHub CLI 2.102 completed-job escape guard was reproduced and corrected with explicit captured reads, older-CLI compatibility and control stripping; raw failed evidence stays private. Actionlint 1.7.12 passes all workflows with only its known ubuntu-26.04 label-table lag excluded. Existing producer jobs actually use that runner successfully.
+
+Full ready-runtime, resulting main publication/native and final documentation-only main acceptance remain pending. These development timings and scope checks do not replace them. No Core/module release or dedicated-instance update is performed for this policy.
