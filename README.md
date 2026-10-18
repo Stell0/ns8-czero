@@ -1,21 +1,21 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (17 October 2026): Agent Memory AM0–AM3 runtime acceptance passes.** The dedicated instance runs main `cb60da9`, with Core **0.27.0**, app **0.42.0** and schema **0015**. Agents can use protected spaces, ingest bounded evidence and revise Wiki pages with explicit revision and retry protection. Current/legacy SDK workflows, fresh OAuth consent, supported update/restart, preservation and bounded journal privacy pass. The existing connector separately reads retained Shared evidence and historical Wiki content after reconnecting; new space operations through its cached catalog are not claimed.
+**Status (18 October 2026): Agent Memory AM0–AM4 runtime acceptance passes.** The dedicated instance runs main `878978d`, with Core **0.28.0**, app **0.43.0** and schema **0016**. Agents can use protected spaces, ingest bounded evidence, revise Wiki pages safely, annotate exact content and search structured records with exact applicability filters. Current/legacy SDK workflows, fresh consent, supported update/restart, preservation and bounded journal privacy pass. The existing cached connector separately reconnects and reads retained Shared citations and historical Wiki content; new tools through its 63-operation catalog are not claimed.
 
-Main passes 1048 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core checks, Debian installation and genuine Rocky AM2 upgrade with all eight automated browser workflows. Native reports, actual source checkouts and privacy artifacts are audited. See [PLAN.md](PLAN.md) for exact sources, published Core artifacts and frozen installed digests. AM3 closeout source 6402026 and resulting main 7fcc39b pass their completed checks and native/artifact audits. AM4 development is active; AM4–AM6 deployment acceptance and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist. No stable module release is claimed.
+Exact main passes 1127 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core/Renovate and both native distributions: Debian genuine AM3 upgrade twenty passes, Rocky installation twenty-five passes/three expected skips, all eight browser/privacy workflows and twenty-five accessibility contexts. Actual source checkouts, image/scan artifacts and three OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed results and frozen installed digests. Verify this documentation marker's actual CI/main publication before AM5. AM5–AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist; no stable module release is claimed.
 
 
-## AM4 development: applicability and structured retrieval
+## Applicability and structured retrieval (AM4)
 
 Core 0.28 is independently published and app 0.43 pins its verified immutable
-release. Application acceptance is pending; the dedicated instance remains on
-the accepted AM3 deployment above. Applicability and verification describe
+release. The dedicated instance accepts this behavior on main 878978d.
+Applicability and verification describe
 exact content through separate revisioned annotations. They do not rewrite source
 evidence, article revisions or strict record payloads. Missing metadata is unknown;
 changed content never inherits verification. C0 stores the observations supplied
 by authorized editors; external agents assess and consolidate knowledge.
 
-The candidate adds `knowledge_annotations_get`, `knowledge_annotations_history`,
+The application adds `knowledge_annotations_get`, `knowledge_annotations_history`,
 `knowledge_annotations_update` and `knowledge_search_structured` with matching
 REST operations. An annotation target uses its kind, content UUID and observed
 revision: source versions and article revisions use their immutable UUIDs;
@@ -66,8 +66,10 @@ status, observation time, confidence and bounded extensions; `verification` has
 its own status, observation/verification times, confidence and extensions. Times
 require a timezone and normalize to UTC. New REST bodies retain the existing one-MiB knowledge request bound;
 annotation values retain the existing 16-KiB JSON budget. Existing MCP request and
-response bounds remain unchanged. Exact CI/native/publication and dedicated-instance
-acceptance remain required before AM4 is closed.
+response bounds remain unchanged. Exact-source CI/native/publication and dedicated
+update/restart acceptance pass, including all five target histories and changed
+content returning unknown verification. Inspect this documentation marker's
+actual checks and main publication before starting AM5.
 
 ## Purpose and boundaries
 
@@ -114,7 +116,7 @@ Configure an application hostname in NS8 Settings. Older M01 installations retai
 | `/openapi.json`, `/docs` | REST schemas, role/scope metadata, safe connection metadata and Swagger UI |
 | `/agents`, `/agents/capabilities.json` | Use with AI guide and role-aware task instructions; original caller-aware technical reference at `/agents?view=tools`; capability JSON unchanged |
 
-Core/app versions are **0.27.0/0.42.0**, with migrations through `0015_content_spaces`. The accepted dedicated runtime is `cb60da9`; earlier M14, reader UI, Integration M15/M16 and structured-object acceptance remains recorded in PLAN. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
+Core/app versions are **0.28.0/0.43.0**, with migrations through `0016_annotations`. The accepted dedicated runtime is `878978d`; earlier M14, reader UI, Integration M15/M16 and structured-object acceptance remains recorded in PLAN. Public health returns HTTP 200 when PostgreSQL/schema/pgvector are ready, or safe HTTP 503 with a database reason. Authentication status reports configuration rather than provider reachability. Swagger loads CDN assets; OpenAPI JSON remains usable without them.
 
 Objects, sources, immutable documents/citations, Wiki/claims/graph and optional retrieval pass local PostgreSQL-backed HTTP, real disposable SSO/browser, native recovery and permitted live acceptance. Readers inspect permitted content; Editors author/upload within their effective space role; Admins register schemas and manage spaces, grants, membership, clients and jobs. No per-document ACL exists. Optional providers stay disabled in live checks.
 
@@ -380,30 +382,33 @@ M14 candidate evidence, security findings and deployment limits are recorded in 
 
 The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers text evidence,
 revision-safe Wiki operations, protected spaces, applicability-aware retrieval
-and external-agent maintenance guidance. AM0–AM3 runtime acceptance passes at
-main `cb60da9` (Core 0.27.0/app 0.42.0/schema 0015), including supported backup,
-update, full-manager restart, original-data preservation and live current/legacy
-SDK checks. The existing connector independently reads retained Shared evidence
-and a historical Wiki revision after reconnecting. AM3's documentation closeout
-marker and main 7fcc39b pass their actual checks and reviewed publication. AM4 is
-active for separate revisioned applicability/verification annotations and opt-in
-structured retrieval; none of that new behavior is deployed yet.
+and external-agent maintenance guidance. AM0–AM4 runtime acceptance passes at
+main `878978d` (Core 0.28.0/app 0.43.0/schema 0016), including supported backup,
+update, full-manager restart and live current/legacy SDK checks. All 7146 original
+rows, 125 terminal jobs/attempts, four files, 97 scheduler-history rows, nineteen
+old client descriptors, eleven prior backup plans and eleven unrelated instances
+are preserved. The owned client is disabled after a valid bearer control; native
+browser/private Wiki and an independent existing-client read remain accepted.
+The actual 1027-line root journal passes request-controlled privacy checks.
+Verify this documentation marker's actual CI/main publication before AM5.
 
-[Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0)
+[Core 0.28.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.28.0)
 is independently published after exact-source local, producer and both-native
-gates. Its 1040 Python/PostgreSQL/packaging cases include role/grant/scope
-combinations, migration preservation, immutable evidence, private references and
-filtered retrieval. Downloaded wheel/archive checksums, reproducible rebuilds,
-independent installs and packaged migrations pass. App 0.42.0 adds typed
-REST/MCP selectors, qualified resources and space/grant controls; its native and
-dedicated deployment acceptance passes.
+gates. Downloaded wheel/archive checksums, reproducible builds, separate installs
+and packaged migrations pass. App 0.43 pins that immutable released source with
+all 53 transitive packages unchanged. Its 75-operation catalog preserves all 71
+accepted contracts and six resource templates. Owned deployed SDK sessions use
+all five annotation targets and exact structured retrieval, preserve original
+receipts and return unknown verification after a content change. The existing
+connector independently reconnects and reads retained Shared evidence and a
+historical Wiki revision; its cached 63 operations do not expose the new APIs.
 
 The agreed space contract keeps object-type definitions shared across the
 instance. Records, relations, events and annotations are protected by space;
 Admins access all spaces under actual OAuth scopes, while Readers/Editors need
 explicit protected-space grants capped by their application role. The space
-contract is deployed. Revisioned applicability annotations and structured
-retrieval remain AM4 work. Existing knowledge, immutable evidence/history and
+contract, revisioned applicability annotations and structured retrieval are
+deployed. Consolidation reliability and complete agent guidance remain AM5/AM6 work. Existing knowledge, immutable evidence/history and
 approved clients must survive every milestone. C0 remains deterministic storage,
 retrieval and maintenance infrastructure; external agents perform reasoning and
 consolidation. Windmill Gate remains blocked through AM6 deployment acceptance.
