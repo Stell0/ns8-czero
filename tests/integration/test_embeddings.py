@@ -303,3 +303,44 @@ def test_native_completion_drains_a_corpus_larger_than_four_batches(indexed,monk
     finally:
         with store.database.engine.begin() as c:
             for key in created:c.execute(text('DELETE FROM c0_jobs WHERE id=:id'),{'id':key})
+
+
+def test_native_timer_progress_does_not_require_five_shared_vectors(indexed,monkeypatch):
+    from pathlib import Path
+    import runpy
+    from czero_core.jobs import JobService,default_registry
+    from czero_core.worker import Worker
+    store,fixtures,_=indexed;_,wiki,_=fixtures
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1]))
+    native=runpy.run_path(str(Path(__file__).parents[1]/'retrieval_fixture.py'))
+    registry=default_registry();register_embedding_handlers(registry,store)
+    jobs=JobService(store.database,registry,wiki[0].access);created=[]
+    with store.database.engine.connect() as c:
+        previous=set(c.execute(text('SELECT job_id FROM c0_task_runs WHERE schedule_id=:id'),{'id':SCHEDULE_ID}).scalars())
+    def command(arguments):
+        with store.database.engine.connect() as c:return 't' if c.execute(text(arguments[-1])).scalar_one() else 'f'
+    try:
+        create_page(wiki,body='alpha first evidence')
+        with store.database.engine.begin() as c:
+            store._activate(c)
+            c.execute(text('UPDATE c0_scheduled_tasks SET enabled=false WHERE id=:id'),{'id':SCHEDULE_ID})
+        manual=jobs.enqueue(wiki[1],'embedding.index',{},'native-timer-'+uuid4().hex);created.append(manual['id'])
+        assert Worker(store.database,registry).tick(max_jobs=1)==1
+        status=store.status(wiki[1])
+        assert status['configured'] and 0<status['indexed']<5
+        progress=native['timer_indexed'];progress.__globals__['command']=command
+        assert progress('disposable') is False
+        create_page(wiki,body='alpha timer evidence')
+        jobs.update_schedule(wiki[1],SCHEDULE_ID,enabled=True,interval_seconds=60)
+        with store.database.engine.begin() as c:
+            c.execute(text("UPDATE c0_scheduled_tasks SET next_run_at=now()-interval '1 second' WHERE id=:id"),{'id':SCHEDULE_ID})
+        assert Worker(store.database,registry).tick(max_jobs=1)==1
+        assert store.status(wiki[1])['indexed']==status['indexed']+1<5
+        assert progress('disposable') is True
+        with store.database.engine.begin() as c:
+            c.execute(text('UPDATE c0_embedding_profiles SET generation=generation+1 WHERE id=:id'),{'id':store.profile_id})
+        assert progress('disposable') is False
+    finally:
+        with store.database.engine.begin() as c:
+            created.extend(key for key in c.execute(text('SELECT job_id FROM c0_task_runs WHERE schedule_id=:id'),{'id':SCHEDULE_ID}).scalars() if key not in previous)
+            for key in created:c.execute(text('DELETE FROM c0_jobs WHERE id=:id'),{'id':key})

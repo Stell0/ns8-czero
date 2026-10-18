@@ -138,6 +138,22 @@ def index_complete(module_id):
                     'psql', '-U', 'czero', '-d', 'czero', '-At', '-c', query]).strip() == 't'
 
 
+def timer_indexed(module_id):
+    # The public index status is selected-space scoped. A global worker may
+    # first index protected evidence, so Shared's count cannot prove progress.
+    # Require an actual scheduled successful batch for the active generation;
+    # manually submitted jobs and previous profiles/generations do not count.
+    query = """SELECT EXISTS(SELECT 1 FROM c0_task_runs r
+        JOIN c0_scheduled_tasks s ON s.id=r.schedule_id
+        JOIN c0_jobs j ON j.id=r.job_id
+        JOIN c0_embedding_profiles p ON p.id::text=j.result->>'profile_id'
+        WHERE s.handler='embedding.index' AND j.state='succeeded' AND p.active
+        AND j.result->>'generation'=p.generation::text
+        AND j.result->>'status'='indexed' AND (j.result->'indexed')>'0'::jsonb);"""
+    return command(['runagent', '-m', module_id, 'podman', 'exec', 'czero-postgres',
+                    'psql', '-U', 'czero', '-d', 'czero', '-At', '-c', query]).strip() == 't'
+
+
 def complete_indexing(module_id, get, enqueue):
     # Independent client fixtures grow the corpus. Successful bounded jobs do
     # not prove completion; observe the real remaining source/Wiki candidates.
@@ -183,9 +199,9 @@ def check(module_id, operation):
     if operation == 'seed':
         for attempt in range(60):
             status = get('knowledge/index/status')
-            if status['indexed'] >= 5: break
+            if status['configured'] and timer_indexed(module_id): break
             time.sleep(2)
-        assert status['configured'] and status['indexed'] >= 5, 'Native worker did not index evidence'
+        assert status['configured'] and timer_indexed(module_id), 'Native timer did not index evidence'
         schedules = get('schedules')['schedules']
         refresh = next(s for s in schedules if s['handler'] == 'embedding.index')
         code, body, _ = browser.api('/api/v1/schedules/' + refresh['id'],

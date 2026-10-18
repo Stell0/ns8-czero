@@ -3238,3 +3238,27 @@ embedding/provider regressions pass: nineteen cases in 5.58 seconds, plus twenty
 Robot dry runs. Runtime application/Core bytes, released pin and schema remain
 unchanged. Preserve all failed evidence and repeat exact-source gates for this
 focused native-fixture correction.
+
+
+**AM5 follow-up scheduled-progress correction:** Exact source `bdf2cb3`
+passes all seven non-native workflows, including 1205 Python/PostgreSQL cases,
+125 scripts, twenty Robot checks, released/producer builds and actual artifact
+checks. [Native 39122460111](https://github.com/Stell0/ns8-czero/actions/runs/39122460111)
+is not accepted: the genuine AM4 Debian upgrade has nineteen passes and one
+failure before recovery, at the earlier five-Shared-vector timer assumption.
+Its actual failed log/report are preserved privately; the remaining Rocky job
+is cancelled before replacing branch images. Main and the dedicated instance
+remain unchanged, and the guarded promotion pipeline is stopped.
+
+Public index status is selected-space scoped while worker indexing is global.
+A real PostgreSQL regression demonstrates successful manual and scheduled
+batches with fewer than five Shared vectors. Require an actual successful
+scheduled index job for the active profile and generation, with positive
+indexed work; a manual job or a stale generation cannot satisfy it. Retain the
+existing two-minute initial timer window, the bounded complete-corpus drain,
+and the paused schedule/recovery snapshots. No runtime or authority lifetime
+changes. All twenty focused embedding/provider/fixture cases pass in 5.26
+seconds against a fresh database. The corrected source must repeat all gates.
+
+The operator has updated the private credential file. Fresh normal SSO now
+passes for the existing owner/Admin. No login question remains pending.
