@@ -196,7 +196,53 @@ async def protected_spaces(client, http, previous=None):
     stale=await client.call_tool('wiki_pages_upsert',{'space_id':identifier,'data':{**data,
         'expected_revision':1,'idempotency_key':uuid4().hex}})
     assert stale.is_error and stale.content[0].text=='knowledge_conflict', 'Installed protected stale write overwrote current state'
-    return {'request':request,'space':space,'data':data,'first':first,'current':current}
+    annotations=await annotated_memory(client,http,space,current,previous['annotations'] if previous else None)
+    return {'request':request,'space':space,'data':data,'first':first,'current':current,'annotations':annotations}
+
+
+async def annotated_memory(client,http,space,page,previous=None):
+    """Actual delegated annotation CAS/replay, typed filtering and separate history."""
+    async def call(name,arguments):
+        result=await client.call_tool(name,arguments)
+        assert not result.is_error,'Installed annotation/retrieval operation failed'
+        assert json.loads(result.content[0].text)==result.structured_content,'Installed annotation representations differ'
+        return result.structured_content
+    args={'kind':'wiki_revision','target_id':page['content']['id'],'content_revision':page['revision'],'space_id':space['id']}
+    if previous is None:
+        missing=await call('knowledge_annotations_get',{**args,'namespace':'verification'})
+        assert missing['revision']==0 and missing['status']=='unknown','Missing annotation inferred verification'
+        requests={
+            'applicability':{'value':{'products':['C0'],'components':['sdk-annotation'],'version_tags':['0.28'],'status':'applicable'},
+                'expected_revision':0,'idempotency_key':uuid4().hex},
+            'verification':{'value':{'status':'unverified'},'expected_revision':0,'idempotency_key':uuid4().hex}}
+        receipts={namespace:await call('knowledge_annotations_update',{**args,'namespace':namespace,'data':request})
+            for namespace,request in requests.items()}
+        current=await call('knowledge_annotations_update',{**args,'namespace':'verification','data':{
+            'value':{'status':'verified','verified_at':'2026-10-18T00:00:00Z'},'expected_revision':1,'idempotency_key':uuid4().hex}})
+        previous={'requests':requests,'receipts':receipts,'current':current}
+    for namespace,request in previous['requests'].items():
+        assert await call('knowledge_annotations_update',{**args,'namespace':namespace,'data':request})==previous['receipts'][namespace], 'Annotation replay snapshot changed'
+    observed=await call('knowledge_annotations_get',{**args,'namespace':'verification'})
+    assert observed==previous['current'] and observed['revision']==2,'Installed current annotation read changed'
+    history=await call('knowledge_annotations_history',{**args,'namespace':'verification'})
+    assert [row['number'] for row in history['revisions']]==[2,1],'Installed independent annotation history missing'
+    stale=await client.call_tool('knowledge_annotations_update',{**args,'namespace':'verification','data':{
+        'value':{'status':'stale'},'expected_revision':0,'idempotency_key':uuid4().hex}})
+    assert stale.is_error and stale.content[0].text=='knowledge_conflict','Installed stale annotation write was accepted'
+    path='/api/v1/knowledge/annotations/wiki_revision/'+args['target_id']+'/'+str(args['content_revision'])+'/verification'
+    response=await http.get(path,params={'space_id':space['id']})
+    assert response.status_code==200 and response.json()==observed,'Installed annotation REST/MCP parity failed'
+    assert (await http.get(path)).status_code==404,'Installed protected annotation leaked into Shared'
+    request={'query':'Independent','space_id':space['id'],'mode':'text','rerank':'off','filters':{'categories':['wiki'],
+        'products':['C0'],'components':['sdk-annotation'],'version_tags':['0.28'],'verification_statuses':['verified']}}
+    found=await call('knowledge_search_structured',{'data':request})
+    assert found['candidate_count']==1 and found['hits'][0]['reference']['id']==page['content']['id'],'Installed typed filtered retrieval failed'
+    assert found['hits'][0]['verification']['revision']==2 and found['hits'][0]['citation'] is None,'Installed annotation/citation identity changed'
+    assert (await http.post('/api/v1/knowledge/search/structured',json=request)).json()==found,'Installed structured REST/MCP parity differs'
+    for changes in ({'version_tags':['0.2']},{'components':['absent']}):
+        absent=await call('knowledge_search_structured',{'data':{**request,'filters':{**request['filters'],**changes}}})
+        assert absent['hits']==[] and absent['candidate_count']==0,'Installed exact applicability predicate broadened results'
+    return previous
 
 
 async def wiki_memory(client, http):
@@ -364,6 +410,7 @@ async def check(value):
     print('Installed typed object lifecycles completed: %d' % typed_lifecycles)
     assert protected_lifecycles==expected_typed, 'Installed protected-space lifecycle coverage mismatch'
     print('Installed protected space lifecycles completed: %d' % protected_lifecycles)
+    print('Installed applicability and structured retrieval lifecycles completed: %d' % protected_lifecycles)
     assert wiki_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed Wiki lifecycle coverage mismatch'
     print('Installed Wiki memory lifecycles completed: %d' % wiki_lifecycles)
     assert text_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'

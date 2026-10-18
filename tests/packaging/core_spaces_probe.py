@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from czero_core import Database
 from czero_core.access import AccessService
+from czero_core.annotations import AnnotationService, ContentTarget
 from czero_core.identity import PermissionDenied, Role, VerifiedIdentity
 from czero_core.jobs import default_registry
 from czero_core.knowledge import KnowledgeService
@@ -22,6 +23,7 @@ from czero_core.oauth_grants import OAuthGrantService, GrantRejected, pkce_chall
 from czero_core.sessions import SessionContext
 from czero_core.sources import OriginalStore, SourceService, SourceNotFound, register_source_handlers
 from czero_core.spaces import SpaceService
+from czero_core.structured import StructuredFilters, StructuredSearchService
 from czero_core.wiki import KnowledgeNotFound
 
 assert os.environ.get('CZERO_DISPOSABLE_TEST') == '1', 'Disposable fixture marker required'
@@ -65,6 +67,38 @@ try:
         objects.register_type(owner,type_name,'Fixture',{'type':'object','properties':{'name':{'type':'string','maxLength':64}},'required':['name']},['name'])
         record = objects.in_space(private['id']).create(owner,type_name,{'name':'Same unique value'})
         objects.in_space(other['id']).create(owner,type_name,{'name':'Same unique value'})
+        annotations = AnnotationService(database,access).in_space(private['id'])
+        targets = [ContentTarget('source_version',receipt['id'],receipt['number']),
+                   ContentTarget('wiki_revision',first['content']['id'],first['revision']),
+                   ContentTarget('entity',entity['id'],entity['revision']),
+                   ContentTarget('object',record['id'],record['revision']),
+                   ContentTarget('claim',claim['id'],claim['revision'])]
+        for index,target in enumerate(targets):
+            assert annotations.get(owner,target,'verification')['status']=='unknown'
+            annotations.update(owner,target,'applicability',{'products':['C0'],'version_tags':['0.28'],'status':'applicable'},
+                expected_revision=0,idempotency_key='applicable-'+str(index))
+            annotations.update(owner,target,'verification',{'status':'unverified'},
+                expected_revision=0,idempotency_key='verify-'+str(index))
+        target=targets[1]
+        old=annotations.get(owner,target,'verification')
+        annotations.update(owner,target,'verification',{'status':'verified'},expected_revision=1,idempotency_key='verified')
+        assert annotations.update(owner,target,'verification',{'status':'unverified'},expected_revision=0,idempotency_key='verify-1')==old
+        assert [r['number'] for r in annotations.history(owner,target,'verification')['revisions']]==[2,1]
+        assert annotations.get(owner,target,'applicability')['revision']==1
+        assert selected.get_page(owner,first['id'])==first
+        try:AnnotationService(database,access).get(owner,target,'verification')
+        except KnowledgeNotFound:pass
+        else:raise AssertionError('Shared annotation lookup crossed spaces')
+        structured = StructuredSearchService(database,access).in_space(private['id'])
+        for target,category,query in zip(targets,['source','wiki','entity','object','claim'],
+                                       ['Retained','Unverified','fixture','Same','unknown'],strict=True):
+            result=structured.search(owner,query,filters=StructuredFilters(categories=[category],
+                products=['C0'],version_tags=['0.28']))
+            assert result['candidate_count']==1 and len(result['hits'])==1
+            assert result['hits'][0]['reference']['id']==str(target.id)
+            assert result['hits'][0]['reference']['revision']==target.revision
+        assert structured.search(owner,'Unverified',filters=StructuredFilters(version_tags=['0.2']))['hits']==[]
+        target=targets[1]
         assert objects.in_space(private['id']).resolve_reference(owner,'chunk',chunk['id'],'chunk')['data']['body'] == 'Retained fixture evidence'
         try:objects.get(owner,record['id'])
         except ObjectNotFound:pass
@@ -84,11 +118,19 @@ try:
         pair = tokens.exchange_code(code,client['client_id'],callback=callback,verifier=verifier,resource=resource)
         delegated = tokens.verify(pair.access_token,resource=resource).actor
         assert selected.get_page(delegated,first['id']) == first
+        assert annotations.get(delegated,target,'verification')['status']=='verified'
+        assert structured.search(delegated,'Unverified',filters=StructuredFilters(version_tags=['0.28']))['hits']
         spaces.set_grant(owner,private['id'],editor.user_id,None,expected_revision=1,idempotency_key='revoke')
         spaces.set_grant(owner,private['id'],editor.user_id,Role.EDITOR,expected_revision=2,idempotency_key='regrant')
         try:selected.get_page(delegated,first['id'])
         except PermissionDenied:pass
         else:raise AssertionError('Captured authority survived revocation/regrant')
+        try:annotations.get(delegated,target,'verification')
+        except PermissionDenied:pass
+        else:raise AssertionError('Captured annotation authority revived')
+        try:structured.search(delegated,'Unverified')
+        except PermissionDenied:pass
+        else:raise AssertionError('Captured retrieval authority revived')
         try:tokens.verify(pair.access_token,resource=resource)
         except GrantRejected:pass
         else:raise AssertionError('Revoked token revived')
@@ -97,7 +139,7 @@ finally:
     with database.engine.begin() as c:
         if client_id:c.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':client_id})
         for identifier in created:
-            for table in ('c0_evidence_links','c0_entity_links','c0_relations','c0_claims','c0_knowledge_receipts',
+            for table in ('c0_annotation_targets','c0_evidence_links','c0_entity_links','c0_relations','c0_claims','c0_knowledge_receipts',
                           'c0_knowledge_events','c0_entity_aliases','c0_entities','c0_wiki_revisions','c0_wiki_pages',
                           'c0_chunks','c0_documents','c0_source_versions','c0_sources','c0_jobs','c0_object_relations',
                           'c0_object_keys','c0_objects','c0_object_events','c0_space_grants'):
@@ -106,4 +148,4 @@ finally:
         c.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':type_name})
         c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'),{'issuer':issuer})
     database.close()
-print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True}))
+print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True,'structured_retrieval':True}))
