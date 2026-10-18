@@ -5,7 +5,6 @@ import ast
 import json
 import re
 import shlex
-import subprocess
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
@@ -13,10 +12,11 @@ from robot.libraries.BuiltIn import BuiltIn
 
 class CzeroActions:
     @keyword
-    def verify_installed_candidate_images(self, module_id):
+    def verify_installed_candidate_images(self, module_id, source):
         if not re.fullmatch(r'czero[0-9]+', module_id):
             raise AssertionError('Invalid module identity')
-        source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+        if not re.fullmatch(r'[0-9a-f]{40}', source):
+            raise AssertionError('Invalid expected source')
         ssh = BuiltIn().get_library_instance('SSHLibrary')
         images = []
         for container in ('czero', 'czero-postgres'):

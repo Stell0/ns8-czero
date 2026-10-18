@@ -38,7 +38,7 @@ jobs:
       image_url: ${{ inputs.image_url }}
       version_tag: ${{ inputs.image_tag }}
       script: ''
-      args: '-v SCENARIO:update'
+      args: '-v SCENARIO:update -v EXPECTED_SOURCE:${{ inputs.source }}'
       artifact_suffix: update
       run_ui_tests: false
   rocky:
@@ -49,6 +49,6 @@ jobs:
       image_url: ${{ inputs.image_url }}
       version_tag: ${{ inputs.image_tag }}
       script: ''
-      args: '-v SCENARIO:install'
+      args: '-v SCENARIO:install -v EXPECTED_SOURCE:${{ inputs.source }}'
       artifact_suffix: install
       run_ui_tests: true
