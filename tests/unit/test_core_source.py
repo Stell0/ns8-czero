@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import tomllib
+import re
 
 import pytest
 from packaging.requirements import Requirement
@@ -80,3 +81,13 @@ def test_declared_compatibility_supports_both_released_and_explicit_producer_cor
     released = app['tool']['uv']['sources']['czero-core']['tag'].removeprefix('core-v')
     assert Version(released) in requirement.specifier
     assert Version(core['project']['version']) in requirement.specifier
+
+
+def test_native_health_expectations_match_the_declared_producer_versions():
+    root = Path(__file__).parents[2]
+    robot = (root/'tests/czero.robot').read_text()
+    for name, manifest in (('core_version','packages/czero-core/pyproject.toml'),
+                           ('app_version','app/pyproject.toml')):
+        declared = tomllib.loads((root/manifest).read_text())['project']['version']
+        expected = re.findall('"'+name+'":"([^"]+)"',robot)
+        assert expected and set(expected)=={declared}

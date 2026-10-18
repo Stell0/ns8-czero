@@ -3081,3 +3081,25 @@ source-selection/compatibility regressions pass. App adoption/narrowing and
 updater changes still follow immutable Core publication. Failed evidence remains
 private; no failed source was deployed. The corrected exact source must pass all
 CI/native/artifact gates before publication.
+
+**AM5 pre-publication concurrency/native correction:** Source `a2ee432` passes
+actual push/PR local checks (1169 cases), producer/released-Core/Renovate,
+three OCI identities/siblings and five downloaded scan-artifact pairs. The fresh
+local full run passes 1169 cases in 384.19 seconds. Before publication, an
+independent-object-batch experiment reproduces a PostgreSQL deadlock: standalone
+supersession annotations can retain objects in the reverse order to the batch.
+Serialize only this new object-reference shape through object mutex 49375 before
+the existing knowledge/authority locks. Old requests/fingerprints/lock paths stay
+unchanged; bundles already hold both mutexes on their outer connection. The
+controlled two-writer regression now yields a completed batch and a genuine stale
+annotation conflict, without a deadlock. All fifty-four focused annotation/bundle
+cases pass after this fix.
+
+[Superseded native 39113698219](https://github.com/Stell0/ns8-czero/actions/runs/39113698219)
+reports healthy Core 0.29/app 0.43/schema 0016, but Debian fails stale native
+health assertions expecting Core 0.28. Correct both API/browser expectations and
+add a local regression comparing them with declared package versions. Its failed
+report is retained; the remaining superseded native work is cancelled before a
+new publication changes the branch images. No Core 0.29 artifact is published
+and the dedicated instance remains untouched. The corrected exact source must
+repeat all required CI/native/artifact gates before immutable publication.

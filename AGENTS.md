@@ -659,6 +659,9 @@ commits or writes a receipt. Acquire object mutex 49375 before knowledge mutex
 49376, then the existing authority locks and current role/grant/token recheck.
 Preserve old individual API fingerprints. Do not expose arbitrary method names,
 imports, callbacks, file ingestion, jobs, schema/grant changes or native actions.
+Standalone supersession annotations that retain object references also acquire
+49375 before 49376; otherwise multiple object anchors can deadlock against a
+sorted independent object batch. Ordinary old annotations keep their lock path.
 
 Keep applicability/verification separate. New literal knowledge types,
 supersession targets and ready immutable chunk references describe supplied

@@ -311,6 +311,9 @@ unannotated object later removed through ordinary CRUD. It never archives prior
 content, changes an assertion or moves verification to replacement content.
 Self-supersession is invalid. Retained historical anchors remain explicitly
 readable, without synthesizing an annotation or verified status.
+Standalone supersession writes referencing objects acquire the object mutex
+before the knowledge mutex, preventing row-order deadlocks with ordinary object
+batches. Existing annotation requests retain their original lock path.
 
 The complete contract therefore uses applicability `knowledge_type`, `status`,
 `confidence`, `observed_at`, `products`, `components`, exact `version_tags`,

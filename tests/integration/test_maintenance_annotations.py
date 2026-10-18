@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Maintenance metadata describes retained observations without rewriting them."""
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from uuid import uuid4
 
 import pytest
@@ -125,6 +128,57 @@ def test_self_supersession_is_rejected_without_an_annotation(annotations, wiki):
     with pytest.raises(ValueError, match='invalid_self_supersession'):
         write(annotations, wiki[1], target, 'applicability', {'supersedes':[target_value(target)]})
     assert annotations.get(wiki[1], target, 'applicability')['revision'] == 0
+
+
+def test_object_supersession_and_object_batch_have_a_consistent_lock_order(annotations, wiki, objects):
+    from sqlalchemy import event, text
+    from czero_core.wiki import KnowledgeConflict
+    owner = wiki[1]
+    rows = sorted([objects[0].create(owner,objects[2],{'name':'first'}),
+                   objects[0].create(owner,objects[2],{'name':'second'})], key=lambda row:str(row['id']))
+    first_locked, second_shared, resume = Event(), Event(), Event()
+    def pause(connection,cursor,statement,parameters,context,executemany):
+        if 'SELECT * FROM c0_objects' not in statement:
+            return
+        identifier = str(parameters.get('id'))
+        if 'FOR UPDATE' in statement and identifier==str(rows[0]['id']):
+            first_locked.set()
+            assert resume.wait(timeout=10)
+        elif 'FOR SHARE' in statement and identifier==str(rows[1]['id']):
+            second_shared.set()
+            assert resume.wait(timeout=10)
+    operations=[{'operation':'update','id':str(row['id']),'data':{'name':'updated-'+str(index)},'expected_revision':1}
+                for index,row in enumerate(rows)]
+    def annotate():
+        try:
+            return write(annotations,owner,ContentTarget('object',rows[1]['id'],1),'applicability',
+                {'supersedes':[{'kind':'object','id':str(rows[0]['id']),'revision':1}]})
+        except KnowledgeConflict:
+            return 'stale'
+    event.listen(annotations.database.engine,'after_cursor_execute',pause)
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            batch=pool.submit(objects[0].batch,owner,operations)
+            annotation=None
+            try:
+                assert first_locked.wait(timeout=10)
+                annotation=pool.submit(annotate)
+                deadline=time.monotonic()+5
+                while not second_shared.is_set():
+                    with annotations.database.engine.connect() as connection:
+                        waiting=connection.execute(text('''SELECT count(*) FROM pg_locks WHERE locktype='advisory'
+                            AND objid=49375 AND NOT granted AND database=(SELECT oid FROM pg_database WHERE datname=current_database())''')).scalar_one()
+                    if waiting:
+                        break
+                    assert time.monotonic()<deadline,'Annotation neither serialized nor reached its content lock'
+                    time.sleep(.02)
+            finally:
+                resume.set()
+            assert len(batch.result(timeout=10))==2
+            assert annotation.result(timeout=10)=='stale'
+    finally:
+        event.remove(annotations.database.engine,'after_cursor_execute',pause)
+    assert all(objects[0].get(owner,row['id'])['revision']==2 for row in rows)
 
 
 @pytest.mark.parametrize('value', [

@@ -13,7 +13,7 @@ from sqlalchemy import text
 from .identity import Role
 from .knowledge import EvidenceNotReady
 from .objects import page
-from .receipts import json_value, snapshot
+from .receipts import json_value, snapshot, mutate
 from .sources import SourceService, SourceNotFound, _metadata, _uuid
 from .wiki import KnowledgeConflict, KnowledgeNotFound, WikiService
 
@@ -122,6 +122,17 @@ def annotation_value(namespace, value):
 
 class AnnotationService(WikiService):
     """Shared receipt/role ordering protects annotation writes and old retries."""
+
+    def _mutate(self, actor, operation, payload, key, execute):
+        # Retaining several object anchors can otherwise invert the row order
+        # of an independent ObjectService.batch. Only the new reference shape
+        # needs this extra mutex; old requests keep their original lock path.
+        object_references = operation == 'annotation.update' and any(
+            reference['kind'] == 'object' for reference in payload['value'].get('supersedes', []))
+        if object_references:
+            return mutate(self.database, self._authorize, actor, operation, payload,
+                key, execute, conflict=KnowledgeConflict, lock_objects=True)
+        return super()._mutate(actor, operation, payload, key, execute)
 
     def _maintenance_references(self, connection, current, target, value):
         # Descriptive supersession does not rewrite/archive the earlier target.
