@@ -2,7 +2,7 @@
 
 **Status (18 October 2026): Agent Memory AM0–AM5 runtime acceptance passes.** The dedicated instance runs main `41864e4`, Core **0.29.0**, app **0.44.0** and schema **0016**. Agents can ingest evidence, use protected spaces, revise Wiki pages safely, annotate exact content, search applicability and publish bounded consolidation atomically. Both SDK protocols, explicit scope consent, canonical update and full-manager restart preserve original receipts, immutable evidence and authored history. The existing cached connector separately reads retained Shared citations and historical Wiki content after temporary-client revocation; new tools through its 63-operation catalog are not claimed.
 
-Exact main passes 1206 Python/PostgreSQL/packaging cases, 125 scripts and twenty Robot checks, with producer/released-Core/updater and both native gates. Actual reports verify debian13-update-latest: 20 passes; rocky9-install-latest: 25 passes/3 expected skips, all eight browser/privacy workflows and 25 accessibility contexts. Actual source checkouts, five scan/report pairs, three OCI revisions/siblings and three downloaded OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed digests and preservation evidence. AM5’s documentation-marker checks remain required before AM6; AM6 and Windmill Gate remain gated. Existing interactive-Playwright and CPU-quota waivers persist; no stable module release is claimed.
+Accepted CI main `31ca102` passes 1284 Python/PostgreSQL/packaging cases, 125 controllers and 21 Robot checks, producer/released-Core/scans, Debian genuine upgrade (21 passes), Rocky installation (26 passes/3 expected skips/all eight browsers), and actual artifact privacy/accessibility/source/image audits. Canonical publication and all six registry aliases are verified. The dedicated AM5 runtime remains `41864e4` at the same Core/app/schema versions; its genuine deployed digests remain AM6's predecessor. AM5's c1a90d3 completion marker passes its actual gates. See [PLAN.md](PLAN.md). AM6 and Windmill Gate remain pending; existing waivers persist and no stable module release is claimed.
 
 
 ## Applicability and structured retrieval (AM4)
@@ -593,8 +593,10 @@ The policy changes no application/Core API, version, dependency or schema.
 
 Controlled GitHub probes measure UI feedback at 110 seconds versus a prior
 466-second full local run (plus its duplicate), and documentation PR acceptance
-at 28 seconds versus 2386 seconds for the prior full pipeline. Those single-run
-observations include verified source/job artifacts and negative full-promotion
-controls; full runtime acceptance is still pending for this CI change. Main now
-requires the GitHub Actions `C0 merge gate` with an up-to-date base and admin
-enforcement. Details and exact run links are in the policy document.
+at 28 seconds versus 2386 seconds for the prior full pipeline. These are single-run
+observations. Full exact-source PR and main acceptance passes 1284 cases, both
+native systems and all eight browsers; main's full/publication span is 2305 seconds.
+Main requires the GitHub Actions C0 merge gate, up-to-date base and admin enforcement.
+See the policy for exact sources, reports, failed evidence and the pre-existing
+forced-plan timing limitation. No runtime deadline is weakened or automatic test
+retry added. Documentation-only main commits retain accepted runtime images.

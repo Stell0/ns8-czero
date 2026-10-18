@@ -23,7 +23,7 @@ frozen branches must not be cancelled or changed unexpectedly. No test shards
 share a mutable PostgreSQL database; preserve both existing waivers.
 
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (18 October 2026):** Agent Memory AM0–AM5 runtime acceptance passes at main `41864e4`, Core/app/schema 0.29.0/0.44.0/0016. Exact-source CI/native/artifacts, immutable Core `8157092`/core-v0.29.0, released dependency adoption and supported C0-only backup/update pass. Both SDK protocols preserve whole atomic receipts, supersession, ready citations, five annotation histories and unknown verification after changes. Fresh browser/delegated authority survives canonical update and full-manager restart. All 7283 old rows in 33 retained tables, 136 terminal jobs/attempts, 5 originals, 20 old client descriptors, 12 prior plans and 11 unrelated instances are preserved. The new owned client is disabled after a valid same-bearer control; the saved browser/REST and an independent existing connector still read authorized content. Cached 63-tool reading does not prove new bundle/annotation/space invocations. The bounded 1261-line root app journal has health/authorization/token/MCP controls and no query, issued-secret, submitted-body or traceback matches. Freeze the three genuinely installed 41864e4 digests from PLAN for AM6. Verify this documentation marker’s actual checks before AM6; AM6 and Windmill Gate remain gated, and Integration M17–M20 remains separate. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (18 October 2026):** Agent Memory AM0–AM5 runtime acceptance passes at main `41864e4`, Core/app/schema 0.29.0/0.44.0/0016. Exact-source CI/native/artifacts, immutable Core `8157092`/core-v0.29.0, released dependency adoption and supported C0-only backup/update pass. Both SDK protocols preserve whole atomic receipts, supersession, ready citations, five annotation histories and unknown verification after changes. Fresh browser/delegated authority survives canonical update and full-manager restart. All 7283 old rows in 33 retained tables, 136 terminal jobs/attempts, 5 originals, 20 old client descriptors, 12 prior plans and 11 unrelated instances are preserved. The new owned client is disabled after a valid same-bearer control; the saved browser/REST and an independent existing connector still read authorized content. Cached 63-tool reading does not prove new bundle/annotation/space invocations. The bounded 1261-line root app journal has health/authorization/token/MCP controls and no query, issued-secret, submitted-body or traceback matches. Freeze the three genuinely installed `41864e4` digests from PLAN for AM6. AM5 completion marker c1a90d3 passes actual main/native/artifact gates (PLAN.md); AM6 and Windmill Gate remain gated, and Integration M17–M20 remains separate. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
 
 ## Protected knowledge spaces (AM3 runtime accepted)
 
@@ -725,8 +725,7 @@ browser/REST session and an independent existing connector remain accepted.
 All 7283 old rows, 136 terminal jobs/attempts, 5 originals,
 20 old clients, 12 prior plans and 11 unrelated modules are preserved.
 Other actual live personas, refreshed cached tools, provider quality, scheduled
-interoperability and a stable module release are not claimed. Verify this final
-documentation marker’s actual checks before beginning AM6.
+interoperability and a stable module release are not claimed. AM5 final marker c1a90d3 passes actual main/native/artifact checks; AM6 remains gated.
 
 Freeze the actual installed `41864e4` three-image digests from PLAN.md for
 AM6’s genuine predecessor; documentation-marker images are not that deployment.
@@ -738,12 +737,27 @@ installed authority lifetimes. All eight automated browsers remain mandatory;
 interactive Playwright and CPU-quota waivers remain unchanged.
 
 
-## Scoped CI development proof (acceptance pending)
+## Scoped CI policy accepted sources
 
-Actual c9f62f4 broad feedback passes1254 PostgreSQL/Python/packaging,125 scripts
-and21 Robot cases; it does not authorize runtime merging. Controlled docs/UI
-PR15/16 are closed unmerged after actual28s/110s checks, explicit skipped full
-jobs and promotion negatives. Main's required C0 merge gate is configured with
-GitHub Actions app15368, strict base/admin enforcement and no bypass in normal
-promotion. Use scripts/verify-promotion.py on the exact ready head; retain full
-ready/main/native and deployment gates. Details/limitations are in docs/ci-policy.md.
+The CI policy is merged through PRs 14 and 18. Final main `31ca102` passes actual full
+39155318390: 1284 Python/PostgreSQL/packaging, 125 controllers, 21 Robot checks,
+producer/released-Core/runtime/license/five scans, Debian 21 and Rocky 26/three
+expected skips/all eight browsers. Actual source/digest, restore, artifact privacy
+and accessibility evidence passes; canonical publication actually succeeds.
+Fresh registry reads verify all six main/latest digests and immutable sibling refs.
+See PLAN.md and docs/ci-policy.md. Current unit cases 339; focused cases 98.
+
+Main protection requires GitHub Actions C0 merge gate (app 15368), strict base and
+admin enforcement. Use verify-promotion on the current ready head; preserve full
+runtime/main/release/deployment gates. Docs-only markers use lightweight PR/main
+checks and do not replace accepted runtime proof. A docs-only main HEAD can differ
+from its canonical runtime source; use the publication proof's exact source.
+
+Keep failed evidence outside Git: the Git-less Robot probe is fixed by explicit
+source binding, and GitHub's skipped-ancestor publication condition is fixed by
+explicit successful gate checks. One pre-existing forced-plan SQL timeout remains
+a recorded timing limitation; fresh full runs pass without changing runtime
+SQL/deadlines or adding automatic retries. All original unfinished files remain
+preserved. Dedicated runtime `41864e4`, Core 0.29.0/app 0.44.0/schema 0016 and its genuine
+predecessor digests remain unchanged. AM6, Windmill Gate and Integration M17–M20
+are separate and pending. No stable module release is claimed.
