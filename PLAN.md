@@ -3262,3 +3262,83 @@ seconds against a fresh database. The corrected source must repeat all gates.
 
 The operator has updated the private credential file. Fresh normal SSO now
 passes for the existing owner/Admin. No login question remains pending.
+
+
+### AM5 deployed runtime acceptance — 18 October 2026
+
+Five actual PostgreSQL reliability experiments require a bounded atomic bundle;
+individual receipts cannot prevent partial multi-resource publication. Corrected
+application source `acd1b22` passes all seven workflows (1206 Python/PostgreSQL/
+packaging cases, 125 scripts and twenty Robot cases), exact source/PR merge tree,
+released Core, three OCI revisions/siblings and five actual scan/report pairs.
+Native [CI 39125136872](https://github.com/Stell0/ns8-czero/actions/runs/39125136872) passes Debian installation seventeen cases/three expected
+skips and genuine AM4 Rocky upgrade twenty-eight cases, all eight browsers and
+privacy guards, twenty-five accessibility contexts and three clean downloaded
+OAuth-query artifacts. Both protocols execute sourced bundles and preserve
+whole receipts, supersession, ready citations and five independent annotation
+histories through configured update and encrypted disposable clean restore.
+The failed fixed-batch and Shared-vector assumptions are retained above; the
+corrected fixture proves actual scheduled current-generation progress and
+observed complete indexing without changing installed authority lifetimes.
+
+Reviewed [PR 12](https://github.com/Stell0/ns8-czero/pull/12) merges to main
+`41864e47c15765dc18b05b03cfedbfe87cbedf93` with an identical tested tree and both parents verified.
+Main [CI 39127651157](https://github.com/Stell0/ns8-czero/actions/runs/39127651157), [CI 39127651212](https://github.com/Stell0/ns8-czero/actions/runs/39127651212),
+[CI 39127651818](https://github.com/Stell0/ns8-czero/actions/runs/39127651818), [CI 39127651153](https://github.com/Stell0/ns8-czero/actions/runs/39127651153) and
+native [CI 39127826351](https://github.com/Stell0/ns8-czero/actions/runs/39127826351) are actually completed/successful with inspected checkouts,
+reports, scan artifacts and three image identities/sibling references. Main
+reports: debian13-update-latest: 20 passes; rocky9-install-latest: 25 passes/3 expected skips; all eight browser/privacy workflows and
+25 numeric accessibility contexts. Private raw evidence stays outside Git.
+Core’s immutable publication remains `core-v0.29.0` at `8157092`; the complete
+Core package tree is unchanged by app adoption. No stable NS8 release is claimed.
+
+A fresh supported C0-only encrypted backup is completed, disabled and verified
+with repository read-data, PostgreSQL custom-dump/schema checks and all five
+actual retained source-file byte hashes. The three main registry identities
+are rechecked immediately before the supported canonical update of only the
+authorized dedicated instance. Real readiness and the same fresh browser and
+delegated authority pass immediately after both update and full-manager restart.
+Exact OAuth rows, all 44 original-column projections, settings, schedules,
+terminal history and original files are preserved at these immediate gates.
+
+Two SDK protocols execute the owned nine-step sourced bundle, retry its original
+whole result after later writes, reject genuine stale writes without partial
+publication, preserve prior verified content/supersession/source references and
+return unknown verification for changed content. All five annotation histories,
+exact structured filters, Shared UUID denials, immutable citations and the new
+retained original survive restart. Narrow write challenges name only c0:write;
+new explicit consent restores eligible authority. The new owned client is then
+disabled after a valid same-bearer positive control and its bearer is rejected.
+The saved browser/REST session still reads its private Wiki; a separate actual
+existing connector reads the retained AM2 Shared citation and historical Wiki
+revision one. Its cached 63-tool catalog does not prove new space/annotation/
+bundle invocations. Other actual live personas are not claimed.
+
+Original observers retain 7283 rows in 33 tables,
+136 terminal jobs and attempts, 5 original files,
+105 scheduler-history rows, 20 old client descriptors,
+12 prior backup plans and 11 unrelated module identities/metadata.
+The bounded root journal contains 1261 actual app lines with health,
+authorization, token and MCP positive controls. OAuth-query, issued-secret,
+submitted-body and traceback matches are zero; host logging is unchanged.
+Destructive restoration remains disposable. Vendor findings, real-provider
+quality and scheduled-client interoperability remain maintenance limitations.
+
+The genuinely installed source is `41864e47c15765dc18b05b03cfedbfe87cbedf93`, Core 0.29.0/app 0.44.0/schema 0016:
+
+- Module `sha256:f9bd770fca9c1be307cb0afbf990d84c916097fcf28f20b598b80ad056f4cd4c`.
+- Application `sha256:ce1b3e0dc82836f295860d3cc0d41e6201ca324468f46451c2c35450dd6c2c69`.
+- PostgreSQL `sha256:e4f3cbea39e27389bfa18df286ae12f8b56f5b1b68727fcfa5d6d1c79de56126`.
+
+Freeze these actual installed feature-main images for AM6. Do not substitute
+newly built documentation-marker images. AM5 runtime acceptance passes; verify
+this closeout marker’s actual CI/main publication/native reports before AM6.
+AM6 and Windmill Gate remain gated. Existing CPU-quota and interactive-Playwright
+waivers persist; all eight automated native browser workflows are mandatory.
+
+The initial private restart preflight rejected a 20.0-second-old token window
+before any restart action. Failed evidence is retained. Independent read-only
+snapshots and authority controls were then collected concurrently; the unchanged
+under-twenty-second guard passed at 18.5 seconds, with 280.5 seconds remaining.
+The same authority passed immediately after the supported manager restart. No
+application source, session lifetime or token policy was changed for this retry.
