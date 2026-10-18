@@ -85,3 +85,23 @@ def test_disposable_https_server_checks_credentials_models_and_failures(tmp_path
         with pytest.raises(ProviderUnavailable,match='unavailable'):wrong.embed(['fixture'])
     finally:
         server.shutdown();server.server_close();thread.join(timeout=1)
+
+
+@pytest.mark.parametrize('outcome',['failed','never_complete','queued_timeout'])
+def test_native_index_completion_stops_failed_or_unbounded_work(monkeypatch,outcome):
+    monkeypatch.syspath_prepend(str(ROOT/'tests'))
+    function=runpy.run_path(str(ROOT/'tests/retrieval_fixture.py'))['complete_indexing']
+    function.__globals__['index_complete']=lambda _:False
+    created=[]
+    def enqueue():
+        value={'id':str(len(created))};created.append(value);return value
+    def get(path):return {'state':'failed' if outcome=='failed' else 'queued' if outcome=='queued_timeout' else 'succeeded'}
+    if outcome=='queued_timeout':
+        from types import SimpleNamespace
+        ticks=iter(range(0,1000,10))
+        function.__globals__['time']=SimpleNamespace(monotonic=lambda:next(ticks),sleep=lambda _:None)
+    expected={'failed':'Fixture index completion job failed',
+              'never_complete':'Fixture index completion exceeded its bounded job budget',
+              'queued_timeout':'Complete derivative indexing did not settle'}[outcome]
+    with pytest.raises(AssertionError,match='^'+expected+'$'):function('disposable',get,enqueue)
+    assert len(created)==(32 if outcome=='never_complete' else 4)

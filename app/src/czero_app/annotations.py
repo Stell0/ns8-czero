@@ -46,12 +46,26 @@ def timestamp(value):
 UTCTime = Annotated[AwareDatetime, BeforeValidator(timestamp)]
 
 
+class AnnotationSupersessionTarget(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    kind: Kind
+    id: UUID = Field(strict=False)
+    revision: int = Field(strict=True, ge=1, lt=2147483647)
+
+
+class AnnotationSourceReference(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    kind: Literal['chunk']
+    id: UUID = Field(strict=False)
+
+
 class AnnotationValue(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, allow_inf_nan=False)
     status: str | None = Field(default=None, min_length=1, max_length=64)
     observed_at: UTCTime | None = Field(default=None, strict=False)
     confidence: float | None = Field(default=None, ge=0, le=1)
     extensions: dict[str, JsonValue] | None = None
+    source_references: list[AnnotationSourceReference] | None = Field(default=None, max_length=32)
 
     @model_serializer(mode='wrap')
     def supplied_fields(self, handler):
@@ -65,6 +79,8 @@ class ApplicabilityValue(AnnotationValue):
     products: Tags | None = None
     components: Tags | None = None
     version_tags: Tags | None = None
+    knowledge_type: str | None = Field(default=None, min_length=1, max_length=64)
+    supersedes: list[AnnotationSupersessionTarget] | None = Field(default=None, max_length=32)
 
 
 class VerificationValue(AnnotationValue):

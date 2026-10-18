@@ -637,3 +637,55 @@ corrected to the real schema-0015 baseline before accepting its 7146-row result.
 Freeze the three installed feature digests, rather than documentation-marker
 images. Verify this closeout marker's actual CI/main results before AM5; retain
 all eight automated native browsers and both existing waivers.
+
+## AM5 consolidation candidate (acceptance pending)
+
+AM4's final marker/main d889902 passes actual local/publication/released-Core/
+Renovate and native 39109200513, including all eight browsers and inspected
+source/privacy artifacts. The dedicated instance still runs accepted 878978d;
+freeze its three genuine digests from PLAN for AM5, never documentation images.
+
+Five PostgreSQL experiments prove that individual writes/retry receipts cannot
+make multi-resource publication atomic: racing writers, revocation and injected
+harness failures leave earlier writes committed. Core 0.29.0 therefore adds a
+bounded knowledge bundle and explicit maintenance metadata. Exact Core source
+8157092 passes all CI/native/artifact gates and is published as core-v0.29.0;
+app 0.44 adopts that released source with >=0.29.0,<0.30.0. Schema stays 0016;
+application CI/native/deployment acceptance remains pending.
+
+Bundles use one selected space, one to twenty-five fixed trusted content writes,
+the existing 256-KiB JSON budget and one original-result receipt. Only earlier
+step UUID/revision paths can be referenced. Domain methods execute their trusted
+mutation closures on the outer transaction; no substep opens a connection,
+commits or writes a receipt. Acquire object mutex 49375 before knowledge mutex
+49376, then the existing authority locks and current role/grant/token recheck.
+Preserve old individual API fingerprints. Do not expose arbitrary method names,
+imports, callbacks, file ingestion, jobs, schema/grant changes or native actions.
+Standalone supersession annotations that retain object references also acquire
+49375 before 49376; otherwise multiple object anchors can deadlock against a
+sorted independent object batch. Ordinary old annotations keep their lock path.
+
+Keep applicability/verification separate. New literal knowledge types,
+supersession targets and ready immutable chunk references describe supplied
+observations. Retain superseded identity/hash anchors even for unannotated
+objects later deleted; unknown remains unknown. Supersession never archives,
+rewrites prior evidence or transfers verification. Validate all references in
+the selected space and preserve old histories, null/omission and strict payloads.
+
+Local verification uses a separate database per full run and absolute import
+paths. A cancelled shell can leave its test child active: inspect completion
+before starting another run. Preserve failed reports. Errno 122 is the actual
+local disk quota even when df reports free space; remove only reproducible
+caches/environments, retaining source artifacts and acceptance/privacy evidence.
+Actual exact-source CI/native/Core publication, released app adoption and live
+acceptance still gate AM5. AM6 and Windmill Gate remain pending.
+
+AM5 application bundles expose seventeen fixed typed operations through one
+Editor/c0:write operation, body-selected space and a whole-result receipt.
+Preserve supplied fields/nulls and reserved `$result` references through REST
+model serialization. Normalize each stored result through its existing public
+DTO without re-reading current rows. Require actual native current/legacy
+sourced bundles and receipt/history/citation/supersession recovery; read-only
+roles/tokens must retain their precise denial/challenge behavior. Keep Core
+0.29's immutable publication source and installed predecessor 878978d distinct
+from application and documentation images.

@@ -1,8 +1,11 @@
 import importlib.util
 from pathlib import Path
 import tomllib
+import re
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.version import Version
 
 SPEC = importlib.util.spec_from_file_location("core_source", Path(__file__).parents[2] / "scripts/select-core-source.py")
 SELECT = importlib.util.module_from_spec(SPEC)
@@ -67,3 +70,24 @@ def test_absent_local_checkout_is_not_replaced_by_another_package(project):
     with pytest.raises(ValueError):
         SELECT.select(project, "local")
     assert project.read_bytes() == original
+
+
+def test_declared_compatibility_supports_both_released_and_explicit_producer_core():
+    root = Path(__file__).parents[2]
+    app = tomllib.loads((root/'app/pyproject.toml').read_text())
+    core = tomllib.loads((root/'packages/czero-core/pyproject.toml').read_text())
+    requirement = next(Requirement(value) for value in app['project']['dependencies']
+                       if Requirement(value).name == 'czero-core')
+    released = app['tool']['uv']['sources']['czero-core']['tag'].removeprefix('core-v')
+    assert Version(released) in requirement.specifier
+    assert Version(core['project']['version']) in requirement.specifier
+
+
+def test_native_health_expectations_match_the_declared_producer_versions():
+    root = Path(__file__).parents[2]
+    robot = (root/'tests/czero.robot').read_text()
+    for name, manifest in (('core_version','packages/czero-core/pyproject.toml'),
+                           ('app_version','app/pyproject.toml')):
+        declared = tomllib.loads((root/manifest).read_text())['project']['version']
+        expected = re.findall('"'+name+'":"([^"]+)"',robot)
+        assert expected and set(expected)=={declared}

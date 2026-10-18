@@ -13,8 +13,8 @@ from sqlalchemy import text
 from .identity import Role
 from .knowledge import EvidenceNotReady
 from .objects import page
-from .receipts import json_value, snapshot
-from .sources import _metadata, _uuid
+from .receipts import json_value, snapshot, mutate
+from .sources import SourceService, SourceNotFound, _metadata, _uuid
 from .wiki import KnowledgeConflict, KnowledgeNotFound, WikiService
 
 KINDS = frozenset({'source_version', 'wiki_revision', 'entity', 'object', 'claim'})
@@ -71,13 +71,37 @@ def annotation_value(namespace, value):
     _namespace(namespace)
     if type(value) is not dict:
         raise ValueError('invalid_annotation_value')
-    fields = {'status', 'observed_at', 'confidence', 'extensions'}
-    fields |= {'products', 'components', 'version_tags'} if namespace == 'applicability' else {'verified_at'}
+    fields = {'status', 'observed_at', 'confidence', 'extensions', 'source_references'}
+    fields |= {'products', 'components', 'version_tags', 'knowledge_type', 'supersedes'} if namespace == 'applicability' else {'verified_at'}
     if set(value) - fields:
         raise ValueError('invalid_annotation_field')
     result = dict(value)
     if 'status' in result:
         result['status'] = _literal(result['status'], 64)
+    if 'knowledge_type' in result:
+        result['knowledge_type'] = _literal(result['knowledge_type'], 64)
+    for field in ('supersedes', 'source_references'):
+        if field not in result:
+            continue
+        references = result[field]
+        if type(references) is not list or len(references) > 32:
+            raise ValueError('invalid_annotation_references')
+        normalized = []
+        for reference in references:
+            if type(reference) is not dict:
+                raise ValueError('invalid_annotation_reference')
+            if field == 'supersedes':
+                if set(reference) != {'kind', 'id', 'revision'}:
+                    raise ValueError('invalid_annotation_reference')
+                target = ContentTarget(**reference)
+                entry = {'kind': target.kind, 'id': str(target.id), 'revision': target.revision}
+            else:
+                if set(reference) != {'kind', 'id'} or reference['kind'] != 'chunk':
+                    raise ValueError('invalid_annotation_reference')
+                entry = {'kind': 'chunk', 'id': str(_uuid(reference['id']))}
+            if entry not in normalized:
+                normalized.append(entry)
+        result[field] = normalized
     for field in ('products', 'components', 'version_tags'):
         if field in result:
             values = result[field]
@@ -98,6 +122,36 @@ def annotation_value(namespace, value):
 
 class AnnotationService(WikiService):
     """Shared receipt/role ordering protects annotation writes and old retries."""
+
+    def _mutate(self, actor, operation, payload, key, execute):
+        # Retaining several object anchors can otherwise invert the row order
+        # of an independent ObjectService.batch. Only the new reference shape
+        # needs this extra mutex; old requests keep their original lock path.
+        object_references = operation == 'annotation.update' and any(
+            reference['kind'] == 'object' for reference in payload['value'].get('supersedes', []))
+        if object_references:
+            return mutate(self.database, self._authorize, actor, operation, payload,
+                key, execute, conflict=KnowledgeConflict, lock_objects=True)
+        return super()._mutate(actor, operation, payload, key, execute)
+
+    def _maintenance_references(self, connection, current, target, value):
+        # Descriptive supersession does not rewrite/archive the earlier target.
+        for reference in value.get('supersedes', []):
+            previous = ContentTarget(**reference)
+            if previous == target:
+                raise ValueError('invalid_self_supersession')
+            binding, live = self._binding(connection, previous, lock=True)
+            self._ensure_anchor(connection, current, previous, binding, live)
+        for reference in value.get('source_references', []):
+            try:
+                citation = SourceService._citation(connection, _uuid(reference['id']), space_id=self._space(connection))
+            except SourceNotFound:
+                raise KnowledgeNotFound() from None
+            state = connection.execute(text('''SELECT state FROM c0_source_versions
+                WHERE space_id=:space AND id=:id FOR SHARE'''),
+                {'space': self._space(connection), 'id': citation['version_id']}).scalar_one()
+            if state != 'ready':
+                raise EvidenceNotReady()
 
     def _live(self, connection, target, *, lock=False):
         parameters = {'space': self._space(connection), 'id': target.id}
@@ -135,9 +189,9 @@ class AnnotationService(WikiService):
             {'space': self._space(connection), 'kind': target.kind, 'id': target.id,
              'revision': target.revision}).mappings().one_or_none()
 
-    def _binding(self, connection, target, *, writing=False):
+    def _binding(self, connection, target, *, writing=False, lock=False):
         anchor = self._anchor(connection, target)
-        live = self._live(connection, target, lock=writing)
+        live = self._live(connection, target, lock=writing or lock)
         if live is None and (writing or anchor is None):
             raise KnowledgeNotFound()
         if (writing or anchor is None) and live['content_revision'] != target.revision:
@@ -147,6 +201,19 @@ class AnnotationService(WikiService):
             'target_id': target.id, 'content_revision': target.revision,
             'resource_id': live['resource_id'], 'content_hash': live['content_hash']}
         return binding, live
+
+    def _ensure_anchor(self, connection, current, target, binding, live):
+        if binding['id'] is not None:
+            return binding
+        fields = {kind + '_id': target.id if kind == target.kind else None for kind in KINDS}
+        return dict(connection.execute(text('''INSERT INTO c0_annotation_targets
+            (id,space_id,kind,target_id,content_revision,resource_id,content_hash,created_by,
+             source_version_id,wiki_revision_id,entity_id,object_id,claim_id)
+            VALUES (:anchor,:space,:kind,:target,:revision,:resource,:hash,:actor,
+             :source_version_id,:wiki_revision_id,:entity_id,:object_id,:claim_id) RETURNING *'''),
+            {**fields, 'anchor': uuid4(), 'space': self._space(connection), 'kind': target.kind,
+             'target': target.id, 'revision': target.revision, 'resource': live['resource_id'],
+             'hash': live['content_hash'], 'actor': current.user_id}).mappings().one())
 
     @staticmethod
     def _reference(binding):
@@ -204,18 +271,10 @@ class AnnotationService(WikiService):
                    'namespace': namespace, 'value': value, 'expected_revision': expected_revision}
         def execute(connection, current):
             binding, live = self._binding(connection, target, writing=True)
+            self._maintenance_references(connection, current, target, value)
             if namespace == 'verification' and value.get('status') == 'verified' and target.kind == 'source_version' and live['state'] != 'ready':
                 raise EvidenceNotReady()
-            if binding['id'] is None:
-                fields = {kind + '_id': target.id if kind == target.kind else None for kind in KINDS}
-                binding = dict(connection.execute(text('''INSERT INTO c0_annotation_targets
-                    (id,space_id,kind,target_id,content_revision,resource_id,content_hash,created_by,
-                     source_version_id,wiki_revision_id,entity_id,object_id,claim_id)
-                    VALUES (:anchor,:space,:kind,:target,:revision,:resource,:hash,:actor,
-                     :source_version_id,:wiki_revision_id,:entity_id,:object_id,:claim_id) RETURNING *'''),
-                    {**fields, 'anchor': uuid4(), 'space': self._space(connection), 'kind': target.kind,
-                     'target': target.id, 'revision': target.revision, 'resource': live['resource_id'],
-                     'hash': live['content_hash'], 'actor': current.user_id}).mappings().one())
+            binding = self._ensure_anchor(connection, current, target, binding, live)
             old = connection.execute(text('''SELECT id,revision FROM c0_annotations
                 WHERE space_id=:space AND anchor_id=:anchor AND namespace=:namespace FOR UPDATE'''),
                 {'space': self._space(connection), 'anchor': binding['id'], 'namespace': namespace}).mappings().one_or_none()

@@ -2917,3 +2917,348 @@ own actual exact-source CI/native/artifact results, reviewed main promotion and
 completed main publication/checks before AM5 starts. Keep both existing waivers;
 all eight automated native browsers remain mandatory. AM5/AM6 and Windmill Gate
 remain gated, with Integration M17–M20 a separate roadmap.
+
+### AM4 final marker gates and AM5 start — 18 October 2026
+
+AM4 closeout `626d89b` passed actual local push/PR, publication, released-Core
+and Renovate checks, plus [native 39106630279](https://github.com/Stell0/ns8-czero/actions/runs/39106630279):
+Debian installation seventeen passes/three expected skips and genuine AM3 Rocky
+upgrade twenty-eight passes, all eight browsers/privacy guards and twenty-five
+accessibility contexts. Actual checkouts, all-five-target histories/receipts
+through update/clean restore and three downloaded query artifacts pass inspection.
+Reviewed PR 11 merged with the identical tree as
+`d8899029a4e175352b697ad8b77c5718bf034d1f`.
+
+Final main passes [local 39109051740](https://github.com/Stell0/ns8-czero/actions/runs/39109051740),
+[publication 39109051722](https://github.com/Stell0/ns8-czero/actions/runs/39109051722),
+[released-Core 39109069476](https://github.com/Stell0/ns8-czero/actions/runs/39109069476)
+and [Renovate 39109071160](https://github.com/Stell0/ns8-czero/actions/runs/39109071160).
+Actual results remain 1127 Python/PostgreSQL/packaging cases, 125 scripts and
+twenty non-UI Robot cases, with schema/shell checks. Three OCI identities/sibling
+references and five actual SARIF/SBOM pairs pass inspection. A registry blob read
+timed out; failed private evidence is retained and the read-only retry passes.
+[Final main native 39109200513](https://github.com/Stell0/ns8-czero/actions/runs/39109200513)
+passes Debian genuine AM3 upgrade twenty cases and Rocky installation twenty-five
+cases/three expected skips, all eight browsers/privacy guards and twenty-five
+accessibility contexts. Both actual checkout heads, mandatory Core/current/legacy
+SDK probes, all-five-target histories/receipts through update/clean restore and
+three downloaded query artifacts pass inspection with zero query candidates.
+
+AM4 is complete. Fresh read-only native inspection confirms all three accepted
+`878978d` images above remain installed, database/authentication/timer health
+passes and the owned acceptance client is disabled. No documentation image is
+deployed. AM5 starts in a fresh worktree from verified `d889902`; preserve the
+older checkout and unfinished documentation. Only AM5 is expanded here. AM6,
+Windmill Gate and Integration M17–M20 remain separate gates.
+
+**AM5 implementation subplan (before code):** First run a real PostgreSQL
+canonical consolidation through existing Wiki, entity, sourced-claim, object and
+annotation primitives. Measure successful individual retries after lost replies,
+independent-writer conflicts, revocation between steps and injected harness
+failure. Inspect committed records, revisions, events and receipts after failures.
+Decide whether these primitives provide all-or-nothing publication from that
+proof; do not presume a bundle implementation.
+
+Complete annotations additively with literal knowledge type/status/confidence,
+observation/verification UTC times, products/components/exact version tags,
+explicit supersession and immutable source-chunk references. Keep applicability
+and verification separate, preserving old requests/fingerprints, omitted/null,
+strict object data and retained history. Unknown/future values and contradictions
+remain stored; supersession never deletes/archives prior content or transfers
+verification. Resolve typed references only within the authorized space; source
+references require ready immutable evidence. Bound lists and retain sixteen-KiB
+annotation values. Document canonical fields without ambiguous version aliases.
+
+If the proof demonstrates partial publication, add reusable Core
+`KnowledgeBundleService.apply` followed by typed REST/MCP
+`knowledge_bundle_apply`. One bundle selects one space, contains one to twenty-five
+content mutations and fits the existing 256-KiB aggregate JSON budget. Dispatch
+only a fixed allowlist of trusted Wiki/entity/claim/relationship/object/annotation
+writes; requests never select imports, SQL, callbacks or arbitrary methods.
+Support typed references to earlier step results; reject forward/cyclic, missing
+and invalid paths. Keep expected revisions and ready-evidence requirements.
+Exclude file ingestion, external I/O, jobs, type registration, membership, grants
+and native actions.
+
+Reuse domain mutation helpers on one connection/transaction, with one
+actor/space-bound fingerprinted receipt and original whole-result snapshot.
+Preserve individual APIs/replay fingerprints. Acquire object/event then
+knowledge/receipt mutexes before authority locks; recheck persisted role, space
+grant and captured OAuth token after waits. No substep commits, opens a second
+transaction or creates its own receipt. Failure leaves no partial content,
+history, events, cursors or receipt. Independent writers have one revision winner;
+retry after uncertain success returns the original whole result. Revocation
+linearizes with commit and later regrant cannot revive old delegated authority.
+
+Anticipate additive Core 0.29.0, app 0.44.0 and schema 0016 unchanged unless a
+forward migration proves necessary. The app retains released Core 0.28.0 during
+producer development. Prove failures before fixes; add meaningful PostgreSQL
+concurrency/rollback/replay/authorization/limits/same-space/ready-evidence tests
+and raw current/legacy transport parity. Extend native SDK and update/clean-restore
+probes for the new annotation values and bundle receipt, freezing the genuine
+installed `878978d` digests above. All eight browser workflows remain mandatory.
+
+Require complete local/packaging, scripts, schema/shell, Robot,
+producer/released-Core, runtime/license/scans and Debian/Rocky checks on exact
+Core source before immutable reproducible artifact publication. Verify supplied
+wheel/archive hashes, independent installations and repeated migration, then pin
+the released tag/frozen lock/compatible updater bounds in the app and test that
+source. Review the whole diff and compatibility evidence before autonomous PR
+promotion; verify actual main checks/publication and all three OCI identities.
+
+Before the canonical dedicated update, verify a supported C0-only backup,
+original-row/old-column/file/settings/schedule/OAuth observers and unrelated
+modules. Exercise owned consolidation, lost-response replay, genuine stale
+conflicts, scope consent, retained citations/history and explicit supersession
+through both SDK protocols. Check the same fresh delegated/browser authority
+immediately after update and full-manager restart within actual lifetimes; never
+extend authority. Verify preservation, disable the owned client after a valid
+same-bearer control and inspect bounded root app journald with real request
+controls and issued-secret/body checks. Destructive failures/restores and other
+roles remain disposable. Reconcile all three project documents and verify their
+actual marker/main gates before AM6. Retain failed private evidence outside Git,
+both waivers and honest provider/live-persona/scheduled/stable-release limits.
+
+**AM5 existing-primitives decision:** Five actual PostgreSQL experiments pass.
+Wiki/entity/claim/annotation retries recover their individual original receipts;
+object creation instead conflicts after a lost response. Two independent writers
+both commit candidate pages before one loses the shared entity revision. Role
+revocation prevents the second write and old receipt replay, but the first page
+remains published. Injected harness failures after one/two writes leave their
+pages/annotations, histories, events and receipts committed. Existing operations
+therefore cannot provide atomic multi-resource publication. Implement the bounded
+bundle above; do not attempt compensating deletes of retained history/evidence.
+
+**AM5 Core foundation (local candidate):** Core 0.29.0 now provides the bounded
+bundle through the same trusted mutation helpers and outer connection, one
+whole-result receipt and fixed object/knowledge/authority lock order. Seventeen
+allowlisted content operations support earlier result UUID/revision references;
+no request-selected methods, extra transactions or substep receipts exist.
+Applicability gains literal knowledge types/supersession and both annotation
+namespaces gain ready immutable chunk references. Superseded identity/hash anchors
+survive removal of previously unannotated objects without creating verification.
+Existing payloads/fingerprints, strict records, contradictions and old histories
+remain intact. Schema stays 0016; the app's released 0.28 tag/lock is unchanged.
+
+Forty-one new focused PostgreSQL cases pass, including the five prerequisite
+experiments, rollback across domains/events/cursors/receipt, two-writer conflicts,
+concurrent identical submissions, lost replies, injected database failure,
+independent-reader visibility, authority loss while waiting, real opaque read/
+write-only scopes, revoked receipt replay, protected-space denial, ready evidence,
+all seventeen operation kinds and the twenty-five-step/aggregate/typed-reference
+bounds. Maintenance tests preserve source citations, separate unknown/verified
+state, prior receipt/history, cross-space denials and removed-object identity.
+Missing bundle support, missing metadata fields and lost superseded identity were
+reproduced before their fixes; failed private evidence is retained.
+
+The clean full local run passes **1168 actual Python/PostgreSQL/packaging cases
+in 350.38 seconds**, including actual independent wheel/archive installations,
+rebuild hashes, repeated migrations and installed bundle/maintenance probes.
+All 125 script cases, schema/shell checks and twenty non-UI Robot checks pass.
+The explicit producer override independently installs Core 0.29 with app 0.43;
+the released consumer remains pinned to 0.28. A hard-coded app health test was
+reproduced and corrected to compare the Core version actually supplied by either
+supported build mode. No application runtime/dependency or migration changed.
+
+Local failed evidence includes an interrupted wrapper whose test child continued,
+causing overlapping suites on a disposable database, and actual disk-quota errno
+122 that truncated reporting/blocked temporary files despite free filesystem
+space. Reproducible environments/package caches were removed with logs and source
+artifacts retained. The passing run uses a fresh database, separate temporary
+directory and absolute import paths; it is the accepted local result. Native
+tests freeze all three genuine 878978d predecessor images and require both new
+installed Core probe flags. Exact-source CI/native/artifact review, immutable
+Core publication, released app adoption and dedicated acceptance remain pending.
+
+**AM5 producer compatibility correction:** First exact Core source `b820253`
+fails [local CI 39113380640](https://github.com/Stell0/ns8-czero/actions/runs/39113380640)
+at pip installation: the app's `<0.29` bound excludes the explicitly installed
+0.29 producer even though the uv local-source override resolves it. A new
+regression reproduces that mismatch. Expand only the declared compatible range
+to `>=0.28.0,<0.30.0`; keep the released `core-v0.28.0` tag, exact locked source
+and all 53 transitive package entries unchanged. Actual lock comparison and the
+source-selection/compatibility regressions pass. App adoption/narrowing and
+updater changes still follow immutable Core publication. Failed evidence remains
+private; no failed source was deployed. The corrected exact source must pass all
+CI/native/artifact gates before publication.
+
+**AM5 pre-publication concurrency/native correction:** Source `a2ee432` passes
+actual push/PR local checks (1169 cases), producer/released-Core/Renovate,
+three OCI identities/siblings and five downloaded scan-artifact pairs. The fresh
+local full run passes 1169 cases in 384.19 seconds. Before publication, an
+independent-object-batch experiment reproduces a PostgreSQL deadlock: standalone
+supersession annotations can retain objects in the reverse order to the batch.
+Serialize only this new object-reference shape through object mutex 49375 before
+the existing knowledge/authority locks. Old requests/fingerprints/lock paths stay
+unchanged; bundles already hold both mutexes on their outer connection. The
+controlled two-writer regression now yields a completed batch and a genuine stale
+annotation conflict, without a deadlock. All fifty-four focused annotation/bundle
+cases pass after this fix.
+
+[Superseded native 39113698219](https://github.com/Stell0/ns8-czero/actions/runs/39113698219)
+reports healthy Core 0.29/app 0.43/schema 0016, but Debian fails stale native
+health assertions expecting Core 0.28. Correct both API/browser expectations and
+add a local regression comparing them with declared package versions. Its failed
+report is retained; the remaining superseded native work is cancelled before a
+new publication changes the branch images. No Core 0.29 artifact is published
+and the dedicated instance remains untouched. The corrected exact source must
+repeat all required CI/native/artifact gates before immutable publication.
+The version guard also requires explicit app-version positive controls; add them
+to the native API/browser checks alongside Core 0.29 expectations. All ten local
+source/compatibility/version cases and twenty Robot dry runs then pass. A
+preceding sequential shell did not stop at the new guard's failure; subsequent
+dependent verification uses fail-fast execution and inspects each actual result.
+
+
+**AM5 immutable Core publication and application candidate:** Corrected exact
+Core source `815709226efec96afe2d411a596464ac9ec365f7` passes
+[local push 39115292505](https://github.com/Stell0/ns8-czero/actions/runs/39115292505),
+[PR local 39115296021](https://github.com/Stell0/ns8-czero/actions/runs/39115296021),
+[producer 39115292509](https://github.com/Stell0/ns8-czero/actions/runs/39115292509),
+[released 39115529133](https://github.com/Stell0/ns8-czero/actions/runs/39115529133),
+[PR released 39115296030](https://github.com/Stell0/ns8-czero/actions/runs/39115296030)
+and [actual Renovate 39115351873](https://github.com/Stell0/ns8-czero/actions/runs/39115351873).
+The fresh local full run passes 1171 Python/PostgreSQL/packaging cases in
+337.39 seconds; CI also passes 125 script cases and twenty Robot dry runs.
+[Native 39115438733](https://github.com/Stell0/ns8-czero/actions/runs/39115438733)
+actually passes Debian genuine `878978d` upgrade twenty cases and Rocky
+installation twenty-five cases/three expected update-only skips, including all
+eight real browser/privacy workflows and twenty-five numeric accessibility
+contexts. Downloaded reports verify both actual tested checkouts, the three
+frozen predecessor digests, installed atomic-consolidation/maintenance probes,
+all five annotation histories/receipts through update and clean restore, both
+SDK protocols and all three actual OAuth-query artifacts with zero candidates.
+All three candidate OCI revisions/sibling references and five actual SARIF/SBOM
+pairs pass audit; existing vendor findings remain unresolved.
+
+Only after these exact gates and complete diff/compatibility review, immutable
+[`core-v0.29.0`](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.29.0)
+is published by [39117777852](https://github.com/Stell0/ns8-czero/actions/runs/39117777852).
+Its six supplied-artifact tests actually pass. Downloaded checksums:
+
+- Wheel: `cab8aee2ac4b1783294c0116a4c760f5289c66c3efa05e39930131f583daf9df`.
+- Source archive: `4f4670784325ff6f067260437f9988d9a1af7bf4cb7a5c66d20ca8dd68154943`.
+
+A separate clean detached checkout of that exact source verifies both assets,
+independent physical wheel/archive installations outside the checkout, identical
+normalized rebuild hashes and repeated fresh PostgreSQL migrations plus installed
+evidence/space/annotation/bundle probes: six passes in 34.42 seconds. No published
+asset is replaced. This library publication is not a stable module release.
+
+Application 0.44 now adopts the actual released tag/commit with compatible range
+`>=0.29.0,<0.30.0`, a frozen lock and matching Renovate/runtime source guards.
+Typed REST `POST /api/v1/knowledge/bundles/apply` and MCP
+`knowledge_bundle_apply` expose the seventeen fixed operations with one body
+space selector, prior-result references, expected revisions, ready-evidence
+checks and the original whole receipt. Each returned step uses its existing
+public DTO; retries normalize stored snapshots without reading current content.
+The catalog adds one operation (76 total); existing response contracts remain
+unchanged and maintenance annotation inputs gain only optional fields.
+
+Local transport proofs include actual lost reply after commit followed by an
+independent delegated SDK retry, all seventeen operations, both raw current and
+legacy metadata/error wires, protected-role/scope/revocation denials, stale
+rollback, immutable citations and unknown verification after changed content.
+The exact native SDK fixture now requires two sourced nine-step consolidation
+cycles; configured-update/clean-restore observers retain their whole receipts,
+supersession, source references and immutable history. Its subprocess deadline
+is 180 seconds for the two existing bounded extraction polls; server, session
+and grant lifetimes are unchanged. These new application native workflows still
+require exact-source CI/deployment acceptance. The dedicated instance remains
+accepted `878978d`; AM5 closeout, AM6 and Windmill Gate remain pending.
+
+
+**AM5 released-install full-suite correction:** A physical frozen app 0.44 /
+released Core 0.29 installation verifies both actual imports and the tag's exact
+Git commit outside the checkout. Its first collection is missing only Robot
+development tools; install those in the test environment without changing
+runtime dependencies. The actual 1201-case run then reports 1197 passes and four
+empty-store failures. They all observe the same Shared fixture entity: inner
+MCP cleanup deletes its events before the outer HTTP fixture uses those events
+to discover and dispose entities. Remove only the current unique test issuer's
+entity aliases/entities before its events. Preserve the failed full report,
+re-run the bundle-to-Core regression sequence and a fresh complete suite; do not
+change production storage/deletion behavior or accept the failed run.
+
+The corrected fixture-order sequence passes all thirty bundle tests followed by
+the four formerly failing Core tests: 34 passes in 18.11 seconds. The dedicated
+live helper independently passes both protocols against the physical released
+installation (one complete workflow in 12.88 seconds). All 125 scripts, Go schema
+checks with a writable cache, shell checks, twenty Robot dry runs and native
+Renovate API bounds pass. All 53 locked transitive package entries are unchanged.
+A fresh isolated full run is in progress; exact application CI/native and
+dedicated update remain required. The read-only preflight confirms genuine
+878978d installed identities/readiness and a fresh observer covering all 44
+tables, 7283 retained rows in 33 tables, 136 terminal jobs/attempts, five originals,
+twenty old clients, twelve old backup plans and eleven unrelated instances.
+
+
+**AM5 application exact-source native indexing correction:** Source `a7941ef`
+passes a fresh physical released-install full run: 1201 cases in 366.32 seconds;
+all 23 installed application Python files match the candidate. Actual exact
+[push local 39118859032](https://github.com/Stell0/ns8-czero/actions/runs/39118859032),
+[PR local 39118861692](https://github.com/Stell0/ns8-czero/actions/runs/39118861692),
+[producer 39118858949](https://github.com/Stell0/ns8-czero/actions/runs/39118858949),
+[push released 39118858993](https://github.com/Stell0/ns8-czero/actions/runs/39118858993),
+[PR released 39118861705](https://github.com/Stell0/ns8-czero/actions/runs/39118861705),
+[push Renovate 39118858893](https://github.com/Stell0/ns8-czero/actions/runs/39118858893)
+and [PR Renovate 39118861698](https://github.com/Stell0/ns8-czero/actions/runs/39118861698)
+all complete successfully, with inspected checkout/PR merge tree, 125 scripts,
+twenty Robot checks, three OCI identities/siblings and five actual scan pairs.
+
+[Native 39119015157](https://github.com/Stell0/ns8-czero/actions/runs/39119015157)
+is not accepted: Debian installation has sixteen passes/one failure/three
+expected skips; Rocky genuine AM4 upgrade has twenty-seven passes/one failure,
+including all eight browser/privacy workflows. Both fail the derivative-index
+completion fixture before recovery snapshots: four successful bounded jobs no
+longer finish the larger corpus introduced by independent sourced bundle
+clients. All three downloaded query artifacts remain clean; failed raw reports
+are retained privately. No candidate is deployed.
+
+A real PostgreSQL twenty-page regression proves four actual registered index
+jobs succeed while the exact installed completion query remains false. Replace
+the fixed four-job assumption with observed completion and additional batches
+of four trusted jobs, capped at 32 total, with explicit failed-job and deadline
+rejection. The disposable deadline permits three existing one-minute worker
+opportunities (180 seconds); installed timer/budgets and all session/grant
+lifetimes remain unchanged. Require complete source and current-Wiki indexing
+before snapshot and preserve the paused refresh schedule. The corrected exact
+source must repeat all required CI/native/artifact gates.
+
+During acceptance preparation, the existing external connector reports an
+expired refresh grant. The operator confirms an expired identity-provider
+password, renews it and reconnects. An actual connector read then returns the
+retained Shared citation with exact IDs, offsets, body and all three hashes.
+This is separate from SDK evidence; the cached 63-operation connector has not
+been shown invoking new bundle/annotation/space operations. The private local
+credential file must be refreshed before new dedicated normal-SSO tests.
+
+The completed real PostgreSQL backlog, failure/cap/deadline and existing
+embedding/provider regressions pass: nineteen cases in 5.58 seconds, plus twenty
+Robot dry runs. Runtime application/Core bytes, released pin and schema remain
+unchanged. Preserve all failed evidence and repeat exact-source gates for this
+focused native-fixture correction.
+
+
+**AM5 follow-up scheduled-progress correction:** Exact source `bdf2cb3`
+passes all seven non-native workflows, including 1205 Python/PostgreSQL cases,
+125 scripts, twenty Robot checks, released/producer builds and actual artifact
+checks. [Native 39122460111](https://github.com/Stell0/ns8-czero/actions/runs/39122460111)
+is not accepted: the genuine AM4 Debian upgrade has nineteen passes and one
+failure before recovery, at the earlier five-Shared-vector timer assumption.
+Its actual failed log/report are preserved privately; the remaining Rocky job
+is cancelled before replacing branch images. Main and the dedicated instance
+remain unchanged, and the guarded promotion pipeline is stopped.
+
+Public index status is selected-space scoped while worker indexing is global.
+A real PostgreSQL regression demonstrates successful manual and scheduled
+batches with fewer than five Shared vectors. Require an actual successful
+scheduled index job for the active profile and generation, with positive
+indexed work; a manual job or a stale generation cannot satisfy it. Retain the
+existing two-minute initial timer window, the bounded complete-corpus drain,
+and the paused schedule/recovery snapshots. No runtime or authority lifetime
+changes. All twenty focused embedding/provider/fixture cases pass in 5.26
+seconds against a fresh database. The corrected source must repeat all gates.
+
+The operator has updated the private credential file. Fresh normal SSO now
+passes for the existing owner/Admin. No login question remains pending.

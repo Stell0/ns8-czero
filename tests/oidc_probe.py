@@ -503,7 +503,78 @@ def seed_protected_space(browser, profile, member_id):
     assert status == 201, 'Protected uniqueness was not isolated from Shared'
     record = json.loads(body)
     annotations = seed_content_annotations(scoped,profile,memory,records,record)
-    return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':record,'annotations':annotations}
+    consolidation = seed_atomic_consolidation(scoped,profile,space['id'],memory,records,record)
+    return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':record,
+            'annotations':annotations,'consolidation':consolidation}
+
+
+def seed_atomic_consolidation(browser,profile,space_id,memory,records,record):
+    """Owned current-runtime data must survive configured update/clean restore."""
+    root=browser.browser if isinstance(browser,ScopedBrowser) else browser
+    def step(operation,**arguments):return {'operation':operation,'arguments':arguments}
+    def ref(index,path='id'):return {'$result':index,'path':path}
+    prior=memory['receipts'][-1]
+    citation=records[-1]['citation']
+    applicability={'knowledge_type':'procedure','status':'applicable','products':['C0'],
+        'components':['native-atomic'],'version_tags':['0.29'],'confidence':None,
+        'source_references':[{'kind':'chunk','id':citation['chunk_id']}]}
+    request={'space_id':space_id,'idempotency_key':'native-atomic-consolidation','operations':[
+        step('entity.create',kind='procedure',label='Native atomic procedure'),
+        step('wiki.upsert',slug='native-atomic-memory',title='Native atomic procedure',body='Retained native atomic procedure'),
+        step('object.create',type_name='fixture-inventory',data={'name':'native-atomic-record','count':29}),
+        step('claim.create',entity_id=ref(0),page_id=ref(1),predicate='observed',value={'state':'unknown'},evidence_chunk_ids=[citation['chunk_id']]),
+        step('entity.link',entity_id=ref(0),target_kind='object',target_id=ref(2)),
+        step('annotation.update',target={'kind':'wiki_revision','id':ref(1,'content.id'),'revision':1},namespace='applicability',
+            value={**applicability,'supersedes':[
+                {'kind':'wiki_revision','id':prior['content']['id'],'revision':prior['revision']},
+                {'kind':'object','id':record['id'],'revision':record['revision']}]},expected_revision=0),
+        step('annotation.update',target={'kind':'wiki_revision','id':ref(1,'content.id'),'revision':1},namespace='verification',
+            value={'status':'unverified','verified_at':None,'source_references':[{'kind':'chunk','id':citation['chunk_id']}]},expected_revision=0),
+        step('annotation.update',target={'kind':'object','id':ref(2),'revision':1},namespace='applicability',value=applicability,expected_revision=0),
+        step('annotation.update',target={'kind':'claim','id':ref(3),'revision':1},namespace='applicability',value=applicability,expected_revision=0)]}
+    status,body,_=root.api('/api/v1/knowledge/bundles/apply',request,'POST',profile['csrf_token'])
+    assert status==200,'Cannot seed atomic consolidation receipt'
+    receipt=json.loads(body);assert len(receipt['results'])==9,'Atomic recovery step coverage missing'
+    current=knowledge_request(browser,profile,'wiki/pages/upsert',{
+        'slug':'native-atomic-memory','title':'Native atomic procedure','body':'Later native atomic observation','expected_revision':1},'POST')
+    return {'request':request,'receipt':receipt,'current':current,'prior':prior,'citation':citation}
+
+
+def verify_atomic_consolidation(browser,profile,expected,space_id,*,admin=False):
+    scoped=ScopedBrowser(browser,space_id)
+    rows=expected['receipt']['results']
+    status,body,_=browser.api('/api/v1/knowledge/bundles/apply',expected['request'],'POST',profile['csrf_token'])
+    if admin:
+        assert status==200 and json.loads(body)==expected['receipt'],'Whole atomic retry receipt changed during recovery'
+    else:
+        assert status==403,'Reader space grant admitted atomic publication'
+    status,body,_=scoped.api('/api/v1/wiki/pages/resolve?slug=native-atomic-memory')
+    assert status==200 and json.loads(body)==expected['current'],'Atomic current Wiki revision changed during recovery'
+    status,body,_=scoped.api('/api/v1/wiki/pages/'+rows[1]['id']+'?revision=1')
+    assert status==200 and json.loads(body)['content']==rows[1]['content'],'Atomic original authored content changed'
+    assert browser.api('/api/v1/wiki/pages/'+rows[1]['id'])[0]==404,'Atomic private UUID leaked into Shared'
+    status,body,_=scoped.api('/api/v1/wiki/pages/'+expected['prior']['id']+'?revision='+str(expected['prior']['revision']))
+    assert status==200 and json.loads(body)['content']==expected['prior']['content'],'Superseded prior content changed'
+    status,body,_=scoped.api('/api/v1/claims/'+rows[3]['id'])
+    claim=json.loads(body) if status==200 else {}
+    assert status==200 and claim['value']=={'state':'unknown'},'Atomic assertion changed during recovery'
+    assert claim['evidence'][0]['chunk_id']==expected['citation']['chunk_id'],'Atomic claim evidence changed during recovery'
+    status,body,_=scoped.api('/api/v1/chunks/'+expected['citation']['chunk_id']+'/citation')
+    assert status==200 and json.loads(body)==expected['citation'],'Atomic immutable citation changed during recovery'
+    status,body,_=scoped.api('/api/v1/objects/'+rows[2]['id'])
+    assert status==200 and json.loads(body)==rows[2],'Atomic structured record changed during recovery'
+    for row in rows[5:]:
+        target=row['target'];path='/api/v1/knowledge/annotations/'+target['kind']+'/'+target['id']+'/'+str(target['revision'])+'/'+row['namespace']
+        status,body,_=scoped.api(path);actual=json.loads(body) if status==200 else {}
+        assert status==200 and actual['revision']==row['revision'] and actual['value']==row['value'],'Atomic annotation value/history changed'
+        status,body,_=scoped.api(path+'/history')
+        assert status==200 and [revision['number'] for revision in json.loads(body)['revisions']]==[1],'Atomic annotation history changed'
+        assert browser.api(path)[0]==404,'Atomic annotation UUID leaked into Shared'
+    current=expected['current']
+    path='/api/v1/knowledge/annotations/wiki_revision/'+current['content']['id']+'/'+str(current['revision'])+'/verification'
+    status,body,_=scoped.api(path);unknown=json.loads(body) if status==200 else {}
+    assert status==200 and unknown['revision']==0 and unknown['status']=='unknown' and unknown['value'] is None,'Recovered atomic verification transferred to changed content'
+    print('Retained atomic bundle receipt, supersession, source references and unknown new revision passed')
 
 
 
@@ -583,6 +654,7 @@ def verify_protected_space(browser, profile, expected, *, admin=False):
     identifier = expected['space']['id']
     scoped = ScopedBrowser(browser, identifier)
     verify_content_annotations(browser,profile,expected['annotations'],identifier,admin=admin)
+    verify_atomic_consolidation(browser,profile,expected['consolidation'],identifier,admin=admin)
     status, body, _ = scoped.api('/api/v1/me')
     assert status == 200 and json.loads(body)['role'] == ('admin' if admin else 'reader'), 'Recovered space role changed'
     status, body, _ = browser.api('/api/v1/spaces')

@@ -2,7 +2,7 @@
 
 **Status (18 October 2026): Agent Memory AM0–AM4 runtime acceptance passes.** The dedicated instance runs main `878978d`, with Core **0.28.0**, app **0.43.0** and schema **0016**. Agents can use protected spaces, ingest bounded evidence, revise Wiki pages safely, annotate exact content and search structured records with exact applicability filters. Current/legacy SDK workflows, fresh consent, supported update/restart, preservation and bounded journal privacy pass. The existing cached connector separately reconnects and reads retained Shared citations and historical Wiki content; new tools through its 63-operation catalog are not claimed.
 
-Exact main passes 1127 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core/Renovate and both native distributions: Debian genuine AM3 upgrade twenty passes, Rocky installation twenty-five passes/three expected skips, all eight browser/privacy workflows and twenty-five accessibility contexts. Actual source checkouts, image/scan artifacts and three OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed results and frozen installed digests. Verify this documentation marker's actual CI/main publication before AM5. AM5–AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist; no stable module release is claimed.
+Exact main passes 1127 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core/Renovate and both native distributions: Debian genuine AM3 upgrade twenty passes, Rocky installation twenty-five passes/three expected skips, all eight browser/privacy workflows and twenty-five accessibility contexts. Actual source checkouts, image/scan artifacts and three OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed results and frozen installed digests. The final AM4 marker/main `d889902` also passes its actual CI/native/artifact gates. AM5 consolidation is in progress; AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist; no stable module release is claimed.
 
 
 ## Applicability and structured retrieval (AM4)
@@ -68,8 +68,8 @@ require a timezone and normalize to UTC. New REST bodies retain the existing one
 annotation values retain the existing 16-KiB JSON budget. Existing MCP request and
 response bounds remain unchanged. Exact-source CI/native/publication and dedicated
 update/restart acceptance pass, including all five target histories and changed
-content returning unknown verification. Inspect this documentation marker's
-actual checks and main publication before starting AM5.
+content returning unknown verification. The final documentation marker's actual
+checks and main publication are verified in PLAN; AM5 remains in progress.
 
 ## Purpose and boundaries
 
@@ -349,7 +349,7 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 [C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The app pins released `core-v0.27.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.27.0,<0.28.0`. The accepted dedicated runtime uses Core 0.27.0. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
+The application candidate pins released `core-v0.29.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.29.0,<0.30.0`. The accepted dedicated runtime still uses Core 0.28.0 until AM5 deployment acceptance. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
 [Core 0.24.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.2) is a published documentation/packaging patch with unchanged schema/API. Its exact-source local, image, both-native and artifact verification gates pass. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. The real [compatible-patch Renovate PR](https://github.com/Stell0/c0-m13-example/pull/3) changes only the tag/lock and passes database-backed consumer CI.
 
@@ -579,3 +579,16 @@ descriptors and eleven unrelated modules remain unchanged. Existing connector
 reads of the new citation and historical Wiki content pass separately, including
 after cleanup. This proves SDK new-tool behavior and actual connector reading;
 it does not claim a refreshed connector catalog or live all-role coverage.
+
+
+AM5 candidate app 0.44 adopts independently verified released Core 0.29.
+`knowledge_bundle_apply` (`POST /api/v1/knowledge/bundles/apply`) publishes
+1–25 trusted content mutations atomically in one space, within 256 KiB and one
+idempotency receipt. It supports prior-step UUID/revision references and existing
+revision/ready-evidence checks. An unchanged retry returns the original whole
+snapshot; resolve/read again for current state. Optional maintenance annotations
+record knowledge type, superseded content and immutable source-chunk references
+without transferring verification or changing retained evidence. Files, jobs,
+type registration, grants and external I/O remain separate operations. Exact
+application CI/native and dedicated-instance acceptance are pending; Core's
+actual publication/checksums and tested requirements are recorded in PLAN.

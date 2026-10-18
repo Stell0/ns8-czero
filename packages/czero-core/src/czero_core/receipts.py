@@ -27,7 +27,7 @@ def snapshot(value):
     return json.loads(json.dumps(value, default=json_value, ensure_ascii=False, allow_nan=False))
 
 
-def mutate(database, authorize, actor, operation, payload, key, execute, *, conflict):
+def mutate(database, authorize, actor, operation, payload, key, execute, *, conflict, lock_objects=False):
     from .spaces import SpaceService, hold_authority
     if not isinstance(key, str) or not _KEY.fullmatch(key):
         raise ValueError('invalid_idempotency_key')
@@ -36,6 +36,10 @@ def mutate(database, authorize, actor, operation, payload, key, execute, *, conf
     try:
         with database.engine.begin() as connection:
             authorize(connection, actor, Role.EDITOR)
+            # Mixed-domain bundles use the same ordering as object batches.
+            # Ordinary knowledge requests preserve their original lock path.
+            if lock_objects:
+                connection.execute(text('SELECT pg_advisory_xact_lock(49375)'))
             # Preserve Wiki's existing cursor/receipt serialization and lock order.
             connection.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': MUTATION_LOCK})
             hold_authority(connection)
