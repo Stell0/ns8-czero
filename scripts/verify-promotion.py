@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from ci_policy import SHA, classify, git_changes, required_jobs, verify_gate
+from ci_policy import EMPTY_TREE, SHA, classify, git_changes, required_jobs, verify_gate
 
 
 def gh(*args):
@@ -37,7 +37,7 @@ def accepted_source(repo, source, *, pr_number=None, require_full=False):
         git = ['git', '-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential']
         if subprocess.check_output(['git', 'rev-parse', '--is-shallow-repository'], text=True).strip() == 'true':
             subprocess.run([*git, 'fetch', '--no-tags', '--unshallow', 'origin'], check=True)
-        subprocess.run([*git, 'fetch', '--no-tags', 'origin', source, base], check=True)
+        subprocess.run([*git, 'fetch', '--no-tags', 'origin', source, *([base] if base != EMPTY_TREE else [])], check=True)
         selected = classify(git_changes(base, source, pr=proof.get('pr_number') is not None))
         if selected['kind'] != proof['kind']:
             raise ValueError('promotion_classification_changed')

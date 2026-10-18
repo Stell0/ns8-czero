@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from ci_policy import SHA, classify, git_changes, validation_mode
+from ci_policy import EMPTY_TREE, SHA, classify, git_changes, validation_mode
 
 event_name = os.environ['GITHUB_EVENT_NAME']
 event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -26,7 +26,9 @@ else:
     assert source == os.environ['GITHUB_SHA'], 'Checkout differs from event source'
     base = event.get('before', '')
     if not SHA.fullmatch(base) or set(base) == {'0'}:
-        base = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
+        parent = subprocess.run(['git', 'rev-parse', '--verify', 'HEAD^'], text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        base = parent.stdout.strip() if parent.returncode == 0 else EMPTY_TREE
     number, draft = None, False
 selected = classify(git_changes(base, source, pr=pr is not None))
 selected.update(source=source, base=base, draft=draft, event=event_name, pr_number=number)

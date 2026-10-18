@@ -20,6 +20,7 @@ DOCS = frozenset({
         'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream')),
 })
 SHA = re.compile(r'[0-9a-f]{40}\Z')
+EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 SMOKE = [
     'tests/integration/test_auth_http.py',
     'tests/integration/test_agent_memory_baseline.py::test_legacy_operation_names_roles_scopes_and_rest_bindings',
@@ -62,8 +63,12 @@ def area(path):
 def git_changes(base, head, *, cwd='.', pr=True):
     if not SHA.fullmatch(base) or not SHA.fullmatch(head):
         raise ValueError('invalid_diff_source')
+    if base == EMPTY_TREE:
+        subprocess.run(['git', 'hash-object', '-w', '-t', 'tree', '--stdin'],
+            input=b'', stdout=subprocess.DEVNULL, cwd=cwd, check=True)
+    revisions = [base+'...'+head] if pr else [base, head]
     raw = subprocess.check_output(['git', 'diff', '--no-ext-diff', '--raw', '-z', '-M',
-        base + ('...' if pr else '..') + head, '--'], cwd=cwd).decode('utf-8', 'strict').split('\0')
+        *revisions, '--'], cwd=cwd).decode('utf-8', 'strict').split('\0')
     result = []
     index = 0
     while index < len(raw) and raw[index]:

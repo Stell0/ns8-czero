@@ -56,6 +56,9 @@ def test_git_diff_includes_deleted_and_both_renamed_paths(tmp_path):
     git('add', '.')
     git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'baseline')
     base = git('rev-parse', 'HEAD')
+    initial = policy()['git_changes'](policy()['EMPTY_TREE'], base, cwd=tmp_path, pr=False)
+    assert {c['path'] for c in initial} == {'README.md', 'PLAN.md'}
+    assert all(c['status'] == 'A' for c in initial)
     (tmp_path / 'runtime.html').write_bytes((tmp_path / 'README.md').read_bytes())
     (tmp_path / 'README.md').unlink()
     (tmp_path / 'PLAN.md').unlink()
