@@ -20,3 +20,5 @@ section,details{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--li
 @media(max-width:48rem){.source-library-toggle{margin-bottom:1rem}.source-library-toggle>summary{display:list-item;margin-bottom:1rem}}
 
 .space-context{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;padding:.8rem 0;border-bottom:1px solid var(--border,#d1d5db);margin-bottom:1rem}.space-context select{min-width:0;max-width:100%;width:24rem}.space-context p{margin:0;flex-basis:100%;color:var(--muted,#475569)}#space-administration small{display:block}#space-grant-list select{max-width:100%}
+
+/* Controlled scoped-feedback CI fixture; this branch is closed unmerged. */
