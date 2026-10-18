@@ -173,7 +173,10 @@ def test_real_https_preserves_operator_ca_and_rejects_an_untrusted_certificate(t
     server.socket=context.wrap_socket(server.socket,server_side=True)
     thread=threading.Thread(target=lambda:server.serve_forever(poll_interval=.05),daemon=True);thread.start()
     try:
-        settings=EmbeddingSettings('https://127.0.0.1:'+str(server.server_port)+'/v1/embeddings','fixture',dimensions=3,timeout=1)
+        # Trust validation is the assertion here. Use the existing bounded
+        # five-second budget so a loaded runner can complete its TLS handshake;
+        # separate slow-provider tests retain their deliberately short deadlines.
+        settings=EmbeddingSettings('https://127.0.0.1:'+str(server.server_port)+'/v1/embeddings','fixture',dimensions=3,timeout=5)
         monkeypatch.setenv('SSL_CERT_FILE',str(ca))
         assert EmbeddingClient(settings).embed(['fixture'])['vectors']==[[1.,0.,0.]]
         monkeypatch.delenv('SSL_CERT_FILE')

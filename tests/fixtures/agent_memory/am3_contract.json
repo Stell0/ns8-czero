@@ -1,0 +1,645 @@
+{
+  "baseline_source": "7fcc39b049693bcaa84032c0372ab943d510e6a2",
+  "accepted_runtime": "cb60da9fdc3e8c2cac2555e704a9af760999d9ef",
+  "operations": [
+    {
+      "name": "citations_get",
+      "description": "Read the stable citation of an evidence chunk",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "4c47241bab0fdccda9991a841ed3d95380a0636890c00e30339cfc42f43057a1",
+      "output_schema": "b27fe8fcc7907bd5c0258f838b6d31302d81d503213618136d3acf293ec47270"
+    },
+    {
+      "name": "claims_annotate",
+      "description": "Annotate a claim without rewriting its assertion",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "ee04c46cc44df230cff70e7b26fa56d6ca6bd428e2903fb6a1a9edd15d351e3e",
+      "output_schema": "39cdecab2d997160078e25ee50c7550cb20924b12ce22d750a241ad0cdd84ff7"
+    },
+    {
+      "name": "claims_create",
+      "description": "Record an assertion backed by real evidence",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "9f66b595337f2400e80141233508686f9d28926ffe55b99e72fbd4d9d97849d1",
+      "output_schema": "39cdecab2d997160078e25ee50c7550cb20924b12ce22d750a241ad0cdd84ff7"
+    },
+    {
+      "name": "claims_get",
+      "description": "Inspect an assertion and its provenance",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "b493965b25e618a8d3b780afc787f59d48f3e6499b8caa4b51a8b52db854891d",
+      "output_schema": "39cdecab2d997160078e25ee50c7550cb20924b12ce22d750a241ad0cdd84ff7"
+    },
+    {
+      "name": "claims_list",
+      "description": "Browse immutable sourced assertions",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "2c59e15c6e2be1a475e91959a04f134e5e694aafb407408764dc7d97e19b99e5",
+      "output_schema": "64f48b9db5e60779a5e81ef7e4036ed68d4726a2c8824b8ff9e387eb4c7fa65b"
+    },
+    {
+      "name": "claims_retract",
+      "description": "Retract a claim while retaining provenance",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "2c1a22b04110cfee9b7556642afb6507e53f9c73430fb0ad60fa4ae913ff17d1",
+      "output_schema": "39cdecab2d997160078e25ee50c7550cb20924b12ce22d750a241ad0cdd84ff7"
+    },
+    {
+      "name": "document_chunks_list",
+      "description": "Read immutable chunks and offsets",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "3b3d32080cf27b9b9835623fbcc520d8715547aef37d4e7f7c24d6bfe686f861",
+      "output_schema": "185ee0acf64f01d2640401aab16efb99abdd872bfac06fe636651d0ff97f39ea"
+    },
+    {
+      "name": "documents_get",
+      "description": "Read complete retained extracted text",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "c8871cebcaf046790f91fd390394762d8d23b3c71b50a55c1f355994c9b6cda2",
+      "output_schema": "53c892e0a210102081994393ac6422d338838f682da17ef21363da66212bad58"
+    },
+    {
+      "name": "entities_archive",
+      "description": "Archive an entity preserving its identity",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "d98973daed9e79f413d8a9e287cb5f795f75ff413a6e035734a2c09d8ce62850",
+      "output_schema": "a43c627a6ff898694c1b0044205fca42a0bb6645f173195a259be836a4465336"
+    },
+    {
+      "name": "entities_create",
+      "description": "Create an entity and normalized aliases",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "b01a3cebc40e0628962689d22c04076e42bfacfe03598cc951297401dae4525f",
+      "output_schema": "a43c627a6ff898694c1b0044205fca42a0bb6645f173195a259be836a4465336"
+    },
+    {
+      "name": "entities_get",
+      "description": "Inspect a knowledge entity",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "371c74396e92cc7d3f9bc7fa830e318e91e471b9c300af61d0d87e71d1363c64",
+      "output_schema": "a43c627a6ff898694c1b0044205fca42a0bb6645f173195a259be836a4465336"
+    },
+    {
+      "name": "entities_list",
+      "description": "Browse knowledge entities",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "9ab92a49b209e9cb8b4756293a831043f4f7fc4ddd3acfae15cf691f3a4b842b",
+      "output_schema": "d4a11212d1f023a2e122f28409fb413c3a89093b3d88f6c69caa19e66a43e61b"
+    },
+    {
+      "name": "entities_resolve",
+      "description": "Resolve a normalized entity alias",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "c0061047af1d111254d938be8b839e20d0fc4a4d5a57228979492f12bf0c0b0b",
+      "output_schema": "a43c627a6ff898694c1b0044205fca42a0bb6645f173195a259be836a4465336"
+    },
+    {
+      "name": "entities_update",
+      "description": "Update entity metadata with revision protection",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "9db452949dbffb3effd88d885fba7929b4dbcbc450fced2454f2d7c31883184c",
+      "output_schema": "a43c627a6ff898694c1b0044205fca42a0bb6645f173195a259be836a4465336"
+    },
+    {
+      "name": "entity_aliases_create",
+      "description": "Add a reserved normalized entity alias",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "0636e51721e3a55eebc40b97aad59d3647ecc0b58a0113f5a877f4972abe7aec",
+      "output_schema": "a43c627a6ff898694c1b0044205fca42a0bb6645f173195a259be836a4465336"
+    },
+    {
+      "name": "entity_references_create",
+      "description": "Attach a typed knowledge reference",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "58a52f58f06c038ea42b190df4efa4547ff6d8b674093ede0e4bce6a02796600",
+      "output_schema": "5ba30c3b0e607fd7177fb6d4d3ee27d261a3ea5d2730e13f05bc35320362ff50"
+    },
+    {
+      "name": "entity_references_list",
+      "description": "Inspect typed knowledge references",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "25d8669c1f1975e8ecf4d14334c823bd018a3387c9eda80d4289b1949eea4252",
+      "output_schema": "36499c7b44cf95861c213c2528a96a79efb2889e199696cae6f9d885f408e139"
+    },
+    {
+      "name": "entity_references_remove",
+      "description": "Remove an authored typed reference",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "4cbbe333ba47d1aee6c3b7149a9fb234c1125615fa58fad03ddb47eb9df31740",
+      "output_schema": "2355132b03ed0133813e16d8a01bee62c01d0b0c757b629fa12fb7c96d73cfbe"
+    },
+    {
+      "name": "entity_relations_create",
+      "description": "Create a bounded entity relationship",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "f6601400bc00d6d2daa6da60c0718d151311b6a02bf0de73ba14c0eaacac2fe2",
+      "output_schema": "e74890b83a380e599009fa098ca2d78ea881cd9558a8e1ce61df3ca306fc6747"
+    },
+    {
+      "name": "entity_relations_list",
+      "description": "Inspect entity relationships",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "06b780b2f1b47a64f2583e07ae584cd6c51890977c7cb733aa6258d73d269ffe",
+      "output_schema": "4dfdf2aec680b8f0e1ad7f74a36c6e1880bcc5c69b09bf874b266ad78138d52e"
+    },
+    {
+      "name": "entity_relations_update",
+      "description": "Update an entity relationship with revision protection",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "fe37b227e911e46ea1ac388e01a1b96beca4125dfb2efb1d1b503a831967374d",
+      "output_schema": "e74890b83a380e599009fa098ca2d78ea881cd9558a8e1ce61df3ca306fc6747"
+    },
+    {
+      "name": "job_handlers_list",
+      "description": "Inspect available trusted deterministic handlers",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "78b2613a3d6f1c794304986e0ec829d1e369c2abf5ef50e2e0d0674b04f09c42",
+      "output_schema": "68d038a951d6063d45a43911bb8c420d2410e445a110dcd3ad3fb607883cb1c7"
+    },
+    {
+      "name": "job_runs_list",
+      "description": "Inspect bounded execution attempts",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "4ad9dd2b4644f385e74ca0b7bd553791a9add877c3820d6e48b79457794882bd",
+      "output_schema": "c09cbd2de194793acf6498766554743fa814dcef985aa1ba97562794d671b2ac"
+    },
+    {
+      "name": "jobs_enqueue",
+      "description": "Queue a trusted registered handler with replay protection",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "adc873fa77f8e2b5064cbfea00b13ea29939f3b4c2613aca9243064c069e3c80",
+      "output_schema": "aba8b741d6fa072fd7f3aa9de503215aef2a1fbb3ddd386c27e376247bfb6982"
+    },
+    {
+      "name": "jobs_get",
+      "description": "Inspect one persisted job",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "79dcecf356637deec9324cfc2289e7ab38a34c7b760d349dbd19661ca9dd4595",
+      "output_schema": "aba8b741d6fa072fd7f3aa9de503215aef2a1fbb3ddd386c27e376247bfb6982"
+    },
+    {
+      "name": "jobs_list",
+      "description": "Inspect persisted deterministic jobs",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "9d382d42360c3c3fb030e78bc01135c714b292ae858a2f6f98b190a5043ce701",
+      "output_schema": "3af4976d41821dc97c128e6bfe8a4502507bff597f64abb0b36d38370b8029e1"
+    },
+    {
+      "name": "knowledge_changes",
+      "description": "Read commit-ordered knowledge metadata changes",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "de020f9215656c1ff6f62d1ecfb0d9d58bbcaadfbb30c4ecf6f0db4f6fcf0b72",
+      "output_schema": "6ed987614c946a26a70bfce0affd37a926c1e8bd33b71a6eb0f7759d0dc0db72"
+    },
+    {
+      "name": "knowledge_graph",
+      "description": "Traverse a bounded supplemental knowledge graph",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "7b9a81962af3f67d3ab5c108e951f4917fb22245250c4e90cbc6527d61709349",
+      "output_schema": "d36679c130539dbc5b7622d2573a672dd6d23d83609bcdb25b9cebef3c38f9b4"
+    },
+    {
+      "name": "knowledge_index_status",
+      "description": "Inspect optional derivative indexing state",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "a2fd7c94ba79f969ac1deec2345f7a400e573a2a888d1e0dccec3f300c10bef5",
+      "output_schema": "9c3fd2e2b47e9290a65a5419fd358cf9bb25f838e3cde08777ff3b91fc0eceaf"
+    },
+    {
+      "name": "knowledge_search",
+      "description": "Search source and Wiki evidence with bounded optional providers",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "9880bbdc9f0503e82cca8b3aed9813616c63197f185999cb9f8fe106f4732463",
+      "output_schema": "44e9a9085b556720767e77a357dbd580f772e211adfddfbec4d22b2324af8c8e"
+    },
+    {
+      "name": "oauth_clients_configure",
+      "description": "Enable or disable a registered client with revision protection",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "aaba8320e57217072a399b79bd9de84553f3d0d70a600227511b8c098e998c05",
+      "output_schema": "48ce4f394da6d33af8fa2c77f2e02de3bebfa9674ee4538a1dd3e61913850a39"
+    },
+    {
+      "name": "oauth_clients_list",
+      "description": "Inspect administrator-approved external clients",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "1ff1a7b984f902068f6c0072a8073a8a5b822ea2d17ae61448c07a1c193730b4",
+      "output_schema": "32675ce49ba74b179f15ea391a15db6fdc02d814b0a7bb7e55e1b5c591958d1a"
+    },
+    {
+      "name": "oauth_clients_register",
+      "description": "Approve a public client with exact callbacks and bounded scopes",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "a094d0796a34decb72b918a0dee127c528896e78378daabe2bd0d6d3084b3e78",
+      "output_schema": "48ce4f394da6d33af8fa2c77f2e02de3bebfa9674ee4538a1dd3e61913850a39"
+    },
+    {
+      "name": "object_relations_create",
+      "description": "Connect two typed object records",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "091967088fdcb31c21b2caa5e3e7121517fc9548b639dd14e9a7d8525b8fc161",
+      "output_schema": "57dc9886b6e7e4683327f4e12ac2ca5cfefc633f34d1903dcb9cd619d4f5225a"
+    },
+    {
+      "name": "object_relations_delete",
+      "description": "Remove an object relation",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "b049fce20ae54886fe0d0eb752be4bee3592af898805dfc2a316d83cc8694911",
+      "output_schema": "bcde375ebd4cbacf651311181173836b169d5a360c6ac158c6a2cdaf49be3f61"
+    },
+    {
+      "name": "object_relations_list",
+      "description": "List relations of an object record",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "f6c3ad90a10b8259815f6ff893e636ac19fddfb1e52e71a8eff3e7c962a5192d",
+      "output_schema": "5db5b14da5ebf44f78af3b8a5543234763d105c327360737b554a4f48b6be39d"
+    },
+    {
+      "name": "object_types_create",
+      "description": "Register an immutable bounded object schema. Unique strings require explicit maxLength <=128.",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "31858f5dcd15e0db7134ea88cd050a2136b84f49fae0517bed1e26b2a65d174a",
+      "output_schema": "c078509b1b0813d953c41a87c33f7cf939349b5916e276b4dfca4ea7455f2e66"
+    },
+    {
+      "name": "object_types_get",
+      "description": "Inspect one immutable object type",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "fd5c01041d0738955cf8538626a115211f14fa3d262c89d8ab51f7c36cff959c",
+      "output_schema": "c078509b1b0813d953c41a87c33f7cf939349b5916e276b4dfca4ea7455f2e66"
+    },
+    {
+      "name": "object_types_list",
+      "description": "List immutable object type definitions",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "e13d07da6471ab992a9eab356071c9eab277cf91798b8a97c66cd3c43b71acec",
+      "output_schema": "bb6c45e646a775c23a372127c3e5db1444ec76e0d8bf23dc97fe6a2e21268dbc"
+    },
+    {
+      "name": "objects_batch",
+      "description": "Apply an atomic bounded object mutation batch",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "12cd21774a5bf64172164cbf34277bbf73e8f7406946a5558afb56b4f70d201f",
+      "output_schema": "ee515b913a5d2f838aadb17526908b96f45e9e114f3d97c8ea5b17d47645c924"
+    },
+    {
+      "name": "objects_changes",
+      "description": "Read commit-ordered object changes",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "8bee24cd63cf207e2a1a4544796465e75d73daebf2f22704db40e0d02a14d952",
+      "output_schema": "d079bc936a99b79e660dd7f6748daae46ecf674e3d7d70648d994fe3cb590028"
+    },
+    {
+      "name": "objects_create",
+      "description": "Create a typed object record",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "d2a6241b2caef2320bf732f0d9c2d50fd037c90164200128887cf399f2ade746",
+      "output_schema": "3d8491f5ef281e318b68c97b9e86926a76de5f67017acd2aaad732b2f4ef8941"
+    },
+    {
+      "name": "objects_delete",
+      "description": "Delete a record with its expected revision",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "a19bf46799b940b1585edb41db5b7ecb341b4f3c8a53d221b01ed98bb55702c3",
+      "output_schema": "e336bca03ed8bb9b6c8bee45dcd4c18c10b037f551849978607acf8dd041f599"
+    },
+    {
+      "name": "objects_get",
+      "description": "Read one object record and revision",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "5e3e96dfca4b9e4fee8f6dd0d755ee4dd070c3adca0dd4cec3ff3dccba028f13",
+      "output_schema": "3d8491f5ef281e318b68c97b9e86926a76de5f67017acd2aaad732b2f4ef8941"
+    },
+    {
+      "name": "objects_list",
+      "description": "List and filter typed object records",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "4ea96e9a9b97daf505e4c7fa3e160251278b465a7ed60239cbbbb78bbc940c3e",
+      "output_schema": "bbedc3876d01e909417b4e973fb934511de2a0c616a64fe17be206c19ee5d5e2"
+    },
+    {
+      "name": "objects_update",
+      "description": "Update a record with its expected revision",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "e67eb8c9baf8eaf5d88a4674114613224f2d0ec5f22748988f2ea71687a04fa1",
+      "output_schema": "3d8491f5ef281e318b68c97b9e86926a76de5f67017acd2aaad732b2f4ef8941"
+    },
+    {
+      "name": "references_get",
+      "description": "Resolve a registered typed reference",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "95059deadf203b089daadb043afa899f9d1eb4f33100cfc5a06ea503d64381a2",
+      "output_schema": "b72c6b2d62e85e519227245cd3e96c406d84feb46b23d079bac8be3b9d6157ba"
+    },
+    {
+      "name": "schedule_runs_list",
+      "description": "Inspect due-time schedule execution records",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "f270d0fb34064103913e1aac0976a55ea0f01ed85a73dce18b8cf4ba268013e6",
+      "output_schema": "ce2fdcf2a744fd438d44523d2e48b7f700271e3a0c6016c915a84b5353b8712a"
+    },
+    {
+      "name": "schedules_create",
+      "description": "Create a bounded registered UTC schedule",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "a962337f5d28131c086102f2bb7bdb57b62626e5aeaa5774cb3dbd8b892bf887",
+      "output_schema": "e0f329fc686153f1c1e190933e618bba50816e0eaf3e26c6ae6f05b2e18b7c41"
+    },
+    {
+      "name": "schedules_list",
+      "description": "Inspect UTC interval schedules",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "29b5eb21e949cf510fad95c07b33518fe9a789cf1d28a1dc4d72a7afd6195099",
+      "output_schema": "77d9463a5dbf43fb5ea55bf0f9ac0282f23390be31ca1d9f5f0146d949c76c6a"
+    },
+    {
+      "name": "schedules_update",
+      "description": "Configure or pause a registered schedule",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "017f6932d84e2947d592b642cd5b9cceff125cf273c432df8ca10bef22b39fa8",
+      "output_schema": "e0f329fc686153f1c1e190933e618bba50816e0eaf3e26c6ae6f05b2e18b7c41"
+    },
+    {
+      "name": "source_versions_list",
+      "description": "Inspect immutable source version history",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "bb1d34d4cf839a0929dd46ad96e7b56772dce65598d2a0e54cf8f0a03d414800",
+      "output_schema": "8436f194953cb4610e5e5e7843932eb32cca7d1232991ba67e5420f546a8ef89"
+    },
+    {
+      "name": "source_versions_retry",
+      "description": "Queue retry of retained failed evidence",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "ed0b1cd227da53a349c6fcc1afec7e23b5caebde985627109e39cbf45d1f3989",
+      "output_schema": "1e0f993ae83ac52e14ec8ba2121190d35c8d9c394c89beffb0a29bfd601454de"
+    },
+    {
+      "name": "sources_archive",
+      "description": "Archive a source while retaining evidence",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "b58f92f9a63013957140a65012ed63ea1893d7243df52f73a9357201ad0caf2c",
+      "output_schema": "c0154d0e1278668de6fb1fa2531196b29fa351218495264b959f930bfd388532"
+    },
+    {
+      "name": "sources_get",
+      "description": "Inspect source metadata",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "70b9fe1ae2e38fb65dc0259e45b8d350e86c66e7d180fd3410d7f45f10c8a01a",
+      "output_schema": "c0154d0e1278668de6fb1fa2531196b29fa351218495264b959f930bfd388532"
+    },
+    {
+      "name": "sources_ingest_text",
+      "description": "Submit sanitized text evidence (131072 UTF-8 bytes); poll versions, then retrieve immutable document/chunks before citing. Replays return the original submission state.",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "fc28d973844b9ff2c72c88874a1c9f57f16ba875a5bf851b109af05f76afed40",
+      "output_schema": "1e0f993ae83ac52e14ec8ba2121190d35c8d9c394c89beffb0a29bfd601454de"
+    },
+    {
+      "name": "sources_list",
+      "description": "Browse source metadata",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "d551df4d9e8a8a2ed98f79928cd3c0637f01f4ab81d06c021250acdcb370ad61",
+      "output_schema": "3b0451cd53ea00d5e6a52aa6143da7554020bc27c6206075e131da4144d2b300"
+    },
+    {
+      "name": "sources_search",
+      "description": "Search retained source text with citations",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "d728e4dae2906e4a852c4a4122303db18a4f5b9c48851d84c0f79af3beaab775",
+      "output_schema": "78a359731dadbd642659a1cbd3eb05b9e879d0f0ffabfe0c4f9485c4f551785d"
+    },
+    {
+      "name": "space_grants_list",
+      "description": "Admin: inspect revisioned Reader/Editor grants. Shared policy is fixed; Admin access is implicit.",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": true,
+      "input_schema": "89bcb8a1433bcd7823a39dd343c041066d8f1bb6529a539087aecc535b7a09cc",
+      "output_schema": "48d8d16587b88d332f083d297c12d6e94f29d4702ad12614add8931050deebf4"
+    },
+    {
+      "name": "space_grants_set",
+      "description": "Admin: set or revoke a space grant at its current revision (zero creates). Changes revoke affected delegated tokens; regrant cannot revive them.",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "cf6dad09c9af02b1fc34298cfe0a28b7fbbeeda6994731d89d4c8cdcd91cdcac",
+      "output_schema": "2c7c082bba3d5f102b1acc2700949167f125aa6e0fdc208999fd62b417298e3a"
+    },
+    {
+      "name": "spaces_create",
+      "description": "Create a protected space. Application Admins have access under actual OAuth scopes.",
+      "minimum_role": "admin",
+      "required_scope": "c0:admin",
+      "read_only": false,
+      "input_schema": "1cf774d1ae73fb371fffdf126c757d2a1563a2c4b615c45899ee680ca149f2c3",
+      "output_schema": "ef977eb9a799bc2154ce76150dde69279281388dec52015711a97086d399a667"
+    },
+    {
+      "name": "spaces_get",
+      "description": "Inspect an authorized space and the current effective role.",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "f477d07e9f58b0ae1712c70c7cb654ec81b9c4949781168bd5b0aa29857c9da3",
+      "output_schema": "ef977eb9a799bc2154ce76150dde69279281388dec52015711a97086d399a667"
+    },
+    {
+      "name": "spaces_list",
+      "description": "Discover authorized spaces and effective roles; omitted content selectors use the legacy shared space.",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "d3d6dadc97d3d9b4b845116b34f2e6dfb43838ed3bbed5081bd33b1be61f24df",
+      "output_schema": "55e74f726748fe89151ba7fdd4cdf5bdd8086638834bb4668c40032d9f2e5024"
+    },
+    {
+      "name": "wiki_pages_archive",
+      "description": "Archive a page while retaining revisions",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "6df544cf596db940a0c6158cc128e52c97e6d68e0489bdeac12c8c30230e08ab",
+      "output_schema": "c35167792754f1d759f9803f439fb53e62c9fdb2b8a945e5b3f004b813a052bd"
+    },
+    {
+      "name": "wiki_pages_create",
+      "description": "Create an authored page with a replay key",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "f1c2ace5398fcfe235549598bc8b61ac0bdb69a1b0dc4baebb49151ae443fe8f",
+      "output_schema": "c292ac4ad46812cb37a2d44eafb64c71a05af285502f35c14577a8a94b64489f"
+    },
+    {
+      "name": "wiki_pages_get",
+      "description": "Read current or historical immutable Wiki content",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "c05f047122f12c176327b31da3ceff7f9ddafe0ab8562ad72a82cec059851a83",
+      "output_schema": "c292ac4ad46812cb37a2d44eafb64c71a05af285502f35c14577a8a94b64489f"
+    },
+    {
+      "name": "wiki_pages_list",
+      "description": "Browse authored Wiki page metadata",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "6242da2ba182ee44888803a137db7f8cec256e0be05a77688ef633e780646ebc",
+      "output_schema": "7b8181c57155684f4008b8adc515b00f1de0d287afbaa77ac821bb3e33a799e1"
+    },
+    {
+      "name": "wiki_pages_resolve",
+      "description": "Resolve an exact Wiki slug; archived pages require include_deleted",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "e259023d0a6f0da85f6ca02ebcf965ca41ccd0df886aef3d77ed98983b0d5b61",
+      "output_schema": "c292ac4ad46812cb37a2d44eafb64c71a05af285502f35c14577a8a94b64489f"
+    },
+    {
+      "name": "wiki_pages_update",
+      "description": "Edit a page with revision and replay protection",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "930fa3b9b25fac2995b1a3b11a2fdc4eca958a3e7a361a8bd4c18dde2be82061",
+      "output_schema": "c292ac4ad46812cb37a2d44eafb64c71a05af285502f35c14577a8a94b64489f"
+    },
+    {
+      "name": "wiki_pages_upsert",
+      "description": "Create by exact slug only when absent, or update with expected_revision. Never silently overwrites; retry an unchanged request with its original key.",
+      "minimum_role": "editor",
+      "required_scope": "c0:write",
+      "read_only": false,
+      "input_schema": "573795be83eaa1653cba6b2dff2936b50b71a9cf4625a9f92ea6f5b5d29f0c64",
+      "output_schema": "c292ac4ad46812cb37a2d44eafb64c71a05af285502f35c14577a8a94b64489f"
+    },
+    {
+      "name": "wiki_revisions_list",
+      "description": "Inspect immutable authored revision history",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_schema": "f8e1f8c2c1cb0db74d117b976db64796f852336de23b426e71ca25be04906866",
+      "output_schema": "4b08e8b7faead710007a0272bec8bef8588de8ae83db617f272201a28c96e296"
+    }
+  ]
+}

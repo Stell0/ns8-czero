@@ -26,6 +26,7 @@ def knowledge_http(application, tmp_path):
     with db.engine.begin() as c:
         actors = c.execute(text('SELECT id FROM c0_accounts WHERE issuer=:issuer'), {'issuer': application[5]}).scalars().all()
         for actor in actors:
+            c.execute(text('DELETE FROM c0_annotation_targets WHERE created_by=:id'), {'id': actor})
             # This fixture creates knowledge only through signed HTTP.
             c.execute(text('DELETE FROM c0_evidence_links WHERE claim_id IN (SELECT id FROM c0_claims WHERE actor_id=:id)'), {'id': actor})
             c.execute(text('DELETE FROM c0_claims WHERE actor_id=:id'), {'id': actor})

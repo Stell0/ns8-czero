@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0015_content_spaces"
+SCHEMA_REVISION = "0016_annotations"
 
 
 class Database:

@@ -9,6 +9,8 @@ KNOWLEDGE_OPERATIONS = frozenset({
     'claims_list', 'claims_create', 'claims_get', 'claims_annotate', 'claims_retract',
     'entity_relations_create', 'entity_relations_update', 'entity_relations_list',
     'entity_references_create', 'entity_references_list', 'entity_references_remove',
+    'knowledge_annotations_get', 'knowledge_annotations_history', 'knowledge_annotations_update',
+    'knowledge_search_structured',
     'knowledge_graph', 'knowledge_changes', 'knowledge_search', 'knowledge_index_status',
 })
 _PUBLIC_HTTP_ERRORS = frozenset({

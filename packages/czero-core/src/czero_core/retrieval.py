@@ -150,8 +150,7 @@ class SearchService(SpaceBound):
             self._authorize(connection,actor)
             ordinary=self._text(connection,query,limit=self.limits.candidates,kind=kind)
             profile=self.embeddings._profile(connection) if self.embeddings.client else None
-            ready=profile is not None and connection.execute(text('SELECT 1 FROM c0_embeddings WHERE space_id=:space AND profile_id=:id AND generation=:generation LIMIT 1'),
-                {'space':self._space(connection),'id':self.embeddings.profile_id,'generation':profile['generation']}).scalar_one_or_none() is not None
+            ready=profile is not None and self.embeddings._ready(connection,profile)
         hits=ordinary
         if desired in ('semantic','hybrid'):
             if self.embeddings.client is None:failures.append('embeddings_not_configured')

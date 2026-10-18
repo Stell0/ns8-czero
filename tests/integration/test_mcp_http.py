@@ -52,6 +52,7 @@ def transport(application):
     yield PrivateFixture((app, child, grants, client, pair, token, owner_token, member_token))
     with access.database.engine.begin() as connection:
         actors = {'issuer': access.issuer}
+        connection.execute(text('DELETE FROM c0_annotation_targets WHERE created_by IN (SELECT id FROM c0_accounts WHERE issuer=:issuer)'), actors)
         pages = connection.execute(text('''SELECT DISTINCT page_id FROM c0_wiki_revisions
             WHERE actor_id IN (SELECT id FROM c0_accounts WHERE issuer=:issuer)'''), actors).scalars().all()
         for page in pages:
@@ -82,7 +83,7 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                 for mode in ('auto', 'legacy'):
                     async with Client(streamable_http_client(RESOURCE, http_client=http), mode=mode) as client:
                         tools = (await client.list_tools()).tools
-                        assert len(tools) == 71 and any(t.name == 'wiki_pages_create' for t in tools)
+                        assert len(tools) == 75 and any(t.name == 'wiki_pages_create' for t in tools)
                         assert next(t for t in tools if t.name == 'objects_list').annotations.read_only_hint
                         result = await client.call_tool('object_types_list', {})
                         assert not result.is_error and result.structured_content == expected_types
@@ -94,7 +95,7 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                         resource = await client.read_resource('c0://wiki/pages/' + expected_page['id'])
                         assert json.loads(resource.contents[0].text) == expected_page
                         descriptions = json.loads((await client.read_resource('c0://capabilities')).contents[0].text)
-                        assert len(descriptions['operations']) == 71
+                        assert len(descriptions['operations']) == 75
                         assert (await client.call_tool('unregistered_operation', {})).is_error
                         assert (await client.call_tool('object_types_list', {'unknown':1})).is_error
                         with pytest.raises(MCPError, match='invalid_resource_request'):
