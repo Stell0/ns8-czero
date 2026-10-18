@@ -598,3 +598,5 @@ observations include verified source/job artifacts and negative full-promotion
 controls; full runtime acceptance is still pending for this CI change. Main now
 requires the GitHub Actions `C0 merge gate` with an up-to-date base and admin
 enforcement. Details and exact run links are in the policy document.
+
+<!-- Owned documentation-to-UI cancellation probe. -->
