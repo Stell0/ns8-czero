@@ -1,7 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json,os
-from uuid import uuid4
+from uuid import UUID,uuid4
 import httpx2
 import pytest
 from sqlalchemy import text
@@ -265,3 +265,41 @@ def test_disabled_embedding_schedule_cannot_block_other_worker_jobs(indexed):
             created.extend(key for key in c.execute(text('SELECT job_id FROM c0_task_runs WHERE schedule_id=:id'),{'id':SCHEDULE_ID}).scalars() if key not in previous)
             for key in created:c.execute(text('DELETE FROM c0_jobs WHERE id=:id'),{'id':key})
             c.execute(text('UPDATE c0_scheduled_tasks SET enabled=:enabled,interval_seconds=:interval_seconds,next_run_at=:next_run_at WHERE id=:id'),{**original,'id':SCHEDULE_ID})
+
+
+def test_native_completion_drains_a_corpus_larger_than_four_batches(indexed,monkeypatch):
+    from pathlib import Path
+    import runpy
+    from czero_core.jobs import JobService,default_registry
+    from czero_core.worker import Worker
+    store,fixtures,_=indexed;_,wiki,_=fixtures
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1]))
+    native=runpy.run_path(str(Path(__file__).parents[1]/'retrieval_fixture.py'))
+    registry=default_registry();register_embedding_handlers(registry,store)
+    jobs=JobService(store.database,registry,wiki[0].access);created=[]
+    # Every pass prepares at most two Wiki revisions. Four successful jobs
+    # cannot finish the larger corpus created by independent native clients.
+    for ordinal in range(20):create_page(wiki,title='Consolidated '+str(ordinal),body='alpha retained evidence')
+    with store.database.engine.begin() as c:
+        store._activate(c)
+        c.execute(text("UPDATE c0_scheduled_tasks SET enabled=false WHERE handler='embedding.index'"))
+    def command(arguments):
+        with store.database.engine.connect() as c:return 't' if c.execute(text(arguments[-1])).scalar_one() else 'f'
+    native['index_complete'].__globals__['command']=command
+    def enqueue():
+        value=jobs.enqueue(wiki[1],'embedding.index',{},'native-complete-'+uuid4().hex);created.append(value['id']);return {**value,'id':str(value['id'])}
+    def get(path):
+        Worker(store.database,registry).tick(max_jobs=4,budget_seconds=5)
+        return jobs.get_job(wiki[1],UUID(path.removeprefix('jobs/')))
+    try:
+        initial=[enqueue() for _ in range(4)]
+        assert all(get('jobs/'+j['id'])['state']=='succeeded' for j in initial)
+        assert native['index_complete']('disposable') is False
+        submitted=native['complete_indexing']('disposable',get,enqueue)
+        assert 4<submitted<=32 and native['index_complete']('disposable') is True
+        with store.database.engine.connect() as c:
+            assert c.execute(text('SELECT count(*) FROM c0_embeddings WHERE profile_id=:id'),{'id':store.profile_id}).scalar_one()==20
+            assert c.execute(text("SELECT enabled FROM c0_scheduled_tasks WHERE handler='embedding.index'")).scalar_one() is False
+    finally:
+        with store.database.engine.begin() as c:
+            for key in created:c.execute(text('DELETE FROM c0_jobs WHERE id=:id'),{'id':key})

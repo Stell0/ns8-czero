@@ -3191,3 +3191,50 @@ dedicated update remain required. The read-only preflight confirms genuine
 878978d installed identities/readiness and a fresh observer covering all 44
 tables, 7283 retained rows in 33 tables, 136 terminal jobs/attempts, five originals,
 twenty old clients, twelve old backup plans and eleven unrelated instances.
+
+
+**AM5 application exact-source native indexing correction:** Source `a7941ef`
+passes a fresh physical released-install full run: 1201 cases in 366.32 seconds;
+all 23 installed application Python files match the candidate. Actual exact
+[push local 39118859032](https://github.com/Stell0/ns8-czero/actions/runs/39118859032),
+[PR local 39118861692](https://github.com/Stell0/ns8-czero/actions/runs/39118861692),
+[producer 39118858949](https://github.com/Stell0/ns8-czero/actions/runs/39118858949),
+[push released 39118858993](https://github.com/Stell0/ns8-czero/actions/runs/39118858993),
+[PR released 39118861705](https://github.com/Stell0/ns8-czero/actions/runs/39118861705),
+[push Renovate 39118858893](https://github.com/Stell0/ns8-czero/actions/runs/39118858893)
+and [PR Renovate 39118861698](https://github.com/Stell0/ns8-czero/actions/runs/39118861698)
+all complete successfully, with inspected checkout/PR merge tree, 125 scripts,
+twenty Robot checks, three OCI identities/siblings and five actual scan pairs.
+
+[Native 39119015157](https://github.com/Stell0/ns8-czero/actions/runs/39119015157)
+is not accepted: Debian installation has sixteen passes/one failure/three
+expected skips; Rocky genuine AM4 upgrade has twenty-seven passes/one failure,
+including all eight browser/privacy workflows. Both fail the derivative-index
+completion fixture before recovery snapshots: four successful bounded jobs no
+longer finish the larger corpus introduced by independent sourced bundle
+clients. All three downloaded query artifacts remain clean; failed raw reports
+are retained privately. No candidate is deployed.
+
+A real PostgreSQL twenty-page regression proves four actual registered index
+jobs succeed while the exact installed completion query remains false. Replace
+the fixed four-job assumption with observed completion and additional batches
+of four trusted jobs, capped at 32 total, with explicit failed-job and deadline
+rejection. The disposable deadline permits three existing one-minute worker
+opportunities (180 seconds); installed timer/budgets and all session/grant
+lifetimes remain unchanged. Require complete source and current-Wiki indexing
+before snapshot and preserve the paused refresh schedule. The corrected exact
+source must repeat all required CI/native/artifact gates.
+
+During acceptance preparation, the existing external connector reports an
+expired refresh grant. The operator confirms an expired identity-provider
+password, renews it and reconnects. An actual connector read then returns the
+retained Shared citation with exact IDs, offsets, body and all three hashes.
+This is separate from SDK evidence; the cached 63-operation connector has not
+been shown invoking new bundle/annotation/space operations. The private local
+credential file must be refreshed before new dedicated normal-SSO tests.
+
+The completed real PostgreSQL backlog, failure/cap/deadline and existing
+embedding/provider regressions pass: nineteen cases in 5.58 seconds, plus twenty
+Robot dry runs. Runtime application/Core bytes, released pin and schema remain
+unchanged. Preserve all failed evidence and repeat exact-source gates for this
+focused native-fixture correction.
