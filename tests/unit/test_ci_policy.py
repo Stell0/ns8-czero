@@ -206,3 +206,58 @@ def test_main_documentation_merge_does_not_strand_accepted_runtime(tmp_path, mon
         with pytest.raises(SystemExit,match='Main runtime advanced'):
             runpy.run_path(str(root/'scripts/promote-ci-images.py'))
         assert not copies
+
+
+def test_development_cancellation_covers_mode_changes_without_cancelling_acceptance():
+    import re
+    workflow = (Path(__file__).parents[2]/'.github/workflows/validate.yml').read_text()
+    jobs = dict(re.findall(r'^  ([a-z-]+):\n(.*?)(?=^  [a-z-]+:\n|\Z)', workflow, re.M | re.S))
+    groups = []
+    for name in ('docs', 'feedback'):
+        job = jobs[name]
+        groups.append(re.search(r'^      group: (.+)$', job, re.M).group(1))
+        assert 'cancel-in-progress: true' in job
+    assert len(set(groups)) == 1
+    assert "needs.classify.outputs.mode == 'full'" in jobs['retire-feedback']
+    assert 'retire-feedback' in policy()['required_jobs']('runtime', 'full')
+    for name in ('retire-feedback', 'local', 'released', 'renovate', 'producer', 'images', 'native', 'artifacts', 'gate', 'publish-canonical'):
+        assert 'concurrency:' not in jobs[name], name
+
+
+@pytest.mark.parametrize('damage,expected', [
+    ('docs', [9]), ('scoped', [9]), ('full', []), ('missing', []),
+    ('different_pr', []), ('different_source', []), ('newer', []),
+    ('same_source', []), ('finished', []), ('superseded', []),
+])
+def test_retirement_requires_old_development_proof_and_preserves_full_runs(tmp_path, monkeypatch, damage, expected):
+    import json
+    retire = runpy.run_path(str(Path(__file__).parents[2]/'scripts/retire-ci-feedback.py'))['retire']
+    selection = {'source': SHA, 'mode': 'full', 'pr_number': 14}
+    run = {'id': 9, 'head_sha': BASE, 'status': 'in_progress', 'created_at': '2026-10-18T15:00:00Z'}
+    prior = {'source': BASE, 'mode': damage, 'pr_number': 14, 'event': 'pull_request'}
+    if damage == 'different_pr': prior.update(mode='scoped', pr_number=99)
+    if damage == 'different_source': prior.update(mode='scoped', source='c'*40)
+    if damage == 'newer': run['created_at'] = '2026-10-18T17:00:00Z'
+    if damage == 'same_source': run['head_sha'] = SHA
+    calls = []
+    def gh(*args):
+        calls.append(args)
+        if args[0] == 'run':
+            if damage == 'missing': raise subprocess.CalledProcessError(1, 'gh')
+            Path(args[args.index('--dir')+1], 'ci-selection.json').write_text(json.dumps(prior))
+            return ''
+        if '--method' in args:
+            assert args[-1].endswith('/9/cancel')
+            return ''
+        path = args[1]
+        if path.endswith('/runs/100'):
+            return json.dumps({'created_at': '2026-10-18T16:00:00Z'})
+        if path.endswith('/pulls/14'):
+            return json.dumps({'head': {'sha': 'c'*40 if damage == 'superseded' else SHA}})
+        if 'workflows/validate.yml/runs?' in path:
+            return json.dumps({'workflow_runs': [run]})
+        assert path.endswith('/runs/9')
+        return json.dumps({'status': 'completed' if damage == 'finished' else 'in_progress'})
+    monkeypatch.setitem(retire.__globals__, 'gh', gh)
+    assert retire(selection, 'example/ns8-czero', '100', 'feature/example') == expected
+    assert sum('--method' in call for call in calls) == len(expected)

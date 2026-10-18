@@ -116,7 +116,7 @@ def validation_mode(kind, feedback, event, draft):
 
 def required_jobs(kind, mode):
     if mode == 'full':
-        return ('classify', 'local', 'producer', 'released', 'renovate', 'images', 'native', 'artifacts')
+        return ('classify', 'retire-feedback', 'local', 'producer', 'released', 'renovate', 'images', 'native', 'artifacts')
     return ('classify', 'docs') if kind == 'docs' else ('classify', 'feedback')
 
 

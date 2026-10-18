@@ -437,6 +437,11 @@
       "path": "tests/unit/test_ci_policy.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "scripts/retire-ci-feedback.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

@@ -56,7 +56,7 @@ jobs:
     needs: classify
     if: needs.classify.outputs.mode == 'docs'
     concurrency:
-      group: docs-${{ github.event.pull_request.number || github.ref }}
+      group: development-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-24.04
     steps:
@@ -77,12 +77,32 @@ jobs:
     needs: classify
     if: needs.classify.outputs.mode == 'scoped'
     concurrency:
-      group: feedback-pr-${{ github.event.pull_request.number }}
+      group: development-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     uses: ./.github/workflows/test-local.yml
     with:
       source: ${{ needs.classify.outputs.source }}
       feedback: true
+  retire-feedback:
+    needs: classify
+    if: needs.classify.outputs.mode == 'full'
+    # Cancel only older runs whose downloaded selection proves development
+    # mode. This job has no concurrency group that could cancel acceptance.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.classify.outputs.source }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: ci-selection
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/retire-ci-feedback.py
   local:
     needs: classify
     if: needs.classify.outputs.mode == 'full'
@@ -178,7 +198,7 @@ jobs:
           if-no-files-found: error
   gate:
     name: C0 merge gate
-    needs: [classify, docs, feedback, local, producer, released, renovate, images, native, artifacts]
+    needs: [classify, docs, feedback, retire-feedback, local, producer, released, renovate, images, native, artifacts]
     if: always()
     runs-on: ubuntu-24.04
     steps:

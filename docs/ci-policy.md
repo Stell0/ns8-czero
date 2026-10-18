@@ -9,7 +9,8 @@ It changes no runtime API, package version, dependency pin or database schema.
 Open a draft PR. Each update classifies its complete Git diff against its base,
 including deleted paths, both sides of renames and file modes. There is no second
 branch-push validation run. New feedback supersedes older feedback for that PR;
-full acceptance runs are never cancelled by this policy.
+mode transitions also retire obsolete development checks. Full acceptance runs
+are never cancelled by this policy.
 
 The explicit allowlist in [ci_policy.py](../scripts/ci_policy.py) contains only
 reviewed repository guidance: root README/PLAN/AGENTS, the listed development
