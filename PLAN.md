@@ -2917,3 +2917,104 @@ own actual exact-source CI/native/artifact results, reviewed main promotion and
 completed main publication/checks before AM5 starts. Keep both existing waivers;
 all eight automated native browsers remain mandatory. AM5/AM6 and Windmill Gate
 remain gated, with Integration M17–M20 a separate roadmap.
+
+### AM4 final marker gates and AM5 start — 18 October 2026
+
+AM4 closeout `626d89b` passed actual local push/PR, publication, released-Core
+and Renovate checks, plus [native 39106630279](https://github.com/Stell0/ns8-czero/actions/runs/39106630279):
+Debian installation seventeen passes/three expected skips and genuine AM3 Rocky
+upgrade twenty-eight passes, all eight browsers/privacy guards and twenty-five
+accessibility contexts. Actual checkouts, all-five-target histories/receipts
+through update/clean restore and three downloaded query artifacts pass inspection.
+Reviewed PR 11 merged with the identical tree as
+`d8899029a4e175352b697ad8b77c5718bf034d1f`.
+
+Final main passes [local 39109051740](https://github.com/Stell0/ns8-czero/actions/runs/39109051740),
+[publication 39109051722](https://github.com/Stell0/ns8-czero/actions/runs/39109051722),
+[released-Core 39109069476](https://github.com/Stell0/ns8-czero/actions/runs/39109069476)
+and [Renovate 39109071160](https://github.com/Stell0/ns8-czero/actions/runs/39109071160).
+Actual results remain 1127 Python/PostgreSQL/packaging cases, 125 scripts and
+twenty non-UI Robot cases, with schema/shell checks. Three OCI identities/sibling
+references and five actual SARIF/SBOM pairs pass inspection. A registry blob read
+timed out; failed private evidence is retained and the read-only retry passes.
+[Final main native 39109200513](https://github.com/Stell0/ns8-czero/actions/runs/39109200513)
+passes Debian genuine AM3 upgrade twenty cases and Rocky installation twenty-five
+cases/three expected skips, all eight browsers/privacy guards and twenty-five
+accessibility contexts. Both actual checkout heads, mandatory Core/current/legacy
+SDK probes, all-five-target histories/receipts through update/clean restore and
+three downloaded query artifacts pass inspection with zero query candidates.
+
+AM4 is complete. Fresh read-only native inspection confirms all three accepted
+`878978d` images above remain installed, database/authentication/timer health
+passes and the owned acceptance client is disabled. No documentation image is
+deployed. AM5 starts in a fresh worktree from verified `d889902`; preserve the
+older checkout and unfinished documentation. Only AM5 is expanded here. AM6,
+Windmill Gate and Integration M17–M20 remain separate gates.
+
+**AM5 implementation subplan (before code):** First run a real PostgreSQL
+canonical consolidation through existing Wiki, entity, sourced-claim, object and
+annotation primitives. Measure successful individual retries after lost replies,
+independent-writer conflicts, revocation between steps and injected harness
+failure. Inspect committed records, revisions, events and receipts after failures.
+Decide whether these primitives provide all-or-nothing publication from that
+proof; do not presume a bundle implementation.
+
+Complete annotations additively with literal knowledge type/status/confidence,
+observation/verification UTC times, products/components/exact version tags,
+explicit supersession and immutable source-chunk references. Keep applicability
+and verification separate, preserving old requests/fingerprints, omitted/null,
+strict object data and retained history. Unknown/future values and contradictions
+remain stored; supersession never deletes/archives prior content or transfers
+verification. Resolve typed references only within the authorized space; source
+references require ready immutable evidence. Bound lists and retain sixteen-KiB
+annotation values. Document canonical fields without ambiguous version aliases.
+
+If the proof demonstrates partial publication, add reusable Core
+`KnowledgeBundleService.apply` followed by typed REST/MCP
+`knowledge_bundle_apply`. One bundle selects one space, contains one to twenty-five
+content mutations and fits the existing 256-KiB aggregate JSON budget. Dispatch
+only a fixed allowlist of trusted Wiki/entity/claim/relationship/object/annotation
+writes; requests never select imports, SQL, callbacks or arbitrary methods.
+Support typed references to earlier step results; reject forward/cyclic, missing
+and invalid paths. Keep expected revisions and ready-evidence requirements.
+Exclude file ingestion, external I/O, jobs, type registration, membership, grants
+and native actions.
+
+Reuse domain mutation helpers on one connection/transaction, with one
+actor/space-bound fingerprinted receipt and original whole-result snapshot.
+Preserve individual APIs/replay fingerprints. Acquire object/event then
+knowledge/receipt mutexes before authority locks; recheck persisted role, space
+grant and captured OAuth token after waits. No substep commits, opens a second
+transaction or creates its own receipt. Failure leaves no partial content,
+history, events, cursors or receipt. Independent writers have one revision winner;
+retry after uncertain success returns the original whole result. Revocation
+linearizes with commit and later regrant cannot revive old delegated authority.
+
+Anticipate additive Core 0.29.0, app 0.44.0 and schema 0016 unchanged unless a
+forward migration proves necessary. The app retains released Core 0.28.0 during
+producer development. Prove failures before fixes; add meaningful PostgreSQL
+concurrency/rollback/replay/authorization/limits/same-space/ready-evidence tests
+and raw current/legacy transport parity. Extend native SDK and update/clean-restore
+probes for the new annotation values and bundle receipt, freezing the genuine
+installed `878978d` digests above. All eight browser workflows remain mandatory.
+
+Require complete local/packaging, scripts, schema/shell, Robot,
+producer/released-Core, runtime/license/scans and Debian/Rocky checks on exact
+Core source before immutable reproducible artifact publication. Verify supplied
+wheel/archive hashes, independent installations and repeated migration, then pin
+the released tag/frozen lock/compatible updater bounds in the app and test that
+source. Review the whole diff and compatibility evidence before autonomous PR
+promotion; verify actual main checks/publication and all three OCI identities.
+
+Before the canonical dedicated update, verify a supported C0-only backup,
+original-row/old-column/file/settings/schedule/OAuth observers and unrelated
+modules. Exercise owned consolidation, lost-response replay, genuine stale
+conflicts, scope consent, retained citations/history and explicit supersession
+through both SDK protocols. Check the same fresh delegated/browser authority
+immediately after update and full-manager restart within actual lifetimes; never
+extend authority. Verify preservation, disable the owned client after a valid
+same-bearer control and inspect bounded root app journald with real request
+controls and issued-secret/body checks. Destructive failures/restores and other
+roles remain disposable. Reconcile all three project documents and verify their
+actual marker/main gates before AM6. Retain failed private evidence outside Git,
+both waivers and honest provider/live-persona/scheduled/stable-release limits.
