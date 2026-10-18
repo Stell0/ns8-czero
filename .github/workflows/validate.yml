@@ -141,7 +141,7 @@ jobs:
           path: candidate-images.json
           if-no-files-found: error
   native:
-    needs: [classify, local, released, renovate, images]
+    needs: [classify, images]
     if: needs.classify.outputs.mode == 'full'
     permissions:
       contents: read
