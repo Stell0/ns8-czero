@@ -232,7 +232,9 @@ jobs:
           if-no-files-found: error
   publish-canonical:
     needs: [classify, gate]
-    if: needs.classify.outputs.mode == 'full' && (github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/core-v')))
+    # The gate accepts deliberately skipped development ancestors. Override
+    # implicit success() propagation, while rejecting cancellation/failed gates.
+    if: always() && !cancelled() && needs.classify.result == 'success' && needs.gate.result == 'success' && needs.classify.outputs.mode == 'full' && (github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/core-v')))
     runs-on: ubuntu-26.04
     permissions:
       contents: read
