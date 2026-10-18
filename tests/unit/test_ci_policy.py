@@ -261,3 +261,36 @@ def test_retirement_requires_old_development_proof_and_preserves_full_runs(tmp_p
     monkeypatch.setitem(retire.__globals__, 'gh', gh)
     assert retire(selection, 'example/ns8-czero', '100', 'feature/example') == expected
     assert sum('--method' in call for call in calls) == len(expected)
+
+
+@pytest.mark.parametrize('mode,ref,gate,classify_result,cancelled,expected', [
+    ('full', 'refs/heads/main', 'success', 'success', False, True),
+    ('full', 'refs/tags/0.44.0', 'success', 'success', False, True),
+    ('full', 'refs/tags/core-v0.29.0', 'success', 'success', False, False),
+    ('full', 'refs/pull/18/merge', 'success', 'success', False, False),
+    ('full', 'refs/heads/feature', 'success', 'success', False, False),
+    ('docs', 'refs/heads/main', 'success', 'success', False, False),
+    ('scoped', 'refs/heads/main', 'success', 'success', False, False),
+    ('full', 'refs/heads/main', 'failure', 'success', False, False),
+    ('full', 'refs/heads/main', 'skipped', 'success', False, False),
+    ('full', 'refs/heads/main', 'cancelled', 'success', False, False),
+    ('full', 'refs/heads/main', 'success', 'failure', False, False),
+    ('full', 'refs/heads/main', 'success', 'success', True, False),
+])
+def test_actual_publication_condition_handles_skipped_ancestors_and_failed_gates(mode, ref, gate, classify_result, cancelled, expected):
+    import re
+    workflow = (Path(__file__).parents[2]/'.github/workflows/validate.yml').read_text()
+    publisher = workflow.split('  publish-canonical:\n', 1)[1]
+    condition = re.search(r'^    if: (.+)$', publisher, re.M).group(1)
+    # GitHub injects success() unless a status function is explicit; a skipped
+    # docs/feedback ancestor makes that implicit dependency-chain check false.
+    # See actions/runner#2205. Evaluate the real job expression, not a copy.
+    explicit = re.search(r'\b(?:always|cancelled|success|failure)\(', condition)
+    expression = condition
+    for key, value in {'needs.classify.outputs.mode': mode, 'github.ref': ref,
+            'needs.gate.result': gate, 'needs.classify.result': classify_result}.items():
+        expression = expression.replace(key, repr(value))
+    expression = expression.replace('always()', 'True').replace('cancelled()', repr(cancelled))
+    expression = expression.replace('&&', ' and ').replace('||', ' or ').replace('!', ' not ')
+    result = bool(eval(expression, {'__builtins__': {}, 'startsWith': lambda value, prefix: value.startswith(prefix)})) if explicit else False
+    assert result is expected

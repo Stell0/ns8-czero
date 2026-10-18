@@ -3423,3 +3423,22 @@ private failed evidence and current/older CLI regressions. The existing immutabl
 Yarn/node_modules cache is retained and keyed by lock/package/config/builder;
 pip download caching preserves dependency inputs. No runtime build script changed.
 Full ready/main/native and final documentation-only main checks remain required.
+
+### Canonical publication gate correction — 18 October 2026
+
+Full exact-source manual main validation 39149274270 passes at 56e384f, including
+1272 Python/PostgreSQL/packaging cases, 125 controllers, 21 Robot dry runs, both
+native systems, eight browsers, all five scans and actual artifact privacy/source/
+image checks. Its C0 merge gate succeeds, but publish-canonical is unexpectedly
+skipped. Canonical registry reads still show accepted c1a90d3 on all six aliases.
+This is not completed main publication and cannot close the CI-policy task.
+
+Before code: GitHub's default success condition propagates skipped development
+ancestors through the always-scheduled gate. Make publication's status condition
+explicit, requiring successful classification and gate, full mode, an authorized
+main/module-tag ref and an uncancelled workflow. Preserve the independent
+acceptance proof and immutable candidate copy checks. Add a behavioral regression
+matrix for the actual job condition, including skipped ancestors, failed/skipped/
+cancelled gates, cancellation, docs/scoped modes, main/feature/module/Core refs.
+Run fresh exact-source full PR and resulting main acceptance; do not cancel or
+rewrite completed/failed native evidence or alter runtime/schema/version inputs.
