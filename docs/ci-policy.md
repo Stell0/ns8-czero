@@ -76,9 +76,10 @@ independent human review. Existing protections/review requirements are retained.
 
 Runtime main commits repeat full validation. Only a fully accepted current main
 candidate is promoted to canonical `main`/`latest` aliases, without rebuilding.
-The module retains immutable candidate sibling tags. A superseded main source
-cannot overwrite canonical aliases. Documentation-only main commits leave the
-previous accepted runtime images in place.
+The module retains immutable candidate sibling tags. A source superseded by later runtime changes
+cannot overwrite canonical aliases. A later allowlisted documentation merge does
+not strand an in-flight runtime candidate: its runtime/build inputs are unchanged.
+Documentation-only main commits otherwise leave accepted runtime images in place.
 
 Manually dispatch **C0 validation** (`validate.yml`) for full validation of any
 exact branch/tag ref, including documentation markers. To validate a ready PR,
@@ -118,7 +119,7 @@ closeout marker does not replace the accepted runtime's release/deployment proof
 
 ## Executed evidence
 
-Initial local policy regressions: 59 passes. The broader unit suite passes 307
+Initial local policy regressions: 61 passes. The broader unit suite passes 307
 cases in 6.69 seconds. Actionlint 1.7.12 passes the workflows with only its known
 `ubuntu-26.04` label-table lag excluded; actual existing producer jobs use that
 runner successfully. GitHub event, timing, protection and full native evidence

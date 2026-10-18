@@ -137,3 +137,55 @@ def test_every_selected_application_test_exists():
     root = Path(__file__).parents[2]
     for paths in policy()['APP_TESTS'].values():
         assert all((root/path).is_file() for path in paths)
+
+
+@pytest.mark.parametrize('later_path,allowed', [('README.md', True), ('app.py', False)])
+def test_main_documentation_merge_does_not_strand_accepted_runtime(tmp_path, monkeypatch, later_path, allowed):
+    """Exercise the actual publication command with a real ancestor/diff graph."""
+    import json
+    import sys
+    root = Path(__file__).parents[2]
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(root/'scripts'))
+    monkeypatch.setenv('GITHUB_REPOSITORY', 'example/ns8-czero')
+    monkeypatch.delenv('C0_RELEASE_TAG', raising=False)
+    actual_output, actual_run = subprocess.check_output, subprocess.run
+    def git(*args):
+        return actual_output(['git', *args], text=True).strip()
+    git('init', '-q')
+    (tmp_path/'app.py').write_text('baseline\n');git('add', '.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','baseline')
+    base = git('rev-parse','HEAD')
+    (tmp_path/'app.py').write_text('accepted runtime\n');git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','accepted')
+    source = git('rev-parse','HEAD')
+    (tmp_path/later_path).write_text('later change\n');git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','later')
+    current = git('rev-parse','HEAD')
+    p = policy()
+    selected = p['classify'](p['git_changes'](base,source,pr=False))
+    proof = {**evidence(), 'source':source, 'base':base, 'diff_hash':selected['diff_hash']}
+    Path('ci-proof.json').write_text(json.dumps(proof))
+    images = [{'reference':'ghcr.io/example/'+name+':ci-owned','digest':'sha256:'+'c'*64}
+        for name in ('czero','czero-app','czero-postgres')]
+    Path('candidate-images.json').write_text(json.dumps({'source':source,'images':images}))
+    copies=[]
+    def output(args, **kwargs):
+        if args[0]=='gh':return json.dumps({'object':{'sha':current}})
+        if args[:2]==['skopeo','inspect']:return json.dumps({'Digest':images[0]['digest'],
+            'Labels':{'org.opencontainers.image.revision':source}})
+        return actual_output(args, **kwargs)
+    def run(args, **kwargs):
+        if args[:2]==['skopeo','copy']:copies.append(args);return subprocess.CompletedProcess(args,0)
+        if args[0]=='git' and 'fetch' in args:return subprocess.CompletedProcess(args,0)
+        return actual_run(args, **kwargs)
+    monkeypatch.setattr(subprocess,'check_output',output)
+    monkeypatch.setattr(subprocess,'run',run)
+    if allowed:
+        runpy.run_path(str(root/'scripts/promote-ci-images.py'))
+        assert len(copies)==6
+        assert json.loads(Path('main-publication.json').read_text())['publication_ref_commit']==current
+    else:
+        with pytest.raises(SystemExit,match='Main runtime advanced'):
+            runpy.run_path(str(root/'scripts/promote-ci-images.py'))
+        assert not copies

@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from ci_policy import verify_gate
+from ci_policy import classify, git_changes, verify_gate
 
 proof = json.loads(Path('ci-proof.json').read_text())
 verify_gate(proof, proof['source'], proof['base'], proof['diff_hash'], require_full=True)
@@ -21,7 +21,15 @@ else:
     current = json.loads(subprocess.check_output(['gh', 'api', 'repos/'+os.environ['GITHUB_REPOSITORY']+
         '/git/ref/heads/main'], text=True))['object']['sha']
 if current != proof['source']:
-    raise SystemExit('Publication ref advanced: this source cannot publish canonical aliases')
+    if tag:
+        raise SystemExit('Release tag changed: canonical publication blocked')
+    # A lightweight documentation merge must not strand an in-flight accepted
+    # runtime candidate. Its runtime/build tree remains exactly the accepted one.
+    subprocess.run(['git', '-c', 'credential.helper=', '-c',
+        'credential.helper=!gh auth git-credential', 'fetch', '--no-tags', 'origin', current], check=True)
+    subprocess.run(['git', 'merge-base', '--is-ancestor', proof['source'], current], check=True)
+    if classify(git_changes(proof['source'], current, pr=False))['kind'] != 'docs':
+        raise SystemExit('Main runtime advanced: canonical publication blocked')
 candidate = json.loads(Path('candidate-images.json').read_text())
 assert candidate['source'] == proof['source']
 # Dependency aliases first, module last. The module itself keeps immutable
@@ -34,5 +42,6 @@ for image in [*candidate['images'][1:], candidate['images'][0]]:
     result = json.loads(subprocess.check_output(['skopeo', 'inspect', 'docker://'+repository+':'+(tag or 'main')], text=True))
     assert result['Digest'] == image['digest'] and result['Labels']['org.opencontainers.image.revision'] == proof['source']
 Path('main-publication.json').write_text(json.dumps({'source': proof['source'], 'images': candidate['images'],
+    'publication_ref_commit': current, 'documentation_descendant': current != proof['source'],
     'aliases': [tag] if tag else ['main', 'latest'], 'canonical_aliases_verified': True}, indent=2)+'\n')
 print('Canonical aliases match fully accepted candidate identities')
