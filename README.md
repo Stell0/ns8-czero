@@ -1,14 +1,14 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (18 October 2026): Agent Memory AM0–AM4 runtime acceptance passes.** The dedicated instance runs main `878978d`, with Core **0.28.0**, app **0.43.0** and schema **0016**. Agents can use protected spaces, ingest bounded evidence, revise Wiki pages safely, annotate exact content and search structured records with exact applicability filters. Current/legacy SDK workflows, fresh consent, supported update/restart, preservation and bounded journal privacy pass. The existing cached connector separately reconnects and reads retained Shared citations and historical Wiki content; new tools through its 63-operation catalog are not claimed.
+**Status (18 October 2026): Agent Memory AM0–AM5 runtime acceptance passes.** The dedicated instance runs main `41864e4`, Core **0.29.0**, app **0.44.0** and schema **0016**. Agents can ingest evidence, use protected spaces, revise Wiki pages safely, annotate exact content, search applicability and publish bounded consolidation atomically. Both SDK protocols, explicit scope consent, canonical update and full-manager restart preserve original receipts, immutable evidence and authored history. The existing cached connector separately reads retained Shared citations and historical Wiki content after temporary-client revocation; new tools through its 63-operation catalog are not claimed.
 
-Exact main passes 1127 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core/Renovate and both native distributions: Debian genuine AM3 upgrade twenty passes, Rocky installation twenty-five passes/three expected skips, all eight browser/privacy workflows and twenty-five accessibility contexts. Actual source checkouts, image/scan artifacts and three OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed results and frozen installed digests. The final AM4 marker/main `d889902` also passes its actual CI/native/artifact gates. AM5 consolidation is in progress; AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist; no stable module release is claimed.
+Exact main passes 1206 Python/PostgreSQL/packaging cases, 125 scripts and twenty Robot checks, with producer/released-Core/updater and both native gates. Actual reports verify debian13-update-latest: 20 passes; rocky9-install-latest: 25 passes/3 expected skips, all eight browser/privacy workflows and 25 accessibility contexts. Actual source checkouts, five scan/report pairs, three OCI revisions/siblings and three downloaded OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed digests and preservation evidence. AM5’s documentation-marker checks remain required before AM6; AM6 and Windmill Gate remain gated. Existing interactive-Playwright and CPU-quota waivers persist; no stable module release is claimed.
 
 
 ## Applicability and structured retrieval (AM4)
 
-Core 0.28 is independently published and app 0.43 pins its verified immutable
-release. The dedicated instance accepts this behavior on main 878978d.
+AM4 introduced this behavior with independently published Core 0.28 and app
+0.43. The current deployed versions and source are recorded above.
 Applicability and verification describe
 exact content through separate revisioned annotations. They do not rewrite source
 evidence, article revisions or strict record payloads. Missing metadata is unknown;
@@ -69,7 +69,7 @@ annotation values retain the existing 16-KiB JSON budget. Existing MCP request a
 response bounds remain unchanged. Exact-source CI/native/publication and dedicated
 update/restart acceptance pass, including all five target histories and changed
 content returning unknown verification. The final documentation marker's actual
-checks and main publication are verified in PLAN; AM5 remains in progress.
+checks and main publication are verified in PLAN; AM5 runtime acceptance also passes.
 
 ## Purpose and boundaries
 
@@ -349,7 +349,7 @@ Retrieval limitations: embeddings support at most 2000 full-precision dimensions
 
 [C0 Core 0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) is independently published as a wheel, source archive and SHA256SUMS. Its exact source ec940a9 passes local checks and both native distributions. Downloaded artifacts pass six clean-install, reproducibility and packaged-migration checks. GPL metadata, the full license and all migrations are included. Core has no dependency on the NS8 agent SDK or reference application.
 
-The application candidate pins released `core-v0.29.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.29.0,<0.30.0`. The accepted dedicated runtime still uses Core 0.28.0 until AM5 deployment acceptance. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
+The application pins released `core-v0.29.0` and its immutable subdirectory/commit in `uv.lock`, with compatible range `>=0.29.0,<0.30.0`. The accepted dedicated runtime uses Core 0.29.0 after AM5 deployment acceptance. The controlled original consumer remains on `core-v0.24.1` with range `>=0.24.1,<0.25.0`; its existing patch-upgrade contract is preserved. Default image builds use the released source. Producer development explicitly uses `CZERO_CORE_SOURCE=local bash build-images.sh`; the override changes only its temporary builder source/lock. Upstream CI selects this mode; independent forks retain released defaults. Git, uv and the selector remain outside runtime images. Independent released-image CI verifies the actual installed version and immutable Git source against the committed lock, plus runtime content and license.
 
 [Core 0.24.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.2) is a published documentation/packaging patch with unchanged schema/API. Its exact-source local, image, both-native and artifact verification gates pass. Native Renovate uses prefix-aware regex versioning and explicit 0.24.x bounds; ordinary PEP 440 rejects complete `core-v` tags. Automatic merging is disabled. Review actual tag/lock diffs and run consumer tests; minor/breaking upgrades require separate compatibility and migration review. The real [compatible-patch Renovate PR](https://github.com/Stell0/c0-m13-example/pull/3) changes only the tag/lock and passes database-backed consumer CI.
 
@@ -380,35 +380,16 @@ M14 candidate evidence, security findings and deployment limits are recorded in 
 
 ## Agent memory development track
 
-The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers text evidence,
-revision-safe Wiki operations, protected spaces, applicability-aware retrieval
-and external-agent maintenance guidance. AM0–AM4 runtime acceptance passes at
-main `878978d` (Core 0.28.0/app 0.43.0/schema 0016), including supported backup,
-update, full-manager restart and live current/legacy SDK checks. All 7146 original
-rows, 125 terminal jobs/attempts, four files, 97 scheduler-history rows, nineteen
-old client descriptors, eleven prior backup plans and eleven unrelated instances
-are preserved. The owned client is disabled after a valid bearer control; native
-browser/private Wiki and an independent existing-client read remain accepted.
-The actual 1027-line root journal passes request-controlled privacy checks.
-Verify this documentation marker's actual CI/main publication before AM5.
+The accepted C0-AM0–AM6 plan in [PLAN.md](PLAN.md) covers text evidence, revision-safe Wiki operations, protected spaces, applicability retrieval, atomic consolidation and external-agent guidance. AM0–AM5 runtime acceptance passes at main `41864e4` (Core 0.29.0/app 0.44.0/schema 0016). Supported backup, canonical update, full-manager restart and both SDK protocols preserve 7283 retained rows in 33 tables, 136 terminal jobs/attempts, 5 originals, 105 scheduler-history rows, 20 old client descriptors, 12 prior backup plans and 11 unrelated instances. A valid same-bearer control precedes disabling only the new owned client. The normal browser/REST session and an independent existing connector still read authorized content. The bounded 1261-line root journal has actual request controls and no query, issued-secret, submitted-content or traceback matches.
 
-[Core 0.28.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.28.0)
-is independently published after exact-source local, producer and both-native
-gates. Downloaded wheel/archive checksums, reproducible builds, separate installs
-and packaged migrations pass. App 0.43 pins that immutable released source with
-all 53 transitive packages unchanged. Its 75-operation catalog preserves all 71
-accepted contracts and six resource templates. Owned deployed SDK sessions use
-all five annotation targets and exact structured retrieval, preserve original
-receipts and return unknown verification after a content change. The existing
-connector independently reconnects and reads retained Shared evidence and a
-historical Wiki revision; its cached 63 operations do not expose the new APIs.
+[Core 0.29.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.29.0) is independently published from exact source `8157092` after local, producer and both-native gates. Downloaded wheel/archive checksums, reproducible rebuilds, separate installs and repeated migrations pass. App 0.44 pins that immutable released source with all 53 transitive packages unchanged. Its 76-operation catalog retains earlier contracts and resource templates. Whole-bundle retries return the original successful snapshot; read again for current state. Maintenance annotations retain superseded identities and ready immutable source references without transferring verification. Schema remains 0016.
 
 The agreed space contract keeps object-type definitions shared across the
 instance. Records, relations, events and annotations are protected by space;
 Admins access all spaces under actual OAuth scopes, while Readers/Editors need
 explicit protected-space grants capped by their application role. The space
 contract, revisioned applicability annotations and structured retrieval are
-deployed. Consolidation reliability and complete agent guidance remain AM5/AM6 work. Existing knowledge, immutable evidence/history and
+deployed. Consolidation reliability passes AM5; complete agent guidance remains AM6 work. Existing knowledge, immutable evidence/history and
 approved clients must survive every milestone. C0 remains deterministic storage,
 retrieval and maintenance infrastructure; external agents perform reasoning and
 consolidation. Windmill Gate remains blocked through AM6 deployment acceptance.
@@ -581,7 +562,7 @@ after cleanup. This proves SDK new-tool behavior and actual connector reading;
 it does not claim a refreshed connector catalog or live all-role coverage.
 
 
-AM5 candidate app 0.44 adopts independently verified released Core 0.29.
+Accepted AM5 app 0.44 adopts independently verified released Core 0.29.
 `knowledge_bundle_apply` (`POST /api/v1/knowledge/bundles/apply`) publishes
 1–25 trusted content mutations atomically in one space, within 256 KiB and one
 idempotency receipt. It supports prior-step UUID/revision references and existing
@@ -590,8 +571,8 @@ snapshot; resolve/read again for current state. Optional maintenance annotations
 record knowledge type, superseded content and immutable source-chunk references
 without transferring verification or changing retained evidence. Files, jobs,
 type registration, grants and external I/O remain separate operations. Exact
-application CI/native and dedicated-instance acceptance are pending; Core's
-actual publication/checksums and tested requirements are recorded in PLAN.
+application/main CI, native and dedicated-instance acceptance pass; Core's
+actual publication/checksums and deployed requirements are recorded in PLAN.
 
 
 ## Development CI policy
