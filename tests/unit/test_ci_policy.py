@@ -142,6 +142,20 @@ def test_every_selected_application_test_exists():
         assert all((root/path).is_file() for path in paths)
 
 
+@pytest.mark.parametrize('supports_flag', [True, False])
+def test_completed_job_log_reader_allows_then_strips_terminal_escapes(monkeypatch, supports_flag):
+    audit = runpy.run_path(str(Path(__file__).parents[2]/'scripts/audit-ci-artifacts.py'))
+    def output(args, **kwargs):
+        if args == ['gh', 'api', '--help']:
+            return '--allow-escape-sequences' if supports_flag else 'Legacy API help'
+        if supports_flag and '--allow-escape-sequences' not in args:
+            raise ValueError('GH refuses terminal escapes without explicit capture permission')
+        assert ('--allow-escape-sequences' in args) == supports_flag
+        return '\x1b[32mC0 installed candidates: {}\x1b[0m\n'
+    monkeypatch.setattr(subprocess, 'check_output', output)
+    assert audit['gh']('api', 'repos/example/repo/actions/jobs/1/logs') == 'C0 installed candidates: {}\n'
+
+
 @pytest.mark.parametrize('later_path,allowed', [('README.md', True), ('app.py', False)])
 def test_main_documentation_merge_does_not_strand_accepted_runtime(tmp_path, monkeypatch, later_path, allowed):
     """Exercise the actual publication command with a real ancestor/diff graph."""

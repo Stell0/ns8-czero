@@ -24,7 +24,16 @@ QUERY = re.compile(r'[?&](?:state|nonce|code_challenge|code|access_token|id_toke
 
 
 def gh(*args):
-    return subprocess.check_output(['gh', *map(str, args)], text=True)
+    command = ['gh', *map(str, args)]
+    job_log = args[0] == 'api' and str(args[1]).endswith('/logs')
+    if job_log:
+        # New CLI versions refuse terminal escapes even on captured stdout.
+        # Older versions accept logs but do not know the explicit-capture flag.
+        help_text = subprocess.check_output(['gh', 'api', '--help'], text=True)
+        if '--allow-escape-sequences' in help_text:
+            command.append('--allow-escape-sequences')
+    value = subprocess.check_output(command, text=True)
+    return re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', value) if job_log else value
 
 
 def marker_values(logs, marker):
