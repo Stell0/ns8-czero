@@ -3103,3 +3103,8 @@ report is retained; the remaining superseded native work is cancelled before a
 new publication changes the branch images. No Core 0.29 artifact is published
 and the dedicated instance remains untouched. The corrected exact source must
 repeat all required CI/native/artifact gates before immutable publication.
+The version guard also requires explicit app-version positive controls; add them
+to the native API/browser checks alongside Core 0.29 expectations. All ten local
+source/compatibility/version cases and twenty Robot dry runs then pass. A
+preceding sequential shell did not stop at the new guard's failure; subsequent
+dependent verification uses fail-fast execution and inspects each actual result.
