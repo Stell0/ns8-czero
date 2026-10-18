@@ -13,7 +13,7 @@ def evidence():
     return {'sha':SHA,'statuses':[
         {'context':'continuous-integration/qemu/debian13','state':'success'},
         {'context':'continuous-integration/qemu/rocky9','state':'success'}]},[
-        {'headSha':SHA,'status':'completed','conclusion':'success'}]
+        {'headSha':SHA,'status':'completed','conclusion':'success','full_validation':True}]
 
 
 def test_publication_accepts_only_matching_verified_source():
@@ -62,3 +62,10 @@ def test_verified_commit_cannot_authorize_a_different_checkout():
     native,runs=evidence()
     with pytest.raises(ValueError,match='release_source_mismatch'):
         verify('0.24.1','core-v0.24.1',SHA,native,runs,'b'*40)
+
+
+@pytest.mark.parametrize('mode', [None, False, 'scoped', 'docs'])
+def test_scoped_or_documentation_success_cannot_publish_core(mode):
+    native,runs=evidence();runs[0]['full_validation']=mode
+    with pytest.raises(ValueError,match='local_acceptance_not_verified'):
+        verify('0.24.1','core-v0.24.1',SHA,native,runs,SHA)

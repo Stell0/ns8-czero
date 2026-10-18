@@ -8,6 +8,7 @@ Suite Teardown    Cleanup disposable Czero resources
 
 *** Variables ***
 ${SCENARIO}    install
+${EXPECTED_SOURCE}    ${EMPTY}
 ${module_id}    ${EMPTY}
 ${other_id}    ${EMPTY}
 ${host}    ${EMPTY}
@@ -639,6 +640,9 @@ Check saved settings and application HTTPS in a browser
     Get Text    body    contains    "operations":[]
     Close Browser
     Assert Disposable Browser Password Is Private
+
+Verify exact installed candidate images
+    Verify Installed Candidate Images    ${module_id}    ${EXPECTED_SOURCE}
 
 Verify real native SSO and application-wide membership
     [Timeout]    15 minutes

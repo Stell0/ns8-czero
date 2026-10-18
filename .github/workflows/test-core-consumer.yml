@@ -1,22 +1,11 @@
 name: Released Core image
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - app/**
-      - containers/czero-app/**
-      - scripts/select-core-source.py
-      - tests/audit_runtime.py
-      - tests/core_consumer_runtime_probe.py
-      - .github/workflows/test-core-consumer.yml
-  pull_request:
-    paths:
-      - app/**
-      - containers/czero-app/**
-      - scripts/select-core-source.py
-      - tests/audit_runtime.py
-      - tests/core_consumer_runtime_probe.py
-      - .github/workflows/test-core-consumer.yml
+  workflow_call:
+    inputs:
+      source:
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -24,6 +13,9 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source || github.sha }}
+          persist-credentials: false
       - name: Build the default released source independently
         run: buildah build --file containers/czero-app/Containerfile --build-arg CZERO_CORE_SOURCE=released --tag localhost/c0-core-consumer .
       - name: Verify actual runtime content and license

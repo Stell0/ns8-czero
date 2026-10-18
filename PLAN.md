@@ -3342,3 +3342,84 @@ snapshots and authority controls were then collected concurrently; the unchanged
 under-twenty-second guard passed at 18.5 seconds, with 280.5 seconds remaining.
 The same authority passed immediately after the supported manager restart. No
 application source, session lifetime or token policy was changed for this retry.
+
+
+## Scoped development CI policy — active implementation
+
+The operator's 18 October 2026 CI instruction replaces historical requirements
+that every incremental commit and documentation marker run full acceptance.
+Start source: verified main `41864e4`. Preserve the original checkout's three
+unfinished documents and private failed/live/native evidence. AM5 closeout PR 13
+and its frozen native run 39136605761 continue independently; do not cancel or
+modify that branch. This change does not start AM6 or deploy the dedicated app.
+
+Before code: classify the complete Git PR diff (including old/new rename paths,
+deletions and file modes), using a small explicit documentation allowlist and
+conservative UI/application selections. Core, authentication, migrations, locks,
+containers, lifecycle and CI changes receive broad development feedback;
+unknown paths fail closed to broad/full requirements. Static HTML, generated API
+contracts, package README/LICENSE and build-consumed metadata are runtime inputs.
+Only allowlisted repository guidance is documentation-only.
+
+One PR workflow handles opened/reopened/synchronize/ready-for-review/draft
+transitions without duplicate branch-push runs or path-filtered required checks.
+Draft feedback includes affected tests and shared authorization/transport smoke;
+newer drafts cancel obsolete feedback only. Ready runtime PRs require full
+PostgreSQL, scripts, schema/shell, Robot, packaging, producer/released builds,
+runtime/license/scans and real Debian/Rocky browsers/recovery/privacy. Full runs
+are not cancelled by development updates; old results cannot authorize new heads.
+Manual full validation remains available. A stable required merge gate verifies
+classification, exact source, actual required job successes and immutable
+candidate images/native evidence; skipped/cancelled/scoped/stale proof is denied.
+
+Retain immutable Core release, actual main runtime publication and all genuine
+predecessor, backup/restore, artifact privacy and dedicated deployment gates.
+Use isolated databases and cache only reproducible dependency downloads/build
+inputs. Do not change Core/application APIs, versions, schema, installed runtime,
+CPU-quota or interactive-browser waivers. No new schedule or merge-queue trigger
+is needed: current main has no protection/rulesets or configured merge queue;
+verified repository-admin permission allows adding the required merge gate while
+preserving any protection found on the final re-read. The operator confirmed that the reviewed documentation exemption also applies
+to main; runtime changes retain full main validation and publication.
+
+Regression acceptance must cover docs/UI/app/Core/auth/migrations/workflows,
+unknown paths, renames/deletions and every gate rejection. Exercise real draft,
+ready and subsequent-update GitHub events; inspect actual reports/source/image
+identities and measured timings. Review the PR and conventional commits before
+promotion. Record measured scoped/full/docs results and limitations, never an
+estimated speedup. Milestone and deployment acceptance remain separate.
+
+
+The reviewed implementation now has 59 focused gate/classification/release/image
+cases and 307 broader unit cases passing (6.69 s). The initial intended failure
+was 36 cases before the policy module existed; failed evidence stays private.
+Actionlint 1.7.12 validates all workflows, with its outdated ubuntu-26.04 label
+list explicitly excluded (that existing runner has actual successful builds).
+No runtime/Core source, package metadata, lockfile, container, native lifecycle
+handler or schema changed. Native tests add exact installed-candidate inspection;
+producer and native jobs retain unique source/run image identities and report
+privacy. Actual GitHub paths, protection and timings are not yet accepted.
+
+
+**Executed development policy proof:** Source c9f62f4's draft broad feedback
+39140980732 passes 1254 actual Python/PostgreSQL/packaging cases, 125 scripts and
+21 Robot checks; the runtime merge gate stays blocked. Earlier obsolete draft
+feedback runs are actually cancelled, with no acceptance cancellations. Controlled
+PR 15 docs (39141211821/source40358fa) passes in 28 seconds, while draft UI PR 16
+(39141216790/sourcea049eba) passes 63 PostgreSQL and 125 controller cases in a
+110-second workflow with the expected blocked runtime merge gate. Both owned
+probes are closed unmerged. Actual promotion accepts docs but rejects both for
+full release/deployment; complete source/base/job/proof artifacts are inspected.
+Earlier e05ed46 docs acceptance spans 2386 seconds, with duplicate local runs
+466/462 seconds, producer131 seconds and native2250 seconds. These are single
+measured observations, not general performance or full-acceptance speed claims.
+
+Main protection is actually configured/re-read with required C0 merge gate pinned
+to GitHub Actions app15368, strict up-to-date base and admin enforcement, zero
+mandatory human approvals and no force pushes/deletions. Prior protection and
+rulesets were absent. No queue trigger or schedule was added. The actual completed
+job-log CLI escape guard is reproduced and fixed before full acceptance, with
+private failed evidence and current/older CLI regressions. The existing immutable
+Yarn/node_modules cache is retained and keyed by lock/package/config/builder;
+pip download caching preserves dependency inputs. No runtime build script changed.
+Full ready/main/native and final documentation-only main checks remain required.

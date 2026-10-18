@@ -382,6 +382,66 @@
       "path": "LICENSE",
       "mode": "100644",
       "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "path": ".github/workflows/validate.yml",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/ci_policy.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/select-ci.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/run-ci-feedback.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/check-docs.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/ci-gate.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/verify-ci-images.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/audit-ci-artifacts.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/promote-ci-images.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/verify-promotion.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/test_ci_policy.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/retire-ci-feedback.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

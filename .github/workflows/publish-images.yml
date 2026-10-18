@@ -1,9 +1,14 @@
 name: "Publish images"
 
 on:
-  push:
-    branches-ignore: ["apidoc-**"]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      source:
+        type: string
+        required: true
+      image_tag:
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -19,25 +24,28 @@ jobs:
     permissions:
       contents: read
       packages: write
-    concurrency:
-      group: publish-${{ github.ref }}
-      cancel-in-progress: true
     env:
       REPOBASE: ghcr.io/${{ github.repository_owner }}
-      BRANCH_TAG: ${{ github.ref_name }}
+      BRANCH_TAG: ${{ inputs.image_tag || github.ref_name }}
       CZERO_CORE_SOURCE: ${{ github.repository == 'Stell0/ns8-czero' && 'local' || 'released' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source || github.sha }}
+          persist-credentials: false
       - uses: actions/cache@v6
         with:
           path: ui/node_modules
-          key: yarn-${{ hashFiles('ui/yarn.lock') }}
+          key: yarn-${{ runner.os }}-${{ hashFiles('ui/yarn.lock', 'ui/package.json', 'ui/.yarnrc.yml', 'build-images.sh') }}
       - id: build
+        env:
+          EXPECTED_SOURCE: ${{ inputs.source || github.sha }}
         run: |
           export REPOBASE="${REPOBASE,,}"
           export IMAGETAG="${BRANCH_TAG//\//-}"
           echo "IMAGETAG=${IMAGETAG}" >> "$GITHUB_ENV"
-          bash build-images.sh
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
+          GITHUB_SHA="$EXPECTED_SOURCE" bash build-images.sh
       - name: Validate application runtime contents
         run: |
           podman run --rm --interactive --entrypoint python \
@@ -71,9 +79,6 @@ jobs:
           buildah login -u "$REGISTRY_USER" --password-stdin ghcr.io <<<"$REGISTRY_TOKEN"
           for image in $IMAGES; do
             buildah push "$image" "docker://${image}:${IMAGETAG}"
-            if [[ "$IMAGETAG" == main || "$IMAGETAG" == master ]]; then
-              buildah push "$image" "docker://${image}:latest"
-            fi
           done
   module:
     needs: publish-images
@@ -89,7 +94,7 @@ jobs:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
           REPOBASE: ghcr.io/${{ github.repository_owner }}
-          BRANCH_TAG: ${{ github.ref_name }}
+          BRANCH_TAG: ${{ inputs.image_tag || github.ref_name }}
         run: |
           set -euo pipefail
           trap 'podman logout ghcr.io' EXIT
@@ -118,6 +123,9 @@ jobs:
             scan_type: fs
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source || github.sha }}
+          persist-credentials: false
       - name: Scan vulnerabilities and secrets
         uses: aquasecurity/trivy-action@v0.36.0
         env:

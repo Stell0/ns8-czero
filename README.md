@@ -573,3 +573,28 @@ without transferring verification or changing retained evidence. Files, jobs,
 type registration, grants and external I/O remain separate operations. Exact
 application/main CI, native and dedicated-instance acceptance pass; Core's
 actual publication/checksums and deployed requirements are recorded in PLAN.
+
+
+## Development CI policy
+
+Draft PR updates use affected-area tests and a shared PostgreSQL authorization/
+compatibility smoke suite. Reviewed documentation-only changes use lightweight
+checks on PRs and main; packaged documentation, static HTML, generated contracts
+and build metadata retain their actual runtime classification. Ready runtime PRs
+and subsequent commits run full exact-source local/build/released-Core/scan/
+Debian/Rocky acceptance. The required `C0 merge gate` rejects scoped-only,
+skipped, cancelled and stale proof. Main runtime publication, immutable Core
+releases and all dedicated deployment/milestone gates remain separate and full.
+
+See [the policy and executed evidence](docs/ci-policy.md) for selections, immutable
+candidate identities, protected-branch enforcement and manual full dispatch.
+The policy changes no application/Core API, version, dependency or schema.
+
+
+Controlled GitHub probes measure UI feedback at 110 seconds versus a prior
+466-second full local run (plus its duplicate), and documentation PR acceptance
+at 28 seconds versus 2386 seconds for the prior full pipeline. Those single-run
+observations include verified source/job artifacts and negative full-promotion
+controls; full runtime acceptance is still pending for this CI change. Main now
+requires the GitHub Actions `C0 merge gate` with an up-to-date base and admin
+enforcement. Details and exact run links are in the policy document.

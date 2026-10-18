@@ -42,8 +42,14 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/status" > /tmp/core-native-status.json
-          gh run list --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
-            --workflow test-local.yml --json headSha,status,conclusion > /tmp/core-local-runs.json
+          python scripts/verify-promotion.py --source "$GITHUB_SHA" --full --output /tmp/core-acceptance.json
+          python - <<'PY' > /tmp/core-local-runs.json
+          import json
+          from pathlib import Path
+          proof=json.loads(Path('/tmp/core-acceptance.json').read_text())
+          print(json.dumps([{'headSha':proof['source'],'status':'completed',
+              'conclusion':'success','full_validation':proof['mode']=='full'}]))
+          PY
           python scripts/check-core-release.py /tmp/core-native-status.json /tmp/core-local-runs.json
       - name: Build independent distributions
         run: |

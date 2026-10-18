@@ -22,7 +22,7 @@ def verify(version, tag, sha, native, local_runs, checkout_sha):
             or any(entry.get('state')!='success' for entry in selected)):
         raise ValueError('native_acceptance_not_verified')
     if not any(run.get('headSha')==sha and run.get('status')=='completed'
-               and run.get('conclusion')=='success' for run in local_runs):
+               and run.get('conclusion')=='success' and run.get('full_validation') is True for run in local_runs):
         raise ValueError('local_acceptance_not_verified')
 
 
