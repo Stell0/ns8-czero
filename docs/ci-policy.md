@@ -124,3 +124,5 @@ cases in 6.69 seconds. Actionlint 1.7.12 passes the workflows with only its know
 `ubuntu-26.04` label-table lag excluded; actual existing producer jobs use that
 runner successfully. GitHub event, timing, protection and full native evidence
 remain pending and must be recorded before claiming this policy accepted.
+
+Controlled documentation-only CI fixture. This probe is closed unmerged.
