@@ -592,3 +592,19 @@ without transferring verification or changing retained evidence. Files, jobs,
 type registration, grants and external I/O remain separate operations. Exact
 application CI/native and dedicated-instance acceptance are pending; Core's
 actual publication/checksums and tested requirements are recorded in PLAN.
+
+
+## Development CI policy
+
+Draft PR updates use affected-area tests and a shared PostgreSQL authorization/
+compatibility smoke suite. Reviewed documentation-only changes use lightweight
+checks on PRs and main; packaged documentation, static HTML, generated contracts
+and build metadata retain their actual runtime classification. Ready runtime PRs
+and subsequent commits run full exact-source local/build/released-Core/scan/
+Debian/Rocky acceptance. The required `C0 merge gate` rejects scoped-only,
+skipped, cancelled and stale proof. Main runtime publication, immutable Core
+releases and all dedicated deployment/milestone gates remain separate and full.
+
+See [the policy and executed evidence](docs/ci-policy.md) for selections, immutable
+candidate identities, protected-branch enforcement and manual full dispatch.
+The policy changes no application/Core API, version, dependency or schema.

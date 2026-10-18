@@ -1,5 +1,28 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+## Authoritative development CI policy
+
+The operator's scoped-development CI instruction supersedes historical demands
+for full acceptance on every incremental commit or documentation marker. Read
+[docs/ci-policy.md](docs/ci-policy.md). Draft updates use changed-area tests plus
+shared authorization/compatibility smoke; CI/auth/Core/build changes broaden
+feedback and unknown paths fail closed. Only the explicit reviewed Git-only
+allowlist gets lightweight documentation checks, including documentation-only
+main commits. App/static HTML, packaged documentation and generated contracts
+are not exempt by extension.
+
+Mark runtime PRs ready for review to trigger full exact-source acceptance; every
+subsequent commit repeats it. Require the actual `C0 merge gate` and run
+`scripts/verify-promotion.py --source <head> --pr <number>` before merging.
+Scoped feedback, skipped/cancelled jobs and old successes cannot authorize a
+runtime merge. Main runtime, immutable releases, genuine predecessor upgrades,
+all automated browsers/artifact privacy and dedicated deployment/milestone gates
+remain mandatory. Use `validate.yml` manual full dispatch instead of historical
+independent image-publisher dispatch instructions. Full acceptance runs and
+frozen branches must not be cancelled or changed unexpectedly. No test shards
+share a mutable PostgreSQL database; preserve both existing waivers.
+
+
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (18 October 2026):** Agent Memory AM0–AM4 runtime acceptance passes. The dedicated instance runs main `878978d`, Core/app/schema 0.28.0/0.43.0/0016, after exact-source CI/native/artifact review, independently published Core and supported C0-only backup/update. Current/legacy SDK workflows pass separate applicability/verification histories on all five target kinds, exact structured retrieval, original receipt replay, stale conflicts, unknown metadata on changed content and retained immutable evidence. Fresh scope consent and same delegated/browser authority survive update and full-manager restart. The existing cached connector separately reconnects and reads retained Shared citations and historical Wiki content; its 63-operation catalog does not prove new annotation/space tools. All 7,146 original rows across thirty retained tables (all old columns, only normal account last_seen excluded), 125 terminal jobs/attempts, nineteen old client descriptors, four original files, ninety-seven scheduler-history rows, settings/schedules, eleven prior backup plans and eleven unrelated modules are preserved. The owned client is disabled after a valid same-bearer control; native browser/private Wiki and an independent existing-client read remain accepted. The actual 1,027-line root journal has health/authorization/token/MCP controls and zero detected queries, issued secrets, submitted bodies or tracebacks. Freeze all three genuinely installed 878978d digests from PLAN for AM5. Core 48ac409/core-v0.28.0, app 12dce0a and main 878978d pass their actual local/producer/released-Core/native/artifact gates, including all eight browsers and twenty-five accessibility contexts. Verify this documentation marker's actual checks and resulting main publication before AM5 begins. AM5–AM6 and Windmill Gate remain gated; Integration M17–M20 remain separate. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
 
 ## Protected knowledge spaces (AM3 runtime accepted)

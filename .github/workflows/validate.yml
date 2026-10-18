@@ -1,0 +1,246 @@
+name: C0 validation
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+  push:
+    branches: [main]
+    tags-ignore: ['core-v*']
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Optional ready PR number; dispatch its exact current head branch
+        type: string
+        default: ''
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+# Acceptance jobs are never cancelled. Only feedback jobs below supersede
+# earlier feedback for the same PR; full candidates use unique immutable tags.
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    outputs:
+      source: ${{ steps.policy.outputs.source }}
+      base: ${{ steps.policy.outputs.base }}
+      kind: ${{ steps.policy.outputs.kind }}
+      feedback: ${{ steps.policy.outputs.feedback }}
+      mode: ${{ steps.policy.outputs.mode }}
+      pr_number: ${{ steps.policy.outputs.pr_number }}
+      image_tag: ${{ steps.tag.outputs.value }}
+      image_url: ${{ steps.tag.outputs.image_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify the complete diff
+        id: policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/select-ci.py
+      - id: tag
+        env:
+          SOURCE: ${{ steps.policy.outputs.source }}
+        run: |
+          tag="ci-${SOURCE}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "value=$tag" >> "$GITHUB_OUTPUT"
+          echo "image_url=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/czero:$tag" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ci-selection
+          path: ci-selection.json
+          if-no-files-found: error
+  docs:
+    needs: classify
+    if: needs.classify.outputs.mode == 'docs'
+    concurrency:
+      group: docs-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.classify.outputs.source }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: ci-selection
+      - run: python scripts/check-docs.py ci-selection.json
+      - name: Test the classification and gate policy
+        run: |
+          pip install pytest==8.4.2
+          python -m pytest -q tests/unit/test_ci_policy.py
+  feedback:
+    needs: classify
+    if: needs.classify.outputs.mode == 'scoped'
+    concurrency:
+      group: feedback-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/test-local.yml
+    with:
+      source: ${{ needs.classify.outputs.source }}
+      feedback: true
+  local:
+    needs: classify
+    if: needs.classify.outputs.mode == 'full'
+    uses: ./.github/workflows/test-local.yml
+    with:
+      source: ${{ needs.classify.outputs.source }}
+  released:
+    needs: classify
+    if: needs.classify.outputs.mode == 'full'
+    uses: ./.github/workflows/test-core-consumer.yml
+    with:
+      source: ${{ needs.classify.outputs.source }}
+  renovate:
+    needs: classify
+    if: needs.classify.outputs.mode == 'full'
+    uses: ./.github/workflows/test-core-renovate.yml
+    with:
+      source: ${{ needs.classify.outputs.source }}
+  producer:
+    needs: classify
+    if: needs.classify.outputs.mode == 'full'
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      security-events: write
+    uses: ./.github/workflows/publish-images.yml
+    with:
+      source: ${{ needs.classify.outputs.source }}
+      image_tag: ${{ needs.classify.outputs.image_tag }}
+  images:
+    needs: [classify, producer]
+    if: needs.classify.outputs.mode == 'full'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.classify.outputs.source }}
+          persist-credentials: false
+      - name: Inspect exact candidate identities
+        env:
+          SOURCE: ${{ needs.classify.outputs.source }}
+          TAG: ${{ needs.classify.outputs.image_tag }}
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trap 'podman logout ghcr.io >/dev/null 2>&1 || :' EXIT
+          podman login -u "$GITHUB_ACTOR" --password-stdin ghcr.io <<<"$REGISTRY_TOKEN"
+          python scripts/verify-ci-images.py --source "$SOURCE" --owner "$GITHUB_REPOSITORY_OWNER" --tag "$TAG"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: candidate-images
+          path: candidate-images.json
+          if-no-files-found: error
+  native:
+    needs: [classify, local, released, renovate, images]
+    if: needs.classify.outputs.mode == 'full'
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+    uses: ./.github/workflows/test-module.yml
+    with:
+      source: ${{ needs.classify.outputs.source }}
+      image_url: ${{ needs.classify.outputs.image_url }}
+      image_tag: ${{ needs.classify.outputs.image_tag }}
+  artifacts:
+    needs: [classify, images, native]
+    if: needs.classify.outputs.mode == 'full'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.classify.outputs.source }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate-images
+      - name: Audit downloaded native and scan artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/audit-ci-artifacts.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: acceptance-artifact-audit
+          path: |
+            native-acceptance.json
+            native-job-logs.txt
+          if-no-files-found: error
+  gate:
+    name: C0 merge gate
+    needs: [classify, docs, feedback, local, producer, released, renovate, images, native, artifacts]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.classify.outputs.source || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: ci-selection
+      - uses: actions/download-artifact@v8
+        if: needs.classify.outputs.mode == 'full'
+        with:
+          name: candidate-images
+      - uses: actions/download-artifact@v8
+        if: needs.classify.outputs.mode == 'full'
+        with:
+          name: acceptance-artifact-audit
+      - name: Require current-source complete acceptance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: python scripts/ci-gate.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ci-acceptance-proof
+          path: ci-proof.json
+          if-no-files-found: error
+  publish-canonical:
+    needs: [classify, gate]
+    if: needs.classify.outputs.mode == 'full' && (github.ref == 'refs/heads/main' || (startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/tags/core-v')))
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.classify.outputs.source }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: ci-acceptance-proof
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate-images
+      - name: Promote fully accepted immutable candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY_TOKEN: ${{ github.token }}
+          C0_RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          set -euo pipefail
+          trap 'skopeo logout ghcr.io >/dev/null 2>&1 || :' EXIT
+          skopeo login -u "$GITHUB_ACTOR" --password-stdin ghcr.io <<<"$REGISTRY_TOKEN"
+          python scripts/promote-ci-images.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: main-publication
+          path: main-publication.json
+          if-no-files-found: error

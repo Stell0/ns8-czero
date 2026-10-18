@@ -1,16 +1,11 @@
-name: Test UI build for Renovate PRs
+name: Native UI build (manual)
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    # Only run if the PR head branch starts with 'renovate-'
-    if: startsWith(github.head_ref, 'renovate-')
 
     env:
       NODE_OPTIONS: --openssl-legacy-provider

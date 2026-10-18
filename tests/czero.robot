@@ -640,6 +640,9 @@ Check saved settings and application HTTPS in a browser
     Close Browser
     Assert Disposable Browser Password Is Private
 
+Verify exact installed candidate images
+    Verify Installed Candidate Images    ${module_id}
+
 Verify real native SSO and application-wide membership
     [Timeout]    15 minutes
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-authentication-status

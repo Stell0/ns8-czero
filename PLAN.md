@@ -3262,3 +3262,59 @@ seconds against a fresh database. The corrected source must repeat all gates.
 
 The operator has updated the private credential file. Fresh normal SSO now
 passes for the existing owner/Admin. No login question remains pending.
+
+## Scoped development CI policy — active implementation
+
+The operator's 18 October 2026 CI instruction replaces historical requirements
+that every incremental commit and documentation marker run full acceptance.
+Start source: verified main `41864e4`. Preserve the original checkout's three
+unfinished documents and private failed/live/native evidence. AM5 closeout PR 13
+and its frozen native run 39136605761 continue independently; do not cancel or
+modify that branch. This change does not start AM6 or deploy the dedicated app.
+
+Before code: classify the complete Git PR diff (including old/new rename paths,
+deletions and file modes), using a small explicit documentation allowlist and
+conservative UI/application selections. Core, authentication, migrations, locks,
+containers, lifecycle and CI changes receive broad development feedback;
+unknown paths fail closed to broad/full requirements. Static HTML, generated API
+contracts, package README/LICENSE and build-consumed metadata are runtime inputs.
+Only allowlisted repository guidance is documentation-only.
+
+One PR workflow handles opened/reopened/synchronize/ready-for-review/draft
+transitions without duplicate branch-push runs or path-filtered required checks.
+Draft feedback includes affected tests and shared authorization/transport smoke;
+newer drafts cancel obsolete feedback only. Ready runtime PRs require full
+PostgreSQL, scripts, schema/shell, Robot, packaging, producer/released builds,
+runtime/license/scans and real Debian/Rocky browsers/recovery/privacy. Full runs
+are not cancelled by development updates; old results cannot authorize new heads.
+Manual full validation remains available. A stable required merge gate verifies
+classification, exact source, actual required job successes and immutable
+candidate images/native evidence; skipped/cancelled/scoped/stale proof is denied.
+
+Retain immutable Core release, actual main runtime publication and all genuine
+predecessor, backup/restore, artifact privacy and dedicated deployment gates.
+Use isolated databases and cache only reproducible dependency downloads/build
+inputs. Do not change Core/application APIs, versions, schema, installed runtime,
+CPU-quota or interactive-browser waivers. No new schedule or merge-queue trigger
+is needed: current main has no protection/rulesets or configured merge queue;
+verified repository-admin permission allows adding the required merge gate while
+preserving any protection found on the final re-read. The operator confirmed that the reviewed documentation exemption also applies
+to main; runtime changes retain full main validation and publication.
+
+Regression acceptance must cover docs/UI/app/Core/auth/migrations/workflows,
+unknown paths, renames/deletions and every gate rejection. Exercise real draft,
+ready and subsequent-update GitHub events; inspect actual reports/source/image
+identities and measured timings. Review the PR and conventional commits before
+promotion. Record measured scoped/full/docs results and limitations, never an
+estimated speedup. Milestone and deployment acceptance remain separate.
+
+
+The reviewed implementation now has 59 focused gate/classification/release/image
+cases and 307 broader unit cases passing (6.69 s). The initial intended failure
+was 36 cases before the policy module existed; failed evidence stays private.
+Actionlint 1.7.12 validates all workflows, with its outdated ubuntu-26.04 label
+list explicitly excluded (that existing runner has actual successful builds).
+No runtime/Core source, package metadata, lockfile, container, native lifecycle
+handler or schema changed. Native tests add exact installed-candidate inspection;
+producer and native jobs retain unique source/run image identities and report
+privacy. Actual GitHub paths, protection and timings are not yet accepted.

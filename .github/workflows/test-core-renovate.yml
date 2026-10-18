@@ -1,18 +1,11 @@
 name: Core Renovate rules
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - renovate.json
-      - examples/fork/renovate.json
-      - tests/development/core-renovate.mjs
-      - .github/workflows/test-core-renovate.yml
-  pull_request:
-    paths:
-      - renovate.json
-      - examples/fork/renovate.json
-      - tests/development/core-renovate.mjs
-      - .github/workflows/test-core-renovate.yml
+  workflow_call:
+    inputs:
+      source:
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -20,6 +13,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: '24.21.0'
