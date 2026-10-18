@@ -637,3 +637,40 @@ corrected to the real schema-0015 baseline before accepting its 7146-row result.
 Freeze the three installed feature digests, rather than documentation-marker
 images. Verify this closeout marker's actual CI/main results before AM5; retain
 all eight automated native browsers and both existing waivers.
+
+## AM5 consolidation candidate (acceptance pending)
+
+AM4's final marker/main d889902 passes actual local/publication/released-Core/
+Renovate and native 39109200513, including all eight browsers and inspected
+source/privacy artifacts. The dedicated instance still runs accepted 878978d;
+freeze its three genuine digests from PLAN for AM5, never documentation images.
+
+Five PostgreSQL experiments prove that individual writes/retry receipts cannot
+make multi-resource publication atomic: racing writers, revocation and injected
+harness failures leave earlier writes committed. Core 0.29.0 therefore adds a
+bounded knowledge bundle and explicit maintenance metadata; the app still pins
+released 0.28.0, schema stays 0016 and publication/deployment remain pending.
+
+Bundles use one selected space, one to twenty-five fixed trusted content writes,
+the existing 256-KiB JSON budget and one original-result receipt. Only earlier
+step UUID/revision paths can be referenced. Domain methods execute their trusted
+mutation closures on the outer transaction; no substep opens a connection,
+commits or writes a receipt. Acquire object mutex 49375 before knowledge mutex
+49376, then the existing authority locks and current role/grant/token recheck.
+Preserve old individual API fingerprints. Do not expose arbitrary method names,
+imports, callbacks, file ingestion, jobs, schema/grant changes or native actions.
+
+Keep applicability/verification separate. New literal knowledge types,
+supersession targets and ready immutable chunk references describe supplied
+observations. Retain superseded identity/hash anchors even for unannotated
+objects later deleted; unknown remains unknown. Supersession never archives,
+rewrites prior evidence or transfers verification. Validate all references in
+the selected space and preserve old histories, null/omission and strict payloads.
+
+Local verification uses a separate database per full run and absolute import
+paths. A cancelled shell can leave its test child active: inspect completion
+before starting another run. Preserve failed reports. Errno 122 is the actual
+local disk quota even when df reports free space; remove only reproducible
+caches/environments, retaining source artifacts and acceptance/privacy evidence.
+Actual exact-source CI/native/Core publication, released app adoption and live
+acceptance still gate AM5. AM6 and Windmill Gate remain pending.

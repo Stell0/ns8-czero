@@ -80,7 +80,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:181a68d60bda912dfdf685bcdc1e4db11b183e7b25cfb25982c7e310d37bde10
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:6b24869832ce1277a951c081b5058b27b559fb01a5e262f58cd27b63d1852e34
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -90,9 +90,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed cb60da9 AM3 predecessor images.
+        # Freeze all three actually deployed 878978d AM4 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:26849301916c7682fb6d1b2e97eb6a378924da2f98878bd2090c05fc8f7c31cc','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:9f300220dc06ce33c78cf54e88b26cf3daa336ec1fc4cdc6c69148b689a90f22'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:fdfb6de553118c2ddbd6439330659f3883f1aacc258c0b75ebbd70969e34b436','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:6321d506400581e9ab37b9c12a7748fccfcf99d2774911f74203835557b26399'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -405,6 +405,8 @@ Verify protected Core spaces in the installed runtime
     Should Be True    ${result}[grant_revocation]
     Should Be True    ${result}[annotations]
     Should Be True    ${result}[structured_retrieval]
+    Should Be True    ${result}[atomic_consolidation]
+    Should Be True    ${result}[maintenance_annotations]
 
 Verify effective container hardening and memory targets
     Put File    ${CURDIR}/hardening_probe.py    /tmp/czero-hardening-probe.py    mode=0644

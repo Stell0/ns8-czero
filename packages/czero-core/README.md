@@ -85,8 +85,9 @@ are never clobbered.
 
 The latest independent Core artifacts are version 0.28.0:
 https://github.com/Stell0/ns8-czero/releases/tag/core-v0.28.0.
-The dedicated accepted AM3 runtime still uses Core 0.27.0 until AM4 application
-acceptance; library publication does not establish deployment acceptance.
+The dedicated accepted AM4 runtime uses Core 0.28.0 at application source
+`878978d`. Candidate 0.29.0 below is not yet published or deployed;
+library publication does not establish deployment acceptance.
 Consult PLAN.md for subsequent exact-source publication gates and actual
 consumer/Renovate evidence; a started workflow does not establish acceptance.
 
@@ -258,3 +259,65 @@ bounded immutable chunk/version/hash identities that clients resolve separately.
 Editing content never carries verification from its old revision. Current search
 excludes archived content by default; historical annotations remain explicitly
 readable through the annotation API.
+
+## Atomic consolidation (0.29.0 candidate)
+
+`KnowledgeBundleService(database, access).in_space(space_id).apply(actor,
+operations, idempotency_key=...)` publishes one to twenty-five content mutations
+in one transaction. Omitting selection uses the original Shared space. The whole
+operations array has the existing 256-KiB JSON bound, sixteen-level/4096-node
+complexity limit and ordinary per-resource bounds. Failed writes leave no
+partial records, revisions, metadata events, cursors or retry receipt.
+
+Each step is `{"operation":"wiki.upsert","arguments":{...}}`. The fixed
+operation set is `wiki.upsert/archive`, `entity.create/update/archive/alias/link/
+unlink`, `claim.create/update/archive`, `relation.create/update`,
+`object.create/update/delete` and `annotation.update`. Arguments use the existing
+service method names; object mutations use `object_id` and optional `tags`.
+Annotation targets are `{kind,id,revision}` dictionaries. Claim time arguments
+are timezone-aware ISO strings. Existing expected revisions are required for
+updates; Wiki upsert without one remains create-only. Ready evidence is required
+for sourced claims, evidence references and source verification. No file
+ingestion, external calls, jobs, schemas, grants or native operations are allowed.
+
+An argument value `{"$result":0,"path":"id"}` references an earlier step's
+typed result. Allowed paths are `id`, `revision`, `content.id` and
+`content.number`; UUID/revision validation still applies to the receiving
+argument. References can occur in nested targets/lists. Indices are zero-based;
+forward/self references, unknown paths and absent fields fail. `$result` is
+reserved within bundle arguments. A step cannot select another space or supply
+its own idempotency key.
+
+The result is `{space_id,results}`, ordered like the steps. One actor/space-bound
+receipt covers the complete request. Lost-response retries return its original
+snapshot, even after subsequent edits/archive; read again for current state.
+Changed payloads under the same key conflict. Current persisted role, space grant
+and actual OAuth authority are checked after lock waits and before old receipt
+replay. Revocation cannot be reversed by regranting old tokens. Existing
+individual mutation APIs/fingerprints remain unchanged; object-only batches
+retain their existing behavior. Object and knowledge event mutexes use a fixed
+order before authority locks, and domain helpers share the outer connection.
+
+## Maintenance annotations (0.29.0 candidate)
+
+Applicability additionally accepts literal `knowledge_type` (one to sixty-four
+characters) and `supersedes`, up to thirty-two `{kind,id,revision}` exact-content
+references. Both namespaces accept `source_references`, up to thirty-two
+`{"kind":"chunk","id":"<immutable-chunk-uuid>"}` references. Resolve the
+chunk citation separately for retained text/hash/location. References are
+validated within the selected space; source chunks must belong to ready versions.
+Supersession retains the earlier target's observed identity/hash, including an
+unannotated object later removed through ordinary CRUD. It never archives prior
+content, changes an assertion or moves verification to replacement content.
+Self-supersession is invalid. Retained historical anchors remain explicitly
+readable, without synthesizing an annotation or verified status.
+
+The complete contract therefore uses applicability `knowledge_type`, `status`,
+`confidence`, `observed_at`, `products`, `components`, exact `version_tags`,
+`supersedes`, `source_references` and `extensions`; verification independently
+uses `status`, `confidence`, `observed_at`, `verified_at`, `source_references`
+and `extensions`. Missing metadata means unknown. Future literal types/statuses,
+explicit null confidence/times, contradictions and old histories are preserved.
+The sixteen-KiB value bound, expected annotation revisions and old retry
+fingerprints remain unchanged. This candidate adds no migration: schema stays
+`0016_annotations`. Publication/application/deployment acceptance is pending.

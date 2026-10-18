@@ -3028,3 +3028,44 @@ remains published. Injected harness failures after one/two writes leave their
 pages/annotations, histories, events and receipts committed. Existing operations
 therefore cannot provide atomic multi-resource publication. Implement the bounded
 bundle above; do not attempt compensating deletes of retained history/evidence.
+
+**AM5 Core foundation (local candidate):** Core 0.29.0 now provides the bounded
+bundle through the same trusted mutation helpers and outer connection, one
+whole-result receipt and fixed object/knowledge/authority lock order. Seventeen
+allowlisted content operations support earlier result UUID/revision references;
+no request-selected methods, extra transactions or substep receipts exist.
+Applicability gains literal knowledge types/supersession and both annotation
+namespaces gain ready immutable chunk references. Superseded identity/hash anchors
+survive removal of previously unannotated objects without creating verification.
+Existing payloads/fingerprints, strict records, contradictions and old histories
+remain intact. Schema stays 0016; the app's released 0.28 tag/lock is unchanged.
+
+Forty-one new focused PostgreSQL cases pass, including the five prerequisite
+experiments, rollback across domains/events/cursors/receipt, two-writer conflicts,
+concurrent identical submissions, lost replies, injected database failure,
+independent-reader visibility, authority loss while waiting, real opaque read/
+write-only scopes, revoked receipt replay, protected-space denial, ready evidence,
+all seventeen operation kinds and the twenty-five-step/aggregate/typed-reference
+bounds. Maintenance tests preserve source citations, separate unknown/verified
+state, prior receipt/history, cross-space denials and removed-object identity.
+Missing bundle support, missing metadata fields and lost superseded identity were
+reproduced before their fixes; failed private evidence is retained.
+
+The clean full local run passes **1168 actual Python/PostgreSQL/packaging cases
+in 350.38 seconds**, including actual independent wheel/archive installations,
+rebuild hashes, repeated migrations and installed bundle/maintenance probes.
+All 125 script cases, schema/shell checks and twenty non-UI Robot checks pass.
+The explicit producer override independently installs Core 0.29 with app 0.43;
+the released consumer remains pinned to 0.28. A hard-coded app health test was
+reproduced and corrected to compare the Core version actually supplied by either
+supported build mode. No application runtime/dependency or migration changed.
+
+Local failed evidence includes an interrupted wrapper whose test child continued,
+causing overlapping suites on a disposable database, and actual disk-quota errno
+122 that truncated reporting/blocked temporary files despite free filesystem
+space. Reproducible environments/package caches were removed with logs and source
+artifacts retained. The passing run uses a fresh database, separate temporary
+directory and absolute import paths; it is the accepted local result. Native
+tests freeze all three genuine 878978d predecessor images and require both new
+installed Core probe flags. Exact-source CI/native/artifact review, immutable
+Core publication, released app adoption and dedicated acceptance remain pending.

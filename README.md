@@ -2,7 +2,7 @@
 
 **Status (18 October 2026): Agent Memory AM0–AM4 runtime acceptance passes.** The dedicated instance runs main `878978d`, with Core **0.28.0**, app **0.43.0** and schema **0016**. Agents can use protected spaces, ingest bounded evidence, revise Wiki pages safely, annotate exact content and search structured records with exact applicability filters. Current/legacy SDK workflows, fresh consent, supported update/restart, preservation and bounded journal privacy pass. The existing cached connector separately reconnects and reads retained Shared citations and historical Wiki content; new tools through its 63-operation catalog are not claimed.
 
-Exact main passes 1127 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core/Renovate and both native distributions: Debian genuine AM3 upgrade twenty passes, Rocky installation twenty-five passes/three expected skips, all eight browser/privacy workflows and twenty-five accessibility contexts. Actual source checkouts, image/scan artifacts and three OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed results and frozen installed digests. Verify this documentation marker's actual CI/main publication before AM5. AM5–AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist; no stable module release is claimed.
+Exact main passes 1127 Python/PostgreSQL/packaging cases, 125 scripts, producer/released-Core/Renovate and both native distributions: Debian genuine AM3 upgrade twenty passes, Rocky installation twenty-five passes/three expected skips, all eight browser/privacy workflows and twenty-five accessibility contexts. Actual source checkouts, image/scan artifacts and three OAuth-query artifacts are audited. See [PLAN.md](PLAN.md) for immutable Core artifacts, deployed results and frozen installed digests. The final AM4 marker/main `d889902` also passes its actual CI/native/artifact gates. AM5 consolidation is in progress; AM6 and Windmill Gate remain gated. Interactive Playwright and CPU-quota waivers persist; no stable module release is claimed.
 
 
 ## Applicability and structured retrieval (AM4)
@@ -68,8 +68,8 @@ require a timezone and normalize to UTC. New REST bodies retain the existing one
 annotation values retain the existing 16-KiB JSON budget. Existing MCP request and
 response bounds remain unchanged. Exact-source CI/native/publication and dedicated
 update/restart acceptance pass, including all five target histories and changed
-content returning unknown verification. Inspect this documentation marker's
-actual checks and main publication before starting AM5.
+content returning unknown verification. The final documentation marker's actual
+checks and main publication are verified in PLAN; AM5 remains in progress.
 
 ## Purpose and boundaries
 

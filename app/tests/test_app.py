@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from czero_core import core_version
 
 from czero_app.main import create_app
 
@@ -44,7 +45,8 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     assert response.json() == {
         "status": "ok",
         "service": "czero",
-        "core_version": "0.28.0",
+        # Producer Core and the released consumer pin advance independently.
+        "core_version": core_version,
         "app_version": "0.43.0",
         "database": DATABASE_READY,
     }

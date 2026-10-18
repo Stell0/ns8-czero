@@ -14,6 +14,7 @@ from sqlalchemy import text
 from czero_core import Database
 from czero_core.access import AccessService
 from czero_core.annotations import AnnotationService, ContentTarget
+from czero_core.bundles import KnowledgeBundleService
 from czero_core.identity import PermissionDenied, Role, VerifiedIdentity
 from czero_core.jobs import default_registry
 from czero_core.knowledge import KnowledgeService
@@ -24,7 +25,7 @@ from czero_core.sessions import SessionContext
 from czero_core.sources import OriginalStore, SourceService, SourceNotFound, register_source_handlers
 from czero_core.spaces import SpaceService
 from czero_core.structured import StructuredFilters, StructuredSearchService
-from czero_core.wiki import KnowledgeNotFound
+from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound
 
 assert os.environ.get('CZERO_DISPOSABLE_TEST') == '1', 'Disposable fixture marker required'
 database = Database()
@@ -103,6 +104,32 @@ try:
         try:objects.get(owner,record['id'])
         except ObjectNotFound:pass
         else:raise AssertionError('Shared object lookup crossed spaces')
+        bundles=KnowledgeBundleService(database,access).in_space(private['id'])
+        operations=[
+            {'operation':'wiki.upsert','arguments':{'slug':'consolidated','title':'Consolidated','body':'Retained consolidation'}},
+            {'operation':'object.create','arguments':{'type_name':type_name,'data':{'name':'Consolidated record'}}},
+            {'operation':'annotation.update','arguments':{
+                'target':{'kind':'wiki_revision','id':{'$result':0,'path':'content.id'},'revision':1},
+                'namespace':'applicability','expected_revision':0,
+                'value':{'knowledge_type':'procedure','status':'applicable','confidence':None,
+                    'supersedes':[{'kind':target.kind,'id':str(target.id),'revision':target.revision}],
+                    'source_references':[{'kind':'chunk','id':str(chunk['id'])}]}}}]
+        consolidated=bundles.apply(owner,operations,idempotency_key='consolidation')
+        assert len(consolidated['results'])==3
+        assert consolidated['results'][2]['value']['knowledge_type']=='procedure'
+        assert consolidated['results'][2]['value']['source_references']==[{'kind':'chunk','id':str(chunk['id'])}]
+        assert selected.get_page(owner,first['id'])==first
+        assert annotations.get(owner,target,'verification')['status']=='verified'
+        assert bundles.apply(owner,operations,idempotency_key='consolidation')==consolidated
+        failed=[{'operation':'wiki.upsert','arguments':{'slug':'rolled-back','title':'Never','body':'Never'}},
+                {'operation':'object.update','arguments':{'object_id':str(record['id']),'data':{'name':'Never'},'expected_revision':999}}]
+        try:bundles.apply(owner,failed,idempotency_key='rolled-back')
+        except KnowledgeConflict:pass
+        else:raise AssertionError('Stale multi-resource write succeeded')
+        try:selected.resolve_page(owner,'rolled-back')
+        except KnowledgeNotFound:pass
+        else:raise AssertionError('Failed bundle partially published')
+        assert objects.in_space(private['id']).get(owner,record['id'])['revision']==1
         try:access.resolve(VerifiedIdentity(issuer,'editor',str(editor_key),'editor','Editor',time.time()+600))
         except PermissionDenied:pass
         account = next(row for row in access.list_accounts(owner) if row['account_key'] == editor_key)
@@ -120,6 +147,9 @@ try:
         assert selected.get_page(delegated,first['id']) == first
         assert annotations.get(delegated,target,'verification')['status']=='verified'
         assert structured.search(delegated,'Unverified',filters=StructuredFilters(version_tags=['0.28']))['hits']
+        delegated_operations=[{'operation':'wiki.upsert','arguments':{'slug':'delegated-consolidation','title':'Delegated','body':'Delegated'}}]
+        delegated_bundle=bundles.apply(delegated,delegated_operations,idempotency_key='delegated-consolidation')
+        assert delegated_bundle['space_id']==private['id']
         spaces.set_grant(owner,private['id'],editor.user_id,None,expected_revision=1,idempotency_key='revoke')
         spaces.set_grant(owner,private['id'],editor.user_id,Role.EDITOR,expected_revision=2,idempotency_key='regrant')
         try:selected.get_page(delegated,first['id'])
@@ -134,6 +164,9 @@ try:
         try:tokens.verify(pair.access_token,resource=resource)
         except GrantRejected:pass
         else:raise AssertionError('Revoked token revived')
+        try:bundles.apply(delegated,delegated_operations,idempotency_key='delegated-consolidation')
+        except PermissionDenied:pass
+        else:raise AssertionError('Captured bundle receipt authority revived')
         with database.engine.begin() as c:registry.get('source.cleanup').execute(c,{'version_id':receipt['id']})
 finally:
     with database.engine.begin() as c:
@@ -148,4 +181,4 @@ finally:
         c.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':type_name})
         c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'),{'issuer':issuer})
     database.close()
-print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True,'structured_retrieval':True}))
+print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True,'structured_retrieval':True,'atomic_consolidation':True,'maintenance_annotations':True}))
