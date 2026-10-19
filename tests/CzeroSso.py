@@ -306,12 +306,17 @@ class CzeroSso:
             run('Get Text','#record-status','==','Record saved.')
             run('Get Text','#record-list button','==',hostile)
             run('Get Element Count','#record-list img','==',0)
+            source_identity=browser.get_text('#record-identity')
             run('Click','#new-record')
             run('Fill Text','label:text-is("name (required)") + input','Browser linked target')
             run('Fill Text','label:text-is("count (required)") + input','4')
             run('Click','#save-record');run('Get Text','#record-status','==','Record saved.')
             target_id=browser.get_text('#record-identity').split(' · ')[0]
+            assert target_id != source_identity.split(' · ')[0], 'Linked fixture records must differ'
             run('Click','#record-list button:text-is('+json.dumps(hostile)+')')
+            # A click starts an asynchronous detail read; its completion clears
+            # target browsing. Wait for the selected identity before browsing.
+            run('Get Text','#record-identity','==',source_identity)
             run('Select Options By','#relation-type','value',type_name)
             run('Click','#browse-relation-targets')
             run('Get Text','#relation-targets-status','contains','target records shown')

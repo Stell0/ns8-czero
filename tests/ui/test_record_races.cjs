@@ -123,3 +123,25 @@ test('relation target replies preserve a newer manually entered ID',async()=>{
   h.nodes.get('relation-target').value='new-manual-id';h.requests[0].resolve(response('Target'));await pending;
   assert.equal(h.nodes.get('relation-target').value,'new-manual-id');
 });
+
+
+test('detail replacement discards early target browsing and a settled selection can browse', async () => {
+  const h = harness();
+  vm.runInContext("profile={role:'admin',csrf_token:'fixture-only'}; definitions=[{name:'inventory',label:'Inventory',schema:{type:'object'}}]; displayRecord({id:'target',type_name:'inventory',data:{name:'Target'},tags:[],revision:1})", h.context);
+  h.nodes.get('relation-type').value = 'inventory';
+  const selection = vm.runInContext("selectRecord('source')", h.context);
+  const earlyBrowse = vm.runInContext('loadRelationTargets()', h.context);
+  const record = (id, revision) => ({id,type_name:'inventory',data:{name:id},tags:[],revision});
+  h.requests[0].resolve({ok:true,status:200,json:async()=>record('source',3)});
+  await new Promise(setImmediate);
+  const targets = {ok:true,status:200,json:async()=>({objects:[record('source',3),record('target',1)]})};
+  h.requests[1].resolve(targets); await earlyBrowse;
+  assert.equal(h.nodes.get('relation-targets-status').textContent,'');
+  assert.equal(h.nodes.get('relation-picker').children.length,0);
+  h.requests[2].resolve({ok:true,status:200,json:async()=>({relations:[]})}); await selection;
+  assert.equal(h.nodes.get('record-identity').textContent,'source · revision 3');
+  const readyBrowse = vm.runInContext('loadRelationTargets()', h.context);
+  h.requests[3].resolve(targets); await readyBrowse;
+  assert.match(h.nodes.get('relation-targets-status').textContent,/2 target records shown/);
+  assert.deepEqual(h.nodes.get('relation-picker').children.map(node=>node.value),['','target']);
+});
