@@ -618,12 +618,13 @@ retry added. Documentation-only main commits retain accepted runtime images.
 
 ### Session renewal (M20 correction, acceptance pending)
 
-App 0.46 uses independently published Core 0.30/schema 0017. A live provider-window failure blocks acceptance; Core 0.30.1 is being corrected before app 0.46.1 adopts its independently published source.
+App 0.46.1 adopts independently published Core 0.30.1/schema 0017 to correct a live provider-window failure. Final application CI and renewed live acceptance remain pending.
 New sign-ins with provider refresh authority can renew for eight hours, with
 one hour of inactivity allowed by default. Access tokens stay at most five
 minutes; public refresh rotates and cannot add scopes. The provider can end
-native authority earlier. Existing sessions and grants retain their original
-fixed deadlines and receive no renewal rights; sign in again to opt in.
+native authority earlier. Sessions and grants created before renewal support
+retain their original fixed deadlines; sign in again to opt in. Upgrading an
+existing renewable session preserves its original bounds.
 
 Set **Session duration** in NS8 Settings, or supply `session_policy` to the
 supported `configure-module` action:
@@ -652,8 +653,11 @@ CI/native/privacy checks and was deployed to the dedicated instance. Data,
 settings, six retained files, short bounds, five-minute connector renewal and
 full-manager restart pass. Its longer live probe exposes one-hour access versus
 thirty-minute provider refresh authority; waiting for access expiry loses an
-active session. The candidate is unaccepted and unmerged. Core 0.30.1 must pass
-new producer/publication gates, then app 0.46.1 must adopt its exact tag/lock and
-repeat consumer/native/live acceptance. AM6's frozen images remain the last
+active session. The candidate is unaccepted and unmerged. Core 0.30.1 passes
+exact producer/native/publication and supplied-artifact checks at `4600739`.
+App 0.46.1 adopts that exact tag/lock and must repeat consumer/native/live
+acceptance, including at least 35 minutes of continuous activity to cover the
+observed failure window.
+AM6's frozen images remain the last
 accepted predecessor. Original drafts and failed private evidence are preserved.
 See PLAN.md for executed results and remaining gates.

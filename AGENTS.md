@@ -73,6 +73,21 @@ role/scope, lock, absolute/idle, crash, replay and outage semantics. Schema stay
 then adopt its tag/lock in app 0.46.1 and repeat consumer/full/native/live gates.
 Never replace 0.30.0 assets or alter provider policy/credential rows to pass tests.
 
+Patch producer `4600739` passes full 39254573692: 1408 Python/PostgreSQL/packaging,
+130 controllers, 21 Robot dry-runs, Debian 21/Rocky 26+3, all eight browsers/privacy
+guards, 25 accessibility contexts, five scan pairs and three clean query artifacts.
+Current ready-PR/full promotion proof passes. Core publication 39261142231 succeeds;
+actual asset/GitHub digests and six supplied-artifact tests pass. App 0.46.1 now
+adopts immutable `core-v0.30.1` at that source with minimum 0.30.1; keep all other
+lock records and independent-fork bounds unchanged. Do not edit published Core
+files. App adoption passes 1408 actual PostgreSQL/packaging cases (374.29s), 58
+independent frozen released-consumer cases (29.38s), 130 controllers, native
+Renovate/schema/shell checks and 21 Robot dry-runs. Final exact-source CI/native/
+live gates remain pending. Corrected live
+acceptance must measure at least 2100 continuous seconds, multiple actual provider
+renewals and unchanged authority/bounds/scopes without hidden reauthentication;
+the earlier 410-second success did not cover the observed provider failure.
+
 Public OAuth revocation uses the official SDK handler's client/form validation.
 Its trusted route-purpose context lets loaders revoke through Core without native
 provider authentication, returning now-absent metadata for idempotent 200. Core

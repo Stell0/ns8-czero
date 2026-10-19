@@ -61,7 +61,7 @@ Check application route
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
     Should Contain    ${output}    "core_version":"0.30.1"
-    Should Contain    ${output}    "app_version":"0.46.0"
+    Should Contain    ${output}    "app_version":"0.46.1"
 
 Check worker timer recovered
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
@@ -626,7 +626,7 @@ Check saved settings and application HTTPS in a browser
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
     Get Text    body    contains    "core_version":"0.30.1"
-    Get Text    body    contains    "app_version":"0.46.0"
+    Get Text    body    contains    "app_version":"0.46.1"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
