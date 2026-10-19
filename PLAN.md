@@ -1340,7 +1340,7 @@ applicable_versions/supersedes/source_references metadata, distinguishing unknow
 from verified. Preserve contradictions, history and citations. No execution,
 generative maintenance, inference of conclusions or workflow engine.
 
-### C0-AM6 — Agent documentation and integration tests [ ]
+### C0-AM6 — Agent documentation and integration tests [x]
 
 **Active operator priority (18 October 2026):** Implement AM6 now, ahead of Integration M20. M20 is deferred until AM6 is accepted; its unfinished Core/session/OIDC draft remains isolated on `feat/renewable-sessions` in `/tmp/czero-m20` and is not a dependency, release or deployment candidate. Original documentation drafts and prior worktrees remain untouched. AM6 starts from verified main `58a2896` ([completed main validation](https://github.com/Stell0/ns8-czero/actions/runs/39158702780)); genuine installed predecessor remains AM5 `41864e4` with its three frozen digests below. M16 is accepted by operator direction.
 
@@ -1350,16 +1350,16 @@ generative maintenance, inference of conclusions or workflow engine.
 - [x] Preserve M20 and inspect accepted main, AM5 APIs/fixtures, runtime guidance and exact CI policy.
 - [x] Add the shared guidance and align reader copy tasks/developer reference/OpenAPI/repository docs. Current caller authority filters workflow availability; no private resource IDs/content enter public docs. Keep DOM text/link validation, generation/access-loss guards, no-store and prefix-safe URLs.
 - [x] Add actual independent current/legacy SDK clients using distinct grant credentials: discover authorized space -> read/search -> sanitize/ingest evidence -> wait extraction -> immutable chunks/citation -> revision-safe sourced update/annotation/consolidation -> close/reconnect -> search/reuse/history. Cover stale writer/reload, receipt retry, shared-space negatives, read-only/denied authority and malicious retrieved text as inert evidence. Reuse existing signed HTTP and installed TLS/SSO fixtures; no mocked SDK success claims.
-- [ ] Run focused and full real PostgreSQL/Python/packaging/controller/schema/shell/Robot checks using an AM6-only disposable database. Freeze all three genuine AM5 upgrade images together. Extend actual native probes and privacy diagnostics without exposing private URLs/tokens/content.
-- [ ] Open PR with no unsolicited reviewer. Require exact-source full `C0 merge gate`, both native reports, runtime/released-Core audits, all automated browsers and downloaded privacy artifacts. Review actual diff and promotion proof.
-- [ ] Verify dedicated baseline, supported backup and candidate images, deploy only C0 through the canonical targeted update before merge, wait readiness and prove data/OAuth/settings/jobs/files/schedules/unrelated inventory preservation. Execute two independent authenticated SDK read/evidence/update/search/reuse sessions, browser/REST regressions, restart and bounded positive-control root app journal privacy. Keep private evidence outside Git and reversible fixtures isolated.
-- [ ] Record actual source/digests/live results in PR, regular merge after acceptance, verify actual main CI/publication, then separate closeout branch/checks updating all three documents. Preserve deployed runtime as the next genuine predecessor. M20 and Windmill Gate stay deferred until AM6 acceptance; existing waivers remain.
+- [x] Run focused and full real PostgreSQL/Python/packaging/controller/schema/shell/Robot checks using an AM6-only disposable database. Freeze all three genuine AM5 upgrade images together. Extend actual native probes and privacy diagnostics without exposing private URLs/tokens/content.
+- [x] Open PR with no unsolicited reviewer. Require exact-source full `C0 merge gate`, both native reports, runtime/released-Core audits, all automated browsers and downloaded privacy artifacts. Review actual diff and promotion proof.
+- [x] Verify dedicated baseline, supported backup and candidate images, deploy only C0 through the canonical targeted update before merge, wait readiness and prove data/OAuth/settings/jobs/files/schedules/unrelated inventory preservation. Execute two independent authenticated SDK read/evidence/update/search/reuse sessions, browser/REST regressions, restart and bounded positive-control root app journal privacy. Keep private evidence outside Git and reversible fixtures isolated.
+- [x] Record actual source/digests/live results in PR, regular merge after acceptance, verify actual main CI/publication, then separate closeout branch/checks updating all three documents. Preserve deployed runtime as the next genuine predecessor. M20 and Windmill Gate stay deferred until AM6 acceptance; existing waivers remain.
 
 **Local evidence:** App 0.45.0/Core 0.29.0/schema 0016 verifies **1290 distinct Python/PostgreSQL/packaging cases**: frozen full run 1286 passes/four packaging setup errors from local disk quota (358.72s), followed by all six packaging checks passing after disposable cache/environment cleanup (47.78s), including both independent installs and real migrations. No source, dependency or test requirement changed for that environmental retry. The 56-case workflow/MCP/embedding/job isolation run passes (54.52s), including raw current/legacy initialization instructions, separate grant credentials and exact installed probe code. All **127 controller cases**, Go schema and shell syntax checks and **21 non-UI Robot dry-run cases** pass. Core source/schema/released tag and all transitive lock entries are unchanged.
 
 The first broad attempt was mixed-source while initialization guidance was being finalized and is not acceptance evidence. It also exposed retained native-probe atomic evidence/jobs after focused testing reused a database. Track only that probe's created protected-space IDs, remove their data/jobs and verify zero retained fixture sources/jobs; the subsequent combined isolation run and fresh final full-run non-packaging cases pass. Keep the failed private logs outside Git. Local SDK checks are not actual native/browser/live acceptance.
 
-**Read-only live baseline:** Normal SSH/host/UID/leader and dedicated module/node checks pass. All three genuinely installed AM5 revisions/digests match `41864e4`; auth/database/timer health passes. The fresh private preservation observer records 33 domain tables, 152 terminal jobs/attempts, six originals and eleven unrelated instances. No runtime update or live knowledge/client mutation is performed. Exact-source CI/native and candidate deployment/acceptance remain pending; preserve both waivers and M20 deferral.
+**Initial read-only live baseline:** Normal SSH/host/UID/leader and dedicated module/node checks pass. All three genuinely installed AM5 revisions/digests match `41864e4`; auth/database/timer health passes. The fresh private preservation observer records 33 domain tables, 152 terminal jobs/attempts, six originals and eleven unrelated instances. This was the pre-implementation baseline; the completed AM6 acceptance and exact installed candidate are recorded below. Preserve both waivers and the separate M20 draft.
 
 Update human agent instructions, tools/capabilities, OpenAPI and repository docs
 for authorized-space discovery, search, private investigations, evidence ingestion,
@@ -1367,7 +1367,7 @@ chunk resolution, claims, procedures/entities, supersession, conflicts and index
 fallback. Run two independent actual current/legacy SDK sessions through read ->
 evidence -> update -> search -> reuse, retaining original evidence and history.
 
-### Final C0-AM deployment gate [ ]
+### Final C0-AM deployment gate [x]
 
 After applicable disposable/review/main-publication gates, back up and inventory
 only the authorized dedicated C0 instance; freeze all installed/published revisions
@@ -3475,3 +3475,147 @@ Core/module release or dedicated update occurs. The final documentation-only
 closeout uses the explicit allowlist; its PR/main source, gate and timing evidence
 is recorded in that PR after execution. It must not rebuild/publish images or run
 packaging/QEMU, and must leave these accepted runtime aliases intact.
+
+
+## AM6 — Accepted guidance and independent workflows (19 October 2026)
+
+The operator prioritized AM6 ahead of Integration M20. Original dirty-checkout
+work and prior worktrees remain untouched. The unfinished fourteen-file M20
+Core/OIDC/renewal draft remains isolated on `feat/renewable-sessions`, with a
+private mode-0600 archive. Its focused checks pass; a broad draft run has 1304
+passes and two unresolved migration-fixture failures. It has no application
+wiring, version bump, published artifacts or deployment. AM6 imports none of it.
+
+**Accepted application:** app **0.45.0**, released Core **0.29.0**, schema
+**0016_annotations**, all **76** existing tool contracts and dependency pins.
+Shared version-one guidance supplies eight rules and six workflows to actual-scope
+HTTP/MCP capabilities, public OpenAPI and MCP initialization. Reader guidance uses
+safe DOM text, selected-space roles and late-response/access-loss guards. Explicit
+space selectors, extraction readiness, immutable citations, create/update and retry
+semantics, applicability/unknown verification and atomic receipts remain authoritative.
+No session policy, migration, domain API or generative behavior changes.
+
+### Source, review and full acceptance
+
+[PR 20](https://github.com/Stell0/ns8-czero/pull/20) source
+`97a7a1bcd73741d1812db9d8b807bc71397d2434` starts from verified `58a2896`.
+[Full PR validation 39166087566](https://github.com/Stell0/ns8-czero/actions/runs/39166087566)
+actually completes successfully: **1290** Python/PostgreSQL/packaging cases in one
+clean run (424.18s), **127** controllers, schema/shell and **21** Robot dry runs,
+producer/runtime/parser/license audits, independently released-Core image checks,
+Renovate and all five scan jobs. All five actual SARIF/CycloneDX pairs are inspected.
+Actual Debian reports pass **21** genuine AM5-upgrade cases; Rocky installation
+passes **26**, with three expected skips and all eight automated browsers. Actual
+checkout logs, installed images and module sibling references match the candidate.
+Downloaded artifacts pass eight password privacy guards, **25** numeric accessibility
+contexts and three XML/browser-log query audits with zero candidates. Actual guide
+role counts are tasks **7/1/7**, workflows **6/2/6**.
+
+The 56-case focused isolation run passes. Local broad checks have 1286 passes and
+four packaging setup errors from disk quota; cleanup of disposable caches followed
+by all six packaging checks resolves these without source/dependency/test changes.
+The clean CI run independently passes all 1290. Initial mixed-source/retained-fixture
+failures remain private and are not acceptance evidence; captured fixture-owned
+space/job cleanup fixes focused/full isolation without weakening corpus assertions.
+
+Primary-agent review is recorded honestly, separately from independent review.
+No reviewer is assigned; existing protection requires zero human approvals.
+No reviewer feedback remains unresolved. The exact-source full promotion verifier
+passes
+before deployment and again before merge. [Actual live evidence](https://github.com/Stell0/ns8-czero/pull/20#issuecomment-6259976516)
+is recorded before normal protected **regular merge**
+`e378a891112ad75a3a2a1649c5b96900aa39ae55`; its tree exactly matches tested `97a7a1b`
+and preserves that source commit. [Automatic main validation/publication
+39201930016](https://github.com/Stell0/ns8-czero/actions/runs/39201930016) actually
+completes successfully, including canonical publication. Its actual log passes
+1290 cases in 413.56s, 127 controllers, schema/shell and 21 Robot checks. Actual
+main reports independently pass Debian 21 and Rocky 26/three expected skips/all
+eight browsers, eight privacy guards, 25 numeric accessibility contexts, all five
+scan/SBOM pairs and three query artifacts with zero candidates. Both checkout logs
+and all installed image identities match main's candidates. Actual native guide
+counts remain tasks 7/1/7 and workflows 6/2/6. The exact-main full promotion verifier
+passes. Six fresh registry reads match the completed main-publication artifact,
+source and immutable sibling references.
+
+Canonical main/latest images are distinct from the accepted installed candidate:
+
+| Image | Published main/latest digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:7975c7e7014e02345681e33ed0e153739b7bc37e8d740e9ca72384eb95cdb043` |
+| `ghcr.io/stell0/czero-app` | `sha256:acbbdd0aea6e86903e48d59defb2e0f002711f9117275920eed1af7a50db796c` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:28e5dd7316a9fde25f91182f5a1c319c17f17e7cedafa8e9875e30b8473606b4` |
+
+### Accepted dedicated runtime and preservation
+
+Normal root/host/leader/module/node verification confirms only the authorized C0
+instance is targeted. The supported C0-only backup passes repository read-data,
+PostgreSQL dump/schema/table inspection and exact hashes of six original files
+(36847 bytes). The dump is 3734772 bytes. All thirteen previous plans are unchanged;
+the newly owned one-off plan is disabled. No live restore or outage fixture runs.
+
+The supported canonical targeted update installs immutable tag
+`ci-97a7a1bcd73741d1812db9d8b807bc71397d2434-39166087566-1`.
+Actual ready Core/app/schema are **0.29.0/0.45.0/0016**. Freeze all three genuine
+installed digests together as the next upgrade predecessor:
+
+| Image | Installed immutable digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:0d419ca1b1d01cb927aeff00d6d6fb3a43533bbfdd77b4da85f30e963c70647c` |
+| `ghcr.io/stell0/czero-app` | `sha256:40f6c3074d7c07cf068c6bcddd65266bfd8cf356808d14adc963bbc221c12800` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:096029c10856a5898e0cafd6c266251adbc94e14f41975af22b97fcaba0b4e6a` |
+
+All installed revisions are `97a7a1bcd73741d1812db9d8b807bc71397d2434`; the module
+references the exact immutable sibling tag. The tag/branch remain available and
+unchanged while installed. Main and documentation-marker images do not replace it.
+All three genuine AM5 `41864e4` digests remain frozen in the historical acceptance
+record and native upgrade test.
+
+Immediately after update, the same two consented delegated grants and browser
+remain authorized at **58.2s**. Supported full-manager restart similarly preserves
+the same two grants/browser at **36.7s**. Exact domain/OAuth/configuration/files/
+schedule snapshots pass at both boundaries, with 153 pre-update and 155 pre-restart
+terminal jobs/attempts preserved. The final observer verifies all **8236** original
+row hashes across **33** tables, all six original files, configuration/private
+configuration/schedules/schema and old terminal history unchanged. Final terminal
+history is 162 jobs/attempts after legitimate synthetic extraction work. Eleven
+unrelated instance identities/groups/metadata are unchanged; only unordered flags
+are normalized. Runtime/authentication/database and actual worker timer are healthy.
+
+Two distinct fresh grants exercise current/legacy SDK sessions through read →
+sanitized evidence ingestion → actual timer-driven extraction readiness → immutable
+passage/citation → atomic page/entity/claim/applicability update → stale conflict/
+reload/reconcile → search/reuse/history, including whole-receipt replay and Shared
+negative controls. Post-restart replay passes both protocols to revision five.
+The earlier grants had naturally expired before that later replay, so fresh normal
+sign-in/explicit consent is used; it does not replace the immediate original-grant
+restart proof or extend authority. Read-only HTTP/MCP guidance agrees and denied
+writes challenge only for write scope on both protocols. Signed-in browser/REST
+reads exactly match current private content; implicit Shared UUID reads fail.
+
+The existing external connector separately reauthenticates and reads authorized
+content. Its cached 63-tool inventory is not refreshed 76-tool discovery, an
+observed ChatGPT prompt-quality evaluation or invocation of uncached new tools.
+Other live personas are not claimed; actual native browsers cover Reader/Editor/Admin.
+
+Immediately before disabling only the newly owned temporary client, the exact
+same valid bearers pass REST and actual current/legacy SDK MCP controls. Both then
+fail REST and valid MCP initialize with **401**; browser authority remains valid.
+The client is disabled. The bounded root app journald audit has **139** actual
+entries and successful health **1**, authorization **8**, token **4**, MCP **44**
+controls, with zero OAuth-query candidates, known issued secrets, submitted content
+or tracebacks. Empty Podman logs are not used. Private credentials, raw evidence,
+failed observations and synthetic identities remain outside Git.
+
+### Closeout and retained limits
+
+AM6 and the final C0-AM runtime/deployment gate pass. This separate three-document
+closeout uses the explicit Git-only CI allowlist. Its actual PR/main source, gate
+and timing evidence will be recorded in the closeout PR after execution; it must
+not publish/redeploy images or rerun packaging/QEMU. Canonical main aliases and the
+accepted installed candidate are verified independently and preserved.
+
+Existing CPU-quota deferral and interactive-Playwright waiver remain; all eight
+automated native browsers remain mandatory. No stable module release, real-provider
+semantic quality, scheduled-client interoperability or unobserved ChatGPT behavior
+is claimed. Integration M17–M20 remain separate; preserve M20 drafts for later work.
+Windmill Gate is a separate milestone and has not started.
