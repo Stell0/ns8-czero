@@ -3,6 +3,7 @@
 """Bounded NS8 OIDC discovery and authorization-code client operations."""
 from dataclasses import dataclass, field, replace
 import json
+import math
 import re
 import errno
 import socket
@@ -191,6 +192,22 @@ class OidcClient:
         except (KeyError, TypeError):
             raise TokenRejected() from None
 
+    @staticmethod
+    def _refresh_deadline(identity, result):
+        # Provider refresh authority can expire before its access token. Keep
+        # active sessions within that window without changing provider policy.
+        current = time.time()
+        deadline = min(current + 300, identity.expires_at - 30)
+        if 'refresh_expires_in' in result:
+            lifetime = result['refresh_expires_in']
+            if (type(lifetime) not in (int, float) or lifetime < 0
+                    or (type(lifetime) is float and not math.isfinite(lifetime))):
+                raise ValueError()
+            if lifetime > 0:
+                # Clamp before float conversion/addition, including huge ints.
+                deadline = min(deadline, current + min(lifetime, 330) - 30)
+        return deadline
+
     def exchange_renewable(self, code, login):
         identity, result = self._exchange(code, login)
         refresh = result.get('refresh_token')
@@ -200,8 +217,13 @@ class OidcClient:
             return identity, None
         original = self._token_verifier()._decode(result['id_token'])
         original = {name: original[name] for name in ('iss', 'sub', 'aud', 'azp', 'auth_time') if name in original}
+        try:
+            refresh_after = self._refresh_deadline(identity, result)
+        except ValueError:
+            raise TokenRejected() from None
         credential = json.dumps({'access': result['access_token'], 'refresh': refresh,
-                                 'nonce': login.nonce, 'id_context': original})
+                                 'nonce': login.nonce, 'id_context': original,
+                                 'refresh_after': refresh_after})
         return identity, RenewalResult(identity, credential)
 
     def _private_post(self, url, data, *, reject=False, rotating=False):
@@ -245,6 +267,15 @@ class OidcClient:
             access_token, refresh, nonce = (saved[name] for name in ('access', 'refresh', 'nonce'))
             if any(not isinstance(v, str) or not 1 <= len(v) <= 16384 for v in (access_token, refresh, nonce)):
                 raise RenewalRejected()
+            refresh_after = saved.get('refresh_after')
+            if 'refresh_after' in saved:
+                if type(refresh_after) not in (int, float):
+                    raise RenewalRejected()
+                try:
+                    if not math.isfinite(float(refresh_after)):
+                        raise RenewalRejected()
+                except OverflowError:
+                    raise RenewalRejected() from None
             original = saved['id_context']
             if not isinstance(original, dict) or original.get('iss') != self.config.issuer:
                 raise RenewalRejected()
@@ -258,7 +289,8 @@ class OidcClient:
             # provider refresh credential. The authority row binds identity.
             try:
                 identity = verifier.verify_access_token(access_token)
-                needs_refresh = identity.expires_at <= time.time() + 30
+                needs_refresh = (identity.expires_at <= time.time() + 30
+                                 or refresh_after is None or refresh_after <= time.time())
             except TokenRejected:
                 needs_refresh = True
             if needs_refresh:
@@ -276,6 +308,8 @@ class OidcClient:
                 refresh = result.get('refresh_token', refresh)
                 if not isinstance(refresh, str) or not 1 <= len(refresh) <= 16384:
                     raise RenewalRejected()
+            if needs_refresh:
+                refresh_after = self._refresh_deadline(identity, result)
             if identity.issuer != original['iss'] or identity.subject != original['sub']:
                 raise RenewalRejected()
             if not needs_refresh:
@@ -283,7 +317,8 @@ class OidcClient:
                 if active.get('active') is not True:
                     raise RenewalRejected()
             return RenewalResult(identity, json.dumps({'access': access_token, 'refresh': refresh,
-                                                       'nonce': nonce, 'id_context': original}))
+                                                       'nonce': nonce, 'id_context': original,
+                                                       'refresh_after': refresh_after}))
         except (OidcUnavailable, RenewalUnavailable):
             raise RenewalUnavailable() from None
         except (KeyError, TypeError, ValueError, TokenRejected):

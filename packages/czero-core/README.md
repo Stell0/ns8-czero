@@ -358,3 +358,15 @@ credentials; native client/secret replacement requires new authentication.
 The reference application must explicitly enable these trusted adapters. Exact
 release, released dependency adoption and application deployment evidence are
 tracked separately in the repository PLAN.
+
+
+## Provider refresh windows
+
+Core 0.30.1 renews active native sessions before both access expiry and
+any shorter provider refresh window. Provider token responses establish a
+private encrypted renewal deadline, capped at five minutes and never extended
+by introspection. Schema 0017 and existing absolute/idle bounds remain unchanged.
+Old renewable credentials acquire this scheduling metadata through a real
+serialized provider refresh; fixed legacy sessions gain no renewal authority.
+Core 0.30.0 remains immutable; corrected 0.30.1 publication and renewed application
+acceptance are pending. Provider configuration is unchanged.

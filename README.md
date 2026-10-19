@@ -616,9 +616,9 @@ forced-plan timing limitation. No runtime deadline is weakened or automatic test
 retry added. Documentation-only main commits retain accepted runtime images.
 
 
-### Session renewal (M20 candidate, not yet deployed)
+### Session renewal (M20 correction, acceptance pending)
 
-The app 0.46 candidate uses independently published Core 0.30/schema 0017.
+App 0.46 uses independently published Core 0.30/schema 0017. A live provider-window failure blocks acceptance; Core 0.30.1 is being corrected before app 0.46.1 adopts its independently published source.
 New sign-ins with provider refresh authority can renew for eight hours, with
 one hour of inactivity allowed by default. Access tokens stay at most five
 minutes; public refresh rotates and cannot add scopes. The provider can end
@@ -639,7 +639,7 @@ Normal updates/restarts and supported backups preserve policy and encrypted
 credentials. Native client/secret replacement or clean restore requires fresh
 sign-in; approved client descriptors and content remain intact.
 
-Authentication checks native activity and refreshes near token expiry. A definite
+Authentication checks native activity. The correction renews within five minutes of the last token exchange and before access or a shorter provider refresh lifetime expires; introspection never advances this deadline. A definite
 provider outage denies requests with a static 503 and can recover within the
 existing bounds. Rejected native authority or an ambiguous interrupted refresh
 requires fresh sign-in. Browser logout uses same-origin, cookie-bound CSRF;
@@ -647,11 +647,13 @@ local logout and public OAuth revocation work without contacting the provider.
 Logout invalidates linked delegation. Current role/client checks and replay
 revocation remain authoritative.
 
-Core publication and its exact producer/native/privacy gates pass. The app
-candidate passes 1380 Python/PostgreSQL/packaging checks, 129 controllers and
-20 additional checks in a fresh frozen released-Core environment. Final
-image/native validation and dedicated-instance acceptance are pending.
-The accepted installed runtime remains AM6 app 0.45/Core 0.29/schema 0016. Its
-three frozen image digests remain the genuine predecessor. The original M20
-drafts are preserved separately in durable ignored storage. See PLAN.md for
-executed checks and acceptance gates; no renewable deployment is claimed yet.
+Core 0.30.0 publication remains immutable. App candidate `c440727` passes full
+CI/native/privacy checks and was deployed to the dedicated instance. Data,
+settings, six retained files, short bounds, five-minute connector renewal and
+full-manager restart pass. Its longer live probe exposes one-hour access versus
+thirty-minute provider refresh authority; waiting for access expiry loses an
+active session. The candidate is unaccepted and unmerged. Core 0.30.1 must pass
+new producer/publication gates, then app 0.46.1 must adopt its exact tag/lock and
+repeat consumer/native/live acceptance. AM6's frozen images remain the last
+accepted predecessor. Original drafts and failed private evidence are preserved.
+See PLAN.md for executed results and remaining gates.

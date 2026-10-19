@@ -60,7 +60,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.30.0"
+    Should Contain    ${output}    "core_version":"0.30.1"
     Should Contain    ${output}    "app_version":"0.46.0"
 
 Check worker timer recovered
@@ -625,7 +625,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.30.0"
+    Get Text    body    contains    "core_version":"0.30.1"
     Get Text    body    contains    "app_version":"0.46.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health

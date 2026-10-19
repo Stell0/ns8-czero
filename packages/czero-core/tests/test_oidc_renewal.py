@@ -26,7 +26,7 @@ def provider():
     calls = []
     def token(kind='Bearer', **overrides):
         claims = {'iss': ISSUER, 'aud': 'native1', 'sub': options['subject'], 'ldap_uuid': account,
-                  'preferred_username': 'owner', 'iat': clock[0] - 1, 'exp': clock[0] + 300, 'typ': kind, **overrides}
+                  'preferred_username': 'owner', 'iat': clock[0] - 1, 'exp': clock[0] + options.get('access_seconds',300), 'typ': kind, **overrides}
         return jwt.encode({'alg': 'RS256', 'kid': 'trusted'}, claims, key)
     def handle(request):
         if request.url.path.endswith('openid-configuration'):
@@ -45,6 +45,8 @@ def provider():
         assert body['grant_type'] == ['refresh_token']
         assert body['refresh_token'] == ['private-refresh']
         result = {'access_token': token(), 'refresh_token': 'rotated-private-refresh', 'token_type': 'Bearer'}
+        if 'refresh_lifetime' in options:
+            result['refresh_expires_in'] = options['refresh_lifetime']
         if options['nonce'] is not None:
             result['id_token'] = token('ID', **({} if options['nonce'] is False else {'nonce': options['nonce']}), **options.get('id_overrides', {}))
         if options.get('oversized'):
@@ -55,7 +57,8 @@ def provider():
     client._verifier = TokenVerifier(ISSUER, 'native1', {'keys': [key.as_dict(private=False)]})
     client._keys_until = time.monotonic() + 300
     credential = lambda **overrides: json.dumps({'access': token(**overrides), 'refresh': 'private-refresh',
-        'nonce': 'original', 'id_context': {'iss': ISSUER, 'sub': 'owner', 'aud': 'native1'}})
+        'nonce': 'original', 'id_context': {'iss': ISSUER, 'sub': 'owner', 'aud': 'native1'},
+        'refresh_after': time.time() + 270})
     yield client, options, calls, credential
     client.close()
 
@@ -141,3 +144,61 @@ def test_refresh_retains_verified_original_authentication_context(provider,conte
     result=client.check_renewal(json.dumps(saved))
     assert result.identity.subject=='owner'
     assert json.loads(result.credential)['id_context']==saved['id_context']
+
+
+@pytest.mark.parametrize('access_seconds,lifetime,expected', [
+    (3600,'missing',300),(3600,0,300),(3600,120,90),(3600,1800,300),
+    (300,1800,270),(3600,30,0),(3600,10,-20),(3600,10**1000,300),
+])
+def test_new_credential_refresh_deadline_honors_both_provider_windows(provider,access_seconds,lifetime,expected):
+    client,options,_,credential=provider
+    options['access_seconds']=access_seconds
+    if lifetime!='missing':options['refresh_lifetime']=lifetime
+    started=time.time()
+    result=client.check_renewal(credential(exp=int(time.time())+10))
+    deadline=json.loads(result.credential)['refresh_after']
+    assert deadline-started==pytest.approx(expected,abs=1.1)
+
+
+@pytest.mark.parametrize('lifetime',[None,True,False,-1,float('inf'),float('nan'),'120',{},[]])
+def test_malformed_provider_refresh_lifetime_is_rejected_without_private_data(provider,lifetime):
+    client,options,_,credential=provider
+    options['refresh_lifetime']=lifetime
+    with pytest.raises(RenewalRejected,match='^invalid_session$') as caught:
+        client.check_renewal(credential(exp=int(time.time())+10))
+    assert 'private' not in str(caught.value).lower()
+
+
+@pytest.mark.parametrize('deadline',[None,True,'123',{},[],float('inf'),float('nan'),10**1000])
+def test_malformed_saved_refresh_deadline_cannot_select_a_schedule(provider,deadline):
+    client,_,calls,credential=provider
+    saved=json.loads(credential());saved['refresh_after']=deadline
+    with pytest.raises(RenewalRejected):client.check_renewal(json.dumps(saved))
+    assert calls==[]
+
+
+def test_introspection_never_slides_an_existing_refresh_deadline(provider,monkeypatch):
+    from types import SimpleNamespace
+    import czero_core.oidc as oidc_module
+    client,options,calls,credential=provider
+    options['access_seconds']=3600
+    saved=json.loads(credential());original=saved['refresh_after']
+    current=time.time()
+    monkeypatch.setattr(oidc_module,'time',SimpleNamespace(time=lambda:current,monotonic=time.monotonic))
+    for offset in (0,60,120):
+        current+=offset
+        saved=json.loads(client.check_renewal(json.dumps(saved)).credential)
+        assert saved['refresh_after']==original
+    assert len(calls)==3 and all(path.endswith('/check') for path,_ in calls)
+
+
+def test_old_encrypted_credential_performs_one_real_refresh_then_acquires_deadline(provider):
+    client,options,calls,credential=provider
+    options['access_seconds']=3600
+    saved=json.loads(credential());saved.pop('refresh_after')
+    first=client.check_renewal(json.dumps(saved))
+    assert calls==[('/realm/token',['grant_type','refresh_token'])]
+    assert json.loads(first.credential)['refresh_after']>time.time()
+    second=client.check_renewal(first.credential)
+    assert json.loads(second.credential)['refresh_after']==json.loads(first.credential)['refresh_after']
+    assert calls[-1][0].endswith('/check')

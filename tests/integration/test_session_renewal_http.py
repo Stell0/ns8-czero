@@ -50,7 +50,7 @@ def renewing_app(monkeypatch, request):
     def signed(kind, context, **claims):
         value = jwt.encode({'alg':'RS256','kid':'trusted'}, {'iss':issuer,'sub':'owner','aud':'czero901',
             'azp':'czero901','ldap_uuid':str(owner),'preferred_username':'owner','typ':kind,
-            'iat':clock[0]-1,'exp':clock[0]+300, **claims}, signer)
+            'iat':clock[0]-1,'exp':clock[0]+state.get('access_seconds',300), **claims}, signer)
         state['values'].append(value)
         return value
     def handle(request):
@@ -65,22 +65,27 @@ def renewing_app(monkeypatch, request):
             return httpx2.Response(state['status'], json={'error':'temporarily_unavailable','error_description':'PRIVATE provider detail'})
         if path.endswith('/check'):
             state['checks'] += 1
-            return httpx2.Response(200, json={'active':state['active']})
+            return httpx2.Response(200, json={'active':state['active'] and clock[0]<state.get('provider_session_until',float('inf'))})
         if body['grant_type'] == ['authorization_code']:
             context = {'nonce':state['nonce'], 'auth_time':clock[0]}
             assert body['code'] == ['private-code']
         else:
             assert body['grant_type'] == ['refresh_token']
             context = credentials.pop(body['refresh_token'][0], None)
-            if context is None or not state['active']:
+            if context is None or not state['active'] or clock[0]>=context.get('refresh_deadline',float('inf')):
                 return httpx2.Response(400, json={'error':'invalid_grant'})
             state['refreshes'] += 1
         refresh = 'private-native-refresh-' + uuid4().hex
         credentials[refresh] = context
         state['values'].append(refresh)
-        return httpx2.Response(200, json={'token_type':'Bearer','expires_in':300,
+        result={'token_type':'Bearer','expires_in':state.get('access_seconds',300),
             'access_token':signed('Bearer',context), 'refresh_token':refresh,
-            'id_token':signed('ID',context,nonce=context['nonce'],auth_time=context['auth_time'])})
+            'id_token':signed('ID',context,nonce=context['nonce'],auth_time=context['auth_time'])}
+        if state.get('refresh_seconds') is not None:
+            result['refresh_expires_in']=state['refresh_seconds']
+            context['refresh_deadline']=clock[0]+state['refresh_seconds']
+            state['provider_session_until']=context['refresh_deadline']
+        return httpx2.Response(200,json=result)
     def provider(config):
         client = OidcClient(config, transport=httpx2.MockTransport(handle))
         client._verifier = TokenVerifier(issuer, 'czero901', {'keys':[signer.as_dict(private=False)]}, now=lambda:clock[0])
@@ -403,3 +408,27 @@ def test_outage_revocation_cannot_delete_a_different_clients_grant(renewing_app,
                 with app.state.auth.access.database.engine.begin() as c:
                     c.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(wrong_id)})
     asyncio.run(check())
+
+
+def test_long_native_access_with_shorter_refresh_window_stays_active(renewing_app):
+    app,saved,clock,state=renewing_app
+    state.update(access_seconds=3600,refresh_seconds=1800)
+    async def run():
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as browser:
+            current,profile=await pair(browser,saved,state)
+            with app.state.auth.access.database.engine.connect() as c:
+                original=c.execute(text("SELECT id,expires_at,native_authority_id,scopes FROM c0_oauth_grants WHERE client_id=:client"),{'client':UUID(saved['client_id'])}).mappings().one()
+            for _ in range(24):
+                clock[0]+=300
+                response=await browser.get('/api/v1/me')
+                assert response.status_code==200,'Active native session missed its shorter provider refresh window'
+                assert response.json()['id']==profile['id']
+                response=await refresh(browser,saved,current)
+                assert response.status_code==200 and response.json()['scope']==current['scope']
+                assert response.json()['refresh_token']!=current['refresh_token']
+                current=response.json()
+            assert state['refreshes']>=12
+            with app.state.auth.access.database.engine.connect() as c:
+                after=c.execute(text("SELECT id,expires_at,native_authority_id,scopes FROM c0_oauth_grants WHERE client_id=:client"),{'client':UUID(saved['client_id'])}).mappings().one()
+                assert after==original
+    asyncio.run(run())
