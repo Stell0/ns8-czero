@@ -2,6 +2,7 @@
 """Genuine schema-0016 rows retain every old column and fixed expiry."""
 from datetime import datetime,timezone
 import hashlib
+import json
 import os
 from pathlib import Path
 import secrets
@@ -28,7 +29,7 @@ from legacy_oauth import legacy_pair
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='isolated PostgreSQL required')
 
 
-def test_0016_upgrade_preserves_legacy_browser_grants_and_all_original_columns():
+def test_0016_upgrade_preserves_legacy_browser_grants_and_all_original_columns(monkeypatch):
     parsed=make_url(os.environ['CZERO_TEST_DATABASE_URL'])
     admin=create_engine(parsed,hide_parameters=True)
     name='czero_renewal_upgrade_'+uuid4().hex
@@ -52,6 +53,16 @@ def test_0016_upgrade_preserves_legacy_browser_grants_and_all_original_columns()
         resource='https://c0.example.test/mcp'
         client=OAuthClientService(access).register(owner,'Retained approved client',['https://client.example.test/callback'])
         pair=legacy_pair(database,owner,issuer,'native1',client,resource,{'c0:read'})
+        # Run the exact installed recovery snapshot against both schemas.
+        # Native commands are routed only to this disposable database.
+        monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1]))
+        import oidc_fixture
+        import oauth_fixture
+        def snapshot_command(arguments):
+            with database.engine.connect() as c:
+                return json.dumps(c.execute(text(arguments[-1])).scalar_one())
+        monkeypatch.setattr(oidc_fixture, 'command', snapshot_command)
+        native_before = oauth_fixture.snapshot('czero901', client['client_id'])
         with database.engine.connect() as c:
             tables=c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
             columns={table:c.execute(text('''SELECT column_name FROM information_schema.columns
@@ -65,6 +76,7 @@ def test_0016_upgrade_preserves_legacy_browser_grants_and_all_original_columns()
         grants=OAuthGrantService(access,'native1',resource,authority=authority,now=lambda:clock[0])
         for _ in range(2):
             migrate_database(database)
+            assert oauth_fixture.snapshot('czero901', client['client_id']) == native_before
             with database.engine.connect() as c:
                 assert snapshot(c)==before
                 assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0017_session_renewal'

@@ -628,5 +628,7 @@ can end a session earlier. No offline access or implicit scope upgrade is added.
 The Core producer passes 1342 actual Python/PostgreSQL/packaging checks,
 127 controller cases, schema/shell and 21 Robot dry-runs. Exact-source CI/native
 validation, immutable Core publication, application wiring/released dependency
-adoption and dedicated-instance acceptance are still required. The accepted installed runtime remains AM6 app 0.45/Core 0.29/schema
+adoption and dedicated-instance acceptance are still required. Upgrade checks
+retain exact prior grant/token/code fields while accounting for the new nullable
+renewal link. The accepted installed runtime remains AM6 app 0.45/Core 0.29/schema
 0016. Original M20 drafts are preserved separately in durable ignored storage.

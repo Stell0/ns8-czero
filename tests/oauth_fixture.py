@@ -128,7 +128,9 @@ def snapshot(module_id, client_id):
     from oidc_fixture import command
     client = str(UUID(client_id))
     query = """SELECT json_build_object(
-        'grants',(SELECT json_agg(g ORDER BY id) FROM c0_oauth_grants g WHERE client_id='%s'),
+        'grants',(SELECT json_agg(to_jsonb(g) || jsonb_build_object(
+            'native_authority_id',to_jsonb(g)->'native_authority_id') ORDER BY id)
+            FROM c0_oauth_grants g WHERE client_id='%s'),
         'tokens',(SELECT json_agg(t ORDER BY hash) FROM c0_oauth_tokens t JOIN c0_oauth_grants g
                   ON g.id=t.grant_id WHERE g.client_id='%s'),
         'codes',(SELECT json_agg(c ORDER BY hash) FROM c0_oauth_codes c JOIN c0_oauth_grants g

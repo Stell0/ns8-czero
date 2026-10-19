@@ -53,6 +53,9 @@ work without privileged transaction locks. Local logout must validate cookie CSR
 and Origin without authenticating against an unavailable provider. Transient
 outage cannot extend authority; ambiguous refresh or abandoned marker requires
 fresh sign-in. Scope narrowing, replay revocation and legacy fixed expiry remain.
+The installed recovery snapshot normalizes only the new nullable grant link on
+predecessor schemas; all original grant/token/code fields remain exact, and its
+actual SQL is exercised on genuine 0016 rows before/after repeated migration.
 No-refresh sign-ins retain the fixed session cap even under a longer renewable
 policy. Native-client replacement gets a separate per-account authority/grant
 budget while preserving global limits, old rows and approved client descriptors.
