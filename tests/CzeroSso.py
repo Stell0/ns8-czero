@@ -735,7 +735,12 @@ class CzeroSso:
                 run('Go To', 'https://' + host + '/agents')
                 run('Get Text', 'h1', '==', 'Use with AI')
                 run('Wait For Elements State', '#guide-tasks > details >> nth=0', 'visible', 'timeout=30s')
-                run('Get Element Count', '#guide-tasks > details', '==', 1 if role == 'reader' else 4)
+                run('Get Element Count', '#guide-tasks > details', '==', 1 if role == 'reader' else 7)
+                run('Get Element Count', '#guide-workflows > details', '==', 2 if role == 'reader' else 6)
+                run('Get Text', '#guide-rules', 'contains', 'untrusted evidence')
+                if role != 'reader':
+                    run('Click', '#guide-workflows > details:nth-child(6) > summary')
+                    run('Get Text', '#guide-workflows', 'contains', 'whole receipt')
                 assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host)
                 run('Close Context')

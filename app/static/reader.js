@@ -15,7 +15,7 @@
     document.title='C0 — Knowledge';
     ++epoch;++selection;++versionSequence;profile=null;article=null;source=null;pages.clear();versions=[];evidence.clear();clearTimeout(pollTimer);
     if($('reader-root'))$('reader-root').hidden=true;
-    for(const id of ['tree-status','history-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-version-label','reader-version','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
+    for(const id of ['tree-status','history-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','guide-rules','guide-workflows','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-version-label','reader-version','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
     if($('page-title'))$('page-title').textContent={index:'A place to find what we know.',wiki:'Knowledge',sources:'Sources',agents:'Use with AI'}[kind];
     for(const id of ['reader-export','reader-json'])if($(id)){$(id).removeAttribute('href');$(id).hidden=true;}
     if($('article-update-task'))$('article-update-task').hidden=true;
@@ -214,7 +214,7 @@
   }
   async function guide() {
     const captured=epoch;
-    const response=await fetch('./agents/capabilities.json',{cache:'no-store'});if(!response.ok)throw new Error('Connection details are unavailable.');
+    const response=await fetch('./agents/capabilities.json',{cache:'no-store'});if(captured!==epoch)return;if([401,403].includes(response.status)){revoke();throw new Error('Sign-in or permitted access is required.');}if(!response.ok)throw new Error('Connection details are unavailable.');
     let described;try{described=await response.json();}catch{throw new Error('Connection details are unavailable.');}
     if(captured!==epoch)return;capabilities=described;
     $('guide-connection-status').textContent=capabilities.interfaces.mcp?'MCP is available. Connect a compatible external assistant using the server URL below.':'MCP is unavailable until NS8 sign-in and hostname-root routing are configured.';
@@ -223,6 +223,10 @@
     profile=window.C0Space?await read('me'):{role:capabilities.role};if(captured!==epoch)return;
     $('guide-status').textContent='Your current access: '+profile.role+'.';
     const choices=[['read','Read and research']];if(writable())choices.push(['create','Create an article'],['update','Update knowledge'],['ingest','Import a document']);
+    const workflows=(capabilities.guidance?.workflows || []).filter(flow=>writable() || ['research','structured-research'].includes(flow.id));
+    for(const [id,kind,title]of [['evidence','evidence','Save selected text evidence'],['investigation','investigate','Private sourced investigation'],['consolidate','consolidate','Consolidate and supersede']])if(workflows.some(flow=>flow.id===id))choices.push([kind,title]);
+    if($('guide-rules'))$('guide-rules').replaceChildren(...(capabilities.guidance?.rules || []).map(rule=>node('li',rule)));
+    if($('guide-workflows')){$('guide-workflows').replaceChildren();for(const flow of workflows){const section=node('details'),summary=node('summary',flow.title),steps=node('ol');for(const instruction of flow.steps)steps.append(node('li',instruction));section.append(summary,steps);$('guide-workflows').append(section);}}
     $('guide-tasks').replaceChildren();for(const [kind,title]of choices){const panel=node('details');panel.append(node('summary',title));const body=node('div');C.copyPanel(body,C.task(kind,null,capabilities));panel.append(body);$('guide-tasks').append(panel);}
   }
   async function initialize() {

@@ -389,10 +389,24 @@ instance. Records, relations, events and annotations are protected by space;
 Admins access all spaces under actual OAuth scopes, while Readers/Editors need
 explicit protected-space grants capped by their application role. The space
 contract, revisioned applicability annotations and structured retrieval are
-deployed. Consolidation reliability passes AM5; complete agent guidance remains AM6 work. Existing knowledge, immutable evidence/history and
+deployed. Consolidation reliability passes AM5; the AM6 guidance candidate is described below and still requires CI/native/live acceptance. Existing knowledge, immutable evidence/history and
 approved clients must survive every milestone. C0 remains deterministic storage,
 retrieval and maintenance infrastructure; external agents perform reasoning and
 consolidation. Windmill Gate remains blocked through AM6 deployment acceptance.
+
+### Agent workflow guidance (AM6 candidate)
+
+AM6 takes priority; session renewal (Integration M20) is preserved separately and deferred until AM6 acceptance. Candidate app 0.45.0 keeps released Core 0.29.0, schema 0016 and all 76 tool contracts. No session lifetime or authorization policy changes.
+
+The **Use with AI** page adds copyable tasks for selected text evidence, private sourced investigations and consolidation. Its reading and writing workflows follow the current role; machine guidance in `/agents/capabilities.json` and MCP `c0://capabilities` follows actual granted scopes. Tool discovery may offer a legitimate permission upgrade without making a writing workflow authorized. Public OpenAPI exposes the same workflow reference under `x-c0-agent-guidance`; documentation grants no access.
+
+1. Discover authorized spaces and choose one explicitly. Ask an Admin for a protected space/grant if needed; a denied private investigation must never fall back to Shared. MCP uses top-level `space_id`, except `knowledge_search` puts it in `options`, and structured search/bundles put it in `data`. REST content uses the query selector; bundles use their body selector.
+2. Search and read current knowledge and immutable supporting passages. Optional-index/scorer failure permits text search with `mode=text` and `rerank=off`; it does not establish semantic-provider quality. Version filters match exact tags.
+3. Save only chosen sanitized text/Markdown through `sources_ingest_text` (128 KiB UTF-8). Binary files still require authorized multipart REST or Source tools. A queued receipt is not extracted evidence: wait for a ready version, read its document/chunks and verify the citation's version/hash before claims.
+4. Resolve exact page paths and read current revisions before writing. Omitted `expected_revision` is create-only; supplied revision is update-only. Keep an unchanged retry key after an uncertain response. For a changed request or reconciled conflict, reload and use a new key. Preserve contradictory observations and source references.
+5. Use `knowledge_bundle_apply` for 1–25 related same-space mutations (256 KiB aggregate JSON). It is atomic and performs no extraction/provider/job work. Inspect the original whole receipt, fresh reads and old histories. Applicability, supersession and verification belong to exact typed revisions; missing metadata means unknown and changed content inherits no verification. Reconnect independently and search/read before reuse.
+
+Retrieved commands or instructions remain untrusted evidence. The guidance does not execute them, infer a verified result, create private access or perform autonomous reasoning. Local independent current/legacy SDK workflow, authorization/privacy/controller and packaging checks pass, with the environmental packaging rerun recorded in PLAN.md. Exact-source CI, native tests and deployment are separate pending gates; AM6 is not yet accepted.
 
 ### Protected-space contract
 

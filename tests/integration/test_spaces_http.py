@@ -19,7 +19,10 @@ pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason
 def space_http(application):
     created, types = [], []
     yield application, created, types
-    db = application[4]
+    dispose_spaces(application[4],created,types)
+
+
+def dispose_spaces(db, created, types=()):
     with db.engine.begin() as c:
         for identifier in created:
             for table in ('c0_annotation_targets','c0_evidence_links','c0_entity_links','c0_relations','c0_claims','c0_knowledge_receipts',
