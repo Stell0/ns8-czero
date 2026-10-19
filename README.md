@@ -616,19 +616,42 @@ forced-plan timing limitation. No runtime deadline is weakened or automatic test
 retry added. Documentation-only main commits retain accepted runtime images.
 
 
-### Session renewal implementation (M20, not yet deployed)
+### Session renewal (M20 candidate, not yet deployed)
 
-M20 is resumed after AM6 acceptance. The Core 0.30/schema 0017 candidate adds
-optional bounded renewal using the existing trusted sign-in provider. The planned
-application policy is eight hours maximum and one hour inactive, configurable
-within one minute to one day. Access tokens stay short and refresh rotates;
-existing sessions/grants retain their original deadlines. Native/provider policy
-can end a session earlier. No offline access or implicit scope upgrade is added.
+The app 0.46 candidate uses independently published Core 0.30/schema 0017.
+New sign-ins with provider refresh authority can renew for eight hours, with
+one hour of inactivity allowed by default. Access tokens stay at most five
+minutes; public refresh rotates and cannot add scopes. The provider can end
+native authority earlier. Existing sessions and grants retain their original
+fixed deadlines and receive no renewal rights; sign in again to opt in.
 
-The Core producer passes 1342 actual Python/PostgreSQL/packaging checks,
-127 controller cases, schema/shell and 21 Robot dry-runs. Exact-source CI/native
-validation, immutable Core publication, application wiring/released dependency
-adoption and dedicated-instance acceptance are still required. Upgrade checks
-retain exact prior grant/token/code fields while accounting for the new nullable
-renewal link. The accepted installed runtime remains AM6 app 0.45/Core 0.29/schema
-0016. Original M20 drafts are preserved separately in durable ignored storage.
+Set **Session duration** in NS8 Settings, or supply `session_policy` to the
+supported `configure-module` action:
+
+```json
+{"host":"c0.example.test","session_policy":{"absolute_seconds":28800,"idle_seconds":3600}}
+```
+
+Both bounds are whole seconds from 60 to 86400, with inactivity no longer than
+the absolute duration. Omitted settings retain the current policy. New sessions
+snapshot these bounds: changing configuration never extends an existing session.
+Normal updates/restarts and supported backups preserve policy and encrypted
+credentials. Native client/secret replacement or clean restore requires fresh
+sign-in; approved client descriptors and content remain intact.
+
+Authentication checks native activity and refreshes near token expiry. A definite
+provider outage denies requests with a static 503 and can recover within the
+existing bounds. Rejected native authority or an ambiguous interrupted refresh
+requires fresh sign-in. Browser logout uses same-origin, cookie-bound CSRF;
+local logout and public OAuth revocation work without contacting the provider.
+Logout invalidates linked delegation. Current role/client checks and replay
+revocation remain authoritative.
+
+Core publication and its exact producer/native/privacy gates pass. The app
+candidate passes 1380 Python/PostgreSQL/packaging checks, 129 controllers and
+20 additional checks in a fresh frozen released-Core environment. Final
+image/native validation and dedicated-instance acceptance are pending.
+The accepted installed runtime remains AM6 app 0.45/Core 0.29/schema 0016. Its
+three frozen image digests remain the genuine predecessor. The original M20
+drafts are preserved separately in durable ignored storage. See PLAN.md for
+executed checks and acceptance gates; no renewable deployment is claimed yet.

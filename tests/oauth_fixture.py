@@ -181,7 +181,8 @@ def persistence(module_id, operation):
     browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
     if operation == 'seed': seed_persistence(module_id, browser, profile)
     else: verify_persistence(module_id, browser, profile)
-    browser.logout(profile)
+    # Retain the originating native authority for exact update/restart/restore
+    # assertions. Logging out would correctly revoke its linked delegation.
     print('Disposable exact active-grant recovery, native-client binding and TLS SDK checks passed')
 
 

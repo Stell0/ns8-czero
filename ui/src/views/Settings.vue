@@ -71,6 +71,33 @@
                 :disabled="loading.getConfiguration || loading.configureModule"
               />
               <p>{{ $t("settings.sharing_help") }}</p>
+              <h3>{{ $t("settings.session_policy_title") }}</h3>
+              <p>{{ $t("settings.session_policy_help") }}</p>
+              <NsTextInput
+                v-model="sessionPolicy.absolute_seconds"
+                ref="sessionPolicyAbsolute"
+                type="number"
+                min="60"
+                max="86400"
+                step="1"
+                :label="$t('settings.session_absolute')"
+                :disabled="loading.getConfiguration || loading.configureModule"
+              />
+              <NsTextInput
+                v-model="sessionPolicy.idle_seconds"
+                type="number"
+                min="60"
+                max="86400"
+                step="1"
+                :label="$t('settings.session_idle')"
+                :disabled="loading.getConfiguration || loading.configureModule"
+              />
+              <NsInlineNotification
+                v-if="error.session_policy"
+                kind="error"
+                :description="error.session_policy"
+                :showCloseButton="false"
+              />
               <NsInlineNotification
                 v-if="error.authOptions"
                 kind="warning"
@@ -125,6 +152,7 @@
 import to from "await-to-js";
 import { mapState } from "vuex";
 import RetrievalSettings from "../components/RetrievalSettings.vue";
+import { sessionPolicyForm, sessionPolicyPayload } from "../session-policy.mjs";
 import {
   retrievalForm,
   retrievalPayload,
@@ -165,6 +193,7 @@ export default {
       userDomain: "",
       owner: "",
       retrieval: retrievalForm(),
+      sessionPolicy: sessionPolicyForm(),
       identityProviders: [],
       userDomains: [],
       pendingIdentity: null,
@@ -184,6 +213,7 @@ export default {
         owner: "",
         authOptions: "",
         retrieval: "",
+        session_policy: "",
       },
     };
   },
@@ -322,6 +352,7 @@ export default {
       this.letsEncrypt = taskResult.output.lets_encrypt;
       this.owner = taskResult.output.owner;
       this.retrieval = retrievalForm(taskResult.output.retrieval);
+      this.sessionPolicy = sessionPolicyForm(taskResult.output.session_policy);
       this.ssoEnabled = Boolean(taskResult.output.user_domain);
       this.pendingIdentity = taskResult.output;
       this.applyIdentitySelection();
@@ -348,6 +379,10 @@ export default {
           const field = validationError.parameter || validationError.field;
           if (field === "retrieval") {
             this.error.retrieval = this.$t("settings.retrieval_invalid");
+          } else if (field === "session_policy") {
+            this.error.session_policy = this.$t(
+              "settings.session_policy_invalid"
+            );
           } else if (["idp", "user_domain", "owner"].includes(field)) {
             this.error[field] = this.$t("settings.identity_invalid");
           } else {
@@ -366,6 +401,15 @@ export default {
       this.error.user_domain = "";
       this.error.owner = "";
       this.error.retrieval = "";
+      this.error.session_policy = "";
+      let sessionPolicy;
+      try {
+        sessionPolicy = sessionPolicyPayload(this.sessionPolicy);
+      } catch (_) {
+        this.error.session_policy = this.$t("settings.session_policy_invalid");
+        this.focusElement("sessionPolicyAbsolute");
+        return;
+      }
       if (!this.host) {
         this.error.host = this.$t("common.required");
         this.focusElement("host");
@@ -414,6 +458,7 @@ export default {
             user_domain: this.ssoEnabled ? this.userDomain : "",
             owner: this.ssoEnabled ? this.owner : "",
             retrieval: retrievalPayload(this.retrieval),
+            session_policy: sessionPolicy,
           },
           extra: {
             title: this.$t("settings.configure_instance", {

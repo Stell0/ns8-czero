@@ -14,6 +14,7 @@ from czero_core.oauth_consent import ConsentRejected
 
 raw_request = ContextVar('c0_oauth_raw_request', default=None)
 pending_response = ContextVar('c0_oauth_pending_response', default=None)
+request_kind = ContextVar('c0_oauth_request_kind', default=None)
 
 
 class PrivateCode(AuthorizationCode):
@@ -37,6 +38,23 @@ class PrivateTokenResponse(OAuthToken):
 class OAuthProvider:
     def __init__(self, grants, consent, origin):
         self.grants, self.consent, self.origin = grants, consent, origin
+
+    async def _revoke_requested_token(self, value):
+        if request_kind.get() != 'revoke':
+            return False
+        raw = raw_request.get()
+        if not isinstance(raw, dict) or raw.get('token') != value:
+            raise TokenError('invalid_request')
+        # The SDK has authenticated this client and validated the revocation
+        # request before invoking its loaders. Core checks ownership/resource
+        # and deletes the family without provider authentication. Returning its
+        # now-absent metadata retains the SDK's idempotent successful response.
+        try:
+            await to_thread.run_sync(partial(self.grants.revoke, value,
+                raw['client_id'], resource=raw['resource']))
+        except GrantRejected:
+            pass
+        return True
 
     async def get_client(self, client_id):
         value = await to_thread.run_sync(partial(self.grants.clients._lookup, client_id))
@@ -88,6 +106,8 @@ class OAuthProvider:
         return self._response(pair)
 
     async def load_refresh_token(self, client, refresh_token):
+        if await self._revoke_requested_token(refresh_token):
+            return None
         try:
             value = await to_thread.run_sync(partial(self.grants._refresh_token, refresh_token, client.client_id))
         except GrantRejected:
@@ -107,6 +127,8 @@ class OAuthProvider:
         return self._response(pair)
 
     async def load_access_token(self, token):
+        if await self._revoke_requested_token(token):
+            return None
         try:
             value = await to_thread.run_sync(partial(self.grants.verify, token, resource=self.grants.resource))
         except GrantRejected:

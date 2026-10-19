@@ -7,7 +7,11 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tests'))
+from renewal_evidence import validate_measurement
 
 
 REQUIRED_UI = {
@@ -50,9 +54,12 @@ def marker_values(logs, marker):
 def audit_reports(directory, source, images, logs):
     reports = sorted(directory.rglob('output.xml'))
     assert len(reports) == 2, 'Both native reports are required'
-    actual_ui = set(); privacy = 0; audited = 0; summaries = []
+    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []
     for report in reports:
         raw = report.read_text()
+        measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
+        assert len(measured) == 1, 'One measured renewal proof per native distribution is required'
+        renewal.append(validate_measurement(measured[0]))
         root = ET.fromstring(raw)
         tests = list(root.iter('test'))
         assert tests and all(t.find('status').get('status') in {'PASS', 'SKIP'} for t in tests)
@@ -98,7 +105,8 @@ def audit_reports(directory, source, images, logs):
         assert all(v == 0 for k, v in value.items() if k.startswith(('unnamed_', 'missing_')))
     return {'source': source, 'accepted': True, 'reports': summaries, 'browser_workflows': 8,
             'privacy_guards': privacy, 'query_artifacts': audited, 'oauth_query_candidates': 0,
-            'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True}
+            'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
+            'renewal_measurements': renewal}
 
 
 def main():

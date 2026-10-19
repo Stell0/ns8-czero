@@ -91,7 +91,12 @@
         "limit_candidates": "Ranking candidates (at least returned results, at most 64)",
         "limit_graph_depth": "Graph depth (0\u20133)",
         "limit_scorer_candidates": "Scored candidates (1\u201316)",
-        "retrieval_invalid": "Invalid retrieval settings. Check HTTPS endpoints, pinned models, keys and numeric limits."
+        "retrieval_invalid": "Invalid retrieval settings. Check HTTPS endpoints, pinned models, keys and numeric limits.",
+        "session_policy_title": "Session duration",
+        "session_policy_help": "New sign-ins can renew for up to 8 hours by default, with a 1-hour inactivity limit. Set limits from 60 to 86400 seconds; inactivity must not exceed the maximum. The provider can end a session earlier. Existing sessions retain their original limits, and changing these settings never extends them.",
+        "session_absolute": "Maximum session duration (seconds)",
+        "session_idle": "Inactivity limit (seconds)",
+        "session_policy_invalid": "Enter whole seconds from 60 to 86400, with inactivity no longer than the maximum duration."
     },
     "about": {
         "title": "About"

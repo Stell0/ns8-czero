@@ -6,8 +6,11 @@ import os
 import sys
 from pathlib import Path
 import agent
+sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
+from czero_session_policy import read, encode
 
 original = json.load(sys.stdin)['environment']
+policy = encode(read(original))
 module_id = os.environ['MODULE_ID']
 host = original.get('CZERO_HOST','').lower()
 state = Path(os.environ['AGENT_STATE_DIR'])
@@ -17,6 +20,7 @@ with agent.safe_open(str(state / 'restore-previous-host')) as output:
 (state / 'restore-previous-host').chmod(0o600)
 # Core keeps the new node, allocated port, image and platform identity.
 agent.mset_env({'CZERO_MODULE_ID':module_id, 'CZERO_HOST':host,
+    **policy,
     'CZERO_LETS_ENCRYPT':original.get('CZERO_LETS_ENCRYPT','false'),
     'CZERO_BASE_PATH':'' if host else '/czero/'+module_id,
     **{key:original.get(key,'') for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}})

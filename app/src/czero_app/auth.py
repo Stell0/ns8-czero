@@ -20,6 +20,7 @@ from czero_core.identity import Actor, PermissionDenied, Role, TokenRejected
 from czero_core.oidc import OidcClient, OidcConfig, OidcUnavailable
 from czero_core.sessions import LoginStateRejected, SessionRejected, SessionService
 from czero_core.oauth_grants import GrantRejected
+from czero_core.renewal import NativeAuthorityService, RenewalRejected, RenewalUnavailable, SessionPolicy
 
 
 class SafeAccessLog(logging.Filter):
@@ -49,7 +50,15 @@ class AppAuth:
             issuer, client, secret, origin, owner = values
             config = OidcConfig(issuer, client, secret, origin, base_path)
             access = AccessService(database, issuer, UUID(owner))
-            return cls(access, SessionService(access, client), OidcClient(config))
+            policy = SessionPolicy(int(os.getenv('CZERO_SESSION_ABSOLUTE_SECONDS', '28800')),
+                                   int(os.getenv('CZERO_SESSION_IDLE_SECONDS', '3600')))
+            oidc = OidcClient(config)
+            try:
+                authority = NativeAuthorityService(access, client, secret, oidc.check_renewal, policy=policy)
+                return cls(access, SessionService(access, client, authority=authority), oidc)
+            except (TypeError, ValueError):
+                oidc.close()
+                raise
         except (TypeError, ValueError):
             logging.getLogger("czero.auth").error("Authentication configuration is invalid")
             return None
@@ -82,14 +91,14 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             return JSONResponse({"detail": "forbidden"}, status_code=403)
         if isinstance(error, LoginStateRejected):
             return JSONResponse({"detail": "invalid_login_state"}, status_code=400)
-        if isinstance(error, (TokenRejected, SessionRejected)):
+        if isinstance(error, (TokenRejected, SessionRejected, RenewalRejected)):
             return JSONResponse({"detail": str(error)}, status_code=401, headers={"WWW-Authenticate": "Bearer"})
-        if isinstance(error, OidcUnavailable):
+        if isinstance(error, (OidcUnavailable, RenewalUnavailable)):
             return JSONResponse({"detail": "authentication_unavailable"}, status_code=503)
         logging.getLogger("czero.auth").error("Authentication service failed (%s)", type(error).__name__)
         return JSONResponse({"detail": "service_unavailable"}, status_code=503)
 
-    for error_class in (PermissionDenied, LoginStateRejected, TokenRejected, SessionRejected, OidcUnavailable, SQLAlchemyError):
+    for error_class in (PermissionDenied, LoginStateRejected, TokenRejected, SessionRejected, RenewalRejected, RenewalUnavailable, OidcUnavailable, SQLAlchemyError):
         app.add_exception_handler(error_class, error_response)
 
     @app.middleware("http")
@@ -197,9 +206,13 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     def callback(request: Request):
         active = configured()
         login = active.sessions.consume_login(request.query_params.get("state"), request.cookies.get("c0_login"))
-        identity = active.oidc.exchange(request.query_params.get("code"), login)
+        renewal = None
+        if active.sessions.authority is not None:
+            identity, renewal = active.oidc.exchange_renewable(request.query_params.get("code"), login)
+        else:
+            identity = active.oidc.exchange(request.query_params.get("code"), login)
         try:
-            cookie = active.sessions.create(identity)
+            cookie = active.sessions.create(identity, renewal=renewal)
         except PermissionDenied:
             active.sessions.destroy(request.cookies.get("c0_session"))
             # Admission failure does not clear the provider's SSO session.
@@ -238,11 +251,13 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         return response
 
     @app.post("/auth/logout")
-    def logout(request: Request, context: RequestAccess = Depends(write_context)):
-        if context.scopes is not None:
-            raise PermissionDenied()
+    def logout(request: Request, cookie=Security(cookie_scheme)):
         active = configured()
-        active.sessions.destroy(request.cookies.get("c0_session"))
+        if (request.headers.get('authorization') is not None
+                or request.headers.get('origin') != active.oidc.config.public_origin.rstrip('/')):
+            raise PermissionDenied()
+        # Local revocation cannot depend on provider authentication/availability.
+        active.sessions.logout(cookie, request.headers.get('x-c0-csrf'))
         try:
             logout_url = active.oidc.logout_url()
             provider_logout = True

@@ -25,7 +25,8 @@ from czero_core.oauth_grants import OAuthGrantService
 from czero_core.oauth_consent import ConsentRejected, OAuthConsentService
 from czero_core.operations import SCOPES
 from czero_core.sessions import SessionRejected
-from czero_app.oauth_provider import OAuthProvider, raw_request, pending_response
+from czero_core.renewal import RenewalRejected, RenewalUnavailable
+from czero_app.oauth_provider import OAuthProvider, raw_request, pending_response, request_kind
 
 COOKIE = 'c0_consent'
 COOKIE_PATTERN = re.compile(r'([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})\Z')
@@ -61,7 +62,7 @@ class PublicRevocationRequest:
 
 def install_oauth_server(app, auth, read_context, write_context, static_dir: Path):
     origin = auth.oidc.config.public_origin.rstrip('/')
-    grants = OAuthGrantService(auth.access, auth.sessions.client_id, origin + '/mcp')
+    grants = OAuthGrantService(auth.access, auth.sessions.client_id, origin + '/mcp', authority=auth.sessions.authority)
     consent = OAuthConsentService(grants)
     provider = OAuthProvider(grants, consent, origin)
     app.state.delegated_grants, app.state.oauth_consent = grants, consent
@@ -97,6 +98,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             if saved is None or raw.get('redirect_uri') not in saved['redirect_uris']:
                 return JSONResponse({'error':'invalid_request'}, status_code=400)
         request_token, response_token = raw_request.set(raw), pending_response.set(None)
+        kind_token = request_kind.set(kind)
         try:
             incoming = PublicRevocationRequest(request, form) if kind == 'revoke' else request
             response = await handlers[kind].handle(incoming)
@@ -107,6 +109,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             response.headers['Cache-Control'] = 'no-store'
             return response
         finally:
+            request_kind.reset(kind_token)
             raw_request.reset(request_token)
             pending_response.reset(response_token)
 
@@ -114,7 +117,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
         async def endpoint(request):
             try:
                 return await bounded(request, kind)
-            except SQLAlchemyError:
+            except (SQLAlchemyError, RenewalUnavailable):
                 return JSONResponse({'error':'service_unavailable'}, status_code=503)
             except Exception as error:
                 logging.getLogger('czero.oauth').error('OAuth handler failed (%s)', type(error).__name__)
@@ -144,7 +147,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             return RedirectResponse('/auth/login', status_code=302)
         try:
             browser_session(request)
-        except SessionRejected:
+        except (SessionRejected, RenewalRejected):
             # The browser cookie can outlive its native identity. Preserve the
             # validated pending request, but require a fresh ordinary sign-in.
             response = RedirectResponse('/auth/login', status_code=302,

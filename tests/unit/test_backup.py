@@ -235,12 +235,15 @@ def test_restore_settings_keep_new_platform_port_and_identity(monkeypatch,tmp_pa
     agent.read_envfile=lambda path:{'CZERO_HOST':''}
     agent.mset_env=values.update
     monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path))
+    monkeypatch.setenv('AGENT_INSTALL_DIR',str(ROOT/'imageroot'))
     monkeypatch.setenv('MODULE_ID','czero9')
     monkeypatch.setenv('TCP_PORT','22222')
     original={'CZERO_HOST':'Old.Test','CZERO_MODULE_ID':'czero1','TCP_PORT':'11111','NODE_ID':'1','IMAGE_URL':'old-image','CZERO_LETS_ENCRYPT':'false'}
     monkeypatch.setattr(sys,'stdin',StringIO(json.dumps({'environment':original})))
     runpy.run_path(str(ROOT/'imageroot/actions/restore-module/20persist-settings'))
-    assert values == {'CZERO_MODULE_ID':'czero9','CZERO_HOST':'old.test','CZERO_LETS_ENCRYPT':'false','CZERO_BASE_PATH':'', **{key:'' for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}}
+    assert values == {'CZERO_MODULE_ID':'czero9','CZERO_HOST':'old.test','CZERO_LETS_ENCRYPT':'false','CZERO_BASE_PATH':'',
+        'CZERO_SESSION_ABSOLUTE_SECONDS':'28800','CZERO_SESSION_IDLE_SECONDS':'3600',
+        **{key:'' for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}}
     assert not {'TCP_PORT','NODE_ID','IMAGE_URL'} & values.keys()
 
 

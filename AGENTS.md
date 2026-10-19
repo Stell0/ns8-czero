@@ -37,12 +37,28 @@ cases, 127 controllers, schema/shell and 21 Robot dry-runs; failed historical
 runs are not acceptance. Native predecessor is the installed AM6 `97a7a1b`, with all three frozen
 candidate digests in PLAN. Keep CPU/interactive-Playwright waivers unchanged.
 
-Core 0.30/schema 0017 is the producer candidate; application wiring/released pin
-adoption follows immutable Core publication after exact full CI/native proof.
-During producer validation, app 0.45 retains released Core 0.29 by default and
-explicit local builds exercise Core 0.30. The temporary compatible range covers
-both; final renewal app 0.46 must require and pin the published 0.30 source.
-Never silently switch independent consumers to an unpublished local package.
+Core 0.30/schema 0017 is independently published from exact producer `bc5e1dc`.
+Full 39217591934 and actual artifact audits pass Debian 21/Rocky 26+3, all eight browser/
+privacy guards, 25 accessibility contexts, three clean query artifacts and five scan pairs.
+Publication 39222689510 succeeds; actual downloaded assets and six supplied-artifact
+checks pass. See PLAN for checksums. No module release/deployment is implied.
+
+App 0.46 local work on `feat/m20-app-wiring` adopts that released Git source/lock;
+all transitive records and independent-fork patch bounds are preserved. The full
+local suite passes 1380 Python/PostgreSQL/packaging cases, 129 controllers, schema/
+shell and 21 Robot dry-runs; the immutable UI build and native Renovate API pass.
+A fresh frozen consumer environment installs released Core at the exact lock and
+passes 20 real PostgreSQL-backed authentication/renewal cases. Final image/native
+gates and actual dedicated acceptance remain pending. Native renewal must be
+measured for at least 330 seconds per distribution, with idle/absolute expiry,
+rotation, revocation and reconnect metrics; controlled-clock HTTP success is
+not that proof. The accepted installed AM6 `97a7a1b` remains untouched.
+
+Public OAuth revocation uses the official SDK handler's client/form validation.
+Its trusted route-purpose context lets loaders revoke through Core without native
+provider authentication, returning now-absent metadata for idempotent 200. Core
+still checks exact client/resource ownership; ordinary loaders retain native
+checks, and every context resets in finally. Preserve wrong-client/outage tests.
 
 Session policy defaults to eight hours absolute/one hour idle, 60–86400 seconds,
 new-sign-in opt-in only. Core snapshots bounds, encrypts native refresh state,
