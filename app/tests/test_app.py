@@ -12,7 +12,7 @@ from czero_core import core_version
 from czero_app.main import create_app
 
 STATIC = Path(__file__).resolve().parents[1] / "static"
-DATABASE_READY = {"status": "ok", "schema_revision": "0016_annotations", "vector_version": "0.8.7"}
+DATABASE_READY = {"status": "ok", "schema_revision": "0017_session_renewal", "vector_version": "0.8.7"}
 
 
 def ready_database():

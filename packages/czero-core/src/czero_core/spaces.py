@@ -31,7 +31,7 @@ def hold_authority(connection):
     allow independent content transactions while a revocation waits for their
     commits; after revocation commits a captured token cannot start a write.
     """
-    for lock in (49372, 49378, 49379):
+    for lock in (49372, 49378, 49379, 49382):
         connection.execute(text('SELECT pg_advisory_xact_lock_shared(:key)'), {'key': lock})
 
 

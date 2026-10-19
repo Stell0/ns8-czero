@@ -614,3 +614,19 @@ Main requires the GitHub Actions C0 merge gate, up-to-date base and admin enforc
 See the policy for exact sources, reports, failed evidence and the pre-existing
 forced-plan timing limitation. No runtime deadline is weakened or automatic test
 retry added. Documentation-only main commits retain accepted runtime images.
+
+
+### Session renewal implementation (M20, not yet deployed)
+
+M20 is resumed after AM6 acceptance. The Core 0.30/schema 0017 candidate adds
+optional bounded renewal using the existing trusted sign-in provider. The planned
+application policy is eight hours maximum and one hour inactive, configurable
+within one minute to one day. Access tokens stay short and refresh rotates;
+existing sessions/grants retain their original deadlines. Native/provider policy
+can end a session earlier. No offline access or implicit scope upgrade is added.
+
+The Core producer passes 1342 actual Python/PostgreSQL/packaging checks,
+127 controller cases, schema/shell and 21 Robot dry-runs. Exact-source CI/native
+validation, immutable Core publication, application wiring/released dependency
+adoption and dedicated-instance acceptance are still required. The accepted installed runtime remains AM6 app 0.45/Core 0.29/schema
+0016. Original M20 drafts are preserved separately in durable ignored storage.

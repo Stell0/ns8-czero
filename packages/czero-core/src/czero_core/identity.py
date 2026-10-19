@@ -48,6 +48,7 @@ class Actor:
     delegation: object | None = field(default=None, repr=False, compare=False)
     delegated_scopes: frozenset[str] | None = field(default=None, repr=False, compare=False)
     space_id: UUID | None = field(default=None, repr=False, compare=False)
+    session_binding: object | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):
         if not isinstance(self.user_id, UUID) or not isinstance(self.role, Role) or type(self.is_owner) is not bool:
@@ -152,12 +153,33 @@ class TokenVerifier:
 
     def verify_id_token(self, value: str, *, nonce: str,
                         access_token: str | None = None) -> VerifiedIdentity:
+        return self._verify_id_token(value, nonce=nonce, access_token=access_token, refresh=False)
+
+    def verify_refresh_id_token(self, value: str, *, nonce: str, access_token: str, original: dict) -> VerifiedIdentity:
+        if not isinstance(original, dict):
+            raise TokenRejected()
+        claims = self._decode(value)
+        for name in ('iss', 'sub', 'aud', 'azp'):
+            actual, expected = claims.get(name), original.get(name)
+            if name == 'aud':
+                actual = sorted(actual) if isinstance(actual, list) else [actual]
+                expected = sorted(expected) if isinstance(expected, list) else [expected]
+            if actual != expected:
+                raise TokenRejected()
+        if 'auth_time' in claims:
+            if (type(claims['auth_time']) not in (int, float) or not math.isfinite(claims['auth_time'])
+                    or claims['auth_time'] != original.get('auth_time')):
+                raise TokenRejected()
+        return self._verify_id_token(value, nonce=nonce, access_token=access_token, refresh=True)
+
+    def _verify_id_token(self, value, *, nonce, access_token, refresh):
         claims = self._decode(value)
         if claims.get("typ") not in (None, "ID"):
             raise TokenRejected()
-        supplied_nonce = _text(claims.get("nonce"), 128)
-        if not hmac.compare_digest(supplied_nonce.encode(), _text(nonce, 128).encode()):
-            raise TokenRejected()
+        if not refresh or 'nonce' in claims:
+            supplied_nonce = _text(claims.get("nonce"), 128)
+            if not hmac.compare_digest(supplied_nonce.encode(), _text(nonce, 128).encode()):
+                raise TokenRejected()
         audiences = claims["aud"]
         if isinstance(audiences, list) and len(audiences) > 1 and claims.get("azp") != self.audience:
             raise TokenRejected()

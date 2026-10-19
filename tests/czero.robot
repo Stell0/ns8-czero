@@ -60,7 +60,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.29.0"
+    Should Contain    ${output}    "core_version":"0.30.0"
     Should Contain    ${output}    "app_version":"0.45.0"
 
 Check worker timer recovered
@@ -82,7 +82,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:f9bd770fca9c1be307cb0afbf990d84c916097fcf28f20b598b80ad056f4cd4c
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:0d419ca1b1d01cb927aeff00d6d6fb3a43533bbfdd77b4da85f30e963c70647c
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -92,9 +92,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 41864e4 AM5 predecessor images.
+        # Freeze all three actually deployed 97a7a1b AM6 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:ce1b3e0dc82836f295860d3cc0d41e6201ca324468f46451c2c35450dd6c2c69','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:e4f3cbea39e27389bfa18df286ae12f8b56f5b1b68727fcfa5d6d1c79de56126'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:40f6c3074d7c07cf068c6bcddd65266bfd8cf356808d14adc963bbc221c12800','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:096029c10856a5898e0cafd6c266251adbc94e14f41975af22b97fcaba0b4e6a'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -625,7 +625,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.29.0"
+    Get Text    body    contains    "core_version":"0.30.0"
     Get Text    body    contains    "app_version":"0.45.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health

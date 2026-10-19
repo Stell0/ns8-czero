@@ -75,6 +75,10 @@ class AccessService:
         """
         if not isinstance(actor, Actor):
             raise PermissionDenied()
+        # Session/delegation checks hold the final revocation lock through
+        # the caller's transaction, including non-content administrative writes.
+        if actor.session_binding is not None or actor.delegation is not None:
+            connection.execute(text('SELECT pg_advisory_xact_lock_shared(49382)'))
         current = self._actor(connection, actor.user_id)
         if actor.delegation is not None:
             from .oauth_grants import DelegationBinding, GrantRejected
@@ -88,6 +92,19 @@ class AccessService:
                 raise PermissionDenied()
             current = replace(current, delegation=actor.delegation,
                               delegated_scopes=delegated.scopes)
+        if actor.session_binding is not None:
+            from .sessions import SessionBinding, SessionRejected
+            from .renewal import RenewalRejected
+            if not isinstance(actor.session_binding, SessionBinding):
+                raise PermissionDenied()
+            try:
+                session = actor.session_binding.validate(connection)
+            except (SessionRejected, RenewalRejected):
+                raise PermissionDenied() from None
+            if (session.actor.user_id != current.user_id
+                    or actor.session_binding.service.access.issuer != self.issuer):
+                raise PermissionDenied()
+            current = replace(current, session_binding=actor.session_binding)
         return current
 
     def list_accounts(self, actor: Actor, *, limit: int = 100) -> list[dict]:
@@ -138,6 +155,8 @@ class AccessService:
             # Delegation never survives a membership change, including a later
             # regrant of the same role. Grant issuance takes this role lock too.
             connection.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account_id})
+            connection.execute(text('UPDATE c0_native_authority SET revoked=true,credential=NULL,checking=false WHERE account_id=:id'),
+                               {'id': account_id})
             if role is None:
                 connection.execute(text("DELETE FROM c0_memberships WHERE account_id = :id"), {"id": account_id})
             else:

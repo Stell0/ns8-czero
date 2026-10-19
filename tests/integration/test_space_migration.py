@@ -23,7 +23,7 @@ from czero_core.migrate import migrate_database
 import czero_core.migrate
 from czero_core.oauth_clients import OAuthClientService
 from czero_core.oauth_grants import OAuthGrantService, pkce_challenge
-from czero_core.sessions import SessionContext
+from legacy_oauth import legacy_pair
 from czero_core.spaces import SpaceService
 from czero_core.wiki import WikiService
 
@@ -51,10 +51,7 @@ def test_forward_space_upgrade_preserves_all_old_columns_oauth_and_receipt():
         callback, resource = 'https://client.example.test/callback', 'https://app.example.test/mcp'
         client = clients.register(owner, 'Retained client', [callback], scopes=['c0:read','c0:write'])
         tokens = OAuthGrantService(access, 'czero900', resource)
-        session = SessionContext(owner, datetime.fromtimestamp(time.time()+600, timezone.utc), 'synthetic-csrf')
-        verifier = 'a' * 43
-        code = tokens.issue_code(session, client['client_id'], callback=callback, scopes={'c0:read','c0:write'}, challenge=pkce_challenge(verifier), resource=resource)
-        pair = tokens.exchange_code(code, client['client_id'], callback=callback, verifier=verifier, resource=resource)
+        pair = legacy_pair(database, owner, issuer, 'czero900', client, resource, {'c0:read','c0:write'})
         page, revision, entity, source, version, job = (uuid4() for _ in range(6))
         body = 'Retained original evidence'
         payload = {'slug': 'retained', 'title': 'Retained', 'body': body, 'expected_revision': None, 'metadata': {}}
