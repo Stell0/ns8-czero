@@ -152,6 +152,8 @@ The operator approves a Codex runner plus repository testing skill and fresh iso
 
 Local development validation passes 1476 Python/PostgreSQL/packaging cases without skips, plus five new grader regressions (26 total runner controls), 81 independent frozen consumer checks, 130 controllers, schema/shell and 21 Robot dry runs. The skill validator and an independent raw-failure audit pass. All16 real Codex development cases pass independent regrading after cursor/legitimate wording/space-boundary grader corrections; original failures remain and no model calls are rerun for that regrade. These dirty development results are not the frozen baseline/candidate acceptance comparison. Use the repository-only [testing skill](.agents/skills/c0-evaluate-tools/SKILL.md) and [runner guide](docs/tool-evaluations.md); no model credentials/calls run in public CI.
 
+The first frozen comparison passes16/16 in both arms, but a baseline critical repeat reveals a fixture blind spot: valid create-only upsert was neither intercepted nor allowed by the uncertainty rubric. Preserve it as invalid fixture evidence, not a model regression. Rubric2 injects lost replies for both create routes and checks identical operation/arguments; rerun both arms and final-head CI. No runtime change is required.
+
 Native M18 upgrades use all three genuine14e4d01 digests from PLAN; retain eight real browsers, profile identity/grant recovery, configured renewal and actual artifact/journal privacy. Candidate/main/full deployment checks and actual ChatGPT workflows remain required. M19/further AM/Windmill stay deferred; CPU-quota and interactive Playwright waivers remain.
 
 ## Current M17 profile checkpoint — 20 October 2026

@@ -191,7 +191,9 @@ class Fixture:
         result = await client.call_tool(name,arguments)
         if case=='queued-evidence' and name=='sources_ingest_text' and not result.is_error:
             Worker(self.db,self.app.state.jobs.registry).tick(); self.effects.append('real-extraction-worker')
-        if case=='uncertain-replay' and name=='wiki_pages_create' and not result.is_error and not self.dropped_reply:
+        if (case=='uncertain-replay' and name in ('wiki_pages_create','wiki_pages_upsert') and
+                arguments.get('data',{}).get('expected_revision') is None and
+                not result.is_error and not self.dropped_reply):
             from mcp.types import CallToolResult, TextContent
             self.dropped_reply = True; self.effects.append('committed-write-response-hidden')
             # The actual committed receipt remains in parent-only evidence.

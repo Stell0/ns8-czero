@@ -52,7 +52,7 @@ Do not claim an immutable backend snapshot when one is not reported.
 `calls.json` contains parent-observed real results. `state.json` preserves before/
 after rows, fixture effects and ground truth. `grade.json` checks state, actual
 calls, immutable citations and prohibited effects. Conflict injection uses a real
-second writer; uncertain-reply injection hides a real committed response; queued
+second writer; uncertain-reply injection hides a real committed create or create-only upsert response; queued
 evidence uses the real extraction worker. These effects are explicitly recorded.
 A final answer cannot excuse an extra write. All critical invariants and task
 assertions must pass. Repeat critical cases from `CRITICAL` to measure variance;
@@ -65,3 +65,11 @@ assertions establish saved effects, not every nuance of answer quality. Publish
 only sanitized aggregate measurements and hashes; keep raw RPC, credentials,
 synthetic identities and failed evidence outside Git. Actual ChatGPT acceptance
 is required by the milestone and cannot be inferred from this harness.
+
+Rubric version 2 covers both valid Wiki creation routes for lost-reply injection.
+A recorded version-1 baseline repeat used create-only upsert and received no
+injected fault. Preserve that invalid fixture trial separately; do not count it
+as a model failure or a candidate improvement. The corrected prompt quotes the
+requested saved sentence explicitly; grading also checks actual body/title and
+stored synthetic provenance. Freeze and rerun both arms under
+one corrected driver/rubric before claiming the final comparison.

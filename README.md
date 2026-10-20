@@ -25,6 +25,8 @@ App 0.48.0 is the development version; Core 0.30.1, schema 0017 and released dep
 
 M18 development checks pass the complete 77-tool validation/authority baseline, 1476 Python/PostgreSQL/packaging cases, 81 frozen consumer checks, 130 controllers and 21 Robot dry runs. The selected Codex evaluation runner and repository testing skill use real disposable MCP/state and preserve failed results. Frozen baseline/candidate measurements, CI/native/live and actual ChatGPT acceptance remain pending; see [the evaluation guide](docs/tool-evaluations.md).
 
+The initial 16-case model comparison passes in both arms. A critical repeat exposed a lost-reply fixture blind spot for valid create-only upsert; the corrected rubric covers both creation routes, retains the failed evidence and requires a fresh comparison. No model improvement or M18 acceptance is inferred from that fixture defect.
+
 ## Applicability and structured retrieval (AM4)
 
 AM4 introduced this behavior with independently published Core 0.28 and app

@@ -127,14 +127,19 @@ def grade(case, runner, calls, before, after, ground, read_only):
                 'consent' in answer or ('explicit' in answer and 'authoriz' in answer)))
     if case=='queued-evidence':
         original = rows(before,'c0_sources'); new = [r for r in rows(after,'c0_sources') if r not in original]
-        check('one_selected_source',len(new)==1 and new[0].get('title')=='Quasar backup measurement')
+        check('one_selected_source',len(new)==1 and new[0].get('title')=='Quasar backup measurement' and
+            'synthetic' in json.dumps(new[0].get('metadata',{})).lower())
         check('ready_real_passage',bool(citations) and '37' in final.get('answer','') and
             any(isinstance(v,dict) and '37 kilopascals' in v.get('body','') and v.get('source_id')==new[0]['id'] for v in observed) if new else False)
         check('bounded_ingest',len(mutations)==1 and mutations[0]['arguments'].get('data',{}).get('body')=='Quasar backup pressure is 37 kilopascals.')
     if case=='uncertain-replay':
         new = [r for r in rows(after,'c0_wiki_pages') if r not in rows(before,'c0_wiki_pages')]
-        check('one_saved_revision',len(new)==1 and new[0]['slug']=='receipt-check' and new[0]['revision']==1)
+        revisions = [r for r in rows(after,'c0_wiki_revisions') if new and r.get('page_id')==new[0]['id']]
+        check('one_saved_revision',len(new)==1 and new[0]['slug']=='receipt-check' and
+            new[0]['title']=='Receipt check' and new[0]['revision']==1 and not new[0]['deleted'] and
+            len(revisions)==1 and revisions[0]['body']=='One saved revision.')
         check('actual_identical_replay',ground.get('hidden_receipt') is not None and len(mutations)==2 and
+            mutations[0]['name']==mutations[1]['name'] and
             mutations[0]['arguments']==mutations[1]['arguments'] and not mutations[1]['result'].get('isError'))
         check('saved_history_read','wiki_pages_get' in names and 'wiki_revisions_list' in names)
     if case=='exact-version':

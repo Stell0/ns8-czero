@@ -24,16 +24,17 @@ def test_only_loopback_database_administrator_is_allowed():
 
 
 @pytest.mark.parametrize('case',['cited-research','wiki-conflict','uncertain-replay','queued-evidence',
-                                'reader-denial','scope-consent','exact-version','changed-verification'])
+                                'reader-denial','scope-consent','exact-version','changed-verification','uncertain-upsert'])
 def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
     async def check():
         admin_url=os.environ['CZERO_TEST_DATABASE_URL']
+        fixture_case='uncertain-replay' if case=='uncertain-upsert' else case
         async with disposable_database(admin_url) as url:
             name=database_parameters(url).database
             fixture=Fixture(url,tmp_path)
             try:
-                await fixture.seed(case)
-                async with fixture.mcp(case) as client:
+                await fixture.seed(fixture_case)
+                async with fixture.mcp(fixture_case) as client:
                     tools=(await client.list_tools()).tools
                     if case=='reader-denial':
                         assert tools and all(t.annotations.read_only_hint for t in tools)
@@ -41,7 +42,7 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                     else: assert len(tools)==77
                     calls=[]
                     async def call(name,args):
-                        result=await fixture.intercept(client,case,name,args)
+                        result=await fixture.intercept(client,fixture_case,name,args)
                         calls.append({'name':name,'arguments':args,
                             'result':result.model_dump(mode='json',by_alias=True,exclude_none=True)})
                         return result
@@ -72,14 +73,24 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         result=await call('wiki_pages_update',{**args,'data':{**args['data'],
                             'body':body+'\nInspect the exhaust.','expected_revision':2,'idempotency_key':'reconciled'}})
                         assert not result.is_error and content(calls[-1]['result'])['revision']==3
-                    elif case=='uncertain-replay':
+                    elif case in ('uncertain-replay','uncertain-upsert'):
                         args={'space_id':fixture.space,'data':{'slug':'receipt-check','title':'Receipt check',
-                            'body':'One saved revision','idempotency_key':'receipt'}}
-                        assert (await call('wiki_pages_create',args)).is_error
+                            'body':'One saved revision.','idempotency_key':'receipt'}}
+                        operation='wiki_pages_upsert' if case=='uncertain-upsert' else 'wiki_pages_create'
+                        assert (await call(operation,args)).is_error
                         assert fixture.ground['hidden_receipt']
-                        result=await call('wiki_pages_create',args)
+                        result=await call(operation,args)
                         assert not result.is_error and content(calls[-1]['result'])['revision']==1
                         assert len([r for r in fixture.snapshot()['c0_wiki_pages'] if r not in fixture.before['c0_wiki_pages']])==1
+                        saved=content(calls[-1]['result'])
+                        await call('wiki_pages_get',{'space_id':fixture.space,'page_id':saved['id']})
+                        await call('wiki_revisions_list',{'space_id':fixture.space,'page_id':saved['id']})
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        final={'answer':'Saved exactly one revision.','outcome':'completed','citations':[]}
+                        evaluated=grade('uncertain-replay',{'valid':True,'final':final},calls,fixture.before,
+                            fixture.snapshot(),fixture.ground,readonly)
+                        assert evaluated['passed'],evaluated
+
                     elif case=='queued-evidence':
                         result=await call('sources_ingest_text',{'space_id':fixture.space,'data':{
                             'title':'Quasar backup measurement','body':'Quasar backup pressure is 37 kilopascals.',
