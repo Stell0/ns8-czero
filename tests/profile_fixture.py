@@ -38,7 +38,8 @@ def predecessor(stage):
     member = Browser(owner.origin)
     saved = STATE / 'predecessor-profiles.json'
     if stage == 'seed':
-        member.login('c0member', personas['password'], expected=403)
+        denied = Browser(owner.origin)
+        denied.login('c0member', personas['password'], expected=403)
         status, body, _ = owner.api('/api/v1/access/accounts')
         assert status == 200, 'Cannot inspect predecessor accounts'
         account = next(row for row in json.loads(body)['accounts'] if row['username'] == 'c0member')

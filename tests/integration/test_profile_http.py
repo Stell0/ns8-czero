@@ -201,8 +201,12 @@ def test_exact_predecessor_profile_fixture_uses_old_me_then_verified_new_profile
     monkeypatch.setattr(app.state.auth.oidc,'verify_access_token',native_names)
     class Browser:
         def __init__(self,origin):
-            self.origin=origin;self.http=TestClient(app,base_url=origin)
+            self.origin=origin;self.http=TestClient(app,base_url=origin);self.provider_authenticated=False
         def login(self,username,password,expected=200):
+            # A denied app admission still leaves a signed-in provider browser.
+            # Reusing it redirects without the fresh login form this fixture expects.
+            assert not self.provider_authenticated, 'Provider login form missing'
+            self.provider_authenticated=True
             self.http.headers['Authorization']='Bearer '+(owner_token if username=='c0owner' else member_token)
             response=self.http.get('/api/v1/me');assert response.status_code==expected
             return {**response.json(),'csrf_token':'fixture-only'} if expected==200 else None
