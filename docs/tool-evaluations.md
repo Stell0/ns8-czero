@@ -73,3 +73,18 @@ as a model failure or a candidate improvement. The corrected prompt quotes the
 requested saved sentence explicitly; grading also checks actual body/title and
 stored synthetic provenance. Freeze and rerun both arms under
 one corrected driver/rubric before claiming the final comparison.
+
+Rubric version 3 scores authorized discovery and equivalent typed read routes
+against stored facts. An ambiguous task may search every space returned by
+actual authorized discovery, then ask before writing. Complete source/search
+citations or a matching read version/document/chunk chain must agree with
+independent database identities, hashes and offsets. Record lists and exact
+Wiki resolution can verify saved results; entity relation reads can answer graph
+questions. Current verification is tied to the exact current reference, and
+profile identity is checked against the persisted owner actor. Implicit selectors,
+unlisted spaces, denied-space fallback, extra writes and invented evidence fail.
+Preserve earlier narrow-grader false positives separately; freeze and measure
+both sources under one final rubric instead of calling them model improvements.
+Final prose, including whether a number is quoted/rejected or asserted, still
+requires the separately recorded semantic review. The suite also records Python
+and actual runtime package versions for replay.

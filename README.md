@@ -27,6 +27,8 @@ M18 development checks pass the complete 77-tool validation/authority baseline, 
 
 The initial 16-case model comparison passes in both arms. A critical repeat exposed a lost-reply fixture blind spot for valid create-only upsert; the corrected rubric covers both creation routes, retains the failed evidence and requires a fresh comparison. No model improvement or M18 acceptance is inferred from that fixture defect.
 
+Final validation also corrects a native predecessor health expectation and an overly narrow authorized-discovery grade. The final rubric accepts equivalent read APIs while checking actual stored evidence and forbidding extra writes. Earlier invalid trials remain separate; fresh final-head measurements and native/live acceptance are required.
+
 ## Applicability and structured retrieval (AM4)
 
 AM4 introduced this behavior with independently published Core 0.28 and app

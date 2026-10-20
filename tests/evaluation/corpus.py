@@ -31,4 +31,4 @@ WRITE_TOOLS = {
 # A quality pass requires every critical invariant and all task assertions.
 # Manual semantic review remains separate; a green state grade does not prove
 # nuanced prose quality or ChatGPT/native discovery behavior.
-RUBRIC_VERSION = 2
+RUBRIC_VERSION = 3

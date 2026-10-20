@@ -5,6 +5,7 @@
 import argparse
 import asyncio
 import hashlib
+import importlib.metadata
 import json
 import os
 from pathlib import Path
@@ -32,10 +33,17 @@ async def run(args):
     source = subprocess.check_output(['git','rev-parse','HEAD'],cwd=app_root,text=True).strip()
     dirty = bool(subprocess.check_output(['git','status','--porcelain'],cwd=app_root,text=True))
     driver_files = [Path(__file__),*sorted((ROOT/'tests/evaluation').glob('*.py'))]
+    packages={d.metadata['Name'].lower().replace('_','-'):d.version for d in importlib.metadata.distributions()}
+    runtime_names=('czero-core','mcp','fastapi','starlette','httpx','httpx2','sqlalchemy',
+        'psycopg','pydantic','pydantic-core','joserfc','cryptography','jsonschema')
+    runtime_versions={name:packages[name] for name in runtime_names}
+
     proof = {'source':source,'dirty':dirty,'app_version':czero_app.__version__,'rubric_version':RUBRIC_VERSION,
         'driver_sha256':fingerprint({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in driver_files}),
         'corpus_sha256':fingerprint(CASES),'started_at':datetime.now(timezone.utc).isoformat(),
         'requested_model':args.model,'effort':args.effort,'cases':[],
+        'python_version':sys.version,'runtime_versions':runtime_versions,
+        'runtime_versions_sha256':fingerprint(runtime_versions),'installed_packages':dict(sorted(packages.items())),
         'boundary':'Experimental eager Codex app-server adapter; real authenticated MCP/DB. No native discovery or ChatGPT quality claim.'}
     cases = args.cases or list(INITIAL)
     for case in cases:

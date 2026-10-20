@@ -24,11 +24,15 @@ def test_only_loopback_database_administrator_is_allowed():
 
 
 @pytest.mark.parametrize('case',['cited-research','wiki-conflict','uncertain-replay','queued-evidence',
-                                'reader-denial','scope-consent','exact-version','changed-verification','uncertain-upsert'])
+                                'reader-denial','scope-consent','exact-version','changed-verification','uncertain-upsert',
+                                'cited-source-search','cited-knowledge-search','cited-chunks',
+                                'ambiguous-space','graph-vs-objects','typed-create','changed-verification-search','current-profile'])
 def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
     async def check():
         admin_url=os.environ['CZERO_TEST_DATABASE_URL']
-        fixture_case='uncertain-replay' if case=='uncertain-upsert' else case
+        fixture_case=('uncertain-replay' if case=='uncertain-upsert' else
+            'cited-research' if case.startswith('cited-') else
+            'changed-verification' if case=='changed-verification-search' else case)
         async with disposable_database(admin_url) as url:
             name=database_parameters(url).database
             fixture=Fixture(url,tmp_path)
@@ -46,21 +50,33 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         calls.append({'name':name,'arguments':args,
                             'result':result.model_dump(mode='json',by_alias=True,exclude_none=True)})
                         return result
-                    if case=='cited-research':
-                        result=await call('citations_get',{'chunk_id':fixture.ground['citation']['chunk_id'],'space_id':fixture.space})
+                    if case.startswith('cited-'):
+                        if case=='cited-source-search':
+                            result=await call('sources_search',{'query':'Quasar','space_id':fixture.space})
+                        elif case=='cited-knowledge-search':
+                            result=await call('knowledge_search',{'options':{'query':'Quasar','kind':'source',
+                                'mode':'text','rerank':'off','space_id':fixture.space}})
+                        elif case=='cited-chunks':
+                            citation=fixture.ground['citation']
+                            await call('source_versions_list',{'source_id':citation['source_id'],'space_id':fixture.space})
+                            await call('documents_get',{'version_id':citation['version_id'],'space_id':fixture.space})
+                            result=await call('document_chunks_list',{'document_id':citation['document_id'],'space_id':fixture.space})
+                        else:
+                            result=await call('citations_get',{'chunk_id':fixture.ground['citation']['chunk_id'],'space_id':fixture.space})
                         assert not result.is_error
                         final={'answer':'42 kilopascals','outcome':'completed','citations':[
                             {key:fixture.ground['citation'][key] for key in
                                 ('source_id','version_id','document_id','chunk_id','content_hash','source_hash','start_offset','end_offset')}]}
                         readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
-                        assert grade(case,{'valid':True,'final':final},calls,fixture.before,
+                        assert grade('cited-research',{'valid':True,'final':final},calls,fixture.before,
                             fixture.snapshot(),fixture.ground,readonly)['passed']
                         # The same final answer cannot cover a real unrelated write.
                         await fixture.request('POST','/api/v1/wiki/pages',{'slug':'unrequested','title':'Unsafe',
                             'body':'Extra write','idempotency_key':'extra'},fixture.space)
-                        assert not grade(case,{'valid':True,'final':final},calls,fixture.before,
+                        assert not grade('cited-research',{'valid':True,'final':final},calls,fixture.before,
                             fixture.snapshot(),fixture.ground,readonly)['passed']
                     elif case=='wiki-conflict':
+                        await call('wiki_pages_resolve',{'slug':fixture.ground['page']['slug'],'space_id':fixture.space})
                         args={'space_id':fixture.space,'page_id':fixture.ground['page']['id'],
                             'data':{'title':'Quasar maintenance','body':'Inspect the exhaust.',
                                     'expected_revision':1,'idempotency_key':'stale'}}
@@ -73,6 +89,13 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         result=await call('wiki_pages_update',{**args,'data':{**args['data'],
                             'body':body+'\nInspect the exhaust.','expected_revision':2,'idempotency_key':'reconciled'}})
                         assert not result.is_error and content(calls[-1]['result'])['revision']==3
+                        await call('wiki_pages_resolve',{'slug':fixture.ground['page']['slug'],'space_id':fixture.space})
+                        await call('wiki_revisions_list',{'page_id':fixture.ground['page']['id'],'space_id':fixture.space})
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        result=grade(case,{'valid':True,'final':{'answer':'Updated with concurrent note.',
+                            'outcome':'completed','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
+                        assert result['passed'],result
+
                     elif case in ('uncertain-replay','uncertain-upsert'):
                         args={'space_id':fixture.space,'data':{'slug':'receipt-check','title':'Receipt check',
                             'body':'One saved revision.','idempotency_key':'receipt'}}
@@ -83,7 +106,7 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         assert not result.is_error and content(calls[-1]['result'])['revision']==1
                         assert len([r for r in fixture.snapshot()['c0_wiki_pages'] if r not in fixture.before['c0_wiki_pages']])==1
                         saved=content(calls[-1]['result'])
-                        await call('wiki_pages_get',{'space_id':fixture.space,'page_id':saved['id']})
+                        await call('wiki_pages_resolve',{'space_id':fixture.space,'slug':saved['slug']})
                         await call('wiki_revisions_list',{'space_id':fixture.space,'page_id':saved['id']})
                         readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
                         final={'answer':'Saved exactly one revision.','outcome':'completed','citations':[]}
@@ -105,6 +128,60 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         assert result.is_error and result.content[0].text==(
                             'permission_denied' if case=='reader-denial' else 'insufficient_scope')
                         assert fixture.snapshot()==fixture.before
+                    elif case=='ambiguous-space':
+                        await call('spaces_list',{})
+                        spaces=content(calls[-1]['result'])['spaces']
+                        for space in spaces:
+                            result=await call('knowledge_search',{'options':{'space_id':space['id'],
+                                'query':'Handover','kind':'wiki','mode':'text','rerank':'off'}})
+                            assert not result.is_error
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        result=grade(case,{'valid':True,'final':{'answer':'Which Handover page?',
+                            'outcome':'clarification','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
+                        assert result['passed'],result
+                    elif case=='graph-vs-objects':
+                        result=await call('entity_relations_list',{'space_id':fixture.space,
+                            'entity_id':fixture.ground['entities'][0]['id']})
+                        assert not result.is_error
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        result=grade(case,{'valid':True,'final':{'answer':'Quasar router depends on Quasar gateway.',
+                            'outcome':'completed','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
+                        assert result['passed'],result
+                    elif case=='typed-create':
+                        await call('object_types_get',{'type_name':'eval-asset'})
+                        result=await call('objects_create',{'space_id':fixture.space,'data':{
+                            'type_name':'eval-asset','data':{'name':'reserve-router','quantity':7}}})
+                        assert not result.is_error
+                        await call('objects_list',{'space_id':fixture.space,'type_name':'eval-asset',
+                            'where':json.dumps({'name':'reserve-router'})})
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        result=grade(case,{'valid':True,'final':{'answer':'Created reserve-router, quantity 7.',
+                            'outcome':'completed','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
+                        assert result['passed'],result
+                    elif case=='changed-verification-search':
+                        result=await call('knowledge_search_structured',{'data':{'space_id':fixture.space,
+                            'query':'Quasar','mode':'text','filters':{'categories':['wiki']}}})
+                        assert not result.is_error
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        result=grade('changed-verification',{'valid':True,'final':{'answer':'Current verification is unknown.',
+                            'outcome':'completed','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
+                        assert result['passed'],result
+                    elif case=='current-profile':
+                        result=await call('get_profile',{})
+                        assert not result.is_error
+                        profile=content(calls[-1]['result'])
+                        readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
+                        result=grade(case,{'valid':True,'final':{'answer':'owner '+profile['id'],
+                            'outcome':'completed','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
+                        assert result['passed'],result
+                        altered=dict(fixture.before)
+                        revisions=[json.loads(v) for v in altered['c0_wiki_revisions']]
+                        for row in revisions:
+                            if row['id']==fixture.ground['page']['content']['id']: row['actor_id']='different-account'
+                        altered['c0_wiki_revisions']=[json.dumps(v,sort_keys=True) for v in revisions]
+                        rejected=grade(case,{'valid':True,'final':{'answer':'owner '+profile['id'],
+                            'outcome':'completed','citations':[]}},calls,altered,altered,fixture.ground,readonly)
+                        assert not rejected['checks']['credential_scoped_identity']
                     elif case=='exact-version':
                         result=await call('knowledge_search_structured',{'data':{'space_id':fixture.space,
                             'query':'Quasar','mode':'text','filters':{'categories':['wiki'],'version_tags':['8.40']}}})

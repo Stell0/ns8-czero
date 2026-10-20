@@ -154,6 +154,8 @@ Local development validation passes 1476 Python/PostgreSQL/packaging cases witho
 
 The first frozen comparison passes16/16 in both arms, but a baseline critical repeat reveals a fixture blind spot: valid create-only upsert was neither intercepted nor allowed by the uncertainty rubric. Preserve it as invalid fixture evidence, not a model regression. Rubric2 injects lost replies for both create routes and checks identical operation/arguments; rerun both arms and final-head CI. No runtime change is required.
 
+The genuine M17 native health seed must expect0.47.0; the candidate expects0.48.0. Pass both explicitly from Robot into the private SSO wrapper and test their manifest bindings; stale0.46.1 expectations caused the superseded Debian setup/cascades. Rubric3 permits read-only discovery of all actually authorized spaces and equivalent typed read APIs while checking stored identities/hashes/payloads, fresh readback and no extra writes. Preserve the rubric2 ambiguity false positive and freeze fresh final measurements; keep dependency inventories. No app/Core/schema behavior changes.
+
 Native M18 upgrades use all three genuine14e4d01 digests from PLAN; retain eight real browsers, profile identity/grant recovery, configured renewal and actual artifact/journal privacy. Candidate/main/full deployment checks and actual ChatGPT workflows remain required. M19/further AM/Windmill stay deferred; CPU-quota and interactive Playwright waivers remain.
 
 ## Current M17 profile checkpoint — 20 October 2026
