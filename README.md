@@ -5,6 +5,12 @@
 [PR 20](https://github.com/Stell0/ns8-czero/pull/20) preserves the accepted source through regular merge `e378a89`. [Full PR validation](https://github.com/Stell0/ns8-czero/actions/runs/39166087566) and [automatic main validation/publication](https://github.com/Stell0/ns8-czero/actions/runs/39201930016) pass 1290 Python/PostgreSQL/packaging cases, 127 controllers, 21 Robot checks, producer/released-Core/scans and both native distributions (Debian genuine upgrade 21; Rocky installation 26/three expected skips/all eight browsers). Actual source/image/privacy/accessibility artifacts pass. Supported backup, targeted update, full-manager restart, independent current/legacy SDK reuse and same-bearer client revocation pass while preserving original data and eleven unrelated applications. See [PLAN.md](PLAN.md) for exact deployed digests and limits. Session-renewal drafts remain preserved separately; Windmill Gate remains separate. Existing waivers persist and no stable module release is claimed.
 
 
+## Current runtime: M20 renewal acceptance
+
+The dedicated instance runs accepted candidate `4137048`, Core **0.30.1**, app **0.46.1**, schema **0017**. [PR 22](https://github.com/Stell0/ns8-czero/pull/22) is merged as `cba48675`, preserving the tested tree. Its final full PR checks pass; [main validation](https://github.com/Stell0/ns8-czero/actions/runs/39381904479) and documentation closeout remain pending. The AM6 paragraph above is historical evidence, not the current installation.
+
+An active browser is measured for 2110 seconds and the actual ChatGPT connector for 2274 seconds, with repeated native refresh rotation and stable identity, scopes and original bounds. Configured idle/absolute expiry, revocation/reconnect, local logout, C0-only update/full-manager restart, retained content/settings/files/schedules and isolated client-disable controls pass. Actual SDK discovery has 76 tools; the existing connector's cached catalog does not prove fresh discovery. The bounded positive-control app journal passes privacy audits. See [PLAN.md](PLAN.md) for frozen installed digests, exact evidence and the remaining main/closeout gates. Keep accepted candidate images installed; M17 profile identity remains gated. Existing waivers and deferred Windmill work remain unchanged.
+
 ## Applicability and structured retrieval (AM4)
 
 AM4 introduced this behavior with independently published Core 0.28 and app
@@ -616,9 +622,9 @@ forced-plan timing limitation. No runtime deadline is weakened or automatic test
 retry added. Documentation-only main commits retain accepted runtime images.
 
 
-### Session renewal (M20 correction, acceptance pending)
+### Session renewal (M20 corrected runtime accepted)
 
-App 0.46.1 adopts independently published Core 0.30.1/schema 0017 to correct a live provider-window failure. Final application CI and renewed live acceptance remain pending.
+App 0.46.1 adopts independently published Core 0.30.1/schema 0017 to correct a live provider-window failure. Corrected application CI/native and dedicated runtime acceptance pass; the current main/closeout gates are recorded above.
 New sign-ins with provider refresh authority can renew for eight hours, with
 one hour of inactivity allowed by default. Access tokens stay at most five
 minutes; public refresh rotates and cannot add scopes. The provider can end
@@ -658,6 +664,4 @@ exact producer/native/publication and supplied-artifact checks at `4600739`.
 App 0.46.1 adopts that exact tag/lock and must repeat consumer/native/live
 acceptance, including at least 35 minutes of continuous activity to cover the
 observed failure window.
-AM6's frozen images remain the last
-accepted predecessor. Original drafts and failed private evidence are preserved.
-See PLAN.md for executed results and remaining gates.
+The corrected `4137048` installation supersedes C440; its frozen images become the next genuine predecessor after main and documentation closeout pass. Original drafts and failed private evidence are preserved. See PLAN.md for executed results and remaining gates.
