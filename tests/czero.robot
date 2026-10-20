@@ -109,7 +109,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.47.0
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False
@@ -119,7 +119,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.48.0
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
         ...    return_rc=True    return_stdout=False    timeout=180s

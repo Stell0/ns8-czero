@@ -304,3 +304,23 @@ def test_existing_sso_fixture_requires_exact_host_provider_and_valid_tls(tmp_pat
         assert reuse('changed-czero7.test')=={'domain':'users.czero.test','idp':'stable-fixture-id','owner':'c0owner'}
     assert (tmp_path/'personas.json').read_bytes()==before
     assert not any('add-module' in arg or 'setup' in arg for args in calls for arg in args)
+
+
+@pytest.mark.parametrize('stage,expected_app',[('seed','0.47.0'),('verify','0.48.0')])
+def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,stage,expected_app):
+    calls,levels,network = [],[],[]
+    def execute(command,**options):
+        calls.append(command)
+        return ('','',0) if options.get('return_stderr') else ('',0)
+    ssh = SimpleNamespace(execute_command=execute)
+    monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh)
+    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level: levels.append(level) or 'INFO')
+    waits=[]
+    monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,*args: waits.append(args))
+    library = runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    monkeypatch.setattr(library,'_network',lambda *args: network.append(args))
+    library.predecessor_profile('czero7','czero7.test',stage,expected_app)
+    assert waits == [('Wait Until Keyword Succeeds','30s','2s','Check application route',expected_app,'czero7.test')]
+    assert network == ([(ssh,'czero7')] if stage=='verify' else [])
+    assert calls == ['python3 /tmp/profile_fixture.py '+stage,'python3 /tmp/oidc_fixture.py check-logs czero7']
+    assert levels == ['NONE','INFO']

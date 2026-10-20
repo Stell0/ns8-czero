@@ -1,6 +1,7 @@
 {
   "version": 1,
   "source": "14e4d01dce8c2ed7ae2217138c22d462edd95227",
+  "app_version": "0.47.0",
   "operations": [
     {
       "name": "citations_get",

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import tomllib
 import re
@@ -91,3 +92,12 @@ def test_native_health_expectations_match_the_declared_producer_versions():
         declared = tomllib.loads((root/manifest).read_text())['project']['version']
         expected = re.findall('"'+name+'":"([^"]+)"',robot)
         assert expected and set(expected)=={declared}
+
+
+def test_predecessor_and_current_profile_health_bindings_are_explicit():
+    root = Path(__file__).parents[2]
+    robot = (root/'tests/czero.robot').read_text()
+    predecessor = json.loads((root/'tests/fixtures/tool_guidance/m17_contract.json').read_text())
+    current = tomllib.loads((root/'app/pyproject.toml').read_text())['project']['version']
+    calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)',robot)
+    assert calls == [('seed',predecessor['app_version']),('verify',current)]
