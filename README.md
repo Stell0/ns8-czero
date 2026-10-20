@@ -1,9 +1,15 @@
 # C0 (Czero) — Application foundation for NethServer 8
 
-**Status (19 October 2026): Agent Memory AM0–AM6 runtime acceptance passes.** The dedicated instance runs accepted source `97a7a1b`, Core **0.29.0**, app **0.45.0** and schema **0016**. Agents can ingest evidence, use protected spaces, revise Wiki pages safely, annotate exact content, search applicability and publish bounded consolidation atomically. The **Use with AI** page and machine capabilities now guide these workflows under the caller's actual authority.
+**Historical AM6 acceptance (19 October 2026):** Agent Memory AM0–AM6 runtime acceptance passes. Its accepted source is `97a7a1b`, Core **0.29.0**, app **0.45.0**, schema **0016**. Agents can ingest evidence, use protected spaces, revise Wiki pages safely, annotate exact content, search applicability and publish bounded consolidation atomically. The **Use with AI** page and machine capabilities now guide these workflows under the caller's actual authority.
 
-[PR 20](https://github.com/Stell0/ns8-czero/pull/20) preserves the accepted source through regular merge `e378a89`. [Full PR validation](https://github.com/Stell0/ns8-czero/actions/runs/39166087566) and [automatic main validation/publication](https://github.com/Stell0/ns8-czero/actions/runs/39201930016) pass 1290 Python/PostgreSQL/packaging cases, 127 controllers, 21 Robot checks, producer/released-Core/scans and both native distributions (Debian genuine upgrade 21; Rocky installation 26/three expected skips/all eight browsers). Actual source/image/privacy/accessibility artifacts pass. Supported backup, targeted update, full-manager restart, independent current/legacy SDK reuse and same-bearer client revocation pass while preserving original data and eleven unrelated applications. See [PLAN.md](PLAN.md) for exact deployed digests and limits. Session-renewal drafts remain preserved separately; Windmill Gate remains separate. Existing waivers persist and no stable module release is claimed.
+[PR 20](https://github.com/Stell0/ns8-czero/pull/20) preserves the accepted source through regular merge `e378a89`. [Full PR validation](https://github.com/Stell0/ns8-czero/actions/runs/39166087566) and [automatic main validation/publication](https://github.com/Stell0/ns8-czero/actions/runs/39201930016) pass 1290 Python/PostgreSQL/packaging cases, 127 controllers, 21 Robot checks, producer/released-Core/scans and both native distributions (Debian genuine upgrade 21; Rocky installation 26/three expected skips/all eight browsers). Actual source/image/privacy/accessibility artifacts pass. Supported backup, targeted update, full-manager restart, independent current/legacy SDK reuse and same-bearer client revocation pass while preserving original data and eleven unrelated applications. See [PLAN.md](PLAN.md) for exact deployed digests and limits. Original session-renewal drafts remain preserved separately; the corrected M20 runtime is recorded below. Windmill Gate remains separate. Existing waivers persist and no stable module release is claimed.
 
+
+## Current runtime: M20 renewal acceptance
+
+The dedicated instance runs accepted candidate `4137048`, Core **0.30.1**, app **0.46.1**, schema **0017**. [PR 22](https://github.com/Stell0/ns8-czero/pull/22) is merged as `cba48675`, preserving the tested tree. Its final full PR checks pass; [main validation](https://github.com/Stell0/ns8-czero/actions/runs/39381904479) fails a Rocky recovery-fixture timestamp check. [PR 24](https://github.com/Stell0/ns8-czero/pull/24) fixes the reproduced Python-3.9 parsing defect, passes full candidate acceptance and is regularly merged as `8ca30ac`. [Corrected main validation/publication](https://github.com/Stell0/ns8-czero/actions/runs/39397121223) completes successfully: 1412 actual Python/PostgreSQL/packaging cases, both native distributions, all eight browsers, artifact/privacy/scan audits and verified canonical image identities. This documentation closeout still requires review/merge and its actual successful lightweight main checks. The AM6 paragraph above is historical evidence, not the current installation.
+
+An active browser is measured for 2110 seconds and the actual ChatGPT connector for 2274 seconds, with repeated native refresh rotation and stable identity, scopes and original bounds. Configured idle/absolute expiry, revocation/reconnect, local logout, C0-only update/full-manager restart, retained content/settings/files/schedules and isolated client-disable controls pass. Actual SDK discovery has 76 tools; the existing connector's cached catalog does not prove fresh discovery. The bounded positive-control app journal passes privacy audits. See [PLAN.md](PLAN.md) for frozen installed digests, exact evidence and the remaining documentation closeout gate. Keep accepted candidate images installed; the Git-only correction needs no live update. M17 profile identity starts only after this closeout marker's successful main result. Existing waivers and deferred Windmill work remain unchanged.
 
 ## Applicability and structured retrieval (AM4)
 
@@ -616,9 +622,9 @@ forced-plan timing limitation. No runtime deadline is weakened or automatic test
 retry added. Documentation-only main commits retain accepted runtime images.
 
 
-### Session renewal (M20 correction, acceptance pending)
+### Session renewal (M20 corrected runtime accepted)
 
-App 0.46.1 adopts independently published Core 0.30.1/schema 0017 to correct a live provider-window failure. Final application CI and renewed live acceptance remain pending.
+App 0.46.1 adopts independently published Core 0.30.1/schema 0017 to correct a live provider-window failure. Corrected application CI/native and dedicated runtime acceptance pass; the current main/closeout gates are recorded above.
 New sign-ins with provider refresh authority can renew for eight hours, with
 one hour of inactivity allowed by default. Access tokens stay at most five
 minutes; public refresh rotates and cannot add scopes. The provider can end
@@ -655,9 +661,5 @@ full-manager restart pass. Its longer live probe exposes one-hour access versus
 thirty-minute provider refresh authority; waiting for access expiry loses an
 active session. The candidate is unaccepted and unmerged. Core 0.30.1 passes
 exact producer/native/publication and supplied-artifact checks at `4600739`.
-App 0.46.1 adopts that exact tag/lock and must repeat consumer/native/live
-acceptance, including at least 35 minutes of continuous activity to cover the
-observed failure window.
-AM6's frozen images remain the last
-accepted predecessor. Original drafts and failed private evidence are preserved.
-See PLAN.md for executed results and remaining gates.
+App 0.46.1 adopts that exact tag/lock and passes corrected consumer/native/live acceptance, including over 35 minutes of continuous browser and actual ChatGPT activity covering the observed failure window.
+The corrected `4137048` installation supersedes C440; its frozen images become the next genuine predecessor after main and documentation closeout pass. Original drafts and failed private evidence are preserved. See PLAN.md for executed results and remaining gates.
