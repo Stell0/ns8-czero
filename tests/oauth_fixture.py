@@ -4,6 +4,7 @@
 import hashlib
 import base64
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 import secrets
 import subprocess
@@ -150,6 +151,13 @@ def seed_persistence(module_id, browser, profile, *, snapshot_fn=snapshot):
     path.chmod(0o600)
 
 
+def parse_grant_expiry(value):
+    # PostgreSQL omits trailing fractional zeros. Python 3.9 fromisoformat
+    # accepts only three or six fractional digits; strptime accepts one to six.
+    pattern = '%Y-%m-%dT%H:%M:%S' + ('.%f' if '.' in value else '') + '%z'
+    return datetime.strptime(value, pattern).astimezone(timezone.utc)
+
+
 def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk_fn=sdk):
     path = STATE / 'expected-oauth-grant.json'
     expected = json.loads(path.read_text())
@@ -160,8 +168,7 @@ def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk
                'refresh_token':pair['refresh_token'],'resource':browser.origin+'/mcp'}
     restored = module_id != expected['module_id']
     # An expired grant would not prove restored native-client binding.
-    from datetime import datetime, timezone
-    assert all(datetime.fromisoformat(row['expires_at']).astimezone(timezone.utc) > datetime.now(timezone.utc)
+    assert all(parse_grant_expiry(row['expires_at']) > datetime.now(timezone.utc)
                for row in expected['rows']['grants']), 'Recovery grant expired before binding assertion'
     status, body, _ = browser.request('/oauth/token',urlencode(refresh).encode(),'POST',headers)
     if restored:
