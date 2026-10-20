@@ -146,6 +146,23 @@ def apply_czero_network(module_id):
              "czero-pod.service", "czero-postgres.service", "czero.service"])
 
 
+def reuse(host):
+    """Reuse only this VM's exact existing provider and TLS/persona fixture."""
+    global PHASE
+    PHASE = 'existing disposable SSO fixture'
+    personas = json.loads((STATE / 'personas.json').read_text())
+    resources = json.loads((STATE / 'resources.json').read_text())
+    if host != personas['host'] or not host.endswith('.test'):
+        raise RuntimeError('Disposable SSO host changed')
+    provider = command(['runagent', '-m', 'node', 'python3', '-c',
+        "import agent; p=agent.list_service_providers(agent.redis_connect(),'oidc','http'); "
+        "print(next(x['module_uuid'] for x in p if x['module_id']==" + repr(resources['idp']) + "))"]).strip()
+    if provider != resources['provider']:
+        raise RuntimeError('Disposable SSO provider changed')
+    command(['openssl', 'x509', '-in', str(STATE / 'leaf.pem'), '-noout', '-checkend', '0'])
+    return {'domain': DOMAIN, 'idp': provider, 'owner': 'c0owner'}
+
+
 def cleanup():
     global PHASE
     PHASE = "fixture cleanup"
@@ -179,6 +196,8 @@ if __name__ == "__main__":
         if operation == "setup":
             result = setup(json.loads(Path(sys.argv[2]).read_text()))
             print(json.dumps(result))
+        elif operation == 'reuse':
+            print(json.dumps(reuse(sys.argv[2])))
         elif operation == "network":
             apply_czero_network(sys.argv[2])
         elif operation == "cleanup":

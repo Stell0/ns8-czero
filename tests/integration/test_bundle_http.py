@@ -108,7 +108,7 @@ def test_actual_sdk_bundle_matches_rest_and_returns_safe_stale_conflict(bundle_h
                         headers={'Authorization':'Bearer '+pair.access_token},event_hooks={'response':[observe]}) as http:
                     async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
                         tools = (await client.list_tools()).tools
-                        assert len(tools) == 76
+                        assert len(tools) == 77
                         tool = next(value for value in tools if value.name=='knowledge_bundle_apply')
                         assert not tool.annotations.read_only_hint
                         assert tool.meta['securitySchemes'][0]['scopes'] == ['c0:write']

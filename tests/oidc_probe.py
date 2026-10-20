@@ -10,6 +10,7 @@ import ssl
 import sys
 import time
 from uuid import uuid4
+from profile_fixture import verify_profile
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urljoin
 from urllib.request import build_opener, HTTPCookieProcessor, HTTPSHandler, Request
@@ -286,6 +287,7 @@ def probe():
     owner = Browser(origin)
     profile = owner.login("c0owner", payload["password"])
     assert profile["role"] == "admin" and profile["is_owner"], "Owner identity mismatch"
+    verify_profile(owner, profile)
     verify_capabilities(owner, 'admin')
     status, body, _ = owner.api("/api/v1/schedules")
     assert status == 200 and len(json.loads(body)["schedules"]) >= 2, "Admin schedules unavailable"
@@ -309,6 +311,7 @@ def probe():
     reader = Browser(origin)
     current = reader.login("c0member", payload["password"])
     assert current["role"] == "reader", "Reader grant not persisted"
+    verify_profile(reader, current)
     verify_capabilities(reader, 'reader')
     status, _, _ = reader.api("/api/v1/access/accounts")
     assert status == 403, "Reader can administer"
@@ -708,6 +711,7 @@ def persistence(operation):
     owner = Browser(origin)
     profile = owner.login("c0owner", payload["password"])
     assert profile["role"] == "admin" and profile["is_owner"], "Recovered owner is not admitted"
+    verify_profile(owner, profile)
     verify_capabilities(owner, 'admin')
     expected_file = STATE / "expected-identities.json"
     if operation == "seed":
@@ -741,6 +745,7 @@ def persistence(operation):
     editor = Browser(origin)
     member_profile = editor.login("c0member", payload["password"])
     assert member_profile["id"] == expected["member"] and member_profile["role"] == "editor", "Recovered membership changed"
+    verify_profile(editor, member_profile)
     verify_capabilities(editor, 'editor')
     verify_protected_space(editor, member_profile, expected['protected'])
     for record in expected["objects"]:

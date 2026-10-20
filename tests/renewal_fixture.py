@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 
 from oidc_fixture import STATE, task
 from oidc_probe import Browser
+from profile_fixture import verify_profile
 from oauth_fixture import registered, issue, sdk
 
 SNAPSHOT = r'''
@@ -75,6 +76,7 @@ def run(module_id, *, browser_factory=Browser, snapshot_fn=native_snapshot, sdk_
     assert policy=={'absolute_seconds':28800,'idle_seconds':3600}, 'Unexpected native renewal baseline policy'
     browser=browser_factory(origin)
     profile=browser.login('c0owner',personas['password'])
+    expected_profile=verify_profile(browser,profile)
     client=register_fn(browser,profile,client_name='Disposable renewable session lifetime')
     pair=issue(browser,profile,client)
     initial=snapshot_fn(module_id,browser)
@@ -134,6 +136,7 @@ def run(module_id, *, browser_factory=Browser, snapshot_fn=native_snapshot, sdk_
                         absolute_pair=renewed;absolute_refreshes+=1
             clock.sleep(min(20,max(1,330-(clock.monotonic()-started))))
         assert absolute_refreshes==1, 'Active short session refresh was not exercised'
+        assert verify_profile(browser,profile)==expected_profile, 'Renewal changed profile identity'
         after=snapshot_fn(module_id,browser)
         assert after['id']==initial['id'] and after['absolute']==initial['absolute'], 'Renewal changed native authority or its absolute bound'
         assert after['native_expiry']>initial['native_expiry'] and after['access_fingerprint']!=initial['access_fingerprint'], 'Native provider access did not renew'
@@ -148,6 +151,7 @@ def run(module_id, *, browser_factory=Browser, snapshot_fn=native_snapshot, sdk_
         fresh=browser_factory(origin)
         fresh_profile=fresh.login('c0owner',personas['password'])
         assert fresh_profile['id']==profile['id'], 'Fresh login changed account identity'
+        assert verify_profile(fresh,fresh_profile)==expected_profile, 'Reconnect changed profile identity'
         assert public_refresh(fresh,client,renewed)[0]==400, 'Fresh login revived old delegation'
         status,_,_=fresh.api('/api/v1/oauth/clients/'+client['client_id'],
             {'enabled':False,'expected_revision':client['revision']},'PUT',fresh_profile['csrf_token'])

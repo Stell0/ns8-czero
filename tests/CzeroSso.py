@@ -35,18 +35,25 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
                 ssh.put_file(str(fixture_root / name), '/tmp/czero-evidence-' + name, mode='0644')
-            with tempfile.TemporaryDirectory(prefix="czero-sso-") as directory:
-                payload = Path(directory) / "payload.json"
-                payload.write_text(json.dumps({"password": "Sso-" + secrets.token_urlsafe(32) + "9!", "host": host}))
-                payload.chmod(0o600)
-                ssh.put_file(str(payload), "/tmp/czero-sso-payload.json", mode="0600")
-            output, errors, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py setup /tmp/czero-sso-payload.json",
-                                             return_stderr=True, return_rc=True, timeout="900 seconds")
+            _, present = ssh.execute_command('test -f /tmp/czero-oidc-fixture/resources.json', return_rc=True)
+            if present == 0:
+                output, errors, rc = ssh.execute_command('python3 /tmp/oidc_fixture.py reuse ' + shlex.quote(host),
+                    return_stderr=True, return_rc=True, timeout='180 seconds')
+            elif present == 1:
+                with tempfile.TemporaryDirectory(prefix="czero-sso-") as directory:
+                    payload = Path(directory) / "payload.json"
+                    payload.write_text(json.dumps({"password": "Sso-" + secrets.token_urlsafe(32) + "9!", "host": host}))
+                    payload.chmod(0o600)
+                    ssh.put_file(str(payload), "/tmp/czero-sso-payload.json", mode="0600")
+                output, errors, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py setup /tmp/czero-sso-payload.json",
+                                                 return_stderr=True, return_rc=True, timeout="900 seconds")
+            else:
+                raise AssertionError('Cannot inspect disposable SSO fixture')
             if rc:
                 safe = next((line for line in errors.splitlines() if line.startswith("Disposable SSO fixture failed:")), "")
                 raise AssertionError(safe or "Disposable SSO provisioning failed")
@@ -74,6 +81,28 @@ class CzeroSso:
             self._network(ssh, module_id)
         finally:
             ssh.execute_command("rm -f /tmp/czero-sso-payload.json", return_stdout=False)
+            builtin.set_log_level(previous)
+
+    @keyword
+    def predecessor_profile(self, module_id, host, stage):
+        builtin = BuiltIn()
+        previous = builtin.set_log_level('NONE')
+        try:
+            ssh = builtin.get_library_instance('SSHLibrary')
+            if stage == 'verify':
+                self._network(ssh, module_id)
+            expected = '0.46.1' if stage == 'seed' else '0.47.0'
+            builtin.run_keyword('Wait Until Keyword Succeeds', '30s', '2s',
+                'Check application route', expected, host)
+            _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage),
+                return_stderr=True, return_rc=True, timeout='180 seconds')
+            if rc:
+                raise AssertionError('Genuine predecessor profile identity check failed')
+            _, rc = ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs ' + shlex.quote(module_id),
+                return_rc=True, timeout='180 seconds')
+            if rc:
+                raise AssertionError('Predecessor profile privacy check failed')
+        finally:
             builtin.set_log_level(previous)
 
     @staticmethod

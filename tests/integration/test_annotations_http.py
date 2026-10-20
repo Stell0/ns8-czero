@@ -122,7 +122,7 @@ def test_sdk_annotation_and_structured_search_match_rest(annotation_http, mode):
                         headers={'Authorization':'Bearer '+pair.access_token},event_hooks={'response':[capture]}) as http:
                     async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
                         tools={tool.name:tool for tool in (await client.list_tools()).tools}
-                        assert len(tools)==76
+                        assert len(tools)==77
                         assert tools['knowledge_annotations_update'].meta['securitySchemes']==[{'type':'oauth2','scopes':['c0:write']}]
                         assert tools['knowledge_search_structured'].annotations.read_only_hint
                         missing=await client.call_tool('knowledge_annotations_get',args)

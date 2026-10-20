@@ -29,6 +29,7 @@ from czero_app.operations import OperationCatalog
 from czero_core.identity import Role
 from czero_app.oauth import install_oauth_routes
 from czero_app.spaces import install_space_routes, ExactSpaceSelector
+from czero_app.profile import install_profile_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -100,6 +101,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     catalog = OperationCatalog(auth)
     instance_app.state.operations = catalog.registry
     instance_app.state.operation_catalog = catalog
+    install_profile_routes(instance_app, auth, read_context)
     install_space_routes(instance_app, database, auth, read_context, write_context)
     originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
     retrieval_settings=load_settings()
