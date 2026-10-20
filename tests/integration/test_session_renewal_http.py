@@ -155,9 +155,13 @@ def test_signed_browser_and_public_refresh_continue_beyond_original_token_expiry
             with app.state.auth.access.database.engine.connect() as c:
                 row = c.execute(text('SELECT * FROM c0_native_authority WHERE account_id=:id'),{'id':UUID(profile['id'])}).mappings().one()
             absolute = row['expires_at']
+            expected_profile=(await client.get('/api/v1/profile')).json()
+            assert expected_profile['id']==profile['id']
             for _ in range(2):
                 clock[0] += 301
                 assert (await client.get('/api/v1/me')).json()['id'] == profile['id']
+                assert (await client.get('/api/v1/profile')).json()==expected_profile
+                assert (await client.get('/api/v1/profile',headers={'Authorization':'Bearer '+current['access_token']})).status_code==401
                 assert (await client.get('/api/v1/me',headers={'Authorization':'Bearer '+current['access_token']})).status_code == 401
                 renewed = await refresh(client,saved,current)
                 assert renewed.status_code == 200
@@ -165,6 +169,7 @@ def test_signed_browser_and_public_refresh_continue_beyond_original_token_expiry
                 assert updated['refresh_token'] != current['refresh_token'] and updated['scope'] == 'c0:read'
                 assert 0 < updated['expires_in'] <= 300
                 current = updated
+                assert (await client.get('/api/v1/profile',headers={'Authorization':'Bearer '+current['access_token']})).json()==expected_profile
             assert state['refreshes'] == 2 and state['checks'] > 0
             async with app.router.lifespan_context(app):
                 async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app),base_url=ORIGIN,
@@ -172,6 +177,8 @@ def test_signed_browser_and_public_refresh_continue_beyond_original_token_expiry
                     async with Client(streamable_http_client(RESOURCE,http_client=http)) as sdk:
                         result=await sdk.call_tool('object_types_list',{})
                         assert not result.is_error and 'types' in result.structured_content
+                        result=await sdk.call_tool('get_profile',{})
+                        assert not result.is_error and result.structured_content==expected_profile
             with app.state.auth.access.database.engine.connect() as c:
                 after=c.execute(text('SELECT * FROM c0_native_authority WHERE id=:id'),{'id':row['id']}).mappings().one()
             assert after['expires_at'] == absolute and after['credential'] != row['credential']

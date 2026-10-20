@@ -503,6 +503,21 @@ async def check(value):
                     assert scope in {'c0:read','c0:write','c0:admin'}, 'Installed tool OAuth scope invalid'
                     assert scope != 'c0:admin' or role == 'admin', 'Installed Admin tool discovery crossed role'
                     assert scope != 'c0:write' or role in {'editor','admin'}, 'Installed write tool discovery crossed role'
+                profile_tool = next(t for t in tools if t.name == 'get_profile')
+                assert profile_tool.meta.get('openai/profile') is True, 'Installed profile marker missing'
+                assert profile_tool.output_schema['additionalProperties'] is False, 'Installed profile schema is open'
+                profile_result = await client.call_tool('get_profile', {})
+                if 'c0:read' in value['scope'].split():
+                    profile_response = await http.get('/api/v1/profile')
+                    me_response = await http.get('/api/v1/me')
+                    assert profile_response.status_code == me_response.status_code == 200, 'Installed profile unavailable'
+                    profile = profile_response.json()
+                    assert profile['id'] == me_response.json()['id'], 'Installed profile crossed credentials'
+                    assert not profile_result.is_error and profile_result.structured_content == profile, 'Installed profile result differs'
+                    assert json.loads(profile_result.content[0].text) == profile, 'Installed profile text differs'
+                    assert not (set(profile) - {'id','name','nickname','email'}), 'Installed profile leaked context'
+                else:
+                    assert profile_result.is_error and profile_result.content[0].text == 'insufficient_scope', 'Installed profile bypassed read scope'
                 result = await client.call_tool('object_types_list', {})
                 assert not result.is_error and result.structured_content == expected, 'Installed REST/MCP result mismatch'
                 if role != 'admin' or 'c0:admin' not in value['scope'].split():

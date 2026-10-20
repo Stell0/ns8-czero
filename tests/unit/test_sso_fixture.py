@@ -20,14 +20,17 @@ def accessibility_measurement(monkeypatch):
         'missing_main': 0, 'missing_h1': 0, 'missing_navigation': 0, 'missing_skip_target': 0}
 
 
-def test_sso_password_uploaded_privately_never_in_argv(monkeypatch):
+@pytest.mark.parametrize('existing', [False, True])
+def test_sso_password_uploaded_privately_never_in_argv(monkeypatch, existing):
     commands, uploads, levels = [], [], []
     def upload(source, destination, **kwargs):
         if destination.endswith('payload.json'):
             uploads.append((Path(source).read_text(), kwargs, Path(source).stat().st_mode & 0o777))
     def execute(command, **kwargs):
         commands.append(command)
-        if ' setup ' in command:
+        if command == 'test -f /tmp/czero-oidc-fixture/resources.json':
+            return '', 0 if existing else 1
+        if ' setup ' in command or ' reuse ' in command:
             return json.dumps({'domain': 'users.czero.test', 'idp': 'fixture-id', 'owner': 'c0owner'}), '', 0
         if '/get-configuration' in command:
             return json.dumps({'host': 'czero7.test', 'lets_encrypt': False, 'user_domain': 'users.czero.test',
@@ -41,10 +44,13 @@ def test_sso_password_uploaded_privately_never_in_argv(monkeypatch):
     monkeypatch.setattr(BuiltIn, 'set_log_level', log_level)
     library = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['CzeroSso']()
     library.provision_disposable_sso('czero7', 'czero7.test')
-    assert len(uploads) == 1
-    payload, options, mode = uploads[0]
-    assert mode == 0o600 and options['mode'] == '0600'
-    assert json.loads(payload)['password'] not in '\n'.join(commands)
+    assert len(uploads) == (0 if existing else 1)
+    assert sum(' setup ' in command for command in commands) == (0 if existing else 1)
+    assert sum(' reuse ' in command for command in commands) == (1 if existing else 0)
+    if not existing:
+        payload, options, mode = uploads[0]
+        assert mode == 0o600 and options['mode'] == '0600'
+        assert json.loads(payload)['password'] not in '\n'.join(commands)
     assert commands[-1] == 'rm -f /tmp/czero-sso-payload.json'
     assert levels == ['NONE', 'INFO']
 
@@ -276,3 +282,25 @@ def test_accessibility_rejects_private_or_failing_results(monkeypatch, accessibi
     with pytest.raises(AssertionError) as error:
         check(browser, 'sources', 'reader')
     assert 'private fixture' not in str(error.value) + ''.join(messages)
+
+
+@pytest.mark.parametrize('fault', [None, 'host', 'provider', 'certificate'])
+def test_existing_sso_fixture_requires_exact_host_provider_and_valid_tls(tmp_path, fault):
+    reuse=runpy.run_path(str(ROOT/'tests/oidc_fixture.py'))['reuse']
+    (tmp_path/'personas.json').write_text(json.dumps({'host':'changed-czero7.test','password':'private-fixture'}))
+    (tmp_path/'resources.json').write_text(json.dumps({'idp':'idp7','provider':'stable-fixture-id'}))
+    reuse.__globals__['STATE']=tmp_path
+    before=(tmp_path/'personas.json').read_bytes();calls=[]
+    def command(args):
+        calls.append(args)
+        if args[0]=='openssl':
+            if fault=='certificate':raise RuntimeError('Expired certificate')
+            return ''
+        return 'another-provider' if fault=='provider' else 'stable-fixture-id'
+    reuse.__globals__['command']=command
+    if fault:
+        with pytest.raises(RuntimeError):reuse('other.test' if fault=='host' else 'changed-czero7.test')
+    else:
+        assert reuse('changed-czero7.test')=={'domain':'users.czero.test','idp':'stable-fixture-id','owner':'c0owner'}
+    assert (tmp_path/'personas.json').read_bytes()==before
+    assert not any('add-module' in arg or 'setup' in arg for args in calls for arg in args)

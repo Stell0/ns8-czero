@@ -74,7 +74,7 @@ def test_accepted_contracts_only_add_optional_space_selectors(application):
             else: value_at_key=actual[key]
             assert value_at_key==value, (expected['name'],key)
     owner=app.state.auth.access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
-    assert len(registry.describe(owner))==76
+    assert len(registry.describe(owner))==77
     schema=app.openapi()
     assert schema['paths'][RESOLVE]['get']['x-c0-operation']=={
         'name':'wiki_pages_resolve','minimum_role':'reader','required_scope':'c0:read','read_only':True}

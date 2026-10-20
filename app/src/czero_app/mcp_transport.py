@@ -189,8 +189,11 @@ def create_mcp_app(registry, grants, *, issuer_url):
         return types.ListToolsResult(tools=[types.Tool(name=item['name'], description=item['description'],
             input_schema=item['input_schema'],
             output_schema=item['output_schema'] if item['output_schema'].get('type') == 'object' else None,
-            annotations=types.ToolAnnotations(read_only_hint=item['read_only']),
-            meta={'securitySchemes':[{'type':'oauth2', 'scopes':[item['required_scope']]}]})
+            annotations=types.ToolAnnotations(read_only_hint=item['read_only'],
+                **({'destructive_hint':False, 'idempotent_hint':True, 'open_world_hint':False}
+                   if item['name'] == 'get_profile' else {})),
+            meta={'securitySchemes':[{'type':'oauth2', 'scopes':[item['required_scope']]}],
+                **({'openai/profile':True} if item['name'] == 'get_profile' else {})})
             for item in await describe(include_scope_upgrades=True)])
 
     async def call(ctx, params):

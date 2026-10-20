@@ -53,15 +53,16 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
+    [Arguments]    ${expected_app}=0.47.0    ${route_host}=${host}
     ${output}    ${rc} =    Execute Command
-    ...    curl --fail --silent --show-error --max-time 10 https://${host}/api/v1/health --insecure --resolve ${host}:443:127.0.0.1
+    ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
     Should Be Equal As Integers    ${rc}    0
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
     Should Contain    ${output}    "core_version":"0.30.1"
-    Should Contain    ${output}    "app_version":"0.46.1"
+    Should Be Equal    ${health}[app_version]    ${expected_app}
 
 Check worker timer recovered
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
@@ -82,7 +83,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:0d419ca1b1d01cb927aeff00d6d6fb3a43533bbfdd77b4da85f30e963c70647c
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:f7ccdae519d6c5093065c0db7976ca63fe330e50b7698de38802e4429e691878
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -92,9 +93,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 97a7a1b AM6 predecessor images.
+        # Freeze all three actually deployed 4137048 M20 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:40f6c3074d7c07cf068c6bcddd65266bfd8cf356808d14adc963bbc221c12800','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:096029c10856a5898e0cafd6c266251adbc94e14f41975af22b97fcaba0b4e6a'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:7004386631a5d91a04c46cb2819576260791e0a45f5d957c68e15032f5e4b615','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:3ec7585ed0e68fcb094a0565fb01da83f46b9c731bfe07d223de6f5a8af6d128'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -106,6 +107,9 @@ Install Czero with its own identity
         ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -v ON_ERROR_STOP=1 -c "CREATE TABLE czero_upgrade_probe (id int PRIMARY KEY); INSERT INTO czero_upgrade_probe VALUES (7);"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
+        # Use the later suite hostname so one private provider/CA can be reused.
+        Provision Disposable Sso    ${module_id}    changed-${host}
+        Predecessor Profile    ${module_id}    changed-${host}    seed
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False
@@ -115,6 +119,11 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
+        Predecessor Profile    ${module_id}    changed-${host}    verify
+        ${rc} =    Execute Command
+        ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
+        ...    return_rc=True    return_stdout=False    timeout=180s
+        Should Be Equal As Integers    ${rc}    0
         # Return to a clean unconfigured fixture for the inherited preservation check.
         ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user stop czero-pod.service
         ...    return_rc=True    return_stdout=False
@@ -626,7 +635,7 @@ Check saved settings and application HTTPS in a browser
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
     Get Text    body    contains    "core_version":"0.30.1"
-    Get Text    body    contains    "app_version":"0.46.1"
+    Get Text    body    contains    "app_version":"0.47.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
