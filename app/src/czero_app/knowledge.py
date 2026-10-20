@@ -18,7 +18,8 @@ from czero_app.auth import RequestAccess
 
 class Mutation(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
-    idempotency_key: str = Field(min_length=1, max_length=128)
+    idempotency_key: str = Field(min_length=1, max_length=128,
+        description='Reuse only for an identical uncertain request. A changed request or reconciled conflict needs a new key.')
 
 
 class PageCreate(Mutation):
@@ -35,7 +36,7 @@ class PageUpsert(PageCreate):
     metadata: dict = Field(default_factory=dict, repr=False,
         description='JSON metadata, at most 16384 UTF-8 bytes.')
     expected_revision: int | None = Field(default=None, ge=1, lt=2147483647,
-        description='Omit for create-only. Supply the current revision for update-only; conflicts never overwrite.')
+        description='Omitted/null is create-only. Supply the current revision for update-only; conflicts never overwrite.')
 
 
 class KnowledgeRequestError(BaseModel):
@@ -46,7 +47,8 @@ class PageUpdate(Mutation):
     title: str = Field(min_length=1, max_length=256)
     body: str = Field(max_length=131072)
     metadata: dict = Field(default_factory=dict)
-    expected_revision: int = Field(ge=1, lt=2147483647)
+    expected_revision: int = Field(ge=1, lt=2147483647,
+        description='Current page revision from a fresh read. On conflict reload/reconcile and use a new retry key.')
 
 
 class ArchiveRequest(Mutation):

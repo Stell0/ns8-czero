@@ -3,6 +3,7 @@
 """REST and actual SDK clients; identities are trusted disposable test inputs."""
 import asyncio
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -27,6 +28,15 @@ from test_knowledge_http import knowledge_http
 from test_mcp_http import transport, RESOURCE
 
 pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason='isolated PostgreSQL required')
+
+# Presentation help may evolve; retain the accepted validation contracts using
+# schema-aware fingerprints frozen from the genuine M17 predecessor.
+spec = importlib.util.spec_from_file_location('tool_contract', Path(__file__).parents[1]/'tool_contract.py')
+contract = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(contract)
+M17_CONTRACT = {item['name']:item for item in json.loads(
+    (Path(__file__).parents[1]/'fixtures/tool_guidance/m17_contract.json').read_text())['operations']}
+
 UPSERT='/api/v1/wiki/pages/upsert'
 RESOLVE='/api/v1/wiki/pages/resolve'
 
@@ -60,6 +70,11 @@ def test_accepted_contracts_only_add_optional_space_selectors(application):
     for expected in baseline['operations']:
         actual=registry.definition(expected['name'])
         for key,value in expected.items():
+            if key=='description':
+                # M18 intentionally revises presentation; the complete card/wire
+                # test checks descriptions while these assertions freeze authority.
+                assert actual[key] and isinstance(actual[key],str)
+                continue
             if key in ('input_schema','output_schema'):
                 projected=json.loads(json.dumps(actual[key]))
                 if key=='input_schema':
@@ -67,19 +82,22 @@ def test_accepted_contracts_only_add_optional_space_selectors(application):
                         properties=candidate.get('properties',{})
                         if 'space_id' in properties:
                             assert 'space_id' not in candidate.get('required',[])
-                            assert properties.pop('space_id')=={
+                            assert contract.structural_schema(properties.pop('space_id'))=={
                                 'anyOf':[{'format':'uuid','type':'string'},{'type':'null'}],
-                                'default':None,'title':'Space Id'}
-                value_at_key=hashlib.sha256(json.dumps(projected,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                                'default':None}
+                value_at_key=contract.schema_hash(actual[key])
+                value=M17_CONTRACT[expected['name']]['input_sha256' if key=='input_schema' else 'output_sha256']
             else: value_at_key=actual[key]
             assert value_at_key==value, (expected['name'],key)
     owner=app.state.auth.access.resolve(app.state.auth.oidc.verify_access_token(owner_token))
     assert len(registry.describe(owner))==77
     schema=app.openapi()
     assert schema['paths'][RESOLVE]['get']['x-c0-operation']=={
-        'name':'wiki_pages_resolve','minimum_role':'reader','required_scope':'c0:read','read_only':True}
+        'name':'wiki_pages_resolve','minimum_role':'reader','required_scope':'c0:read','read_only':True,
+        'annotations':{'readOnlyHint':True,'destructiveHint':False,'idempotentHint':True,'openWorldHint':False}}
     assert schema['paths'][UPSERT]['post']['x-c0-operation']=={
-        'name':'wiki_pages_upsert','minimum_role':'editor','required_scope':'c0:write','read_only':False}
+        'name':'wiki_pages_upsert','minimum_role':'editor','required_scope':'c0:write','read_only':False,
+        'annotations':{'readOnlyHint':False,'destructiveHint':True,'idempotentHint':True,'openWorldHint':False}}
 
 
 @pytest.mark.parametrize('mode',['auto','legacy'])

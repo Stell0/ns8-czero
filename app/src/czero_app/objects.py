@@ -43,14 +43,16 @@ class TypesView(BaseModel):
 
 
 class ObjectCreate(StrictRequest):
-    type_name: str = Field(min_length=1,max_length=64)
-    data: dict
+    type_name: str = Field(min_length=1,max_length=64,
+        description='Existing immutable type name; discover/read its schema before choosing payload fields.')
+    data: dict = Field(description='Record payload conforming to that type schema. No replay key is accepted for this create.')
     tags: list[str] = Field(default_factory=list,max_length=32)
 
 
 class ObjectUpdate(StrictRequest):
     data: dict
-    expected_revision: int = Field(ge=1,le=2147483647)
+    expected_revision: int = Field(ge=1,le=2147483647,
+        description='Current record revision from a fresh read; stale changes conflict. This is not an idempotency key.')
     tags: list[str] | None = Field(default=None,max_length=32)
 
 

@@ -32,6 +32,7 @@ from czero_core.renewal import RenewalUnavailable
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 from czero_app.agent_guidance import agent_guidance, SERVER_INSTRUCTIONS
+from czero_app.tool_guidance import annotations_for, presented_operations
 from czero_app.object_errors import mcp_object_error
 from czero_app.knowledge_errors import KNOWLEDGE_OPERATIONS, mcp_knowledge_error
 from czero_app.space_errors import SPACE_OPERATIONS, mcp_space_error
@@ -189,9 +190,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
         return types.ListToolsResult(tools=[types.Tool(name=item['name'], description=item['description'],
             input_schema=item['input_schema'],
             output_schema=item['output_schema'] if item['output_schema'].get('type') == 'object' else None,
-            annotations=types.ToolAnnotations(read_only_hint=item['read_only'],
-                **({'destructive_hint':False, 'idempotent_hint':True, 'open_world_hint':False}
-                   if item['name'] == 'get_profile' else {})),
+            annotations=types.ToolAnnotations.model_validate(annotations_for(item)),
             meta={'securitySchemes':[{'type':'oauth2', 'scopes':[item['required_scope']]}],
                 **({'openai/profile':True} if item['name'] == 'get_profile' else {})})
             for item in await describe(include_scope_upgrades=True)])
@@ -252,7 +251,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
         uri = str(params.uri)
         try:
             if uri == 'c0://capabilities':
-                operations = await describe()
+                operations = presented_operations(await describe())
                 result = {'operations': operations, 'guidance': agent_guidance(operations)}
             else:
                 match = re.fullmatch(r'c0://(wiki/pages|source-versions|entities)/([0-9a-fA-F-]{36})', uri)

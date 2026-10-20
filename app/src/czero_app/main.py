@@ -217,7 +217,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     def capabilities(request):
         context = read_context(request) if (request.headers.get('authorization') is not None
             or request.cookies.get('c0_session')) else None
-        operations = catalog.registry.describe(context.actor, scopes=context.scopes) if context else []
+        from czero_app.tool_guidance import presented_operations
+        operations = presented_operations(catalog.registry.describe(context.actor, scopes=context.scopes)) if context else []
         from czero_app.agent_guidance import agent_guidance
         return {'version': 1, 'authenticated': context is not None,
                 'role': auth.access.authorize(context.actor, Role.READER).role.value if context else None,

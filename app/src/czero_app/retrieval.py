@@ -61,7 +61,8 @@ class IndexStatus(BaseModel):
 class SearchOptions(BaseModel):
     model_config = ConfigDict(extra='forbid')
     query: str = Field(min_length=1, max_length=512)
-    space_id: UUID | None = None
+    space_id: UUID | None = Field(default=None,
+        description='Explicit authorized space selector inside options for MCP. Omission selects legacy Shared; never use that as a fallback after denial.')
     limit: int | None = Field(default=None, ge=1, le=50)
     mode: Literal['auto','text','semantic','hybrid'] = 'auto'
     kind: Literal['all','source','wiki'] = 'all'

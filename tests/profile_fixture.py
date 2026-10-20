@@ -54,7 +54,7 @@ def predecessor(stage):
         finally:
             os.umask(old)
         saved.chmod(0o600)
-        # This phase runs on M20: never request the new profile endpoint/tool.
+        # Seed only established /me identity; this works on genuine M17 too.
     else:
         verify_profile(owner, me)
         verify_profile(member, current)
