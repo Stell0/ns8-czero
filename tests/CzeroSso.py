@@ -10,6 +10,7 @@ import tempfile
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
+from renewal_evidence import validate_measurement
 
 
 def assert_accessibility(browser, page, role):
@@ -34,7 +35,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -100,6 +101,22 @@ class CzeroSso:
                 return_stderr=True, return_rc=True, timeout="300 seconds")
             if rc:
                 raise AssertionError("Installed OAuth probe: " + errors.strip())
+            if not getattr(self, '_renewal_probe_done', False):
+                output, _, rc = ssh.execute_command('python3 /tmp/renewal_fixture.py ' + shlex.quote(module_id),
+                    return_stderr=True, return_rc=True, timeout='660 seconds')
+                if rc:
+                    raise AssertionError('Installed renewable-session probe failed')
+                try:
+                    measurement = validate_measurement(json.loads(output))
+                except (ValueError, TypeError):
+                    raise AssertionError('Renewal acceptance measurement invalid') from None
+                # Only this strictly validated public measurement is recorded.
+                builtin.set_log_level('INFO')
+                try:
+                    builtin.log('C0 renewable session: ' + json.dumps(measurement, sort_keys=True), console=True)
+                finally:
+                    builtin.set_log_level('NONE')
+                self._renewal_probe_done = True
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                 return_rc=True, timeout="180 seconds")
             if rc:
@@ -289,12 +306,17 @@ class CzeroSso:
             run('Get Text','#record-status','==','Record saved.')
             run('Get Text','#record-list button','==',hostile)
             run('Get Element Count','#record-list img','==',0)
+            source_identity=browser.get_text('#record-identity')
             run('Click','#new-record')
             run('Fill Text','label:text-is("name (required)") + input','Browser linked target')
             run('Fill Text','label:text-is("count (required)") + input','4')
             run('Click','#save-record');run('Get Text','#record-status','==','Record saved.')
             target_id=browser.get_text('#record-identity').split(' · ')[0]
+            assert target_id != source_identity.split(' · ')[0], 'Linked fixture records must differ'
             run('Click','#record-list button:text-is('+json.dumps(hostile)+')')
+            # A click starts an asynchronous detail read; its completion clears
+            # target browsing. Wait for the selected identity before browsing.
+            run('Get Text','#record-identity','==',source_identity)
             run('Select Options By','#relation-type','value',type_name)
             run('Click','#browse-relation-targets')
             run('Get Text','#relation-targets-status','contains','target records shown')

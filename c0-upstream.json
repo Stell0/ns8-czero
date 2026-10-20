@@ -442,6 +442,41 @@
       "path": "scripts/retire-ci-feedback.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero_session_policy.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-create-session-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/create-module/32session-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/update-module.d/52session-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/13validate-session-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/38persist-session-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/renewal_evidence.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

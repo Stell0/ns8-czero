@@ -88,7 +88,9 @@ def test_settings_round_trip(monkeypatch, capsys, tmp_path):
     run_step(monkeypatch, 'get-configuration/20read', SimpleNamespace())
     config = json.loads(capsys.readouterr().out)
     from czero_retrieval_config import public, defaults
-    assert config == {'host':'c0.example.test','lets_encrypt':True, 'retrieval':public(defaults()), **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
+    assert config == {'host':'c0.example.test','lets_encrypt':True, 'retrieval':public(defaults()),
+        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
+        **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
     schema = json.loads((ACTIONS / 'get-configuration/validate-output.json').read_text())
     Draft7Validator(schema).validate(config)
 
@@ -100,7 +102,9 @@ def test_unconfigured_defaults_are_machine_readable(monkeypatch, capsys, tmp_pat
     monkeypatch.delenv('CZERO_LETS_ENCRYPT',raising=False)
     run_step(monkeypatch,'get-configuration/20read',SimpleNamespace())
     from czero_retrieval_config import public, defaults
-    assert json.loads(capsys.readouterr().out) == {'host':'','lets_encrypt':False, 'retrieval':public(defaults()), **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
+    assert json.loads(capsys.readouterr().out) == {'host':'','lets_encrypt':False, 'retrieval':public(defaults()),
+        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
+        **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
 
 
 @pytest.mark.parametrize('base_path', [None, '', '/czero/czero7'])

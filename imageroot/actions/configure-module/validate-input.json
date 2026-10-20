@@ -149,6 +149,23 @@
                     }
                 }
             }
+        },
+        "session_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "absolute_seconds": {
+                    "type": "integer",
+                    "minimum": 60,
+                    "maximum": 86400
+                },
+                "idle_seconds": {
+                    "type": "integer",
+                    "minimum": 60,
+                    "maximum": 86400
+                }
+            },
+            "description": "New sign-in absolute/inactivity bounds; idle must not exceed absolute"
         }
     },
     "additionalProperties": false,

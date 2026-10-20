@@ -28,6 +28,7 @@ from starlette.responses import JSONResponse
 
 from czero_core.identity import PermissionDenied
 from czero_core.oauth_grants import GrantRejected
+from czero_core.renewal import RenewalUnavailable
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 from czero_app.agent_guidance import agent_guidance, SERVER_INSTRUCTIONS
@@ -151,7 +152,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
     async def verified(value):
         try:
             return await to_thread.run_sync(partial(grants.verify, value, resource=resource))
-        except SQLAlchemyError:
+        except (SQLAlchemyError, RenewalUnavailable):
             raise TransportUnavailable() from None
 
     class Verifier:

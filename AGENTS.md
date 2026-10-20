@@ -23,7 +23,92 @@ frozen branches must not be cancelled or changed unexpectedly. No test shards
 share a mutable PostgreSQL database; preserve both existing waivers.
 
 
-This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (19 October 2026):** Agent Memory AM0–AM6 runtime acceptance passes. Accepted AM6 source `97a7a1b` is installed from immutable CI candidate images at Core/app/schema **0.29.0/0.45.0/0016**; regular merge `e378a89` preserves the exact tested tree. Full PR/main CI and actual native/artifact audits pass; canonical main publication is verified in PLAN.md. Caller-filtered agent guidance reuses all 76 tool contracts. Supported backup, canonical targeted update, real readiness and full-manager restart preserve 8236 original rows across 33 tables, six originals, configuration/schedules, 153 pre-update and 155 pre-restart terminal jobs/attempts, thirteen prior backup plans and eleven unrelated instances. Immediate same-grant/browser checks pass after update (58.2s) and restart (36.7s). Independent current/legacy SDK workflows and post-restart reuse pass; the owned temporary client is disabled after same-bearer REST/MCP controls. A bounded 139-entry root app journal has successful health/authorization/token/MCP controls and zero query, issued-secret, submitted-content or traceback matches. The existing connector separately reauthenticates/reads; its cached 63-tool catalog does not prove refreshed 76-tool discovery or observed prompt evaluations. Freeze the three installed `97a7a1b` candidate digests in PLAN.md as the genuine next predecessor; main/closeout images do not replace it. Integration M20 drafts remain preserved and deferred, with no renewal implementation in AM6. Windmill Gate remains separate. Existing waivers remain; no stable module release is claimed. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
+This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Current status (19 October 2026):** Agent Memory AM0–AM6 runtime acceptance passes. Accepted AM6 source `97a7a1b` was installed from immutable CI candidate images at Core/app/schema **0.29.0/0.45.0/0016**; regular merge `e378a89` preserves the exact tested tree. Full PR/main CI and actual native/artifact audits pass; canonical main publication is verified in PLAN.md. Caller-filtered agent guidance reuses all 76 tool contracts. Supported backup, canonical targeted update, real readiness and full-manager restart preserve 8236 original rows across 33 tables, six originals, configuration/schedules, 153 pre-update and 155 pre-restart terminal jobs/attempts, thirteen prior backup plans and eleven unrelated instances. Immediate same-grant/browser checks pass after update (58.2s) and restart (36.7s). Independent current/legacy SDK workflows and post-restart reuse pass; the owned temporary client is disabled after same-bearer REST/MCP controls. A bounded 139-entry root app journal has successful health/authorization/token/MCP controls and zero query, issued-secret, submitted-content or traceback matches. The existing connector separately reauthenticates/reads; its cached 63-tool catalog does not prove refreshed 76-tool discovery or observed prompt evaluations. Freeze the three installed `97a7a1b` candidate digests in PLAN.md as the genuine next predecessor; main/closeout images do not replace it. Integration M20 has resumed separately; no renewal implementation was included in AM6. Windmill Gate remains separate. Existing waivers remain; no stable module release is claimed. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
+
+## M20 resumed after AM6 acceptance
+
+User-directed order is M20, M17, M18, M19, one accepted milestone at a time.
+Work from `.cache/worktrees/m20` (`feat/m20-session-renewal`) on verified `6456231`.
+The environment cleared `/tmp`; all fourteen original draft files were recovered
+from this task's recorded source edits into `.cache/worktrees/m20-original` with
+an ignored private archive. Preserve that reference and the original dirty
+checkout. Recovered producer checks pass 1342 actual Python/PostgreSQL/packaging
+cases, 127 controllers, schema/shell and 21 Robot dry-runs; failed historical
+runs are not acceptance. Native predecessor is the installed AM6 `97a7a1b`, with all three frozen
+candidate digests in PLAN. Keep CPU/interactive-Playwright waivers unchanged.
+
+Core 0.30/schema 0017 is independently published from exact producer `bc5e1dc`.
+Full 39217591934 and actual artifact audits pass Debian 21/Rocky 26+3, all eight browser/
+privacy guards, 25 accessibility contexts, three clean query artifacts and five scan pairs.
+Publication 39222689510 succeeds; actual downloaded assets and six supplied-artifact
+checks pass. See PLAN for checksums. No module release/deployment is implied.
+
+App 0.46 local work on `feat/m20-app-wiring` adopts that released Git source/lock;
+all transitive records and independent-fork patch bounds are preserved. The full
+local suite passes 1380 Python/PostgreSQL/packaging cases, 129 controllers, schema/
+shell and 21 Robot dry-runs; the immutable UI build and native Renovate API pass.
+A fresh frozen consumer environment installs released Core at the exact lock and
+passes 20 real PostgreSQL-backed authentication/renewal cases. Final image/native
+gates and actual dedicated acceptance remain pending. Native renewal must be
+measured for at least 330 seconds per distribution, with idle/absolute expiry,
+rotation, revocation and reconnect metrics; controlled-clock HTTP success is
+not that proof. The accepted AM6 `97a7a1b` images remain the genuine accepted predecessor; the unaccepted M20 candidate status below supersedes the earlier deployment checkpoint.
+
+M20 candidate `c440727` passes full 39232074014 and actual native/artifact/promotion
+checks, then its supported dedicated update and full-manager restart preserve
+exact data/settings/files, old grant rows and both SDK protocols. Actual short
+bounds and 410-second same-grant connector rotation pass. It remains UNACCEPTED:
+provider introspection confirms refresh expiry thirty minutes before native
+access expiry; an active browser then fails at that shorter window. Do not merge
+or substitute this failed installation for an accepted upgrade predecessor.
+
+Core 0.30.1 corrects scheduling with a private encrypted `refresh_after` deadline,
+capped at five minutes and before both verified access expiry and a supplied
+positive provider refresh TTL (thirty-second margin). Missing/zero TTL uses the
+bounded fallback; malformed metadata fails closed. Introspection never slides
+this deadline. Old 0.30 credentials without the field perform one serialized
+real refresh; fixed legacy rows gain nothing. Preserve all existing identity,
+role/scope, lock, absolute/idle, crash, replay and outage semantics. Schema stays
+0017. Publish a NEW immutable Core patch after exact full producer/native gates,
+then adopt its tag/lock in app 0.46.1 and repeat consumer/full/native/live gates.
+Never replace 0.30.0 assets or alter provider policy/credential rows to pass tests.
+
+Patch producer `4600739` passes full 39254573692: 1408 Python/PostgreSQL/packaging,
+130 controllers, 21 Robot dry-runs, Debian 21/Rocky 26+3, all eight browsers/privacy
+guards, 25 accessibility contexts, five scan pairs and three clean query artifacts.
+Current ready-PR/full promotion proof passes. Core publication 39261142231 succeeds;
+actual asset/GitHub digests and six supplied-artifact tests pass. App 0.46.1 now
+adopts immutable `core-v0.30.1` at that source with minimum 0.30.1; keep all other
+lock records and independent-fork bounds unchanged. Do not edit published Core
+files. App adoption passes 1408 actual PostgreSQL/packaging cases (374.29s), 58
+independent frozen released-consumer cases (29.38s), 130 controllers, native
+Renovate/schema/shell checks and 21 Robot dry-runs. Final exact-source CI/native/
+live gates remain pending. Corrected live
+acceptance must measure at least 2100 continuous seconds, multiple actual provider
+renewals and unchanged authority/bounds/scopes without hidden reauthentication;
+the earlier 410-second success did not cover the observed provider failure.
+
+Public OAuth revocation uses the official SDK handler's client/form validation.
+Its trusted route-purpose context lets loaders revoke through Core without native
+provider authentication, returning now-absent metadata for idempotent 200. Core
+still checks exact client/resource ownership; ordinary loaders retain native
+checks, and every context resets in finally. Preserve wrong-client/outage tests.
+
+Session policy defaults to eight hours absolute/one hour idle, 60–86400 seconds,
+new-sign-in opt-in only. Core snapshots bounds, encrypts native refresh state,
+serializes checks across durable crash markers and rechecks captured browser and
+delegated authority inside transactions. Native revocation lock 49382 follows
+caller role/client/grant locks; renewal's 49383 session namespace spans provider
+work without privileged transaction locks. Local logout must validate cookie CSRF
+and Origin without authenticating against an unavailable provider. Transient
+outage cannot extend authority; ambiguous refresh or abandoned marker requires
+fresh sign-in. Scope narrowing, replay revocation and legacy fixed expiry remain.
+The installed recovery snapshot normalizes only the new nullable grant link on
+predecessor schemas; all original grant/token/code fields remain exact, and its
+actual SQL is exercised on genuine 0016 rows before/after repeated migration.
+No-refresh sign-ins retain the fixed session cap even under a longer renewable
+policy. Native-client replacement gets a separate per-account authority/grant
+budget while preserving global limits, old rows and approved client descriptors.
 
 ## AM6 accepted implementation; M20 preserved
 

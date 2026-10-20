@@ -332,7 +332,12 @@ def probe():
         status, _, _ = owner.api(path, {"role": role}, "PUT", profile["csrf_token"])
         assert status == 204, "Role update failed"
         status, body, _ = reader.api("/api/v1/me")
-        assert status == 200 and json.loads(body)["role"] == role, "Session role is stale"
+        assert status == 401, "Changed membership retained renewable authority"
+        previous_reader = reader
+        reader = Browser(origin)
+        current = reader.login("c0member", payload["password"])
+        assert current["role"] == role, "Fresh session role is stale"
+        assert previous_reader.api('/api/v1/me')[0] == 401, 'Fresh sign-in revived prior membership authority'
         verify_capabilities(reader, role)
         status, _, _ = reader.api("/api/v1/access/accounts")
         assert status == (200 if role == "admin" else 403), "Role authorization mismatch"
@@ -351,9 +356,9 @@ def probe():
     status, _, _ = owner.api(path, {"role": None}, "PUT", profile["csrf_token"])
     assert status == 204, "Role revocation failed"
     status, _, _ = reader.api("/api/v1/me")
-    assert status == 403, "Revoked session remains admitted"
+    assert status == 401, "Revoked renewable session remains admitted"
     status, _, _ = reader.api('/agents/capabilities.json')
-    assert status == 403, 'Revoked session can discover private capabilities'
+    assert status == 401, 'Revoked renewable session can discover private capabilities'
     owner.logout(profile)
     missing = Browser(origin)
     status, _, _ = missing.api("/api/v1/me")

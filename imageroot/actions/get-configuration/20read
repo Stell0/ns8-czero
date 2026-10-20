@@ -12,6 +12,7 @@ import agent
 from pathlib import Path
 sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
 from czero_retrieval_config import read, public
+from czero_session_policy import read as session_policy
 
 config = {"host": os.getenv("CZERO_HOST", ""),
           "lets_encrypt": os.getenv("CZERO_LETS_ENCRYPT", "false").lower() == "true",
@@ -19,4 +20,5 @@ config = {"host": os.getenv("CZERO_HOST", ""),
           "owner":os.getenv('CZERO_OWNER_USERNAME',''),"owner_ldap_uuid":os.getenv('CZERO_OWNER_LDAP_UUID','')}
 
 config['retrieval'] = public(read(Path(os.environ['AGENT_STATE_DIR']) / 'retrieval.env'))
+config['session_policy'] = session_policy()
 json.dump(config, fp=sys.stdout)

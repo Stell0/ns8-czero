@@ -26,7 +26,7 @@ import czero_core.migrate
 from czero_core.objects import ObjectService
 from czero_core.oauth_clients import OAuthClientService
 from czero_core.oauth_grants import OAuthGrantService, pkce_challenge
-from czero_core.sessions import SessionContext
+from legacy_oauth import legacy_pair
 from czero_core.sources import OriginalStore, SourceService, register_source_handlers
 from czero_core.spaces import SpaceService
 
@@ -55,7 +55,9 @@ def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(
         owner = access.resolve(identity(owner_key, 'owner'))
         with pytest.raises(PermissionDenied): access.resolve(identity(editor_key, 'editor'))
         editor_id = next(row['id'] for row in access.list_accounts(owner) if row['account_key'] == editor_key)
-        access.set_role(owner, editor_id, Role.EDITOR)
+        # Seed the old membership schema; current role writers also revoke schema-0017 authority.
+        with database.engine.begin() as connection:
+            connection.execute(text("INSERT INTO c0_memberships(account_id,role) VALUES (:id,'editor')"), {'id': editor_id})
         editor = access.resolve(identity(editor_key, 'editor'))
         spaces = SpaceService(database, access)
         private = spaces.create(owner, 'Retained protected space', idempotency_key='space')
@@ -89,11 +91,7 @@ def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(
         callback, resource = 'https://client.example.test/callback', 'https://app.example.test/mcp'
         client = OAuthClientService(access).register(owner, 'Retained client', [callback], scopes=['c0:read', 'c0:write'])
         tokens = OAuthGrantService(access, 'czero900', resource)
-        verifier = 'a'*43
-        code = tokens.issue_code(SessionContext(editor, datetime.fromtimestamp(time.time()+600, timezone.utc), 'fixture-only-csrf'),
-            client['client_id'], callback=callback, scopes={'c0:read', 'c0:write'},
-            challenge=pkce_challenge(verifier), resource=resource)
-        pair = tokens.exchange_code(code, client['client_id'], callback=callback, verifier=verifier, resource=resource)
+        pair = legacy_pair(database, editor, issuer, 'czero900', client, resource, {'c0:read','c0:write'})
         original_bytes = originals.path(source['id']).read_bytes()
         with database.engine.connect() as connection:
             tables = connection.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
@@ -109,7 +107,7 @@ def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(
             migrate_database(database)
             with database.engine.connect() as connection:
                 assert snapshot(connection) == before
-                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0016_annotations'
+                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0017_session_renewal'
                 assert connection.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one() == shared
             delegated = tokens.verify(pair.access_token, resource=resource).actor
             assert knowledge.get_page(delegated, first['id']) == current

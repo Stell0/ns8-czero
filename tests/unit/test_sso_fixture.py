@@ -165,17 +165,29 @@ def test_identity_backup_reuses_existing_encryption_repository(monkeypatch):
 
 def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monkeypatch, accessibility_measurement):
     invocations=[]; filled=[]; commands=[]; secret='private-browser-fixture-value'
+    selection_pending=[False]
+    identities=iter(['00000000-0000-4000-8000-000000000001 · revision 3',
+        '00000000-0000-4000-8000-000000000002 · revision 1'])
     def execute(command,**kwargs):
         commands.append(command)
         if command.startswith('cat '): return json.dumps({'password':secret})
         return '', '', 0
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
-        get_text=lambda selector:'00000000-0000-4000-8000-000000000001 · revision 1',
+        get_text=lambda selector:next(identities),
         evaluate_javascript=accessibility_measurement)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
-    monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))
+    def keyword(self,name,*args):
+        invocations.append((name,args))
+        if name=='Browser.Click' and args[0].startswith('#record-list button:text-is('):
+            selection_pending[0]=True
+        if name=='Browser.Get Text' and args==('#record-identity','==',
+                '00000000-0000-4000-8000-000000000001 · revision 3'):
+            selection_pending[0]=False
+        if name=='Browser.Click' and args[0]=='#browse-relation-targets':
+            assert not selection_pending[0], 'Relation browsing raced the selected detail reply'
+    monkeypatch.setattr(BuiltIn,'run_keyword',keyword)
     library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
     library.verify_disposable_objects_browser('czero7.test')
     assert filled.count(('input[name="password"]',secret))==2

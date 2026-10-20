@@ -83,10 +83,10 @@ checks its uploaded hashes and publishes it without replacing the module's
 latest release. Replays must match existing artifact bytes; published files
 are never clobbered.
 
-The latest independent Core artifacts are version 0.28.0:
-https://github.com/Stell0/ns8-czero/releases/tag/core-v0.28.0.
-The dedicated accepted AM4 runtime uses Core 0.28.0 at application source
-`878978d`. Candidate 0.29.0 below is not yet published or deployed;
+The accepted M20 predecessor uses independently published Core 0.29.0:
+https://github.com/Stell0/ns8-czero/releases/tag/core-v0.29.0.
+Its accepted AM6 application source is `97a7a1b` (app 0.45/schema 0016).
+Core 0.30 renewal and its application adoption have separate gates;
 library publication does not establish deployment acceptance.
 Consult PLAN.md for subsequent exact-source publication gates and actual
 consumer/Renovate evidence; a started workflow does not establish acceptance.
@@ -107,10 +107,10 @@ Use a Python 3.12–3.14 virtual environment and the verified release assets, or
 the immutable Git tag/subdirectory source:
 
 ```sh
-uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.28.0#subdirectory=packages/czero-core"
+uv pip install "czero-core @ git+https://github.com/Stell0/ns8-czero.git@core-v0.29.0#subdirectory=packages/czero-core"
 ```
 
-For that released generation, declare the compatible range `>=0.28.0,<0.29.0` and the
+For that released generation, declare the compatible range `>=0.29.0,<0.30.0` and the
 reviewed Git tag in `[tool.uv.sources]`, then commit uv.lock. Never replace the
 released source with a local checkout implicitly. The template producer can
 opt in with `CZERO_CORE_SOURCE=local`; this affects only its build environment.
@@ -260,7 +260,7 @@ Editing content never carries verification from its old revision. Current search
 excludes archived content by default; historical annotations remain explicitly
 readable through the annotation API.
 
-## Atomic consolidation (0.29.0 candidate)
+## Atomic consolidation (0.29.0)
 
 `KnowledgeBundleService(database, access).in_space(space_id).apply(actor,
 operations, idempotency_key=...)` publishes one to twenty-five content mutations
@@ -298,7 +298,7 @@ individual mutation APIs/fingerprints remain unchanged; object-only batches
 retain their existing behavior. Object and knowledge event mutexes use a fixed
 order before authority locks, and domain helpers share the outer connection.
 
-## Maintenance annotations (0.29.0 candidate)
+## Maintenance annotations (0.29.0)
 
 Applicability additionally accepts literal `knowledge_type` (one to sixty-four
 characters) and `supersedes`, up to thirty-two `{kind,id,revision}` exact-content
@@ -322,5 +322,51 @@ uses `status`, `confidence`, `observed_at`, `verified_at`, `source_references`
 and `extensions`. Missing metadata means unknown. Future literal types/statuses,
 explicit null confidence/times, contradictions and old histories are preserved.
 The sixteen-KiB value bound, expected annotation revisions and old retry
-fingerprints remain unchanged. This candidate adds no migration: schema stays
-`0016_annotations`. Publication/application/deployment acceptance is pending.
+fingerprints remain unchanged. Version 0.29 adds no migration: its schema is
+`0016_annotations`. Its immutable publication and AM5/AM6 acceptance evidence are
+recorded in the repository PLAN.
+
+
+## Renewable authority (0.30)
+
+Forward migration `0017_session_renewal` adds optional native-authority references
+to browser sessions and delegated grants. Existing rows keep their exact fixed
+expiry and receive no renewal rights. A trusted application can compose
+`NativeAuthorityService`, `SessionService` and `OAuthGrantService` with the same
+AccessService/native client. Only an authenticated `RenewalResult` from the trusted
+OIDC exchange opts in. The default SessionPolicy is eight hours absolute and one
+hour idle; integer bounds are 60–86400 seconds with idle <= absolute. Every new
+authority snapshots its limits; increasing configuration never extends it.
+
+Native credentials use authenticated, context-bound encryption derived from the
+private native client secret. They never belong in public DTOs or logs. Provider
+checks precede grant/content transactions. A durable checking marker and per-row
+session advisory lock serialize native rotation across processes; an interrupted
+check or ambiguous refresh response requires fresh sign-in. Definite transient
+outage denies access without extending authority and may recover before its
+existing idle/absolute deadline. OIDC checks preserve the original issuer,
+subject, audience, authorized party and authentication time, and validate an
+optional refreshed nonce and access-token hash.
+
+Captured browser and delegated actors recheck persisted authority inside Core
+transactions. Local cookie-bound CSRF logout revokes the session and its linked
+grants without contacting the provider. OAuth refresh rotates, narrows scopes
+durably and revokes the family on replay; access tokens are bounded by five
+minutes and remaining idle authority. Unchanged update/restart can preserve
+credentials; native client/secret replacement requires new authentication.
+
+The reference application must explicitly enable these trusted adapters. Exact
+release, released dependency adoption and application deployment evidence are
+tracked separately in the repository PLAN.
+
+
+## Provider refresh windows
+
+Core 0.30.1 renews active native sessions before both access expiry and
+any shorter provider refresh window. Provider token responses establish a
+private encrypted renewal deadline, capped at five minutes and never extended
+by introspection. Schema 0017 and existing absolute/idle bounds remain unchanged.
+Old renewable credentials acquire this scheduling metadata through a real
+serialized provider refresh; fixed legacy sessions gain no renewal authority.
+Core 0.30.0 remains immutable; corrected 0.30.1 publication and renewed application
+acceptance are pending. Provider configuration is unchanged.

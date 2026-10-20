@@ -3,6 +3,7 @@
 """Bounded NS8 OIDC discovery and authorization-code client operations."""
 from dataclasses import dataclass, field, replace
 import json
+import math
 import re
 import errno
 import socket
@@ -16,6 +17,7 @@ import httpx2
 
 from .identity import TokenRejected, TokenVerifier, VerifiedIdentity
 from .sessions import LoginSecrets, PendingLogin
+from .renewal import RenewalRejected, RenewalResult, RenewalUnavailable
 
 
 class OidcUnavailable(ValueError):
@@ -168,6 +170,9 @@ class OidcClient:
         return url
 
     def exchange(self, code: str, login: LoginSecrets) -> VerifiedIdentity:
+        return self._exchange(code, login)[0]
+
+    def _exchange(self, code: str, login: LoginSecrets):
         if not isinstance(code, str) or not code.isascii() or not 1 <= len(code) <= 4096:
             raise TokenRejected()
         metadata = self._discovery()
@@ -183,9 +188,141 @@ class OidcClient:
             access = verifier.verify_access_token(result["access_token"])
             if access.account_key != identity.account_key or access.subject != identity.subject:
                 raise TokenRejected()
-            return replace(identity, expires_at=min(identity.expires_at, access.expires_at))
+            return replace(identity, expires_at=min(identity.expires_at, access.expires_at)), result
         except (KeyError, TypeError):
             raise TokenRejected() from None
+
+    @staticmethod
+    def _refresh_deadline(identity, result):
+        # Provider refresh authority can expire before its access token. Keep
+        # active sessions within that window without changing provider policy.
+        current = time.time()
+        deadline = min(current + 300, identity.expires_at - 30)
+        if 'refresh_expires_in' in result:
+            lifetime = result['refresh_expires_in']
+            if (type(lifetime) not in (int, float) or lifetime < 0
+                    or (type(lifetime) is float and not math.isfinite(lifetime))):
+                raise ValueError()
+            if lifetime > 0:
+                # Clamp before float conversion/addition, including huge ints.
+                deadline = min(deadline, current + min(lifetime, 330) - 30)
+        return deadline
+
+    def exchange_renewable(self, code, login):
+        identity, result = self._exchange(code, login)
+        refresh = result.get('refresh_token')
+        if not isinstance(refresh, str) or not 1 <= len(refresh) <= 16384:
+            # A provider that doesn't issue refresh authority remains bounded
+            # by its original token expiry; never fabricate renewal authority.
+            return identity, None
+        original = self._token_verifier()._decode(result['id_token'])
+        original = {name: original[name] for name in ('iss', 'sub', 'aud', 'azp', 'auth_time') if name in original}
+        try:
+            refresh_after = self._refresh_deadline(identity, result)
+        except ValueError:
+            raise TokenRejected() from None
+        credential = json.dumps({'access': result['access_token'], 'refresh': refresh,
+                                 'nonce': login.nonce, 'id_context': original,
+                                 'refresh_after': refresh_after})
+        return identity, RenewalResult(identity, credential)
+
+    def _private_post(self, url, data, *, reject=False, rotating=False):
+        try:
+            with self._http.stream('POST', url, data=data,
+                    auth=httpx2.BasicAuth(self.config.client_id, self.config.client_secret)) as response:
+                if reject and response.status_code in (400, 401):
+                    raise RenewalRejected()
+                response.raise_for_status()
+                chunks, length = [], 0
+                for chunk in response.iter_bytes():
+                    length += len(chunk)
+                    if length > 65536:
+                        raise RenewalRejected()
+                    chunks.append(chunk)
+                result = json.loads(b''.join(chunks))
+                if not isinstance(result, dict):
+                    raise RenewalRejected()
+                return result
+        except httpx2.RequestError:
+            # The provider may already have rotated the credential when a
+            # transport failure prevents us receiving its response. Never retry
+            # that ambiguous refresh with the old credential.
+            if rotating:
+                raise RenewalRejected() from None
+            raise RenewalUnavailable() from None
+        except (httpx2.HTTPStatusError, OidcUnavailable):
+            raise RenewalUnavailable() from None
+        except (ValueError, TypeError, RecursionError):
+            raise RenewalRejected() from None
+
+    def check_renewal(self, credential):
+        """Check provider session every authentication; refresh before expiry.
+
+        Introspection never grants roles. The trusted same-origin provider's
+        active flag supplements local signature/audience/identity verification.
+        Credentials and provider error descriptions never leave this adapter.
+        """
+        try:
+            saved = json.loads(credential)
+            access_token, refresh, nonce = (saved[name] for name in ('access', 'refresh', 'nonce'))
+            if any(not isinstance(v, str) or not 1 <= len(v) <= 16384 for v in (access_token, refresh, nonce)):
+                raise RenewalRejected()
+            refresh_after = saved.get('refresh_after')
+            if 'refresh_after' in saved:
+                if type(refresh_after) not in (int, float):
+                    raise RenewalRejected()
+                try:
+                    if not math.isfinite(float(refresh_after)):
+                        raise RenewalRejected()
+                except OverflowError:
+                    raise RenewalRejected() from None
+            original = saved['id_context']
+            if not isinstance(original, dict) or original.get('iss') != self.config.issuer:
+                raise RenewalRejected()
+            metadata = self._discovery()
+            introspection = metadata.get('introspection_endpoint')
+            if (not isinstance(introspection, str) or len(introspection) > 2048
+                    or _origin(introspection) != _origin(self.config.issuer)):
+                raise RenewalRejected()
+            verifier = self._token_verifier()
+            # An expired access token can still renew using its original
+            # provider refresh credential. The authority row binds identity.
+            try:
+                identity = verifier.verify_access_token(access_token)
+                needs_refresh = (identity.expires_at <= time.time() + 30
+                                 or refresh_after is None or refresh_after <= time.time())
+            except TokenRejected:
+                needs_refresh = True
+            if needs_refresh:
+                result = self._private_post(metadata['token_endpoint'],
+                    {'grant_type': 'refresh_token', 'refresh_token': refresh}, reject=True, rotating=True)
+                if str(result.get('token_type', '')).lower() != 'bearer':
+                    raise RenewalRejected()
+                access_token = result['access_token']
+                identity = verifier.verify_access_token(access_token)
+                if 'id_token' in result:
+                    verified_id = verifier.verify_refresh_id_token(result['id_token'], nonce=nonce,
+                                                                   access_token=access_token, original=original)
+                    if (verified_id.account_key != identity.account_key or verified_id.subject != identity.subject):
+                        raise RenewalRejected()
+                refresh = result.get('refresh_token', refresh)
+                if not isinstance(refresh, str) or not 1 <= len(refresh) <= 16384:
+                    raise RenewalRejected()
+            if needs_refresh:
+                refresh_after = self._refresh_deadline(identity, result)
+            if identity.issuer != original['iss'] or identity.subject != original['sub']:
+                raise RenewalRejected()
+            if not needs_refresh:
+                active = self._private_post(introspection, {'token': access_token, 'token_type_hint': 'access_token'}, reject=True)
+                if active.get('active') is not True:
+                    raise RenewalRejected()
+            return RenewalResult(identity, json.dumps({'access': access_token, 'refresh': refresh,
+                                                       'nonce': nonce, 'id_context': original,
+                                                       'refresh_after': refresh_after}))
+        except (OidcUnavailable, RenewalUnavailable):
+            raise RenewalUnavailable() from None
+        except (KeyError, TypeError, ValueError, TokenRejected):
+            raise RenewalRejected() from None
 
     def verify_access_token(self, token: str) -> VerifiedIdentity:
         if not isinstance(token, str) or len(token) > 16_384 or not re.fullmatch(

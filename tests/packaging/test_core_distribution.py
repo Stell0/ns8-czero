@@ -89,6 +89,8 @@ def test_clean_install_is_independent_of_checkout_and_ns8_sdk(installed):
         "import sys,json,importlib.util,importlib.metadata;from pathlib import Path;import czero_core;"
         "from czero_core.jobs import default_registry;from czero_core.objects import ObjectService;"
         "from czero_core.wiki import WikiService;from czero_core.sources import SourceService;"
+        "from czero_core.renewal import NativeAuthorityService,SessionPolicy;"
+        "assert SessionPolicy().absolute_seconds==28800;"
         "assert importlib.util.find_spec('agent') is None;assert importlib.util.find_spec('czero_app') is None;"
         "assert Path(czero_core.__file__).is_relative_to(Path(sys.prefix).resolve());"
         "assert default_registry().get('health').name=='health';"
@@ -116,7 +118,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0016_annotations'
+        assert results[0]==results[1] and results[0][1]=='0017_session_renewal'
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,

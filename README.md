@@ -614,3 +614,50 @@ Main requires the GitHub Actions C0 merge gate, up-to-date base and admin enforc
 See the policy for exact sources, reports, failed evidence and the pre-existing
 forced-plan timing limitation. No runtime deadline is weakened or automatic test
 retry added. Documentation-only main commits retain accepted runtime images.
+
+
+### Session renewal (M20 correction, acceptance pending)
+
+App 0.46.1 adopts independently published Core 0.30.1/schema 0017 to correct a live provider-window failure. Final application CI and renewed live acceptance remain pending.
+New sign-ins with provider refresh authority can renew for eight hours, with
+one hour of inactivity allowed by default. Access tokens stay at most five
+minutes; public refresh rotates and cannot add scopes. The provider can end
+native authority earlier. Sessions and grants created before renewal support
+retain their original fixed deadlines; sign in again to opt in. Upgrading an
+existing renewable session preserves its original bounds.
+
+Set **Session duration** in NS8 Settings, or supply `session_policy` to the
+supported `configure-module` action:
+
+```json
+{"host":"c0.example.test","session_policy":{"absolute_seconds":28800,"idle_seconds":3600}}
+```
+
+Both bounds are whole seconds from 60 to 86400, with inactivity no longer than
+the absolute duration. Omitted settings retain the current policy. New sessions
+snapshot these bounds: changing configuration never extends an existing session.
+Normal updates/restarts and supported backups preserve policy and encrypted
+credentials. Native client/secret replacement or clean restore requires fresh
+sign-in; approved client descriptors and content remain intact.
+
+Authentication checks native activity. The correction renews within five minutes of the last token exchange and before access or a shorter provider refresh lifetime expires; introspection never advances this deadline. A definite
+provider outage denies requests with a static 503 and can recover within the
+existing bounds. Rejected native authority or an ambiguous interrupted refresh
+requires fresh sign-in. Browser logout uses same-origin, cookie-bound CSRF;
+local logout and public OAuth revocation work without contacting the provider.
+Logout invalidates linked delegation. Current role/client checks and replay
+revocation remain authoritative.
+
+Core 0.30.0 publication remains immutable. App candidate `c440727` passes full
+CI/native/privacy checks and was deployed to the dedicated instance. Data,
+settings, six retained files, short bounds, five-minute connector renewal and
+full-manager restart pass. Its longer live probe exposes one-hour access versus
+thirty-minute provider refresh authority; waiting for access expiry loses an
+active session. The candidate is unaccepted and unmerged. Core 0.30.1 passes
+exact producer/native/publication and supplied-artifact checks at `4600739`.
+App 0.46.1 adopts that exact tag/lock and must repeat consumer/native/live
+acceptance, including at least 35 minutes of continuous activity to cover the
+observed failure window.
+AM6's frozen images remain the last
+accepted predecessor. Original drafts and failed private evidence are preserved.
+See PLAN.md for executed results and remaining gates.

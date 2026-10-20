@@ -109,7 +109,7 @@ class OAuthConsentService:
             row, _ = self._request(connection, request, binding)
             if session.expires_at.timestamp() <= self.grants._now():
                 raise ConsentRejected()
-            self.grants.access._actor(connection, session.actor.user_id)
+            self.grants.access.checked_actor(connection, session.actor)
             code = None
             if approve:
                 if scopes is None:

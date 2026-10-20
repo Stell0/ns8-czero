@@ -15,7 +15,7 @@
         "Stell0/ns8-czero"
       ],
       "versioning": "regex:^core-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
-      "allowedVersions": ">=core-v0.29.0 <core-v0.30.0",
+      "allowedVersions": ">=core-v0.30.1 <core-v0.31.0",
       "automerge": false
     }
   ]
