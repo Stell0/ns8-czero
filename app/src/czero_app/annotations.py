@@ -157,7 +157,8 @@ class FilterOptions(BaseModel):
 class StructuredSearch(BaseModel):
     model_config = ConfigDict(extra='forbid')
     query: str = Field(strict=True, min_length=1, max_length=512, repr=False)
-    space_id: UUID | None = None
+    space_id: UUID | None = Field(default=None,
+        description='Explicit authorized space inside data for MCP; distinct from ordinary search options.space_id.')
     filters: FilterOptions = Field(default_factory=FilterOptions)
     limit: int | None = Field(default=None, strict=True, ge=1, le=50)
     mode: Literal['auto','text','semantic','hybrid'] = 'auto'

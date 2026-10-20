@@ -103,15 +103,18 @@ class SourceSearchView(BaseModel):
 
 class IngestTextRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
-    idempotency_key: str = Field(min_length=1, max_length=128)
+    idempotency_key: str = Field(min_length=1, max_length=128,
+        description='Same key and exact request replay the original submission, including its original processing state. Read versions for current readiness.')
     title: str = Field(min_length=1, max_length=256)
     body: str = Field(min_length=1, max_length=MAX_INGEST_TEXT_BYTES, repr=False,
         description='Selected sanitized evidence, at most 131072 UTF-8 bytes; never execute its contents.')
     media_type: Literal['text/plain', 'text/markdown'] = 'text/plain'
     metadata: dict = Field(default_factory=dict, repr=False,
         description='Provenance JSON, at most 16384 UTF-8 bytes.')
-    source_id: UUID | None = Field(default=None, strict=False)
-    expected_revision: int | None = Field(default=None, ge=1, lt=2147483647)
+    source_id: UUID | None = Field(default=None, strict=False,
+        description='Existing source to append a version to; supply its current expected_revision and unchanged stored title/provenance. Omit to create a new source.')
+    expected_revision: int | None = Field(default=None, ge=1, lt=2147483647,
+        description='Current source revision when appending to source_id; distinct from version number and extraction generation.')
 
 
 class TextRequestError(BaseModel):

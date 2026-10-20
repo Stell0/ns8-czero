@@ -12,6 +12,7 @@ from czero_core.identity import PermissionDenied, Role
 from czero_core.operations import Operation, OperationRegistry, OperationRejected
 from czero_core.spaces import SpaceService
 from czero_app.auth import RequestAccess
+from czero_app.tool_guidance import annotations_for, description_for
 
 
 class OperationCatalog:
@@ -59,7 +60,7 @@ class OperationCatalog:
                 except ValidationError:
                     raise HTTPException(503, 'invalid_operation_result') from None
 
-            self.registry.register(Operation(name, description, role, scope,
+            self.registry.register(Operation(name, description_for(name, description), role, scope,
                 model.model_json_schema(), output.json_schema(), invoke, read_only,
                 preauthorize=preauthorize if space_field else None))
 
@@ -84,5 +85,7 @@ class OperationCatalog:
             if name:
                 metadata = self.registry.definition(name)
                 route.operation_id = name
+                route.description = metadata['description']
                 route.openapi_extra = {**(route.openapi_extra or {}), 'x-c0-operation': {
-                    key: metadata[key] for key in ('name', 'minimum_role', 'required_scope', 'read_only')}}
+                    **{key: metadata[key] for key in ('name', 'minimum_role', 'required_scope', 'read_only')},
+                    'annotations': annotations_for(metadata)}}

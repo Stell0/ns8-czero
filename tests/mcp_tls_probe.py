@@ -503,6 +503,32 @@ async def check(value):
                     assert scope in {'c0:read','c0:write','c0:admin'}, 'Installed tool OAuth scope invalid'
                     assert scope != 'c0:admin' or role == 'admin', 'Installed Admin tool discovery crossed role'
                     assert scope != 'c0:write' or role in {'editor','admin'}, 'Installed write tool discovery crossed role'
+                # Independently check the installed wire, rather than importing
+                # application metadata and comparing it to itself.
+                capability_response = await http.get('/agents/capabilities.json')
+                assert capability_response.status_code == 200, 'Installed capabilities unavailable'
+                capability = capability_response.json()
+                assert capability['guidance']['version'] == 2, 'Installed tool guidance version mismatch'
+                available = {item['name']:item for item in capability['operations']}
+                expected_hints = {'get_profile':(True,False,True,False),
+                    'wiki_pages_update':(False,True,True,False),
+                    'objects_create':(False,False,False,False),
+                    'objects_delete':(False,True,False,False),
+                    'sources_ingest_text':(False,False,True,False),
+                    'knowledge_search':(True,False,True,True),
+                    'oauth_clients_configure':(False,True,False,False),
+                    'jobs_enqueue':(False,True,True,True)}
+                hint_keys = ('readOnlyHint','destructiveHint','idempotentHint','openWorldHint')
+                for tool in tools:
+                    assert tool.annotations is not None, 'Installed explicit safety hints missing'
+                    hints = tool.annotations.model_dump(by_alias=True,exclude_none=True)
+                    assert set(hints)==set(hint_keys) and all(type(v) is bool for v in hints.values()), 'Installed hint shape mismatch'
+                    if tool.name in expected_hints:
+                        assert tuple(hints[k] for k in hint_keys)==expected_hints[tool.name], 'Installed semantic hint mismatch'
+                    if tool.name in available:
+                        item=available[tool.name]
+                        assert hints==item['annotations'] and tool.description==item['description'], 'Installed capabilities/tool guidance differs'
+                        assert hints['readOnlyHint'] is item['read_only'], 'Installed trusted read-only contract differs'
                 profile_tool = next(t for t in tools if t.name == 'get_profile')
                 assert profile_tool.meta.get('openai/profile') is True, 'Installed profile marker missing'
                 assert profile_tool.output_schema['additionalProperties'] is False, 'Installed profile schema is open'
