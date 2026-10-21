@@ -43,6 +43,10 @@
       csrf = value.csrf_token;
       byId('profile').textContent = 'Signed in as ' + value.profile.username;
       byId('client').textContent = value.client_name;
+      if (typeof value.client_id === 'string' && value.client_id.toLowerCase().startsWith('https://')) {
+        byId('client-identity').textContent = 'Approved client metadata URL: ' + value.client_id;
+        byId('client-identity').hidden = false;
+      }
       byId('callback').textContent = value.callback;
       for (const scope of value.scopes) {
         const label = document.createElement('label');

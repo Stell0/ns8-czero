@@ -11,6 +11,8 @@ from pydantic import Field
 
 from czero_core.oauth_grants import GrantRejected
 from czero_core.oauth_consent import ConsentRejected
+from czero_core.cimd import CimdRejected
+from czero_app.cimd_fetch import FetchRejected
 
 raw_request = ContextVar('c0_oauth_raw_request', default=None)
 pending_response = ContextVar('c0_oauth_pending_response', default=None)
@@ -36,8 +38,9 @@ class PrivateTokenResponse(OAuthToken):
 
 
 class OAuthProvider:
-    def __init__(self, grants, consent, origin):
+    def __init__(self, grants, consent, origin, *, cimd=None):
         self.grants, self.consent, self.origin = grants, consent, origin
+        self.cimd = cimd
 
     async def _revoke_requested_token(self, value):
         if request_kind.get() != 'revoke':
@@ -62,7 +65,7 @@ class OAuthProvider:
             return None
         return OAuthClientInformationFull(client_id=value['client_id'], client_name=value['client_name'],
             redirect_uris=value['redirect_uris'], scope=' '.join(value['allowed_scopes']),
-            token_endpoint_auth_method='none', grant_types=['authorization_code','refresh_token'], response_types=['code'])
+            token_endpoint_auth_method='none', grant_types=value.get('grant_types', ['authorization_code','refresh_token']), response_types=['code'])
 
     async def register_client(self, client_info):
         raise NotImplementedError('Dynamic registration is disabled')
@@ -72,10 +75,11 @@ class OAuthProvider:
         if raw is None:
             raise AuthorizeError('invalid_request')
         try:
+            verification = await self.cimd.verification(client.client_id) if self.cimd is not None else None
             pending = await to_thread.run_sync(partial(self.consent.begin, client.client_id,
                 callback=raw['redirect_uri'], scopes=set(params.scopes or ['c0:read']),
-                challenge=params.code_challenge, state=params.state, resource=params.resource))
-        except ConsentRejected:
+                challenge=params.code_challenge, state=params.state, resource=params.resource, verification=verification))
+        except (ConsentRejected, CimdRejected, FetchRejected):
             raise AuthorizeError('invalid_request') from None
         pending_response.set(pending)
         return self.origin + '/oauth/consent'

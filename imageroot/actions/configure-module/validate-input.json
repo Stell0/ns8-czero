@@ -166,6 +166,10 @@
                 }
             },
             "description": "New sign-in absolute/inactivity bounds; idle must not exceed absolute"
+        },
+        "cimd_enabled": {
+            "type": "boolean",
+            "description": "Allow administrator-approved public OAuth client metadata URLs; disabled by default"
         }
     },
     "additionalProperties": false,

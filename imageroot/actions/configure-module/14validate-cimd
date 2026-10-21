@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+from pathlib import Path
+import sys
+import agent
+
+sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
+from czero_cimd_config import read, validate
+
+try:
+    validate(json.load(sys.stdin).get('cimd_enabled', read()))
+except (ValueError, TypeError):
+    agent.set_status('validation-failed')
+    json.dump([{'field': 'cimd_enabled', 'parameter': 'cimd_enabled',
+                'error': 'invalid_cimd_policy'}], sys.stdout)
+    sys.exit(2)

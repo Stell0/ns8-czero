@@ -70,11 +70,19 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     database = database if database is not None else Database()
     auth = auth if auth is not None else AppAuth.from_env(database, base_path)
     mcp_child = None
+    from czero_app.cimd_config import configured as cimd_configured
+    cimd_enabled = cimd_configured() and auth is not None and not base_path
 
     @asynccontextmanager
     async def lifespan(application):
         try:
             async with AsyncExitStack() as stack:
+                from anyio import to_thread
+                from czero_core.cimd import CimdPolicyService
+                await to_thread.run_sync(CimdPolicyService(database).sync_policy, bool(cimd_enabled))
+                cimd = getattr(instance_app.state, 'cimd', None)
+                if cimd is not None:
+                    stack.push_async_callback(cimd.fetcher.aclose)
                 if mcp_child is not None:
                     await stack.enter_async_context(mcp_child.router.lifespan_context(mcp_child))
                 yield
@@ -153,6 +161,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get('/admin', include_in_schema=False)
     async def admin_page() -> FileResponse:
         return FileResponse(static_dir / 'admin.html', media_type='text/html')
+
+    @instance_app.get('/cimd.js', include_in_schema=False)
+    def cimd_script():
+        return FileResponse(static_dir / 'cimd.js', media_type='text/javascript')
 
     @instance_app.get('/admin.js', include_in_schema=False)
     async def admin_script() -> FileResponse:

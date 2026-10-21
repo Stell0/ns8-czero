@@ -8,9 +8,10 @@ from pathlib import Path
 import agent
 sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
 from czero_session_policy import read, encode
+from czero_cimd_config import read as read_cimd, encode as encode_cimd
 
 original = json.load(sys.stdin)['environment']
-policy = encode(read(original))
+policy = {**encode(read(original)), **encode_cimd(read_cimd(original))}
 module_id = os.environ['MODULE_ID']
 host = original.get('CZERO_HOST','').lower()
 state = Path(os.environ['AGENT_STATE_DIR'])

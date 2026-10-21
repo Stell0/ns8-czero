@@ -53,7 +53,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.48.0    ${route_host}=${host}
+    [Arguments]    ${expected_app}=0.48.0    ${route_host}=${host}    ${expected_core}=0.31.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -61,7 +61,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.31.0"
+    Should Be Equal    ${health}[core_version]    ${expected_core}
     Should Be Equal    ${health}[app_version]    ${expected_app}
 
 Check worker timer recovered
@@ -109,7 +109,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.48.0
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.48.0    0.30.1
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False
@@ -119,7 +119,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.48.0
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.48.0    0.31.0
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
         ...    return_rc=True    return_stdout=False    timeout=180s
@@ -603,6 +603,12 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> h2 >> text="Settings"    visible    timeout=30s
     Wait For Elements State    iframe >>> .ns-text-input input >> nth=0    enabled    timeout=30s
     Get Property    iframe >>> .ns-text-input input >> nth=0    value    ==    ${host}
+    Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
+    Wait For Elements State    iframe >>> input[data-c0-cimd-switch]    attached
+    Get Property    iframe >>> input[data-c0-cimd-switch]    checked    ==    ${False}
+    Click    iframe >>> .ns-toggle:has(input[data-c0-cimd-switch]) label
+    Get Property    iframe >>> input[data-c0-cimd-switch]    checked    ==    ${True}
+    Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
     Fill Text    iframe >>> .ns-text-input input >> nth=0    localhost
     Click    iframe >>> button >> text="Save"
     Wait For Elements State    iframe >>> text="Enter a valid fully qualified DNS hostname."    visible    timeout=30s
@@ -622,6 +628,14 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> .ns-text-input input >> nth=0    enabled    timeout=30s
     Get Property    iframe >>> .ns-text-input input >> nth=0    value    ==    ${host}
     Get Attribute    iframe >>> a:has-text("Open C0 application")    href    ==    https://${host}/
+    Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
+    Wait For Elements State    iframe >>> input[data-c0-cimd-switch]    attached
+    Get Property    iframe >>> input[data-c0-cimd-switch]    checked    ==    ${True}
+    Click    iframe >>> .ns-toggle:has(input[data-c0-cimd-switch]) label
+    Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
+    Click    iframe >>> button >> text="Save"
+    Wait For Elements State    iframe >>> button >> text="Save"    enabled    timeout=30s
+    Wait Until Keyword Succeeds    30s    2s    Check application route
     Go To    https://${NODE_ADDR}/cluster-admin/#/apps/${module_id}?page=about
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${host}/

@@ -32,6 +32,26 @@ M20 drafts and existing waivers. Historical entry gates below remain evidence of
 those checkpoints, superseded by this current status. Further AM/Windmill stays
 deferred until M19 closes.
 
+## M19 candidate conventions
+
+- CIMD defaults off; native Settings owns the trusted switch. Removing SSO or
+  hostname-root routing synchronizes policy off and revokes CIMD authority.
+  Unchanged restart preserves it. Restore retains approvals, rotates native
+  identity and requires fresh sign-in. Existing UUID clients remain independent.
+- Use exact approved HTTPS metadata URLs as public identities; internal UUIDs
+  remain database/admin identifiers. No anonymous unknown fetch, DCR or JWKS.
+  App transport pins all-public DNS peers with original TLS identity and bounded
+  work. Core owns approval, revision, sticky review and final revocation locks.
+- REST-only review uses current Core Admin/scope checks before and after network
+  work plus existing browser Origin/CSRF. Keep all77 MCP contracts unchanged.
+  Relevant changes block new consent, while existing grants retain only their
+  local authority; reapproval/disable revokes. Never use remote metadata as roles.
+- Native upgrade profiles explicitly supply predecessor and candidate app AND
+  Core versions: an unchanged app version does not imply an unchanged Core.
+  Freeze the accepted M18 trio. Exact Core full/native/publication precedes final
+  app pin/lock, full native artifacts, dedicated deployment and actual ChatGPT.
+  Neither SDK simulations nor started jobs establish acceptance.
+
 This repository is the **C0 (Czero)** application template for NethServer 8. Read [PLAN.md](PLAN.md) for authoritative milestones and [README.md](README.md) for the public product contract. **Historical AM6 status (19 October 2026):** Agent Memory AM0–AM6 runtime acceptance passes. Accepted AM6 source `97a7a1b` was installed from immutable CI candidate images at Core/app/schema **0.29.0/0.45.0/0016**; regular merge `e378a89` preserves the exact tested tree. Full PR/main CI and actual native/artifact audits pass; canonical main publication is verified in PLAN.md. Caller-filtered agent guidance reuses all 76 tool contracts. Supported backup, canonical targeted update, real readiness and full-manager restart preserve 8236 original rows across 33 tables, six originals, configuration/schedules, 153 pre-update and 155 pre-restart terminal jobs/attempts, thirteen prior backup plans and eleven unrelated instances. Immediate same-grant/browser checks pass after update (58.2s) and restart (36.7s). Independent current/legacy SDK workflows and post-restart reuse pass; the owned temporary client is disabled after same-bearer REST/MCP controls. A bounded 139-entry root app journal has successful health/authorization/token/MCP controls and zero query, issued-secret, submitted-content or traceback matches. The existing connector separately reauthenticates/reads; its cached 63-tool catalog does not prove refreshed 76-tool discovery or observed prompt evaluations. AM6's three installed `97a7a1b` candidate digests remain historical predecessor evidence; the corrected M20 checkpoint below records the current installation and next predecessor. Integration M20 has resumed separately; no renewal implementation was included in AM6. Windmill Gate remains separate. Existing waivers remain; no stable module release is claimed. **Historical M14 baseline:** M00–M14 candidate implementation/acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes 675 actual Python/PostgreSQL/packaging cases, eighty-six real-script cases, local/producer/released-Core CI and both native QEMU distributions: Debian sixteen passes/three expected skips, Rocky twenty-six passes including all seven real browser workflows. Nineteen numeric accessibility contexts, measured small-fixture latency/RSS, exact recovery/backup observers and actual artifact privacy audits pass. The recorded M14 live acceptance ran this verified source with canonical inventory identity; targeted update and final full-manager restart preserve data/settings, scoped OAuth/SDK parity and timer health, with temporary clients disabled. Other roles are proven in disposable browsers, not claimed live. Verify actual final main completion-marker CI; never infer a pass from workflow start. Core/app/schema remain 0.24.2/0.39.0/0013. M13 distribution/skills/updater evidence remains valid. No stable module release is claimed; vendor scan findings, real-provider quality, scheduled-run interoperability and deployment-specific IdP/proxy/log policy remain release/maintenance work. See docs/m14-readiness.md and docs/m14-release-notes.md. Freeze all three deployed 5be82b7 digests there for future genuine upgrades. Do not revive deferred CPU quotas without a new operator request.
 
 ## Historical M17 implementation entry

@@ -231,6 +231,7 @@ source = { editable = "." }
 dependencies = [
     { name = "czero-core" },
     { name = "fastapi" },
+    { name = "httpcore" },
     { name = "mcp" },
     { name = "python-multipart" },
     { name = "uvicorn" },
@@ -247,6 +248,7 @@ test = [
 requires-dist = [
     { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.30.1" },
     { name = "fastapi", specifier = "==0.143.0" },
+    { name = "httpcore", specifier = "==1.0.9" },
     { name = "httpx", marker = "extra == 'test'", specifier = "==0.28.1" },
     { name = "jsonschema", marker = "extra == 'test'", specifier = "==4.26.0" },
     { name = "mcp", specifier = "==2.3.0" },

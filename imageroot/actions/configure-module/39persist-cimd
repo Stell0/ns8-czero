@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+from pathlib import Path
+import sys
+import agent
+
+sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
+from czero_cimd_config import read, encode
+
+agent.mset_env(encode(json.load(sys.stdin).get('cimd_enabled', read())))

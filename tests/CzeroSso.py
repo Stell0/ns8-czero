@@ -84,7 +84,7 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
-    def predecessor_profile(self, module_id, host, stage, expected_app):
+    def predecessor_profile(self, module_id, host, stage, expected_app, expected_core):
         builtin = BuiltIn()
         previous = builtin.set_log_level('NONE')
         try:
@@ -92,7 +92,7 @@ class CzeroSso:
             if stage == 'verify':
                 self._network(ssh, module_id)
             builtin.run_keyword('Wait Until Keyword Succeeds', '30s', '2s',
-                'Check application route', expected_app, host)
+                'Check application route', expected_app, host, expected_core)
             _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage),
                 return_stderr=True, return_rc=True, timeout='180 seconds')
             if rc:
@@ -792,7 +792,7 @@ class CzeroSso:
                     run('Click', '#guide-workflows > details:nth-child(6) > summary')
                     run('Get Text', '#guide-workflows', 'contains', 'whole receipt')
                 assert_accessibility(browser, 'agents', role)
-                self._verify_admin_controls(browser, run, role, host)
+                self._verify_admin_controls(browser, run, role, host, module_id)
                 run('Close Context')
             _, rc=ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs '+shlex.quote(module_id),
                                      return_rc=True,timeout='180 seconds')
@@ -803,17 +803,43 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @staticmethod
-    def _verify_admin_controls(browser, run, role, host):
+    def _verify_admin_controls(browser, run, role, host, module_id=None):
         run('Go To', 'https://' + host + '/admin')
         if role != 'admin':
             run('Get Text', '#admin-account', 'contains', 'Only application Admins')
             run('Wait For Elements State', '#admin-workspace', 'hidden')
+            run('Wait For Elements State', '#cimd-administration', 'hidden')
             run('Wait For Elements State', 'nav a[data-admin-link]', 'hidden')
             assert_accessibility(browser, 'admin', role)
             return
         run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
         run('Wait For Elements State', 'nav a[data-admin-link]', 'visible', 'timeout=30s')
         run('Get Element Count', 'nav a[aria-current="page"]', '==', 1)
+        run('Wait For Elements State', '#cimd-administration', 'visible', 'timeout=30s')
+        run('Wait For Elements State', '#cimd-preview', 'disabled', 'timeout=30s')
+        if module_id is not None:
+            ssh = BuiltIn().get_library_instance('SSHLibrary')
+            def switch(enabled):
+                request = json.dumps({'host': host, 'lets_encrypt': False, 'cimd_enabled': enabled})
+                _, rc = ssh.execute_command('api-cli run module/' + shlex.quote(module_id) +
+                    '/configure-module --data ' + shlex.quote(request), return_rc=True, timeout='180 seconds')
+                if rc:
+                    raise AssertionError('Disposable CIMD switch failed')
+            try:
+                switch(True)
+                run('Reload')
+                run('Wait For Elements State', '#cimd-preview', 'enabled', 'timeout=30s')
+                run('Fill Text', '#cimd-url', 'https://127.0.0.1/client.json')
+                run('Click', '#cimd-preview')
+                run('Get Text', '#cimd-form-status', 'contains', 'Check the exact HTTPS URL')
+                run('Fill Text', '#cimd-url', 'https://localhost/client.json')
+                run('Click', '#cimd-preview')
+                run('Get Text', '#cimd-form-status', 'contains', 'Metadata is unavailable')
+                run('Wait For Elements State', '#cimd-approve', 'disabled')
+            finally:
+                switch(False)
+            run('Click', '#cimd-refresh')
+            run('Wait For Elements State', '#cimd-preview', 'disabled', 'timeout=30s')
         name = 'browser-client-' + secrets.token_hex(4)
         run('Fill Text', '#client-name', name)
         run('Fill Text', '#client-callbacks', 'https://client.example.test/callback')

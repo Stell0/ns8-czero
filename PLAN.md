@@ -4040,3 +4040,32 @@ CIMD authority even when SSO is removed in the same change. Add trusted
 `CimdPolicyService(database)` and independently test it without an access service.
 Keep `c33e6d1`/its running ref unchanged as retained evidence; repeat exact-source
 local/full/native gates for the corrected Core source before immutable release.
+
+### M19 application implementation checkpoint — 21 October 2026
+
+The isolated application branch implements the public-DNS-pinned HTTPS fetcher,
+REST-only Admin preview/approval/reapproval, request-local consent verification,
+default-off native configuration/lifecycle/restore handling, native Settings
+switch and literal Administration/consent UI. Existing77 MCP bindings remain
+unchanged. Core files match the corrected producer candidate87b8fd1; final
+immutable tag adoption/app0.49 and native acceptance remain pending.
+
+Actual focused fetch/HTTP/native/fixture checks pass128 cases, including real
+TLS/SNI/certificate failures, mixed/rebinding DNS, bounded real deadlines,
+cancellation/singleflight/cache, unknown-URL no-fetch, public URL OAuth/SDK,
+metadata outage/change, refresh replay, sticky review, restart policy and
+post-I/O role loss. Read-scoped owner tokens cannot administer CIMD; browser
+writes reject bad Origin/CSRF before fetching. All140 controller checks, schema
+validation, five separately parsed Bash scripts and21 Robot dry runs pass.
+Immutable Vue install/build passes on the local host's Node25.8.1; pinned CI
+Node24 and actual native browsers remain required.
+
+The first full application run reports1662 passes/three old default-dictionary
+assertion failures: the expected new `cimd_enabled=false`/environment field was
+absent from their expectations. Corrected native backup/module/default checks
+pass65 cases; keep the failed run. Repeat final full checks after released-Core
+adoption. No application candidate CI, deployment or actual ChatGPT M19 pass is
+claimed. Read-only dedicated baseline confirms the accepted M18 image trio,
+45 tables, six original files and healthy timer; all original/M20 worktrees
+still match captured HEAD/status/document bytes. The temporary owned HTTPS
+fixture and cleanup procedure are prepared privately but not deployed.
