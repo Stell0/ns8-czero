@@ -117,3 +117,19 @@ def test_native_upgrade_freezes_all_three_accepted_predecessor_images():
     for image in predecessor['images'].values():
         assert re.fullmatch(r'ghcr.io/stell0/czero(?:-app|-postgres)?@sha256:[0-9a-f]{64}', image)
         assert image in robot
+
+
+def test_released_image_workflow_extracts_the_actual_current_lock(tmp_path):
+    import subprocess
+    import sys
+    root = Path(__file__).parents[2]
+    workflow = (root/'.github/workflows/test-core-consumer.yml').read_text()
+    source = workflow.split("python3 - <<'PY' > /tmp/core-expected\n", 1)[1].split('          PY\n', 1)[0]
+    import textwrap
+    source = textwrap.dedent(source)
+    (tmp_path/'app').mkdir()
+    (tmp_path/'app/uv.lock').write_bytes((root/'app/uv.lock').read_bytes())
+    result = subprocess.run([sys.executable, '-c', source], cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0
+    core = next(item for item in tomllib.loads((root/'app/uv.lock').read_text())['package'] if item['name'] == 'czero-core')
+    assert result.stdout.split() == [core['version'], core['source']['git'].rsplit('#', 1)[1]]
