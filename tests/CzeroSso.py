@@ -84,7 +84,7 @@ class CzeroSso:
             builtin.set_log_level(previous)
 
     @keyword
-    def predecessor_profile(self, module_id, host, stage, expected_app):
+    def predecessor_profile(self, module_id, host, stage, expected_app, expected_core):
         builtin = BuiltIn()
         previous = builtin.set_log_level('NONE')
         try:
@@ -92,7 +92,7 @@ class CzeroSso:
             if stage == 'verify':
                 self._network(ssh, module_id)
             builtin.run_keyword('Wait Until Keyword Succeeds', '30s', '2s',
-                'Check application route', expected_app, host)
+                'Check application route', expected_app, host, expected_core)
             _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage),
                 return_stderr=True, return_rc=True, timeout='180 seconds')
             if rc:

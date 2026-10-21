@@ -99,8 +99,12 @@ def test_predecessor_and_current_profile_health_bindings_are_explicit():
     robot = (root/'tests/czero.robot').read_text()
     predecessor = json.loads((root/'tests/fixtures/upgrade_predecessor.json').read_text())
     current = tomllib.loads((root/'app/pyproject.toml').read_text())['project']['version']
-    calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)',robot)
-    assert calls == [('seed',predecessor['app_version']),('verify',current)]
+    current_core = tomllib.loads((root/'packages/czero-core/pyproject.toml').read_text())['project']['version']
+    calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)\s+([0-9.]+)',robot)
+    assert calls == [('seed',predecessor['app_version'],predecessor['core_version']),
+                     ('verify',current,current_core)]
+    assert '${expected_core}='+current_core in robot
+    assert 'Should Be Equal    ${health}[core_version]    ${expected_core}' in robot
 
 
 def test_native_upgrade_freezes_all_three_accepted_predecessor_images():

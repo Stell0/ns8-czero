@@ -4040,3 +4040,15 @@ CIMD authority even when SSO is removed in the same change. Add trusted
 `CimdPolicyService(database)` and independently test it without an access service.
 Keep `c33e6d1`/its running ref unchanged as retained evidence; repeat exact-source
 local/full/native gates for the corrected Core source before immutable release.
+
+Core policy/revocation corrections pass1574 actual PostgreSQL/Python/packaging
+cases without skips (494.83s). These serialize CIMD refresh/replay/revocation
+with already-running delegated transactions, preserve manual-client semantics,
+and record changed metadata while a client is disabled. Retained full CI
+39566400246 fails genuine Debian upgrade: the profile fixture incorrectly
+requires Core0.31 while still checking accepted M18 Core0.30.1; Rocky installation
+passes. Run39573023659 remains retained at181cb36. The corrected fixture now
+supplies both app and Core versions explicitly for predecessor and candidate.
+Three new regression failures reproduce the bug; all37 focused fixture/source
+cases and21 Robot dry runs pass after correction. No publication/deployment is
+claimed; fresh exact-source full native gates remain required.
