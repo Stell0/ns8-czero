@@ -170,6 +170,10 @@
                 "absolute_seconds",
                 "idle_seconds"
             ]
+        },
+        "cimd_enabled": {
+            "type": "boolean",
+            "description": "Allow administrator-approved public OAuth client metadata URLs; disabled by default"
         }
     },
     "additionalProperties": false,
@@ -181,6 +185,7 @@
         "owner",
         "owner_ldap_uuid",
         "retrieval",
-        "session_policy"
+        "session_policy",
+        "cimd_enabled"
     ]
 }

@@ -53,3 +53,18 @@ def test_generator_preflights_paths_before_creating_destination(tmp_path, kind):
     with pytest.raises(ValueError):
         EXAMPLE.create(destination, repository)
     assert not destination.exists()
+
+
+def test_generated_fork_has_complete_native_cimd_dependencies(tmp_path):
+    import runpy
+    destination = tmp_path / 'consumer'
+    EXAMPLE.create(destination, ROOT)
+    helper = destination / 'imageroot/bin/czero_cimd_config.py'
+    assert helper.is_file(), 'Generated native configuration imports an unregistered CIMD helper'
+    assert runpy.run_path(str(helper))['read']({}) is False
+    for name in ('imageroot/bin/czero-create-cimd-config',
+                 'imageroot/actions/create-module/33cimd',
+                 'imageroot/update-module.d/53cimd',
+                 'imageroot/actions/configure-module/14validate-cimd',
+                 'imageroot/actions/configure-module/39persist-cimd'):
+        assert (destination / name).is_file() and (destination / name).stat().st_mode & 0o111

@@ -66,3 +66,15 @@ test('empty selection can deny and only successful server reply redirects', asyn
   await tick();
   assert.deepEqual(h.redirects, ['https://client.example.test/callback?error=access_denied']);
 });
+
+
+test('metadata-client consent shows the approved URL as literal identity', async () => {
+  const h = harness(), clientId = 'https://client.example.test/client.json';
+  h.requests[0].resolve({ok: true, json: async () => ({client_id: clientId,
+    client_name: '<svg> literal name', callback: 'https://client.example.test/callback',
+    profile: {username: 'owner'}, scopes: ['c0:read'], eligible_scopes: ['c0:read'], csrf_token: 'fixture-only'})});
+  await tick();
+  assert.equal(h.nodes.get('client-identity').textContent, 'Approved client metadata URL: ' + clientId);
+  assert.equal(h.nodes.get('client-identity').hidden, false);
+  assert.equal(h.nodes.get('client').textContent, '<svg> literal name');
+});

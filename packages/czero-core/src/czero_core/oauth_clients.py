@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Administrator-approved public OAuth clients; no client secrets or URL fetches."""
+from dataclasses import dataclass
 import json
 import hashlib
 from urllib.parse import urlsplit
@@ -43,6 +44,17 @@ def _view(row):
             'redirect_uris': row['redirect_uris'], 'allowed_scopes': row['scopes'],
             'token_endpoint_auth_method': 'none', 'enabled': row['enabled'],
             'revision': row['revision'], 'created_at': row['created_at']}
+
+
+@dataclass(frozen=True)
+class ClientIdentity:
+    internal_id: UUID
+    public_id: str
+    registration_kind: str
+
+
+def internal_id(client):
+    return client['internal_id'] if 'internal_id' in client else UUID(client['client_id'])
 
 
 class OAuthClientService:
@@ -102,10 +114,14 @@ class OAuthClientService:
         if self.access is None:
             raise PermissionDenied()
         with self.access.database.engine.begin() as connection:
-            connection.execute(text('SELECT pg_advisory_xact_lock(49378)'))
+            from .cimd import _lock, _revoke
+            _lock(connection)
             self._authorize(connection, actor)
             if not isinstance(client_id, UUID) or type(enabled) is not bool or type(expected_revision) is not int:
                 raise ValueError('invalid_client_update')
+            if connection.execute(text('SELECT 1 FROM c0_cimd_clients WHERE client_id=:id'),
+                                  {'id': client_id}).scalar_one_or_none():
+                _revoke(connection, client_id)
             row = connection.execute(text('''UPDATE c0_oauth_clients SET enabled=:enabled,revision=revision+1
                 WHERE id=:id AND revision=:revision AND revision<2147483646 RETURNING *'''),
                 {'id': client_id, 'enabled': enabled, 'revision': expected_revision}).mappings().one_or_none()
@@ -113,15 +129,44 @@ class OAuthClientService:
                 raise ClientConflict()
             return _view(row)
 
-    def _registered(self, connection, client_id):
-        """Trusted OAuth adapter lookup; public callers cannot list clients."""
+    def _by_id(self, connection, identifier):
+        """Internal FK lookup, never an alternate public OAuth identity."""
+        row = connection.execute(text('SELECT * FROM c0_oauth_clients WHERE id=:id AND enabled'),
+            {'id': identifier}).mappings().one_or_none()
+        if row is None:
+            return None
+        binding = connection.execute(text('SELECT * FROM c0_cimd_clients WHERE client_id=:id'),
+            {'id': identifier}).mappings().one_or_none()
+        view = _view(row)
+        if binding is not None:
+            if not connection.execute(text('SELECT enabled FROM c0_cimd_policy WHERE id=1')).scalar_one():
+                return None
+            view.update(client_id=binding['metadata_url'], internal_id=identifier,
+                        registration_kind='cimd', metadata_digest=binding['metadata_digest'],
+                        review_required=binding['review_required'],
+                        grant_types=binding['approved_descriptor']['grant_types'])
+        return view
+
+    def _identity(self, connection, client_id):
+        if not isinstance(client_id, str):
+            return None
+        if client_id[:8].lower() == 'https://':
+            row = connection.execute(text('SELECT client_id FROM c0_cimd_clients WHERE metadata_url=:url'),
+                                     {'url': client_id}).scalar_one_or_none()
+            return ClientIdentity(row, client_id, 'cimd') if row else None
         try:
             identifier = UUID(client_id)
         except (TypeError, ValueError, AttributeError):
             return None
-        row = connection.execute(text('SELECT * FROM c0_oauth_clients WHERE id=:id AND enabled'),
-            {'id': identifier}).mappings().one_or_none()
-        return _view(row) if row is not None else None
+        if connection.execute(text('SELECT 1 FROM c0_cimd_clients WHERE client_id=:id'),
+                              {'id': identifier}).scalar_one_or_none():
+            return None
+        return ClientIdentity(identifier, client_id, 'manual')
+
+    def _registered(self, connection, client_id):
+        """Trusted public OAuth lookup, exact URL or legacy UUID; no fetching."""
+        identity = self._identity(connection, client_id)
+        return self._by_id(connection, identity.internal_id) if identity else None
 
     def _lookup(self, client_id):
         """Trusted OAuth handler metadata lookup, never a public client list."""

@@ -8,8 +8,9 @@
   <h1>Authorize a client</h1>
   <p id="profile"></p>
   <p id="client"></p>
+  <p id="client-identity" hidden></p>
   <p>Approved callback: <span id="callback"></span></p>
-  <p>Choose the permissions to grant. Access lasts at most one hour, no later than this sign-in expires. Signing out does not revoke client access; revoke it through the client or ask an Admin to disable the client.</p>
+  <p>Choose the permissions to grant. Access remains bounded by this sign-in and the configured session policy. Signing out ends linked renewable client grants. You can also revoke through the client or ask an Admin to disable it.</p>
   <form id="consent-form">
     <fieldset id="scopes"><legend>Permissions</legend></fieldset>
     <button id="approve" type="submit" disabled>Authorize</button>

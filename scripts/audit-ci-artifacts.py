@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tests'))
 from renewal_evidence import validate_measurement
+from cimd_recovery_evidence import require_stages as require_cimd_recovery
 
 
 REQUIRED_UI = {
@@ -54,12 +55,13 @@ def marker_values(logs, marker):
 def audit_reports(directory, source, images, logs):
     reports = sorted(directory.rglob('output.xml'))
     assert len(reports) == 2, 'Both native reports are required'
-    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []
+    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []
     for report in reports:
         raw = report.read_text()
         measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
         assert len(measured) == 1, 'One measured renewal proof per native distribution is required'
         renewal.append(validate_measurement(measured[0]))
+        cimd_recovery.append(require_cimd_recovery(marker_values(html.unescape(raw), 'C0 CIMD recovery: ')))
         root = ET.fromstring(raw)
         tests = list(root.iter('test'))
         assert tests and all(t.find('status').get('status') in {'PASS', 'SKIP'} for t in tests)
@@ -108,7 +110,7 @@ def audit_reports(directory, source, images, logs):
     return {'source': source, 'accepted': True, 'reports': summaries, 'browser_workflows': 8,
             'privacy_guards': privacy, 'query_artifacts': audited, 'oauth_query_candidates': 0,
             'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
-            'renewal_measurements': renewal}
+            'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery}
 
 
 def main():

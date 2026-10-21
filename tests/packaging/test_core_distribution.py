@@ -90,6 +90,7 @@ def test_clean_install_is_independent_of_checkout_and_ns8_sdk(installed):
         "from czero_core.jobs import default_registry;from czero_core.objects import ObjectService;"
         "from czero_core.wiki import WikiService;from czero_core.sources import SourceService;"
         "from czero_core.renewal import NativeAuthorityService,SessionPolicy;"
+        "from czero_core.cimd import CimdService;from czero_core.cimd_metadata import parse_metadata;"
         "assert SessionPolicy().absolute_seconds==28800;"
         "assert importlib.util.find_spec('agent') is None;assert importlib.util.find_spec('czero_app') is None;"
         "assert Path(czero_core.__file__).is_relative_to(Path(sys.prefix).resolve());"
@@ -118,7 +119,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0017_session_renewal'
+        assert results[0]==results[1] and results[0][1]=='0018_cimd_clients'
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,
@@ -129,6 +130,11 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
         scoped=command([str(python),'-I',str(spaces_probe)],cwd=directory,
                        env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
         assert all(json.loads(scoped).values())
+        cimd_probe = directory/'core_cimd_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_cimd_probe.py', cimd_probe)
+        cimd = command([str(python), '-I', str(cimd_probe)], cwd=directory,
+                       env={**env, 'CZERO_DATABASE_URL': target, 'CZERO_DISPOSABLE_TEST': '1'})
+        assert all(json.loads(cimd).values())
     finally:
         with engine.connect().execution_options(isolation_level='AUTOCOMMIT') as connection:
             connection.execute(text('DROP DATABASE IF EXISTS '+name+' WITH (FORCE)'))

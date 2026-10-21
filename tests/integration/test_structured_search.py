@@ -10,7 +10,8 @@ from uuid import uuid4
 
 import httpx2
 import pytest
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 
 from czero_core.annotations import ContentTarget
 from czero_core.filtered_retrieval import FilteredEmbeddingStore
@@ -39,6 +40,39 @@ def structured(search, annotations):
 def annotate(service, actor, target, **fields):
     value = {'products': ['NS8'], 'components': ['backup'], 'version_tags': ['8.4'], 'status': 'applicable', **fields}
     return write(service, actor, target, 'applicability', value)
+
+
+@pytest.fixture(autouse=True)
+def ann_database(request, monkeypatch):
+    if 'ann_indexed' not in request.fixturenames:
+        yield None
+        return
+    # Keep this forced-plan corpus independent of preceding fixtures' index
+    # tombstones, statistics and maintenance timing in the shared suite DB.
+    # Autouse establishes its URL before any of the ordinary service fixtures.
+    original = make_url(os.environ['CZERO_TEST_DATABASE_URL'])
+    name = 'czero_ann_' + uuid4().hex
+    admin = create_engine(original.set(database='postgres'))
+    try:
+        with admin.connect().execution_options(isolation_level='AUTOCOMMIT') as connection:
+            connection.execute(text('CREATE DATABASE ' + name))
+        try:
+            monkeypatch.setenv('CZERO_TEST_DATABASE_URL', original.set(database=name).render_as_string(hide_password=False))
+            yield name
+        finally:
+            # Only the database created by this invocation is eligible for
+            # deletion; leaked connections fail teardown rather than being killed.
+            with admin.connect().execution_options(isolation_level='AUTOCOMMIT') as connection:
+                connection.execute(text('DROP DATABASE ' + name))
+    finally:
+        admin.dispose()
+
+
+@pytest.fixture
+def ann_indexed(ann_database, indexed):
+    with indexed[0].database.engine.connect() as connection:
+        assert connection.execute(text('SELECT current_database()')).scalar_one() == ann_database
+    return indexed
 
 
 def test_default_source_wiki_selection_and_legacy_search_are_preserved(knowledge, objects, structured):
@@ -155,8 +189,9 @@ def test_filtered_hybrid_and_reranker_never_receive_other_space_or_version(space
     assert [hit['reference']['id'] for hit in private_result['hits']] == [hidden['content']['id']]
 
 
-def test_semantic_candidates_beyond_limit_and_provider_failure_keep_valid_version(indexed, annotations):
-    store, fixture, calls = indexed
+@pytest.mark.parametrize('incremental_sort', ['on', 'off'])
+def test_semantic_candidates_beyond_limit_and_provider_failure_keep_valid_version(ann_indexed, annotations, incremental_sort):
+    store, fixture, calls = ann_indexed
     _, wiki, _ = fixture
     for index in range(70):
         wrong = create_page(wiki, title='Wrong '+str(index), body='alpha wrong version')
@@ -177,6 +212,9 @@ def test_semantic_candidates_beyond_limit_and_provider_failure_keep_valid_versio
     # The actual exact-distance query must still find the one eligible revision.
     filtered = FilteredEmbeddingStore(store.database, store.client, store.access, filters)
     with store.database.engine.begin() as connection:
+        # Exercise both ordering plans with normal compilation settings and
+        # the original query deadline, using only this test's fresh ANN corpus.
+        connection.execute(text('SET LOCAL enable_incremental_sort='+incremental_sort))
         connection.execute(text('SET LOCAL enable_seqscan=off'))
         connection.execute(text('SET LOCAL enable_sort=off'))
         plans, fallbacks = [], []

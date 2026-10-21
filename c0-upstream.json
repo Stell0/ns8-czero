@@ -477,6 +477,41 @@
       "path": "tests/renewal_evidence.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero_cimd_config.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-create-cimd-config",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/create-module/33cimd",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/update-module.d/53cimd",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/14validate-cimd",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/39persist-cimd",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/cimd_recovery_evidence.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

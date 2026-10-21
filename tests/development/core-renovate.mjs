@@ -11,7 +11,7 @@ const {api:Regex}=await import(pathToFileURL(resolve(root,'dist/modules/versioni
 const {api:Pep440}=await import(pathToFileURL(resolve(root,'dist/modules/versioning/pep440/index.js')));
 assert.equal(Pep440.isVersion('core-v0.24.1'),false,'Reproduce the original skipped dependency');
 for(const [file,base,patch,next,older] of [
- ['renovate.json','core-v0.30.1','core-v0.30.2','core-v0.31.0','core-v0.30.0'],
+ ['renovate.json','core-v0.31.0','core-v0.31.1','core-v0.32.0','core-v0.30.1'],
  ['examples/fork/renovate.json','core-v0.24.1','core-v0.24.2','core-v0.25.0','core-v0.24.0']
 ]) {
  const rules=JSON.parse(readFileSync(file)).packageRules;

@@ -96,7 +96,11 @@
         "session_policy_help": "New sign-ins can renew for up to 8 hours by default, with a 1-hour inactivity limit. Set limits from 60 to 86400 seconds; inactivity must not exceed the maximum. The provider can end a session earlier. Existing sessions retain their original limits, and changing these settings never extends them.",
         "session_absolute": "Maximum session duration (seconds)",
         "session_idle": "Inactivity limit (seconds)",
-        "session_policy_invalid": "Enter whole seconds from 60 to 86400, with inactivity no longer than the maximum duration."
+        "session_policy_invalid": "Enter whole seconds from 60 to 86400, with inactivity no longer than the maximum duration.",
+        "cimd_title": "Client metadata discovery",
+        "cimd_enabled": "Allow approved client metadata URLs",
+        "cimd_help": "Disabled by default. Application Administrators must review each exact HTTPS metadata URL and its callbacks in Administration before a client can connect. Turning this off revokes metadata-client connections; existing manually approved clients stay available.",
+        "cimd_invalid": "Choose whether approved client metadata URLs are allowed."
     },
     "about": {
         "title": "About"

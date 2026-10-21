@@ -94,10 +94,55 @@ def test_native_health_expectations_match_the_declared_producer_versions():
         assert expected and set(expected)=={declared}
 
 
+def test_runtime_versions_match_the_installed_package_metadata():
+    from importlib.metadata import version
+    from czero_app import __version__ as app_version
+    from czero_core import core_version
+    root = Path(__file__).parents[2]
+    for name, runtime, manifest in (
+        ('czero-app', app_version, 'app/pyproject.toml'),
+        ('czero-core', core_version, 'packages/czero-core/pyproject.toml'),
+    ):
+        declared = tomllib.loads((root/manifest).read_text())['project']['version']
+        assert runtime == version(name) == declared
+
+
 def test_predecessor_and_current_profile_health_bindings_are_explicit():
     root = Path(__file__).parents[2]
     robot = (root/'tests/czero.robot').read_text()
-    predecessor = json.loads((root/'tests/fixtures/tool_guidance/m17_contract.json').read_text())
+    predecessor = json.loads((root/'tests/fixtures/upgrade_predecessor.json').read_text())
     current = tomllib.loads((root/'app/pyproject.toml').read_text())['project']['version']
-    calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)',robot)
-    assert calls == [('seed',predecessor['app_version']),('verify',current)]
+    current_core = tomllib.loads((root/'packages/czero-core/pyproject.toml').read_text())['project']['version']
+    calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)\s+([0-9.]+)',robot)
+    assert calls == [('seed',predecessor['app_version'],predecessor['core_version']),
+                     ('verify',current,current_core)]
+    assert '${expected_app}='+current in robot
+    assert '${expected_core}='+current_core in robot
+    assert 'Should Be Equal    ${health}[core_version]    ${expected_core}' in robot
+
+
+def test_native_upgrade_freezes_all_three_accepted_predecessor_images():
+    root = Path(__file__).parents[2]
+    predecessor = json.loads((root/'tests/fixtures/upgrade_predecessor.json').read_text())
+    robot = (root/'tests/czero.robot').read_text()
+    assert re.fullmatch(r'[0-9a-f]{40}', predecessor['source'])
+    assert predecessor['source'] in predecessor['tag']
+    for image in predecessor['images'].values():
+        assert re.fullmatch(r'ghcr.io/stell0/czero(?:-app|-postgres)?@sha256:[0-9a-f]{64}', image)
+        assert image in robot
+
+
+def test_released_image_workflow_extracts_the_actual_current_lock(tmp_path):
+    import subprocess
+    import sys
+    root = Path(__file__).parents[2]
+    workflow = (root/'.github/workflows/test-core-consumer.yml').read_text()
+    source = workflow.split("python3 - <<'PY' > /tmp/core-expected\n", 1)[1].split('          PY\n', 1)[0]
+    import textwrap
+    source = textwrap.dedent(source)
+    (tmp_path/'app').mkdir()
+    (tmp_path/'app/uv.lock').write_bytes((root/'app/uv.lock').read_bytes())
+    result = subprocess.run([sys.executable, '-c', source], cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0
+    core = next(item for item in tomllib.loads((root/'app/uv.lock').read_text())['package'] if item['name'] == 'czero-core')
+    assert result.stdout.split() == [core['version'], core['source']['git'].rsplit('#', 1)[1]]

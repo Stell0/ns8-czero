@@ -21,7 +21,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.datastructures import FormData
 
 from czero_core.identity import PermissionDenied, Role
-from czero_core.oauth_grants import OAuthGrantService
+from czero_app.cimd_server import install_cimd_routes
+from czero_core.oauth_grants import OAuthGrantService, GrantRejected
 from czero_core.oauth_consent import ConsentRejected, OAuthConsentService
 from czero_core.operations import SCOPES
 from czero_core.sessions import SessionRejected
@@ -64,7 +65,8 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
     origin = auth.oidc.config.public_origin.rstrip('/')
     grants = OAuthGrantService(auth.access, auth.sessions.client_id, origin + '/mcp', authority=auth.sessions.authority)
     consent = OAuthConsentService(grants)
-    provider = OAuthProvider(grants, consent, origin)
+    cimd = install_cimd_routes(app, grants.cimd, read_context, write_context)
+    provider = OAuthProvider(grants, consent, origin, cimd=cimd)
     app.state.delegated_grants, app.state.oauth_consent = grants, consent
     authenticator = ClientAuthenticator(provider)
     handlers = {'authorize': AuthorizationHandler(provider), 'token': TokenHandler(provider, authenticator),
@@ -132,6 +134,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
 
     @app.get('/.well-known/oauth-authorization-server/oauth', include_in_schema=False)
     def authorization_metadata():
+        metadata.client_id_metadata_document_supported = grants.cimd.enabled()
         return JSONResponse(metadata.model_dump(mode='json', by_alias=True, exclude_none=True),
             headers={'Cache-Control':'no-store'})
 
@@ -177,10 +180,18 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
                 'profile':auth.access.profile(session.actor)}
 
     @app.post('/oauth/consent', include_in_schema=False)
-    def consent_complete(request: Request, choice: ConsentChoice, context=Depends(write_context)):
-        session = browser_session(request)
-        result = consent.complete(session, *pending_cookie(request), approve=choice.approve,
-            scopes=set(choice.scopes) if choice.scopes is not None else None)
+    async def consent_complete(request: Request, choice: ConsentChoice, context=Depends(write_context)):
+        pending = pending_cookie(request)
+        verification = None
+        if choice.approve:
+            view = await to_thread.run_sync(partial(consent.view, *pending))
+            verification = await cimd.verification(view['client_id'])
+        session = await to_thread.run_sync(partial(browser_session, request))
+        try:
+            result = await to_thread.run_sync(partial(consent.complete, session, *pending, approve=choice.approve,
+                scopes=set(choice.scopes) if choice.scopes is not None else None, verification=verification))
+        except GrantRejected:
+            raise ConsentRejected() from None
         values = {'code':result.code} if result.code else {'error':'access_denied'}
         if result.state is not None:
             values['state'] = result.state

@@ -1,6 +1,6 @@
 # C0 implementation plan — milestone-by-milestone Codex handoff
 
-**Current checkpoint (20 October 2026):** M20 and M17 are closed. M18 candidate `93b9546` is deployed on the dedicated C0 instance at Core/app/schema **0.30.1/0.48.0/0017**, and PR27 is regularly merged as `73a04e1` with the same tree. Exact candidate CI/native/artifact checks, frozen 24/24-per-arm Codex measurements, dedicated preservation/lifecycle/privacy checks and operator post-reconnect ChatGPT acceptance pass within the recorded limits below. Main full acceptance/publication 39489443427 and actual source/native/privacy/scan/registry audits pass. Separate closeout PR28 review/checks/main verification remain pending. Keep the deployed candidate trio unchanged and available; M19/further AM/Windmill remain gated. Preserve original dirty documents/recovered worktrees and both existing waivers.
+**Current checkpoint (21 October 2026):** M20, M17 and M18 are closed. Operator-merged closeout PR28 produces main `426bcb6f7f04da9426b826989f9f1cea2967d2c7`, identical to reviewed `08076c7`; actual [main documentation validation39545434377](https://github.com/Stell0/ns8-czero/actions/runs/39545434377) completes successfully and exact-source promotion verification passes. M19 begins from this marker in its own worktree. Preserve the deployed M18 `93b9546` trio, original dirty documents, recovered drafts and both existing waivers. Further AM/Windmill remains deferred.
 
 **Historical state:** M00–M14 implementation and acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes local/producer/released-image/both-QEMU and permitted live owner gates. Verify actual main completion-marker CI before treating that marker as verified. No stable module release is claimed. Interactive Playwright remains waived; permitted dedicated live and disposable all-role browser evidence remain required.
 
@@ -1325,7 +1325,7 @@ Main or documentation images do not replace this accepted installation. No Core 
 
 **M17 closeout completed:** [PR26](https://github.com/Stell0/ns8-czero/pull/26), exact source `82308c3`, passes ready documentation CI39450205370 and is regularly merged as `9aa2363`. Its actual main39450459776 completes successfully and exact-source documentation promotion verification passes. All three accepted deployed14e4d01 images remain unchanged as M18’s genuine predecessor.
 
-## Integration M18 — Tool guidance (deployed; closeout pending)
+## Integration M18 — Tool guidance (accepted and closed)
 
 **Entry passed:** operator-reviewed closeout [PR 26](https://github.com/Stell0/ns8-czero/pull/26) is regularly merged as `9aa23633b34cd628e1baada449dc501e5924c14f`; actual [main 39450459776](https://github.com/Stell0/ns8-czero/actions/runs/39450459776) is completed/successful with documentation checks and exact promotion verification. M17 is closed. M18 begins from that verified marker on `feat/m18-tool-guidance` in a separate worktree/environment. The genuinely installed `14e4d01` trio frozen above is the upgrade predecessor. Preserve all original dirty documents, drafts, approved clients and existing waivers. M18 acceptance is not yet claimed.
 
@@ -1354,11 +1354,11 @@ Main or documentation images do not replace this accepted installation. No Core 
 - [x] Focused/full local and independent consumer checks; exact completed candidate CI/native/publication and actual artifact audits.
 - [x] Dedicated supported update, preservation/privacy/lifecycle and operator post-reconnect ChatGPT workflow acceptance against frozen source/digests, within recorded limits.
 - [x] Operator regularly merges PR27, preserving the exact tested source.
-- [ ] Actual main full acceptance/publication, separate reviewed three-document closeout/main marker. M19 and further AM/Windmill work remain gated.
+- [x] Actual main full acceptance/publication, separate reviewed three-document closeout/main marker; see M19 entry below. Further AM/Windmill remains deferred.
 
 ### M18 executed evidence and closeout — 20 October 2026
 
-**Status:** [PR27](https://github.com/Stell0/ns8-czero/pull/27) is merged by the operator as `73a04e1d183e9841c7c7636c8886b08b42cc45bb` at 20:08:29 UTC. Its two-parent regular merge preserves candidate `93b9546529c623a5620fa0c585f8216bfec5e58f` and has an identical tree. GitHub has no separate review record; do not invent one. App/Core/schema are **0.48.0/0.30.1/0017**. Candidate implementation, measurements and dedicated backend acceptance below pass within the recorded limits. Actual [main full validation/publication 39489443427](https://github.com/Stell0/ns8-czero/actions/runs/39489443427) completes successfully, with the independent audits below passing. Operator post-reconnect ChatGPT UI acceptance and the passive unrelated-inventory diagnosis below are now recorded. This separate three-document closeout/main marker remains a gate. **M18 is not fully closed; M19 remains unstarted.** Historical development checkpoints above are superseded only by these executed results, not erased.
+**Status:** [PR27](https://github.com/Stell0/ns8-czero/pull/27) is merged by the operator as `73a04e1d183e9841c7c7636c8886b08b42cc45bb` at 20:08:29 UTC. Its two-parent regular merge preserves candidate `93b9546529c623a5620fa0c585f8216bfec5e58f` and has an identical tree. GitHub has no separate review record; do not invent one. App/Core/schema are **0.48.0/0.30.1/0017**. Candidate implementation, measurements and dedicated backend acceptance below pass within the recorded limits. Actual [main full validation/publication 39489443427](https://github.com/Stell0/ns8-czero/actions/runs/39489443427) completes successfully, with the independent audits below passing. Operator post-reconnect ChatGPT UI acceptance and the passive unrelated-inventory diagnosis below are now recorded. This separate three-document closeout/main marker remains a gate. **M18 closeout subsequently passes at `426bcb6`; M19 entry below records the final verified marker.** Historical development checkpoints above are superseded only by these executed results, not erased.
 
 **Exact candidate checks:** [Full 39466269075](https://github.com/Stell0/ns8-czero/actions/runs/39466269075) completes successfully at `93b9546`. Local clean-source verification passes 1499 actual Python/PostgreSQL/packaging cases without skips in 468.99s; the actual downloaded CI log independently confirms 1499/no skips in 355.01s. Focused evaluator/native-wrapper/real-MCP coverage passes 86; independently installed released-Core/frozen consumer 81, JavaScript 130, schema/shell and Robot 21 dry runs pass. The repository testing skill validates and independently rejects raw failed discovery artifacts as quality evidence. Core's immutable released Git pin remains `46007396c5e83d05ed8dd11bcd5436bc1b245230`; no Core publication, migration, dependency change beyond the app version, facade or lifecycle behavior change is introduced.
 
@@ -3875,3 +3875,409 @@ Windmill Gate is a separate milestone and has not started.
 
 
 M20 recovery checkpoint (19 October 2026): `/tmp` was cleared during the interrupted turn. All fourteen original draft files were reconstructed from the task's recorded source edits into `.cache/worktrees/m20-original`, with a mode-0600 archive in ignored private storage. Active work is separate in `.cache/worktrees/m20` on `feat/m20-session-renewal`. The resumed edits, durable Python environment and dedicated disposable PostgreSQL fixture are recovered; current producer verification passes 1342 actual Python/PostgreSQL/packaging cases. Publication/native/application/live gates remain pending. Existing committed AM6 evidence and original dirty documents remain unchanged.
+
+
+## Integration M19 — Optional approved client metadata discovery
+
+**Entry and authorization:** M18 closeout PR28 is merged and actual main marker
+39545434377 passes exact promotion verification at `426bcb6`. The operator
+approves this implementation plan. Work uses `feat/m19-cimd` in a separate
+worktree; the original dirty checkout and all recovered M20 work remain intact.
+No acceptance, publication or deployment is claimed by this plan.
+
+**Behavior and boundaries:** New installations default CIMD off. Native NS8
+Settings controls `cimd_enabled` (`CZERO_CIMD_ENABLED`); application Admins preview
+and approve exact metadata URLs and scopes. Anonymous authorization may fetch
+only an enabled approved URL; unknown URLs trigger no network request. Manual
+UUID clients retain their contract. All 77 MCP operations, roles, schemas and
+bindings remain unchanged; CIMD administration is REST-only. No DCR, JWT client
+authentication, new session policy, stable module release or AM work is added.
+
+**Core first:** Planned Core0.31.0/schema0018 adds a singleton default-off policy
+and approved URL binding/cache records referencing existing client UUIDs. Foreign
+keys remain UUIDs; trusted identity distinguishes internal UUID from public URL.
+A CIMD internal UUID cannot authenticate as an alternate public identity. The
+64-client bound is shared. Migration preserves old clients/consent/grants/tokens
+and repeated upgrades preserve approval. Approval/reapproval uses optimistic
+revision checks and exact normalized metadata digests. Duplicate approval never
+reenables disabled clients. Relevant changes stick in review-required state;
+remote reversion cannot silently approve them. Existing consented grants survive
+metadata outage/change within local policy/lifetimes; reapproval invalidates them.
+Global off revokes only CIMD authority and pending requests; reenable never
+revives it. Unchanged startup synchronization preserves authority.
+
+**Concurrency:** No DNS/HTTP under database locks. Trusted request-local proof
+binds exact URL, approved revision/digest and at most30-second handoff at consent
+begin and approve. Denial needs no fetch. Recheck policy, approval and current
+actor after external work. Preserve role49372 -> client49378 -> grant49379 ->
+consent49380 -> final revocation49382 ordering. Captured delegated actors must
+fail after completed CIMD disable/reapproval/global-off actions.
+
+**Validation:** Exact ASCII HTTPS DNS URL,443, path, <=2048 characters; no
+credentials/query/fragment/whitespace/backslash/dot path segments. Strict UTF-8
+JSON <=32KiB, duplicate keys rejected, depth<=16. Require exact self-identity,
+printable nonblank name<=128 and1–4 exact existing-valid callbacks. Select public
+`none` from plural `token_endpoint_auth_methods_supported` when present; otherwise
+require singular `none`. A plural-none ChatGPT document with legacy JWT preference
+is accepted. Never fetch JWKS or display remote logos. Reject embedded credentials
+and private key material. Support authorization_code and optional refresh_token;
+omitted grant types means code-only. Respect declared C0 scope ceilings. Digest
+only normalized approval-relevant fields; unused display/JWKS URLs have no power.
+
+**Application network boundary:** Declare/freeze public httpcore1.0.9 interfaces.
+A dedicated public AsyncNetworkBackend resolves all bounded A/AAAA results,
+rejects mixed/private/special/unsafe-transition addresses, pins numeric connects
+and retains original TLS hostname/SNI/certificate verification. HTTP1 only, no
+redirect/proxy/retry/keepalive/compression/forwarded credentials. Four fetches,
+bounded single-flight waiters, five seconds total including DNS,64KiB total
+plaintext and32KiB body; only200 JSON or application/*+json. Cancellation retains
+DNS concurrency until resolver work actually ends. Fixed diagnostic codes avoid
+raw documents/URLs. Valid-only cache defaults60s, caps300s, respects Cache-Control,
+Age/Expires and no-store/no-cache; no negative cache. No-store proofs remain
+request-local. Persist freshness for approved bindings only, bounded by64.
+
+**Interfaces:** Native numbered validation/persistence/init/update/backup/restore
+scripts preserve omitted patches and default missing old backup policy to off.
+Application uses existing Admin/c0:admin/CSRF guards for GET `/api/v1/oauth/cimd`,
+POST `/api/v1/oauth/cimd/preview` `{metadata_url}`, POST
+`/api/v1/oauth/cimd/clients` `{metadata_url,metadata_digest,allowed_scopes}`, PUT
+`/api/v1/oauth/cimd/clients/{uuid}`
+`{metadata_digest,allowed_scopes,expected_revision}`. Binding URL is immutable.
+Approval fetches again and conflicts on changed digest; ordinary existing client
+PUT enables/disables by UUID. Keep existing ClientView unchanged. UI renders
+literal reviewed name/URL/callbacks/scopes with generation/draft/access-loss
+guards; consent shows approved URL, never a verified-publisher claim. Discovery
+advertises `client_id_metadata_document_supported` only when enabled on the real
+authenticated hostname-root mount. Existing grants/token/refresh/revoke/MCP/REST
+use local descriptors without remote fetches. Preserve exact raw callback/resource,
+PKCE, native authority, explicit consent, current roles and scope enforcement.
+
+**Compatibility and releases:** Verify producer Core against old app first with
+default-off migration. Run actual PostgreSQL, packaging/reproducible wheel/archive,
+local/image/native checks at exact source, then publish immutable core-v0.31.0
+artifacts. Adopt released Core>=0.31,<0.32 and frozen app lock at planned app0.49.0,
+then rerun final consumer/image/native checks before deployment. Never clobber
+artifacts or substitute unpublished local Core in the released consumer.
+
+**Tests:** Real PostgreSQL migration preservation/repeat, public/internal identity,
+approval revisions/idempotency/client limit/scopes, no-store proof expiry,
+metadata-change stickiness, outage continuity, global-off/on no revival and
+concurrent approval/disable/reapproval/refresh/captured-actor checks. Controlled
+DNS/TLS tests prove no prohibited destination receives a connection, SNI/cert,
+rebinding/mixed DNS, redirects/compression/slow/oversized/deep/duplicate documents,
+cache/cancellation races. Exercise raw and pinned SDK code/token/refresh/revoke,
+authcode-only/plural-none, scope/role failures and all77 unchanged tools. Extend
+native Settings/Admin browsers and genuine upgrade/restore/privacy coverage.
+Run focused tests then complete Python/PostgreSQL/packaging, scripts, immutable
+Vue build, schemas/shell and Robot; database skips never establish a pass.
+
+**Genuine upgrade predecessor:** Keep canonical installed tag
+`ci-93b9546529c623a5620fa0c585f8216bfec5e58f-39466269075-1` unchanged/available.
+Freeze module `sha256:ae588e3c32e6fdc65a27cbc2c66ba1005c4d5ab5daef9c0328676795e52d4240`,
+app `sha256:ccb0f181852cc004e594fc6b3896ba5a29528c4679284adeede6b2c6f809a28c`,
+PostgreSQL `sha256:9522bc903cfc5037f6e322cf13300ae1f2935b9098d2555b786815e93c52bade`;
+all OCI revisions93b9546. Main/documentation images do not replace them.
+
+**Dedicated acceptance checklist and delivery:**
+
+- [x] Verify M18 closeout main and isolate/preserve work before implementation.
+- [x] Core domain/migration, exact local/full/native/packaging and immutable release.
+- [ ] Released app adoption, final full CI, inspected actual native/privacy/scan artifacts.
+- [ ] Open ready PR targeting main without unsolicited reviewer; satisfy review.
+- [ ] Agent verifies dedicated C0 installation/baseline, supported C0-only backup,
+  freezes all three candidate digests/revisions/tag, targeted canonical update,
+  readiness and installed identity before merge. Preserve unrelated instances.
+- [ ] Isolated controlled publicly trusted HTTPS metadata fixture on a temporary
+  dedicated-instance route/container: actual OAuth/SDK/MCP, rotation/replay,
+  metadata change/outage, per-client and global disable. No permanent test route,
+  runtime fixture code or private-address bypass. Global off/on occurs before
+  retaining the real ChatGPT connection; disable fixture client/remove fixture.
+- [ ] Separate actual ChatGPT connection using automatic CIMD and no static UUID
+  credentials; Admin approves exact connection-specific URL from management UI.
+  Preserve existing UUID connection. Verify profile, cited Wiki/source/repeated
+  reads beyond five minutes with real renewal and full-manager restart continuity.
+  Reconnect expired predecessor sessions normally; never extend authority for tests.
+- [ ] Compare knowledge/files/settings/schedules/original clients/worker health and
+  unrelated instance inventory across each action window. Root bounded app journal
+  requires successful health/auth/token/MCP positive controls and private audit.
+- [ ] Final dedicated state CIMD ON with approved retained ChatGPT URL and old UUID
+  connection preserved. Keep private/failed evidence outside Git; no destructive live
+  recovery. Any runtime fix repeats affected CI/deployment/acceptance within M19.
+- [ ] Regular reviewed merge preserves tested commits, actual main full/publication
+  and registry identities, then separate three-document checked closeout/main marker.
+  Accepted deployed images remain frozen for the next genuine upgrade predecessor.
+
+Existing interactive Playwright and CPU-quota waivers remain unchanged. Real
+ChatGPT acceptance remains an operator interaction gate; SDK simulation alone
+cannot satisfy it. Further AM/Windmill work remains deferred until M19 closes.
+
+### M19 Core implementation checkpoint — 21 October 2026
+
+Core0.31.0/schema0018 now implements the bounded metadata validator, separate
+public URL/internal UUID identity, default-off policy, Admin approvals/revisions,
+sticky review, short-lived consent proof, optional refresh grants and targeted
+CIMD revocation. Focused actual PostgreSQL/validator checks pass69 cases;
+legacy OAuth grant/consent regressions pass19 and migration regressions pass3.
+The new external-install probe covers approval/identity/rotation/revocation and
+is also wired into both disposable native distributions. The predecessor fixture
+now freezes the accepted M18 trio independently of the frozen M17 eval catalog.
+The first full local trial reports1567 passes/one obsolete predecessor-fixture
+assertion failure; its correction and twelve focused source/fixture checks pass.
+Retain that failed trial. Corrected final full local/CI/native and publication
+remain gates; no Core artifact or runtime deployment is claimed here.
+
+The producer application's compatible range temporarily admits both0.30.1 and
+0.31; the released source/tag/lock remain0.30.1. Frozen lock validation passes.
+Final adoption will narrow to0.31 only after immutable publication. This keeps
+producer and independently released-consumer checks executable in the required
+Core-first sequence. Existing MCP/tool/schema contracts remain unchanged.
+
+Core producer `c33e6d1` passes1569 actual PostgreSQL/Python/packaging cases without
+skips (467.40s),130 controllers, schema/shell and21 Robot dry runs; full CI
+39566400246 is started and not yet accepted. During application startup design,
+a missing database-only policy interface is identified: global off must revoke
+CIMD authority even when SSO is removed in the same change. Add trusted
+`CimdPolicyService(database)` and independently test it without an access service.
+Keep `c33e6d1`/its running ref unchanged as retained evidence; repeat exact-source
+local/full/native gates for the corrected Core source before immutable release.
+
+Core policy/revocation corrections pass1574 actual PostgreSQL/Python/packaging
+cases without skips (494.83s). These serialize CIMD refresh/replay/revocation
+with already-running delegated transactions, preserve manual-client semantics,
+and record changed metadata while a client is disabled. Retained full CI
+39566400246 fails genuine Debian upgrade: the profile fixture incorrectly
+requires Core0.31 while still checking accepted M18 Core0.30.1; Rocky installation
+passes. Run39573023659 remains retained at181cb36. The corrected fixture now
+supplies both app and Core versions explicitly for predecessor and candidate.
+Three new regression failures reproduce the bug; all37 focused fixture/source
+cases and21 Robot dry runs pass after correction. No publication/deployment is
+claimed; fresh exact-source full native gates remain required.
+
+### M19 application implementation checkpoint — 21 October 2026
+
+The isolated application branch implements the public-DNS-pinned HTTPS fetcher,
+REST-only Admin preview/approval/reapproval, request-local consent verification,
+default-off native configuration/lifecycle/restore handling, native Settings
+switch and literal Administration/consent UI. Existing77 MCP bindings remain
+unchanged. Core files match the corrected producer candidate87b8fd1; final
+immutable tag adoption/app0.49 and native acceptance remain pending.
+
+Actual focused fetch/HTTP/native/fixture checks pass128 cases, including real
+TLS/SNI/certificate failures, mixed/rebinding DNS, bounded real deadlines,
+cancellation/singleflight/cache, unknown-URL no-fetch, public URL OAuth/SDK,
+metadata outage/change, refresh replay, sticky review, restart policy and
+post-I/O role loss. Read-scoped owner tokens cannot administer CIMD; browser
+writes reject bad Origin/CSRF before fetching. All140 controller checks, schema
+validation, five separately parsed Bash scripts and21 Robot dry runs pass.
+Immutable Vue install/build passes on the local host's Node25.8.1; pinned CI
+Node24 and actual native browsers remain required.
+
+The first full application run reports1662 passes/three old default-dictionary
+assertion failures: the expected new `cimd_enabled=false`/environment field was
+absent from their expectations. Corrected native backup/module/default checks
+pass65 cases; keep the failed run. Repeat final full checks after released-Core
+adoption. No application candidate CI, deployment or actual ChatGPT M19 pass is
+claimed. Read-only dedicated baseline confirms the accepted M18 image trio,
+45 tables, six original files and healthy timer; all original/M20 worktrees
+still match captured HEAD/status/document bytes. The temporary owned HTTPS
+fixture and cleanup procedure are prepared privately but not deployed.
+
+Corrected application checkpoint4af5479 passes all1665 actual Python/PostgreSQL/
+packaging cases without skips (488.17s). Three additional focused regressions
+pass: both explicit/default TLS-port and uppercase transport normalization keep
+the exact approved URL identity, and pinned SDK2.3 selects CIMD from empty client
+storage through actual server discovery. That SDK signs in, obtains consent,
+calls all77-tool discovery/profile and rotates refresh authority while the real
+controlled metadata HTTPS host returns503, with no extra metadata request.
+The SDK renewal test supplies a past client-side deadline; it does not claim
+real five-minute lifetime acceptance. Its initial storage-expiry assumption fails
+and is corrected without runtime changes; private failed evidence is retained.
+Core87b8fd1 passes1574 local cases (485.34s); exact full CI39573888375 remains
+pending both native suites. No immutable release or deployment yet.
+
+Fork compatibility review catches a missing native dependency registration:
+generated consumers copy only explicit managed infrastructure, so updated
+get-configuration/restore scripts would import a missing CIMD helper. A real
+consumer-generation regression reproduces it before correction. Register only
+the six new tracked CIMD helper/lifecycle files, with null baseline metadata
+because they are absent from the immutable original baseline. The existing95
+entries and customization rules stay unchanged; all37 generator/updater cases
+pass after correction. No generated application code or private files are added.
+
+### M19 Core release and consumer adoption — 21 October 2026
+
+Exact Core source `87b8fd19d1d76fb6fa16ee15e27e966b8142d57c` passes1574
+actual local PostgreSQL/Python/packaging cases without skips (485.34s). Its
+[full acceptance39573888375](https://github.com/Stell0/ns8-czero/actions/runs/39573888375)
+completes successfully. Downloaded reports pass Debian genuine M18 upgrade21
+cases and Rocky installation26/three expected skips, all eight real browsers,
+eight privacy guards,25 numeric accessibility contexts and three actual XML/
+browser-log privacy audits with zero OAuth-query candidates. Both native
+sources and all three installed candidate image identities match the frozen
+producer source. All five actual scan/SBOM pairs pass inspection. Native renewal
+measurements335/338 seconds preserve existing session bounds; these are the
+existing native OAuth workflows, not real ChatGPT CIMD acceptance. Exact full
+promotion verification and fresh three-image registry reads pass.
+
+Immutable [Core0.31.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.31.0)
+is published at that source by successful
+[publication39580059693](https://github.com/Stell0/ns8-czero/actions/runs/39580059693).
+Actual downloaded release assets match the exact workflow-tested bytes and
+SHA256SUMS; wheel contains both CIMD modules and migration0018. Checksums:
+
+- Wheel `757acb2b09ada6e2806ab701dc7c7e3cc75f3178cfb58d664c9a87cde41e37a0`.
+- Archive `5cb8c00950932b50f4a7da1dea71bcda9c96cdc15446e3850de7ef38b49072ba`.
+
+App0.49 now adopts released `core-v0.31.0`/exact87b8fd1 with compatible
+`>=0.31.0,<0.32.0`. Only app/Core lock records change; all other frozen dependency
+records remain identical. Prefix-aware Renovate permits only0.31 patch updates,
+with the independent example's old compatibility range preserved. The explicit
+native predecessor app/Core versions remain0.48.0/0.30.1; candidate expectations
+become0.49.0/0.31.0. Final producer/full and independently frozen released-consumer
+checks are running, not yet accepted. M18 remains the live runtime; producer
+Core-validation images do not replace it. Final application CI/native, ready PR,
+dedicated controlled HTTPS/ChatGPT acceptance and reviewed merge remain gates.
+
+The independent frozen released consumer passes206 checks without skips (87.95s),
+importing Core0.31 from the exact Git tag outside the checkout. Final adoption
+also passes140 controllers,21 Robot dry runs, actual Renovate API bounds and
+frozen-lock/source checks. A full run on the repeatedly reused disposable DB
+reports1668 passes/one existing forced-HNSW statement timeout. The unchanged
+focused case passes; disposable EXPLAIN ANALYZE measures132ms with no JIT.
+Its cause remains unproven; retain the failure. No deadline, query or assertion
+is weakened. The unchanged final full suite on a newly created isolated DB
+passes all1669 cases without skips (487.96s). Native CIMD recovery coverage is
+being expanded before the application PR; do not infer final CI/live acceptance.
+
+Native recovery now seeds an isolated CIMD approval/cache through trusted Core
+using a real verified browser context, then exercises public consent/tokens.
+It requires unchanged approval/profile/absolute deadline and real refresh
+rotation after update. Clean restore must reject still-unexpired old authority,
+then require fresh sign-in/consent; only the fixture client is disabled and the
+native switch returns off. The backup must retain its explicitly enabled switch.
+This is Core-seeded recovery evidence, explicitly **not** external HTTPS-fetch
+proof; controlled HTTPS transport and actual ChatGPT remain separate gates. No
+runtime DNS/TLS/private-address guard is changed or bypassed.
+
+The exact installed helper is exercised through signed local HTTP with released
+Core: six cases pass, including lost approval, retained old access, expired-grant
+false evidence, missing restored switch and non-disposable-host rejection.
+Ninety-four focused producer recovery/privacy/updater cases pass before the
+additional expired-grant negative control. Native artifact audits now require
+all three validated non-private stage measurements per distribution, and reject
+missing/private/false claims. Its reusable CI evidence validator is explicitly
+registered with a null original baseline. Repeat final full local/native gates
+for this expanded application candidate; published Core bytes are unchanged.
+
+The expanded final application candidate passes all1688 actual PostgreSQL/
+Python/packaging cases without skips on a newly created disposable database
+(499.89s), plus140 controllers,21 Robot dry runs, schema and separate Bash
+parsing checks. Frozen released-consumer206 plus six exact recovery-helper
+cases pass. No Core library bytes differ from published87b8fd1. Open the ready
+application PR and require fresh exact-source image/native/artifact gates before
+any dedicated-instance update; actual M19 HTTPS/ChatGPT acceptance is pending.
+
+
+### M19 application CI correction — 21 October 2026
+
+Ready [PR29](https://github.com/Stell0/ns8-czero/pull/29) targets main without
+an unsolicited reviewer. Its first exact-source
+[full run39598916352](https://github.com/Stell0/ns8-czero/actions/runs/39598916352)
+at `a550602` completes with successful local checks and image publication,
+but fails the released-image probe's obsolete0.30-only version guard and the
+application image's fixable critical Certifi GHSA-6q48-6c7w-9gw2. Native jobs
+are skipped, so this source is not deployable or accepted.
+
+The released probe now reads the actual committed numeric Core release while
+retaining exact installed version, Git URL, subdirectory and40-character source
+checks. A regression executes the real workflow extraction against the current
+lock. The application explicitly pins Certifi2026.10.19 and updates only that
+bundle's lock records alongside its direct dependency entry. Published Core0.31
+bytes remain unchanged. No vulnerability gate is waived. Repeat focused/full
+local and exact-source CI/native/artifact checks before any live action; the
+accepted M18 installation remains unchanged.
+
+
+The corrected application working tree passes1689 actual Python/PostgreSQL/
+packaging cases without skips on a new disposable DB (541.54s). Focused source/
+fetch checks pass77 producer cases and64 independently frozen released-consumer
+fetch cases. All140 JavaScript controllers,21 Robot dry runs, Go schemas,
+five individually parsed Bash scripts, frozen lock and exact installed released
+Core version/source checks pass. Only Certifi and its app dependency record
+change in the lock; Core remains byte-identical to published87b8fd1. Fresh
+exact-source CI/native/scans and live acceptance remain required.
+
+
+### M19 final-candidate validation corrections — 21 October 2026
+
+[Full39602167906](https://github.com/Stell0/ns8-czero/actions/runs/39602167906)
+at `85d3426` passes the corrected released-Core image probe and all five scan
+jobs. Downloaded application SBOM confirms Certifi2026.10.19 and the blocking
+advisory is absent. Fresh registry reads verify all three image identities.
+The local job nevertheless reports1688 passes/one five-second statement timeout
+in the existing forced-HNSW structured-search regression. Debian upgrade exposes
+another defect: app package metadata is0.49 but its runtime constant remains0.48,
+so post-upgrade health assertions and dependent scenarios fail. Rocky is still
+running at this checkpoint. This source remains undeployed and unaccepted.
+
+Twenty unchanged focused forced-plan repetitions pass with incremental sorts,
+without reproducing the CI timeout. A disposable alternate full-sort plan has
+artificial cost10000011205.4 and enables47 optimized JIT functions; execution
+measures220.73ms under the original five-second deadline. PostgreSQL's
+[cost-based JIT decision](https://www.postgresql.org/docs/17/jit-decision.html)
+explains the compiler activation; this does not establish the precise CI timeout
+cause. The regression now isolates compilation only in its forced transaction
+and exercises both incremental/full-sort configurations. Normal search retains
+normal database settings, and actual filtered HNSW execution, exact underfill
+fallback, version isolation and the five-second bound remain required. No query,
+runtime database setting or published Core bytes change.
+
+The app runtime constant is corrected to0.49. A new check compares actual
+imported app/Core runtime versions with installed package metadata and project
+declarations; its negative control rejects the old app0.48 constant. Focused
+source/SSO checks pass39 cases, the independently frozen consumer passes14 source
+checks and structured retrieval passes19 database cases. Repeat final full local
+and exact-source image/native/artifact gates before any dedicated live action.
+
+
+The failed run subsequently completes. Actual downloaded reports have Debian
+five passes/sixteen failures and Rocky five passes/twenty-one failures/three
+expected skips, with zero OAuth-query candidates across the three XML/browser
+log artifacts. Early runtime-version failures block dependent scenarios; none
+is counted as a native pass or waived. Expanded CIMD recovery remains pending.
+
+The first corrected full local trial has1689 passes/two failures: existing
+health/OpenAPI expected values still name app0.48. Those HTTP assertions now
+compare with independently installed distribution metadata, which also catches
+an unbumped runtime constant. Current verification-stage SSO expectations become
+0.49 while the genuine predecessor stays0.48. Focused producer health/source/
+SSO checks pass84 cases, and the independent frozen consumer passes59 health/
+source cases. Both forced sort plans execute under the original five-second
+bound without JIT, measured5.67/5.15ms in the disposable observer. Freeze the
+corrected source and require completed successful full local and CI/native/
+artifact checks before any live deployment. Failed evidence remains private.
+
+
+### M19 forced-ANN fixture isolation — 21 October 2026
+
+The exact `ee99523` full local run reports1689 passes/two forced-ANN SQL
+timeouts (639.55s), including both sort configurations despite transaction-local
+JIT disable. In contrast its actual CI local job passes; native jobs are still
+running at this checkpoint. Compiler isolation did not resolve the local failure,
+and the precise timeout cause remains unproven. Retain these results separately.
+
+The forced-plan correctness corpus now receives its own uniquely named disposable
+PostgreSQL database before service fixtures initialize. This removes earlier
+fixtures' physical vector-index/statistics/maintenance state from that bounded
+71-revision corpus. The test asserts the actual database identity; teardown drops
+only its owned database after fixture cleanup, without forcing connections closed.
+Normal compilation settings are restored: the ineffective JIT override is removed.
+Both ordering plans, real filtered HNSW execution, exact underfill fallback,
+version isolation and the original five-second query deadline remain intact.
+No runtime SQL, database configuration, application behavior or Core bytes change.
+
+Combined embedding/structured checks pass32 cases with normal compilation
+(17.52s), and both forced cases pass with independently installed released Core
+(5.54s). Both owned databases are confirmed absent after cleanup. Require a fresh
+complete local run, then final exact-source CI/native/artifact validation before
+any live action; the accepted M18 installation remains unchanged.

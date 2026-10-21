@@ -243,6 +243,7 @@ def test_restore_settings_keep_new_platform_port_and_identity(monkeypatch,tmp_pa
     runpy.run_path(str(ROOT/'imageroot/actions/restore-module/20persist-settings'))
     assert values == {'CZERO_MODULE_ID':'czero9','CZERO_HOST':'old.test','CZERO_LETS_ENCRYPT':'false','CZERO_BASE_PATH':'',
         'CZERO_SESSION_ABSOLUTE_SECONDS':'28800','CZERO_SESSION_IDLE_SECONDS':'3600',
+        'CZERO_CIMD_ENABLED':'false',
         **{key:'' for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}}
     assert not {'TCP_PORT','NODE_ID','IMAGE_URL'} & values.keys()
 

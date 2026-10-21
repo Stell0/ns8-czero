@@ -89,7 +89,7 @@ def test_settings_round_trip(monkeypatch, capsys, tmp_path):
     config = json.loads(capsys.readouterr().out)
     from czero_retrieval_config import public, defaults
     assert config == {'host':'c0.example.test','lets_encrypt':True, 'retrieval':public(defaults()),
-        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
+        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600}, 'cimd_enabled':False,
         **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
     schema = json.loads((ACTIONS / 'get-configuration/validate-output.json').read_text())
     Draft7Validator(schema).validate(config)
@@ -103,7 +103,7 @@ def test_unconfigured_defaults_are_machine_readable(monkeypatch, capsys, tmp_pat
     run_step(monkeypatch,'get-configuration/20read',SimpleNamespace())
     from czero_retrieval_config import public, defaults
     assert json.loads(capsys.readouterr().out) == {'host':'','lets_encrypt':False, 'retrieval':public(defaults()),
-        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
+        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600}, 'cimd_enabled':False,
         **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
 
 

@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 
 from .identity import Actor, PermissionDenied, Role
-from .oauth_clients import OAuthClientService, redirect_uri
+from .oauth_clients import OAuthClientService, redirect_uri, internal_id
 from .operations import SCOPES
 from .sessions import SessionContext
 
@@ -50,7 +50,7 @@ class DelegationBinding:
 @dataclass(frozen=True)
 class TokenPair:
     access_token: str = field(repr=False)
-    refresh_token: str = field(repr=False)
+    refresh_token: str | None = field(repr=False)
     scopes: frozenset[str]
     expires_in: int
 
@@ -110,6 +110,8 @@ class OAuthGrantService:
             raise ValueError('invalid_resource')
         self.access = access
         self.clients = OAuthClientService(access)
+        from .cimd import CimdService
+        self.cimd = CimdService(access, now=now)
         self.native_client = native_client
         self.resource = resource
         self._now = now
@@ -137,10 +139,11 @@ class OAuthGrantService:
                 AND g.expires_at>:now {token_filter}"""),
                 {'hash': digest, 'now': _date(self._now()), 'issuer': self.access.issuer,
                  'native': self.native_client, 'resource': self.resource, 'kind': kind}).mappings().one_or_none()
-            if row is None or (client_id is not None and str(row['client_id']) != client_id):
+            if row is None:
                 raise GrantRejected()
-            client = self.clients._registered(connection, str(row['client_id']))
-            if client is None or client['revision'] != row['client_revision']:
+            client = self.clients._by_id(connection, row['client_id'])
+            if (client is None or client['revision'] != row['client_revision']
+                    or (client_id is not None and client['client_id'] != client_id)):
                 raise GrantRejected()
             try:
                 self.access._actor(connection, row['account_id']).require(Role.READER)
@@ -155,10 +158,19 @@ class OAuthGrantService:
             except RenewalRejected:
                 raise GrantRejected() from None
 
-    def _lock(self, connection, *, roles=False):
-        if roles:
+    def _lock(self, connection, *, roles=False, client_id=None):
+        if roles or (isinstance(client_id, str) and client_id[:8].lower() == 'https://'):
             connection.execute(text('SELECT pg_advisory_xact_lock(49372)'))
+        connection.execute(text('SELECT pg_advisory_xact_lock(49378)'))
         connection.execute(text('SELECT pg_advisory_xact_lock(49379)'))
+
+    @staticmethod
+    def _cimd_revocation_lock(connection, client_id):
+        # URL-client rotation/revocation must finish after transactions already
+        # using its old delegated actor. The legacy UUID contract is unchanged.
+        if connection.execute(text('SELECT 1 FROM c0_cimd_clients WHERE client_id=:id'),
+                              {'id': client_id}).scalar_one_or_none():
+            connection.execute(text('SELECT pg_advisory_xact_lock(49382)'))
 
     def _clean(self, connection):
         connection.execute(text('DELETE FROM c0_oauth_grants WHERE expires_at<=:now'), {'now': _date(self._now())})
@@ -174,10 +186,10 @@ class OAuthGrantService:
             AND issuer=:issuer AND native_client=:native AND resource=:resource AND expires_at>:now'''),
             {'id': identifier, 'issuer': self.access.issuer, 'native': self.native_client,
              'resource': self.resource, 'now': _date(self._now())}).mappings().one_or_none()
-        if row is None or str(row['client_id']) != client_id:
+        if row is None:
             raise GrantRejected()
-        client = self.clients._registered(connection, client_id)
-        if client is None or client['revision'] != row['client_revision']:
+        client = self.clients._by_id(connection, row['client_id'])
+        if client is None or client['client_id'] != client_id or client['revision'] != row['client_revision']:
             raise GrantRejected()
         try:
             actor = self.access._actor(connection, row['account_id'])
@@ -194,13 +206,13 @@ class OAuthGrantService:
                 raise GrantRejected() from None
         return row, actor
 
-    def issue_code(self, session, client_id, *, callback, scopes, challenge, resource):
+    def issue_code(self, session, client_id, *, callback, scopes, challenge, resource, verification=None):
         """Called only after explicit, CSRF-protected consent by this session."""
         with self.access.database.engine.begin() as connection:
             return self._issue_code(connection, session, client_id, callback=callback,
-                scopes=scopes, challenge=challenge, resource=resource)
+                scopes=scopes, challenge=challenge, resource=resource, verification=verification)
 
-    def _issue_code(self, connection, session, client_id, *, callback, scopes, challenge, resource):
+    def _issue_code(self, connection, session, client_id, *, callback, scopes, challenge, resource, verification=None):
         """Called only after explicit, CSRF-protected consent by this session."""
         if not isinstance(session, SessionContext) or session.expires_at.tzinfo is None:
             raise GrantRejected()
@@ -238,6 +250,12 @@ class OAuthGrantService:
         client = self.clients._registered(connection, client_id)
         if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
             raise GrantRejected()
+        if client.get('registration_kind') == 'cimd':
+            from .cimd import CimdRejected
+            try:
+                self.cimd._check_proof(connection, client, verification)
+            except CimdRejected:
+                raise GrantRejected() from None
         if connection.execute(text('SELECT count(*) FROM c0_oauth_grants')).scalar_one() >= 1000:
             raise GrantRejected()
         if connection.execute(text('''SELECT count(*) FROM c0_oauth_grants
@@ -248,7 +266,7 @@ class OAuthGrantService:
         connection.execute(text('''INSERT INTO c0_oauth_grants
             (id,account_id,client_id,client_revision,issuer,native_client,resource,scopes,expires_at,native_authority_id)
             VALUES (:id,:account,:client,:revision,:issuer,:native,:resource,CAST(:scopes AS jsonb),:expires,:authority)'''),
-            {'id': identifier, 'account': actor.user_id, 'client': UUID(client_id), 'revision': client['revision'],
+            {'id': identifier, 'account': actor.user_id, 'client': internal_id(client), 'revision': client['revision'],
              'issuer': self.access.issuer, 'native': self.native_client, 'resource': self.resource,
              'scopes': json.dumps(sorted(scopes)), 'expires': _date(expires), 'authority': session.native_authority_id})
         connection.execute(text('''INSERT INTO c0_oauth_codes(hash,grant_id,redirect_uri,challenge,expires_at)
@@ -258,13 +276,20 @@ class OAuthGrantService:
         return code
 
     def _tokens(self, connection, grant, scopes):
-        access, refresh = (secrets.token_urlsafe(32) for _ in range(2))
+        client = self.clients._by_id(connection, grant['client_id'])
+        if client is None:
+            raise GrantRejected()
+        access = secrets.token_urlsafe(32)
+        refresh = secrets.token_urlsafe(32) if 'refresh_token' in client.get(
+            'grant_types', ['authorization_code', 'refresh_token']) else None
         access_expiry = min(grant['expires_at'].timestamp(), self._now() + 300)
         if grant['native_authority_id'] is not None:
             native = self.authority.peek(connection, grant['native_authority_id'], account_id=grant['account_id'])
             access_expiry = min(access_expiry, native['idle_until'].timestamp())
         for value, kind, expiry in [(access, 'access', _date(access_expiry)),
                                    (refresh, 'refresh', grant['expires_at'])]:
+            if value is None:
+                continue
             connection.execute(text('''INSERT INTO c0_oauth_tokens(hash,grant_id,kind,expires_at)
                 VALUES (:hash,:grant,:kind,:expires)'''),
                 {'hash': _digest(value), 'grant': grant['id'], 'kind': kind, 'expires': expiry})
@@ -274,7 +299,7 @@ class OAuthGrantService:
         digest, challenge = _digest(code), pkce_challenge(verifier)
         self._prepare(code, 'code', client_id, resource)
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('''SELECT * FROM c0_oauth_codes WHERE hash=:hash AND expires_at>:now'''),
                 {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
             if row is None or row['redirect_uri'] != callback or not hmac.compare_digest(row['challenge'], challenge):
@@ -307,7 +332,7 @@ class OAuthGrantService:
         rejected = False
         result = None
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('''SELECT * FROM c0_oauth_tokens
                 WHERE hash=:hash AND kind='refresh' AND expires_at>:now'''),
                 {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
@@ -315,6 +340,7 @@ class OAuthGrantService:
                 raise GrantRejected()
             grant, _ = self._grant(connection, row['grant_id'], client_id, self.resource, check_native=not row['consumed'])
             if row['consumed']:
+                self._cimd_revocation_lock(connection, grant['client_id'])
                 connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
                 rejected = True
             else:
@@ -330,13 +356,14 @@ class OAuthGrantService:
         rejected = False
         result = None
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('''SELECT * FROM c0_oauth_tokens
                 WHERE hash=:hash AND kind='refresh' AND expires_at>:now'''),
                 {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
             if row is None:
                 raise GrantRejected()
             grant, _ = self._grant(connection, row['grant_id'], client_id, resource, check_native=not row['consumed'])
+            self._cimd_revocation_lock(connection, grant['client_id'])
             if row['consumed']:
                 # Commit family revocation before reporting replay failure.
                 connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
@@ -376,11 +403,14 @@ class OAuthGrantService:
             {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
         if row is None:
             raise GrantRejected()
-        grant, actor = self._grant(connection, row['grant_id'], str(row['client_id']), resource)
+        client = self.clients._by_id(connection, row['client_id'])
+        if client is None:
+            raise GrantRejected()
+        grant, actor = self._grant(connection, row['grant_id'], client['client_id'], resource)
         scopes = frozenset(grant['scopes'])
         if bind:
             actor = replace(actor, delegation=DelegationBinding(self, digest), delegated_scopes=scopes)
-        return DelegatedAccess(actor, str(grant['client_id']), scopes,
+        return DelegatedAccess(actor, client['client_id'], scopes,
             row['expires_at'], self.resource, self.access.issuer)
 
     def revoke(self, token, client_id, *, resource):
@@ -390,10 +420,11 @@ class OAuthGrantService:
         except GrantRejected:
             return
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('SELECT grant_id FROM c0_oauth_tokens WHERE hash=:hash'),
                 {'hash': digest}).mappings().one_or_none()
             if row is None:
                 return
-            self._grant(connection, row['grant_id'], client_id, resource, check_native=False)
+            grant, _ = self._grant(connection, row['grant_id'], client_id, resource, check_native=False)
+            self._cimd_revocation_lock(connection, grant['client_id'])
             connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': row['grant_id']})
