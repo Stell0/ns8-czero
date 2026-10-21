@@ -1,3 +1,5 @@
+> Historical evidence. For current setup, see the [documentation index](index.md); for current acceptance, see [release readiness](release-readiness.md). The measurements and generation-specific instructions below are retained.
+
 # M14 development-candidate readiness
 
 This is a development deployment report, not approval of a stable NS8 release.

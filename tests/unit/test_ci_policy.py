@@ -13,6 +13,10 @@ def policy():
 
 
 @pytest.mark.parametrize('path,area', [
+    ('plugins/c0-knowledge/plugin.json', 'broad'),
+    ('plugins/c0-knowledge/skills/c0-setup/SKILL.md', 'broad'),
+    ('docs/plugin.md', 'docs'),
+    ('docs/history/PLAN.md', 'docs'),
     ('README.md', 'docs'), ('PLAN.md', 'docs'), ('AGENTS.md', 'docs'),
     ('docs/ci-policy.md', 'docs'), ('app/static/agents.html', 'ui'),
     ('app/static/reader.js', 'ui'), ('ui/src/views/Status.vue', 'ui'),
@@ -294,3 +298,26 @@ def test_actual_publication_condition_handles_skipped_ancestors_and_failed_gates
     expression = expression.replace('&&', ' and ').replace('||', ' or ').replace('!', ' not ')
     result = bool(eval(expression, {'__builtins__': {}, 'startsWith': lambda value, prefix: value.startswith(prefix)})) if explicit else False
     assert result is expected
+
+
+def test_broad_feedback_rejects_a_syntax_error_in_the_second_shell_file(tmp_path, monkeypatch):
+    # bash -n accepts positional arguments but parses only the first script.
+    # Exercise actual bash against an independent invalid later input.
+    import json
+    import sys
+    root=Path(__file__).parents[2]
+    for name in ('build-images.sh','imageroot/actions/configure-module/80start_services',
+                 'imageroot/actions/create-module/40scheduler',
+                 'imageroot/update-module.d/60scheduler','imageroot/update-module.d/80restart'):
+        path=tmp_path/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('true\n')
+    (tmp_path/'imageroot/actions/configure-module/80start_services').write_text('if then\n')
+    selection=tmp_path/'selection.json';selection.write_text(json.dumps({'feedback':'broad','node':False,'vue':False}))
+    actual_run=subprocess.run
+    def run(args, **kwargs):
+        if args[0]=='bash':return actual_run(args, **kwargs)
+        return subprocess.CompletedProcess(args,0)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys,'argv',['run-ci-feedback.py',str(selection)])
+    monkeypatch.setattr(subprocess,'run',run)
+    with pytest.raises(subprocess.CalledProcessError):
+        runpy.run_path(str(root/'scripts/run-ci-feedback.py'),run_name='__main__')

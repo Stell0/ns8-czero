@@ -21,8 +21,9 @@ if selection['vue']:
     subprocess.run(['yarn', 'build'], cwd='ui', check=True)
 if broad:
     subprocess.run(['go', 'run', 'tests/check_schemas.go'], check=True)
-    subprocess.run(['bash', '-n', 'build-images.sh',
-        'imageroot/actions/configure-module/80start_services', 'imageroot/actions/create-module/40scheduler',
-        'imageroot/update-module.d/60scheduler', 'imageroot/update-module.d/80restart'], check=True)
+    for script in ('build-images.sh', 'imageroot/actions/configure-module/80start_services',
+                   'imageroot/actions/create-module/40scheduler',
+                   'imageroot/update-module.d/60scheduler', 'imageroot/update-module.d/80restart'):
+        subprocess.run(['bash', '-n', script], check=True)
     subprocess.run(['robot', '--dryrun', '--exclude', 'ui', '-v', 'NODE_ADDR:disposable.invalid',
         '-v', 'IMAGE_URL:ghcr.io/stell0/czero:main', '-d', '/tmp/robot-dryrun', 'tests'], check=True)

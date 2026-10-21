@@ -1,0 +1,4404 @@
+> Historical record through M19 closeout (21 October 2026). Superseded status statements and version-specific commands are retained as evidence. Use the [current documentation](../index.md) and [current plan](../../PLAN.md) for new work. Deployment identities are sanitized.
+
+# C0 implementation plan — milestone-by-milestone Codex handoff
+
+**Current checkpoint (21 October 2026):** M19 runtime acceptance passes. Operator-reviewed PR29 regularly merges tested `38a8654` as `7a223fb` with an identical tree. Actual [main full validation/publication39632626515](https://github.com/Stell0/ns8-czero/actions/runs/39632626515) and independently inspected native/privacy/scan artifacts pass. The accepted installed source remains `38a8654`; documentation/main images do not replace it. This separate closeout still requires reviewed merge and its own successful main marker. M21 documentation/skills release readiness is authorized next; Windmill follows separately. Preserve original drafts, exact deployed images and both existing waivers.
+
+**Historical state:** M00–M14 implementation and acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes local/producer/released-image/both-QEMU and permitted live owner gates. Verify actual main completion-marker CI before treating that marker as verified. No stable module release is claimed. Interactive Playwright remains waived; permitted dedicated live and disposable all-role browser evidence remain required.
+
+This plan is intended to be **executed iteratively**: inspect, refine the current milestone, implement, test, commit/push, verify CI, perform applicable live and Playwright MCP checks, update docs, and only then advance. Never implement several milestones blindly before reviewing the prior milestone's results.
+
+## Product contract (do not quietly change)
+
+- C0 = AI-native, forkable NethServer 8 web application, using NS8's native module framework and readable **numbered action scripts**. Don't replace lifecycle actions with a monolithic Python NS8 management library.
+- Runtime: Python/FastAPI, user Web UI, REST/OpenAPI, remote MCP, NS8-idp authentication, one PostgreSQL **instance per C0 installation**, pgvector, generic structured-object storage and an LLM Wiki with relational graph connections.
+- Single shared knowledge space per installation. Personal-owner default; optional Reader/Editor/Admin application-wide roles. No per-document ACLs, UGO, policy engine or multi-tenancy.
+- No embedded generative LLM, local model server, autonomous AI maintenance or AI scheduling. External agents do reasoning/wiki updates. C0 may optionally call an external embedding API and a System One scorer (**Jev or Kev**) for retrieval; graceful full-text and standard-ranking fallbacks.
+- Deterministic ingestion, chunking, jobs, trusted scheduled tasks, and native NS8 backup/restore. Keep extracted text even when deleting binary originals after successful extraction.
+- Installed application exposes `/agents` and native MCP discovery. `AGENTS.md`/skills/build/CI/tests are Git/repository-only, never bundled into the runtime.
+- An external developer forks C0 to build an application. Generally useful enhancements flow upstream by a focused, tested PR. Versioned C0 Core should be upgraded automatically where possible, with Codex used for conflicts.
+- Favor reuse from NS8. Respect GPL/license headers, secret handling and existing module interfaces.
+
+## Source precedence and selection
+
+1. Current checked-in behavior and the deployed NS8 version.
+2. [NS8 official module contracts](https://github.com/NethServer/ns8-core/tree/main/docs/modules) and [NethServer/agents module skill](https://github.com/NethServer/agents/tree/main/skills/nethserver-ns8-module).
+3. Current, maintained, tested examples referenced in each milestone: [ns8-kickstart](https://github.com/NethServer/ns8-kickstart), [ns8-hermes-agent](https://github.com/NethServer/ns8-hermes-agent), [ns8-dependencytrack](https://github.com/NethServer/ns8-dependencytrack), [ns8-idp](https://github.com/NethServer/ns8-idp), [ns8-mail](https://github.com/NethServer/ns8-mail), [ns8-github-actions](https://github.com/NethServer/ns8-github-actions).
+4. Official upstream project reference for features NS8 modules do not supply.
+
+**When no code link is listed for a C0-specific feature:** search maintained NethServer/Nethesis repos first, starting with filenames, actions, services and REST schema names matching the operation. Review at least two patterns when available, compare freshness, test coverage, security and lifecycle, choose the current better implementation and note the finding in the milestone subplan. If nothing reusable exists, implement the smallest component and record why. Do not copy older hard-coded secrets or image tags.
+
+## Non-negotiable execution loop for EVERY milestone
+
+1. **Inspect and plan.** Read `AGENTS.md` and `README.md`, the pending milestone, previous evidence, local git status and relevant upstream sources. Expand only the active milestone's `Work plan` with implementation steps, specific files and tests. Record changed assumptions. Maintain a short task checklist in that milestone rather than opening a separate planning document.
+2. **Build early.** From **M00**, configure actual image publication in GitHub Actions. For each meaningful slice: make a focused commit, push it, inspect the image-build workflow and the ensuing QEMU/Robot test workflow. Fix and repush until green. Check both source/build failures and installed-service behavior. Never claim CI green without a completed successful run.
+3. **Test in layers.** Unit/type/lint locally; service integration against isolated PostgreSQL; NS8 install/configure/update/backup/restore in QEMU where applicable. Once bootable and CI green, test on an explicitly authorized live NS8 node provided at runtime. Use **Playwright MCP** for interactive NS8 admin UI and C0 user UI (including auth, settings, errors and persistence); maintain automated Robot/browser coverage too. A browser screenshot alone is not a passing behavioral test.
+4. **Protect live systems.** Use only the dedicated C0 instance, test accounts and designated C0 hostname supplied in the execution prompt. Never modify unrelated modules, reset system passwords, publish secrets, delete a module with useful data, or run destructive installation/restore tests on a shared live node. Use disposable QEMU for destructive scenarios. A missing SSH/MCP/browser capability is a blocker to record, not a license to invent results.
+5. **Document each milestone.** Update `AGENTS.md` with discoveries/developer rules, `README.md` with actual human-visible behavior, configuration and known limitations, and this `PLAN.md` with status and evidence. Keep documentation concise; move sprawling details to reference files if necessary. Commit and push the docs changes, and observe the triggered CI.
+6. **Exit gate.** Mark `[x]` only after all milestone-specific acceptance tests pass and `Evidence` includes commit SHA(s), relevant CI run URL(s), test commands/results and live/Playwright result if applicable. If blocked, keep `[ ]`, write the exact blocker, and stop instead of silently skipping.
+
+**Evidence template for every milestone:** `Evidence: pending. Work plan: pending. Tests: pending. CI: pending. Live/UI: pending or not applicable (explain). Docs: pending.`
+
+**Operator testing exception (13 October 2026):** The operator requested “skip playwright tests for now” and to proceed without live testing. Initially suspend interactive Playwright MCP and live-environment tests, including subsequent milestones. The operator later reauthorized live testing only of the dedicated Czero instance; interactive Playwright remains suspended. Retain local tests, image publication, GitHub Actions and automated QEMU/Robot browser coverage. Record affected live/UI gates as **waived by operator**, not passed; do not silently remove them from milestone evidence.
+
+### Tests and CI conventions
+
+- Preserve the existing `.github/workflows/publish-images.yml` / `test-module.yml` structure where sound; use [publish-branch.yml](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/publish-branch.yml), [test-module-qemu.yml](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/test-module-qemu.yml), [test-module runner](https://github.com/NethServer/ns8-github-actions/blob/v1/scripts/test-module.sh) and [Trivy scanning](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/scan-with-trivy.yml). Inspect `workflow_run` permissions, GHCR image visibility, fork Actions settings and the proper output image tag.
+- QEMU Robot suites must verify **install and update**, not merely parse Robot tests. For browser coverage use Robot Browser/Playwright in CI and use [Playwright MCP](https://github.com/microsoft/playwright-mcp) interactively when an operator-supplied live test host is available.
+- Stop using the template's sample `kickstart` credentials in `tests/kickstart.robot` in M00. Do not commit operator-supplied live credentials, hostnames, OAuth tokens, browser auth state or private URLs. Runtime config and test secrets are injected safely.
+- NS8 operations use `imageroot/actions/<action>/<NN>step`, JSON input/output validation, `agent` SDK, systemd user services, private secrets files, Traefik and volumes. Application business logic can live in a versioned Python library; **module lifecycle logic must not** become a single giant library.
+- If a requirement is blocked by a missing facility, add a clear, testable follow-up to this milestone; do not silently weaken acceptance criteria.
+
+## Milestones
+
+### M00 — Rebrand kickstart, create working CI and smoke-test the module [x]
+
+**Goal:** On the first implementation push, build an actual `czero` module image from this repository and get an honest install/configure/uninstall smoke test. The baseline may still be a simple HTTP stub, but must no longer pretend to be implemented C0.
+
+**Copy/adapt from:** [ns8-kickstart/build-images.sh](https://github.com/NethServer/ns8-kickstart/blob/main/build-images.sh); [kickstart CI publish](https://github.com/NethServer/ns8-kickstart/blob/main/.github/workflows/publish-images.yml); [kickstart QEMU test](https://github.com/NethServer/ns8-kickstart/blob/main/.github/workflows/test-module.yml); [kickstart Robot](https://github.com/NethServer/ns8-kickstart/blob/main/tests/kickstart.robot); [ns8-github-actions](https://github.com/NethServer/ns8-github-actions/blob/v1/README.md); [module developer skill](https://github.com/NethServer/agents/tree/main/skills/nethserver-ns8-module).
+
+**Implement:** Rename `kickstart` across scripts, unit files, tests, UI, metadata, image labels and workflows. Use a verified image name/tag and pinned runtime images; make the registry owned by this repo, not `ghcr.io/nethserver/kickstart`. Remove placeholder README behavior and hard-coded Robot passwords; pass test credentials safely. Ensure publish + QEMU/Robot workflows really run on appropriate pushes; fix Actions permissions/trigger order. Add a basic health smoke and clear module identity. Preserve GPL/attribution.
+
+**Acceptance:** A pushed commit yields a **published czero image**, successful CI build and QEMU install/configure/uninstall with correct name; no leftover kickstart functionality falsely represented as C0; no credentials committed. No use of the shared live host for destructive tests.
+
+**Documentation gate:** Correct agent source/layout/CI instructions in `AGENTS.md`; update `README.md` with achieved install and honest limitations; record image tag/commit/build/test URLs in `PLAN.md`.
+
+**Work plan (active, 12 October 2026):**
+
+- [x] Rename module/image/unit/metadata to `czero`; pin the honest HTTP stub, remove SMTP discovery and fake settings, and use an instance-owned `/czero/<module-id>/` route.
+- [x] Build/publish from M00 with explicit checkout/package permissions; inspect image metadata and retain Trivy/SBOM artifacts. Gate automatic QEMU on completed successful publication.
+- [x] Add and run local contracts and Robot install/configure/reconfigure/rejection/restart/update/uninstall checks. Create random disposable browser administrators; assert Settings Save restores a stopped Czero service.
+- [x] Verify anonymous image access and run Playwright MCP/live installation, settings, status, errors, restart, HTTP and refresh checks on only the dedicated Czero module.
+- [x] Restore native-token publication after the package Actions Write grant; inspect scans, image metadata/archive, final-documentation commit CI and both QEMU reports; update and test only the dedicated live Czero instance; reconcile all three documents.
+
+**Source findings and implementation:** Inspected current kickstart build/actions, Hermes component packaging, Core agent/route/lifecycle contracts and `ns8-github-actions@v1` publisher, metadata, QEMU and Robot runner. Core supplies image environment and cleanup. The upstream publisher's packages-only permission block stripped private checkout access; adapt its small build/push job locally with `contents: read` and `packages: write`. The upstream metadata job masks pull errors; use authenticated inspection that fails on errors. Keep native reusable QEMU. Docker Hub tags `jmalloc/echo-server:v0.3.7` and `node:24.21.0-slim` were verified. Installed NethServer module/container/commit skills are active. Runtime packaging explicitly allows only `imageroot/` and generated `ui/dist/`; archive inspection found 99 entries and no development files.
+
+**Failure fixes:** Publication checkout failed in [38233736825](https://github.com/Stell0/ns8-czero/actions/runs/38233736825); `a1692f5` fixed permissions. Optional SARIF ingestion failed because code scanning was unavailable; `9cb2aca` retains scan/SBOM artifacts without requiring that integration. Initial QEMU legs stopped at private GHCR pulls before VM boot; the operator made the package public. After a temporary GitHub outage, the same repository URL recovered, but the package reported no linked repository. Core `add-module` prints a Python dictionary, while `api-cli` prints JSON; [38248325628](https://github.com/Stell0/ns8-czero/actions/runs/38248325628) exposed the parser mismatch, fixed by safe literal/JSON parsing in `2902f57`. [38249852618](https://github.com/Stell0/ns8-czero/actions/runs/38249852618) exposed Browser enum conversion when invoked directly from Python; `6e8b290` dispatches through Robot. [38251632977](https://github.com/Stell0/ns8-czero/actions/runs/38251632977) exposed an exact paragraph selector; `e495790` uses a substring and verifies Save through actual service recovery. No failing acceptance assertion was removed.
+
+**Verified CI/QEMU evidence:** Implementation commits `6124dca`, `a1692f5`, `9cb2aca`, `1652305`, `2902f57`, `6e8b290`, `e495790b45a5a18c660c79749b62f1e9726bfecd`. Earlier publication/scans run `38246945351`, recorded successful before the outage but now returning HTTP 404, produced `ghcr.io/stell0/czero:main` and `:latest`, digest `sha256:6b8da019245df3a374de7c0668fbe6cbca6213838f1a3eb9cd3a3411885af03c`; anonymous pulls still resolve that digest. The inaccessible historical run is not sufficient to close current CI acceptance. `imageroot/` and `ui/` are unchanged from that published baseline through `e495790`. [Local CI 38254300775](https://github.com/Stell0/ns8-czero/actions/runs/38254300775) passes. [Manual QEMU 38254302726](https://github.com/Stell0/ns8-czero/actions/runs/38254302726) completed successfully using that published image and the corrected tests: Debian 13/update has six passing lifecycle tests; Rocky 9/install has six passing tests including full browser behavior and one intentional update-scenario skip. Both test suites removed only the disposable module. XML reports were downloaded and inspected. This manual run proves installed behavior; the automatic run after failed publication was skipped and supplies no acceptance evidence. M00 forces a native update of the same image because no older released predecessor exists; M04 must test genuine migration.
+
+**Local/scan evidence:** Eleven pytest tests pass; six non-UI Robot dry-run cases parse/pass, shell/action-schema/workflow checks and immutable Yarn production build pass. Inherited peer and bundle-size warnings remain. Four SARIF and four CycloneDX artifacts were inspected: module/imageroot have zero reported findings; UI dependencies have 29 and the temporary echo runtime has 95. Scan execution passed; those findings are not resolved. Replace the stub in M01 and review inherited UI dependencies before release. Git SSH is unavailable because of system SSH configuration permissions; use existing authenticated HTTPS without changing Git configuration.
+
+**Live/Playwright evidence (12 October 2026):** The operator resolved administration certificate trust; normal-validation Playwright login succeeds. Earlier certificate-exception requests were rejected and were not bypassed. Advertised read-only facts report Core `3.21.0`, Rocky `9.8` and cluster leader. Native inventory initially contained no Czero. Installed only dedicated Czero using the verified digest through the authenticated native cluster task API; Playwright exercised its Settings Save twice, refresh/persistence, Status (`active enabled`), and the HTTPS smoke page (200 and expected echoed path). Native `get-configuration` returns `{}`; unknown settings return validation exit 10 while HTTP stays healthy; targeted native restart returns zero and service/route recover. Installing by digest exposed Core's `list_installed` colon-split display quirk; a forced native update of only Czero to `:latest` (the identical verified digest) restored correct `czero` source/module identity. Final inventory comparison, normalizing unordered flags, confirms all unrelated instances/versions/digests unchanged. The dedicated module remains installed and healthy. System logs UI returned no Czero entries, so live log visibility is unverified. No live destructive test, SSH access, certificate exception, or unrelated module change was used. Private access details and browser artifacts remain outside Git. This is echo-stub acceptance; application login, normal-user roles, REST, storage and MCP remain unimplemented.
+
+**Publisher diagnosis and repair:** After the temporary GitHub outage, native publication built successfully but failed with `permission_denied: write_package`. Public read access did not grant Actions Write. The operator-created `NS8_MODULE_RELEASES_TOKEN` was tried in `d1ee855`; GHCR rejected its scopes, and `8e900b1` confirmed a fine-grained PAT without revealing its value. Current Hermes uses `github.token` for images and that named secret only for GitHub releases; both modules correctly strip the `ns8-` repository prefix. No package rename was needed. `dcaaf8974ddee410fa3a15b35f933783aa4f12fa` restored native `GITHUB_TOKEN` publication and removed PAT diagnostics. [Publish 38355381704](https://github.com/Stell0/ns8-czero/actions/runs/38355381704) still failed until the operator repaired package Settings -> Manage Actions access -> `Stell0/ns8-czero` -> Write. No secret value was retrieved, changed or committed. The release secret remains untouched and unused by image publication. A private repository needs `contents: read`; private container packages additionally need authenticated QEMU/guest pulls, which the current upstream runner does not supply. The current package is public.
+
+**Package grant recovery (13 October 2026):** The operator added `Stell0/ns8-czero` to package Actions access with Write. Retrying [publication 38355628389](https://github.com/Stell0/ns8-czero/actions/runs/38355628389) at `7ff5516f0663568aad4a898e2872e5531d18689c` now succeeds completely: build, native-token push, authenticated metadata and all four Trivy/SBOM jobs. Published `:main`/`:latest` digest `sha256:63d0fd7c934f7bdf8b170bb1bba04de11a4b80ddca6c8ca0ff80205002b62981`; anonymous resolution and OCI source/revision/license/title labels were inspected. Archive audit again finds 99 entries entirely under `imageroot/` and `ui/`, with no forbidden development paths. Four inspected SARIF reports still contain 29 UI and 95 echo-runtime findings, zero module/imageroot findings, and four CycloneDX SBOMs. [Automatic QEMU 38355927140](https://github.com/Stell0/ns8-czero/actions/runs/38355927140) completed successfully. Downloaded XML reports confirm Debian 13/install: six lifecycle passes and the intentional update-only skip; Rocky 9/update: all seven tests pass, including browser service recovery. [Local CI 38355628449](https://github.com/Stell0/ns8-czero/actions/runs/38355628449) passes. Native live update of only Czero to this digest exits zero. Playwright MCP confirms Settings Save/refresh, active/enabled Status, About identity and HTTPS 200 with expected body. Configuration remains `{}`; unknown settings exit 10 without disrupting HTTP; targeted restart exits zero and HTTP recovers. Before/after inventory comparison confirms all unrelated instances unchanged. Normal TLS validation remains enabled.
+
+**Evidence:** Implementation/recovery commits `dcaaf8974ddee410fa3a15b35f933783aa4f12fa`, `7ff5516f0663568aad4a898e2872e5531d18689c`; M00 closeout docs `dd26e4af403f3305c64db5e3659c8d9423560e1e`. Published `:main`/`:latest` image for `dd26e4a` resolves to `sha256:9f01b2c5c15c1d82976d2ceada955e1b1df82eafcdc9386d31508472b134f00e`. [Publish/scans 38359773901](https://github.com/Stell0/ns8-czero/actions/runs/38359773901), [local checks 38359773965](https://github.com/Stell0/ns8-czero/actions/runs/38359773965), and final [QEMU 38359921126](https://github.com/Stell0/ns8-czero/actions/runs/38359921126) pass. Downloaded Robot XML confirms Debian 13/update has six passes; Rocky 9/install has six passes and the expected update-only skip, with admin/browser smoke and disposable uninstall included. The prior current-runtime digest `sha256:63d0fd7c934f7bdf8b170bb1bba04de11a4b80ddca6c8ca0ff80205002b62981` was installed and tested live; final source-only metadata revision changes do not alter runtime behavior. Current live native update/status/config/error/restart/HTTPS/browser checks pass and unrelated inventory is unchanged. Eleven local pytest tests pass; archive inspection confirms runtime allowlist. Four SARIF/SBOM pairs were inspected: zero findings for module/imageroot, 29 UI and 95 echo dependency findings. No release or C0 REST/MCP capability exists. Live log visibility and reported dependency vulnerabilities remain documented limitations.
+
+### M01 — Minimal Python runtime, Web UI and Core/application separation [x]
+
+**Goal:** Replace the echo sample with an actual installable HTTP application and established package boundaries.
+
+**Copy/adapt from:** [ns8-hermes-agent/build-images.sh](https://github.com/NethServer/ns8-hermes-agent/blob/main/build-images.sh) (component images); [ns8-kickstart/systemd service](https://github.com/NethServer/ns8-kickstart/blob/main/imageroot/systemd/user/kickstart.service); [ns8-dependencytrack/systemd components](https://github.com/NethServer/ns8-dependencytrack/tree/main/imageroot/systemd/user); [nethserver-containerfile skill](https://github.com/NethServer/agents/tree/main/skills/nethserver-containerfile).
+
+**Work plan (active, 13 October 2026):**
+
+- [x] Add `packages/czero-core` as a small independently versioned Python distribution; keep FastAPI transport and C0-specific page/route composition in a separate `app` package. Do not add generic storage abstractions before their later milestones.
+- [x] Build a pinned Python runtime component image, with locked runtime dependencies and explicit copies of only the Core and app runtime files. Replace the echo dependency in module metadata/service configuration while preserving short NS8 numbered actions and the separate compiled NS8 admin UI. Keep credentials, tests, CI and developer docs out of the runtime image.
+- [x] Serve a minimal static end-user landing page, honest `/agents` introduction, OpenAPI and `GET /api/v1/health` beneath the existing instance route. Resolve and test the dynamic `/czero/<module-id>` prefix end-to-end; preserve HTTPS and instance isolation. Do not claim authentication before M05.
+- [x] Add focused pytest coverage for Core/app package separation, mounted path behavior, JSON health contract, OpenAPI, agents page and failure responses. Extend Robot/QEMU to assert the public app page and endpoints, access/request logging, restart and forced update. Add a repeatable UI/API browser check.
+- [x] Reconcile the instance ID during update from M00 and restart an already-running application through native update hooks. Unit-test the non-secret identity write; QEMU clears the prior identity as an upgrade fixture and asserts container replacement and healthy routes after native update. Validate the real M00-to-M01 transition on the dedicated live instance.
+- [x] Validate package/image naming, source references and path behavior; run local tests/build/archive audits and verify publication/scans plus both QEMU legs. The dedicated live M00-to-M01 transition and partial Playwright checks passed before the remaining live checks were explicitly waived.
+- [x] Commit the reconciled AGENTS/README/PLAN closeout and verify its resulting CI before marking M01 complete.
+
+**Source findings:** Current kickstart confirms Core-provided dependency-image environment variables, rootless loopback service, allocated port and numbered action conventions. Hermes demonstrates separate component images via `buildah build`, a module dependency label and a systemd component unit; its large upstream application image/dependency choices are not suitable for C0. The official FastAPI Docker and proxy guidance supports a single ASGI process behind the existing Traefik route; test the actual NS8 preserved-prefix behavior rather than assume a proxy strips it. Pin the supported Python base and every runtime dependency after checking current upstream versions. Keep app UI static and independent from the NS8 Vue 2 admin UI.
+
+**Upgrade review finding:** The [Core update contract](https://github.com/NethServer/ns8-core/blob/main/docs/modules/updates.md) reloads units/environment and delegates restart to module hooks. The maintained [idp restart hook](https://github.com/NethServer/ns8-idp/blob/main/imageroot/update-module.d/80restart) uses `try-restart` to preserve an unconfigured module's stopped state. M00 lacks `CZERO_MODULE_ID`, and same-image tests did not prove the running echo container was replaced. Add only focused ID and restart hooks, not a lifecycle manager.
+
+
+**Implement:** Minimal FastAPI runtime with `GET /api/v1/health`, OpenAPI, initial browser `/` page and honest `/agents` introductory page. Create clearly separated, versioned/releasable Python C0 Core package, application-specific extension module, and repository-only development files; use a pinned, minimal Python container and a user Web UI bundle. NS8 action scripts stay separate from FastAPI. Build all required images in CI.
+
+**Acceptance:** Install image, start systemd units, access browser and REST health through NS8 path/route, verify request logs and restart behavior, run pytest and QEMU smoke; no development files in runtime images. Playwright MCP browser health/UI check when feasible.
+
+**Documentation gate:** Record package/app boundaries in `AGENTS.md`; actual endpoints/UI and install caveats in `README.md`; tests and evidence in `PLAN.md`.
+
+**Implementation and failure fixes:** `47933493d177cef198d07fe54b7cbafa54ac2178` adds independent `czero-core`/`czero-app` version 0.1.0, the FastAPI path-mounted application, static landing/agents pages, pinned Python component and locked non-editable packages. [QEMU 38362582273](https://github.com/Stell0/ns8-czero/actions/runs/38362582273) exposed virtualenv console-script shebangs pointing to the builder path after relocation. `59e0929be17c98f25dd74d12f93a847bcc82e86b` keeps `/opt/czero/.venv` identical in both stages. [QEMU 38364268844](https://github.com/Stell0/ns8-czero/actions/runs/38364268844) then passed application behavior but failed the log assertion, which incorrectly queried container `czero.service`; systemd `%N` names it `czero`. `8836be53994c23289165437883f239cdaece820d` corrects that query without removing the assertion. Final SBOM review found base-image pip and vendored setuptools; `4976d7fbd9a0438f3e32d5a2504acc0f3edf85d2` removes installers/build tooling from the runtime stage and is being verified.
+
+**Verified checks so far:** 17 local pytest tests and seven non-UI Robot dry-run cases pass. Locked dependency resolution, application startup/access logs and immutable admin UI build pass locally; local container builds are unavailable because the host sandbox denies user-namespace setup, so actual image build evidence comes from CI. [Local checks 38365193242](https://github.com/Stell0/ns8-czero/actions/runs/38365193242), [publication/scans 38365193016](https://github.com/Stell0/ns8-czero/actions/runs/38365193016) and [QEMU 38365401791](https://github.com/Stell0/ns8-czero/actions/runs/38365401791) pass at `8836be5`. Downloaded Robot reports confirm seven Debian 13/update lifecycle passes and seven Rocky 9/install passes including admin/app browser recovery, plus the intentional update-only skip. Module image `:main`/`:latest` digest is `sha256:8c25496c3676c9896c73a64c3e90b55c4e91b3ef6220f4872ca973e8bb8f84b7`; app component digest is `sha256:e5a8215c9f906d231d8ec3a67b6b47b451a0ad2131b0fc194a4600ec18b8e067`. Initial app archive audit found 6,278 entries with no repository docs, tests, lockfiles or package manifests. Scans retain dependency findings; no clean-security claim is made.
+
+**Packaging review:** At `4976d7f`, [publication/scans 38367272524](https://github.com/Stell0/ns8-czero/actions/runs/38367272524) and [local checks 38367272464](https://github.com/Stell0/ns8-czero/actions/runs/38367272464) pass. Its SBOM contains no pip, setuptools, uv, pytest or Robot components. A stricter flattened-filesystem audit caught `.agents` authoring skills bundled in the FastAPI wheel; the earlier audit had missed vendor development content. `94fd25d737fc32dc39f7f4d5235f30646521664f` strips these directories and adds an actual assembled-image audit before publication. The check fails against the original installed wheel and passes after cleanup in a temporary runtime environment. Current scans report 166 app and 29 inherited UI findings, zero module/imageroot findings; these remain release-review work.
+
+**Final runtime evidence:** Commit `83301943beffced658efafc5f36b5dd62b3bf6a1`; [local CI 38369010061](https://github.com/Stell0/ns8-czero/actions/runs/38369010061), [publication/audit/scans 38369009899](https://github.com/Stell0/ns8-czero/actions/runs/38369009899) and [QEMU 38369204785](https://github.com/Stell0/ns8-czero/actions/runs/38369204785) all pass. Downloaded Robot XML confirms Debian 13/install: six lifecycle passes and two intended update-only skips; Rocky 9/update: all nine tests pass, including unconfigured-instance preservation, missing-ID reconciliation, actual container replacement, request logs, restart, browser service recovery and disposable uninstall. Eighteen local pytest tests and eight Robot dry-run cases pass. Module `:main`/`:latest` digest is `sha256:e1ebfa1c2887d79b81c1dd4f45913d22d01a5f6d547552851e2f61318f8499ee`; app component digest is `sha256:390c0d0047ba7062d751678695e27e3932b1c9259d1986a2414d5103c266a86c`. Module archive has 102 entries only under `imageroot/` and `ui/`, with both hooks executable. The publisher's assembled-image audit passes; independent app filesystem inspection after vendor cleanup has 5,659 entries and zero forbidden paths. Current inspected SARIF/SBOM reports have zero module/imageroot findings, 166 app and 29 UI findings, and no build/test package tools. Findings remain M14 release-review work.
+
+**Partial live/Playwright evidence before waiver:** The targeted native update of only the dedicated M00 Czero instance to the verified M01 image exited zero. The JSON health contract returned HTTP 200 and both versions `0.1.0` immediately, proving the old echo process was replaced without another configure action. Native status reports active/enabled/not failed; configuration remains `{}`. Unknown configuration exits 10 while health remains 200. Interactive NS8 Settings renders the new runtime description; its Save task exits zero and health stays 200. The application landing page, health link, agents introduction, OpenAPI JSON with the preserved instance prefix, and rendered Swagger health operation were exercised with normal TLS validation. The Swagger Execute operation, live restart/refresh and final before/after unrelated-inventory comparison were not executed after the operator requested suspension. They are **waived by operator**, not passing evidence. Application login/normal-user authorization remains unimplemented until M05. No live destructive action, SSH, certificate exception or unrelated-module mutation was used.
+
+**Evidence:** Runtime acceptance passes with the explicit temporary live-testing exception above. Closeout documentation commit `d4ca51c1e24901b5bfdde678ca619f7bcab7479e` passes [local CI 38373643549](https://github.com/Stell0/ns8-czero/actions/runs/38373643549), [publication/audit/scans 38373643528](https://github.com/Stell0/ns8-czero/actions/runs/38373643528) and [QEMU 38373861781](https://github.com/Stell0/ns8-czero/actions/runs/38373861781). Downloaded reports confirm eight Debian 13/update passes; Rocky 9/install has seven passes including browser checks and two expected update-only skips. M01 is complete. No release, database storage or MCP capability exists yet. Superseded/cancelled QEMU runs do not count as acceptance.
+
+
+### M02 — NS8 configuration, Traefik and administrator UI [x]
+
+**Goal:** Make installation configurable using native NS8 actions, not a custom admin service.
+
+**Copy/adapt from:** [Hermes validation](https://github.com/NethServer/ns8-hermes-agent/tree/main/imageroot/actions/configure-module); [Hermes get-configuration](https://github.com/NethServer/ns8-hermes-agent/blob/main/imageroot/actions/get-configuration/20read); [Hermes route reconciliation](https://github.com/NethServer/ns8-hermes-agent/blob/main/imageroot/actions/configure-module/90reconcile-desired-routes); [kickstart Settings.vue](https://github.com/NethServer/ns8-kickstart/blob/main/ui/src/views/Settings.vue); [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib); [Core Traefik/certificates](https://github.com/NethServer/ns8-core/blob/main/docs/modules/certificates.md).
+
+**Implement:** `configure-module`/`get-configuration` with input/output schemas, persisted non-secret environment, secrets separated, single host and TLS configuration, port allocation and route reconciliation, systemd service control, native NS8 admin settings/errors/progress. Avoid extra nginx proxy unless it has a demonstrated purpose. No giant lifecycle manager. Ensure idempotence on repeated configure and hostname changes.
+
+**Acceptance:** Configure through API and NS8 admin UI; settings round-trip, valid TLS route, repeated configure harmless, invalid input rejected, service status accurate. Test admin UI with Playwright MCP, then dedicated live C0 install once image build is green.
+
+**Documentation gate:** Update `AGENTS.md` action steps/secrets rules; `README.md` administrator operation instructions; `PLAN.md` evidence.
+
+**Implementation subplan and tests (13 October 2026):**
+
+- [x] Validate a required FQDN and optional boolean `lets_encrypt` with strict schemas; normalize lowercase and reject conflicts through `agent.http_route_in_use`, allowing reconfiguration of the existing owned hostname. Unit-test syntax, collision, repeat and machine-readable validation errors before persistence.
+- [x] Keep focused `10validate`, `20configure-route`, `40persist`, `80start_services` and bounded readiness steps. Persist only non-secret identity, hostname, certificate flag and application base path. Persist only after Traefik accepts the route so failed certificate validation preserves saved settings. Delegate TLS/redirects to `agent.set_route`; explicitly clear the old preserved-prefix route with `path: null`. Unit-test route ownership, settings round-trip and stdout discipline. No provider secrets are introduced.
+- [x] Serve the application at the configured hostname root; keep the M01 prefix for existing unconfigured legacy instances on update. Test root and legacy health/OpenAPI/links, invalid base paths and preservation of an explicitly empty root base path during update.
+- [x] Add ns8-ui-lib hostname and certificate controls, native field errors/task progress and a saved application link. Remove all task listeners on terminal states and component destruction. Build the Vue UI and test settings persistence, validation recovery and service status in disposable automated browser tests.
+- [x] Extend QEMU/Robot tests for repeated configuration, HTTPS root health, HTTP redirect, hostname changes/old-route removal, competing-module conflict rejection, restart and upgrade persistence. Use synthetic disposable DNS names, no live endpoints. Inspect both reports and actual image publication/audit/scans; update all three documents before closeout.
+- [x] Commit the reconciled AGENTS/README/PLAN documentation and verify its resulting CI/QEMU before marking M02 complete.
+
+**Reference findings:** Inspected current Hermes validation/persistence/routes, Core certificates/agent SDK and Traefik `set-route/20writeconfig`, kickstart Settings and actual ns8-ui-lib controls. The smaller [Dependency Track hostname validation](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/actions/configure-module/01Hostname_validation) confirms the own-host conflict exemption. Traefik merges route data, so omitting `path` would preserve M01's prefix; `path: null` is required for hostname-root migration. Same-instance route replacement removes the old host rule. The inherited allocated loopback port and Traefik TLS service remain authoritative. Interactive Playwright and live acceptance are temporarily waived by the operator; automated disposable browser tests remain required.
+
+
+**Implementation status:** Native hostname/TLS actions, hostname-root application routes, legacy-update preservation and administrator settings/errors/progress are implemented. App version is `0.2.0`; Core remains `0.1.0`. Forty local tests, shell checks, eleven non-UI Robot dry-run cases, immutable Yarn install and production UI build pass. Actual publication and native/browser QEMU verification pass at `f33cc99`. The route step precedes persistence because native certificate validation can fail; this keeps the prior saved configuration accurate. No live or interactive Playwright checks will run under the operator waiver.
+
+**Failure investigation:** Initial M02 commit `7f25d8fd4c3481f7b5cd98ed41dad7e8f935de91` passes [local 38376237653](https://github.com/Stell0/ns8-czero/actions/runs/38376237653), [publication/audit/scans 38376237652](https://github.com/Stell0/ns8-czero/actions/runs/38376237652) and API docs. [QEMU 38376474181](https://github.com/Stell0/ns8-czero/actions/runs/38376474181) fails: the actual Go Core validator rejects a Python-compatible negative regex lookahead; the legacy upgrade check queried before ASGI startup (HTTP 502); Robot interpreted curl's `%{http_code}` as an environment variable. Use a portable anchored hostname pattern plus a separate whitespace exclusion, add a Go-regex schema compilation CI regression gate, wait for legacy health and escape the Robot curl placeholder. The Go gate was executed against the old schema and fails specifically on `(?!`; it passes on the corrected schema, alongside all 40 pytest tests and 11 Robot dry-run cases. Keep all acceptance assertions. Publication scans still report 166 app / 29 UI findings, zero module/imageroot; runtime archives contain only allowed files. Planning-only QEMU `38375319126` was superseded/cancelled and supplies no acceptance evidence.
+
+**Further browser diagnosis:** The Rocky report also failed to locate `input[type=text]`. The actual ns8-ui-lib control omits the type attribute when unset (HTML still defaults to text), so locate its existing `.ns-text-input input` control and wait for configuration loading to finish. Native Traefik certificate errors use field `host`, parameter `names` and error `newcert_acme_error`; show a certificate-specific message instead of misreporting invalid hostname syntax.
+
+**Native runtime evidence:** Fix `5172888be83fd22b025a466ec5103e594e4e4eb2` passes [local/Go schema CI 38377697131](https://github.com/Stell0/ns8-czero/actions/runs/38377697131) and [publication/audit/scans 38377697068](https://github.com/Stell0/ns8-czero/actions/runs/38377697068). Downloaded [QEMU 38377897741](https://github.com/Stell0/ns8-czero/actions/runs/38377897741) reports confirm Debian 13/install: eight native passes and three expected update-only skips; Rocky 9/update: all eleven native tests pass, including legacy-prefix reconciliation and configured root/hostname persistence. The overall run is red solely on the diagnosed browser selector; M02 remains open. Module digest is `sha256:180de641a6f6cb439eb60fe5f06934fffbb83f8a24b62b0e33862692f50d31b6`; app digest is `sha256:47e25fd437d052867f90327a36145b46bc0709c0ebabc0f41c736000bb15cd85`. Scans remain 166 app / 29 UI / zero module and imageroot.
+
+**Final runtime evidence:** Commit `f33cc99d6fc6a69af2c2b4da3e3725f749648bfb` passes [local/Go schema CI 38379291745](https://github.com/Stell0/ns8-czero/actions/runs/38379291745), [publication/audit/scans 38379291014](https://github.com/Stell0/ns8-czero/actions/runs/38379291014) and [QEMU 38379473707](https://github.com/Stell0/ns8-czero/actions/runs/38379473707). Downloaded reports confirm Debian 13/update has all eleven native passes; Rocky 9/install has nine passes (including the complete admin/application browser case) and three expected update-only skips. The browser asserts native field-error recovery, visible progress, restarting a deliberately stopped service, saved hostname after reload, the saved application link, HTTPS landing/health/OpenAPI/agents and About. Native tests prove own-host repeat, old-host and legacy-path removal, HTTP 301 redirect, competing-instance rejection without owner mutation, accurate active/enabled/nonfailed status, restart, legacy migration, root base-path preservation and native update container replacement. Forty pytest tests, Go-regex checks, eleven non-UI Robot dry-run cases and immutable Yarn production build pass.
+
+Module `:main`/`:latest` digest is `sha256:63a64df49b37b8eb9fd1dda798d5678126a21ab56d76aba2ff811dcea8a878e4`; app digest is `sha256:fddb151aa189202d5464d2b05bf771f1d652a08c653a5c726d51af42fb8ab8d7`. The actual publisher runtime audit passes. Final exported module/application archives contain only allowed runtime content. Inspected SARIF/SBOM still report zero module/imageroot findings, 166 app and 29 inherited UI findings; no package/build/test tools are in the application SBOM. These findings remain M14 work.
+
+**Evidence:** Runtime and documentation acceptance are green. Closeout commit `20c4c417bccc8b1a8129571e8ec03b86b889dfe4` passes [local CI 38380968426](https://github.com/Stell0/ns8-czero/actions/runs/38380968426), [publication/audit/scans 38380968415](https://github.com/Stell0/ns8-czero/actions/runs/38380968415) and [QEMU 38381161697](https://github.com/Stell0/ns8-czero/actions/runs/38381161697). Downloaded XML confirms Rocky 9/update: all twelve passes including browser; Debian 13/install: eight passes and three expected update-only skips. M02 is complete. Interactive Playwright and dedicated live testing are **waived by operator**, not passed. No live module was changed during M02. QEMU validates encrypted routes using synthetic DNS and the platform test certificate; public ACME issuance was not attempted and is not claimed as verified. Database, login, objects, search and MCP remain future milestones. No release exists.
+
+### M03 — Dedicated PostgreSQL + pgvector and migrations [x]
+
+**Goal:** Each installed C0 owns its own isolated PostgreSQL container/database and durable state; enable pgvector without introducing a separate vector database.
+
+**Copy/adapt from:** [ns8-dependencytrack PostgreSQL unit](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/systemd/user/postgresql-app.service); [ns8-idp modern PostgreSQL unit](https://github.com/NethServer/ns8-idp/blob/main/imageroot/systemd/user/postgres.service) (**use Type=notify only if selected image supports it**); [ns8-postgresql module](https://github.com/NethServer/ns8-postgresql); [NS8 volumes](https://github.com/NethServer/ns8-core/blob/main/docs/modules/volumes.md); [pgvector upstream](https://github.com/pgvector/pgvector).
+
+**Implement:** Select/pin an actual supported PostgreSQL+pgvector image (build a minimal derived image if needed); secrets in private `state` files; database connectivity/readiness, SQLAlchemy/Alembic migrations, `CREATE EXTENSION vector` and baseline version tables. Isolate instance naming/credentials and keep DB off public ports.
+
+**Acceptance:** Two module instances cannot see each other's DB; data survives service restarts; vector extension is available and indexed test vectors can be queried; migration repeatable; UI health indicates DB availability. Build/Robot/QEMU green.
+
+**Documentation gate:** `AGENTS.md` schema/migration and systemd conventions, `README.md` DB/version/setup behavior, `PLAN.md` evidence.
+
+**Implementation subplan and tests (13 October 2026):**
+
+- [x] Pin the maintained pgvector `0.8.7-pg17-bookworm` image by digest (PostgreSQL `17.11`, vector `0.8.7`); derive a minimal Czero database image that removes upstream PGXS development files and runs as `postgres`. Build/publish/scan it from the first database increment and audit its UID, extension and runtime contents.
+- [x] Reuse native pod/unit conventions: one private pod, allocated loopback application port only, PostgreSQL listening on pod loopback with no published DB port. Preserve the existing `czero.service` identity/container name for upgrades, order pod -> DB readiness -> migrations -> application. The selected Debian image is compiled with `--with-systemd`; use native notify readiness only with actual QEMU verification.
+- [x] Generate per-instance database credentials once into an atomic mode-0600 private state env-file through a small reusable native helper, invoked by create/update numbered steps. Never use `set_env` for secrets or print them. Test permissions, distinct credentials, repeated initialization and preservation; ensure Core's non-secret environment has no credentials.
+- [x] Add reusable SQLAlchemy/psycopg database operations and packaged Alembic migrations to C0 Core. Bootstrap vector and baseline schema/knowledge-space identity transactionally; run migrations before app start. Pin dependencies, repeat migration without changing identity, and test real PostgreSQL transactions, vector availability and indexed nearest-vector queries.
+- [x] Extend application health and landing-page status for database readiness, including safe HTTP 503 when unavailable. Keep Core/app and NS8 responsibilities separate. Test healthy/unavailable contracts, sanitized errors and browser status/recovery; avoid a generic lifecycle manager.
+- [x] Extend local/integration CI and QEMU for two independently configured module instances, isolated data/secrets/pod networks, persisted rows across restarts/updates, vector index queries, repeated migrations and DB outage recovery. Retain all M02 routing/admin regressions. Download and inspect reports, publication/audit/scans and reconcile all three documents before completion. Native logical backup/restore remains M04; do not claim backups ready here.
+- [x] Commit the reconciled AGENTS/README/PLAN documentation and verify its resulting CI/QEMU before marking M03 complete.
+
+**Source findings/preparation:** Inspected current Dependency Track pod/database units, maintained IDP PostgreSQL unit and atomic password generation, PostgreSQL module units, Core volumes and safe I/O SDK, pgvector Dockerfile and official SQLAlchemy/Alembic/psycopg/PostgreSQL docs. Prefer the current IDP notify pattern over older polling when supported; keep the larger PostgreSQL module's external database port and pgAdmin out of C0. Selected upstream image digest is `sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d`. Inspected image config reports PostgreSQL `17.11-1.pgdg12+2`; extracted `pg_config --configure` confirms systemd support. A temporary unprivileged local PostgreSQL process from those upstream binaries, using a private Unix socket and no TCP listener, successfully installs vector `0.8.7`, creates an HNSW index and returns the expected nearest row with an actual indexed query plan. This validates upstream preparation, not C0 implementation or container/systemd acceptance. Upstream PGXS files must be removed from the derived runtime image. Local container namespaces are unavailable; actual Podman/systemd image behavior must pass QEMU. Further live/interactive Playwright tests remain waived by operator.
+
+
+**Implementation status:** Core `0.2.0` adds bounded PostgreSQL health and transactional packaged migrations; app `0.3.0` adds structured database readiness/503 and landing-page status. Native units share a private pod with notify PostgreSQL readiness and a pre-app migration command. Create/update reuse one atomic private secret helper; the DB volume and separate derived image are declared in module metadata/build/publication. The upstream entrypoint explicitly clears `NOTIFY_SOCKET` for its temporary init server, preventing premature readiness. Forty-four local unit tests, three real PostgreSQL integration tests, Go action-schema compilation, thirteen non-UI Robot dry-run cases and production admin UI build pass. QEMU now exercises independently configured databases/secrets, vector indexes, persisted rows, no published database port, outage recovery and all M02 regressions. Image publication, derived non-root runtime audit (including vendor SQLAlchemy/Alembic test and developer-template cleanup) and both native/QEMU legs pass. Documentation closeout remains pending. No live testing occurs under the operator waiver.
+
+**First remote evidence:** Database increment `1cb5fc3a0003f31ae13327017f7955c83abbd0bc` passes [local/integration CI 38394215923](https://github.com/Stell0/ns8-czero/actions/runs/38394215923) (all 47 cases, Go schema check and 13 Robot dry-run cases) and [publication/audits/scans 38394216151](https://github.com/Stell0/ns8-czero/actions/runs/38394216151). New `czero-postgres` package is public and anonymous pulls work, digest `sha256:7a6ce67c5266c9a9c935e5acffe4cab80fbbf6839967ba85cb77f127e715124e`. Inspected scans report 526 PostgreSQL, 166 app and 29 UI findings, zero module/imageroot; these are not resolved. [QEMU 38394502129](https://github.com/Stell0/ns8-czero/actions/runs/38394502129) Debian 13/install passes ten native tests with three expected update-only skips, including actual notify startup, migrations, distinct mode-0600 secrets, independent databases, indexed vectors, no DB port mapping, persistent data and outage/recovery. Downloaded Rocky 9/update report confirms all fourteen tests pass, including legacy/native upgrades, retained database rows and actual browser database status/outage/recovery. The full first QEMU run is green. Pod-restart review refinement below still needs a new native run.
+
+**Review refinement:** A private pod restart must also restart active children. Native `BindsTo` handles stopping but does not alone guarantee restart propagation; add `PartOf=czero-pod.service` to the app and database and extend the existing persistence regression to restart the whole pod, assert health and retain seeded rows. Keep the parent independent of app startup so starting a database for future restore does not implicitly start an unconfigured app. This follows [systemd PartOf semantics](https://github.com/systemd/systemd/blob/main/man/systemd.unit.xml) without a management library. The official documentation source was inspected because the rendered manual endpoint returned HTTP 403. The revised unit behavior passes the final runtime QEMU below.
+
+**Final runtime evidence:** Commit `77d66439ee22aec94382e3acfd07a213c9df083f` passes [local/integration CI 38396452686](https://github.com/Stell0/ns8-czero/actions/runs/38396452686), [publication/audits/scans 38396452888](https://github.com/Stell0/ns8-czero/actions/runs/38396452888) and [QEMU 38396706452](https://github.com/Stell0/ns8-czero/actions/runs/38396706452). Downloaded reports confirm Debian 13/update: all thirteen native tests pass; Rocky 9/install: eleven passes including admin/application browser checks, with three expected update-only skips. The persistence test now actually recreates the private pod, recovers both children and verifies its retained rows. Initial Rocky 9/update also passed all fourteen cases at `1cb5fc3`, covering database persistence during real native update and legacy-prefix migration. Browser checks assert healthy/unavailable/recovered database states in addition to M02 settings, native task progress and saved-host navigation. All 47 local cases (44 unit + three real PostgreSQL integration), Go schema compatibility, thirteen Robot dry-run cases and production UI build pass. Runtime startup uses the packaged migrations successfully after vendor development files are removed.
+
+Module digest is `sha256:372601d2ea3386a2bfb1df94e253add82078a187f02b97a48490114d17cde88b`; app digest is `sha256:318f00884f04c23a0a6746a87e072a853e36269e3a72e1d66bc89bc10418db93`; PostgreSQL component digest is `sha256:e8efa70f7da8eb931b2e366033e39a380ac37dca2ed146208a6f4f4520769a7d`. Both actual runtime audits pass: app excludes developer files/tools, database UID is non-root and vector exists without PGXS/compilers. Public anonymous pulls of all three images work. Inspected first-runtime scans report 526 PostgreSQL, 166 app and 29 UI findings, zero module/imageroot; review remains M14 work. No vulnerability-free claim is made.
+
+**Evidence:** Runtime and documentation acceptance are green. Closeout `0e5c26c1758afec197fb8dc5c77a90eebb21dcbb` passes [local/integration 38398509035](https://github.com/Stell0/ns8-czero/actions/runs/38398509035), [publication/audits/scans 38398509092](https://github.com/Stell0/ns8-czero/actions/runs/38398509092) and [QEMU 38398745454](https://github.com/Stell0/ns8-czero/actions/runs/38398745454). Downloaded reports confirm Debian 13/install: ten passes and three intended update-only skips; Rocky 9/update: all fourteen passes including pod recreation, migration/row persistence, native upgrade and browser availability/recovery. M03 is complete. Interactive Playwright/live checks remain **waived by operator**, not passed, and no live module was modified in M03. Logical database backup/restore is not implemented until M04. Login, object/source/Wiki operations, search, scheduled jobs and MCP remain later milestones. No release exists.
+
+### M04 — Backup, restore and upgrade-safe persistence [x]
+
+**Goal:** Use NS8's native lifecycle, not custom backup infrastructure.
+
+**Copy/adapt from:** [NS8 backup/restore contract](https://github.com/NethServer/ns8-core/blob/main/docs/modules/backup_restore.md); [dependencytrack dump](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/bin/module-dump-state); [dependencytrack restore](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/actions/restore-module/40restore_database); [dependencytrack cleanup](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/bin/module-cleanup-state); [dependencytrack state include](https://github.com/NethServer/ns8-dependencytrack/blob/main/imageroot/etc/state-include.conf); [Hermes restore reconcile](https://github.com/NethServer/ns8-hermes-agent/blob/main/imageroot/actions/restore-module/20configure); [Core updates](https://github.com/NethServer/ns8-core/blob/main/docs/modules/updates.md).
+
+**Implement:** Logical `pg_dump`/`pg_restore` flow; `state-include.conf` for DB dump, secrets and retained uploaded-source volume; cleanup temporary dump; rebuild derivative config on restore; idempotent restore/reconfigure; versioned DB/app migrations in update scripts. Do not blindly back up running DB files together with redundant full dumps; decide strategy based on authoritative NS8 behavior.
+
+**Acceptance:** Seed persistent data and retained test file, backup, restore to clean QEMU instance, verify identities/data/config and REST behavior; upgrade from an earlier test image; run destructive tests ONLY in disposable infrastructure.
+
+**Documentation gate:** `AGENTS.md` backup/restore invariants; `README.md` operator restore/upgrades; `PLAN.md` evidence.
+
+**Implementation subplan and tests (13 October 2026):**
+
+- [x] Add native `module-dump-state`/`module-cleanup-state` hooks: atomic private `pg_dump --format=custom`, restricted backup format/service-state metadata, and cleanup after successful Restic backup. Bring up only an inactive database for dumping and restore its prior state; never start an unconfigured app. Preserve credentials and database identity. Test failure cleanup and service-state preservation with stubbed native commands.
+- [x] Declare a retained-source named volume and mount it to the app with its unprivileged ownership. `state-include.conf` includes database dump, private credential file, backup metadata and retained-source volume; exclude live PostgreSQL files. Test exact backup inputs and app-image boundaries. Original ingestion/retention policy itself remains M08; at this milestone the volume holds a controlled fixture.
+- [x] Extend inherited restore through focused steps: persist only recovered non-secret settings with the new module identity/allocated port; validate snapshot format and dump; restore into a fresh database volume offline with `pg_restore --single-transaction --exit-on-error`; rebuild the instance-owned route; restore enabled/running state and run current packaged migrations on startup. Do not copy old node/port/image state or replace Core's Restic/gateway machinery. Reject malformed archives and do not resume an app after failed restore.
+- [x] Add disposable QEMU tests using native cluster backup destination/schedule/run/restore actions. Let Core generate the encryption password and suppress its returned value in Robot logs. Seed relational/vector rows and retained file, backup, verify temporary dump cleanup, delete only the source Czero module, restore into a clean module slot and assert identity/data/file/config/TLS/REST behavior. Repeat restore/reconfigure behavior and verify secret modes; remove disposable backup resources in teardown.
+- [x] Exercise genuine upgrade from the immutable verified M03 image to M04 in the update scenario, preserving seeded data and identity across newly introduced lifecycle code. Keep all prior lifecycle, route, private database and browser regressions. Verify local tests, publication/audits/scans and both reports; reconcile all three documents before completion. Destructive operations stay entirely in disposable QEMU, with live/interactive testing waived.
+
+**Reference findings:** Inspected Core backup manual and actual `module-backup`, `restore-module/10restore`, cluster `restore-module/50restore_module`, backup repository/schedule/run schemas and handlers, rclone gateway and VPN lookup. Core always saves `state/environment`; extra data is included explicitly, and restore excludes that environment file so C0 must recover only its own settings from the supplied original environment. Core handles node/port/image identity and native Restic volumes. Dependency Track supplies a logical dump/offline init-server restore pattern, but C0 must add fail-fast transactional restore rather than copy its weaker error handling. Hermes restores by re-running configure; C0's readable single-host steps can also preserve legacy/unconfigured service state. The cluster provider stores backups in the existing gateway volume (`/srv/repo`); use the disposable node's VPN address. `add-backup-repository` returns a newly generated encryption password, so the test helper must capture/sanitize it with Robot logging disabled. No live configuration or backup action is authorized during the testing pause.
+
+
+**Implementation status:** Native atomic dump/cleanup hooks, explicit Restic includes, retained-source volume and focused restore steps are implemented. Format/dump validation and offline `pg_restore` fail fast; only C0 settings are recovered, preserving new platform identity/port/image. The current service state is recorded for restore, and cold database dumping preserves prior state. Receipts prevent accidental overwrites of initialized data. Sixty-one local cases (58 unit + three real PostgreSQL integration), Go schema checks, shell checks and fourteen non-UI Robot dry-run cases pass. New QEMU scenarios use native encrypted backup/restore, retain a controlled file and verify data/identity/config/HTTP after clean-slot restore. The update scenario pins the actual M03 module and both component digests and seeds a predecessor database before applying current native hooks. Backup setup suppresses the generated encryption password from Robot output. Final coverage adds native repeated delivery of the same archive after a new database row, checking that the receipt preserves later changes and that restored secrets remain mode 0600. A regression also reproduces non-object manifest input previously raising `AttributeError`; validate the manifest shape before reading its fields and return the standard safe format error. Runtime publication/native QEMU acceptance passes; final bounded test diagnostics and documentation/main closeout remain pending. Original-file ingestion is still M08; backup coordination with future file writers/workers must be verified with those features.
+
+**Failure investigation:** First implementation `4de1b55fe2877b6492eb272f9155eba8bb071596` passes [local/integration CI 38403071280](https://github.com/Stell0/ns8-czero/actions/runs/38403071280) and [publication/audits/scans 38403071206](https://github.com/Stell0/ns8-czero/actions/runs/38403071206). [QEMU 38403351518](https://github.com/Stell0/ns8-czero/actions/runs/38403351518) Debian install and Rocky update pass all preceding lifecycle/private-database tests, including the genuine predecessor upgrade in Rocky, but restore fails in Core before C0 restore scripts: the Restic repository is absent. Actual Core `node/bin/run-backup` returns zero without work when a schedule is disabled, so the original disabled-schedule fixture never created a snapshot. Enable a schedule at a distant fixed date, assert a nonempty actual Restic snapshot list before deleting the source, and retain every restore assertion. Add a regression for enabled/future scheduling; require a nonempty module ID before final uninstall assertions to avoid a misleading follow-on failure. Credential-bearing diagnostics are redacted and no real testing credentials were involved. Corrected native verification remains pending.
+
+**Verification progress:** Correction `50574f32eeccc444fe27d7456fa0ece0111b3dca` passes [local CI 38405595339](https://github.com/Stell0/ns8-czero/actions/runs/38405595339) and [publication/audits/scans 38405595227](https://github.com/Stell0/ns8-czero/actions/runs/38405595227). Downloaded [QEMU 38405934158](https://github.com/Stell0/ns8-czero/actions/runs/38405934158) Debian 13/update report passes all fourteen native cases, including an actual Restic snapshot, clean-slot restore, relational/vector rows, knowledge-space identity, retained file, hostname and health recovery. Rocky 9/install was force-cancelled as superseded after the native backup/restore case stalled for over thirty minutes. Its released job log proves earlier lifecycle cases passed and identifies the stalled case, but supplies no per-command result or completed Robot report. This leg is unverified, not passed. Bound backup/restore SSH reads to 180 seconds, bound the case to ten minutes and print static phase markers without identifiers or credentials; preserve every assertion so future stalls produce diagnostics. Final manifest-shape/replay coverage is developed on `fix/m04-restore-validation`. Commit `8ca1e11b32874e6477bc5914b6ed1c6da35ca437` passes [local CI 38409797517](https://github.com/Stell0/ns8-czero/actions/runs/38409797517), [publication/audits/scans 38409797570](https://github.com/Stell0/ns8-czero/actions/runs/38409797570) and the downloaded Debian 13/install report from [QEMU 38410191832](https://github.com/Stell0/ns8-czero/actions/runs/38410191832): eleven native passes and three intended update-only skips, including clean restore, completed-archive replay preserving an added row, and mode-0600 credentials. Downloaded Rocky 9/update report passes all fifteen cases, including genuine M03 upgrade, clean restore, archive replay and admin/application browser checks. The earlier main Rocky stall was not reproduced in this replacement. Its exact native-command root cause remains unknown because force cancellation prevented a complete Robot report; static phase markers and bounded reads preserve all assertions and enable diagnostics if it recurs. Timeout/phase diagnostics are prepared on a separate branch to preserve its in-flight image tag. No runtime root cause is claimed without the native diagnostics.
+
+**Runtime evidence:** `8ca1e11b32874e6477bc5914b6ed1c6da35ca437` passes all local/integration checks, publication/audits/scans and both downloaded QEMU reports above. Module digest `sha256:5255827e91c9ae4909de52924a53ebd81aca8ba8220eccd15a7dd8aa7e7c478e`; app `sha256:98fa1b7a67ae560b61bb0920b580a7f671de49663d21114594df78e8394545ad`; PostgreSQL `sha256:91b82860a269106e8b17991183ebd196cdf84a80c8a21c54bb2c13e3b31ddc8d`. Anonymous manifests are accessible. Sixty-one local cases (58 unit + three actual PostgreSQL integration), Go schemas, shell validation and fourteen non-UI Robot dry-run cases pass. Current schema is still `0001_database`; the genuine M03 fixture proves newly introduced lifecycle upgrade persistence, not a new schema transformation. Logical backup excludes live PostgreSQL files and includes only controlled retained-file infrastructure until M08. Source-file/worker coordination remains explicitly deferred to M06/M08. Interactive Playwright MCP and all live mutation/testing are waived by the operator, not passed.
+
+**Evidence:** Main closeout `a3e79d3ffa7ca4ea510fada6a277a1b7a46d7f8e` passes [local/integration CI 38412789235](https://github.com/Stell0/ns8-czero/actions/runs/38412789235), [publication/audits/scans 38412789543](https://github.com/Stell0/ns8-czero/actions/runs/38412789543) and [QEMU 38413109254](https://github.com/Stell0/ns8-czero/actions/runs/38413109254). Downloaded reports confirm Debian 13/update: all fourteen native cases pass; Rocky 9/install: twelve passes including admin/application browser checks and three intended update-only skips. Both execute the bounded backup/restore/replay case successfully, preserving post-restore data and credential modes. Final module digest is `sha256:2543268f93026d1a4a992174f63375181437ae3dd9eec37ec46deb142034f9ad`; app `sha256:4f8c20c670bf67223660af01f7ef19526a2eff68d15cb8b4c6df9b3880e62d8e`; database `sha256:a459ab2bc7f1bb37d87e13927efe2dcb6d2108ba92c810ec2c8eee1f15485320`. M04 is complete. The earlier superseded stall remains recorded with unknown command-level cause; it did not recur in the accepted replacement or final closeout. Keep the bounded diagnostic regression and investigate any recurrence. Interactive Playwright/live checks remain **waived**, not passed. No release exists.
+
+### M05 — ns8-idp login and minimal application-wide authorization [x]
+
+**Goal:** Browser, REST and later MCP share NS8 identities and simple roles.
+
+**Copy/adapt from:** [ns8-idp README and register-client](https://github.com/NethServer/ns8-idp/blob/main/README.md); [register-client schema](https://github.com/NethServer/ns8-idp/blob/main/imageroot/actions/register-client/validate-input.json); [NS8 user-domain binding](https://github.com/NethServer/ns8-core/blob/main/docs/core/user_domains.md); [Hermes user-domain action](https://github.com/NethServer/ns8-hermes-agent/tree/main/imageroot/actions/configure-module); [NS8 idp tests](https://github.com/NethServer/ns8-idp/tree/main/tests).
+
+**Implement:** Discover ns8-idp service, bind one user domain, register/update OIDC client with proper redirect URIs, preserve client secret safely, authenticate app browser, validate issuer/audience/expiry/signature for API, stable user identity. Default personal owner; optionally admit named users as Reader/Editor/Admin with a single knowledge space. Check access at shared service boundaries. No per-document ACLs.
+
+**Acceptance:** Owner login/logout and session expiry work; unadmitted user denied; reader cannot write; editor cannot administer; admin may configure; REST rejects absent/invalid/mis-audienced tokens. Exercise owner and a normal test user using Playwright MCP on live C0 UI and admin settings. No passwords or cookies in Git.
+
+**Documentation gate:** `AGENTS.md` identity/roles invariants; `README.md` login and sharing instructions; `PLAN.md` evidence.
+
+**Implementation subplan and tests (13 October 2026):**
+
+- [x] Extend native configuration with a selected OIDC provider, one user domain and owner username. Validate before mutation, bind via `agent.bind_user_domains`, register via provider `register-client`, and request the Czero client ID as access-token audience. Use exact HTTPS callback/logout URIs. Store client credentials atomically in restricted state, never Redis environment/action output. Reconcile provider/domain events and restored/new module identity. Keep existing hostname-only installations usable for public health while resource access fails closed until identity is configured. Add SDK/schema/secret regression tests and update the NS8 Settings UI.
+- [x] Add packaged database migration for stable accounts, named application-wide membership grants, one-use login state and expiring server sessions. Identify accounts with validated issuer + signed LDAP account key. Resolve the selected owner’s LDAP UUID using native `Ldapclient.get_user_entry` before assigning ownership; share with verified named accounts by their persisted IDs, so username reuse cannot inherit access. Accounts become visible to the owner after a validated login attempt. The configured owner has Admin access; optional Reader/Editor/Admin grants share the same space. Enforce read/write/admin at reusable Core service boundaries; expose useful membership administration, with Editor resource writes introduced by subsequent resource milestones. Test denied/unadmitted users, role changes, renamed accounts, owner protection, transactions and persistence.
+- [x] Implement authorization-code login with S256 PKCE, one-use state and nonce; validated discovery/JWKS with bounded HTTPS requests and caching; strict signature/issuer/audience/expiry/required-claim checks. Reuse maintained OAuth/JOSE libraries, never implement cryptography. Use opaque Secure/HttpOnly/SameSite cookies backed by expiring sessions and protect cookie-authenticated writes against CSRF. REST also accepts validated access tokens, rejects ID tokens/algorithm confusion and never trusts token roles as C0 grants. Test invalid/missing/mis-audienced/expired tokens, nonce/state replay, session expiry/logout and optional-provider outage. Redact OAuth queries from application access logs; no passwords enter C0.
+- [x] Add minimal app login/logout, current identity/role and membership controls; update OpenAPI and `/agents` honestly without claiming future CRUD/search/MCP. Extend repeatable disposable tests with a real OpenLDAP domain, generated temporary personas and the verified ns8-idp module. Use native binding/client registration, not upstream's fake Redis binding fixture. Assert owner login/logout, denied normal user, admitted roles, negative REST authorization, saved settings and backup/restore/upgrade identities. Keep credentials/tokens/cookies out of logs/artifacts; TLS verification remains enabled in application clients, with any test CA/DNS setup confined to disposable fixtures.
+- [x] Review lifecycle restore/update implications alongside migration/session/client state, run local cryptographic/database and SDK tests, UI build, image publication/audits/scans and bounded native QEMU cases. Freeze M04 module/components above for the genuine predecessor fixture. Update all three documents and inspect closeout CI before completion. Interactive Playwright MCP and live tests remain operator-waived.
+
+**Reference findings:** Read current Core user-domain/OIDC contracts, Hermes numbered binding step, current ns8-idp README/register schemas and handler, realm/client/LDAP UUID/audience implementation and actual realm tests. Inspected ns8-idp commit `4034dc3046f0ed5d73a36588735316c7e354bf72` with [green upstream QEMU 38402058814](https://github.com/NethServer/ns8-idp/actions/runs/38402058814). Client registration infers its calling module, requires a native domain binding, preserves secrets/disabled clients and emits the signed `ldap_uuid`; access-token audience needs explicit self-client mapping. Exact logout URI registration is required. The provider returns a secret in its temporary, Core-managed task result; capture it privately and never persist it through `agent.set_env`. Upstream realm tests simulate a Redis binding and use fixed dummy passwords; C0 will use real native binding and generated private execution-time credentials instead. NethServer/Nethesis code search found no matching Python resource-server implementation: PyJWT search returns none, Authlib hits are a legacy PHP backend and Hermes dependency packaging. NethVoice's maintained OIDC action uses a separate proxy/trusted-mint architecture, which does not fit C0's already-agreed shared FastAPI/Core REST authorization. Use a small Core service with maintained OAuth/JOSE libraries, following [Authlib's code/PKCE client API](https://docs.authlib.org/en/stable/oauth2/client/http/index.html) and primary JWT validation documentation. Candidate package versions/licenses have been checked against current PyPI/source metadata; final locked dependencies will be recorded with implementation.
+
+**First Core slice:** Added `czero_core.identity` with trusted-key RS256 verification, strict issuer/audience/time/identity checks, bounded inputs, access-vs-ID-token separation and OIDC nonce/authorized-party/hash validation. Signed LDAP UUIDs normalize to stable keys; token role claims confer no C0 role. The separate immutable admitted `Actor` checks only Reader/Editor/Admin thresholds. Forty-eight new cryptographic/role cases plus the previous suite pass locally (109 total: 106 unit and three real database cases). Locked `joserfc==1.7.5` (BSD-3-Clause) and its cryptography dependencies; read [primary JWT/key/claim API](https://jose.authlib.org/en/guide/jwt/) before implementation. Core/app versions become 0.3.0/0.4.0; schema remains `0001_database`. Native update fixture now freezes verified M04 module/component digests. No app authentication or membership admission is claimed: this slice is reusable Core functionality, with native registration/session/UI integration still pending. CI/publication/native verification of the slice is pending.
+
+**Membership refinement:** Owner-name comparison alone would let an earlier, same-name LDAP identity claim an initially unbound owner grant. Core's maintained RFC2307/AD `Ldapclient.get_user_entry(user, lextra_attributes)` can resolve `entryUUID`/`objectGUID` in native configuration; use that stable key as the owner selector. Runtime membership grants reference verified account IDs rather than reusable names. Preserve identity on username/sub changes, reject a different UUID with the same name, and recheck persisted roles inside shared service methods. This keeps one owner and three simple roles without a policy engine or backend NS8 management library. Before implementing storage, define real PostgreSQL tests for unadmitted-profile persistence, same-name replacement, rename stability, role changes, forged/stale actors, owner protection and transactional rollback.
+
+**Core slice evidence:** `2edac1b85cc039f587b78cf27cf7b11c23fdca4e` passes [local CI 38419371707](https://github.com/Stell0/ns8-czero/actions/runs/38419371707), [publication/audits/scans 38419371417](https://github.com/Stell0/ns8-czero/actions/runs/38419371417) and [QEMU 38419664844](https://github.com/Stell0/ns8-czero/actions/runs/38419664844). Downloaded reports verify Debian 13/update: fourteen native passes from the frozen M04 predecessor; Rocky 9/install: twelve passes including baseline admin/application browser checks and three expected skips. These are packaging/lifecycle checks, not application-login acceptance. The M04 completion marker `da66cf37c5585aab926c4994386339eedf7b949a` also passes local 38417100920, publication 38417100918 and downloaded QEMU 38417413840 reports (Rocky update fifteen passes; Debian install eleven passes/three skips).
+
+**Account/membership slice:** Packaged `0002_accounts` adds issuer/LDAP-key-unique account profiles and simple role grants. `AccessService` records signed profiles without granting access, preserves account IDs across username/subject changes, derives ownership solely from the configured stable LDAP key, and uses current persisted grants inside privileged operations rather than trusting stale/forged Actor roles. Owner roles are controlled only by native configuration. Bound SQL parameters and transactional/advisory locking protect role mutations. Nine new actual PostgreSQL tests cover all three member roles, unadmitted-profile persistence, username reuse/rename, stale/forged callers, revocation, owner protection, issuer boundaries and input injection; 118 total local cases pass (106 unit + twelve database). Core/app versions become 0.4.0/0.5.0 and readiness checks current revision `0002_accounts`. Native owner-key lookup, client registration, sessions, login and authenticated app transport remain pending. Packaging/native migration verification of this slice is pending.
+
+**Account slice evidence:** `097e08490c5560b2cf0a29ab0388d5ee1ec52a16` passes [local CI 38423683320](https://github.com/Stell0/ns8-czero/actions/runs/38423683320), [publication/audits/scans 38423683275](https://github.com/Stell0/ns8-czero/actions/runs/38423683275) and [QEMU 38424017805](https://github.com/Stell0/ns8-czero/actions/runs/38424017805). Downloaded Debian 13/install report has eleven passes/three intended skips; Rocky 9/update has all fifteen passes including baseline browsers, actual M04-to-current migration and native backup/restore/replay. Accounts are not yet exercised through app authentication; actual service authorization is covered by database tests.
+
+**Session/OIDC Core slice:** Packaged `0003_sessions` stores hashed opaque session/state identifiers, private PKCE/nonce data, issuer/client scope and expiry. Browser binding and atomic `DELETE ... RETURNING` make state one-use even under simultaneous callbacks. Session access rechecks current membership, logout deletes its hash, and CSRF values are protected; no raw session token is stored. Login-state allocation is bounded and expires/prunes old state. Added nine real PostgreSQL session cases and nine signed/mock-transport OIDC cases; all 136 local tests pass (115 unit + twenty-one PostgreSQL). `OidcClient` uses `Authlib==1.8.0` and `httpx2==2.13.1` (verified BSD-3-Clause metadata) with `joserfc==1.7.5`, three-second HTTPS requests, capped discovery/JWKS responses, fixed cache TTL, trusted same-origin endpoints, S256 PKCE and paired ID/access-token identity checks. OIDC logout uses exact registered return URI/client ID without placing ID-token hints in URLs. Core/app versions are 0.5.0/0.6.0; current revision is `0003_sessions`. Native configuration and the FastAPI/UI integration are still pending; no app login/authorization is claimed. Publication/native verification of the slice remains pending.
+
+**Session slice evidence:** `22deac0234ca48775fa4494f0b36e1379df7c928` passes [local CI 38427482628](https://github.com/Stell0/ns8-czero/actions/runs/38427482628), [publication/audits/scans 38427482884](https://github.com/Stell0/ns8-czero/actions/runs/38427482884) and [QEMU 38427778036](https://github.com/Stell0/ns8-czero/actions/runs/38427778036). Downloaded reports verify Debian update fourteen passes and Rocky install twelve passes/three intended skips, including schema/row persistence and native restore/replay. These baseline browsers do not prove real SSO.
+
+**Application transport/UI slice:** FastAPI connects the shared Core services to login/callback/logout, configured-auth status, protected identity and admin account/role routes. Public health remains available; absent native identity configuration fails closed for resource access. Cookie writes require CSRF/configured Origin; malformed bearer tokens do not fall back to cookies. OpenAPI documents bearer/cookie alternatives. Access logs strip query values, and token-bearing test fixtures hide their representations. An HTTP regression exposed broad `ValueError` handlers converting PermissionDenied into 404/422; rethrow authorization errors so actual 403 responses survive. Local logout clears/revokes even during provider outage, with provider logout unavailable explicitly reported. Minimal UI uses safe text nodes for identity/profile data and current-role sharing controls; no future resource operations are claimed. Four actual PostgreSQL/real-signature ASGI workflows cover auth errors, all role changes, cookies, callback replay, logout, expiry and provider outage; two unit cases cover log redaction and fail-closed/OpenAPI behavior. All 142 local tests pass (117 unit + twenty-five database). Core/app versions are 0.6.0/0.7.0 with schema `0003_sessions`. Native owner/domain/IdP settings and real SSO end-to-end checks remain pending. Publication/native verification of this slice is pending.
+
+**Application slice evidence:** `2aed4fa680117b23cac6cdab5dd80310d641ead1` passes [local CI 38430137409](https://github.com/Stell0/ns8-czero/actions/runs/38430137409), [publication/audits/scans 38430137388](https://github.com/Stell0/ns8-czero/actions/runs/38430137388) and [QEMU 38430494925](https://github.com/Stell0/ns8-czero/actions/runs/38430494925). Downloaded baseline reports pass native lifecycle and the minimal unconfigured-sign-in page. These are not actual IdP login results; signed/mock-provider HTTP tests cover transport behavior locally.
+
+**Native configuration slice:** Focused `15validate-auth`, `25bind-user-domain`, `30register-client` and `40persist` extend existing native route/lifecycle steps. Discovery selects provider UUID; native LDAP validation resolves/preserves owner UUID before route changes. Bind through SDK and register as the calling module with self audience and exact callback/logout URIs; never supply a fake module owner. Restricted `auth.env` holds the secret/runtime config, is backed up explicitly and loaded only by the application unit. Create/update initialize private state, restore re-registers a new client for the recovered settings, and selected OIDC/domain events reconcile. Core's actual update action refreshes declared authorizations, so declare accountconsumer/clientadm without reinventing grants. Get-options exposes only domain/provider labels/IDs. Optional input preserves hostname-only compatibility; UI uses NsToggle/NsComboBox/NsTextInput and cleans task listeners. Five native regressions cover owner-key preservation, complete selection, exact registration and previous-secret preservation on error. All 147 local tests pass (122 unit + twenty-five database), Go schema checks and the production UI build pass with only inherited size warnings. Cross-module binding/client registration is not a distributed transaction; a registration failure preserves the prior secret file but may need operator re-save of the previous selection. Actual native SSO and configuration/restore verification remain pending.
+
+**Native failure and fix:** `dfa577a3f77e1d8dca4f23440ed70abff209617f` passes [local 38434624255](https://github.com/Stell0/ns8-czero/actions/runs/38434624255) and [publication 38434624237](https://github.com/Stell0/ns8-czero/actions/runs/38434624237), but [QEMU 38434904528](https://github.com/Stell0/ns8-czero/actions/runs/38434904528) fails native restore on both distributions. Downloaded journals show `Popen.__init__` rejects `input=` passed by `run_helper`; the configured upgrade hook has the same defect. Two regression cases reproduced it before switching both hooks to a rewound temporary stdin file. All 149 local cases now pass (124 unit + twenty-five database); replacement publication/QEMU remains pending. Browser/uninstall failures after restore are consequential, not separate passing checks.
+
+**Dependency finding:** Current ns8-idp has no GitHub release, and anonymous pull of its README `:1.0.0` returns MANIFEST_UNKNOWN. Verified public `:main` module digest is `sha256:fb33441753aba1f7df20df8511cf992dd21202e527a5cd983707a36876ec5976`, corresponding to maintained/green upstream source above. It declares idp-keycloak:main and PostgreSQL 18.6-trixie; freeze the module/component identities for the disposable fixture. This is a development integration dependency, not a stable release claim. A stable compatible IdP must be reviewed at M14 release readiness. Maintained IdP QEMU also installs `ldapproxy:1.4.0-dev.1` for a listener reachable from the Keycloak pod (upstream issue NethServer/dev#8188). The disposable C0 fixture uses native `update-module` on the discovered proxy instance with verified digest `sha256:c06ad303d81596a50c5aef84f3220fdd0ef5e3af7e85ce8c252fe4f0ca36219e`; no live Core component is changed. Stable compatible proxy availability is also a release prerequisite.
+
+**Native fix evidence:** `a3a9ac3f2271f3fdf919468289b214bada1acd84` passes [local 38436837119](https://github.com/Stell0/ns8-czero/actions/runs/38436837119), [publication 38436837179](https://github.com/Stell0/ns8-czero/actions/runs/38436837179) and [QEMU 38437115510](https://github.com/Stell0/ns8-czero/actions/runs/38437115510). Downloaded Debian install report has eleven passes/three expected skips; Rocky update has fifteen passes, including baseline admin/application browsers, clean native restore and archive replay. This closes the SDK regression; actual SSO is the next test gate.
+
+**Real SSO fixture increment:** Add a disposable OpenLDAP domain and pinned ns8-idp/Keycloak, generated private personas, a short-lived trusted CA and synthetic test hosts. Native binding/registration and persisted settings are asserted; test-only app CA/DNS drop-ins retain TLS verification. The real authorization-code probe checks owner admission, denied normal user, Reader/Editor/Admin changes, stale-session revocation, anonymous/invalid REST rejection, protected cookies, local/provider logout and stable account identity across restart. It uses neither password grants nor fake Redis bindings. Two local fixture tests protect private upload/no-password-in-argv behavior and Keycloak form parsing. All 151 local tests pass; Robot dry-run validates syntax only, and actual disposable SSO execution is pending.
+
+**Real SSO first execution:** `7250271` passes [local 38439262720](https://github.com/Stell0/ns8-czero/actions/runs/38439262720) and [publication 38439263201](https://github.com/Stell0/ns8-czero/actions/runs/38439263201). [QEMU 38439521496](https://github.com/Stell0/ns8-czero/actions/runs/38439521496) reaches successful native provisioning/registration, signed owner login, denied normal-user admission, role changes/revocation and local logout, then fails provider logout confirmation on Debian. The downloaded journal shows its relative form action was posted to Czero and returned 404. Resolve form actions relative to their provider page URL; add a regression for that exact redirect/hidden-field behavior. No application TLS validation is bypassed. Complete rerun and restart persistence remain pending; do not mark the SSO test passing from its intermediate assertions.
+
+**Rocky fixture failure:** The same first SSO run fails health after its test-only CA mount on Rocky. Downloaded journal shows rootless Podman cannot apply the SELinux label to the root-owned public CA file (`lsetxattr ... operation not permitted`). Give that public bind source to the module account before mounting it; keep mode 0644 and `:ro,z`, preserve SELinux enforcement and application TLS verification. A focused ownership regression fails before the fix and passes after it. The provider form fix is `35719ce`; both fixes need a complete fresh QEMU run.
+
+**Disposable diagnostic privacy:** The first Debian artifact contained transient authorization-code/state queries from Core Traefik access logs, although Czero access logs already strip all queries. Removed that raw public diagnostic artifact after retaining its failure evidence locally; no operator credentials were used. Inspected maintained Traefik static config and current action schemas: there is no access-log settings action. Disable only its default access log in the disposable SSO fixture and restart its unit, preserving certificates/routes and application request logging. Do not change any live proxy. Czero cannot claim platform-wide production log redaction; review the Core/Traefik logging contract at M14. Add a disposable assertion that Czero and proxy logs contain no OAuth query values.
+
+**Replacement preparation:** `35719ce` passes [local 38441895117](https://github.com/Stell0/ns8-czero/actions/runs/38441895117) and [publication 38441895022](https://github.com/Stell0/ns8-czero/actions/runs/38441895022). Superseded [QEMU 38442318347](https://github.com/Stell0/ns8-czero/actions/runs/38442318347) was cancelled before SSO to avoid repeating the known Rocky bind-source defect and raw proxy query diagnostics; it is not passing evidence. Combined fixture corrections now pass 155 local cases (130 unit + twenty-five database), including ownership and both-stream log regressions. A complete replacement run is pending.
+
+**Real SSO corrected evidence:** `5af51c367787e4eae924c374f0a4279a3a407012` passes [local 38442998415](https://github.com/Stell0/ns8-czero/actions/runs/38442998415), [publication 38442998546](https://github.com/Stell0/ns8-czero/actions/runs/38442998546) and [QEMU 38443270965](https://github.com/Stell0/ns8-czero/actions/runs/38443270965). Downloaded Debian update report has fifteen passes; Rocky install has thirteen passes/three expected skips. The complete real SSO case passes on both: native configuration/secret privacy, signed owner identity, normal-user denial, all role changes, immediate revocation, protected cookies, local/provider logout and stable account identity after restart. Log assertions pass and both downloaded diagnostic journals contain zero OAuth query-bearing access lines. Baseline admin/application browsers also pass on Rocky; live and interactive Playwright remain waived. Configured upgrade/clean restore with admitted identities is the remaining M05 gate.
+
+**Browser report privacy audit:** Reviewing the corrected Rocky report found that Robot retains nested `Fill Text` arguments even at log level NONE, exposing the generated temporary cluster-browser password. Removed that raw artifact and cancelled [identity QEMU 38445919105](https://github.com/Stell0/ns8-czero/actions/runs/38445919105) before repeating the exposure; it is not passing evidence. The VM credentials were disposable and no operator credentials were used. Call the public Browser fill method directly for plain string values, retaining Robot conversion only for typed states/timeouts. Upload the cluster user/hash payload privately and feed native `api-cli` through stdin; never put it in argv. Add actual-output privacy assertion and two positive/negative regressions. `904abcc` passes [local 38445640827](https://github.com/Stell0/ns8-czero/actions/runs/38445640827) and [publication 38445640925](https://github.com/Stell0/ns8-czero/actions/runs/38445640925); configured identity persistence still needs fresh QEMU verification.
+
+**Identity first verification and readiness refinement:** `5535826` passes [local 38450860340](https://github.com/Stell0/ns8-czero/actions/runs/38450860340) and [publication 38450860257](https://github.com/Stell0/ns8-czero/actions/runs/38450860257). [QEMU 38451133270](https://github.com/Stell0/ns8-czero/actions/runs/38451133270) passes real SSO on both distributions and the actual browser-output privacy assertion on Rocky, with zero password-bearing keyword arguments in both downloaded XML reports. Its identity-persistence case fails immediately after configured update/test pod restart, before backup. That helper did not await application readiness, unlike established upgrade cases; add the same bounded 30-second health poll before authenticating and report only the HTTP status on page failure. Two regression cases prevent probing an unready app; all 159 local cases pass (134 unit + twenty-five database). A rerun must confirm the guard or expose any persistent failure; no restore success is claimed. Audited seventy-two historical disposable archives, retained sanitized XML and removed thirty additional raw archives containing temporary browser-password arguments. No operator credentials were used.
+
+**Configured identity upgrade and repository fix:** `75188c6` passes [local 38454122326](https://github.com/Stell0/ns8-czero/actions/runs/38454122326) and [publication 38454122632](https://github.com/Stell0/ns8-czero/actions/runs/38454122632). [QEMU 38454517549](https://github.com/Stell0/ns8-czero/actions/runs/38454517549) advances past the readiness guard and verifies signed owner/member IDs and the Editor grant after native update. The next encrypted backup fails: Restic reports wrong password/no key. The test deleted/recreated a repository at the same destination, generating a new encryption key for the retained UUID/path. Core `restore-module/50restore_module` explicitly reuses the original logical MODULE_UUID when the donor is removed, while allocating a new module ID. Reuse the existing native repository/key and create only a new schedule for the restored instance; never remove encrypted data or bypass encryption to fix the test. Add a regression preventing repository recreation. All 160 local cases pass (135 unit + twenty-five database); clean identity restore remains pending.
+
+**Identity persistence acceptance refinement:** After the real SSO workflow, admit the verified member as Editor through owner-authenticated REST and retain expected account IDs outside the module backup. Run a configured native update and verify fresh signed owner/member logins and saved roles. Then run encrypted native backup, verify the snapshot, remove only the disposable donor, restore to a new module ID, reapply test-only CA/DNS and verify unchanged C0 account IDs/Editor grant plus the new native client registration. Keep previous backup resources cleaned up. Dry-run validates syntax only; actual execution is pending.
+
+**Runtime acceptance evidence:** `19131fcfd722c1ac99c4c387946aba2b22bd5500` passes [local 38458497048](https://github.com/Stell0/ns8-czero/actions/runs/38458497048), [publication/audits/scans 38458497039](https://github.com/Stell0/ns8-czero/actions/runs/38458497039) and [QEMU 38458727367](https://github.com/Stell0/ns8-czero/actions/runs/38458727367). Downloaded reports confirm Debian 13/update sixteen passes and Rocky 9/install fourteen passes/three expected predecessor-only skips. Both real SSO and admitted-identity update/clean-restore cases pass. Signed fresh logins preserve owner/member account IDs and Editor grants after a new module/client identity; encrypted repository key reuse is verified. Both diagnostic journals contain zero OAuth query-bearing access lines and both XML reports contain zero credential-bearing keyword argument candidates. All 160 local tests (135 unit + twenty-five PostgreSQL), native schema validation and the production UI build pass. Review confirms shared Core authorization, focused native steps, restricted secrets and runtime development-file exclusion. Interactive Playwright/live remain operator-waived. Production proxy logging and compatible stable IdP/proxy remain release review items, not claimed resolved. Documentation closeout CI is pending; M05 remains unchecked until it passes.
+
+**Documentation closeout and resumed live testing:** Documentation commit `75a0c383c6762c8e63e609a091c3385688f0e4f6` passes [local 38464482879](https://github.com/Stell0/ns8-czero/actions/runs/38464482879), [publication/scans 38464482721](https://github.com/Stell0/ns8-czero/actions/runs/38464482721) and [QEMU 38465078551](https://github.com/Stell0/ns8-czero/actions/runs/38465078551). Downloaded Debian install has thirteen passes/three expected skips; Rocky update has seventeen passes. Both signed SSO and configured identity update/restore cases pass, with zero credential argument candidates/OAuth query-bearing journal lines. Operator subsequently reauthorized live testing of only the dedicated Czero instance; interactive Playwright remains suspended. Native administration login, targeted M01-to-M05 update, hostname/certificate configuration and identity registration pass. Current live health verifies Core/app 0.6.0/0.7.0, PostgreSQL/vector and migration 0003. Introducing pod dependencies stopped the old M01 process; hostname configuration recovered the enabled stack. Record this legacy transition limitation for M14 rather than claiming uninterrupted upgrade. Live owner login currently fails closed with authentication-unavailable 503, although the provider's public discovery succeeds with trusted TLS and matching endpoints. Add a focused native diagnostic action with safe transport/error categories and tests, then inspect the actual Czero runtime connection and apply the smallest fix. No live provider, proxy, directory or unrelated module has been modified. M05 remains open pending this resumed live gate.
+
+**Diagnostic increment:** Core/app 0.6.1/0.7.1 add bounded trusted OIDC connectivity status, a native numbered diagnostic action/CLI and fixed failure categories. Malformed bearer envelopes reject locally before discovery; signature/claims still use JOSE. Seventeen regressions cover cached success, TLS/network/HTTP/metadata redaction, malformed-token/provider outage, private CLI environment/client cleanup and actual native command delegation. All 177 local tests pass (152 unit + twenty-five PostgreSQL). Native QEMU and live diagnostic evidence remain pending.
+
+**Live diagnostic subplan:** Implement Core OIDC connectivity status using bounded existing requests and sanitized reason codes; expose it only through a small NS8 numbered action/CLI with validated JSON, not arbitrary shell or secret output. Test TLS/network/metadata error redaction and diagnostic CLI/action schema, run local/publication/QEMU checks, deploy only Czero and reproduce the live failure. Preserve normal certificate verification. Reconcile all three documents before closing M05.
+
+**Initial diagnostic evidence and refinement:** `5ffafedb4c2b32721cfebe6565a18e85809669b7` passes [local 38468508671](https://github.com/Stell0/ns8-czero/actions/runs/38468508671), [publication/audits/scans 38468508756](https://github.com/Stell0/ns8-czero/actions/runs/38468508756) and [QEMU 38468997250](https://github.com/Stell0/ns8-czero/actions/runs/38468997250). Downloaded Debian update has sixteen passes and Rocky install fourteen passes/three expected skips; disabled/healthy native diagnostics, real signed SSO and identity update/restore pass. Both reports/journals pass credential/query privacy checks. Targeted live update exits zero and healthy HTTPS verifies Core/app 0.6.1/0.7.1. Native diagnostic returns configured/unavailable/connection-failed; malformed-token and anonymous requests now return 401, while login remains safe 503. Public provider certificate/discovery/JWKS are valid and every unrelated inventory entry is unchanged. Inspecting the actual installed httpcore2 backend confirms OSError causes survive both wrappers. Refine fixed categories for DNS, ECONNREFUSED and unreachable routes, with three nested-cause regressions; Core/app become 0.6.2/0.7.2. No exception text or addresses are returned. Root cause/fix remains pending the refined live probe; do not claim signed live login passes.
+
+**Refined diagnostic evidence and local-routing subplan:** `c99272d726b3ad38696ef0a0ab52e64f4c46e355` passes [local 38471828966](https://github.com/Stell0/ns8-czero/actions/runs/38471828966), [publication/scans 38471829665](https://github.com/Stell0/ns8-czero/actions/runs/38471829665), schema-doc generation and [QEMU 38472086502](https://github.com/Stell0/ns8-czero/actions/runs/38472086502). Downloaded Debian install has thirteen passes/three expected skips; Rocky update seventeen passes, including signed SSO and identity update/restore; both privacy checks pass. Targeted live update succeeds, healthy HTTPS verifies Core/app 0.6.2/0.7.2 and native diagnostics identify ECONNREFUSED rather than DNS/TLS failure. Live invalid hostname returns exit 10 without changing settings/health; OpenAPI identity/membership contracts and secret-free configuration pass. The selected provider is on the same node. Inspected current [Nextcloud pod local routing](https://github.com/NethServer/ns8-nextcloud/blob/main/imageroot/systemd/user/nextcloud.service) at `bddf0562370b0bf90b024394673fcf98a67af7e1` with [green upstream QEMU 38347060644](https://github.com/NethServer/ns8-nextcloud/actions/runs/38347060644), plus Grafana/Dokuwiki/Webtop/SOGo/Roundcube units. They explicitly use slirp host-loopback and a local host alias. Adapt that native pattern: validate the selected issuer hostname, persist a non-secret gateway alias only for same-node providers after successful registration, and set explicit slirp host-loopback on the private pod. Remote providers keep ordinary DNS. Recreate pod/database/app together during configure/update while retaining cold-state semantics. Remove the disposable fixture's VPN/DNS override so actual native local routing is tested; retain only trusted test-CA setup. Define regressions for local/remote mapping, failed registration preservation, disabled authentication and absence of fixture DNS overrides. Rerun local/publication/QEMU, then verify live trusted discovery and signed login/logout. No shared node/proxy/provider modification or TLS bypass is permitted. This routing fix is pending implementation and evidence; the exact platform listener/DNS behavior is not otherwise claimed diagnosed.
+
+**Local-routing implementation:** Native validation stages a bounded same-node issuer host alias; successful registration persists only that non-secret Podman argument, preserving the prior mapping on failure and clearing it when authentication is disabled/remote. The pod explicitly uses the maintained slirp host-loopback pattern. Configure/update list pod, PostgreSQL and app together so routing/image changes take effect; update uses try-restart to keep cold services stopped. Disposable SSO no longer replaces pod DNS; only the trusted CA drop-in remains. Four new cases cover local/remote selection, disable clearing and invalid hostname rejection, plus existing failure-preservation and fixture assertions. All 184 local cases pass (159 unit + twenty-five PostgreSQL), shell syntax and Go action schemas pass. Publication/QEMU and live correction remain pending; no success is inferred from implementing the maintained pattern.
+
+**Final runtime/live acceptance (14 October 2026):** `70024c2e1cdd7ce369a71eee5834c96d0fef07c9` passes [local 38474580971](https://github.com/Stell0/ns8-czero/actions/runs/38474580971), [publication/audits/scans 38474581054](https://github.com/Stell0/ns8-czero/actions/runs/38474581054) and [QEMU 38474830280](https://github.com/Stell0/ns8-czero/actions/runs/38474830280). Downloaded Debian update has sixteen passes; Rocky install fourteen passes/three expected skips. Real signed SSO and configured identity update/restore pass through native gateway routing, with no disposable pod DNS override. Both XML/journal privacy checks pass. Verified published module `sha256:78b1c366ba4068b74b164c23ab5ee33dced4fe6e08b0c3254956386affe9b5a7`, app `sha256:40b0f42f3076f4cca4424cc7db33f9b379a670386b96f67b885001d1e4c4d179` and PostgreSQL `sha256:b3bf8bd1dc483ccd638b0c2254b5873c592bb0f1937f7db7e64fca6acd273f67`. Targeted live update exits zero and eliminates the refused connection: native trusted discovery/JWKS status is ok, HTTPS health/database/schema are ready, signed owner admission and Secure/HttpOnly session pass, Admin membership inspection succeeds, missing-CSRF/owner-role writes return 403, anonymous/malformed bearer return 401, local/provider logout pass. Native restart of only Czero returns zero; bounded readiness, fresh login with unchanged owner account ID, persisted hostname/certificate/identity configuration and all active/not-failed service states pass. Normal TLS validation remains enabled. Every unrelated normalized inventory entry is unchanged. Only the supplied application persona was exercised live; Reader/Editor/Admin admission/revocation remain proven in real disposable SSO tests. Interactive Playwright stays waived; no live destructive test, SSH assumption or shared provider/directory/proxy configuration change occurred. Source review confirms focused native actions, shared Core authorization, runtime allowlisting and no additional dependencies. Final three-document closeout CI is pending; M05 remains unchecked until that gate passes.
+
+**Evidence:** M05 is complete. Runtime/local/live evidence is recorded above at `70024c2e1cdd7ce369a71eee5834c96d0fef07c9`. Final three-document closeout `153605c909f3ba8b16a4f05551bf09da856028d7` passes [local 38477228249](https://github.com/Stell0/ns8-czero/actions/runs/38477228249), [publication/audits/scans 38477228104](https://github.com/Stell0/ns8-czero/actions/runs/38477228104) and [QEMU 38477491067](https://github.com/Stell0/ns8-czero/actions/runs/38477491067). Downloaded Debian install has thirteen passes/three expected skips; Rocky update seventeen passes, including native gateway SSO and admitted-identity update/restore. Both credential/query privacy audits pass. All 184 local cases, Go schemas, shell syntax and the production administration UI build pass. Permitted live owner admission/logout, protected session/CSRF, configuration, certificate/health, negative REST, restart/stable account and unchanged unrelated inventory pass on the same runtime code. Interactive Playwright and a second live application persona were not exercised; all member-role/revocation behavior is proven in disposable SSO. No release is declared. Legacy M01 resave, production proxy-log review and stable IdP/proxy availability remain documented maintenance/release items.
+
+**Main marker verification:** `55c1a6e` passes [main local 38480063154](https://github.com/Stell0/ns8-czero/actions/runs/38480063154), [publication 38480063196](https://github.com/Stell0/ns8-czero/actions/runs/38480063196), schema-doc generation and [QEMU 38480337580](https://github.com/Stell0/ns8-czero/actions/runs/38480337580). Downloaded Debian update has sixteen passes and Rocky install fourteen passes/three expected skips; both privacy audits pass. M05 main delivery is verified.
+
+### M06 — Deterministic jobs and database-backed scheduler [x]
+
+**Goal:** A simple reusable asynchronous/cron substrate for application developers, with no AI orchestrator.
+
+**Copy/adapt from:** [ns8-mail systemd timer](https://github.com/NethServer/ns8-mail/blob/main/imageroot/systemd/user/spam-expunge.timer); [ns8-mail timer activation action](https://github.com/NethServer/ns8-mail/blob/main/imageroot/actions/create-module/20spam-expunge); [ns8-mail one-shot service](https://github.com/NethServer/ns8-mail/blob/main/imageroot/systemd/user/spam-expunge.service); [ns8-porthos timer](https://github.com/NethServer/ns8-porthos/blob/main/imageroot/systemd/user/snapshot.timer).
+
+**Implement:** PostgreSQL-backed `jobs`/`job_runs` and `scheduled_tasks`/`task_runs`; registered Python handlers, idempotency, retry and concurrency/timeout limits, restart recovery; one systemd user timer wakes scheduler. Seed one cheap statistics/health task and a weekly bounded maintenance check. No user-defined arbitrary shell, SQL, or built-in LLM calls. Expose simple status/configuration REST.
+
+**Acceptance:** Due tasks execute once under normal conditions and safely recover from restarts; failures logged and retried within limits; no duplicate concurrent execution; admin can inspect schedules; CI/QEMU timer/service checks pass.
+
+**Documentation gate:** `AGENTS.md` scheduler registration contract; `README.md` operator schedule and status; `PLAN.md` evidence.
+
+**Implementation subplan and tests (14 October 2026):**
+
+- [x] Add packaged `0004_jobs` migration with constrained `jobs`/`job_runs`, `scheduled_tasks`/`task_runs`, bounded JSON payload/result, unique idempotency and schedule/due keys. Seed hourly statistics/health and weekly bounded expired-session/history maintenance. Keep schedules as fixed UTC intervals (minute to 31 days), coalescing missed intervals to one due run. Test repeatable migration, uniqueness, input/conflict handling and persistence with actual PostgreSQL.
+- [x] Add a small trusted Python handler registry and Core queue/schedule services. No request selects an import path, SQL or shell. Recheck Admin membership at exposed service boundaries; validate registered payloads, paging, interval/retry/timeout caps. Provide protected REST enqueue/inspection and schedule configuration with shared service methods/CSRF. Test Reader/Editor/admin/revocation and error contracts with signed real-database ASGI fixtures.
+- [x] Implement a serial CLI worker with a PostgreSQL session advisory lock (49374), committed attempt history, transactional database effects/completion, bounded retry/backoff and interrupted-run recovery. Trusted handlers must be idempotent for effects outside the transaction; document at-least-once restart behavior. Bound Python handler deadlines and the entire native container lifetime. Test real concurrent processes, timeout rollback, failure/retry limits, persisted running-state recovery and due-task deduplication before exposing execution.
+- [x] Adapt maintained mail/Porthos timer and one-shot patterns: one native user timer wakes an unprivileged container from the existing app image/private pod; trusted app code builds its registry. Couple timer/worker to app lifecycle without starting cold instances. Extend native create/update/restore and dump/cleanup to pause worker/timer during backup and resume prior timer state, including failures and older archives. Test metadata/backward compatibility and actual QEMU enable/run/restart/backup/restore behavior. Retain immutable M05 predecessor module/app/database digests recorded above for genuine schema upgrade tests.
+- [x] Add native disposable Robot worker/timer/state assertions and real-SSO REST authorization tests; verify publication/runtime audits/local/QEMU and permitted live schedules/jobs/persistence on only the dedicated Czero instance. Update all three documents with registry/deadline/retry/backup contracts, actual REST usage and evidence. Interactive Playwright remains waived; destructive scenarios remain disposable.
+
+**Reference findings:** Inspected current mail `spam-expunge.timer`, one-shot service and numbered create activation at mail `d11725133952eaa82f56e5fc4806de31df2ada43`, with [green upstream QEMU 38369327541](https://github.com/NethServer/ns8-mail/actions/runs/38369327541); inspected Porthos weekly timer at `6688c3748d290c2d7c0e8797f3dec2db71858e6e`. Reuse native timer/one-shot lifecycle, not another scheduler daemon/framework. NethServer Python `SKIP LOCKED` and Nethesis `scheduled_tasks` searches found no reusable application queue; use the existing SQLAlchemy/psycopg/Alembic stack and documented [PostgreSQL locks](https://www.postgresql.org/docs/17/explicit-locking.html). Current M04 dump/restore and M05 sessions are the local integration contracts; preserve service state, credentials, knowledge-space/account identities and default runtime allowlists. Worker deadlines rely on standalone POSIX execution plus native container termination; handlers must bound their own database/I/O operations and avoid generative AI.
+
+**Evidence:** M06 is complete. Runtime/local/disposable/permitted live evidence is recorded below. Final documentation `564a08482c8c02998c98f00d6b52c72137bdf2d2` passes [local 38490127429](https://github.com/Stell0/ns8-czero/actions/runs/38490127429), [publication/audits/scans 38490127207](https://github.com/Stell0/ns8-czero/actions/runs/38490127207) and [QEMU 38490323463](https://github.com/Stell0/ns8-czero/actions/runs/38490323463). Downloaded Debian update has seventeen passes; Rocky install fifteen passes/three expected update-only skips. Worker/timer, backup/restore and signed SSO pass; both credential/query artifact checks have zero candidates. Review corrects a stale runtime `/agents` timer sentence and adds an assertion. Freeze verified M06 runtime module `sha256:0d47cb23b7bf1d5a9f814bcc1399a5d8f1ebddbcd02ee850017acc52d4946252`, app `sha256:cbd334d2a02d9c1c5a0a72e82e5e4a83bab34f5219c1c33529b84e4d148a81a2` and PostgreSQL `sha256:3ce97f901b62e6ae3788173cac65079c8562bc6d802b96edefe6b71d486c350d` for M07 predecessor tests. Interactive Playwright remains waived; destructive tests remain disposable.
+
+**Core queue foundation slice:** Add `0004_jobs` with constrained queue/attempt/schedule/due records, two seeded UTC schedules and lookup indexes. A trusted handler registry validates names/callables, bounded canonical JSON and timeout/retry limits; public queue/schedule operations recheck Admin membership inside the transaction. Handler/payload fingerprints reject conflicting idempotency atomically; due-task row locks and unique keys coalesce missed intervals without duplicate runs. Builtins report aggregate account/session/queue health and prune at most 1000 expired-session/login-state or old-terminal-job records per table. Fifteen registry/JSON unit cases and nine real PostgreSQL cases cover constraints, rights/forged actors/revocation, idempotency, due coalescing, configuration/migration persistence, aggregate-only health and bounded maintenance. Core/app become 0.7.0/0.8.0 and readiness requires `0004_jobs`; genuine predecessor fixtures freeze all three verified M05 digests. Worker execution, REST and native timer/backup coordination remain pending. All 208 local cases (174 unit + thirty-four PostgreSQL), Go schemas and sixteen non-UI Robot dry-run cases pass. Publication/QEMU verification of the committed slice remains pending; no background execution is claimed.
+
+**Foundation CI and worker/REST slice:** `8fbd1f5` passes [local 38481738777](https://github.com/Stell0/ns8-czero/actions/runs/38481738777), [publication/audits/scans 38481738813](https://github.com/Stell0/ns8-czero/actions/runs/38481738813) and [QEMU 38481959060](https://github.com/Stell0/ns8-czero/actions/runs/38481959060). Downloaded Debian install has thirteen passes/three expected skips; Rocky update seventeen passes, exercising actual M05-to-0004 upgrade, native backup/restore, real SSO and identity persistence; privacy checks pass. Add standalone serial Worker with session lock, transactional effects/completion, bounded retries/deadlines and interrupted-attempt recovery; shared trusted app registry and typed Admin REST job/schedule routes reuse existing auth/CSRF. Eight actual PostgreSQL worker cases include real process death, overlapping workers, rollback/retry limits, timeout, lock release, due-once completion and a post-COMMIT timeout regression. Three signed database-backed ASGI cases cover contracts, conflicting requests, all roles/revocation and cookie Origin/CSRF. All 219 local cases pass (174 unit + forty-five PostgreSQL). Core/app become 0.8.0/0.9.0, schema stays 0004. Native timer/container guard, backup coordination and live execution remain pending; the standalone worker does not claim automatic dispatch yet. Add real-SSO schedule-role assertions to the disposable probe. Replacement publication/QEMU must pass.
+
+**Native timer/backup integration (verification pending):** Add one app-dependent user timer and one-shot unprivileged app-image container, with a 150-second native lifetime guard and idempotent container stop/removal. Native create/update enable the timer under app startup without waking cold instances. Scheduler status distinguishes activating one-shot execution from idle. Dump stops timer/worker before SQL archive preparation and retains the pause through Restic; a private transient resume file is excluded from backup inputs, cleanup resumes the prior active timer and dump failure restores it immediately. Format-1 restore accepts missing old scheduler fields and preserves explicit paused state. Six backup-state/backward-compatibility cases and two status cases join the suite: all 227 local tests pass (182 unit + forty-five PostgreSQL), Go schemas, shell syntax and seventeen non-UI Robot dry-run cases pass. Disposable Robot now checks cold timer/worker state, actual due task completion, duplicate-free second wake, timer/app restart and restored run history. Native execution, publication/QEMU and live evidence remain pending. No timer pass is inferred from dry-run.
+
+**Worker/REST CI evidence:** `dfae455` passes [local 38485339994](https://github.com/Stell0/ns8-czero/actions/runs/38485339994), [publication/audits/scans 38485340047](https://github.com/Stell0/ns8-czero/actions/runs/38485340047) and [QEMU 38485543439](https://github.com/Stell0/ns8-czero/actions/runs/38485543439). Downloaded Debian update has sixteen passes and Rocky install fourteen passes/three expected skips. Real signed SSO now asserts Admin schedule inspection and Editor denial, plus previous admission/revocation and native identity update/restore. Credential/query privacy checks pass on both. Native timer/backup additions above remain pending their own publication/disposable/live gate.
+
+**Native/runtime/live evidence (14 October 2026):** `bde7524` passes [local 38487514145](https://github.com/Stell0/ns8-czero/actions/runs/38487514145), [schema docs 38487514542](https://github.com/Stell0/ns8-czero/actions/runs/38487514542), [publication/audits/scans 38487514005](https://github.com/Stell0/ns8-czero/actions/runs/38487514005) and [QEMU 38487724448](https://github.com/Stell0/ns8-czero/actions/runs/38487724448). Downloaded Debian install has fourteen passes/three expected skips; Rocky update eighteen passes. Actual native worker/timer completion, due-run deduplication, cold-state preservation, restart, restored history, backup/restore, signed schedule authorization and identity persistence pass. Both credential/query privacy audits pass. All 227 local cases (182 unit + forty-five real PostgreSQL), schema/shell and seventeen non-UI dry-run checks pass. Targeted live update exits zero and confirms Core/app 0.8.0/0.9.0, schema 0004 and healthy HTTPS/vector/database. Native timer is active/enabled and worker not failed. Owner-authenticated schedule pause/resume, idempotent enqueue/replay and 409 conflict pass; the real native timer completes the queued health job with one attempt. Targeted native restart, bounded readiness, stable owner ID, completed job/history and saved schedule persistence pass; timer resumes without failure. All unrelated normalized inventory entries are unchanged. No SSH assumption or live destructive action occurred; interactive Playwright remains waived. Review confirms trusted handlers, transactional completion, safe logs, same services behind API/worker and native one-shot lifecycle; no dependencies or runtime development files were added. Remaining nonblocking limits: serial/minute-granularity execution, Python deadline plus container guard for extension calls, idempotent external effects, no full jobs UI until M12, and foreground file-write backup coordination deferred until M08 introduces it. Final three-document closeout CI is pending; M06 remains unchecked until it passes.
+
+### M07 — Generic application object model and reusable CRUD [x]
+
+**Goal:** Cover common CRM/inventory/project/idea-style records without creating a database table for every object type.
+
+**Search rule (no direct reusable NS8 object engine identified):** Search current NethServer/Nethesis code for `JSON Schema`, `jsonb`, `validate-input.json`, CRUD action contracts and data-driven forms. Reuse NS8 action/schema conventions from [ns8-core agent](https://github.com/NethServer/ns8-core/blob/main/docs/modules/agent.md) and form components from [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib); use PostgreSQL's ordinary JSONB/index constraints rather than imitating a huge no-code platform.
+
+**Implement:** `object_types` (JSON Schema, names/labels), `objects` (JSONB, revision, stable id), `object_relations`, tags/events and indexed query/CRUD services. Validate schema, permission, paging/filters, type-level uniqueness where needed, optimistic concurrency, safe batch writes, and typed references to future wiki/real relational records. Dedicated SQL tables remain supported for transactional domains. Add generic REST endpoints and minimal reusable record list/detail UI.
+
+**Acceptance:** Agents/API can register types and CRUD records; two test domains (inventory and projects) run without new schema tables; conflict/invalid input detected; typed relations resolve; Reader/Editor rights enforced; CI and browser checks pass.
+
+**Documentation gate:** `AGENTS.md` type/schema extension rules; `README.md` CRUD examples and limitations; `PLAN.md` evidence.
+
+**Implementation subplan and tests (14 October 2026):**
+
+- [x] Add packaged `0005_objects` with type definitions, JSONB objects/stable UUIDs/revisions, constrained typed relation endpoints, tags, transactional change events and lookup/JSONB indexes. Keep immutable registered schemas initially; migrations/extensions handle later schema evolution. Preserve all existing identities/jobs/schedules. Test migration repeatability and native M06 predecessor upgrade with frozen component digests.
+- [x] Build a small Core ObjectService with persisted Reader reads, Editor writes and Admin type registration. Validate bounded object-root Draft 2020-12 schemas and JSON, rejecting remote/recursive references and unsafe validation constructs; never fetch schemas from request URLs. Register optional top-level scalar uniqueness fields enforced transactionally. Test invalid schemas/records, uniqueness races, stale revisions, safe paging/filters and atomic batches against real PostgreSQL.
+- [x] Store object-to-object relations with foreign keys and type validation; provide trusted resolver registration for future sources/Wiki/dedicated SQL records, never request-provided callbacks. Test nonexistent/wrong-type endpoints, deletion semantics and stable IDs; add bounded tags and paginated events in the same write transaction.
+- [x] Expose typed REST using existing identity/CSRF and shared services, including type registration, object CRUD/batches, relations and event inspection. Add minimal separate application list/detail/create/edit UI with JSON Schema validation errors, revision conflict handling and safe DOM text. Exercise inventory and projects without domain SQL tables; test Reader denial, Editor writes, revoked/stale actors, malformed requests and cookie CSRF.
+- [x] Extend disposable real-SSO/browser, upgrade and encrypted backup/restore assertions for objects/relations/events. Verify local, publication/runtime audits and both QEMU reports, then permitted live CRUD/persistence only in the dedicated Czero instance. Interactive Playwright remains waived. Review and reconcile all three documents before closing M07.
+
+**Reference findings:** Inspected bound JSONB update/read in [NethServer controller storage](https://github.com/NethServer/ns8-nethsecurity-controller/blob/main/controller/api/storage/storage.go) at `f2d49650aac11cc28dcbd6d14674c3832e989511` and typed, paginated customer JSONB repositories in [NethServer/my](https://github.com/NethServer/my) at `2aec922bf2e8a56e5918e7e1be6c542791d012b3`. Searches found typed application storage, not a reusable generic object engine. Reuse ordinary bound queries, indexes and constraints; do not copy the CRM's multi-organization ACLs or AGPL implementation. Existing Core account/job transaction boundaries and separate static app UI remain local contracts. Use [jsonschema validation](https://python-jsonschema.readthedocs.io/en/stable/validate/) and [PostgreSQL JSONB/index documentation](https://www.postgresql.org/docs/17/datatype-json.html); pin jsonschema as runtime dependency when implemented and publish the supported bounded schema contract. No domain-specific tables or generic management framework are needed.
+
+**Main M06 delivery verification:** `426710a409341263cc7f33b1a65aae63326c6192` passes [local 38491998394](https://github.com/Stell0/ns8-czero/actions/runs/38491998394), [publication/audits/scans 38491998391](https://github.com/Stell0/ns8-czero/actions/runs/38491998391), schema documentation and [QEMU 38492174132](https://github.com/Stell0/ns8-czero/actions/runs/38492174132). Downloaded Debian install has fourteen passes/three expected skips; Rocky update eighteen passes. Both artifact privacy checks pass. The discovery correction and M06 main marker are verified.
+
+**Core foundation slice:** Add packaged `0005_objects`, immutable bounded schemas, JSONB records/tags/revisions, scalar unique keys, typed foreign-key relations and transactional metadata events. Core services recheck persisted Reader/Editor/Admin rights and atomically roll back conflicting batches. Mutation lock 49375 preserves event commit order, with a two-thread regression preventing cursor loss. Nineteen schema/JSON unit cases and ten actual PostgreSQL cases cover two domains, uniqueness/revision races, role forgery/revocation, constraints, relation cleanup, migration persistence and paging/filters. Actual tests exposed an ambiguous nullable tag parameter; explicitly cast it before the null check, retaining filtered/unfiltered regression coverage. All 256 local tests pass (201 unit + fifty-five PostgreSQL), Go schema checks and seventeen non-UI Robot dry-run cases pass. Core/app become 0.9.0/0.10.0; native update now freezes all M06 predecessor digests. REST/UI, non-object reference resolvers, extended disposable/live acceptance and final docs remain pending. Publication/QEMU of this slice must pass before continuing. Dependency-wheel inspection found jsonschema bundles a `tests` directory; extend the existing builder-only development-directory removal to keep those files out of runtime, retaining the assembled-image audit.
+
+**Foundation acceptance and REST/UI slice:** `6a2d07b` local checks pass; its publication was superseded while dependency test cleanup was corrected. Replacement `5c14b36065832790dd5f86fd73c2ba9ff877d537` passes [local 38492572240](https://github.com/Stell0/ns8-czero/actions/runs/38492572240), [publication/audits/scans 38492572246](https://github.com/Stell0/ns8-czero/actions/runs/38492572246) and [QEMU 38492760086](https://github.com/Stell0/ns8-czero/actions/runs/38492760086). Downloaded Debian install has fourteen passes/three expected skips and Rocky update eighteen passes; both credential/query checks pass. Assembled-image audit excludes dependency tests. Inspected SARIF/SBOM remain 166 app/526 PostgreSQL/29 UI findings and zero module/imageroot; these are release review items.
+
+Add typed REST for types, objects/batches, relations, events and references, sharing Core authorization/CSRF and safe error responses. A signed HTTP regression caught PermissionDenied being wrapped as 422; preserve 403 before catching ValueError. Add trusted reference callbacks for future relational domains, with default object resolution only. Separate local-asset record UI provides type registration, JSON create/edit, paging, tags, relations, role gates and explicit revision reload. Extend real disposable SSO roles and configured update/clean restore to assert actual object IDs/data/tags/revisions, relation IDs and event history. Add owner/Reader browser workflows for invalid input, create/edit/refresh, escaped hostile text and read-only controls; generated passwords stay outside Robot variables/arguments and have an artifact assertion. All 261 local tests pass (203 unit + fifty-eight PostgreSQL), JavaScript syntax, Go schemas and seventeen non-UI dry-run cases pass. The two added UI/browser cases are not executed locally; replacement publication/QEMU and permitted live CRUD/restart persistence are pending. No browser pass is claimed from source checks. Core/app versions and schema remain 0.9.0/0.10.0/0005.
+
+**Replacement failure investigation:** `831ddfccece860d9497773561d4c78b3806c14b8` passes [local 38495221707](https://github.com/Stell0/ns8-czero/actions/runs/38495221707) and [publication/audits/scans 38495221705](https://github.com/Stell0/ns8-czero/actions/runs/38495221705). [QEMU 38495398874](https://github.com/Stell0/ns8-czero/actions/runs/38495398874) Debian update passes all seventeen native tests, including signed object roles and configured update/clean restore preserving object/relationship/event state; privacy checks pass. Rocky install passes thirteen tests/three expected skips but the disposable IdP installer exceeds the helper's 180-second subprocess deadline. Its actual journal ends in Core `create-module/05pullimages` copying upstream Keycloak layers; no registry error or completed pull is recorded before timeout. The dependent identity persistence and record-browser tests consequently lack a configured fixture and fail. All Rocky credential/query checks are zero, including browser output. No C0 runtime defect or completed browser pass is inferred. Current Core add-module does not accept dependency overrides, and inherited 05pullimages downloads the upstream label images before the fixture applies its frozen Keycloak override. Allow 480 seconds only for IdP installation, retaining 180 seconds for other helper commands and a bounded 900-second outer provisioning call. Add a helper deadline regression and rerun the unchanged acceptance assertions; do not replace SSO with a fake login or modify any live IdP.
+
+**Browser race investigation:** `ced76677232695153824f82e965937543602f79e` passes [local 38497586526](https://github.com/Stell0/ns8-czero/actions/runs/38497586526) and [publication/audits/scans 38497586521](https://github.com/Stell0/ns8-czero/actions/runs/38497586521). [QEMU 38497764367](https://github.com/Stell0/ns8-czero/actions/runs/38497764367) Debian install passes fourteen tests/three expected skips. Rocky update passes eighteen tests, including genuine predecessor upgrade, real SSO and object/relationship/event update/clean restore. Its single failure is the new record browser: the strict record locator resolves two identical buttons after refresh/type selection. The actual JavaScript clears the list before awaiting HTTP and then appends each response, so overlapping requests duplicate rows and stale replies can render the wrong type. Add a monotonic request generation and clear only the accepted latest reply before rendering. Two dependency-free Node tests execute the actual UI script against out-of-order replies; both reproduce duplicate rows on the old code and pass with the fix. Retain the strict single-record browser assertion. All report credential/OAuth checks pass, including browser logs. Replacement native/browser acceptance remains pending; no live M07 deployment has occurred. Review extends generation guards to detail selection and relation replies, including type/new-draft invalidation and preserving a newly selected draft when an earlier save completes. Two more Node cases prove late replies cannot replace a newer detail or its edges.
+
+**Corrected runtime and permitted live checks:** `fc7abca6b7a54e7d5ad02ccdce87772b664000c9` passes [local 38500014644](https://github.com/Stell0/ns8-czero/actions/runs/38500014644), [publication/audits/scans 38500014599](https://github.com/Stell0/ns8-czero/actions/runs/38500014599) and [QEMU 38500215889](https://github.com/Stell0/ns8-czero/actions/runs/38500215889). Downloaded Debian install has fourteen passes/three expected skips; Rocky update all nineteen passes, including actual owner type registration/invalid input/create/edit/refresh, hostile text without injected DOM elements and Reader read-only controls. Both browser/native artifact credential/query checks pass. Superseded `d224d89` native run 38499983418 was cancelled, not counted. Five local Node cases now include an earlier save preserving a new unsaved draft; 262 Python cases pass.
+
+Permitted live update of only Czero reaches healthy Core/app 0.9.0/0.10.0 and schema 0005/vector. The existing Core 3.21 digest-only inventory quirk reproduced; force-updating the verified branch tag (same module digest) corrects source/module identity. Signed owner type creation, CRUD, schema errors, unique/revision conflicts, missing-CSRF rejection, atomic batch rollback, relation replay/deduplication and typed reference resolution pass. Native restart preserves owner/account, object IDs/data/tags/revisions/schemas, relations/events and previous completed job/schedule history. Saved native configuration and all unrelated normalized inventory entries match. No destructive live test, SSH assumption or unrelated module modification occurred. Interactive Playwright remains waived; live uses the supplied owner persona, with all member roles verified in real disposable SSO.
+
+**Live scheduler gap and diagnostic subplan:** Final live `get-scheduler-status` shows timer inactive/enabled and worker idle/not failed after native node restart-module, despite healthy app/database. Do not accept this as scheduler recovery. Current Core rootless restart-module restarts `user@<uid>.service`; existing Robot coverage restarted only the app service. Add this actual native manager restart to the disposable scheduler case, retaining its timer assertion, and return bounded timer ActiveState/Result/WantedBy diagnostics through the existing native action. The authorized native WebSocket log query for only Czero timer messages returns an empty response; no log-based root cause is claimed. Investigate actual unit state/order using the new diagnostic image, apply the smallest native fix, rerun local/publication/QEMU and live restart. M07 remains unchecked. Runtime image module `sha256:85cdbd7796e505f763d18c2f02fa1ada98548ce17905adeb29ca5ce413dc8bf2`, app `sha256:aeaf20850a31dd9207e5ce5c01a7558eec195d507d9ee5944084cc399c57b354`, database `sha256:efaa7f003852c7f1934d066097d3b5a75225b2861ae2100a40e8bfaaa9f77abe`; freeze only after the lifecycle gap is resolved.
+
+**Confirmed manager ordering cycle and fix:** Diagnostic increment `e6e6950535658ab4f052f1ed21f5423653f5810a` passes [local 38504174926](https://github.com/Stell0/ns8-czero/actions/runs/38504174926), [publication/audits/scans 38504174916](https://github.com/Stell0/ns8-czero/actions/runs/38504174916) and schema documentation. Its [QEMU 38504347460](https://github.com/Stell0/ns8-czero/actions/runs/38504347460) Debian update report reproduces the exact native user-manager timer failure: sixteen passes, one failed scheduler assertion. The actual user-manager journal identifies `basic.target -> czero.service -> czero-worker.timer -> timers.target -> basic.target` ordering cycles and deleted stop/start jobs. Repeated live diagnostic-image restarts happened to pass three times, with active/success/app-WantedBy, persisted objects/configuration and unchanged unrelated inventory; those passes do not resolve the intermittent cycle now reproduced in disposable evidence.
+
+Consulted primary [systemd timer dependencies](https://raw.githubusercontent.com/systemd/systemd/main/man/systemd.timer.xml) and [service dependencies](https://raw.githubusercontent.com/systemd/systemd/main/man/systemd.service.xml): timer defaults add Before=timers.target, while services follow basic.target. C0 explicitly orders its app-dependent timer after the app. Set `DefaultDependencies=no` only on that timer, retain PartOf/Requisite/After app ownership and explicitly restore Conflicts/Before shutdown.target. App dependencies provide initialization ordering transitively, so no cold-app bootstrap is introduced. Keep the actual manager restart assertion, prior cold/direct-restart/backup/restore checks and bounded diagnostics. Replacement local/publication/QEMU and live validation must pass; no fix success is inferred from editing the unit.
+
+**Final runtime/live acceptance (14 October 2026):** `079ed4b5944d5a24a83b29569b1ecd6925a80cd9` passes [local 38506045658](https://github.com/Stell0/ns8-czero/actions/runs/38506045658), [publication/audits/scans 38506045617](https://github.com/Stell0/ns8-czero/actions/runs/38506045617) and [QEMU 38506228720](https://github.com/Stell0/ns8-czero/actions/runs/38506228720). Downloaded Debian install has fourteen passes/three expected update-only skips; Rocky update nineteen passes. Both actual full user-manager restart assertions pass; both journals contain zero C0 ordering-cycle lines. Owner/Reader browser forms, invalid input, refresh, safe hostile text, native update/restore, object/relationship/event persistence, membership roles/revocation and all baseline cases pass. Both credential/query audits pass, including browser log/XML. Local 263 Python tests (205 unit + fifty-eight PostgreSQL), five Node response-race tests, Go schemas and seventeen non-UI Robot dry-run cases pass.
+
+Module `sha256:5cb44dddcc0e0e1f35cb5f116955ba66a5892bb9d229515bcaee38f9783e1565`, app `sha256:3421220d1fae917aef6ba4c3ac6c795961b28076e28dc263485accc0c30fc8ff`, database `sha256:17adfd9d6805ba857189e18a0f1109028af2e0fa7c884d061f4508796b981b9c`. Public digest resolution is verified. Only the dedicated live Czero instance is updated to the verified branch tag/digest. Normal HTTPS health confirms Core/app/schema 0.9.0/0.10.0/0005/vector. Three subsequent native full-manager restarts each recover an active timer with success result, app dependency and no worker failure. Fresh signed owner login, unchanged object IDs/data/tags/revisions/schemas/relations/events, existing completed job/schedule history, native configuration and every unrelated normalized inventory entry persist. No live destructive test, shared service change, SSH assumption or certificate bypass occurred. Interactive Playwright remains waived; only the supplied owner persona was exercised live, with all member roles proven in real disposable SSO.
+
+Review confirms bounded schema/data validation without remote retrieval, current-role transactions, database-enforced scalar uniqueness, revision conflicts/atomic batches, stable foreign-key edges and commit-ordered metadata events. REST and the separate local-asset UI reuse Core services; asynchronous response guards preserve current rows/details/relations/drafts. The confirmed systemd ordering cycle is fixed and guarded by an actual native manager restart case. Runtime development-directory audit and scans pass; unresolved scan findings remain release review items. Limits: immutable bounded schema subset, exact scalar uniqueness, metadata-only object events, 100-type picker/50-row UI paging, JSON editor rather than full generated forms, default stored edges only between objects, and source/Wiki adapters still pending their real tables. Final three-document closeout CI is pending; M07 remains unchecked until it passes.
+
+**Evidence:** M07 is complete. Final three-document closeout `a6109853cdf23009af119085a40bf117a2078dc7` passes [local 38508401711](https://github.com/Stell0/ns8-czero/actions/runs/38508401711), [publication/audits/scans 38508401694](https://github.com/Stell0/ns8-czero/actions/runs/38508401694) and [QEMU 38508591871](https://github.com/Stell0/ns8-czero/actions/runs/38508591871). Downloaded Debian update has seventeen passes and Rocky install sixteen passes/three expected update-only skips. Both include the actual native user-manager restart; C0 ordering-cycle, credential and OAuth-query audit counts are zero. Runtime/local/browser/live evidence and verified M07 module/component digests are recorded above at `079ed4b5944d5a24a83b29569b1ecd6925a80cd9`; retain those immutable images for M08 predecessor tests. Interactive live Playwright remains waived. Bounded immutable schemas, metadata-only events, JSON rather than full generated forms, type-picker/page limits and pending source/Wiki adapters remain accurate nonblocking limits. No stable release is declared.
+
+### M08 — Source ingestion, text extraction and chunk storage [x]
+
+**Goal:** A normal C0 installation can ingest, inspect and text-search documents without any AI provider.
+
+**Search rule (C0-specific):** Search maintained NS8 applications for upload handling, background ingestion and safe user-file storage; adopt only reusable file/NS8-volume and queue patterns. For text extraction libraries, verify current supported upstream APIs and benchmark PDFs/DOCX/Markdown before selecting dependencies; do not invent NethServer-specific document parsers.
+
+**Implement:** `sources`, `source_versions`, `documents` and `chunks` with content hashes, offsets, page/section locations and deduplication; deterministic upload/parser/chunker task handlers. Always retain extracted full text in PostgreSQL. Delete binary original only after validated persistence by default; allow per-source or instance `retain_original` backed by an NS8 volume. Quarantine failed/extraction-incomplete originals for explicit resolution. Paginated REST browse/search/delete, UI upload/details, version history.
+
+**Acceptance:** Text/Markdown/PDF/DOCX samples round-trip with citations and stable hashes; re-upload doesn't duplicate identical content; changed source creates a version; failed extraction never silently loses original; no AI credentials needed; backup/restore source checks and UI tests pass.
+
+**Documentation gate:** `AGENTS.md` ingestion/retention invariants; `README.md` supported formats, storage and recovery; `PLAN.md` evidence.
+
+**Implementation subplan and tests (14 October 2026):**
+
+- [x] Inspect bounded upload/path patterns and current parser APIs/licenses; benchmark an original Text/Markdown/PDF/DOCX corpus before selecting parser dependencies. Use deterministic extraction only, with page/section locations and character offsets. Define input/page/uncompressed-archive/text/chunk caps and isolated parser CPU/memory/time limits. Reject unsupported/encrypted/image-only or incomplete formats without silent success/truncation; retain failed originals for resolution. Test malformed files, archive expansion, path traversal, Unicode, stable output/hash/offsets and complete extracted-text retention.
+- [x] Add packaged `0006_sources` with sources, immutable source versions, full-text documents, chunks/offsets/location metadata and generated PostgreSQL full-text indexes. Preserve source/version/chunk UUIDs and content hashes across reindex/retry/restore. Recheck Reader reads and Editor ingest/edit/delete boundaries. Provide initial content deduplication and explicit existing-source version uploads with expected revision; test duplicate/concurrent content, changed versions, history, safe paging and role/revocation on real PostgreSQL. Define deletion/tombstone semantics so citations cannot silently point to missing evidence.
+- [x] Reuse the trusted Core job queue and serial worker for extraction and post-persistence cleanup. Uploads use generated IDs and restricted atomic files on the existing NS8 source volume, never a filename as a path. Commit extracted full text/chunks and status before scheduling original cleanup; cleanup is idempotent and only runs for committed successful extraction without retention. Retention override is validated boolean; failure leaves a retryable/quarantined original. Test crash/retry boundaries, stale jobs, parser failures, default deletion versus explicit retention and absence of AI/provider requirements.
+- [x] Expose authenticated typed REST for bounded multipart upload/new version, paginated source/version/document/chunk details, citations, text search, retry and deletion/retention; register trusted source/document/chunk reference adapters when their tables exist. Add minimal local-asset source list/upload/detail/history/search UI using safe DOM text, role controls, useful extraction errors and original-retention status. Test signed HTTP/CSRF, two roles, actual upload/search/retry/refresh and evidence persistence in real disposable SSO/browser.
+- [x] Extend native backup coordination to quiesce foreground file writes and workers through SQL dump plus Restic volume copy, preserving prior running/timer states on success/failure and older archive compatibility. Prefer stopping the dedicated app during the native backup window over a custom management daemon. Test retained and quarantined originals alongside extracted text/versions/chunks/citations in encrypted clean restore, including concurrent write boundaries. Freeze verified M07 module/app/database digests for genuine upgrade; verify local, image audits/publish, both QEMU reports and permitted live ingestion/persistence only in the dedicated Czero instance. Interactive Playwright remains waived; destructive restore stays disposable. Review and reconcile all three docs before closeout.
+
+**Reference findings so far:** Public NethServer/Nethesis searches found upload handlers, not a reusable evidence/extraction engine. Inspected [NethSecurity bounded upload/generated names/path checks](https://github.com/NethServer/nethsecurity/blob/865a6a688373c2d7769c52f6e5c4b80dc0adfc94/packages/ns-api-server/files/src/methods/files.go), with [green image build 38369470794](https://github.com/NethServer/nethsecurity/actions/runs/38369470794). Its GPL-2.0-only implementation is not copied into GPL-3.0 C0; reuse the principles via original code. Inspected current public GPL-3.0 [Satellite FastAPI upload](https://github.com/nethesis/satellite/blob/b95156efabe255fa79ab83e2506ddcde458f857d/api.py); retain small FastAPI transport patterns, exclude its transcription/generative services and unbounded read. Local C0 queue, source volume and native dump/restore are the authoritative integration points. Primary parser references: [pypdf extraction and memory limitations](https://pypdf.readthedocs.io/en/stable/user/extract-text.html), [python-docx supported API](https://python-docx.readthedocs.io/en/latest/). Current documented versions are pypdf 6.20.1 (BSD-style license) and python-docx 1.2.0 (MIT); dependency selection remains pending actual fixture benchmarks. Scanned PDFs need explicit unsupported/quarantine handling when no text is extractable; no OCR or generative service is assumed.
+
+**Parser benchmark and first Core slice:** Original four-format fixture benchmark over 25 reads averages Text 0.021 ms, Markdown 0.020 ms, two-page PDF 0.768 ms and DOCX body/table 5.831 ms; shared-process peak RSS is 81,756 KiB. This is a tiny-fixture baseline, not an arbitrary-document performance promise. Select pinned pypdf 6.20.1 and python-docx 1.2.0 with locked lxml 6.1.3, retaining their BSD/MIT-compatible licenses. The isolated Core parser uses a fixed Python command, 512 MiB address-space cap, 20/21-second CPU cap, 25-second parent deadline and no file writes. Inputs cap at 10 MiB; retained extracted text at one million characters/2 MiB, PDF pages 200, DOCX archive expansion 16 MiB, locations 4000 and chunks 4096. Limits reject rather than silently truncate. No OCR, network fetch, macro or embedded instruction execution occurs. Reject encrypted/image-only PDFs, unsafe XML/archive paths/macros and unsupported DOCX notes/comments instead of deleting their originals.
+
+Twenty new cases cover UTF-8/Text/Markdown, actual PDF pages and DOCX body/tables/header/footer, exact offsets/stable hashes/overlap, nested image-only PDFs, malformed/unsafe files, original preservation, child deadline/signals and cold bytecode-cache operation. All 283 local Python cases pass (225 unit + fifty-eight PostgreSQL), five Node races, Go schemas and seventeen non-UI dry-run cases pass. One initial combined extraction case failed without a usable concise traceback because its generated parameter ID embedded a large synthetic payload; give bounded case IDs. Focused and full reruns pass, including the cold-cache case; no unproven parser root cause is claimed. Core/app become 0.10.0/0.11.0; schema remains 0005 because source persistence is not implemented in this slice. Native predecessor fixtures now freeze all verified fixed-timer M07 digests. Upload transport, source/version/chunk tables, registered ingestion/cleanup jobs, retention and file-consistent backup remain pending. Publication/native acceptance of this slice is required before delivery claims.
+
+**Evidence:** Runtime/fidelity `24bde41542d337548996e9adcdb6182d7ecd604b`, closeout docs `84f213d`. Final documentation [local 38525281660](https://github.com/Stell0/ns8-czero/actions/runs/38525281660), [publication 38525281728](https://github.com/Stell0/ns8-czero/actions/runs/38525281728) and [native 38525517155](https://github.com/Stell0/ns8-czero/actions/runs/38525517155) all succeed. Downloaded closeout reports: Debian update seventeen passes; Rocky installation/browser seventeen passes/three expected update-only skips, zero credential/OAuth candidates. Runtime/installed content and tests are unchanged from verified 24bde41. All 323 local Python cases and ten Node races pass; both NS8/admin and end-user source browsers pass, encrypted source restore and actual copy-window quiescence pass, permitted live source/operator identity/object/job/schedule persistence passes with unchanged unrelated inventory/configuration. Interactive Playwright is operator-waived; destructive live scenarios were not run. Frozen image references, actual live evidence and nonblocking limits are recorded below.
+
+**Packaging review:** The selected lxml wheel includes 123 development headers/Cython files. Remove those suffixes from the runtime virtualenv and extend the image audit to reject them, retaining shared libraries and runtime data. Add a publication-time four-format isolated parser probe inside the actual assembled image. Four regression cases verify the audit rejects extension build files but permits runtime shared libraries. Parser local CI [38512363129](https://github.com/Stell0/ns8-czero/actions/runs/38512363129) and publication [38512363223](https://github.com/Stell0/ns8-czero/actions/runs/38512363223) passed before this packaging correction; native run [38512528579](https://github.com/Stell0/ns8-czero/actions/runs/38512528579) is still pending inspection. The M07 main marker's native run [38510898821](https://github.com/Stell0/ns8-czero/actions/runs/38510898821) succeeded; downloaded-report inspection remains pending.
+
+**Source storage/REST increment:** Core/app advance to 0.11.0/0.12.0 with packaged `0006_sources`. SourceService implements restricted generated-ID atomic originals, immutable versions, complete retained text/chunks, deterministic UUIDs/hashes/offsets, citations and indexed PostgreSQL FTS. Initial uploads deduplicate matching bytes/title/metadata/media via an indexed ingest key, including concurrent deliveries; changed bytes use explicit source/revision. Different provenance remains distinct. Registered extraction jobs commit all evidence before a separate idempotent cleanup job can remove an original. Failed/changed/unsupported inputs remain quarantined with static codes and expected-generation retry. Deletion is a tombstone preserving historical citations. REST shares the service, persisted roles, CSRF/Origin, bounded multipart input and attachment-only original downloads; trusted source/document/chunk reference adapters now use real tables.
+
+Native dump/cleanup now stops foreground app writers as well as workers throughout SQL dump and Restic copy, restores prior app/timer activity on success/failure and keeps format-1 restore compatibility. Six new coordination cases pass. The HTTP guard initially surfaced oversized chunked requests as FastAPI's generic HTTP 400; a bounded abort handled inside the response middleware now yields 413 and closes actual multipart temporary files. No validation assertion was removed. Worker fixtures now freeze/restore shared schedules to prevent seed-job history leaking into other isolated tests. Before publication, changing the still-unpublished migration's indexed ingest key required reconciling empty local development tables; actual clean/upgrade migration is a required CI check.
+
+All 315 local Python cases pass (241 unit + seventy-four PostgreSQL), five Node races, Go schemas and seventeen non-UI Robot dry-run cases pass. Four original Git-only fixtures prove full format/storage round-trip, stable hashes/citations and deduplication; tests cover commit visibility/rollback, cleanup crash recovery, failed originals, retention, concurrent uploads/versions, persisted roles/revocation, signed HTTP and cookie CSRF, oversized chunked spooling and temporary-file closure. Native source tests/UI/live acceptance remain pending. Packaging fix `826426a` passes [local 38513135401](https://github.com/Stell0/ns8-czero/actions/runs/38513135401) and [publish 38513135341](https://github.com/Stell0/ns8-czero/actions/runs/38513135341), including actual runtime audit and all four isolated packaged parsers. QEMU [38513303975](https://github.com/Stell0/ns8-czero/actions/runs/38513303975) is pending its second leg; superseded [38512528579](https://github.com/Stell0/ns8-czero/actions/runs/38512528579) was cancelled and is not accepted. Downloaded M07 main-marker reports confirm Debian install fourteen passes/three expected skips and Rocky update nineteen passes, zero C0 ordering-cycle lines.
+
+**Discovery assertion fix:** Source increment `88ea8d8` publishes successfully in [38515184096](https://github.com/Stell0/ns8-czero/actions/runs/38515184096), but [local 38515184047](https://github.com/Stell0/ns8-czero/actions/runs/38515184047) fails one stale assertion (314 pass): `/agents` now truthfully describes source FTS while the test still expects all search to be planned. Update the assertion to require implemented source text search, its real OpenAPI route and remaining Wiki/hybrid/MCP limitations. No behavior check is bypassed. Packaged-parser QEMU [38513303975](https://github.com/Stell0/ns8-czero/actions/runs/38513303975) has completed successfully; source QEMU [38515363965](https://github.com/Stell0/ns8-czero/actions/runs/38515363965) is running.
+
+**Source UI/native acceptance increment:** App advances to 0.13.0; Core stays 0.11.0/0006_sources. Local source assets provide role-gated multipart upload/retention, provenance, paginated browse, version history, complete extracted text, offsets/citations, FTS, failed-original download/retry and tombstone archive controls. Guard stale list/history/document/search replies and capture upload inputs before awaiting; ten real-script Node races now pass. Disposable Browser coverage adds valid/invalid metadata, retained upload, dedup, changed version and old text, reload, hostile-text rendering, search, failed-file recovery/retry, Reader controls and archival citation persistence. Upload uses the official [Browser Upload File By Selector contract](https://marketsquare.github.io/robotframework-browser/Browser.html#Upload%20File%20By%20Selector).
+
+The disposable real-SSO probe uploads all four original formats, verifies byte/text hashes and exact text/chunk/citation identity, reuploads without duplicates and adds an explicit version. It seeds retained and quarantined originals and checks all records after native configured update and encrypted clean restore. Reader denial and Editor/Admin upload are exercised with real SSO. A read-only disposable observer verifies no active app/worker/timer while native Restic is copying, complementing local backup success/failure state tests. Interactive Playwright remains waived; no destructive live tests. These new native/browser scenarios remain unverified until their actual CI run completes.
+
+Discovery fix `2f3816f` passes [local 38515762599](https://github.com/Stell0/ns8-czero/actions/runs/38515762599) and [publish 38515762540](https://github.com/Stell0/ns8-czero/actions/runs/38515762540). Superseded source QEMU [38515363965](https://github.com/Stell0/ns8-czero/actions/runs/38515363965) was cancelled, not accepted; corrected source QEMU [38515950095](https://github.com/Stell0/ns8-czero/actions/runs/38515950095) is pending. Downloaded packaged-parser [38513303975](https://github.com/Stell0/ns8-czero/actions/runs/38513303975) reports confirm Debian install fourteen passes/three expected skips, Rocky update nineteen passes, zero temporary credential/OAuth query candidates. Before the UI version bump, all 315 Python cases pass; rerun the changed public-page tests before pushing. Go schemas and seventeen non-UI dry-run cases pass.
+
+**DOCX fidelity correction:** Review reproduced a concrete partial-success gap: a document containing ordinary body text plus a content control returns only the ordinary text from python-docx. Its [official Document API](https://python-docx.readthedocs.io/en/latest/api/document.html) also documents omitted revision-mark paragraphs. Reject unsupported controls/revisions/simple fields/custom XML/textboxes/embedded objects in actual document/header/footer roots before accepting extraction, regardless of part filename. Preflight XML and relationships with entity resolution/network disabled and detect DOCTYPE even in UTF-16. Emit static `unsupported_docx`, keep the original and show an actionable conversion message. Seven parser regression cases cover five omitted-text structures, UTF-16 entity declarations and OPC-renamed main parts without an XML extension; all twenty-seven parser cases and the four-format local isolated probe pass. A PostgreSQL regression proves unsupported DOCX retains its original, creates no partial document and schedules no cleanup. Core/app advance to 0.11.1/0.13.1, schema remains 0006. Installed acceptance must rerun with this correction.
+
+Source UI increment `aa75450` passes [local 38517034682](https://github.com/Stell0/ns8-czero/actions/runs/38517034682) and [publish 38517034717](https://github.com/Stell0/ns8-czero/actions/runs/38517034717). Native [38517215933](https://github.com/Stell0/ns8-czero/actions/runs/38517215933) Debian update has completed; Rocky installation/browser is pending. Native source results must be reconciled before closeout. Inspected five scan/SBOM artifacts: 166 app, 526 database, 29 UI findings and zero module/imageroot; these findings remain unresolved for release review. Only read-only live baseline login/inventory/configuration checks have run; no live M08 deployment is claimed.
+
+**Native results and smoke assertion correction:** Downloaded `aa75450` [38517215933](https://github.com/Stell0/ns8-czero/actions/runs/38517215933) reports show Debian update seventeen passes, including real source update/clean-restore and a passing backup writer observer. Rocky installation has sixteen passes/one failure/three expected update-only skips. All new source browser workflows, identity/source persistence and native backup pass. The single failure is the existing Robot discovery smoke still expecting “Search and MCP are planned” after source FTS was implemented; align it with both implemented source search and remaining Wiki/hybrid/MCP limits. The workflow remains red until rerun; no acceptance assertion is removed. Both reports contain zero temporary credential/OAuth query candidates.
+
+The fidelity/smoke correction passes all 323 local Python cases (248 unit + seventy-five PostgreSQL), ten actual-script Node races and Go schemas. Eight new cases cover seven parser fidelity/safe-XML boundaries plus actual PostgreSQL quarantine with no partial document/cleanup. Normal Text/Markdown/PDF/DOCX extraction still passes the isolated local probe. Verify fresh image build, packaged probe and both native reports before any live M08 update.
+
+**Runtime acceptance closeout (14 October 2026):** Final implementation/fidelity commit `24bde41542d337548996e9adcdb6182d7ecd604b` passes [local 38521704941](https://github.com/Stell0/ns8-czero/actions/runs/38521704941), [publish/audits/scans 38521704972](https://github.com/Stell0/ns8-czero/actions/runs/38521704972), and [native 38521939210](https://github.com/Stell0/ns8-czero/actions/runs/38521939210). Downloaded reports confirm Debian 13 installation fourteen passes/three expected update-only skips; Rocky 9 update all twenty pass, including NS8 administration, object and source browser behavior. Both have zero temporary credential/OAuth query candidates. Actual backup copy-window observer passes; real SSO seeds all four formats, explicit changed version and retained/quarantined originals, then verifies exact IDs, hashes, full text, offsets/chunks/citations and binaries through configured update and encrypted clean restore. All 323 local Python cases, ten real-script Node races, Go schemas and seventeen non-UI dry-run cases pass. Packaged image probe confirms all four parsers still work after stripping development files. Five inspected scans/SBOMs retain 166 app, 526 database, 29 UI findings and zero module/imageroot; release review remains required.
+
+Verified M08 predecessor references for M09: module `ghcr.io/stell0/czero@sha256:e02567b7cab418a2c2774b2aede91f05414e7b13f5e172ca07ae4d000101657b`, app `ghcr.io/stell0/czero-app@sha256:7ec2bdb24afc38adcdfb21ea8789a701178fb45d441e321e9318110974140d0f`, database `ghcr.io/stell0/czero-postgres@sha256:562b7721b208ea59057ff526a44157db41e2366a01d9e414cf30be6396b5ff5d`. Module OCI revision is the exact commit above; Core/app/schema are 0.11.1/0.13.1/0006_sources. Freeze all three genuine predecessor images when advancing.
+
+**Permitted live evidence:** Update only the dedicated authorized Czero module to the verified build, using its checked branch tag for the known Core digest-only inventory display issue. Local/publication and prior native source acceptance were complete; the corrected full native run was still active during deployment and subsequently finished green. Native update and normal-TLS Core/app/schema/vector health pass. Real configured owner SSO exercises all four formats, same-content dedup, explicit changed source, full text/chunks/citations/FTS, retained and failed originals, expected-generation retry, stale revision/generation conflicts, cookie CSRF and reachable source UI assets. A content-control DOCX returns unsupported_docx, retains exact original bytes and creates no partial document. Native user-manager restart preserves all source/version/document/chunk IDs, text/hash/location/citation data and original binaries, plus previous object schemas/data/tags/revisions/relations/events and completed job/schedule/owner identity. Saved native configuration and every unrelated inventory entry remain unchanged; scheduler stays active/enabled without failure. Only the configured owner persona was used live; all three roles/revocation and destructive restore remain verified in disposable QEMU. Interactive Playwright remains operator-waived; HTTP asset checks are not represented as live browser interaction. No live SSH, provider/directory alteration or destructive restore/uninstall occurred. Private details remain outside Git.
+
+**Review/limitations:** NS8 lifecycle stays in focused native actions; Core owns storage/parsers/jobs and transports share persisted roles. Original deletion is a separate post-COMMIT idempotent operation. Unsupported/incomplete extraction stays quarantined. Source deletion is a tombstone preserving citations; title/provenance is established at initial upload and existing-source versions retain it. No OCR, supported tracked-change/control/notes DOCX conversion, automatic orphan reconciliation, full Wiki/hybrid retrieval or MCP is claimed. An uncertain upload COMMIT preserves a generated original for operator recovery. Source UI uses safe local assets and bounded paging; full forms remain M12. All three documents now reflect actual behavior. Commit/push closeout documentation, verify its CI and only then mark M08 complete and begin M09.
+
+### M09 — Versioned Wiki, entities, claims, provenance and PostgreSQL graph [x]
+
+**Goal:** Persistent LLM Wiki data usable by external agents, without a second graph database.
+
+**Search rule (no matching NS8 knowledge graph identified):** Search NethServer/Nethesis repositories for versioned records, entity aliasing, relation tables, source provenance and event/change feeds; prefer PostgreSQL constraints and recursive SQL for graph traversal. Consult the existing C0 `sources`/`objects` schema before designing new identities. If nothing reusable exists, implement minimal typed tables and small APIs.
+
+**Implement:** `wiki_pages`, `wiki_revisions`, `entities`, `entity_aliases`, `relations`, `claims`, `evidence_links` and stable references to objects/chunks/sources. Conflicting claims coexist with sources and time metadata, not silent replacement. Expose CRUD, citation lookup, bounded graph traversal, export to Markdown/JSON, changes-since cursor, idempotency keys and optimistic concurrency.
+
+**Acceptance:** External test agent can add/update knowledge, retrieve its evidence, resolve aliases, traverse 1-3 hops, export and reconcile concurrent edits; every claim tracks provenance; backups preserve revisions; REST/authorization tests pass.
+
+**Documentation gate:** `AGENTS.md` canonical identity/provenance and change-feed contracts; `README.md` Wiki usage/exports; `PLAN.md` evidence.
+
+**Evidence:** M09 is complete. Runtime/local/native/browser/permitted live acceptance passes at `7ce6c7fa3a53cf52310532361475895761443758`. Final three-document closeout `ba9918c` passes [local 38540879540](https://github.com/Stell0/ns8-czero/actions/runs/38540879540), [publication 38540879603](https://github.com/Stell0/ns8-czero/actions/runs/38540879603) and [native 38541179015](https://github.com/Stell0/ns8-czero/actions/runs/38541179015). Downloaded Debian update has seventeen passes; Rocky installation/browser has eighteen passes/three expected update-only skips, zero credential/OAuth candidates. The exact Wiki recovery and owner/Reader browser cases pass. Runtime code is unchanged from the verified live build; all 352 Python cases and eighteen Node cases pass. Interactive Playwright remains waived; only the owner persona was used live. Frozen M09 image references and nonblocking limitations are recorded below.
+
+**Implementation subplan and tests (14 October 2026):**
+
+- [x] Inspect current SourceService immutable IDs/citations, ObjectService revisions/events/reference callbacks and native backup before schema changes. Public NethServer searches found no entity_aliases/wiki_revisions implementation. Compare maintained NS8 DokuWiki's actual runtime/persistence pattern with C0's tested PostgreSQL services. Keep one shared space, existing UUIDs/roles and PostgreSQL; no per-document ACL or second graph store. Freeze all three verified M08 image digests for real native predecessor tests.
+- [x] Add packaged Wiki schema with pages/immutable revisions, entities/normalized unique aliases, relationships, claims/evidence links and metadata change events/idempotency receipts. Define bounds before service changes: Markdown at most 128 KiB, metadata at most 16 KiB, alias/title limits, paginated reads at most 100, fixed trusted reference kinds and optimistic expected revisions. Reuse current transaction/role patterns. Every claim needs durable provenance; conflicting claims coexist. Test constraints, replays/conflicting keys, concurrent edits, aliases/renames, stable IDs/revisions and persisted Reader/Editor/revocation.
+- [x] Implement focused Core Wiki/entity operations first, then claims/provenance/relationships and bounded graph traversal. Source chunks/full text remain raw evidence; Wiki/claims are separate authored data. Reuse trusted source/object reference adapters instead of copying lookup/authorization. Depth is 1–3 with explicit cycle/work/output bounds and deterministic ordering; verify cycles, high fanout, missing/deleted references and cross-domain nodes on actual PostgreSQL. Registered deterministic maintenance only; no generative runtime operation.
+- [x] Add typed authenticated REST and small separate local-asset Wiki UI using the same services/CSRF/roles. Provide revision inspection, citation lookup, Markdown/JSON export, paginated changes-since cursor, idempotency and concurrency errors that preserve drafts. Reuse safe DOM text and stale-response guards. Test a scripted external-agent REST workflow, signed HTTP and real disposable owner/Reader/Editor SSO/browser, provenance lookups, exports and no execution of hostile Markdown/data.
+- [x] Extend existing native real-SSO backup/update/clean-restore checks with Wiki revisions, aliases, conflicting sourced claims, relationships/change cursors and existing evidence. No additional native management service is needed. Run local/image/QEMU tests and permitted live Wiki/graph CRUD/persistence only in the dedicated module; destructive restore stays QEMU-only and interactive Playwright remains waived. Review all three documents, commit/push and verify final CI before completing M09.
+
+**Reference findings:** Public entity_aliases/wiki_revisions searches yield no NethServer implementation. A provenance search's CISO import script is a false positive, not a reusable knowledge store; SQL revision search points to old WebTop 4, so prefer current tested Core. Maintained [NS8 DokuWiki state includes](https://github.com/NethServer/ns8-dokuwiki/blob/b24afab60e81ed152941653b7be5523e62b17e12/imageroot/etc/state-include.conf) use its filesystem volume plus private secrets, and [upgrade secret migration](https://github.com/NethServer/ns8-dokuwiki/blob/b24afab60e81ed152941653b7be5523e62b17e12/imageroot/update-module.d/10Do_upgrades) moves legacy secrets out of Redis. Its current revision has [green CI 38346652893](https://github.com/NethServer/ns8-dokuwiki/actions/runs/38346652893) and other passing builds; inspected actual files and README. Its separate filesystem/ACL application does not supply C0's agreed PostgreSQL claim/graph contracts. Reuse current C0 ObjectService revision/event/role patterns and SourceService immutable citations, while retaining native backup already proven in M08. Official [PostgreSQL 17 recursive query/cycle documentation](https://www.postgresql.org/docs/17/queries-with.html) is the traversal reference; outer LIMIT alone does not bound a joined/sorted traversal. Implement the smallest bounded relational service, without generic management abstractions.
+
+**First Core Wiki/entity increment:** Packaged 0007_wiki adds pages/immutable revisions, entities/normalized globally unique aliases, metadata event cursors and actor-scoped idempotency receipts. WikiService reuses persisted Reader/Editor checks, safe Core metadata/labels and transaction patterns; no native lifecycle manager or new runtime dependency. Bound authored Markdown to 128 KiB, metadata to 16 KiB and aliases to sixteen; receipts allow 1 MiB for the worst valid JSON-escape expansion. Transaction lock 49376 precedes event allocation and receipt handling, preserving commit-order cursors. Page archive creates an immutable revision; entity archive reserves historical aliases and rename retains old names. Replays return the original immutable JSON-compatible snapshot, even after later edits; changed payload/key conflicts and revoked actors fail. Initial tests found mixed UUID/string output between read and replay paths; normalize public results consistently.
+
+All 338 local Python cases pass (248 unit + ninety PostgreSQL), ten real-script Node races, Go schemas and seventeen non-UI dry-run cases pass. Fifteen new PostgreSQL cases cover exact Unicode Markdown/hashes/exports/history/archive, concurrent edits, actor/key replays, maximum escaped body, NFKC/casefold aliases, uniqueness/count/stale-operation rollback, persisted roles/revocation, repeated migration and uncommitted/cursor visibility. Core/app/schema advance to 0.12.0/0.14.0/0007_wiki; native predecessor fixtures now freeze all verified M08 images. This is a Core service slice: Wiki REST/UI, claims/provenance/graph and installed/native acceptance remain pending. M08 main marker b675a23 passes [local 38528518654](https://github.com/Stell0/ns8-czero/actions/runs/38528518654) and [publish 38528518674](https://github.com/Stell0/ns8-czero/actions/runs/38528518674); [native main 38528769047](https://github.com/Stell0/ns8-czero/actions/runs/38528769047) is running.
+
+**Core claims/graph increment:** Packaged 0008_knowledge_graph adds sourced claims, durable chunk evidence links, entity relations and typed entity links to existing page/object/source/document/chunk IDs with real foreign keys. KnowledgeService extends the same Wiki mutation/role/receipt/event contracts. Assertion value/entity/predicate/time are immutable; conflicting assertions coexist, annotations can add evidence and retraction retains it. Every public claim creation validates 1–32 real chunks and UTC time bounds; source tombstones preserve evidence. No generative operation or new service/dependency is added.
+
+Relations cap active incident degree at thirty-two for every entity, under the shared mutation transaction lock. PostgreSQL recursive traversal uses UNION per-depth deduplication, maximum depth three, deterministic nearest-depth/UUID ordering, bounded result/reference sets and explicit truncation. This bounds reachable work rather than relying solely on an outer LIMIT. Typed cross-domain references are leaves. Object deletion remains compatible: SET NULL clears its real FK while retaining the canonical target ID/label snapshot and explicit missing marker. No per-document ACL or alternative graph store.
+
+All 348 Python tests pass (248 unit + one hundred PostgreSQL); ten new cases cover conflicting sourced claims/citations after source archive, replay/CAS/retraction, required provenance/UTC bounds, directed 1–3 hops/cycles/determinism/truncation, relation archive/revival, high fanout rejection, cross-domain FK/reference behavior after object deletion and persisted role/revocation. Core/app/schema advance to 0.13.0/0.15.0/0008_knowledge_graph. Wiki/claims/graph transport/UI and installed/native acceptance remain pending. The first Wiki service increment 86bd1ce passes [local 38530287566](https://github.com/Stell0/ns8-czero/actions/runs/38530287566) and [publication 38530287568](https://github.com/Stell0/ns8-czero/actions/runs/38530287568); [native 38530551247](https://github.com/Stell0/ns8-czero/actions/runs/38530551247) is pending its second leg. Main M08 marker native [38528769047](https://github.com/Stell0/ns8-czero/actions/runs/38528769047) completed successfully; report inspection remains pending.
+
+
+**Active M09 transport/UI increment:** Typed Wiki/entity/claim/relation/reference/graph/export/change REST now shares Core authorization, required replay keys, optimistic revisions and cookie CSRF/Origin. Trusted page/entity/claim object-reference callbacks return bounded metadata. Authored JSON is capped at 1 MiB before parsing, including chunked bodies. The local-asset Wiki page provides pages/revisions/exports, entity creation, sourced claims/citations and bounded graph/reference controls using safe DOM text. Generation guards prevent stale list/detail/revision/entity/graph responses; conflicts preserve drafts and unchanged uncertain retries reuse their write key. Discovery and both local/Robot assertions describe actual routes. Core/app become 0.13.1/0.16.0, schema stays 0008.
+
+Three signed PostgreSQL HTTP cases verify a scripted external-agent workflow, aliases, conflicting claims/provenance, graph 1–3 hops, exports, cursors, replay/CAS, roles/revocation, cookie CSRF and oversized chunked JSON. A fourth executes the exact native Wiki seed/verifier through signed HTTP before QEMU; an initial bearer fixture lacked the cookie-only CSRF field, corrected locally without changing runtime authorization. Eight real-script Wiki UI cases join ten prior cases, including stale revision previews and Reader fields. Extend actual native SSO/update/clean-restore and owner/Reader browser tests with Wiki data; installed/live results remain pending.
+
+Downloaded first Wiki 86bd1ce native [38530551247](https://github.com/Stell0/ns8-czero/actions/runs/38530551247) reports confirm Rocky install seventeen passes/three expected skips and Debian update seventeen passes, zero credential/OAuth query candidates. Main M08 marker [38528769047](https://github.com/Stell0/ns8-czero/actions/runs/38528769047) reports confirm Rocky update twenty passes and Debian install fourteen passes/three expected skips, zero privacy candidates. Claims/graph afb026c passes [local 38533417640](https://github.com/Stell0/ns8-czero/actions/runs/38533417640) and [publish 38533417585](https://github.com/Stell0/ns8-czero/actions/runs/38533417585); [native 38533667673](https://github.com/Stell0/ns8-czero/actions/runs/38533667673) is still running. No live M09 deployment or completed milestone is claimed.
+
+**Transport CI correction:** 0e443fa [local 38536500134](https://github.com/Stell0/ns8-czero/actions/runs/38536500134) fails the exact native fixture's JSON-export comparison; the typed page DTO and untyped export encode UTC timestamps differently under CI dependency resolution. Apply PageView to JSON export as well, retaining attachment responses for Markdown. Strengthen signed HTTP to compare the full export with the mutation response; retain every native persistence assertion. App becomes 0.16.1; no schema/Core change. Replacement CI/native remains required. Claims/graph afb026c [native 38533667673](https://github.com/Stell0/ns8-czero/actions/runs/38533667673) now succeeds; downloaded reports confirm Rocky update twenty passes, Debian install fourteen passes/three expected skips, zero credential/OAuth candidates.
+
+
+**M09 installed runtime acceptance:** Export correction `7ce6c7fa3a53cf52310532361475895761443758` passes [local 38536908156](https://github.com/Stell0/ns8-czero/actions/runs/38536908156), [publication/audits/scans 38536908114](https://github.com/Stell0/ns8-czero/actions/runs/38536908114) and [native 38537179997](https://github.com/Stell0/ns8-czero/actions/runs/38537179997). Downloaded Debian installation report has fourteen passes/three expected update-only skips; Rocky update has twenty-one passes, including actual Wiki owner editing/revisions/refresh, safe hostile titles, restored claim citations/three-hop graph and Reader read-only controls. Both exact Wiki seed/recovery fixtures pass after configured update and encrypted clean restore, preserving authored revisions/aliases/conflicting claims/provenance/typed references/change cursors alongside all source/identity/object data. Both reports have zero credential/OAuth candidates. Local Python has 352 passes (248 unit + 104 PostgreSQL); eighteen real-script Node cases now pass, plus Go schemas and seventeen non-UI dry-run cases.
+
+Verified runtime images: module `ghcr.io/stell0/czero@sha256:1d6b9d152605990e74e89926354a1d56317c21d64df6aa9ffa1f6077d24dcbbf`, app `ghcr.io/stell0/czero-app@sha256:ae45c76afd2982d2ba7d15398f23d6daa50918daf3b79a01604f4d6c7d5db4e7`, database `ghcr.io/stell0/czero-postgres@sha256:686f9fdedca81f97264ef458d41838f1eb9bf1a6cc29df3f3c07ab3c7f0ba207`. Module OCI revision matches the exact commit. Five inspected scans/SBOMs retain 166 app/526 database/29 inherited UI findings, zero module/imageroot; release review remains required. Superseded native 38536787022 was cancelled after the export failure and is not acceptance evidence. Permitted live M09 checks and final three-document closeout CI remain pending.
+
+**Permitted live M09 evidence:** Update only the dedicated authorized Czero instance after all local/publication/native gates pass, comparing actual tag digest and OCI revision immediately before native update. Update and full native user-manager restart exit zero; trusted HTTPS health confirms Core/app/schema/vector readiness. Real owner SSO verifies authored page create/edit/history and Markdown/JSON export, normalized aliases, two conflicting claims with real retained source chunks/time/provenance, 1–3-hop graph, all five typed reference kinds, metadata cursor/replay/409 conflicts and cookie CSRF. Local Wiki assets are reachable; HTTP checks are not represented as interactive browser interaction. Restart preserves exact authored revisions/entities/aliases/claims/citations/references/graph/cursors plus previous source IDs/full text/hashes/chunks/originals, object schemas/data/tags/revisions/relations/events and completed job/schedule/owner identity. Native scheduler is active/enabled without worker failure. Saved configuration and all unrelated normalized inventory entries remain unchanged. Only the configured owner persona is used live; all roles/revocation and destructive restore are proven in disposable QEMU. Interactive Playwright remains waived; no live SSH, destructive test or unrelated provider/directory/proxy changes occur. Private details remain outside Git.
+
+**Review/limitations:** Knowledge services stay separate from native lifecycle; no additional runtime dependencies, service/graph database or generative handler is introduced. Persisted global roles, real evidence FKs, immutable Wiki revisions/assertion values, additive provenance, replay snapshots and commit-ordered metadata cursors remain shared across REST/UI. Depth/work/output and JSON/Markdown/alias/relation/reference caps are enforced. Object deletion preserves an explicit missing-reference marker; page/entity/source archives preserve historical identity. Minimal UI uses safe text, bounded pickers/reads and explicit reload on conflicts; full forms/navigation remain M12. Claim values are immutable; a changed assertion is a new claim and old evidence is retained. No Markdown HTML rendering, autonomous synthesis, semantic/hybrid retrieval or MCP is claimed. Scan findings and platform stable-IdP/proxy/logging reviews remain release work. Reconcile all three documents, push closeout and verify its CI before marking M09 complete.
+
+### M10 — Full-text, vectors, external embeddings and Jev/Kev System One RAG [x]
+
+**Goal:** Useful `knowledge_search` by default and optional state-of-the-art retrieval components without built-in generation.
+
+**Copy/adapt from:** [pgvector](https://github.com/pgvector/pgvector); [Jev System One API examples](https://github.com/SC0d3r/jev-systemone); [Kev server and compatible API](https://github.com/arjun988/Kev); [NS8 module config UI](https://github.com/NethServer/ns8-kickstart/blob/main/ui/src/views/Settings.vue). **Search rule:** no matching NS8 embedding/RAG engine was identified; compare current PostgreSQL FTS/hybrid retrieval and supported provider protocols before implementing any query/vector pipeline. Confirm Jev/Kev wire-format compatibility against real docs, not only names.
+
+**Implement:** PostgreSQL FTS baseline; optional embedding provider adapter with model/dimension registry, background embeddings/re-embedding, pgvector ANN/indexes; bounded hybrid ranking (e.g. RRF), optional graph expansion; System One `/v1/systemone` compatible Jev and Kev scorer (off/rerank/filter), bounded candidate set and calibrated threshold per model. NS8 admin UI/env config for endpoints, model names, timeouts, credentials stored as secrets. Safe request-time overrides for `mode`, `limit`, `graph_depth`, `rerank` within administrator caps. Graceful fallbacks and reported `retrieval_method`/`fallback_reason`. No generative model or arbitrary per-request provider URLs.
+
+**Acceptance:** With no provider, FTS returns sourced results. With mocked/real authorized external embedding provider, semantic/hybrid works and model mismatch rejected. Jev and Kev adapters pass protocol mocks; unavailable/rate-limited services preserve ordinary results. Benchmark Recall@k, precision/answer evidence, latency and candidate costs on a fixture corpus; do not assume System One improves quality without evidence.
+
+**Documentation gate:** `AGENTS.md` retrieval/provider contracts and fallback rules; `README.md` configuration/examples/privacy tradeoffs; `PLAN.md` benchmarks and evidence.
+
+**Evidence:** Runtime acceptance, documentation closeout and the corrected complete-index/paused-refresh recovery gate pass. M10 is complete; verify the resulting completion documentation CI before advancing. Runtime/native/browser and permitted live acceptance passes at 80314c3c1f7c2e9fe1739bc103196c309e927d74, with verified image digests and actual live results below. Three-document closeout 9f34d965380105a944642168e3b4a8d4bbc9ee1c passes [local 38574383063](https://github.com/Stell0/ns8-czero/actions/runs/38574383063), [publication 38574383084](https://github.com/Stell0/ns8-czero/actions/runs/38574383084) and [QEMU 38574685790](https://github.com/Stell0/ns8-czero/actions/runs/38574685790). Downloaded Debian installation has fourteen passes/three expected update-only skips; Rocky update has all twenty-two passes, including the five administration/object/source/Wiki/search browser workflows, configured HTTPS indexing/scoring/fallbacks and exact vector/raw recovery. Backup observers pass and both reports have zero temporary password/OAuth candidates; native browser checks also assert the actual provider key is absent. All 466 Python and twenty-four Node cases pass. Interactive Playwright remains waived; only the configured owner and provider-free defaults were used live. No stable release or real-provider quality claim is made.
+
+**M10 implementation subplan and tests (14 October 2026):**
+
+- [x] Inspect actual source/Wiki FTS, current queue, native secret/config/update/restore contracts, maintained NethServer/Nethesis embedding patterns, pgvector index/filter guidance and the real Jev/Kev wire formats before adding operations. Freeze all three verified M09 implementation digests above; monitor M09 main marker CI. No new graph service, LangChain framework, local inference or generative handler.
+- [x] First add a focused shared knowledge-search Core service and typed authenticated REST for source chunks plus current authored Wiki revisions, with stable evidence/revision IDs, bounded snippets/limits/query text and deterministic ranking. Add packaged Wiki FTS/GIN migration while retaining existing source FTS. Tests: no-provider sourced results, Wiki edits/archives/current revision, Unicode/invalid inputs, persisted Reader/Editor/revocation and signed HTTP. FTS must work independently of optional embedding/index jobs.
+- [x] Add immutable embedding model/endpoint/dimension profiles, derivative Wiki chunks and idempotent bounded background indexing/re-indexing through the existing trusted queue. Preserve all raw/source/Wiki IDs/revisions/citations. Use full-precision pgvector HNSW with declared dimensions at most 2000; zero-pad smaller vectors in one fixed-width index (cosine unchanged), isolate by exact profile/model/dimension and enable bounded iterative scans for filtered ANN. Reject nonfinite/zero/wrong-dimensional/mismatched-model outputs without replacing evidence. Test actual vector/index plans, stale revision/hash/profile changes, rollback/retries, repeated migrations and backup recovery. Reuse bounded HTTP transport; no SDK/framework dependency or per-request provider URL/secret.
+- [x] Implement a HTTPS embeddings-compatible float adapter and one common System One relevance adapter for Jev/Kev's shared model/state/questions/answers Noul contract. Cap provider timeouts, request/response bytes, embedding batches, candidate count/text and returned scores; verify exact indexes/IDs/model/dimensions and TLS. Add text/semantic/hybrid RRF modes and optional existing PostgreSQL entity expansion, with off/rerank/filter bounded by administrator caps and explicit retrieval_method/fallback_reason. Missing/down/rate-limited/malformed providers preserve ordinary ranking. No provider scoring affects roles. Unit protocol mocks must cover both Jev and Kev, invalid responses, 429/timeouts/no redirects and no secret/data logs. A fixture benchmark reports Recall@k, precision, latency and candidate costs for text/hybrid and deliberately helpful/unhelpful mock scores, without claiming real provider quality or universal calibration.
+- [x] Add focused native retrieval validation/private atomic secret-file persistence/default initialization/get-configuration/restore steps and NS8 Settings controls. Keep provider credentials outside Redis and user REST overrides, backed up through native includes and loaded by app/worker. Defaults disable providers; public config returns only safe fields/credential-presence flags. Test invalid configuration leaves prior state, repeated/partial edits preserve secrets, old upgrades/restores initialize disabled defaults and configured restores preserve profiles/settings. Add disposable mock-HTTPS provider/native and repeatable search-browser tests; permitted live tests use provider-free defaults only in the dedicated Czero instance. Run all local/image/QEMU gates, inspect results and update all three documents/final CI before completing M10. Interactive Playwright stays waived.
+
+
+**Reference findings:** Current public NethServer searches find no reusable System One or retrieval service. [Nethesis Satellite db.py](https://github.com/nethesis/satellite/blob/b95156efabe255fa79ab83e2506ddcde458f857d/db.py) uses PostgreSQL HNSW and bound transactional replacement, but couples to fixed OpenAI/LangChain and transcription; reuse only compatible patterns with C0's existing Core/queue/evidence contracts. Its latest Actions include a mixed pass/failure, so do not infer whole-project acceptance. Older aisupport uses Chroma/LangChain and has no declared license; copy no implementation and retain the agreed PostgreSQL architecture. Inspected actual source files, not just READMEs.
+
+[pgvector index limits](https://github.com/pgvector/pgvector#hnsw) allow full-precision HNSW up to 2000 dimensions; [iterative scans/filtering](https://github.com/pgvector/pgvector#iterative-index-scans) explain post-index filtering and bounded scan controls. Fixed-width zero padding preserves same-profile cosine while avoiding request-driven DDL and multiple dynamic schemas; document the supported cap rather than truncating vectors. Official [embedding documentation](https://developers.openai.com/api/docs/guides/embeddings) establishes float model/input responses and optional dimensionality; the generic reference URL returned transient 503, so inspect the fetched guide and exact response contracts. No external provider credentials/calls are used in tests.
+
+Inspected Jev client/types/mock tests at [fb277d3](https://github.com/SC0d3r/jev-systemone/blob/fb277d30d3bef5034cd664e72122cc0d5b91f9c3/src/types.ts) (MIT) and Kev server/schema/RAG example at [959da16](https://github.com/arjun988/Kev/blob/959da16ee364722ba06daeac392df96c011c67b4/packages/schema/src/index.ts) (Apache-2.0), with [Kev CI 35880855596](https://github.com/arjun988/Kev/actions/runs/35880855596) passing. Both implement POST /v1/systemone, explicit model/state, named typed questions and named answers; Noul is a finite 0–1 relevance probability. Kev extensions/trace/batch and generative backends are not embedded in C0. Keep a minimal original HTTP adapter for their common contract, not a chat-completions surrogate. Thresholds are per configured model and require operator calibration; mock benchmark scores do not establish real Jev/Kev improvement.
+
+**First M10 FTS increment:** Packaged 0009_retrieval_text adds generated Wiki revision FTS/GIN. SearchService combines existing source FTS with current active Wiki revisions, deterministic bounded ranking, exact excerpt substrings/offsets and stable source/revision citations. Typed Reader REST at /api/v1/knowledge/search rejects unknown options, including provider URLs; modes semantic/hybrid explicitly fall back to provider-free text. No embedding/scorer/configuration or derivative indexing dependency is added. Core/app/schema advance to 0.14.0/0.17.0/0009_retrieval_text. All 357 Python cases pass (248 unit + 109 PostgreSQL); four new Core cases cover source/Wiki citations, late-text excerpt offsets, stable ranking/filtering, obsolete revisions/archives, roles/revocation, caps and a real GIN plan/repeated migration. One signed HTTP case covers response citations, safe fallback, unknown options and admitted/revoked Reader behavior. The exact native Wiki recovery fixture now verifies current revision FTS/fallback after update/restore, tested in the nine-case focused HTTP/Core rerun. Eighteen Node, Go schemas and seventeen non-UI dry-run cases pass. Native predecessor fixtures now freeze all verified M09 runtime images. Publication/native of this increment and all optional-provider M10 acceptance remain pending.
+
+**Provider adapter Core increment (publication/native pending):** Implement original HTTP adapters using the existing httpx2 dependency and a private asyncio request loop beneath synchronous Core methods; an absolute timeout covers headers and slowly streamed bodies, with byte caps and cleanup. Embeddings validate exact model/dimension/complete indexes, finite nonzero vectors and optional requested dimensions; System One validates complete named Noul answers and model identity. Both use administrator-owned HTTPS endpoints, no redirects/proxies, masked key representations and static errors. Candidate excerpts cap at 2 KiB and report truncation. Initial mock responses were preconsumed by httpx2.Response; use its supported byte iterator under an identity-encoding requirement, retaining compression rejection and streamed bounds. Slow-header/body deadline tests close the stream; no runtime timeout claim is made without native HTTPS checks.
+
+Concrete Kev finding: [resolveModelName](https://github.com/arjun988/Kev/blob/959da16ee364722ba06daeac392df96c011c67b4/apps/server/src/decision.ts) resolves kev-latest/jev-latest to backend-specific IDs. Pin the resolved ID in configuration/calibration rather than silently accepting a changed model. First FTS b04fd7f passes [local 38546112510](https://github.com/Stell0/ns8-czero/actions/runs/38546112510) and [publication 38546112422](https://github.com/Stell0/ns8-czero/actions/runs/38546112422); [native 38546370042](https://github.com/Stell0/ns8-czero/actions/runs/38546370042) is running. M10 planning-only native 38545341116 was cancelled as superseded before the FTS tag update; it is not passing evidence. M09 main marker native 38544764268 remains pending.
+
+Provider protocol suite has thirty-seven passing cases, including both Jev/Kev common contracts, exact embedding indexes/dimensions/models, nonfinite/zero/missing/duplicate results, URL/header/config limits, no redirects, 429/unavailable errors, byte/compression guards and absolute header/slow-drip-body timeout with stream closure. All 394 Python cases pass before the version-only bump (285 unit + 109 PostgreSQL). Core/app advance to 0.15.0/0.18.0, schema remains 0009. Public knowledge FTS remains unchanged; native/provider configuration and vector/scoring integration are not claimed.
+
+
+**Provider trust correction:** httpx2 trust_env=False suppresses proxy configuration but also skips SSL_CERT_FILE. Supply an explicit verifying SSL context so OS/operator CA trust remains effective without proxy inheritance; bad CA/network errors return a static unavailable reason. A generated disposable real HTTPS server passes with its trusted CA and fails without trust, retaining certificate/hostname verification. The current thirty-eight provider cases and all 395 Python cases pass before vector-schema development (286 unit + 109 PostgreSQL). Core/app patch to 0.15.1/0.18.1, schema still 0009. First FTS [native 38546370042](https://github.com/Stell0/ns8-czero/actions/runs/38546370042) completed successfully; downloaded Debian installation has fourteen passes/three expected skips, zero privacy candidates. Downloaded Rocky update has twenty-one passes, including the real browser and FTS/recovery fixture, zero privacy candidates. M09 main marker [38544764268](https://github.com/Stell0/ns8-czero/actions/runs/38544764268) downloaded reports confirm Rocky update twenty-one passes, Debian install fourteen passes/three expected skips, zero privacy candidates.
+
+**Embedding storage Core increment:** Packaged 0010_embeddings adds immutable model/endpoint-fingerprint/dimension profiles with generation/active state, exact derivative Wiki chunks and full-precision normalized zero-padded vector(2000) HNSW rows, plus a disabled optional refresh schedule. EmbeddingStore indexes at most eight inputs in the existing worker transaction; source evidence and authored revisions remain immutable. Reindex increments generation with CAS so old vectors do not mix with refreshed data. Trusted handler payloads contain only bounded profile/generation IDs, never URLs/secrets/imports. Filtered ANN uses strict iterative scans and a bounded max-scan setting; profiles/generations/current revisions/archives filter inside the actual query. Profile transitions activate/deactivate the schedule while repeated activation preserves an explicit pause. No runtime/native activation or semantic/scoring API is claimed yet.
+
+Ten actual PostgreSQL cases pass: complete Wiki substring offsets/stable UUIDs/raw evidence, replay-safe bounded batches, credential rotation/profile identity and model/dimension separation, generation/stale-job CAS, actual worker/idempotent queue execution, current revision/source archive exclusion, a real filtered HNSW query plan, provider rollback without raw changes, blank-page title indexing and paused-schedule preservation. Initial fixture imports lacked dependencies, corrected before service tests. The unpublished local derivative migration was refined with active-state/pause semantics; equivalent DDL reconciled empty local derivative tables, without touching raw data. Fresh CI migration/upgrade remains required. All 405 Python cases pass (286 unit + 119 PostgreSQL), including the actual disabled-schedule/health worker regression. Core/app/schema advance to 0.16.0/0.19.0/0010_embeddings.
+
+Provider/trust 9fc5e85 passes [local 38549454532](https://github.com/Stell0/ns8-czero/actions/runs/38549454532), [publication 38549454644](https://github.com/Stell0/ns8-czero/actions/runs/38549454644) and [native 38549710951](https://github.com/Stell0/ns8-czero/actions/runs/38549710951). Downloaded Debian update has seventeen passes; Rocky installation/browser eighteen passes/three expected skips, zero credential/OAuth candidates. These installed checks prove packaged lifecycle/FTS, not configured remote inference. Provider protocol/real disposable HTTPS trust is verified locally. Vector slice publication/native acceptance and the remaining M10 integration/configuration/benchmark/live gates remain pending.
+
+**Dormant schedule integration guard:** An Admin can enable a seeded schedule even before its optional provider exists; an unknown handler would abort due-task allocation and block ordinary work. Always register bounded embedding handlers, returning an explicit disabled no-op for indexing without a provider. A real worker test enables the dormant schedule and verifies both its disabled result and an ordinary health job complete; the signed handler-list assertion now requires both trusted embedding names. Restore the fixture's interval/enabled/due values to prevent schedule leakage. Optional configured indexing/semantic/scoring and native settings remain pending.
+
+**Shared retrieval integration:** SearchService now combines text and exact active profile/generation semantic candidates through deterministic RRF; Wiki chunk matches aggregate to their stable revision identities. Optional Jev/Kev scoring reranks at most sixteen candidates plus unchanged tail, or filters only evaluated candidates at the configured threshold. Complete-answer/model validation and explicit fallback reasons preserve ordinary ranking on provider failures. Response metadata discloses considered/scored counts, input truncation and safe token usage. Search provider calls hold no DB connection; background indexing retains its bounded worker transaction for rollback. Persisted roles are checked before data and again before returning, including in-flight revocation. Request modes/limits/graph depth/scoring cannot exceed validated administrator caps or enable disabled scoring. Supplemental graphs are unscored, separate from ranked hits, using existing KnowledgeService with at most three roots/sixteen nodes each.
+
+Eight ranking/cap unit cases and eight PostgreSQL hybrid cases cover semantic paraphrases/current revision IDs/exact offsets, deduplication/RRF, empty indexes/model mismatch/429 fallback, both scorer protocols/rerank/filter/outage, graph references/no-hit label expansion, bounds and revocation during scoring with zero held connections. One signed HTTP case verifies typed hybrid/filter probabilities/citations and unknown/over-cap request rejection. Graph testing exposed SQLAlchemy's untyped empty expanding UUID list rendering as INTEGER; explicit Uuid binds fix the actual PostgreSQL error without accepting a graph fallback as success. All 422 Python cases pass (294 unit + 128 PostgreSQL) before the version-only bump; twenty focused health/ranking cases pass afterward. Core/app advance to 0.17.0/0.20.0, schema remains 0010. Clients are trusted test injection only; native configuration/activation, real configured index recovery, benchmarks and live M10 remain pending.
+
+Storage e617d12 passes [local 38558586097](https://github.com/Stell0/ns8-czero/actions/runs/38558586097), [publication 38558585966](https://github.com/Stell0/ns8-czero/actions/runs/38558585966), [native 38558851741](https://github.com/Stell0/ns8-czero/actions/runs/38558851741). Downloaded Debian installation has fourteen passes/three expected skips; Rocky update twenty-one passes, zero credential/OAuth candidates. Native migration/FTS/lifecycle/backup baseline passes; configured vector contents were not seeded yet and are not claimed restored.
+
+**Native settings/runtime increment (verification active):** Focused numbered steps validate private retrieval settings before routing, persist atomically after registration, initialize disabled defaults for create/legacy upgrade/restore and preserve restored settings. Private retrieval.env is backed up and loaded by application/worker. Public output contains only safe fields/key-presence flags; endpoint changes clear old keys, blank inputs preserve same-endpoint keys, explicit clear/rotation are tested. Core validates the same bounded format and constructs configured clients for search/worker; startup activates profiles while preserving same-profile schedule pauses. Optional activation errors use a fixed diagnostic and never stop baseline FTS. Reader index status has a typed response. Native administration controls show privacy/calibration guidance and bounded settings, clear entered keys after successful save and exclude output-only flags from requests.
+
+All 454 Python cases pass before two additional runtime-factory tests; those two pass separately. The focused twenty-four application/signed HTTP cases pass after advancing Core/app to 0.18.0/0.21.0 (schema 0010 unchanged), including exact index status. Twenty real-script Node cases and Go schemas pass. The administration build initially hit the host Node 25/OpenSSL incompatibility with existing Webpack 4; rerunning with the already-established container/CI NODE_OPTIONS=--openssl-legacy-provider succeeds. This is build-only compatibility, not a runtime TLS exception. Shared retrieval d20ce13 passes [local 38562694538](https://github.com/Stell0/ns8-czero/actions/runs/38562694538) and [publication 38562694572](https://github.com/Stell0/ns8-czero/actions/runs/38562694572); [native 38562963796](https://github.com/Stell0/ns8-czero/actions/runs/38562963796) completed green. Downloaded reports confirm Debian update seventeen passes and Rocky installation eighteen passes/three expected skips, including all existing browser/recovery cases, with zero credential/OAuth candidates. The final full local run has 456 Python passes. Configured native inference, vector restore, benchmark, new search UI and live M10 are still unverified; M10 remains open.
+
+**Configured retrieval/UI acceptance increment (tests under development):** Add a Git-only disposable HTTPS server outside runtime images with generated private credentials/certificate and real common embedding/System One responses. Extend the existing test-CA drop-in to the worker, configure via native action/private stdin, wait for actual timer indexing and compare complete derivative profiles/Wiki chunks/vector values after update and encrypted clean restore. Test 429, mismatched model and unavailable services with unchanged text ranking. Existing raw knowledge recovery now explicitly requests text/scoring-off alongside separate configured hybrid/filter recovery. Runtime remains free of test servers. Extend real owner/Reader browser search with actual citations/filter/text/reload checks; fix the existing admin browser's ambiguous text-input selector after settings expansion.
+
+A minimal separate search page uses local assets, literal evidence/citations and sequence/captured-option guards; no mutation or provider URL/key inputs. Discovery honestly advertises implemented optional retrieval and pending MCP. Four real-script response/error races pass. A measured PostgreSQL fixture benchmark of eight revisions/two paraphrase queries is recorded in docs/retrieval-benchmark.md: text and unscored RRF recall@2/precision@2 are 0, mock semantic and deliberately helpful scoring are 1, deliberately unhelpful scoring is 0, all hits have immutable citation references. Local mean latency spans 3.22–11.88 ms, eight semantic candidates per query, eight scored candidates when enabled, 156 query-embedding bytes and 7550 scorer bytes across two queries. These are mocked local observations, not real-provider quality/calibration/cost. Actual configured native recovery/browser evidence remains pending.
+
+Native settings cec01bc passes [local 38565947030](https://github.com/Stell0/ns8-czero/actions/runs/38565947030) and [publication 38565947065](https://github.com/Stell0/ns8-czero/actions/runs/38565947065); [native 38566253698](https://github.com/Stell0/ns8-czero/actions/runs/38566253698) is active. Core/app advance to 0.19.0/0.22.0, schema stays 0010. M10 is not complete.
+
+**Local acceptance refinement:** The first new search-page test accidentally retained discovery assertions in the new function, producing a NameError. Restore those assertions to their original discovery case; the full rerun has 461 passes. Review additionally found falsey non-string disabled endpoint/model fields could bypass Core descriptor validation; explicitly require strings and add four cases. Fifty-four focused app/configuration/fixture cases pass. The exact disposable HTTPS provider server now passes actual local TLS/credential/model/429/unavailable checks for both adapters; fifteen fixture/privacy cases pass. Twenty-four Node cases, Go schemas and seventeen non-UI dry-run cases pass. Native tests additionally check the generated provider key against actual browser reports; no credential becomes a Robot variable. Configured native execution remains pending, not inferred from these local results.
+
+Final pre-publication rerun: all 466 Python cases pass (337 unit + 129 PostgreSQL), twenty-four Node cases pass, Go schemas and seventeen non-UI dry-run cases pass. Configured native and live acceptance remain pending.
+
+**Settings native result:** cec01bc native 38566253698 is red: downloaded Debian installation fourteen passes/three expected skips, Rocky update twenty passes/one failure. Actual failed browser report and CI log identify strict-mode ambiguity in the expanded settings form's text-input locator. The correction already prepared in 8759d19 selects its first hostname input explicitly and retains invalid-host/save/restart/reload assertions; no acceptance case is removed. Both native reports contain zero temporary password/OAuth candidates. All preceding private configuration/lifecycle/SSO/recovery cases pass, but this run is not accepted as green. Publish the corrected search/provider-test increment and require a complete new native result.
+
+**M10 runtime/native acceptance:** Published source 80314c3c1f7c2e9fe1739bc103196c309e927d74 passes [local 38570011441](https://github.com/Stell0/ns8-czero/actions/runs/38570011441), [publication/audits/scans 38570010589](https://github.com/Stell0/ns8-czero/actions/runs/38570010589) and [QEMU 38570317250](https://github.com/Stell0/ns8-czero/actions/runs/38570317250). Downloaded Debian update has seventeen passes; Rocky installation has nineteen passes/three expected update-only skips. Both verify actual timer indexing through a trusted disposable HTTPS embedding provider, Jev/Kev-compatible scoring, complete semantic/current-Wiki citations, 429/model-mismatch/outage fallbacks and exact profile/generation/chunk/vector recovery after configured update and encrypted clean restore. Backup writer observers pass. Rocky additionally passes corrected administration settings, all previous object/source/Wiki browsers and new owner/Reader hybrid/filter/text/citation/reload behavior. Temporary password/OAuth report candidates are zero; native browser assertions also verify the actual generated provider key is absent from reports.
+
+Verified module digest sha256:b53c57b53df7162d4a854bb5441910b8dcfc12b9b4711d3a0d6856183ad659cf, application sha256:bc5d3c492fd747d06dc1a077dc99edf06ca57a7c0bb24d5c271115608b8bcccc, database sha256:072781b5b07af4d82ecbb69c8cc3c91a60e0fe31cd6bc8390eefd2adad12a09c. OCI revision matches the source above; Core/app/schema are 0.19.0/0.22.0/0010_embeddings. Local 466 Python cases (337 unit + 129 PostgreSQL), twenty-four Node cases and Go/dry-run checks pass. Five inspected SBOM/scans retain 166 application, 526 database, 29 UI and zero module/imageroot findings; unresolved release review remains M14. No real-provider quality/calibration claim or stable release is made. Permitted live M10 deployment and final documentation CI remain pending; M10 is not marked complete.
+
+**Permitted live M10 acceptance:** Only the dedicated authorized Czero instance was updated to the preflight-verified 80314c3 branch image and then restarted through the native node action, which restarts its full user manager. Normal-TLS Core/app/schema/vector readiness passes. Real configured owner SSO asserts provider-free source/Wiki search, immutable source/revision citations, exact excerpt offsets, automatic/text/semantic/hybrid fallbacks, supplemental three-hop graph, bounded/unknown/scoring-policy rejection and available local search assets. Providers remain disabled and no external AI inference is performed live.
+
+After both update and full native restart, exact previous Wiki revisions/entities/claims/provenance/references/graph/cursors, four-format source/version/document/chunk IDs/text/hash/citations and retained/quarantined originals, object schemas/data/tags/revisions/relations/events, completed jobs/schedule and owner identity persist. Prior native hostname/certificate/identity settings and every unrelated inventory entry remain unchanged; only new disabled retrieval defaults are added. Scheduler is active/enabled without failure. No live SSH, unrelated provider/proxy/directory change, destructive restore/uninstall or live provider configuration occurred. Only the configured owner persona was used live; Reader/Editor/revocation and configured-provider/browser/destructive recovery are verified in disposable QEMU. Interactive Playwright remains operator-waived; HTTP asset checks are not claimed as interactive live browser tests. The private live preflight helper initially used a stale branch name; its manifest check failed before any update, and the corrected helper required matching digest/OCI revision before mutation.
+
+**Review and final documentation gate:** Native operations remain numbered focused scripts; Core owns profiles/indexing/ranking/scoring and shared role/evidence contracts. Exact restore and fallback tests are retained; the only red settings-browser result has a diagnosed selector correction and a fully green replacement. The current three documents and measured benchmark now describe actual optional providers, controls, privacy, caps and failure semantics. No real provider quality or universal threshold is claimed. Supported embeddings cap at 2000 full-precision dimensions, graph is supplemental unscored context, the UI remains minimal until M12 and runtime does not generate answers. Old profile/generation derivative rows remain stored; automatic derivative compaction is a maintenance limitation, not raw-data loss. Stable IdP/proxy availability and vulnerability review remain release work. Commit/push these closeout documents, inspect the resulting local/publication/native runs, then mark M10 complete and proceed to M11.
+
+Completion review clarifies connection semantics: interactive search releases its database connections before provider HTTP, while background indexing intentionally retains the supplied bounded worker transaction for atomic rollback. This documentation correction changes no runtime behavior. Move the completion marker to main, verify its resulting CI, then begin M11.
+
+**Completion-marker race and stronger fixture:** Main marker 12c07202df78dec0c92bd743877480caf5348037 passes [local 38578881531](https://github.com/Stell0/ns8-czero/actions/runs/38578881531), [publication 38578881625](https://github.com/Stell0/ns8-czero/actions/runs/38578881625) and API-schema docs, but [native 38579269999](https://github.com/Stell0/ns8-czero/actions/runs/38579269999) is red. Downloaded Debian update has sixteen passes/one failure: exact derivative snapshot changes after configured update, before backup is reached. Rocky installation has nineteen passes/three expected skips, including all five browsers and configured recovery. Both privacy scans are clear. Failed logs and native journals show another valid worker invocation after the seed snapshot; no differing private data was logged, so no runtime data-loss diagnosis is claimed.
+
+Actual preceding SSO role probes create additional sources and Wiki pages. The seed waited only for at least five vectors, although indexing caps at eight inputs and prepares two new Wiki revisions per batch. A local PostgreSQL regression with ten sources/five Wiki revisions reproduces the invalid completion assumption: the first successful batch has eight vectors and only two prepared Wiki revisions; subsequent valid work changes its snapshot. Strengthen acceptance instead of removing exact equality: retain actual timer first-batch proof, pause optional refresh through authenticated schedule REST, enqueue four bounded registered indexing jobs, require all to succeed and use an actual PostgreSQL completeness predicate for every current source/Wiki chunk. Assert semantic-only sourced revision identity and paused-schedule preservation across update/restore. Diagnostics expose only changed category/count/column names, never IDs/text/vector values. Tests restore the schedule fixture to avoid global leakage.
+
+All 468 Python cases pass (338 unit + 130 PostgreSQL); twenty-seven focused embedding/native-fixture cases additionally verify the real completeness SQL is false for a partial batch and true only after all fifteen vectors exist. Go schemas and seventeen non-UI dry-run cases pass. The seed command deadline is bounded at 300 seconds for actual timer completion; other native commands remain at 180 seconds. Runtime packages/images code and the verified live deployment are unchanged. Publish this test-only correction and require fully green native verification before restoring M10 completion or advancing to M11.
+
+**Stronger recovery gate accepted:** Correction 5332017a0ad0e36c4c05f5b4c9df6fd89a4c3306 passes [local 38586229230](https://github.com/Stell0/ns8-czero/actions/runs/38586229230), [publication 38586229183](https://github.com/Stell0/ns8-czero/actions/runs/38586229183) and [QEMU 38586575901](https://github.com/Stell0/ns8-czero/actions/runs/38586575901). Downloaded Debian installation has fourteen passes/three expected update-only skips; Rocky update has all twenty-two passes, including all five administration/object/source/Wiki/search browser workflows. Both pass actual timer proof, complete registered indexing jobs, PostgreSQL coverage of every current source/Wiki chunk, semantic-only immutable revision citations, refresh pause across update/restore and exact profile/chunk/full-vector equality. Both backup observers pass; both artifact audits have zero temporary-password/OAuth-query candidates, and native browser checks assert provider-key absence. All 468 Python and twenty-four Node cases, Go schemas and seventeen non-UI dry-run cases pass. This is a test-only correction; runtime and permitted provider-free live evidence remain unchanged at verified 80314c3. M10 is complete. Verify this three-document completion commit's CI before beginning M11; freeze the verified 803 runtime digests above as M11 predecessors.
+
+### M11 — REST/MCP parity, OAuth interoperability and `/agents` discovery [x]
+
+**Goal:** An external AI client can connect immediately and discover exactly what the installed C0 can do.
+
+**Copy/adapt from:** [ns8-idp registration](https://github.com/NethServer/ns8-idp/blob/main/README.md); [NS8 module identity docs](https://github.com/NethServer/ns8-core/blob/main/docs/core/user_domains.md); [official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk); [MCP protocol](https://github.com/modelcontextprotocol/modelcontextprotocol); [ns8-github-actions API-doc CI](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/build-apidoc.yml). **Search rule:** inspect current ns8-idp protocol support, client registration and issuer behavior and test with real clients; no general NS8 MCP OAuth bridge is known to reuse blindly.
+
+**Implement:** Shared service operation/capability registry powering FastAPI routes/OpenAPI, MCP tools/resources and human-readable `GET /agents` + machine-readable `GET /agents/capabilities.json`. Remote MCP Streamable HTTP; OAuth protected-resource/authorization discovery and delegated user tokens with ns8-idp as identity source; enforce caller's application-wide role and token scopes at boundary. Basic tools: inspect capabilities, types/objects, wiki/documents, search, changes feed, schedules/jobs; **no arbitrary SQL/shell or raw privileged NS8 actions**. Discovery and permissions reflect current caller. OAuth errors and expired/mismatched tokens handled correctly.
+
+**Acceptance:** Authorized client successfully lists/calls tools and sees the same result as REST; Reader cannot mutate by either transport; live OAuth browser login and token lifecycle tested; `/agents` and OpenAPI actually describe installed capabilities; a real compatible MCP client can connect if harness allows. Do not assume scheduled ChatGPT tasks support custom MCP connectors without checking.
+
+**Documentation gate:** `AGENTS.md` operation registry and discovery rules; `README.md` connection steps, API/MCP limitations and authorization; `PLAN.md` client interop evidence.
+
+**Evidence:** Accepted protocol/live implementation 5bc2dca and final discovery closeout aa26512; detailed CI/QEMU/live results and digests below. Completion-marker CI must pass before M12.
+
+**M11 implementation subplan and acceptance (14 October 2026):**
+
+- [x] Freeze the verified M10 80314c3 module/app/database digests for genuine predecessor tests. Introduce a small trusted Core operation registry with unique names, bounded JSON schemas/arguments, minimum persisted roles and explicit c0:read/c0:write/c0:admin scopes. Bind existing typed JSON REST handlers to it without duplicating service operations or changing resource contracts. Generate caller-aware capability JSON and OpenAPI operation metadata from these bindings. Test REST/direct-operation result equality, schema errors, role/scope denial, stale actors/revocation and honest anonymous discovery. Multipart upload and binary/Markdown attachments remain explicit REST interfaces; document their transport behavior.
+- [x] Mount the maintained official MCP Python SDK Streamable HTTP transport in the existing ASGI process, including host/origin/body/concurrency limits and actual host lifespan startup. Generate tools and bounded knowledge resources from registered operations; no SQL, shell, imports, provider credentials or NS8 administration tools. Use a real SDK client over HTTP, including current and supported legacy protocol behavior, exact REST/MCP results, Reader write denial and unknown-operation/oversized-argument errors. Discovery must expose only caller-authorized operations.
+- [x] Resolve the concrete native IdP registration constraints before claiming external OAuth interoperability. Current register-client creates one confidential module-owned client, has no public-client/scope controls and restricts audiences to client IDs. Never expose its existing secret to external clients, impersonate another module or modify unrelated live provider settings. Prefer existing upstream OAuth capabilities; if an adapter is required, use the official SDK authorization-provider/handler contracts and the existing verified NS8 SSO identity, with explicitly approved clients/redirects and per-client consent. Persist bounded one-use S256 codes and scoped, resource/issuer/client-bound delegated grants; validate expiry, revocation, replay, CSRF/state/issuer binding and refresh rotation through real PostgreSQL and compatible client flows. Roles still come only from current C0 membership. Record any external limitation precisely rather than weakening acceptance.
+- [x] Extend disposable real SSO with actual OAuth client discovery/consent/code exchange/refresh/revocation and MCP calls, then exact update/encrypted clean restore of identity/grants and existing knowledge. Test permitted live discovery/REST/MCP and authorization only on the dedicated Czero instance, retaining private operator artifacts and normal TLS. Interactive Playwright remains operator-waived; repeatable native browser assertions remain required. Update all three documents and inspect local/publication/audit/QEMU evidence for each meaningful slice and closeout.
+
+**Reference findings:** M10 completion 807ff59292cd883da322d0b09e1081c25d6a0b14 passes [local 38590332780](https://github.com/Stell0/ns8-czero/actions/runs/38590332780), [publication 38590332820](https://github.com/Stell0/ns8-czero/actions/runs/38590332820) and [QEMU 38590761750](https://github.com/Stell0/ns8-czero/actions/runs/38590761750). Downloaded Debian update has seventeen passes; Rocky installation nineteen passes/three expected skips, including all five browser workflows, complete indexing/paused refresh/exact recovery and backup observers. Both artifact privacy audits are clear. Repeated permitted live normal-TLS health and provider-free retrieval reads pass without deployment or configuration changes. Latest inspected scans retain the documented release findings.
+
+Inspected maintained ns8-idp source 4034dc3046f0ed5d73a36588735316c7e354bf72, native registration schema/handler and actual realm/client/audience implementation. GitHub searches find no NethServer Python MCP implementation or Nethesis OAuthClientProvider adapter. Read official [SDK v2.3.0](https://github.com/modelcontextprotocol/python-sdk/tree/v2.3.0) source 2118f14f8a19bc158d8a1cf90af58d85d187f849, released 2 October 2026, including authorization/provider/routes, HTTP client, ASGI/lifespan, transport security and upstream discovery/authorization tests. It uses the existing httpx2 stack and MCPServer, supports modern sessionless and legacy transports, and separates the resource-server verifier from authorization-provider handlers. Follow the current [2026-07-28 authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) and [security guidance](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices), including exact audiences/redirects, S256, explicit consent and no token passthrough. Do not copy illustrative in-memory tokens or permissive example logging as production behavior.
+
+**First M11 registry slice:** Core OperationRegistry stores trusted unique callbacks and bounded public schemas, rechecks persisted roles, requires validated explicit delegated scope sets and caps JSON arguments at 1 MiB. Typed application bindings cover sixty JSON resource/job/search operations, preserving the public schema alias and DTO UUID/time normalization, authentication/CSRF dependencies and service transaction guards. OpenAPI IDs/x-c0-operation and both discovery routes reuse this catalog; anonymous operations are empty, invalid credentials fail closed, and MCP availability is explicitly false. Multipart/binary/Markdown interfaces remain REST-only attachments. A concrete parity regression caught internal schema_ input serialization; preserving public aliases fixes it. The new boundary rejects non-Admin schema registration with 403 before semantic inspection, while Admin invalid schemas retain 422; the exact role regression records that deliberate stricter boundary.
+
+All 471 Python cases pass (340 unit + 131 real PostgreSQL), twenty-four Node cases, Go schemas and seventeen non-UI dry-run cases pass before final version/scope refinements. The isolated local database process had stopped; a background launch was reaped by the execution environment, so retain its foreground tool session and rerun rather than count unavailable-database errors as passes. Core/app become 0.20.0/0.23.0 with unchanged 0010 schema. Freeze all three verified M10 predecessors and extend native owner/Reader/Editor/Admin/revocation plus exact update/restore discovery assertions. The final broad run has 470 passes and one version-only failure: Core health still declared 0.19.0 after the package bump. Correct it to 0.20.0; all twenty-four focused app/registry/HTTP cases pass afterward, including health versions, alias parity, explicit scope-set rejection and the stricter role boundary. Go schemas and seventeen non-UI dry-run checks pass again with frozen M10 predecessors and native discovery assertions. Publication/native verification is pending. No MCP or external OAuth success is claimed.
+
+**Registry installed/live acceptance:** d9ede798c32f6b90e3535b92543b9e26c60c1960 passes [local 38597370427](https://github.com/Stell0/ns8-czero/actions/runs/38597370427), [publication 38597370631](https://github.com/Stell0/ns8-czero/actions/runs/38597370631) and [QEMU 38597730558](https://github.com/Stell0/ns8-czero/actions/runs/38597730558). The actual local CI log confirms all 471 Python cases pass. Downloaded Debian installation has fourteen passes/three expected skips; Rocky update all twenty-two passes including all five browsers. Both prove current-caller owner/Reader/Editor/Admin discovery and revocation, restored discovery/identity, exact raw/vector recovery and backup observers; artifact audits have zero temporary-password/OAuth-query candidates.
+
+Verified module sha256:20a606050122fedb1836128dfbda23ab3c0073887567a05a670f354afc93c8f5, app sha256:e9c031b325f5573317241d6c79ad198a0ae9880feea61884559f591535037991 and database sha256:c2b8a034fd6e6f4f709361edb550cd21cee3ec40d84e4790bb2b7044d0d1a354. Module OCI revision matches d9ede79. Only the dedicated permitted live Czero instance was updated after digest/source preflight, then restarted through its full native user manager. Normal-TLS health, owner capability JSON with sixty operations/role/scopes, matching OpenAPI IDs/metadata, caller-aware agent HTML and provider-free retrieval pass after both actions. Exact previous Wiki/claims/references/graph, source/document/chunk text/hash/citations and originals, objects/relations/events, jobs/schedule and owner identity persist. Saved configuration and unrelated inventory are unchanged; scheduler remains healthy. No live provider configuration, SSH, destructive case, unrelated modification or interactive Playwright occurred. Owner only was used live; all roles are proven in disposable tests. M11 remains incomplete until MCP and OAuth gates pass.
+
+Official SDK 2.3.0 separately passes a temporary mounted-ASGI HTTP client probe with verified unit bearer context, protected-resource 401/discovery and both automatic/legacy negotiation. Its default localhost host allowlist initially rejects the synthetic deployed host; explicit host/origin settings fix that. Enter the child router lifespan through the host app; do not rely on mounted lifespans running automatically. This is protocol preparation, not Czero TLS/deployment/OAuth acceptance. Current [ChatGPT scheduling documentation](https://learn.chatgpt.com/docs/automations) permits tools/plugins available to the chat, subject to permissions; [custom MCP documentation](https://developers.openai.com/api/docs/guides/custom-mcp-server) supports OAuth/static client setup and read/write tools. Actual Czero account/plugin/scheduled-run interoperability is unverified; no task or plugin was created.
+
+**Public-client approval slice:** Core OAuthClientService and 0011_oauth_clients persist at most sixty-four administrator-approved public clients, exact immutable callback/scopes, enabled state and optimistic revisions. Only HTTPS or literal loopback HTTP is accepted; query/fragment (including empty delimiters), credentials, whitespace, backslashes and wildcards fail static validation. No client secret or callback fetch exists. Identical descriptor fingerprints return the saved client, including an explicit disable. Revision-protected enable/disable advances the epoch; future grants must bind to it rather than revive stale authority. Three typed Admin operations extend the shared catalog to sixty-three entries. JSON is bounded at sixteen KiB, including chunked bodies. Core/app/schema advance to 0.21.0/0.24.0/0011_oauth_clients; native lifecycle remains unchanged and native logical dumps include the new table automatically.
+
+All 491 Python cases pass (358 unit + 133 PostgreSQL). Added one further real PostgreSQL/signed REST case exercises the exact disposable approved/disabled-client seed and recovery verifier: all three client HTTP cases pass after it, for 134 database cases total. URI cases, role/revocation, registration retry, disable/re-enable CAS, real capacity limits, shared-operation parity and over-limit/chunked JSON pass. Twenty-four Node, Go schemas and seventeen non-UI dry-run cases pass. Extend the native persistence fixture with exact client metadata and Reader denial; require actual publication/QEMU recovery before accepting the slice. Existing live registry-only evidence stays at d9ede79 until that gate passes. No OAuth authorization/token exchange or MCP success is claimed.
+
+**Client-slice privacy correction:** ba3f638e3023ccc1db4900821607b525c5469a4d passes [local 38608279457](https://github.com/Stell0/ns8-czero/actions/runs/38608279457) (492 Python cases) and [publication 38608279551](https://github.com/Stell0/ns8-czero/actions/runs/38608279551). [QEMU 38608578951](https://github.com/Stell0/ns8-czero/actions/runs/38608578951) reports behavioral success: Debian seventeen passes; Rocky nineteen passes/three expected skips, all five browser workflows and exact approved/disabled-client recovery. Post-download privacy inspection nevertheless finds six pending OAuth state/nonce/challenge query candidates in Rocky's Browser INFO object dump. No authorization-code/access-token/ID-token candidate or temporary-password/provider-key exposure is found. Remove the raw affected GitHub artifact and retain sanitized local behavioral evidence; do not count the privacy gate as passed or deploy this slice live.
+
+Inspect exact upstream Browser 19.14.2 source (32f2ac1341b22b86a3479f27f24167ba520df0e3): its Pino logger uses ROBOT_FRAMEWORK_BROWSER_PINO_LOG_LEVEL and the lazy Node subprocess inherits the environment. Set the supported silent level before startup rather than sanitizing a published report after generation. Shared fixture checks now reject state, nonce, code_challenge, code, access_token and id_token query values with fixed errors, alongside existing credential checks. Nine new regression cases pass, including XML-escaped queries; all twenty-four focused privacy/SSO/browser-login cases pass after modeling Robot's sibling-library path in the runpy harness. The broad Python run passes all 500 cases before the additional XML regression; twenty-four Node, Go schema and seventeen non-UI dry-run checks also pass. Require a new native run and actual artifact inspection before client-slice acceptance. No runtime logging, TLS, proxy or live provider setting changes are introduced.
+
+**Next grant-storage increment, tests defined before implementation:** Keep Core independent of HTTP/SDK/native management. Trusted consent issues a bounded, one-use S256 authorization code for an admitted session, an approved client revision, exact callback and canonical resource. Persist only hashes of opaque codes/access/refresh tokens, with issuer/native-client/resource/client/actor/scopes and explicit expirations. Refresh rotates atomically; replay revokes the family. Token/resource/redirect/PKCE mismatch fails closed. Client disable/re-enable cannot revive grants; membership changes revoke existing grants within the role transaction. Serialize role/grant creation to avoid a revoke/issue race, and cap/expire rows. Add actual PostgreSQL tests for single-use/concurrent exchange, exact binding, expiry, rotation/replay/revocation, role/client changes, hash-only storage, bounds and native-client identity changes. No endpoint is advertised until SDK/consent adapters and installed tests pass.
+
+**Grant-storage local result:** Core OAuthGrantService and 0012_oauth_grants implement bounded opaque hash-only delegation independently of HTTP/SDK/native management. Tokens are represented privately, codes bind S256/client/callback/resource, scopes must be approved and justified by the persisted role at consent, and expiry cannot exceed the verified session/one hour. Refresh rotates atomically, durably narrows scopes, deletes old access and commits family revocation before returning a replay/rotation-limit error. Membership mutations permanently delete grants within their existing role transaction; issuance takes the same role lock before grant lock 49379. Quotas cap instance/account grants and refresh history; expired unredeemed codes release quota. Client epochs and native identity/resource bindings prevent reuse after changes.
+
+Nineteen new unit/PostgreSQL cases pass initially. The first broad run has 471 passes/three failures/46 fixture errors because the new migration was added without advancing SCHEMA_REVISION: health fails and an existing compatibility test restores the stale marker, causing later duplicate-table migrations. Correct the constant and rerun from a fresh isolated database rather than count a repaired marker as migration proof: all 520 cases pass. Two additional real PostgreSQL race/rotation-limit regressions pass afterward (twenty-one focused grant cases total; 379 unit + 143 database cases now). Go schemas and seventeen non-UI dry-run checks pass. Core/app become 0.22.0/0.25.0. No public consent/token endpoint, SDK transport, delegated live acceptance or grant recovery success is claimed. Hold the next image push while corrected privacy QEMU 38613358677 still consumes the branch tag.
+
+**Client approval accepted after privacy correction:** 00e8ff1ebc54ca25f5fc2da33cede42b1e00d158 passes [local 38612997760](https://github.com/Stell0/ns8-czero/actions/runs/38612997760) (501 Python cases), [publication 38612997660](https://github.com/Stell0/ns8-czero/actions/runs/38612997660) and [QEMU 38613358677](https://github.com/Stell0/ns8-czero/actions/runs/38613358677). Downloaded Debian installation has fourteen passes/three expected skips; Rocky update all twenty-two passes including all five browser workflows. Both prove exact approved/disabled-client recovery, roles/SSO, complete indexing/vector recovery and backup observers. Expanded actual report audits cover state, nonce, code_challenge, code, access_token and id_token (including XML escapes) and find zero candidates; temporary-password/provider-key assertions pass. The Browser internal dump correction is effective.
+
+Verified module sha256:021ba93c65467e64f0884c07645135226ddf1347048bbf074683272cedd9936d, app sha256:937f3d499fb98c8478f8682e0330687196a0f8e70fb9bbbc96b8473a367d7aff and database sha256:c3ee6f8c452ecf49c05edcc08dc2598f1e2d38e45e697e776194644bca18ef17. Module OCI revision matches 00e8ff1. Update only the dedicated authorized live Czero instance after digest/source preflight, then full native user-manager restart. Normal-TLS Core/app/schema readiness is 0.21.0/0.24.0/0011_oauth_clients. Owner public approval, no secret, disable, descriptor replay preserving disable, stale revision conflict and exact metadata after restart pass. Sixty-three operation discovery/OpenAPI/role/scope metadata and provider-free retrieval pass after both actions. Prior exact Wiki/claims/references/graph, source/document/chunk text/hash/citations/originals, objects/relations/events and jobs/owner identity remain unchanged. Saved configuration, healthy scheduler and unrelated inventory compare equal. Only an inert disabled public-client fixture is retained; no unrelated configuration, live destruction, provider fixture, SSH or interactive Playwright occurred. Other roles remain disposable evidence. Client approval is complete; delegated grants, consent/token endpoints and MCP interoperability are not.
+
+**Maintenance bound regression during transport preparation:** A broad local run with the draft SDK fixture has 514 passes/eighteen failures. Repeated parity probes leaked authored pages and changed later embedding/Wiki isolation assumptions; clean up only the fixture's actor-owned pages/revisions/events/receipts. Separately, the existing maintenance bound assertion reports 1006 removed sessions instead of 1000 in broad and focused runs. Later direct query-plan and forced-planner checks report 1000, so the exact plan trigger is not isolated. Replace locking DELETE-IN subqueries with a MATERIALIZED selected batch followed by DELETE USING, ensuring one fixed limited selection; see [PostgreSQL materialization semantics](https://www.postgresql.org/docs/17/queries-with.html#QUERIES-WITH-CTE-MATERIALIZATION). Apply the same bound to sessions, login state and old jobs. Ten focused job-service cases pass, including exact counts with default/forced nested planner choices. Fresh-database full verification passes all 533 cases including the uncommitted transport draft; committed grant/maintenance coverage is 379 unit + 144 PostgreSQL cases. Keep the grant increment's own publication/native gate pending and do not claim SDK deployment from this local result.
+
+**SDK factory local increment:** Pin official mcp/mcp-types 2.3.0 and add a small app factory over the unchanged trusted registry and hashed Core grants. It generates sixty-three tools plus capability and Wiki/document/entity resources, rechecks actual tokens/membership/scopes at each callback, masks token representations and contains driver failures. Official stateless JSON HTTP handles current and legacy protocols with explicit host/origin checks and one-MiB declared/chunked request limits. Replies are complete bounded JSON (eight MiB), never truncated evidence; eight concurrent requests are admitted and the ninth receives fixed 503 without queueing. All replies are no-store. Use the SDK public protected-metadata helper for supported scopes while leaving global required scopes empty; each operation enforces its own scope.
+
+Actual official clients over mounted FastAPI/ASGI HTTP pass current/legacy tools, exact REST type/Wiki DTO results, resources/capabilities, Reader write denial, current revocation, unknown/extra input, metadata, hostname/origin, declared/chunked oversized body and fixed database-error checks. Unit checks prove private token representation, response-byte limits, concurrency/release and exact issuer/root constraints. Legacy tools/list first fails because a REST 204 operation has a null schema: advertise object output schemas only and retain exact JSON text for nonobject results. The corrected fixture releases its authored page/revision/event/receipt rows, preserving later Wiki/embedding isolation assertions. All 533 cases pass from a fresh isolated database (385 unit + 148 PostgreSQL) including the materialized maintenance correction. Runtime Containerfile copies manifests/src explicitly and excludes the development virtualenv created by uv add.
+
+Core/app/schema are 0.22.0/0.26.0/0012_oauth_grants in this draft. The factory is NOT mounted by main and discovery remains MCP false; no public OAuth endpoint, installed TLS client flow, delegated grant recovery or live MCP acceptance is claimed. The SDK's root well-known route does not directly fit NS8's historical prefix-only routing; current MCP support requires the already-established hostname-root configuration, preserving legacy REST. Enter the child router lifespan explicitly from the real host when mounting it. Grant/maintenance a7f51b2cdec211ffd28d05a02e12101f990041df passes [local 38618588348](https://github.com/Stell0/ns8-czero/actions/runs/38618588348) (523 actual cases) and [publication 38618588271](https://github.com/Stell0/ns8-czero/actions/runs/38618588271); [QEMU 38618934091](https://github.com/Stell0/ns8-czero/actions/runs/38618934091) is running. The publisher uses a distinct image/dependency tag and concurrency group per branch and reserves latest for main/master. Keep feat/m11-mcp at a7f51b2 during its native run; publish the locally tested factory on isolated feat/m11-transport instead, so its module/app/database tags cannot change images consumed by the existing run. Inspect both independent runs and verify the factory increment's own CI before progressing to public consent/SDK authorization adapters.
+
+**Next private authorization-adapter prerequisites:** Add trusted Core code/refresh metadata loaders with masked code/token/challenge representations, current identity/client epoch/resource/role/expiry checks and committed replay-family revocation. Test exact metadata, expired/disabled/mismatched clients, concurrent exchange and consumed-refresh replay through real PostgreSQL before exposing endpoints. Then persist bounded one-use browser-bound pending consent, atomically consume it with code creation, and reuse verified SessionService identity plus Origin/CSRF and explicit approval. Official SDK handlers remain responsible for OAuth request parsing/client authentication/protocol responses; an outer bounded guard must enforce exact raw resource/callback and duplicate fields before dispatch, since the inspected SDK ignores token-request resource and normalizes callback URL spellings. Discovery must match actual mounted routes and public-client method none; dynamic registration/metadata URL fetching remain disabled. Define and run full browser/HTTP OAuth negative/lifecycle tests before advertising MCP.
+
+**Private SDK metadata-loader increment:** Core now supplies masked authorization-code/challenge and refresh metadata without exposing SQL to the adapter. Loaders recheck actual current grant/native context, client epoch, roles and expiry. Consumed refresh lookup commits family revocation before returning an error; otherwise the SDK could reject narrowed scopes before reaching the provider exchange and skip replay revocation. Add three PostgreSQL regressions for exact metadata/masked representations, one-use/mismatched clients, expiry/disable/re-enable and committed replay revocation. All thirty-four focused grant/transport cases pass; the broad suite passes all 536 cases (385 unit + 151 PostgreSQL). Core/app patch versions become 0.22.1/0.26.1 with unchanged 0012 schema. These are private prerequisites; public consent/token endpoints and installed OAuth acceptance remain pending.
+
+Isolated factory marker 2d36fb38930e94e199ed89de9094cd00b5cca7fd passes [local 38620155163](https://github.com/Stell0/ns8-czero/actions/runs/38620155163) (533 cases) and [publication 38620155094](https://github.com/Stell0/ns8-czero/actions/runs/38620155094), including actual runtime/parser/database image audit steps. [Factory QEMU 38620497964](https://github.com/Stell0/ns8-czero/actions/runs/38620497964) and grant/maintenance QEMU 38618934091 remain running on distinct image tags. Keep those tags unchanged until their respective runs finish; no started workflow is counted as acceptance.
+
+**Private consent Core increment:** OAuthConsentService/0013_oauth_consent stores hash-only request/browser binding, exact immutable client revision/native issuer/client/resource/callback/scopes/S256 challenge, bounded printable ASCII state and five-minute expiry. Cap pending rows at 1000 instance/32 client and collect expired requests. Private view omits state/challenge/native identity/binding. Refactor code creation into a private supplied-transaction helper while retaining the public service wrapper and all validations. Trusted completion locks role -> grant -> consent, rechecks the current admitted session/client/context, narrows scopes only within the original request, consumes consent and creates its code atomically. Denial produces no grant/code and accepts an empty selected-scope set. Failed role/expiry/scope validation preserves the request through rollback; concurrent completions have exactly one winner.
+
+The first focused run has sixteen passes/six fixture errors because importing the reusable grants fixture did not register its application dependency in the new test module. Import that dependency explicitly; all twenty-two focused consent/grant/MCP cases then pass. A fresh full run passes 542 cases before the final denial/expired-session refinement. All twenty-three focused cases pass afterward, adding the seventh consent PostgreSQL case (385 unit + 158 database cases total). Go schemas and seventeen non-UI dry-run checks pass. Core/app/schema become 0.23.0/0.27.0/0013_oauth_consent. This is private Core storage; no HTTP consent/token endpoint, mounted public MCP, live delegation or recovered active-grant success is claimed. Official SDK wrappers and installed lifecycle/authorization acceptance remain required.
+
+Grant/maintenance a7f51b2 [QEMU 38618934091](https://github.com/Stell0/ns8-czero/actions/runs/38618934091) passes: downloaded Debian update seventeen passes, Rocky installation nineteen passes/three expected skips, all five browser workflows, exact identity/public-client/knowledge/vector recovery and backup observers. Both actual artifact privacy audits have zero candidates. Factory2d [QEMU 38620497964](https://github.com/Stell0/ns8-czero/actions/runs/38620497964) also passes: Debian installation fourteen passes/three skips, Rocky update twenty-two passes/all five browsers, exact recovery/observers and zero privacy candidates. This proves installed package/lifecycle compatibility; the factory remains unmounted, so no native MCP protocol success is inferred. Loader c10be0455e17e02ee99a8fe752c17945e6b7b3ea is now pushed on the factory branch; [local 38625800759](https://github.com/Stell0/ns8-czero/actions/runs/38625800759) and [publication 38625800777](https://github.com/Stell0/ns8-czero/actions/runs/38625800777) pass; [loader QEMU 38626118484](https://github.com/Stell0/ns8-czero/actions/runs/38626118484) remains running, so preserve its tag.
+
+Concurrent main change 9cc820eb6f2f5e1b55fc05db42ebf319d7be2146 updates M12's UI reference to MY NethServer. Inspect and merge it cleanly in b3d2bce936506528bb55bee48163ae933ad7705b, keeping all M11 evidence and the uncommitted consent draft separate. Preserve the operator's new reference when M12 begins.
+
+**App OAuth/MCP local increment:** Reuse official SDK AuthorizationHandler/TokenHandler/ClientAuthenticator/RevocationHandler, Core's approved clients/private loaders/consent/grants and existing verified NS8 SSO. Bound forms/consent JSON at sixteen KiB before parsing, including chunked requests; reject duplicates/unknown fields, unsupported secrets/auth headers and wrong raw resource before dispatch. Preserve exact callback spelling before SDK normalization and again in Core exchange. Public metadata advertises actual /oauth endpoints, none authentication and S256; registration/CIMD/metadata fetching and identity assertions stay disabled. A narrow request adapter supplies SDK 2.3.0's required nullable client_secret for public-client revocation. Private SDK DTOs hide codes/challenges/tokens; SQL/unexpected errors return fixed diagnostics.
+
+Consent uses only a secure HttpOnly Lax 43.43 request/binding cookie and static /oauth/consent URL. Verified native login returns to it only while Core confirms the pending request. Local HTML/JS render profile/client/callback text safely, show role-eligible scopes, send explicit Origin/CSRF approval or denial and suppress repeated/uncertain writes. Delegated opaque REST bearer verification supplies explicit scopes; profile requires read, membership requires admin and delegated logout cannot clear an ambient cookie. Existing first-party JOSE/cookie contracts stay intact. Mount OAuth and MCP only for configured hostname-root apps, with host AsyncExitStack entering the public child router lifespan. Legacy-prefix/unconfigured REST remains usable. Discovery is still MCP false until installed/live gates pass.
+
+All six actual PostgreSQL/HTTP OAuth cases pass: native-signed fixture sign-in, explicit consent/Origin/CSRF, exact state/S256/callback/resource, code replay, rotating refresh/replay-family revoke, denial, public-none/idempotent revocation, declared/chunked over-limit/duplicate requests, Reader scope narrowing/write denial and normalized-equivalent callback rejection. Issued tokens give identical REST/real SDK results and deny mutation/membership/logout without scope. The official OAuthClientProvider itself discovers protected-resource/issuer metadata, uses a statically approved public client, follows sign-in/explicit consent, checks state, exchanges the code and calls MCP tools. This is actual local ASGI HTTP with signed identity verification, not installed TLS/live evidence. Fifteen focused production-mount/auth cases pass; all 549 broad cases pass after app version 0.28.0 (385 unit + 164 PostgreSQL), plus all twenty-seven Node cases including real consent-script text/role/write guards. Core/schema remain 0.23.0/0013_oauth_consent. No installed OAuth/MCP or active-grant recovery success is claimed. Extend native SSO with real TLS/client/browser/recovery and permitted dedicated live acceptance before advancing M11 or enabling discovery.
+
+**Native OAuth/SDK fixture increment:** Add Git-only disposable oauth_fixture.py and mcp_tls_probe.py. Reuse generated private personas and real validating NS8 SSO browser, approve a public loopback client through signed Admin REST, require explicit consent/Origin/CSRF, exact state/S256/resource/verifier and one-use code. Exercise issued read-token SDK current/legacy tools/resources, exact REST parity, scope mutation denial and host/origin negatives over real HTTPS; rotate refresh, prove replay-family 401, revoke another pair and require 401. Run public SDK probe code inside the existing application Python/image while feeding private access JSON only on stdin, with static output/errors. Route only the synthetic application TCP destination to the disposable gateway using public httpcore2 backend/pool APIs, preserving original Host/SNI/resource and verifying the generated test CA; provider DNS remains native. No development fixture is installed in runtime images or deployed live. Check actual access logs after these OAuth calls as well as before them.
+
+The exact native approval/code helper passes through local signed HTTP and real PostgreSQL before deployment. A unit check proves the TCP route affects only the application destination, leaving provider hosts unchanged. All twenty focused fixture/HTTP/SSO cases pass; all 551 broad cases pass (386 unit + 165 PostgreSQL), seventeen non-UI Robot dry-run cases pass and twenty-seven Node cases remain green. These prove fixture preparation; actual installed SDK TLS execution, real consent browser controls and active-grant update/restore/re-authentication are still pending and cannot be inferred from package/lifecycle success.
+
+Mounted ae9d17f1d8d52edd16ecae87b92294944e7eac0b passes [local 38633178025](https://github.com/Stell0/ns8-czero/actions/runs/38633178025) (549 actual cases) and [publication 38633177954](https://github.com/Stell0/ns8-czero/actions/runs/38633177954). [QEMU 38633483867](https://github.com/Stell0/ns8-czero/actions/runs/38633483867) passes. Downloaded Debian update has seventeen passes; Rocky installation nineteen passes/three expected skips and all five browsers. Exact previous recovery/observers pass and both artifact privacy audits are clear; this run predates the actual OAuth/TLS fixture. Loader c10 [QEMU 38626118484](https://github.com/Stell0/ns8-czero/actions/runs/38626118484) is inspected: Debian installation fourteen passes/three skips, Rocky update twenty-two passes/all five browsers, exact identity/client/knowledge/vector recovery and observers, zero private query/password candidates. C10 was still unmounted; no protocol acceptance is inferred. The only verified live image remains 00e8ff1 Core/app/schema 0.21.0/0.24.0/0011_oauth_clients until new installed gates pass.
+
+**Next M11 recovery acceptance:** Before update, issue a real consented read grant and retain its raw pair only in mode-0600 disposable host state. Compare exact client-filtered grant/token/code PostgreSQL rows after update and clean restore without exposing identifiers/hashes/values in diagnostics. Update must preserve refresh authority and SDK parity; clean restore allocates a new native module/client identity and must reject the previous access/refresh while preserving approved clients and permitting fresh signed SSO/explicit consent. Run the exact helper against local signed HTTP/PostgreSQL first, then QEMU. This fixture is never deployed live.
+
+**M11 fixture verification in progress:** Published history is preserved by normal merge 42545d59ba13de148ff3ac86f4d3488fead1ac49 after a concurrent local rebase, with the 9e53 native TLS fixture. [Local 38637253997](https://github.com/Stell0/ns8-czero/actions/runs/38637253997) and [publication 38637253755](https://github.com/Stell0/ns8-czero/actions/runs/38637253755) pass. [QEMU 38637528107](https://github.com/Stell0/ns8-czero/actions/runs/38637528107) is running; Debian failed during NS8 Core installation because Quay returned HTTP 502 pulling node-exporter:v1.10.2, before Czero tests. The completed job log confirms the HTTP 502 and installer exit 125. GitHub rejected a job rerun while the overall workflow was active; retry after completion. No Debian protocol pass is claimed. Stronger pending fixtures now compare exact active grants through update/restore, reject old native-client grants on clean restore, and exercise real consent DOM controls for all three roles. The exact local HTTP/PostgreSQL preparation/recovery/browser-code helpers pass eight cases; TLS route unit adds one pass. The readiness-order fixture now requires OAuth checks only after successful health/retrieval gates. All thirty focused cases pass (eight signed HTTP/PostgreSQL, twenty-two unit), three real consent-script cases pass and all twenty-three Robot dry-run cases pass after installing Browser 19.14.2 into the private development venv. Initial full dry runs correctly failed for the missing Browser library; they were rerun without excluding browser cases. Actual QEMU browser/recovery gates remain pending. Full local working-tree run passes 555 cases in 67 seconds, including concurrent sign-in retry edits left outside this fixture commit; commit-specific CI still must pass.
+
+
+**Stronger fixture publication:** 342e971dd2fc7eb9210417b1e26155c472fd520c is published on the isolated feat/m11-recovery tag so the prior transport QEMU tag remains stable. [Local 38639077950](https://github.com/Stell0/ns8-czero/actions/runs/38639077950) confirms all 552 cases pass; [publication 38639077987](https://github.com/Stell0/ns8-czero/actions/runs/38639077987) passes runtime audits/parser probes and builds all three images. [QEMU 38639377704](https://github.com/Stell0/ns8-czero/actions/runs/38639377704) is running; no installed browser/recovery success is claimed. Downloaded SARIF/CycloneDX artifacts retain 166 app, 526 database and 29 UI findings, zero module/imageroot findings, with 131/150/149 respective SBOM components. These scan findings remain M14 release work, not a vulnerability-free claim. The dedicated live OAuth/MCP normal-TLS probe is prepared privately but unexecuted pending installed acceptance.
+
+**M11 installed fixture failures and correction plan:** 42545d5 QEMU 38637528107 completes failed: Debian stops at the confirmed Quay HTTP 502 before tests; Rocky has twenty-one passes/one OAuth fixture failure, with old recovery/observers and all five browsers passing. 342e971 QEMU 38639377704 remains running; downloaded Debian update has fifteen passes/two failures, zero query/password candidates. Both app journals show successful current/legacy SDK requests and the invalid Origin's HTTP 403, with no invalid-Host request reaching the app. The fixture treated the proxy's unknown-vhost rejection as failure. Keep strict application Origin rejection and accept HTTP 404 only for invalid Host routing, with fixed category/status diagnostics. The failed preceding probe also left a grant on the reused client, invalidating the new recovery fixture's exact one-grant/two-token precondition. Give recovery its own approved descriptor/client; retain exact row counts, unexpired authority and complete snapshot equality. Test local signed HTTP and real proxy behavior before publication; do not mark either failed workflow passing.
+
+**Proxy/isolation correction verified locally:** A permitted normal-TLS read of only the dedicated Czero endpoint confirms normal Host HTTP 200 and unknown Host HTTP 404, with no deployment/configuration change. The Git-only guard probe now uses a valid legacy MCP tools/list request and an explicit HTTP 200 positive control before invalid Origin/Host probes. The initial modern-header/legacy-envelope combination correctly failed the positive control; use the supported legacy header for that explicit JSON-RPC envelope, retaining real SDK current/legacy calls. Two actual SDK/ASGI/PostgreSQL regressions run the exact installed helper behind a proxy 404; deliberately stripping Origin must fail with HTTP 200 rather than vacuously passing on malformed JSON. Both recovery cases now seed a preceding client's real leftover grant and still require the dedicated recovery client's exact one grant/two tokens and complete update/restore comparison. All thirty-six focused cases pass; the full local working tree passes 557 cases (including the three separate concurrent sign-in tests). Runtime remains unchanged; both failed prior QEMU runs require new committed/published fixture execution, with no acceptance criteria waived.
+
+**Recovery-run external prerequisite failure:** 342e971 QEMU 38639377704 finishes failed. Downloaded Rocky installation has thirteen passes/seven failures/three expected skips, zero query/password candidates. Its journal confirms a GHCR registry TCP timeout while pulling the pinned ldapproxy c06ad303 digest, before disposable LDAP/IdP provisioning. Remaining missing-persona/identity/browser failures cascade from that prerequisite; none are waived or counted passing. Debian's two failures are the diagnosed proxy-guard/reused-client fixture problems above. A new corrected source/image run must exercise both distributions and all browser/recovery cases; retain the verified dependency digest.
+
+**Installed and permitted live OAuth/MCP accepted (15 October):** 5bc2dca57eba404423aaa6543d145925a2e49346 passes [local 38642192504](https://github.com/Stell0/ns8-czero/actions/runs/38642192504) with 554 actual cases, [publication 38642192807](https://github.com/Stell0/ns8-czero/actions/runs/38642192807) and [QEMU 38642498266](https://github.com/Stell0/ns8-czero/actions/runs/38642498266). Downloaded Debian installation has fourteen passes/three expected update-only skips; Rocky update all twenty-three passes including all six administration/OAuth/object/source/Wiki/search browsers. Actual SSO/consent/S256/state/resource/code replay, current/legacy SDK tools/resources/REST parity/read scope, refresh/replay/revoke, exact active-grant/code/token snapshots across update/clean restore, old native-client rejection and fresh consent, complete knowledge/vector recovery and backup observers pass. Both actual artifact audits have zero password/OAuth query candidates.
+
+Verified module sha256:b32ad28478510a9f8002fa208ef8583101d4683556b973ea0635fefe8fbdc44f, app sha256:47102de6fccaaede85c33884d664ce12ff43cfa296bdf1e36a7c4c1496270c83 and database sha256:2716156a8163818aad310f5cff5b4a07eb518ee88b050c7756fd429442be3e19. Only the dedicated authorized live Czero instance was updated after source/digest preflight, then restarted through its full native user manager. Normal-TLS owner SSO/explicit read consent, exact resource/S256/state/code reuse rejection, actual SDK current/legacy tools/resources/REST parity/host/origin/read-scope denial, refresh rotation/replay-family rejection and revocation pass. A privately retained bounded read grant refreshes and passes SDK after full restart, then is revoked; its test client is disabled. Existing disabled-client metadata, owner identity, Wiki/claims/aliases/references/graph/cursors, source/document/chunk IDs/text/hash/citations/originals, objects/types/relations/events, completed jobs and schedule persist after update and restart. Saved configuration, scheduler health and unrelated inventory are unchanged. An unnecessary poll invocation without its required label failed locally (IndexError), performed no action and was unnecessary because update already completed; subsequent native readiness and all probes pass. No live destructive scenario, provider fixture, SSH or interactive Playwright was used. Other roles are proven in disposable browsers, not claimed live.
+
+**M11 discovery closeout plan/tests:** Now that installed/live transport gates pass, derive advertised MCP/OAuth URLs and availability from the actual configured hostname-root mount. Keep legacy/unconfigured discovery false, anonymous operations empty, current roles/scopes/revocation and explicit REST attachments; add matching safe OpenAPI metadata and usable connection instructions. Replace stale planned-MCP public-page/Robot assertions with actual unavailable/available behavior, assert installed native metadata/caller roles after restore, require exact permission_denied in the read-token mutation probe, and clarify consent expiry versus explicit client revocation. Run local signed HTTP/SDK/UI/schema gates, publish/inspect QEMU and repeat permitted live discovery before marking M11 complete. ChatGPT account/scheduled-run interoperability, real-provider quality and existing scan/platform logging limitations remain unverified release work.
+
+**M11 connection/discovery closeout implementation:** App 0.29.0 now derives MCP/OAuth availability and canonical resource/issuer/metadata URLs from the real mount, with safe matching x-c0-interfaces OpenAPI metadata and human connection instructions. Anonymous operations remain empty and invalid credentials fail closed; configured legacy-prefix and unconfigured instances explicitly remain REST-only. Native caller-aware discovery/restore assertions now require the installed URLs/OpenAPI metadata. The read-token SDK mutation probe requires exact permission_denied, avoiding a false pass from an unrelated schema error. Consent/docs state bounded expiry and explicit revocation honestly: local browser logout does not revoke a delegated client grant. README replaces stale unavailable/pending claims with actual protocol evidence and static public-client connection steps; ChatGPT scheduled/account integration remains unverified.
+
+A local HTML string-join syntax error was caught before tests and corrected. All twenty-eight focused app/discovery/SDK/OAuth cases pass, the broad working-tree suite passes 557 (including three separate concurrent sign-in cases), and the added configured-legacy-prefix regression plus existing discovery case pass separately (two cases). All twenty-seven real-script Node cases, twenty-three Robot dry-run cases and Go schemas pass. Commit-specific CI expects 555 cases; Core/schema remain 0.23.0/0013. Publication, closeout native/live discovery and final milestone completion-marker CI remain required.
+
+**M11 complete — discovery closeout accepted:** aa26512d1d8c8788b5e0f86b2023400ac59801fc passes [local 38647079722](https://github.com/Stell0/ns8-czero/actions/runs/38647079722), with 555 actual cases (386 unit/169 PostgreSQL), [publication 38647079636](https://github.com/Stell0/ns8-czero/actions/runs/38647079636) and [QEMU 38647336776](https://github.com/Stell0/ns8-czero/actions/runs/38647336776). Downloaded Debian update has all seventeen passes; Rocky installation twenty passes/three expected update-only skips and all six browser workflows. Both prove actual mounted discovery/OpenAPI/role metadata, exact permission_denied for read-scope mutation, real OAuth/SDK lifecycle, active-grant update/clean restore/re-authentication, complete knowledge/vector recovery and backup observers. Actual artifact privacy audits are clear. Twenty-seven Node, twenty-three Robot dry-run and Go schema checks pass. Downloaded closeout scans/SBOMs retain the documented 166 app/526 database/29 UI findings and zero module/imageroot findings; these remain release work, not a clean security claim.
+
+Freeze aa26512 module sha256:9e758b6786ef01a5ce27b9abd3dc49feab5524e4b2a91c7f27b216e257908fc5, app sha256:461e0248345929b764c0f8120f19683f71f0ffac3b0a257e91586ed396e1a63e and database sha256:d902efa3fa9e0318dbbd6d7d8c14efa4560d203ac5e77828427fc40e092ec257 as M12 predecessors. Core/app/schema are 0.23.0/0.29.0/0013_oauth_consent.
+
+Only the dedicated authorized live instance was updated after aa source/module-digest preflight and restarted through the full native user manager. Normal-TLS canonical MCP/OAuth URLs, matching OpenAPI x-c0-interfaces, current owner role/scopes/operations, exact source/Wiki search citations and policy, actual SDK current/legacy tools/resources/REST parity/exact read-scope denial and consent/S256/resource/verifier/code reuse checks pass after deployment. Refresh rotation/replay and revocation pass. A privately saved read grant refreshes and passes SDK after full restart, then is revoked and its client disabled. All previous Wiki/claim/alias/reference/graph/cursor, source/document/chunk/text/hash/citation/original, object/schema/relation/event, owner/job/schedule and disabled-client fixtures persist after both update and restart. Configuration, scheduler health and unrelated inventory match prior state. No live destructive test, provider fixture, SSH or interactive Playwright occurred; other roles are proven in disposable browsers. ChatGPT account/scheduled interoperability and production proxy/IdP dependencies remain documented release limitations.
+
+M11 acceptance criteria are passed. Commit/push this three-document completion marker and verify its resulting CI before beginning M12. M12 uses the updated MY frontend reference already inspected privately; retain static app/native NS8 separation and the frozen aa images.
+
+**M11 completion marker verified:** f35de65478a4ea0e58e140df9d9d23fdfc881df1 passes [local 38650630914](https://github.com/Stell0/ns8-czero/actions/runs/38650630914), [publication 38650631056](https://github.com/Stell0/ns8-czero/actions/runs/38650631056) and [QEMU 38650828671](https://github.com/Stell0/ns8-czero/actions/runs/38650828671). Downloaded Debian installation fourteen passes/three expected skips; Rocky update all twenty-three passes and all six browsers. Both recovery/observers and actual privacy audits pass. M12 can begin; frozen aa26512 implementation images remain the genuine predecessors.
+
+### M12 — Full C0 user UI and NS8 configuration experience [x]
+
+**Goal:** Make the vanilla C0 installation genuinely usable without an AI client.
+
+**Copy/adapt from:** [ns8-kickstart UI](https://github.com/NethServer/ns8-kickstart/tree/main/ui); [ns8-ui-lib](https://github.com/NethServer/ns8-ui-lib) for NS8 administration; [MY nethserver](https://github.com/NethServer/my/tree/main/frontend/). **Search rule:** for the separate application UI, inspect maintained NethServer/Nethesis user-facing CRUD apps for list/detail form, loading, errors and accessibility patterns; use a small app UI rather than creating a new NS8 control plane. Browser automation reference: [Playwright MCP](https://github.com/microsoft/playwright-mcp).
+
+**Implement:** End-user navigation, knowledge/source explorer, upload/retry, Wiki editor with revisions, generic object type/forms, relations/graph view, full-text/semantic search, jobs/schedules, `/agents` with copyable URLs and descriptions; proper owner/read/editor UI state. Admin module page configures host/domain/sharing, embedding and Jev/Kev providers, limits/health, with fields stored via NS8-native configuration actions. Validate frontend state and accessibility.
+
+**Acceptance:** Playwright MCP tests **both** the NS8 admin interface and C0 Web UI, including wrong/valid logins, upload/search/edit, missing provider fallback, role gates, refresh/persistence and useful errors; add repeatable CI browser assertions; QEMU + permitted live tests pass.
+
+**Documentation gate:** `AGENTS.md` UI testing/component conventions; `README.md` illustrated-by-text human usage and config (no secrets); `PLAN.md` evidence.
+
+**Evidence:** Implementation 3939575 passes local/publication, both native distributions/all seven Rocky browsers and permitted live owner acceptance; stronger recovery 79243a2 passes both distributions. Completion-marker CI must pass before M13.
+
+**M12 implementation subplan and acceptance (15 October 2026):**
+
+- [x] Review/integrate the existing sign-in retry changes as a separate feature: unadmitted native SSO returns an actionable 403 page, clears pending login binding and any previous C0 session so failed switching cannot retain the previous identity, and a same-origin account-switch link requests fresh provider authentication. Tests: actual signed admission denial, no unsafe body/URL/referrer data, one-use state/cookie cleanup, prompt=login only on explicit retry, legacy-prefix link and actual disposable account switching. Preserve the concurrent edits; no membership bypass or manual token crypto.
+- [x] Add shared local navigation/style/loading/empty/error/focus patterns to the existing static app, including human home workflows and role-aware administration links. Preserve controller IDs, separate NS8 administration and existing draft/response guards. Add generation/captured-write guards for sharing. Tests execute actual scripts with stale responses/role loss and verify keyboard labels/positive controls in native browser. No framework, external asset or management service.
+- [x] Add schema-derived record fields for Core's supported explicit types/enum/const/bounds, safe property collection (including __proto__), optional omission distinct from false/empty/null, nested/array JSON fallback and an advanced JSON editor. Preserve immutable type/revision/replay/conflict contracts and drafts. Improve relation selection/browse using existing REST. Tests: scalar/nested bounds, hostile labels/properties, Reader readonly, invalid input, conflict/retry/reload, exact persistence and real browser creation/edit/relations.
+- [x] Add application Admin client approval/disable and deterministic jobs/handler/run/UTC schedule views through existing role/CSRF REST. Show bounded explicit payloads, status and errors; never SQL/shell/NS8 actions or generative scheduling. Agent page supplies copyable canonical URLs without hiding permissions. Tests: Admin positive paths/Reader and Editor denied controls and REST, out-of-order requests, replay/optimistic errors, schedule state and actual worker/reload persistence.
+- [x] Connect the existing source upload/history/retry/originals, Wiki revisions/aliases/claims/references/graph and search/fallback workflows with consistent navigation/selection/error/draft behavior. Extend actual browser coverage rather than replace mature tests. Verify upload/search/edit, missing optional providers, provenance/revisions/citations and refresh after native update/restart/restore.
+- [x] Extend native Settings/Status only through existing numbered actions, safe diagnostics and Ns* components/task cleanup: hostname/domain/owner/sharing guidance, optional embeddings/System One keys/limits/policy and real DB/auth/scheduler/retrieval state. Keep configuration/keys in existing mode-0600 native files, never app browser storage or Redis. Tests: native validation preserves saved state, no key leakage, current task listeners/loading/field errors, status during failures and disposable administration browser.
+- [x] Freeze all three aa26512 digests in genuine predecessor tests, run local unit/PostgreSQL/script/Go/image audits and both QEMU matrices, inspect complete reports/logs/privacy, then permitted dedicated live configuration/API/persistence checks. Interactive Playwright remains explicitly operator-waived; retain real automated Robot Browser for both UIs and report the actual live evidence without claiming interactive testing. Update all three documents and verify final CI before M13.
+
+**Maintained reference findings:** Inspected MY frontend at [a95d98d](https://github.com/NethServer/my/tree/a95d98d44f4601eb936eb5fce1fafc0d6bc4a566/frontend), including CustomersView/Table/create-edit form, actual fullstack control tests and password-artifact checks. Its Vue 3/Pinia query/mutation state, labelled controls, loading/field validation/focus and role-positive-control tests inform C0's existing static app; do not add its stack or multi-organization authority. Root license metadata is AGPL-3.0 while inspected customer components carry GPL-3.0-or-later headers; no incompatible source/dependency copy. [Main pipeline 38596998100](https://github.com/NethServer/my/actions/runs/38596998100) passes, but fullstack E2E is skipped and PR E2E/API docs fail; no whole-upstream acceptance claim. Read native frontend skill/Ns* priorities and current C0 controllers/status/sharing and Core object-schema/job DTO code. Home already has sharing: extend it instead of rebuilding it. Core schema is bounded to 16 KiB, explicit types/no refs or regex/combinators, 64 properties/object, depth eight, strings 8192 and arrays 100. Server remains authoritative.
+
+**First M12 account-recovery implementation:** Review and preserve the concurrent provider prompt/login retry changes, then extend denial to destroy any earlier C0 browser session as well as clear both cookies. A generic 403 HTML response carries no-store/no-referrer and a validated root/legacy account-switch link. Explicit switch requests prompt=login without changing issuer/callback/state/nonce/S256 bindings; no access is granted by retry. Tests cover actual signed fresh/pre-signed denial, server-side old-cookie invalidation, consumed-state replay, fresh retry and owner admission while preserving API JSON 403. Core/app advance to 0.24.0/0.30.0, schema stays 0013. Genuine predecessor module/app/database now freeze all three aa26512 digests. A generated Git-only unadmitted persona adds a real provider account-switch browser case after native recovery, with direct private password fills and artifact/server-log audits. Twenty-four Robot dry-run cases and Go schemas pass.
+
+All sixty focused cases pass. Two harness mistakes were fixed without changing acceptance: the legacy wrapper has auth on its child and its cookie path ends with a slash. Cookie assertions now use presence booleans so failed assertions cannot dump generated values; isolated failed diagnostics are retained with session values redacted. The prior broad run correctly reports 559 passes/one fixture failure; The corrected complete run passes all 560 cases (387 unit/173 PostgreSQL) in 57 seconds. Installed/browser/live acceptance remains pending; M12 remains open.
+
+**M12 shared UI/navigation slice:** Package local app.css/navigation.js with consistent instance-relative navigation, current-page markers, visible focus/skip links and responsive forms/tables. Preserve all existing controller IDs and mature source/Wiki/record/search guards. Home now explains human records/knowledge/evidence workflows; service-health/API links remain in service details after a local page-contract test caught their omission. MCP canonical URL copying captures the approved URL, prevents duplicate writes and offers focused manual selection when clipboard is unavailable. Sharing gains current identity/list generations, captured role/CSRF, stale logout/list rejection, empty/error states and newer draft preservation. Health checks validate HTTP/body status and ignore stale successes/errors. Consent uses the local style.
+
+All 566 Python cases pass before the app-only 0.31.0 version bump (393 unit/173 PostgreSQL), all thirty-eight real-script Node tests pass, twenty-one focused page/discovery tests pass and all twenty-four Robot dry-run cases pass. Python invalid regex-escape warnings in the Git-only browser helper were corrected with a raw pattern; no runtime logic changed. Added native assertions check actual shared/current navigation, keyboard skip focus, canonical copying/fallback and updated workspace outage messages, retaining real OAuth roles/lifecycle and all previous UI workflows. App becomes 0.31.0, Core/schema stay 0.24.0/0013. All thirty-three focused page/discovery/fixture/version cases pass after the version bump. Keep the 6bf8c38 account-recovery image tag stable during [its QEMU 38655165570](https://github.com/Stell0/ns8-czero/actions/runs/38655165570); [local 38654903715](https://github.com/Stell0/ns8-czero/actions/runs/38654903715) and [publication 38654903763](https://github.com/Stell0/ns8-czero/actions/runs/38654903763) pass. Installed shared-UI and live acceptance remain pending.
+
+**M12 generic record forms/relations slice:** Add a small local record-fields.js renderer for the bounded stored schema: labelled typed scalar controls, enum/const with structural choice matching, explicit optional presence, bounds and nested/array JSON. Preserve prototype-named own properties using safe definitions, literal hostile labels, read-only controls and server-authoritative validation. Advanced JSON is explicit, synchronizes fields only from valid object JSON and remains the source when directly edited; visual submits collect current typed fields. New record focuses the first editable field. Saves preserve newer edits to the same or another selection while advancing the saved revision, and duplicate busy submits are suppressed.
+
+Relation browsing reuses existing objects REST with fifty-row pages, current type/record/generation checks, manual-ID preservation and captured mutation fields. Native owner tests type through real generated fields, retain invalid/valid JSON and reload checks, create a target through fields and select it by picker; Reader tests require all field controls disabled. Existing tests now explicitly open advanced JSON after reload. Forty-six actual-script tests pass, covering omission/false/empty/null, numeric validity/bounds, enums/constants, hostile/prototype keys, nested invalid JSON, Reader controls, draft/revision races and target reply races. Twenty-four Robot dry-run and thirty-two focused app/privacy fixture cases pass. The first broad run correctly has 566 passes/one privacy-stub AttributeError because new direct target-ID capture needs get_text; extend the test stub while preserving its private credential assertion. App advances to 0.32.0, Core/schema remain 0.24.0/0013. The corrected full suite passes all 567 cases (394 unit/173 PostgreSQL) in 60 seconds; installed/browser/live acceptance remains pending.
+
+**M12 actual provider account-switch fixture correction:** Account-recovery 6bf8c38 [QEMU 38655165570](https://github.com/Stell0/ns8-czero/actions/runs/38655165570) finishes failed: downloaded Debian update seventeen passes; Rocky installation twenty passes/one failure/three expected skips, with all old recovery and six prior browser workflows passing. Both privacy audits are clear. The new browser case passed actual admission 403 and the C0 retry link, then incorrectly required a username input. Its captured screenshot shows Keycloak's real password reauthentication page for the selected unadmitted account with its restart control; current official login template declares reset-login/loginRestartFlowUrl. Retain prompt=login, assert reauthentication and exercise the provider's own restart/account-switch control before filling the alternate username. Add clear user guidance to the denied page. This corrects the actual provider-flow assumption without reducing role/identity/state acceptance; new native CI is required.
+
+The minimal provider-flow correction preserves prompt=login and the signed bindings, waits for actual password reauthentication, uses reset-login when present, then requires an editable alternate username and admitted owner. A private-fill regression confirms both password fills remain outside Robot arguments and the provider restart is exercised. Forty-one focused cases, all twenty-four Robot dry-run cases and all 568 broad Python cases (395 unit/173 PostgreSQL) pass. App patch development becomes 0.33.0; Core/schema stay 0.24.0/0013. Commit/publish on an isolated tag and inspect actual native results. Shared navigation 4fc6ac5 passes [local 38656095256](https://github.com/Stell0/ns8-czero/actions/runs/38656095256) and [publication 38656095143](https://github.com/Stell0/ns8-czero/actions/runs/38656095143), with QEMU 38656342663 running. Forms 89104b6 passes [local 38657430305](https://github.com/Stell0/ns8-czero/actions/runs/38657430305) and [publication 38657430234](https://github.com/Stell0/ns8-czero/actions/runs/38657430234), with QEMU 38657651157 running. Neither inherited account-switch failure nor later UI/browser acceptance is claimed passing.
+
+**M12 Administration implementation and acceptance plan:** Use the existing Admin-only client, jobs/handlers/runs and UTC schedule REST contracts; no new service, native management API or migration. Add packaged /admin assets, role-hidden common navigation, exact callback/scope approval, revision-protected enable/disable, replay-protected job submission and bounded fifty-row job/schedule views. Capture CSRF/fields before writes, suppress duplicate submits, preserve newer drafts/selections and reject stale successes/errors; static transport errors never echo backend/transport secrets. Reader/Editor request only current identity and see no private controls. Interval input follows Core's exact 60..2678400-second limits and handler names remain trusted installed data.
+
+Define and execute actual-script cases for role denial/loss, literal hostile client names, revision conflicts, stale lists/details, uncertain replay reuse/new-input keys and schedule capture/draft preservation. Extend the real disposable OAuth-role browser with an Admin approval/disable, timer-completed health job and paused schedule checked after reload; Reader/Editor must have no visible admin workspace/link. Keep native navigation/current/focus assertions and all previous recovery/privacy tests. Local page/HTTP tests reuse existing server-side role/CSRF suites. Publish app 0.34.0 with unchanged Core/schema 0.24.0/0013 only after local checks; actual installed/live acceptance remains required.
+
+Administration local verification passes all 570 Python cases before the added fixture-control regression; that added regression and all focused page/privacy cases pass (36). All fifty-eight actual-script cases, twenty-four Robot dry runs and Go schema checks pass. Actual installed/browser/live verification remains pending.
+
+Provider-switch dcffaf97fbf53e72af571c3e9c424bde16d09c48 passes [local 38658338699](https://github.com/Stell0/ns8-czero/actions/runs/38658338699) and [publication 38658338701](https://github.com/Stell0/ns8-czero/actions/runs/38658338701). [QEMU 38658557556](https://github.com/Stell0/ns8-czero/actions/runs/38658557556) remains running; no corrected browser pass is yet claimed. Earlier navigation/forms native runs retain the known old account-switch fixture and must be recorded honestly after completion.
+
+**M12 native status subplan/acceptance before implementation:** Extend Status with Ns* cards for real database/schema/vector readiness, authentication connectivity, scheduler timer/idle/running/failure and optional-retrieval configuration. Reuse existing get-authentication-status/get-scheduler-status; add only a focused numbered get-runtime-status invoking a bounded in-container Core health/settings diagnostic because service activity alone cannot prove database readiness. Never return provider endpoints/keys, account IDs, SQL errors or native identity secrets; do not call optional providers. Keep deterministic text fallback explicit. Track each status task's listeners, cancel stale refreshes and remove callbacks on completion/abort/task-creation failure/Vue 2 destruction. Test actual component lifecycle/overlapping replies/failure output and CLI unavailable/corrupt settings/secret exclusion; verify real native cards and retain Settings field/key/error/listener regressions. No new management service or app-runtime NS8 SDK.
+
+**M12 native status local implementation:** App 0.35.0 adds a private Core-backed readiness CLI and a focused numbered native action/output schema. It reports only versions, safe database/schema/vector health and optional configuration flags. NsInfoCard/NsButton/notification UI reuses authentication/scheduler actions, distinguishes ready/paused/failed/running/normal idle worker states and describes text fallback without claiming provider quality/connectivity. Track paired task callbacks with generations, terminal settling and Vue 2 destruction; existing Status also releases its task listeners and no longer dumps task errors/results to browser console. Native browser now asserts actual database/auth/default text/timer cards. Initial CLI import/version-shape and unused callback lint errors were caught locally and corrected. All twenty-eight focused CLI/page/scheduler cases, sixty-four actual-script cases, twenty-four Robot dry runs, Go schema checks, Vue lint and the production build pass. The full Python/PostgreSQL suite passes all 574 cases in 61 seconds; the actual CLI against local PostgreSQL returns the expected 0013/pgvector 0.8.7 and safe disabled-provider flags. Installed/native/live checks remain pending.
+
+Navigation 4fc6ac5 [QEMU 38656342663](https://github.com/Stell0/ns8-czero/actions/runs/38656342663) finishes failed: downloaded Debian fourteen passes/three expected skips; Rocky twenty-three passes/one old account-switch failure. Shared/current/keyboard/copy UI, previous OAuth/object/source/Wiki/search browsers, exact recovery and backup observers pass; both artifact privacy audits are clear. Corrected dcffaf9 native execution remains running. Forms 89104b6 Debian update has seventeen passes, exact recovery/observers and clear privacy; its Rocky browser job remains running. Administration 131a53f17fe6a4c8e195f92d44ab70ea9c0d3bcb passes [local 38659189540](https://github.com/Stell0/ns8-czero/actions/runs/38659189540) and [publication 38659189466](https://github.com/Stell0/ns8-czero/actions/runs/38659189466); [QEMU 38659392381](https://github.com/Stell0/ns8-czero/actions/runs/38659392381) is running. No pending or failed browser gate is called complete.
+
+**M12 Wiki usability subplan/tests before code:** Keep existing raw graph JSON available as explicit details while adding bounded DOM-text entity navigation, readable relation endpoints and typed evidence references with missing markers. Construct reference URLs only from fixed local REST routes and validated UUIDs. Preserve current graph entity/depth/generation across successes and errors; invalidate displayed graph when options change. Fix same-page edits made during an earlier save by advancing the saved revision while retaining the newer draft; keep duplicate/save-selection controls independent. Real-script tests exercise hostile labels/metadata, stale graph success/error/depth, missing links and newer draft/revision saves. Native Wiki browser must assert actual four-node/three-edge/five-reference fixture results plus prior provenance/revision and Reader gates; existing export/recovery and API remain unchanged.
+
+**M12 Wiki local implementation:** App 0.36.0 renders bounded graph entity/edge/reference lists using DOM text, preserving hostile labels and missing snapshots without unsafe links. Typed links are fixed local routes plus validated UUIDs; graph nodes remain navigable beyond the initial one-hundred-entity picker. Graph success/error/depth guards and option invalidation preserve current evidence. Save draft generations retain newer same-page edits while advancing the saved revision and immutable slug/export controls; selection-specific save flights avoid older writes enabling another pending save. Relation/reference and entity-create feedback respects captured selection. Native Wiki assertions now require actual four nodes, three edges and five typed references with no injected images, alongside existing immutable revision/provenance/Reader checks. Seventy-two actual-script cases, thirty-seven focused page/privacy cases and twenty-four Robot dry runs pass; one new test stub initially omitted a DOM node and was corrected without changing behavior. The broad Python/PostgreSQL suite passes all 575 cases in 62 seconds. Installed/live verification remains required. Native Status e72f4c9 passes [local 38659644513](https://github.com/Stell0/ns8-czero/actions/runs/38659644513) and [schema documentation 38659644918](https://github.com/Stell0/ns8-czero/actions/runs/38659644918); [publication 38659644515](https://github.com/Stell0/ns8-czero/actions/runs/38659644515) also passes.
+
+**M12 Sources consistency subplan/tests before code:** Preserve established ingestion/evidence contracts while fixing concrete UI races: an older chunk-citation request must not replace a newer clicked chunk, query edits must invalidate prior search results and late errors, and upload-source metadata lookup must not overwrite typing made after the request. Capture draft generations/current source and prevent duplicate busy uploads; retain originals, parser limits, existing role gates and exact recovery. Execute the actual Sources script with reordered citation success/error, query changes, metadata typing and duplicate submit before rerunning existing native upload/history/search/Reader acceptance. No new storage, parser or API contract.
+
+**M12 Sources implementation:** App 0.37.0 fixes the three observed UI races using citation/document/page generations, query input invalidation and upload draft generations. Citation failures use fixed text and cannot replace a newer selected chunk; earlier source-search failures cannot overwrite edited queries. Metadata lookup does not overwrite typing, and duplicate busy uploads are ignored. No parser, data, API or native configuration changes. All seventy-six actual-script cases pass, including out-of-order citation success/error, edited query/error, typed metadata and duplicate submit regressions. Existing full native ingestion/history/retention/search/Reader workflows remain required. Wiki 39aa4f7 local full suite passes 575; native verification is pending.
+
+**Actual native account switch accepted; worker recovery precondition failure:** dcffaf9 [QEMU 38658557556](https://github.com/Stell0/ns8-czero/actions/runs/38658557556) finishes failed. Downloaded Debian installation has fourteen passes/three expected skips; Rocky update twenty-three passes/one failure. Corrected provider restart/account switch and all six prior UI workflows pass, along with exact recovery/backup observers and both privacy audits. The remaining failure is the initial worker_failed assertion in the deterministic timer case. Journals show the timer starting a worker at 00:21:27, the preceding deliberate database restart at 00:21:29 and bounded worker OperationalError at the same time. The later check occurs at 00:22:04, before the next one-minute wake. The runtime correctly reports its genuine prior failure; do not clear/mask it or replace it with a pass.
+
+Plan the smallest fixture correction: while PostgreSQL is deliberately down, stop/start the worker and require the real nonzero failure plus worker_failed=true. Restore PostgreSQL, retain normal timer activation and require a timer-driven completed successful worker run within a bounded 95-second poll before continuing. This strengthens outage recovery instead of requiring failure history to disappear on unrelated app restarts. Keep existing exact due-count/idempotency, app restart and full-manager restart assertions unchanged. Run Robot dry run and status regressions, publish on an isolated immutable test tag and require actual native recovery/browser results before closing M12.
+
+**Recovery fixture correction ready for native verification:** Keep runtime code unchanged. The disposable database outage now forces and asserts a real worker failure, restores the DB and polls actual timer-active/enabled, worker-completed/not-failed plus systemd Result=success. It never resets failures or manually starts the worker after recovery. All twenty-four Robot dry runs, three scheduler-status tests and six actual native-component script cases pass. Only actual QEMU execution can prove the timer recovery; it remains required.
+
+Latest complete UI/source implementation 39395757023684f7f81a49f8dac56094d1ad32ed passes [local 38660325998](https://github.com/Stell0/ns8-czero/actions/runs/38660325998) (575 actual Python/PostgreSQL and 76 script cases) and [publication 38660325778](https://github.com/Stell0/ns8-czero/actions/runs/38660325778), including runtime/parser audits. [QEMU 38660542679](https://github.com/Stell0/ns8-czero/actions/runs/38660542679) is running with the previous timer precondition. Verified module/app/database digests are sha256:c475a7c6bd4d7cee2687904932ed83c7d0c71594cdf814dd52e7ea29e904d039, sha256:fed7815cf131b966f9e082d4f6d1802e3e80872b80b3a26713773c80bb49e98a and sha256:9e7ef99709cb4ce75cd9a8fc786c5e102bd952005d428f0424aee9541914c3e9. Downloaded scan/SBOM artifacts retain 166 app/526 database/29 UI findings and zero module/imageroot findings, with 131/150/149 respective components; release work remains explicit. A command-review timeout prevented the first source commit/push attempt from running; its permitted retry succeeded with no safety rejection or bypass. Read-only normal-TLS live health still proves the verified M11 Core/app/schema 0.23.0/0.29.0/0013 is healthy. New live UI/native probes are prepared privately but not executed pending installed acceptance.
+
+**M12 installed UI slices verified:** Administration 131a53f [QEMU 38659392381](https://github.com/Stell0/ns8-czero/actions/runs/38659392381) passes: Debian update seventeen passes; Rocky installation twenty-one passes/three expected skips, all seven browsers. Actual approved/disabled client, timer-completed health job, paused schedule reload and Reader/Editor denied controls are present in the executed report. Status e72f4c9 [QEMU 38659916161](https://github.com/Stell0/ns8-czero/actions/runs/38659916161) passes: Debian installation fourteen passes/three skips; Rocky update twenty-four passes, including real native database/auth/default-retrieval/timer cards and all seven browsers. Wiki 39aa4f7 [QEMU 38660161660](https://github.com/Stell0/ns8-czero/actions/runs/38660161660) passes: Debian update seventeen passes; Rocky installation twenty-one passes/three skips, with actual four-node/three-edge/five-reference graph, all prior browser controls and seven browser workflows. All six downloaded reports prove exact identity/knowledge/evidence/vector/grant recovery and copy-window observers, with zero temporary password/OAuth query candidates. These are installed slice passes; final M12 live/marker and stronger recovery gates are still pending.
+
+Recovery 79243a23abb9a7a0bf499ceda90ebb427bd88088 passes [local 38661304363](https://github.com/Stell0/ns8-czero/actions/runs/38661304363) and [publication 38661304362](https://github.com/Stell0/ns8-czero/actions/runs/38661304362). [QEMU 38661512472](https://github.com/Stell0/ns8-czero/actions/runs/38661512472) is running. Anonymous registry preflight verifies matching source labels on all three immutable images: module sha256:c85c52a2d2c7d4a4510f66414064b9b18f92b7174ce25e0ddcc37002f9904e70, app sha256:ed5e503c87996a2df6da8bda4f6ac5db17944eed782a7e48e0af8b0a4e528a3b, database sha256:cb03e02164e15558dff0b3b64f9f110fca7cb448e1a507a0c85e3a1e13770b2b. Private live helpers are updated to this candidate tag but remain unexecuted until its native gates pass. Sources 3939575 Debian installation has fourteen passes/three skips, exact recovery/observers and clear privacy; Rocky remains pending. M12 stays open.
+
+**M12 complete UI implementation and permitted live accepted:** Sources 39395757023684f7f81a49f8dac56094d1ad32ed [QEMU 38660542679](https://github.com/Stell0/ns8-czero/actions/runs/38660542679) passes: Debian installation fourteen passes/three expected skips; Rocky update twenty-four passes/all seven browser workflows. Both downloaded reports prove exact data/grant/vector recovery and backup-copy observers; privacy audits are clear. This image contains all M12 runtime/UI changes. The newer 79243a2 differs only in three documentation files and the deterministic recovery fixture, with no runtime difference. Use the verified 3939575 module/app/database digests above as the M12 implementation baseline; do not replace evidence with mutable tags.
+
+Only the dedicated authorized live instance was updated to 3939575 after immutable source/digest preflight, then restarted through its full native user manager. Normal-TLS authenticated seven-page/local-asset/navigation/control checks, client/job/handler/schedule Admin REST, new native Core database/schema/vector/retrieval diagnostic and actual active/enabled/healthy scheduler pass. Configured provider-free search/citations/policy/discovery/OpenAPI pass. Actual native SSO/explicit read consent, S256/resource/verifier/code replay, current/legacy SDK tools/resources/REST parity/exact read-scope denial, host/Origin, refresh replay and revocation pass. A privately retained read grant refreshes and passes SDK after full restart, then is revoked and its test client disabled. Existing Wiki/revisions/aliases/claims/references/graph/cursors, sources/documents/chunks/text/hash/citations/originals, objects/types/relations/events, owner/jobs/schedule and disabled-client fixtures compare exactly after both update and restart. Saved configuration, scheduler health and unrelated inventory are unchanged. No live destructive scenario, SSH, disposable provider fixture or interactive Playwright was used. Live checks use the owner; other roles are proven in disposable browsers. No operator credentials/details/private fixture values enter Git.
+
+The stronger 79243a2 Debian update report has seventeen passes, including a genuine forced worker failure while PostgreSQL is down and timer-driven completed success after database recovery, exact recovery/observers and zero privacy candidates. Its Rocky browser job remains pending. Final M12 closeout/marker CI is still required before M13; keep the milestone open until these gates pass.
+
+**M12 acceptance complete — final recovery gate passed:** 79243a23abb9a7a0bf499ceda90ebb427bd88088 [QEMU 38661512472](https://github.com/Stell0/ns8-czero/actions/runs/38661512472) passes. Downloaded Debian update has seventeen passes; Rocky installation twenty-one passes/three expected update-only skips and all seven real browser workflows. The forced database outage/failed worker followed by actual timer-driven completed success passes on both, with no reset-failed/manual post-recovery worker start. All existing deterministic due-count, app/full-manager restart, exact identity/knowledge/evidence/vector/grant update/clean restore, backup observers and privacy gates pass. Final local/publication runs are 38661304363/38661304362. Full implementation checks remain 575 Python/PostgreSQL, 76 real-script cases, 24 Robot dry runs, compatible Go schemas, Vue lint/build and runtime/parser audits. Normal NS8 bundle-size warnings and the recorded scan findings remain release work.
+
+Permitted live acceptance is recorded above at 3939575, which has identical runtime content to the test-only 79243a2. Freeze the verified 3939575 module/app/database digests as M13 predecessors. Core/app/schema remain 0.24.0/0.37.0/0013. All M12 acceptance criteria are met under the explicit interactive Playwright waiver; no live interactive UI or non-owner role success is inferred. Commit/push this three-document completion marker and verify its resulting local/publication/QEMU CI before starting M13.
+
+**M12 completion marker verified:** 35875a5944fd29478fe7f8c8b9dc0a87eb4f9e07 passes [local 38664341575](https://github.com/Stell0/ns8-czero/actions/runs/38664341575) (575 Python/PostgreSQL and 76 script cases), [publication 38664341527](https://github.com/Stell0/ns8-czero/actions/runs/38664341527), [schema documentation 38664341897](https://github.com/Stell0/ns8-czero/actions/runs/38664341897) and [QEMU 38664546349](https://github.com/Stell0/ns8-czero/actions/runs/38664546349). Downloaded Debian installation fourteen passes/three expected skips; Rocky update all twenty-four passes and seven real browsers. Exact recovery/observers and both privacy audits pass. Main is fast-forwarded to this verified commit, preserving history and making the working baseline available to new forks. M13 may begin; 3939575 remains the fully verified installed/live runtime predecessor.
+
+### M13 — Fork upgrades, C0 Core distribution and upstream contribution skills [x]
+
+**Goal:** Forked applications can receive most upstream infrastructure updates automatically; Codex handles only semantic merges, and reusable contributions flow back upstream.
+
+**Copy/adapt from:** [NethServer/agents](https://github.com/NethServer/agents); [nethserver-pr](https://github.com/NethServer/agents/tree/main/skills/nethserver-pr); [nethserver-release](https://github.com/NethServer/agents/tree/main/skills/nethserver-release); [Hermes Renovate config](https://github.com/NethServer/ns8-hermes-agent/blob/main/renovate.json); [Hermes testing releases](https://github.com/NethServer/ns8-hermes-agent/blob/main/.github/workflows/create-testing-release.yml); [NS8 Core update mechanism](https://github.com/NethServer/ns8-core/blob/main/docs/modules/updates.md). **Search rule:** review current GitHub Actions, Renovate and package-distribution patterns in maintained NethServer forks. Don't introduce bespoke bot infrastructure if ordinary Renovate/reusable workflows suffice.
+
+**Implement:** Version/publish `czero-core` package (choose and document a usable package registry/artifact workflow and compatible version range); fork app depends on it with Renovate PRs. Introduce versioned upstream manifest and scheduled fork workflow comparing managed NS8 packaging/skills/build files against upstream, opening safe update PRs and explanatory upgrade PRs for changed customized files. Add repository-only skills `c0-create-feature`, `c0-develop-core`, `c0-contribute-upstream`, `c0-upgrade-from-upstream`; delegate NS8-specific tasks to installed [NethServer/agents](https://github.com/NethServer/agents), don't vendor their copies. Publish original test fixtures/example fork. Ensure workflow tokens and permissions are least-privilege.
+
+**Acceptance:** Change Core patch version -> Renovate PR builds/tests; change upstream managed module file -> sync PR; conflicting customized file -> migration instructions without overwrite; agent can isolate a reusable feature into a correct upstream PR; no development skills ship in runtime image.
+
+**Documentation gate:** `AGENTS.md` fork/Core contribution rules; `README.md` how to fork/update/contribute; `PLAN.md` upgrade simulation evidence.
+
+**Evidence:** Acceptance and closeout evidence below; completion-marker CI is required before M14.
+
+**M13 implementation subplan/tests before code (15 October):**
+
+- [x] Publish independently installable Core wheels/source distributions with license/source metadata, packaged migrations and matching Python/runtime versions. Use a scoped ordinary GitHub artifact/release workflow and immutable core-prefixed tags, separate from NS8 module releases; do not assume PyPI credentials. First packaging patch is 0.24.1, with compatible consumer range >=0.24.1,<0.25.0 and unchanged schema 0013. Test wheel/sdist contents, reproducible hashes, isolated installation without checkout/NS8 SDK, actual packaged idempotent PostgreSQL migration and Core operations before publication. Verify the public assets/source and CI for the exact tag; never overwrite a published artifact.
+- [x] Make fork consumption use a pinned Git tag/subdirectory and uv.lock through Renovate's native pep621 Git support. Keep a documented explicit local Core development/test path; neither runtime nor a fork may silently use an unreviewed local Core override. Do not rely on unsupported automatic wheel-URL updates or custom bot infrastructure. Publish a controlled patch, exercise actual Renovate extraction/update/lock changes, create an isolated example-fork PR and require its builds/tests. Verify compatible patch behavior and honest manual review for minor/breaking updates.
+- [x] Add a small versioned upstream manifest with trusted repository/revision, explicit managed paths and baseline identities; use Git and an ordinary scheduled/dispatch GitHub workflow to create update PRs. Apply verified upstream changes only to untouched managed files. For customized/conflicting files, retain the current file and generate specific migration instructions/diffs in the PR. Tests use independent temporary Git histories for unchanged/upstream-only/customized/conflicting/deleted/unsafe-path/symlink/mode cases and repeat delivery. Exercise real controlled GitHub managed-update and customized-conflict PRs; no automatic merge or unsolicited reviewer.
+- [x] Add four short repository-only skills: c0-create-feature, c0-develop-core, c0-contribute-upstream and c0-upgrade-from-upstream. Reuse installed NethServer skills rather than vendor their text. Teach only C0 contracts, package/fork routing and evidence/authorization boundaries. Validate skills and forward-test the risky contribution/upgrade paths in isolated fixtures without granting new external permissions. Demonstrate isolating a reusable contribution from fork-only application changes into a correct scoped upstream PR.
+- [x] Publish an original self-contained example-fork fixture and instructions for receiving Core/managed-file updates, retaining application customization and contributing upstream. Keep development automation and fixtures out of runtime images. Verify actual image audits/SBOMs, all existing local and native tests, and unchanged API/data/identity/worker recovery against all three frozen 3939575 M12 digests. Run permitted owner live update/full-manager restart/persistence for runtime/package changes; destructive scenarios stay disposable and interactive Playwright remains waived.
+- [x] Review/update AGENTS/README/PLAN with actual package assets, PRs, managed-file upgrade simulations, commit/run links and precise limitations. Commit/push and verify the completion-marker CI before M14. Do not mark unexecuted publication, Renovate PRs or upstream-sync behavior as working.
+
+**Reference findings:** Hermes main [b968335](https://github.com/NethServer/ns8-hermes-agent/tree/b9683355741a0f76ece136da8841f65e11c0cad1) uses the same NethServer Renovate preset already present here and its release extension workflow. The installed release skill documents the newer gh-ns8 module command; Core Python artifacts are separate from a module-version release. The [NS8 update implementation contract](https://github.com/NethServer/ns8-core/blob/main/docs/modules/updates.md) retains numbered native hooks; no new lifecycle abstraction is needed. Exact NethServer code searches for pypa/gh-action-pypi-publish and uv build returned no match, so use official Python tooling for this new package-distribution slice. [uv package guidance](https://docs.astral.sh/uv/guides/package/) covers independent no-sources builds and out-of-project installation; [dependency sources](https://docs.astral.sh/uv/concepts/projects/dependencies/) support Git tag/subdirectory consumption. Current [Renovate uv processor](https://github.com/renovatebot/renovate/blob/main/lib/modules/manager/pep621/processors/uv.ts) explicitly skips URL sources but handles Git and native uv.lock artifacts. Its release-attachment digest mapper only strips a leading v, so do not assume core-prefixed release tags map standard wheel filenames automatically. Use the maintained native path and prove it. No M13 code was changed before the M12 marker gate passed.
+
+**M13 first packaging implementation:** Core 0.24.1 adds explicit license/readme/source metadata and synchronized health metadata; app development becomes 0.38.0 and still consumes local Core until the verified external-consumer slice. Schema 0013 and runtime services/operations are unchanged. Build actual wheels/sdists with uv, verify their license/metadata/all migration contents and absence of repository/development material, compare a rebuilt wheel hash, install into a clean external venv with no NS8 SDK/reference app and run packaged migrations twice on a fresh dedicated database. All four focused cases pass in 45 seconds; seventy-six script cases, Go schemas and twenty-four Robot dry runs pass. The full local suite passes all 579 cases in 99 seconds. Native predecessors now pin all three fully verified 3939575 digests. Publication and external consumer/Renovate/sync/skills remain pending; no release success is inferred.
+
+**M13 container packaging correction:** 1102d8f passes [local 38668630362](https://github.com/Stell0/ns8-czero/actions/runs/38668630362) and [publication 38668630478](https://github.com/Stell0/ns8-czero/actions/runs/38668630478), with [QEMU 38668856557](https://github.com/Stell0/ns8-czero/actions/runs/38668856557) running. Standalone distribution checks pass, but actual exported app filesystem has Core 0.24.1 METADATA and no Core licenses/LICENSE. The container's selective COPY included only pyproject/src, omitting newly declared README/LICENSE; quiet uv packaging and the existing development-file audit did not catch the legal metadata gap. Copy both required inputs into the builder and extend the actual runtime audit to require the declared Core GPL license. Seven focused audit cases pass, including missing/invalid/valid Core metadata; corrected image/native acceptance remains pending. This is a build input fix, not a runtime service/API redesign.
+
+**M13 Core publication workflow preparation:** Add a standard GitHub tag workflow for independent core-v<package-version> artifacts. A stdlib verifier requires matching version/tag, actual checkout/source SHA, both current successful native contexts and completed successful local checks for that same SHA. Thirteen real verifier cases reject pending/failed/missing/duplicate contexts, wrong versions, wrong sources/checkouts and incomplete local results. Verification/build tests have read-only repository permissions; only a separate artifact publisher receives contents write. Build/test the exact supplied wheel/archive, include SHA256SUMS, create a draft, verify uploaded bytes and publish without changing the module's latest release; no clobbering of existing artifact versions. Four actual supplied-artifact/clean-install/migration checks pass (37 seconds), normal independent-build checks also pass, and official Actionlint 1.7.12 (downloaded with verified checksum) validates the workflow. Actual tag publication remains unexecuted pending exact-source native CI; no package release or Renovate success is claimed yet. The corrected container build must also pass its strengthened legal metadata audit.
+
+**M13 managed-file updater implementation:** Current NethServer code searches for template-sync and git merge-file have no results. Maintained Webtop development workflow uses ordinary create-pull-request v8; reuse that action rather than introduce bot infrastructure. Add a stdlib Git-blob comparator and scheduled/dispatch fork workflow. Version-1 manifests declare a trusted origin/full baseline and exact file hashes/modes. Preflight all paths/baselines before writes, reject symlinks/unsafe/reserved paths and wrong/backward origins, update untouched additions/deletions/modes, preserve customized files and generate exact migration diff commands without copying local content into reports. Twenty-six independent actual Git-history tests pass, including idempotence, customized deletions/modes and unrelated-change nonchurn. Actionlint passes. GitHub suppresses recursive GITHUB_TOKEN CI; document explicit dispatch/App requirement. Actual manifest/example-fork and managed/conflict PR acceptance remain pending. Corrected publication [38669827490](https://github.com/Stell0/ns8-czero/actions/runs/38669827490) passes the actual Core license audit; release-workflow local [38670314683](https://github.com/Stell0/ns8-czero/actions/runs/38670314683) and image [38670314682](https://github.com/Stell0/ns8-czero/actions/runs/38670314682) pass, with exact-source native contexts pending. No artifact release is claimed.
+
+**M13 native regression found and corrected:** First packaging run [38668856557](https://github.com/Stell0/ns8-czero/actions/runs/38668856557) fails both distributions: installed Core correctly returns 0.24.1, but two Robot route/browser assertions still require 0.24.0. Update those two expectations; do not suppress the failing readiness checks. The maintained reusable runner already checks out module-info's exact source SHA, so the default-branch workflow_run head SHA shown in the run list is not the test checkout. Remaining in-flight pre-fix runs contain the same stale assertion and cannot establish acceptance. Rerun corrected source through publication and native tests.
+
+**M13 repository skills:** Four scoped .agents/skills/c0-* skills delegate NS8 work to installed NethServer instructions and preserve Core/fork/lifecycle separation. Skill Creator structural validation passes all four. Its independent-forward-test guidance is applied only to two isolated /tmp fixtures: contribution evaluator prepares a three-file Core/test/generic-doc patch based on upstream main, excludes mixed-commit customer branding/schema, preserves all fork HEAD/status/hashes and unfinished drafts, passes two tests and demonstrates the regression failing on baseline. Upgrade evaluator applies an untouched build change, preserves customer/optional persistence markers, ports the relevant upstream atomic marker, clears only the resolved flag, passes two behavioral tests/shell checks and verifies byte/mode-identical repeat delivery. These original marker fixtures do not prove real atomic persistence, remote PRs, CI or native operation. No evaluator modifies the project checkout or publishes remotely. Actual app image Dive 0.13.1 (official checksum verified) reports 203000810 bytes, 5657573 inefficient bytes and 98.12% efficiency across its layers; runtime audit independently verifies excluded development content and retained license. Main duplicate native [38667817094](https://github.com/Stell0/ns8-czero/actions/runs/38667817094) reports Debian update seventeen passes and Rocky installation twenty-one passes/three expected skips, all seven browsers; exact recovery/observer and both artifact privacy audits pass.
+
+**M13 manifest/example preparation:** Register sixty-nine tracked native/build/CI/C0-skill files against immutable 130b3eb285c99216b20ab144515e12500fcce94e. Preview against a separately cloned real HTTPS upstream returns unchanged. Use tracked paths, excluding ignored Python caches. Original examples/fork generator copies only registered infrastructure and a standalone compatible Git-tag/subdirectory Core consumer; it never copies app/data or creates Git/remotes, and replaces module publishers with focused consumer CI to avoid overwriting template registry tags. Five meaningful generator tests pass, including absent application/private tree, retained managed bytes, existing-draft protection and unsafe/missing/symlink preflight before destination creation. Local checks gains workflow_dispatch so native-token proposal CI can actually be dispatched. Avoid filtered upstream clones here: per-file lazy blob downloads cause needless network round trips. All thirty-one updater/generator cases and Actionlint pass. Core tag/consumer lock/publication and real Renovate/managed/conflict/contribution PRs remain pending; example installation is not claimed yet.
+
+**M13 unresolved migration review fix:** Review found that a later proposal replacing the report could lose the original comparison range for a still-customized file. First add a real three-revision Git regression and observe failure, then persist/validate review_from at the first unresolved baseline and include all unresolved paths in later reports. Repeated conflicts keep the earliest range; corrupt review pointers fail before writes. All twenty-nine actual-history and five generator tests pass. The original example now includes its own scoped AGENTS/PLAN/gitignore rather than relying on absent application documents. Full suite at 382592f passes 626 cases in 168 seconds; eight focused explicit-source-selector cases also pass, but the selector is not wired into runtime builds before the verified Core tag exists. Current Renovate 44.161.0 on its supported Node 24.21.0 validates the consumer configuration and actually extracts czero-core as github-tags/Stell0/ns8-czero at core-v0.24.1; unauthenticated local extraction reports GitHub-token-required for lookup, not update acceptance. Draft [PR 1](https://github.com/Stell0/ns8-czero/pull/1) targets main, self-assigned with no reviewer, documenting remaining package/remote/native gates. Corrected source native acceptance is still running.
+
+**M13 reproducible source-archive correction:** Actual repeated uv 0.12.20 source builds under identical SOURCE_DATE_EPOCH produce different gzip/tar hashes: generated timestamps, builder UID/GID/names and PAX mtime vary even though member content is unchanged. This would make the publication replay checksum gate reject its own rebuilt source archive. Add a development-only stdlib normalizer preserving file content/executable bits while canonicalizing order, ownership, timestamps, permission classes and gzip headers to the immutable epoch. It rejects nonregular/unsafe members and preserves the original on error. Four focused archive tests pass; two actual independently generated source archives now have the identical c225c143f6cc47b0d190c7c1962667839ab5fca545aad995a2757dab5fe1e739 hash. Extend the existing real rebuild case to compare wheel and normalized source archive, and normalize release output before exact-artifact verification/checksums. All four actual package/rebuild/isolated-install/packaged-migration checks pass in 39 seconds. Explicitly register the new development helper as an absent-at-130b3eb managed path, taking the list to seventy. No Core tag is published before this fix's source acceptance. Independently installed wheel consumer passes both original fixture checks with pinned uv 0.12.20; real Git-tag installation/lock/Renovate remain pending. Latest inspected source-382 scans/SBOMs show app 166/131 components, database 526/150, UI 29/149 and zero module/actions findings; scans are not vulnerability resolution. Corrected 5bf native Debian passes while Rocky remains running; this prior source does not include the archive correction.
+
+**M13 real example and native-token failure:** Publish original [c0-m13-example](https://github.com/Stell0/c0-m13-example) at 19451ad with scoped instructions, explicit baselines, generic customized skill and original isolated three-revision upgrade check. It contains no application/private tree and no module publisher. [Managed CI 38674118047](https://github.com/Stell0/c0-m13-example/actions/runs/38674118047) passes. Core consumer CI is explicitly staged until the verified package tag/lock exists; no Core acceptance is inferred. Actual [sync 38674141571](https://github.com/Stell0/c0-m13-example/actions/runs/38674141571) fails when GitHub rejects a workflow-file push by native GITHUB_TOKEN without workflows permission. Add failing real-Git regression cases, then preserve workflow bytes by default with explicit workflow-permission review metadata/instructions. A maintainer-only --allow-workflow-updates option permits applying them when the existing publishing credential has the required permission; no token is copied into secrets or permissions silently elevated. All thirty-one updater and five generator cases pass. Rerun actual proposal acceptance with this correction. The source-archive fix ec940a9 passes [633-case local CI 38673771080](https://github.com/Stell0/ns8-czero/actions/runs/38673771080), all seventy-six scripts and [image publication 38673771088](https://github.com/Stell0/ns8-czero/actions/runs/38673771088); [exact native 38673948844](https://github.com/Stell0/ns8-czero/actions/runs/38673948844) is running. Core publication remains gated.
+
+**M13 actual proposal acceptance and current platform behavior:** The example repository's native-token branch push succeeds after workflow preservation, then PR creation fails with its default Actions create/approve policy disabled. Enable that required combined GitHub setting only in the newly created example, retaining default read token permissions; the workflow never approves/merges. Actual [conflict proposal 1](https://github.com/Stell0/c0-m13-example/pull/1) at 6af0304a943281d8cdc6f9e30e1bb96e5e656bdd (base ae60680) adds the exact upstream normalizer and preserves both the generic ACME skill and existing workflow bytes, with exact migration commands/reasons. [Explicit exact-head checks 38674912691](https://github.com/Stell0/c0-m13-example/actions/runs/38674912691) pass. Close this controlled fixture without merge after recording proof. Reset only the disposable skill input to baseline and isolate the next proposal branch: [untouched proposal 2](https://github.com/Stell0/c0-m13-example/pull/2) at ab7fa52992261cb6f29cc2773f63a426c3466904 (base 8d2dad0) receives the exact upstream skill and has no unresolved flag for it; [exact-head checks 38675321948](https://github.com/Stell0/c0-m13-example/actions/runs/38675321948) pass. Repeat real delivery is under verification. Automatic PR checks require approval and are not counted as passed: the older blanket suppression statement above is outdated. [GitHub's June 2026 change](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/) and current triggering-workflow docs match observed action_required runs; native-token push builds remain suppressed, while explicit dispatch works. Update current instructions/proposal text accordingly. Corrected 5bf [native 38671902616](https://github.com/Stell0/ns8-czero/actions/runs/38671902616) passes Debian installation fourteen/three expected skips and Rocky update all twenty-four/seven browsers; 130 [native 38671988101](https://github.com/Stell0/ns8-czero/actions/runs/38671988101) passes Debian update seventeen and Rocky installation twenty-one/three skips/seven browsers. Downloaded both report pairs: exact recovery/observers and password/OAuth artifact audits all pass. Neither source includes the later normalized-source publisher, so Core tag publication still requires ec's exact-source gate.
+
+**M13 exact-source release and repeat-delivery gate:** Normalized archive source ec940a931bbdd43bf2defe655934a3a3702edb3f passes local 38673771080, image 38673771088 and both native jobs in [38673948844](https://github.com/Stell0/ns8-czero/actions/runs/38673948844). Downloaded Debian installation has fourteen passes/three expected skips; Rocky update has twenty-four passes and all seven browsers. Exact recovery/backup observers and password/OAuth artifact audits pass. Create core-v0.24.1 at this verified source; [publication 38676517109](https://github.com/Stell0/ns8-czero/actions/runs/38676517109) is running, so uploaded assets are not yet accepted. Extend actual clean installation and repeated packaged database migrations to both wheel and normalized source archive, independently: all six packaging cases pass with pinned uv 0.12.20 in fifty seconds. The external-consumer path remains pending. Actual managed-update delivery 38675232808 attempt two succeeds with unchanged proposal head ab7fa52992261cb6f29cc2773f63a426c3466904 and one open proposal; no duplicate/churn. Both controlled proposals have passed explicitly dispatched exact-head managed CI; automatic approval-required runs are not counted.
+
+**M13 released consumption implementation:** Published [core-v0.24.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.24.1) from exact verified ec940a9 via [38676517109](https://github.com/Stell0/ns8-czero/actions/runs/38676517109). Both verify/publish jobs pass; public wheel hash fff583d24f5913aae4cda98187f6e945562969699541513f293a4bcc3ee683c8 and normalized source hash 67ad98f4586e90b19a3d4b791bf6996e1622d602aa136b6ee21dd824b32eea58 match downloaded SHA256SUMS. Root app 0.39.0 now declares compatible >=0.24.1,<0.25.0 with immutable Git-tag/subdirectory lock. Default builds consume that pin. Explicit CZERO_CORE_SOURCE=local is for producer development CI only; a build-only selector validates the declared source and never falls back. Upstream CI opts in; independent forks default to released consumption. Git/selector/uv remain builder-only. Eight selector cases and five generator cases pass. Exact public assets, assembled images, native recovery, live persistence and real Renovate patch PR remain acceptance gates. Scoped contribution [PR 2](https://github.com/Stell0/ns8-czero/pull/2) at 32167ad isolates the real GPL packaging fix from mixed fork branding/schema; local validation passes, image/native CI is running, self-assigned with no reviewer.
+
+**M13 consumer and cross-environment verification:** Public example 611db86 passes [consumer 38676808446](https://github.com/Stell0/c0-m13-example/actions/runs/38676808446) and managed 38676808438. Its actual Git installation and frozen lock resolve core-v0.24.1 to ec940a9 without a local Core tree; all three original checks pass locally. The reference app also installs frozen non-editable released Core and agrees on runtime/package versions. An explicit temporary local-source resolution passes while the committed released lock remains unchanged. Thirty-six focused app/selector/generator cases, seventy-six scripts, Go schemas and seventeen non-UI Robot dry runs pass. A broad local attempt reports 640 passes, one failure/four setup errors caused by temporary quota exhaustion; preserve its failure log, remove only regenerable completed test/dependency caches and rerun. Downloaded-asset comparison exposes local 0664 versus CI 0644 ZIP modes, with identical members. Rebuilding a wheel from the normalized public source archive under umask 022 yields the exact published fff583d2 hash. Build future release wheels from that normalized archive and make packaging checks exercise this reproducible route; never replace 0.24.1 assets.
+
+Downloaded public artifacts now pass all six exact-artifact checks, including both clean installations and repeated fresh PostgreSQL migrations, in forty-one seconds. The first local cross-environment hash failure is resolved by reconstructing the wheel from the normalized source archive under a defined umask; no public bytes changed. Full local rerun is in progress after quota cleanup. Source changes require actual image/native CI; M13 remains open.
+
+**M13 controlled compatible patch plan before changes:** Publish Core 0.24.2 as a documentation/packaging patch: replace prepared-only instructions with the actual independent release/install procedure, including normalized archive-to-wheel reproduction and current assets. Keep schema 0013 and every service/API unchanged. Synchronize producer package/health/native expectations, test actual artifacts and gate its tag on exact local/image/both-native success. Keep consumers at verified 0.24.1 until publication, then run authenticated native Renovate against the public original example and require a real tag/uv.lock PR plus frozen consumer CI. The prepared-release wordings in 0.24.1 are immutable; a new patch corrects distributed documentation without overwriting artifacts. Root default-build pin advances only after the new tag is verified.
+
+**M13 actual Renovate lookup correction:** Authenticated Renovate 44.161.0 exits zero but explicitly skips core-v0.24.1 as unsupported/unversioned under PEP 440. The previous configuration validation/extraction was insufficient acceptance. Use Renovate's native prefix-aware regex versioning with numeric major/minor/patch and comparator bounds >=core-v0.24.1 <core-v0.25.0; retain the whole tag instead of extractVersion. Its actual installed API reproduces the old rejection and passes patch ordering, lower/minor bounds and prerelease/unprefixed rejection for root and example configs. Add a development-only CI regression using pinned Renovate/Node, keeping this dependency outside runtime. Corrected authenticated lookup accepts the complete tag; no update PR exists until the controlled patch is published. Example fix c991dca is pushed. Released-consumer root 98a0f61 passes local 38677112641 and image 38677112644; its native execution is pending. Public exact-artifact six-case rerun passes. Temporary quota recovery moved only this task's regenerable tooling into ignored workspace cache; preserved all private live state and reports.
+
+**M13 stronger independent consumer evidence:** Add original test_persistence.py to the generated example and its disposable service-backed CI. It creates a dedicated PostgreSQL/pgvector database, runs packaged migrations, registers a custom example-project schema, creates/edits records, rejects stale revisions, grants a persisted Reader, repeats migration and verifies readable retained data plus denied writes. Test-only trusted identities do not prove SSO. All four consumer checks pass against independently installed released 0.24.1. An initial invocation from the template cwd correctly fails the existing no-local-tree guard; rerun from the standalone checkout passes without changing that guard. Public example d728102 includes the test; remote consumer CI is pending. All five generator tests and workflow validation pass. The complete controlled-patch local rerun passes 645 cases in ninety-five seconds, plus the actual Renovate API regression and seventeen non-UI Robot dry runs. Patch CI now runs on d7de945; no unverified tag is published.
+
+**M13 default released image gate:** Add a read-only independent image CI build using the released default, alongside producer CI's explicit local Core. Audit actual runtime files/license and compare installed Core version plus PEP 610 Git commit/subdirectory to committed uv.lock; no NS8 SDK is installed. The actual independent consumer environment passes this source probe and rejects a wrong-commit negative control. Workflow validation passes; assembled image acceptance remains pending. Explicitly register the source-selector and both new development CI/probe pairs as absent-at-baseline managed paths, taking the manifest from seventy to seventy-five; otherwise an updated Containerfile could refer to a helper missing from a fork. Upgrading pre-distribution forks also requires reviewing their application dependency/lock transition, outside automatic infrastructure scope. Independent realistic upgrade-skill evaluation is checking this actual transition while retaining runtime branding/docs/drafts.
+
+**M13 default image and realistic upgrade review:** [Released image 38678014930](https://github.com/Stell0/ns8-czero/actions/runs/38678014930) passes at 7a2bc64; inspected logs prove license, runtime development exclusion and installed immutable Git identity checks actually executed. Producer d7de945 passes local 38677427951, native-rule regression 38677428076 and image/scans 38677427960; native 38677620847 is running. Downloaded current scans retain app 166 findings (44 high), database 526 (104 high/16 critical), UI 29 (15 high/two critical), module/actions zero. Database advertises fixes for 41 high/13 critical; UI for all 17 high/critical. These are release-review findings, not resolved risks. Stronger public database consumer 38677592808 passes. Thirty-six actual-history/generator cases pass after explicitly registering helper dependencies; adding a managed tests path initially exposed an existing-directory collision, corrected with mkdir(exist_ok=True).
+
+Independent Skill Creator real-fork evaluation against trusted 98a0f61 ports the actual builder/source/lock migration and explicitly registers its helper while preserving ACME runtime settings, customized README and unfinished-draft bytes. It passes 464 isolated-fork Python cases, 76 actual UI script cases and separate actual uv 0.12.20 released/local frozen installs. Installed PEP 610 identities, one GPL license and thirteen migrations agree in both modes. Three new build-boundary regressions fail the original fork and pass the upgraded fork. Initial test execution accidentally followed the supplied venv's editable main checkout; explicit isolated-fork PYTHONPATH corrects this without changing acceptance. Container namespaces are unavailable, so fixture image/native success is not claimed. Apply the narrow demonstrated skill correction: inspect changed build/workflow dependencies, explicitly register required helpers and review application source/lock migration before claiming a usable upgrade. Final isolated artifacts remain outside Git. Dedicated live read-only administration login/configuration/inventory baseline is captured privately for the eventual verified-image update; no M13 live update is claimed.
+
+The realistic upgrade evaluator's final report additionally verifies thirty-two actual installed-app tests in each separate released/local environment and a byte/mode-identical repeat delivery across all 328 non-Git files, retaining four unresolved protected workflow ranges. Parent inspected the report/provenance artifacts; the helper dependency gap is corrected in the skill. Current seventy-five-path generator/history checks pass (36). Published example now holds its tested Python range explicitly: authenticated native lookup otherwise proposes 3.15, outside Core's supported <3.15 range. This is a separate compatibility review, not part of the controlled Core patch.
+
+Scoped contribution Debian installation report is downloaded and inspected: fourteen passes/three expected skips, exact recovery/backup observers and zero password/OAuth artifact candidates. Rocky update remains running. Permitted dedicated live pre-update OAuth check passes normal-TLS SSO/consent, official SDK current/legacy parity, read-scope denial, refresh/replay and revocation. A fresh bounded read grant is retained only in a mode-0600 private checkpoint for update/full-manager restart; its test client will be disabled after verification. No M13 live image update has occurred yet.
+
+**M13 example license review correction:** The public/generated original example contains GPL infrastructure but omitted the root license. Explicitly register LICENSE at its actual immutable baseline hash/mode, taking managed scope to seventy-six, and assert exact generated license bytes in the existing real generator case. Publish that unchanged GPL file to the original example. This is source-distribution compliance work; no runtime or API change. Native exact-source patch verification remains running.
+
+**M13 completed subgates:** Independent 0.24.1 publication/actual assets and four skills/contribution acceptance are complete. Scoped [contribution 2](https://github.com/Stell0/ns8-czero/pull/2), source 32167ad, passes native 38676782799: downloaded Debian fourteen/three expected skips and Rocky twenty-four/seven browsers, exact recovery/observers and clear artifact audits. Close this controlled subset unmerged after proof; final implementation stays in PR 1. Consumer source 98a0f61 passes native 38677301067 with the same fourteen/three and twenty-four/seven results, exact recovery/observers and clear audits. Patch d7de945 Debian update passes all seventeen cases with no skips and exact recovery/observers/privacy; Rocky installation is still running. Default-source scheduling/promotion, compatible-patch Renovate PR, final live update/restart and documentation CI remain open gates. Public license correction 27b4f64 passes managed 38679210000 and database-backed consumer 38679209998.
+
+**M13 controlled patch publication and real Renovate acceptance:** d7de945dff9a28e70f8a3fb8f4fc437db7ed6c47 passes [native 38677620847](https://github.com/Stell0/ns8-czero/actions/runs/38677620847): Debian update seventeen passes, Rocky installation twenty-one/three expected skips and all seven browsers. Downloaded reports prove exact recovery/observers and zero password/OAuth artifact candidates. Publish core-v0.24.2 at that exact verified source via [38680257157](https://github.com/Stell0/ns8-czero/actions/runs/38680257157), both jobs successful. Downloaded wheel SHA256 63f7d1bfbbc8ddc60fc32b834d707e05a7839c7c829c4c34bb6adc3e3d7b4925 and source SHA256 5950bc6f9733a8c6ee0ab64f39c9401fc3a7519abd42097481a42280dcdc2a60 match public SHA256SUMS; all six exact-public-artifact installation/rebuild/packaged PostgreSQL migration checks pass in forty-three seconds.
+
+Authenticated native Renovate 44.161.0 creates [consumer PR 3](https://github.com/Stell0/c0-m13-example/pull/3), source d5e10a7ff9053002ea7d4ed2fcfbe1ebab5d190d against 27b4f64. Inspected complete diff changes only pyproject's Core tag and three matching uv.lock identities, from ec940a9/0.24.1 to d7de945/0.24.2; Python range/other dependencies are unchanged. Native uv regenerates the lock; no custom updater substitutes for Renovate. Exact-head consumer 38680387403/38680383853 and managed 38680387453/38680383754 pass. Inspected consumer log proves all four original/database checks executed with installed published 0.24.2. Self-assigned, no reviewer, no automatic merge, Conventional Commit attribution preserved. Root app now adopts the verified 0.24.2 tag/lock; final assembled-default CI remains required.
+
+**M13 permitted live acceptance:** Only the dedicated Czero instance is updated to verified d7de945, then restarted through its full native user manager. Normal-TLS checks pass at Core/app/schema 0.24.2/0.39.0/0013. Retained jobs/objects/sources/Wiki/retrieval/client/scoped SDK fixtures, seven actual HTTP pages/assets/owner controls, native readiness and timer health pass after both operations and again after the final restart. Final saved configuration/scheduler/unrelated-inventory comparison passes. Interactive Playwright remains waived; only the owner persona is used live, while disposable browsers prove other roles. Operator state stays outside Git.
+
+The initial retained OAuth grant waited 1579 seconds despite a returned 285-second lifetime, so refresh correctly failed after the originating native identity/session expired. Preserve that failed checkpoint/log; cleanup disabled its client. Correct only private fixture sequencing: seed fresh independent grants immediately before each update/restart, preflight a conservative issue-time/returned-lifetime window and verify authority before long data probes. Both repeated lifecycle cycles pass refresh rotation, official SDK current/legacy parity and explicit revocation; verified cleanup disables their temporary clients. Two existing local expiry regressions pass. Runtime expiration and authorization remain unchanged; the original expired-fixture failure is not counted as a pass.
+
+Verified native/live M13 predecessor for M14 is d7de945dff9a28e70f8a3fb8f4fc437db7ed6c47, Core/app/schema 0.24.2/0.39.0/0013:
+
+- Module ghcr.io/stell0/czero@sha256:f07b2d04b3515f932614038cc95d7a739a71516a3d88fe1b4e5e3168a9194e0c
+- App ghcr.io/stell0/czero-app@sha256:4f7b7c893c9a952942835ca72c9b0ca70f6fdcb5afe86fa3f39f13ceb7109821
+- Database ghcr.io/stell0/czero-postgres@sha256:6675458321037ca4a972b81f1d43986673c2572efb80608012ceb97fe72fb872
+
+Each OCI revision label matches d7de945. Freeze all three for genuine M14 upgrades; 849736a adopts the same verified library/runtime source in its default external lock. Default-image CI verifies actual installed Git identity. Original consumer 1e5a940 explicitly opts in to all seventy-six managed paths and restores ordinary proposal-branch guidance. Actual default-HEAD dispatch remains pending verified main promotion.
+
+**M13 independent final review:** A separate developer evaluator reviews the complete fifty-three-file/nineteen-commit diff from 35875a5 to exact 849736a, finding no blocking correctness, safety, separation or maintainability issue. Its nonblocking stale AGENTS/PR publication-status nit is corrected. Independent execution passes 470 Python cases with 175 explicit database skips, seventy-six actual-script cases, seventeen non-UI plus one affected-browser dry run, actual Renovate API/frozen lock and all seventy-six baseline identities. Four exact-public-artifact cases pass; its two database cases are skipped. Candidate [local CI 38680599788](https://github.com/Stell0/ns8-czero/actions/runs/38680599788) separately proves all 645 cases with PostgreSQL; [released-image CI 38680599735](https://github.com/Stell0/ns8-czero/actions/runs/38680599735) proves actual license/source audits. Publisher verification proves all six artifact cases. Independent real-fork synchronization preserves customizations and repeats unchanged. The PR skill requires another developer, not specifically a human; this independent review is development evidence, not GitHub self-approval. Operator feedback remains optional. Exact [849 QEMU 38680785334](https://github.com/Stell0/ns8-czero/actions/runs/38680785334), main/default-upstream delivery and final documentation CI remain open gates.
+
+Final candidate 849736a Debian installation completes successfully in native 38680785334: downloaded report has fourteen passes/three expected update-only skips, exact persistence/backup observers and zero temporary-password/OAuth-query candidates. Rocky update/browser execution remains running. A separate real public-example preflight against trusted HTTPS upstream at 849 passes all four released-consumer/managed/PostgreSQL checks and preserves all eighty-four checked source files/modes on repeat delivery. This explicit-revision local preflight supplements, rather than substitutes for, pending actual default-HEAD remote delivery.
+
+Downloaded final-candidate [publication/scans 38680599864](https://github.com/Stell0/ns8-czero/actions/runs/38680599864) SARIF/SBOM artifacts confirm the earlier counts: app 166 findings (44 high), database 526 (104 high/16 critical), UI 29 (15 high/two critical), module/actions zero. Advertised high/critical fixes remain database 41/13 and UI 15/2; app advertises no high fixes. SBOM component counts are 131/150/149. These are retained release findings, not a clean-security result.
+
+**M13 final source accepted and promoted:** Exact 849736ab70f441ec05f5124b747fb6f6ef27991e [QEMU 38680785334](https://github.com/Stell0/ns8-czero/actions/runs/38680785334) passes. Downloaded Debian installation has fourteen passes/three expected update-only skips; Rocky update has twenty-four passes/no skips and all seven real browser workflows. Both prove exact persistence/backup-copy observers and zero temporary-password/OAuth-query candidates. Independent code review and exact-source local/producer/released-image/native-rule gates pass. Main is fast-forwarded from 35875a5 to reviewed 849736a, preserving all focused commits; [PR 1](https://github.com/Stell0/ns8-czero/pull/1) records that merge. Default-HEAD upstream workflow is dispatched without any revision input in public example [38683574634](https://github.com/Stell0/c0-m13-example/actions/runs/38683574634); its actual proposal/checks and repeat delivery remain pending.
+
+**M13 default-upstream acceptance complete:** With reviewed main at 849736a, [default dispatch 38683574634](https://github.com/Stell0/c0-m13-example/actions/runs/38683574634) runs without a revision input and creates [PR 4](https://github.com/Stell0/c0-m13-example/pull/4), exact head ed097c3c0a731aef3c48f90dd626ecffaeba9699 against 1e5a940. Complete diff inspection confirms target 849736a, ten changed paths, unchanged consumer/docs/lock/test customizations and unchanged protected workflows. Five workflow migrations retain explicit review ranges/reasons. Exact-head [consumer 38683687159](https://github.com/Stell0/c0-m13-example/actions/runs/38683687159) and [managed 38683689880](https://github.com/Stell0/c0-m13-example/actions/runs/38683689880) pass; inspected consumer log executes all four original/database checks. [Repeat default dispatch 38683713366](https://github.com/Stell0/c0-m13-example/actions/runs/38683713366) succeeds with the identical proposal head and only one open standard proposal. It is self-assigned with no unsolicited reviewer; nothing is automatically merged. The same default selector is used by the weekly cron; no future timed cron event is claimed as executed.
+
+**M13 closeout:** All implementation acceptance criteria pass under the explicit interactive Playwright waiver. The independent review's documentation nit is resolved; runtime versions remain Core/app/schema 0.24.2/0.39.0/0013. Commit/push this three-document completion marker and require its actual local, producer/default-image, native-rule and both-QEMU results before starting M14. The milestone's checked acceptance marker does not claim that pending CI has passed. Retain d7de945's three verified native/live predecessor digests for M14. Stable module release, real-provider calibration, actual ChatGPT/scheduled integration, IdP/proxy compatibility and scan remediation remain M14 release work.
+
+**M13 completion marker verified:** bb28777d2a4f846fccd7869239a84bdcf5e028c1 passes [local 38683921253](https://github.com/Stell0/ns8-czero/actions/runs/38683921253) (645 actual Python/PostgreSQL/packaging cases), [publication/scans 38683921272](https://github.com/Stell0/ns8-czero/actions/runs/38683921272), [released-source image 38683971394](https://github.com/Stell0/ns8-czero/actions/runs/38683971394), [native Renovate rules 38683973918](https://github.com/Stell0/ns8-czero/actions/runs/38683973918) and [QEMU 38684131094](https://github.com/Stell0/ns8-czero/actions/runs/38684131094). Downloaded Debian installation has fourteen passes/three expected skips; Rocky update has twenty-four passes/no skips and all seven real browsers. Exact recovery/backup observers and both privacy audits pass. Module-info's actual source and all three public image revision labels equal bb28777. Main contains the verified marker. M14 may begin; d7de945 remains its fully verified native/live predecessor.
+
+### M14 — End-to-end hardening, compatibility and release gate [x]
+
+**Goal:** Prove C0 is installable, restorable, independently usable, expandable and safe for other developers to fork.
+
+**Copy/adapt from:** [QEMU install/update scenarios](https://github.com/NethServer/ns8-github-actions/blob/v1/docs/test-module-qemu.md); [NS8 module testing](https://github.com/NethServer/ns8-core/blob/main/docs/modules/testing.md); [Hermes Robot/testing patterns](https://github.com/NethServer/ns8-hermes-agent/tree/main/tests); [Trivy scan](https://github.com/NethServer/ns8-github-actions/blob/v1/.github/workflows/scan-with-trivy.yml); [NethServer PR/release skills](https://github.com/NethServer/agents).
+
+**Implement:** Add coherent reference-app acceptance suite for normal CRUD plus Wiki-backed knowledge, exported sources, backup/restore, older-image upgrade, multiple C0 instances, resource limits, failures of optional providers, PostgreSQL migration and Jev/Kev fallback, network/auth errors, MCP client discovery, jobs/timer restart. Audit package contents and docs, verify no runtime developer files/secrets, check accessibility, latency and memory targets. Generate SBOM and release notes.
+
+**Acceptance:** Successful image build, unit/integration suites, QEMU install+update (Rocky 9 and Debian 13 or clearly justified support matrix), NS8 admin and C0 UI exercised via Playwright MCP on authorized live environment, authenticated REST/MCP tests, backup/restore on disposable host, GPL/source compliance, ready-for-release report with no hidden failures.
+
+**Documentation gate:** `AGENTS.md` final agent handoff/runbook; `README.md` accurate install/use/config/reference; `PLAN.md` complete evidence, known limitations and release state.
+
+**Evidence:** Exact 5be82b7 local/producer/released-Core CI, Debian install/Rocky genuine upgrade, all seven real Rocky browsers, privacy/recovery and dedicated live update/full-manager restart pass. The CPU quota and interactive Playwright deferrals are explicit; final main completion-marker CI must be inspected, not presumed. See the closeout and readiness report below.
+
+**M14 implementation subplan/tests before code (15 October):**
+
+- [x] Retain the existing coherent REST/MCP/SSO/source/Wiki/object/jobs/recovery suites and map each release acceptance requirement to actual evidence. Freeze all three d7de945 module/app/database digests for genuine upgrades. Preserve provider-disabled defaults, Core API/schema, numbered native lifecycle and the interactive Playwright waiver. No destructive fixture runs live.
+- [x] Review the actual SARIF/SBOM inventory and apply the smallest supported fixes: patch vulnerable UI dependencies within compatible ranges; preserve Vue 2/Ns* and the module-loader contract. Update affected database OS packages without changing PostgreSQL major/data layout; inspect and remove an unused root-only helper only if real non-root startup/recovery remains intact. Keep raw scan artifacts and classify remaining findings with primary references and actual exposure evidence; never suppress findings or claim an empty scan without proof. Add a native Trivy gate rejecting fixable critical findings after full artifact upload, with a vulnerable predecessor negative control. Tests: locked lint/build, existing native UI/browser workflows, assembled-image/license/parser/database audits, fresh scans and real update/restore.
+- [x] Bound app/migration/database/worker containers with native Podman flags: 1 GiB memory, 256 tasks, no new privileges and dropped capabilities. The initial two-CPU target is explicitly deferred by the operator after the recorded controller failure; it is not shipped or claimed tested. Validate maintained NS8/Podman patterns and refine only for an observed compatibility problem. Test actual installed app/database limits/security flags and representative worker/ingestion/recovery under the native units on both distributions. Preserve systemd ordering and backup quiescence; no resource-management daemon or duplicated application settings.
+- [x] Add bounded installed measurements and accessibility smoke acceptance using the real reference application. Initial provider-free targets: fifty health requests p95 <=500 ms, twenty authenticated text searches p95 <=1 s, idle app RSS <=256 MiB and database RSS <=384 MiB, each measured on the disposable runner with fixture size/hardware disclosed. Provider deadlines/fallbacks retain existing negative controls. Assert visible controls have accessible names/labels, local navigation/landmarks and keyboard focus in the existing real browsers. Report smoke limits rather than claiming complete WCAG certification. Add meaningful failing controls for new probes; do not copy runtime implementation into tests.
+- [x] Verify available versioned identity dependencies before changing disposable fixtures. Registry has IdP 0.3.1 despite no GitHub release; main differs by a Keycloak patch/UI/CI. LDAP proxy 1.4.0 includes the required listener fix. Compare source/security status, pin exact tested module/component images and require actual SSO/account-switch/OAuth/update/restore/browser acceptance. Do not downgrade a required security fix merely to obtain a versioned tag, and never modify the live provider/proxy.
+- [x] Run full local/database/packaging and script/schema checks, actual producer/default released images, both QEMU scenarios with all browsers, exact recovery/observers/privacy, and permitted Czero-only live update/full-manager restart/API/HTTP UI persistence. Audit shipped licenses/source/dev-file/secret boundaries and native memory/latency evidence. Review failures, add regressions, commit/push and rerun relevant gates until they pass.
+- [x] Produce release notes, a reproducible evidence/readiness report with SBOM/image/source references and explicit remaining limitations, and final AGENTS/README/PLAN handoff. Current gh-ns8 automatic release selection treats core-v library releases as its latest baseline and rejects their non-module version; document/test the initial explicit module-version procedure rather than silently treating a library release as an NS8 release. NS8 catalog versions come from valid semantic OCI tags. No module tag/release is created merely to make a readiness check pass. Verify final documentation CI before marking M14 complete.
+
+**Reference findings:** Re-read maintained [QEMU wrapper](https://github.com/NethServer/ns8-github-actions/blob/c409edab2d58382b15e76d58a3936e0ffad1897f/docs/test-module-qemu.md), [Core testing contract](https://github.com/NethServer/ns8-core/blob/330a194a35bbdb1a28758035f03a40d0e7d5f272/docs/modules/testing.md), [Trivy workflow](https://github.com/NethServer/ns8-github-actions/blob/c409edab2d58382b15e76d58a3936e0ffad1897f/.github/workflows/scan-with-trivy.yml) and [Hermes runtime/native tests](https://github.com/NethServer/ns8-hermes-agent/tree/b9683355741a0f76ece136da8841f65e11c0cad1/tests). Existing Czero tests already verify competing routes and concurrent isolated databases/passwords, so extend the actual suite rather than duplicate a second framework. Current Core and IdP native UIs still use Vue CLI 4; official [migration guidance](https://cli.vuejs.org/migrations/migrate-from-v4.html) shows why a forced major PostCSS/bundler override needs compatibility evidence. Prefer compatible patches first. No NethServer axe-core code reference was found; use focused browser accessibility smoke checks without adding a runtime library.
+
+Debian primary trackers confirm selected app base findings remain unpatched in stable: [util-linux](https://security-tracker.debian.org/tracker/CVE-2026-78408), [Perl Archive::Tar](https://security-tracker.debian.org/tracker/CVE-2026-9538), [systemd-homed](https://security-tracker.debian.org/tracker/CVE-2026-16742). These sources do not by themselves establish Czero reachability or remediation. PostgreSQL's upstream entrypoint invokes gosu only for UID zero, while Czero uses USER postgres; verify actual image/native behavior before removing it. Record source/package versus executable exposure precisely. Available LDAP proxy [1.4.0](https://github.com/NethServer/ns8-ldapproxy/releases/tag/1.4.0), commit 567a0f2, resolves anonymously to sha256:3dc6fc3a2bc4ae3d7775bdbd934f6f1295b80933d6fd11b2bf2301897b4cd16d. IdP Git tag 0.3.1 is 81454e3; current tested main is 4034dc3. Versioned availability is not installed acceptance or a support/security guarantee.
+
+
+
+**M14 first security/resource implementation:** 7164ba7 freezes the three verified M13 predecessor images; fb894e8 resolves compatible UI dependency patches without changing manifest ranges or Vue/native architecture. Locked install, lint, production build and seventy-six real-script cases pass. Trivy 0.70.0's actual old-lock negative control returns exit one with loader-utils/minimist critical findings, while the patched lock returns zero with no fixable critical findings. Initial local database download fails at temporary-storage quota and produces no scan result; retry with workspace temporary/cache storage succeeds. Database b15b0ce passes actual [publication/image audits 38687987598](https://github.com/Stell0/ns8-czero/actions/runs/38687987598), including installed vendor security-version floors and absent root-only gosu. Full current local suite passes 663 Python/PostgreSQL/packaging cases in 133 seconds.
+
+Native candidate app/migration/database/worker units now specify 1 GiB physical memory plus at most 1 GiB swap, two CPUs, 256 tasks, dropped capabilities and no-new-privileges. A Git-only disposable probe reads effective numeric cgroups/process state, sums resident memory conservatively and never inspects container environments. Eighteen local controls reject missing privilege/resource protections, malformed readings, memory excess and private transport diagnostics. Both native distributions gain an actual app/database hardening/RSS check; existing worker/ingestion/recovery suites must complete under their native bounds. Seventy-nine focused lifecycle/probe cases and eighteen non-UI dry runs pass. Actual effective limits, memory measurements and installed behavior are not yet verified. Downloaded b15b0ce SARIF/SBOM reports reduce UI findings from 29 to seven (two high, no critical), and database findings from 526 to 413 (63 high/three critical). No database high/critical finding advertises a fix after this patch; app remains 166/44 high with no advertised high fix. Retain these unresolved findings and all primary evidence.
+
+**M14 acceptance probes prepared locally:** The actual disposable performance helper enforces fifty health/twenty Wiki text-search samples after two warmups each, exact immutable revision evidence, provider-free policy and a sixty-second measurement deadline. Nine local negative/control cases pass, plus the exact helper through signed PostgreSQL-backed REST. It reports only numeric timings, corpus count and runner sizing. Native acceptance measures after clean restore and repeats effective resource/RSS checks on the populated instance. Browser smoke checks named visible controls/links, language, landmarks, heading and skip target, with existing keyboard tests retained; nine actual-callback Node controls and four safe-diagnostic Python controls pass. Three existing browser mock fixtures initially lack the new evaluation method; update their explicit interface fixtures while retaining all credential-privacy assertions. Full local suite now passes 677 cases, all eighty-five script cases, nineteen non-UI dry runs and Go schemas. Actual native browser/performance results remain pending.
+
+**M14 versioned identity fixture selection before changes:** Registry/Git checks identify IdP 0.3.1 module sha256:1c6ee1b6b393e20b4e8fcd1bf3733058a5b86409f12a4288e83a26d17bc0631f and component sha256:175bddd31f8ed3fa47a92a85e607655d0e752db5dee19ff04c3011d1baf3826d. Both versioned and previously tested main use Keycloak server 26.7.4-0. Source comparison changes only provided compile-time Keycloak API dependencies from 26.7.4 to 26.7.5, plus UI/CI/tests; no native registration or authenticator source changes. This is not evidence of identical image bytes or a vendor security guarantee. Test the exact versioned pair and stable proxy 1.4.0 in disposable fixtures; require the full native SSO/OAuth/account-switch/recovery/browser matrix before calling them compatible. Retain current verified main pins as failure evidence if a real compatibility problem appears. No live provider/proxy changes.
+
+**M14 native CPU failure and subplan refinement before correction:** Source 668e025 [QEMU 38688674854](https://github.com/Stell0/ns8-czero/actions/runs/38688674854) Rocky update has two passes/twenty-three failures. The predecessor starts and seeds successfully; after native update every replacement container fails because crun reports the cpu controller unavailable in the rootless pod. Later failures cascade from that outage and are not independent UI/SSO results. Artifact privacy checks are clear. Podman's primary troubleshooting section 26 documents the exact failure and required host delegation; current NS8 user-manager drop-in delegates io, and repository searches find no existing module CPU-quota implementation. Do not change host/Core delegation from a Czero module or weaken mandatory memory/tasks/security checks.
+
+**Operator-directed CPU deferral (15 October):** The operator explicitly waives CPU-quota feature testing and requests continued implementation/deployment. Omit the new `--cpus=2` flags from this candidate rather than ship the observed startup failure or an unverified controller-discovery helper. CPU-rate enforcement and its conditional-delegation implementation are deferred, not passed. Keep mandatory memory/swap/tasks, non-root, capability-drop and no-new-privileges checks; their actual installed checks and all unrelated acceptance remain required. Existing parser CPU deadlines and worker lifetime limits remain. The discarded uncommitted discovery approach is not shipped. Do not alter host/Core delegation. Require successful image publication and ordinary installed readiness/persistence checks before the dedicated czero1 live update.
+
+Separately f49d3ec local CI passes, but publication 38689775221 fails only when the final UI critical gate re-downloads Trivy's database from a mirror returning HTTP 404. Full image/audit/scan jobs otherwise succeed. Retry the failed job without suppressing the gate; no successful full publication or native f49 acceptance is claimed yet.
+
+
+**M14 CPU deferral candidate verified before live mutation:** 724334786b3a4380154b033c12ab190c8381b248 omits CPU flags and the discarded discovery helper. Sixteen focused hardening controls pass; full [local CI 38694737697](https://github.com/Stell0/ns8-czero/actions/runs/38694737697) passes 675 actual Python/PostgreSQL/packaging cases, eighty-five script cases, Go schemas and nineteen non-UI dry runs. Independent local execution passes 499 with 176 explicit database skips. [Publication/audits/scans 38694737747](https://github.com/Stell0/ns8-czero/actions/runs/38694737747) and [released-Core image 38695204598](https://github.com/Stell0/ns8-czero/actions/runs/38695204598) pass. Anonymous OCI revision checks verify all three candidate images and actual packaged unit protections/CPU omission. Full retained scans still report app 166, database 413 and UI seven findings; the fixable-critical gate passes, not a clean-security claim. [Native QEMU 38695052867](https://github.com/Stell0/ns8-czero/actions/runs/38695052867) is pending actual results; no M14 live mutation is claimed here.
+
+The dedicated live preflight confirms normal-TLS native administration and owner SSO, readiness/configuration/timer and exact 59-resource snapshots. Scoped public OAuth and official SDK current/legacy MCP agree with REST, enforce read-only scopes and revoke authority; temporary clients are disabled. An initial private verifier omitted the mandatory resource on revocation and correctly received rejection; adding that established contract makes the repeated preflight pass without runtime changes. Preserve failed evidence privately. Do not include credentials, tokens, resource identifiers or operator inventory in repository/report artifacts. Development release notes and the evidence/readiness report are being prepared under docs/.
+
+
+**M14 installed candidate results and browser-harness correction:** Downloaded 38695052867 Debian genuine M13 upgrade passes all nineteen cases. Rocky installation has eighteen passes/three expected update-only skips/five browser failures; native memory/privilege, deterministic worker, outage, backup/restore, real SSO/OAuth, exact identity/data/vector recovery and latency probes pass. Both XML privacy audits have zero generated-password/OAuth-query candidates. New browser failures occur before numeric accessibility output: Browser 19.14.2 converts the supplied source with `new Function("return " + script)()`. A leading license line comment causes JavaScript automatic semicolon insertion after return, yielding undefined instead of the callback. Parenthesize the supplied callback expression, retain the license and add a regression through the actual pinned conversion contract, including the failing unwrapped control. Require real Browser API reproduction and repeat all native browser workflows; do not call the five workflows passed or infer separate UI defects. No C0 application behavior changes in this correction.
+
+
+**M14 callback correction verification:** 5be82b7 parenthesizes the licensed callback and adds the actual pinned conversion-contract regression with the unwrapped negative control. All eighty-six actual-script cases pass. A real Robot Browser 19.14.2 API run against a synthetic local page independently reproduces the unwrapped failure and verifies the corrected callback's names/structure. The initial nested local Chrome launch is rejected by its sandbox setup; the same test with Chrome sandbox enabled outside the nested filesystem sandbox succeeds, with no live site/credentials or TLS exception. Native all-role rerun remains required. Candidate build/local CI are pending; no M14 live mutation is claimed by this checkpoint.
+
+
+**M14 permitted live update accepted:** Exact 5be82b7 [local 38697416074](https://github.com/Stell0/ns8-czero/actions/runs/38697416074) and [publication 38697416040](https://github.com/Stell0/ns8-czero/actions/runs/38697416040) pass. All three public image revisions and packaged unit CPU omission/protections are verified. Targeted native update of only the dedicated instance exits zero and its installed digest matches the candidate. Core/app/schema remain 0.24.2/0.39.0/0013. The original fresh grant survives update, refresh rotation, official SDK current/legacy REST parity, scoped denial and explicit revocation. Its temporary client is disabled. Exact fifty-nine immutable resources, original terminal jobs/client descriptors, paused/enabled schedule configuration, seven actual HTTP pages and local assets, native configuration/readiness and timer-completed health job pass. Unrelated module IDs, image/source/version metadata and flag sets remain unchanged; no live provider/proxy/other module is modified.
+
+Private fixture failures are retained: the first probe races startup and receives HTTP 502 even though the native action has completed; after readiness, the same original grant verifies successfully. Future cycles wait for bounded actual readiness before authority/data reads, without extending grant lifetime. The inventory comparison initially treats Redis-set flag order and the upgraded Czero-only tag/digest group as unrelated differences; compare unrelated instances by ID with unchanged group/metadata and unordered flag sets. No runtime authorization/data rule changes to satisfy these checks. Full native user-manager restart acceptance and actual corrected browser QEMU 38697735920 remain pending.
+
+
+**M14 live manager restart and canonical metadata:** The same 5be82b7 runtime passes a full native user-manager restart with a new bounded grant, immediate refresh/SDK parity/revocation, exact data/settings/assets and timer-completed health job; temporary client is disabled. Inventory then reveals Core `cluster.modules.list_installed` splits IMAGE_URL at the last colon, unlike the digest-aware agent helper: digest-only deployment is reported as czero@sha256. Do not edit Core/Redis. Immediately reverify/freeze all three actual OCI manifests and reapply exactly the same image through its canonical branch tag with the supported dedicated-instance native update. Canonical module/source/version and unchanged exact digest now pass, as do the full normalization-cycle grant/data/worker/unrelated checks and disabled-client cleanup. The final manager restart after this metadata correction also passes fresh-grant refresh/SDK/revocation, all fifty-nine resources, native configuration, seven HTTP pages/assets, paused schedule, unrelated inventory and timer health; its temporary client is disabled. corrected all-role QEMU 38697735920 and final documentation CI remain required. Public report retains the Core inventory compatibility limitation and failed private fixture evidence. [Exact released-default image 38698337570](https://github.com/Stell0/ns8-czero/actions/runs/38698337570) also passes for 5be82b7.
+
+
+**M14 final accepted source:** 5be82b7a398af3229ee3222e3b5b456fdce92ddd passes [local 38697416074](https://github.com/Stell0/ns8-czero/actions/runs/38697416074) (675 actual Python/PostgreSQL/packaging cases, eighty-six scripts, Go schemas/nineteen non-UI dry runs), [producer/audits/scans 38697416040](https://github.com/Stell0/ns8-czero/actions/runs/38697416040), [released-Core image 38698337570](https://github.com/Stell0/ns8-czero/actions/runs/38698337570) and [QEMU 38697735920](https://github.com/Stell0/ns8-czero/actions/runs/38697735920). Downloaded Debian installation has sixteen passes/three expected update-only skips; Rocky genuine M13 upgrade has twenty-six passes/no skips and all seven real browser workflows. Actual XML/browser/journal files pass generated-password and complete OAuth-query privacy audits. All numeric accessibility contexts pass; names, landmarks and keyboard smoke are not full WCAG certification. Exact source/document/Wiki/object/vector/grant recovery, backup quiescence/copy observers, isolated competing instances, worker outage/timer recovery and versioned IdP/proxy compatibility pass.
+
+Both corrected-source restored performance probes pass with four logical CPUs/about 8 GiB runner RAM, five visible Wiki pages and seven seeded source versions: Debian health/search p95 11.301/18.007 ms, app/database summed RSS 126332/99208 KiB; Rocky 12.617/21.730 ms and 126596/97992 KiB. These small warm-cache figures are bounded fixture evidence, not production-scale claims. Effective one-GiB memory/further one-GiB swap allowance/256-task/non-root/capability-drop/no-new-privileges checks pass. CPU quota is explicitly deferred by operator and never claimed enforced.
+
+The dedicated live instance is on the same source and verified digest, with canonical module/source/version after supported tag normalization. Full manager restart after that correction passes fresh-grant rotation/SDK parity/scopes/revocation, exact fifty-nine resources, original client/job data, schedule configuration, seven HTTP pages/local assets, native readiness and timer-completed health jobs. All temporary clients are disabled. Bounded module logs have zero OAuth query candidates; production-wide proxy log redaction is not claimed. Interactive Playwright remains waived, and only the owner is proven live; disposable native browsers prove the other roles. Failed CPU/native/browser-harness/private-fixture evidence is retained, not counted as passed.
+
+**M14 review and closeout:** Review the complete twenty-one-file implementation diff against bb28777: no Core domain/API/schema change, no monolithic management library, no added runtime developer files or host delegation changes. Native units retain lifecycle/backup ordering; only supported database packages/helper removal and compatible UI locks change images. Actual installed and parser/security/license audits pass. The corrected test callback exercises its pinned real adapter and negative control. docs/m14-readiness.md maps every acceptance requirement, all three exact images, performance/SBOM/security evidence, release-tool limitations and precise remaining external work; docs/m14-release-notes.md covers the initial product and this hardening. AGENTS/README preserve CPU/interactive waivers and canonical native-update conventions.
+
+Commit/push this completion marker to main only after the verified candidate gate, preserving the live branch at 5be82b7. Inspect the marker's actual [local](https://github.com/Stell0/ns8-czero/actions/workflows/test-local.yml?query=branch%3Amain), [publication](https://github.com/Stell0/ns8-czero/actions/workflows/publish-images.yml?query=branch%3Amain), explicit [released-image](https://github.com/Stell0/ns8-czero/actions/workflows/test-core-consumer.yml?query=branch%3Amain) and [both-QEMU](https://github.com/Stell0/ns8-czero/actions/workflows/test-module.yml) results before calling its CI verified. The checked milestone records completed candidate acceptance, not an assertion that a newly started marker workflow has passed. No stable NS8 tag/release is created; unresolved vendor findings, production provider/IdP/proxy/log policy and real ChatGPT/scheduled interoperability remain explicit release/maintenance work.
+
+## After M14
+
+Only after complete acceptance should additional features enter the roadmap. Prefer independent application forks or optional Core adapters over growing the default install. Any new milestone follows the **same** plan -> focused commits/push -> CI build+QEMU -> applicable live+Playwright MCP -> docs+evidence gate.
+
+## Current next action
+
+**Current next action (16 October 2026):** Integration M16 runtime and operator acceptance pass, including the comprehensive 20/20 API report and separately confirmed live OAuth checks below. Verify this documentation closeout marker and required main checks/publication before beginning Integration M17. Preserve the accepted deployed structured-object runtime `9582568` and all three frozen digests, private evidence, existing pilot data and operator fixtures. The reader UI and M1/M2/M3 repair are accepted; no stable module release is claimed. Earlier M14/M15 source identities remain historical evidence.
+
+### M15 — Reader-first knowledge website [x]
+
+**Goal:** Implement the operator-approved documentation/wiki UI using only existing APIs. People primarily read; external AI maintains articles with direct publication and immutable history. Manual contributions remain in Tools.
+
+**Work plan (15 October 2026):**
+- [x] Shared compact navigation, automatic home, responsive article/tree/context layout and local safe Markdown token renderer.
+- [x] Progressive slug-path tree, canonical article/revision/source/citation links, readable source library and evidence, simple search with contextual advanced details.
+- [x] Role-aware AI connection/task guidance; retain existing manual controllers in explicit Tools views and sharing in account administration.
+- [x] Meaningful script/HTTP/real disposable browser assertions, full regression and publication/native checks; preserve interactive/CPU waivers and frozen live images.
+- [x] Reconcile README/AGENTS and actual evidence. No Core/API/schema changes or new generative runtime.
+
+**Original implementation checkpoint:** Implementation on feature branch `feat/knowledge-website`; main marker aee90ce is verified: [local 38701477692](https://github.com/Stell0/ns8-czero/actions/runs/38701477692), [publication 38701477763](https://github.com/Stell0/ns8-czero/actions/runs/38701477763), [released image 38701554107](https://github.com/Stell0/ns8-czero/actions/runs/38701554107), [QEMU 38701819972](https://github.com/Stell0/ns8-czero/actions/runs/38701819972) all completed/successful. Initial local checks: 102 script tests and 43 HTTP/template tests pass; broader Python run 499 passes/176 explicit database/packaging skips without a disposable DB. Automated local synthetic-data rendering covers six screens at five widths (320–1440px), thirty contexts with no horizontal overflow/browser errors; inspected desktop/mobile images. Final local checks use patched markdown-it 15.0.2: 106 script tests, 43 HTTP/template tests and 519 Python passes/176 explicit skips without PostgreSQL; nineteen Robot non-UI dry-run cases parse/pass. Forty final automated local synthetic-data browser contexts also pass numeric accessibility checks, with no overflow/errors including the mobile Tools menu. First implementation 1f1258d is published to the feature branch; released-Core image CI 38719221850 passes. CI/native checks for the final fixes remain pending; no deployment or stable release claimed.
+
+
+**M15 first native correction:** Exact d53bf56 [QEMU 38721341702](https://github.com/Stell0/ns8-czero/actions/runs/38721341702) passes all nineteen Debian update cases, including the genuine frozen M14 predecessor, recovery and real SSO. Rocky installation records twenty-one passes, two failures and three expected update-only skips. The real source browser finds an ambiguous ancestor-summary locator after nested provenance disclosure; search finds malformed query-field wrapping. Retain this failed evidence, fix the source locator to a direct child and correct the actual search template; add seven balanced-element/duplicate-attribute HTTP regressions and exercise advanced search plus both manual editors in forty local automated browser contexts. Final native rerun remains required; the failed source/search cases are not waived.
+
+
+**M15 accepted candidate:** Exact source `b528d4a4b8c47389be1059fb2c7d66cff2b390f1` passes [database/packaging/local checks 38733756082](https://github.com/Stell0/ns8-czero/actions/runs/38733756082) with **695 actual Python/PostgreSQL/packaging cases**, **106 real-script cases**, schema/shell checks and nineteen Robot non-UI dry-run cases. [Producer publication 38733756061](https://github.com/Stell0/ns8-czero/actions/runs/38733756061) and [released-Core image 38733756199](https://github.com/Stell0/ns8-czero/actions/runs/38733756199) pass, retaining independent released/local Core selection and runtime/license audits. Core/app/schema remain 0.24.2/0.39.0/0013.
+
+[Actual QEMU acceptance 38734103395](https://github.com/Stell0/ns8-czero/actions/runs/38734103395) passes **Debian installation: sixteen passes/three expected update-only skips; Rocky genuine M14 upgrade: twenty-six passes, including all seven real browser workflows**. Downloaded XML reports confirm all cases, seven successful browser credential/privacy guards and zero OAuth query candidates across the three actual XML/Pino artifacts. Actual browser output contains **twenty-one numeric accessibility contexts with zero failures**. Source ingestion/retry/archive plus immutable Reader passage viewing, Wiki Tools/revisions/graph plus formatted Reader history and AI context, advanced search/citations, actual all-role AI-guide task counts, native configuration, admission, OAuth/SDK, record controls, recovery, hardening, latency/RSS and timer behavior pass. Failed d53bf56 evidence remains retained; neither failed case was removed or waived.
+
+Local final verification also passes 519 Python cases with 176 explicit PostgreSQL/packaging skips without a disposable DB; CI above executes those database-backed cases. Forty automated local synthetic-data browser contexts across eight screens and five widths (320–1440px) pass actual advanced-search/manual-editor interactions, zero script errors, no horizontal overflow and numeric accessibility checks. Local desktop/mobile preview images use synthetic data and are not live acceptance.
+
+**Frozen M15 candidate images:** Anonymous registry inspection verifies every revision below equals the exact accepted b528d4a source. These are candidate artifacts, not a stable release or a deployed/live upgrade. The dedicated live instance retains the frozen M14 5be82b7 identities from docs/m14-readiness.md; no live operation or interactive Playwright was performed. CPU-quota enforcement remains explicitly deferred.
+
+| Image | Accepted candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:7022a13e4934b35b07e929bac55a51eba8769ea94a852e3b485574aafb26626a` |
+| `ghcr.io/stell0/czero-app` | `sha256:22c7384be726524217beb33fa897795b4cb2f35be8ac7aa67819377b5d9e92c4` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:cbbf348355e35be9b8be77d0a744e701dbbdc7856bb2c505e63f4a856f3d4f2b` |
+
+The following documentation-only closeout records this completed candidate acceptance and must have its own actual local/publication/released-Core/native workflows inspected before calling the marker verified. Its checked milestone records accepted b528d4a behavior; it does not claim a newly started workflow passed. Keep the feature branch separate from main/live; no stable NS8 release is created.
+
+
+## ChatGPT MCP integration — operator plan (15 October 2026)
+
+This plan uses **Integration M15–M20**, preserving the existing completed M15 reader UI milestone. Execute one milestone at a time with the mandatory local -> commit/push -> exact-source CI/native -> main publication -> dedicated-instance update -> real ChatGPT acceptance cycle. No later milestone starts while its predecessor is incomplete. M20 follows M19; the supplied execution-order list omitted it but the delegated-session requirements remain planned. No interoperability, live or schema-migration gate is waived by the earlier interactive UI waiver.
+
+### Integration M15 — OAuth authorization parameter compatibility [x]
+
+**Starting source:** `05713b9f449d89c20007dd988fb66f1571e004cc`, clean main, already accepted on `feat/knowledge-website`: [local 38737923718](https://github.com/Stell0/ns8-czero/actions/runs/38737923718), [publication 38737923803](https://github.com/Stell0/ns8-czero/actions/runs/38737923803), [released Core 38738027324](https://github.com/Stell0/ns8-czero/actions/runs/38738027324) and [both native distributions 38738308444](https://github.com/Stell0/ns8-czero/actions/runs/38738308444) completed/successful. Its main [local 38745712722](https://github.com/Stell0/ns8-czero/actions/runs/38745712722), [publication 38745712681](https://github.com/Stell0/ns8-czero/actions/runs/38745712681), [released image 38745712732](https://github.com/Stell0/ns8-czero/actions/runs/38745712732) and [native 38746116831](https://github.com/Stell0/ns8-czero/actions/runs/38746116831) are completed/successful. Downloaded reports confirm Debian installation sixteen passes/three expected skips, Rocky upgrade twenty-six passes/all seven browsers and privacy guards; three actual XML/Pino artifacts have zero OAuth query candidates. Baseline focused run without PostgreSQL: twelve grant-validation passes/eight HTTP skips; execute HTTP tests against a new isolated PostgreSQL database before implementation.
+
+**References/findings:** [RFC 6749 section 3.1](https://www.rfc-editor.org/rfc/rfc6749#section-3.1) requires ignoring unrecognized authorization parameters while forbidding repeated parameter names. The current app allowlist rejects these before SDK dispatch. Pinned MCP SDK 2.3.0 AuthorizationHandler already selects recognized fields through its AuthorizationRequest model; keep exact callback/resource guards before SDK normalization and filter the raw Core adapter context. [Official OpenAI OAuth guidance](https://developers.openai.com/plugins/build/auth) and [custom MCP connection guidance](https://developers.openai.com/api/docs/guides/custom-mcp-server) describe predefined public clients and the real browser consent/code/tool flow. No NS8 lifecycle change or new Core service is needed.
+
+**Work plan:**
+- [x] Add GET/form-POST HTTP regression tests for optional parameters, all supported scopes, explicit narrowed consent, duplicate known/unknown fields, invalid bindings/PKCE/client/scopes, size bounds and unchanged token/revocation strictness. Prove intended positive tests fail before the fix.
+- [x] Make the smallest application-only parser change. Validate the complete raw multimap before discarding unknown authorization fields; never forward them to trusted Core. Preserve public-client credential guards, exact callback/resource, SDK validation, consent/state and request bounds.
+- [x] Run focused and full Python/PostgreSQL/packaging, JavaScript, Go/schema, shell and Robot checks; review full diff, dependency/API/schema/runtime artifact implications.
+- [x] Commit/push the dedicated branch; verify exact-source local/publication/released-image and both native checks with artifact privacy audits. Merge only after all checks pass, then verify main publication and all three immutable image revisions/digests.
+- [x] Update only the authorized dedicated C0 module through supported canonical native update. Wait for real readiness; verify digests/source, exact existing data/settings/schedules, REST/MCP/revocation/roles and unchanged unrelated inventory; audit bounded logs and clean temporary authority/data.
+- [x] Use a fresh actual ChatGPT request through authorize -> native SSO -> explicit consent -> code exchange -> read-only MCP call. Diagnose the exact failing stage if incomplete; SDK simulation cannot satisfy this gate. Reconcile AGENTS/README/PLAN with executed evidence.
+
+**Local implementation evidence:** Original eight OAuth HTTP cases pass against a new loopback-only disposable PostgreSQL/pgvector database. The added positive regression fails with HTTP 400 before the fix. The corrected application passes **738 actual Python/PostgreSQL/packaging cases**, **106 real-script cases**, Go schema/shell checks and nineteen Robot non-UI dry runs; focused OAuth run passes eighty-five cases. Existing automatic official-SDK discovery now also includes unknown authorization parameters. Native issue/recovery fixtures exercise optional GET/form POST and reject duplicate known/unknown fields, with private tokens handled as before. No dependency, Core, database-schema, public-operation or lifecycle API changes.
+
+**Frozen genuine predecessor:** The private earlier deployment receipt records installed reader UI source `05713b9`, targeted update success, exact data/settings persistence, trusted-HTTPS pages/assets/health and unchanged unrelated inventory; it explicitly does not claim full owner sign-in or an interactive browser retest. Anonymous reinspection verifies all three immutable registry manifests/configs and their exact source; freeze `tests/czero.robot` to module `sha256:7e0d7f440ec3179646ec4488fcd74c60bbd35f30e5b5837e56270b9233a2ab9d`, app `sha256:831caa78167341df00d70d93d89d332d84773a8c1c9781ef447c060a3d36b4f6`, database `sha256:27a50a5c5428f5ada88053c144e6af268109584c454060086796296b8d1e194a`. This preserves the older M14 digests in their original historical documentation.
+
+**Exact-source CI:** `6c02182ffbb210c12a43e3b043f5818f73ebaf3d` passes [local/database/packaging 38746946272](https://github.com/Stell0/ns8-czero/actions/runs/38746946272), [producer publication/audits/scans 38746946216](https://github.com/Stell0/ns8-czero/actions/runs/38746946216), [released-Core image 38746946329](https://github.com/Stell0/ns8-czero/actions/runs/38746946329) and [both-native 38747332535](https://github.com/Stell0/ns8-czero/actions/runs/38747332535). Downloaded reports confirm Debian genuine reader-UI upgrade nineteen passes; Rocky installation twenty-three passes/three expected update-only skips, including all seven browser workflows and all seven privacy guards. Three XML/Pino artifacts pass the actual OAuth-query audit. Main is fast-forwarded to the same SHA after those gates; [main local 38751179832](https://github.com/Stell0/ns8-czero/actions/runs/38751179832), [publication 38751179780](https://github.com/Stell0/ns8-czero/actions/runs/38751179780) and [released-image 38751179796](https://github.com/Stell0/ns8-czero/actions/runs/38751179796) are completed/successful. Additional automatic [main native 38751599937](https://github.com/Stell0/ns8-czero/actions/runs/38751599937) is completed/successful: downloaded reports confirm Debian installation sixteen passes/three expected skips and Rocky upgrade twenty-six passes/all seven browsers and privacy guards. Three actual XML/Pino artifacts pass the OAuth-query audit.
+
+**Dedicated native deployment:** The operator supplies the private native node target and confirms the existing dedicated instance. Verify leader/OS/root identity, supported actions and current three-image predecessor before changes. Reverify all three main OCI manifests/config revisions immediately before `update-module` using the supported canonical tag; target only the dedicated C0 module. Native exit is zero; actual installed module/app/database digests and source match the verified build below. Trusted-HTTPS application/database readiness, native SSO connectivity, normal idle worker and enabled/active timer pass. Exact hashes preserve 27 domain tables, 56 original terminal jobs and their 56 attempts, retained source files, private/native settings and enabled/paused schedule configuration. Ten unrelated instances retain their IDs/groups/metadata with unordered flags normalized.
+
+| Deployed image (all exact source `6c02182`) | Verified immutable digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:6aec0dd367b2eb3ab1751d7fbf399e0cf83240108e59672f30b665e449436124` |
+| `ghcr.io/stell0/czero-app` | `sha256:f7333d95e7ee23b25df9c78b6237322c14fba19f00c2f00e560caf5080787f89` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:67fd70bef36421d30eccce16f3bcb7e1f060860ef4a38eb5d1d942a876f8bf14` |
+
+**Live transport evidence:** On the original deployed reader UI, all six optional-parameter GET/form POST cases return HTTP 400. After the accepted update, the same six cases return HTTP 302 to the canonical consent page with secure cookie/no-store controls. Twelve duplicate known/unknown cases fail safely. Protected-resource/authorization metadata matches actual endpoints; token/revoke unknown fields remain rejected and anonymous/invalid-token REST is denied. No temporary OAuth client or persistent test knowledge was created; anonymous pending consent fixtures expire normally. These checks do not constitute authenticated ChatGPT/code exchange/MCP acceptance.
+
+**Log evidence and failed probes:** Initial Podman log reads, with and without a timestamp filter, return empty; the module-user journal is inaccessible. Do not count either as privacy proof or change host logging. Inspect the actual journald driver and read 300 bounded root-journal entries filtered to the verified C0 UID/app container. Actual health/authorization request positive controls are present; OAuth-query audit passes. Retain all private failed probes. No production-wide proxy-log policy is claimed.
+
+**Real ChatGPT acceptance:** The operator confirms: “chatgpt is now connected and can read content”. Record this as an actual ChatGPT connection/authenticated-read pass on deployed `6c02182`, not an SDK simulation. The subsequent bounded C0 app journal contains successful `/oauth/token` and `/mcp` requests and passes the actual OAuth-query privacy audit with a health-request positive control. The operator subsequently confirms the requested signed-in Wiki/REST and client-disable/rejected-read/re-enable/reconnect checks. Record those as operator-verified live acceptance. A particular read-tool name and exact granted scope set were not separately supplied; do not invent them.
+
+**Verified evidence marker:** Documentation source `86157dd1aafc483322d19cb89b3b9fb7d4985e76` passes [local 38752852712](https://github.com/Stell0/ns8-czero/actions/runs/38752852712), [publication 38752852977](https://github.com/Stell0/ns8-czero/actions/runs/38752852977) and [both-native 38753256387](https://github.com/Stell0/ns8-czero/actions/runs/38753256387). Actual downloaded reports confirm Debian upgrade nineteen passes and Rocky installation twenty-three passes/three expected skips/all seven browser workflows/privacy guards; three actual XML/Pino artifacts pass the OAuth-query audit. This is feature-branch evidence; main/live retain accepted runtime source `6c02182`.
+
+**Acceptance/status:** Integration M15 runtime implementation, exact-source CI/native/main publication, dedicated deployment/persistence/privacy, real ChatGPT connection/content reading, signed-in Wiki/REST and client revocation/reconnect gates pass with the evidence above. The operator explicitly confirms the final manual checks; distinguish that report from the independently observed bounded server log stages. Preserve the working approved ChatGPT connection and deployed `6c02182` images as the regression baseline for subsequent milestones. This documentation-only completion marker must pass its own actual CI/native checks before main promotion; verify main publication afterward before beginning Integration M16. It does not redeploy or replace the verified live runtime, and a newly started marker workflow is not a pass.
+
+### Integration M16 — MCP authentication metadata and permission upgrades [x]
+
+**Starting source:** verified main `86c8b0a27cee957a12c7705ceaf14846270d8fc8`. M15 completion marker [local 38763553550](https://github.com/Stell0/ns8-czero/actions/runs/38763553550), [publication 38763553286](https://github.com/Stell0/ns8-czero/actions/runs/38763553286) and [native 38763959341](https://github.com/Stell0/ns8-czero/actions/runs/38763959341) completed/successful. Actual reports confirm Debian upgrade nineteen passes and Rocky installation twenty-three passes/three expected skips, all seven browser/privacy guards and zero OAuth query candidates in three XML/Pino artifacts. [Main local 38768363571](https://github.com/Stell0/ns8-czero/actions/runs/38768363571) and [main publication 38768363278](https://github.com/Stell0/ns8-czero/actions/runs/38768363278) also completed/successful. Preserve the genuine deployed `6c02182` module/app/database digests above, the approved working ChatGPT client and its real-read/revocation regression baseline; documentation marker images are not the live predecessor. New local focused baseline: twelve actual PostgreSQL-backed SDK/transport/limit cases pass.
+
+**References/findings:** [Official OpenAI authentication guidance](https://developers.openai.com/plugins/build/auth) requires per-tool `securitySchemes` plus runtime `_meta["mcp/www_authenticate"]` challenges containing error and description; [reference](https://developers.openai.com/plugins/reference) defines the `_meta.securitySchemes` compatibility mirror. [Current MCP authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) describes minimal initial read scopes and per-operation challenges, with clients retaining prior scopes during step-up. Existing Core already exports `ScopeDenied` after its persisted-role check and describes trusted required scopes; no Core/schema/dependency change is needed. Use all supported scopes only as the MCP tool-description filter to expose role-eligible upgrade choices, never as invocation authority; resources and REST capability discovery retain actual granted scopes.
+
+**SDK compatibility finding:** Actual pinned MCP 2.3.0 Tool silently drops an unknown top-level `securitySchemes` constructor field. Pydantic also drops subclass fields when a custom Tool is nested in the base ListToolsResult. The protocol-version serializer strips the field again even with typed subclasses. Use the SDK public server middleware after normal wire validation to copy only the trusted `_meta.securitySchemes` mirror to the optional top-level field. Actual raw current/legacy HTTP and ordinary SDK mirror tests pass. No SDK globals, schemas or transport bodies are patched; all ordinary SDK validation and authorization still run.
+
+**Work plan:**
+- [x] Add regression tests for raw and SDK tool metadata, scope versus role denial, read-only and upgraded Editor/Admin operation flows, revoked/expired/wrong-audience tokens and current/legacy serialization. Prove intended new cases fail on the baseline.
+- [x] Extend only app MCP presentation with OAuth requirements derived from trusted Core metadata, minimal read resource metadata, role-eligible tool discovery and a fixed scope-upgrade challenge on Core ScopeDenied. Preserve actual-scope execution, role failures, resource/issuer/Host/Origin checks, stateless transport and runtime limits.
+- [x] Extend the existing installed TLS SDK probe for metadata and role-aware read-scope challenges; retain grant recovery, browser role checks, positive Host/Origin controls and secret-safe stdin/diagnostics. Freeze all three actual `6c02182` predecessor images for genuine upgrades.
+- [x] Run focused/full Python/PostgreSQL/packaging, JavaScript, schema/shell and Robot checks; review contracts/dependencies/migrations/runtime packaging. Update all three documents with actual results, commit/push and verify exact-source local/publication/released-image/both-native checks and artifact privacy before main promotion.
+- [x] Verify successful main publication and all three exact revisions/digests; update only the dedicated C0 module through the canonical native action, wait for readiness and prove data/settings/jobs/schedules/inventory/privacy and existing REST/MCP persistence.
+- [x] Record operator acceptance of live ChatGPT OAuth checks, including the consent-upgrade/revocation gate, and the comprehensive twenty-check API regression report below. Native disposable tests retain metadata discovery, read-only/upgraded operation flows, Reader/Editor role denials and other-client parity. Attribute the operator results explicitly and do not claim unreported live personas or manual subcases. Keep M17 implementation gated until this closeout marker is verified.
+
+**Evidence/status:** app-only implementation passes **760 actual Python/PostgreSQL/packaging cases**, **106 real-script cases**, the Go schema check, applicable shell syntax checks and nineteen non-UI Robot dry-run cases. Focused MCP/OAuth/limit checks and the exact updated native helper pass. The first full run found an undefined variable in the new helper-test callback (759 passed/one failed); that test-only error was corrected, its focused cases passed and the complete 760-case rerun passed. Full diff review confirms no Core, dependency, schema, migration, native action or runtime-package changes beyond the app transport. Baseline Editor/Admin read-only discovery cases and minimal protected-resource metadata failed before implementation. Current/legacy raw HTTP, per-tool scope metadata, role/scope challenges, real signed HTTP consent upgrades, refresh escalation denial, actual authorized writes and expired/revoked/wrong-audience/client-disabled/role-downgraded token denial now pass. The installed fixture is locally exercised against real signed HTTP and TLS-probe logic, including intentionally bypassed Origin controls for all three roles and narrow/upgraded Editor/Admin scopes. This was the local implementation checkpoint; the subsequent verified deployment and operator acceptance are recorded below.
+
+**Verified runtime/deployment checkpoint (M16 historical deployment):** Runtime source `1e14865123dc98ab51ad5c046f8a1637eeb51749` passed [local 38771759111](https://github.com/Stell0/ns8-czero/actions/runs/38771759111), [publication 38771759075](https://github.com/Stell0/ns8-czero/actions/runs/38771759075), [released-Core image 38771759675](https://github.com/Stell0/ns8-czero/actions/runs/38771759675) and [native 38772140404](https://github.com/Stell0/ns8-czero/actions/runs/38772140404), all completed/successful. The workflow-run module-info log independently identifies this exact feature source despite the workflow's default-branch head SHA. Actual downloaded reports prove Debian genuine M15 upgrade nineteen passes, Rocky installation twenty-three passes/three expected skips, all seven real browser workflows/privacy guards, and zero OAuth query candidates in three XML/Pino artifacts. Installed TLS probes exercise per-tool metadata, role-aware discovery, narrow-token challenges, explicit consent upgrades, refresh escalation denial, isolated delegated Wiki writes/archives, REST parity, revocation/replay and exact grant recovery. Native fixtures are disposable; no live Reader/Editor persona is claimed.
+
+Fast-forwarded this exact runtime to main only after those gates. [Main local 38775770289](https://github.com/Stell0/ns8-czero/actions/runs/38775770289), [main publication 38775770086](https://github.com/Stell0/ns8-czero/actions/runs/38775770086), including all scan jobs, and [main released-Core image 38775769987](https://github.com/Stell0/ns8-czero/actions/runs/38775769987) completed/successful. The additional [main native run 38776181165](https://github.com/Stell0/ns8-czero/actions/runs/38776181165) subsequently completed/successful. Its actual downloaded artifacts were audited during the structured-object repair: Debian installation sixteen passes/three expected skips, Rocky upgrade twenty-six passes/all seven browser/privacy guards, and three artifacts with zero OAuth query candidates. M15's final main marker [native 38768842570](https://github.com/Stell0/ns8-czero/actions/runs/38768842570) also completed/successful and was separately downloaded/audited: Debian install sixteen passes/three expected skips, Rocky upgrade twenty-six passes/all seven browsers/privacy guards and zero query candidates in three artifacts.
+
+**Historical M16 installed immutable identities:** Anonymous registry inspection immediately before the supported targeted update verified all three revisions equal the exact accepted `1e14865` source and the canonical main module references both main sibling images. The native command updated only the authorized dedicated `czero1` instance using the proven canonical image reference; after readiness, all installed digests/revisions match the table below. Preserve these historical identities as M16 deployment evidence. The later accepted structured-object runtime `9582568` and its three frozen digests below are the genuine predecessor for subsequent upgrades; documentation-marker images are not substitutes. Core/app/schema remain **0.24.2/0.39.0/0013**.
+
+| Image | Accepted installed OCI digest |
+|---|---|
+| `ghcr.io/stell0/czero` | `sha256:e08f191d6e30c8ae0637456c9faffe73791a3e54ac4892b232f411da4644e201` |
+| `ghcr.io/stell0/czero-app` | `sha256:fa9882fba5c727ead65eed88e7dd21495ee872909eb156da0d9f9f1c5da5a067` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:be277d577066d985aa51b06b71bf3ec76101d27fe7cd90cdaedf19b0143acffd` |
+
+Normal trusted HTTPS confirms application/database readiness, basic read protected-resource metadata, all three authorization-server scopes and exact deployed OAuth endpoints. Six optional authorization GET/form POST cases return 302 to consent; twelve duplicate cases and unknown token/revoke parameters remain rejected. Anonymous/invalid tokens receive no private data. Exact comparison preserves 27 domain tables, 59 original terminal jobs and 59 attempts, retained originals, private/public settings and schedule configuration; ten unrelated NS8 instances retain their IDs/groups/metadata after normalizing unordered flags. Native authentication/database/timer readiness and canonical inventory identity pass. A bounded root journal filtered by the module UID/app container contains 301 lines including actual health/authorization controls and no OAuth query candidates. The native CLI update has no matching API-server audit row; record the successful native action receipt and runtime checks, not a nonexistent API audit entry. No unrelated application, IdP/proxy/host configuration, temporary live client or live knowledge fixture was changed by these server checks.
+
+**Operator acceptance (16 October 2026):** The operator supplies the comprehensive API regression report below, reports **20/20 executed checks passed**, and asks to close Integration M16. Asked specifically about the original live ChatGPT consent-upgrade and revocation/reconnect gates, the operator separately confirms: "Consider accepted live oauth check, I've done that". Record live OAuth acceptance as **operator-verified**, separate from the API exercise and the independently observed CI/deployment/log evidence. Exact granted scope sets, individual request traces and unreported manual subcases are not invented. The operator accepts the report plus this live OAuth confirmation as M16's final functional acceptance.
+
+**C0 comprehensive regression test — operator report:** Previously failing structured-object creation now passes. The report confirms separate-request Wiki persistence and revision one-to-two update, entity creation, retrieval of an existing manufacturer-to-robot relationship, retained-source full-text evidence search, complete object CRUD and evidence-backed claims. All work uses isolated regression data; existing pilot records and operator fixtures are reported unchanged.
+
+| Test | Operator-reported result |
+| --- | --- |
+| Register structured-object schema | Pass |
+| Create structured object | Pass |
+| Read and list objects | Pass |
+| Update object, revision 1 → 2 | Pass |
+| Delete object | Pass |
+| Verify object change feed | Pass |
+| Create knowledge entity | Pass |
+| Retrieve entity relationship | Pass |
+| Create entity-to-object reference | Pass |
+| Read back entity reference | Pass |
+| Search retained source evidence | Pass |
+| Resolve evidence citation | Pass |
+| Create evidence-backed claim | Pass |
+| Read claim with attached evidence | Pass |
+| Update claim annotation | Pass |
+| Retract claim | Pass |
+| Update Wiki page | Pass |
+| Retrieve Wiki revision history | Pass |
+| Retrieve historical Wiki content | Pass |
+| Verify existing Wiki pages preserved | Pass |
+
+**Previously failing functionality:** The operator successfully registers schema `c0-regression-20261016`, creates a typed record, retrieves/lists it, updates revision one to two and deletes it. The change feed records all three mutations. An evidence-backed claim references an existing retained chunk; a separate read returns its attached source, document, content and offsets. Annotation and retraction succeed. The structured-object repair remains the separately accepted M1/M2/M3 work below; this report does not imply another implementation change to claims or objects.
+
+**Remaining coverage of this exercise:** This is an API-level regression exercise, not the full repository CI suite. It does not itself verify new ingestion/processing across file formats; batch mutations/atomic rollback; invalid-schema rejection/optimistic conflicts; idempotency replay/duplicate prevention; jobs/scheduling/worker execution; authentication/authorization/service-restart durability; or whether the five original pilot sources were ingested as retained evidence. Preserve these as targeted follow-up coverage rather than declaring them globally untested: existing independent CI/native/recovery evidence, including the 812-case structured-object suite below, remains valid. Live OAuth is separately operator-verified as stated above. The five-source pilot ingestion check is not claimed passed.
+
+**Preservation and cleanup:** The operator reports that the two earlier pilot blockers are no longer reproducible: structured objects and sourced claims work alongside Wiki and graph operations. Existing fixtures are preserved. Isolated data and a schema were created; the test object was deleted and the test claim retracted. Do not infer that the immutable schema or all generated entities, references, Wiki history and audit events were deleted. No additional live fixture cleanup or ingestion is authorized by this documentation closeout.
+
+**Closeout work plan:**
+- [x] Reconcile the preserved M16 deployment draft with verified main `790be14` and the completed M1/M2/M3 repair without overwriting their evidence.
+- [x] Record the full twenty-check report and separate live OAuth confirmation with operator attribution and coverage limits in PLAN, README and AGENTS.
+- [ ] Commit/push this documentation-only marker; require its actual successful local/publication/released-Core/both-native checks and audit downloaded native artifacts before reviewed main promotion. Verify required main checks/publication afterward. No marker image is deployed.
+
+**Acceptance/status:** Integration M16 runtime, exact-source CI/native/main publication, dedicated deployment/preservation/privacy and operator functional/live OAuth acceptance pass. The accepted installed runtime is now `95825682e00246556f7d0c7314859a6a69e0074b`, including the M16 transport and the subsequent structured-object repair; its three genuine deployed digests remain frozen below. Core/app/schema stay **0.24.2/0.39.0/0013**. The repair completion source `790be14b94662496d202f6499329a463835c9364` has completed/successful [local 38868351397](https://github.com/Stell0/ns8-czero/actions/runs/38868351397), [publication 38868351886](https://github.com/Stell0/ns8-czero/actions/runs/38868351886), [released-Core image 38868357211](https://github.com/Stell0/ns8-czero/actions/runs/38868357211) and [native 38868656380](https://github.com/Stell0/ns8-czero/actions/runs/38868656380) checks. This new documentation marker still requires its own actual checks/main verification; a started workflow is not a pass. **Integration M17 is next after that verification**, and is not implemented by this closeout. No stable release, new live update or policy change is claimed.
+
+### Integration M20 — Renewable browser and delegated sessions [ ]
+
+**Producer checkpoint (19 October 2026):** AM6 and its deployment/closeout gates are accepted. M20 continues on `feat/m20-session-renewal` from verified main `6456231`; the original fourteen-file draft/worktree and private archive remain unchanged. Core producer `bc5e1dcaf75468f71618fbd693e944db0f41e306` passes 1342 actual Python/PostgreSQL/packaging cases, 127 controllers, schema/shell and 21 Robot dry-runs. [Exact full CI 39217591934](https://github.com/Stell0/ns8-czero/actions/runs/39217591934) and promotion verification pass. Actual downloaded reports pass Debian genuine AM6 upgrade (21), Rocky installation (26/three expected skips), all eight browsers/privacy guards, 25 accessibility contexts, all three installed identities, five actual scan/SBOM pairs and three query-audited artifacts with zero matches. The prior `14b74ca` run passed both native systems but its gate correctly rejected the superseded PR head; it is not publication proof for this source.
+
+[Core 0.30.0 publication 39222689510](https://github.com/Stell0/ns8-czero/actions/runs/39222689510) is completed/successful at that exact source. The immutable [release](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.30.0) contains the wheel, source archive and SHA256SUMS. Downloaded bytes match both the checksum file and GitHub asset digests; six additional supplied-artifact checks pass, including external installs, reproducibility and repeated migrations. Wheel SHA256: `0aa367473482188e5d4d02df8983867149b4fdbf1d2ef4742e2d30f26a72bf12`; source archive SHA256: `aabd099e009ab9aacda755db113479843d014aeb759b8f2c1b5242c213fa5c85`. No NS8 module release or deployment is implied.
+
+**Application implementation checkpoint:** Separate local worktree `feat/m20-app-wiring` contains app 0.46 browser/OAuth/MCP adapters, numbered native policy/configuration/update/restore support and exact-second Settings fields. The default dependency/lock now adopts released Core 0.30 at `bc5e1dc`, with every transitive package record unchanged; independent-fork patch bounds remain intact. The final released-dependency app suite passes 1380 actual Python/PostgreSQL/packaging cases (410.71s), 129 controllers, schema/shell, 21 Robot dry-runs and the immutable native UI build. A fresh frozen consumer environment independently installs the released Git source and passes 20 real PostgreSQL-backed authentication/renewal cases; native Renovate prefix/patch/minor/prerelease API checks pass. Public SDK revocation then reproduced two provider-outage failures; the adapter now preserves SDK authentication/schema checks while delegating provider-independent ownership/resource-checked revocation to Core. Its 99 focused regressions and four outage/other-client/context-isolation cases pass. Final image/native checks remain pending; the native-only fixture preflights its remaining short-session window before preparing the second browser and never extends authority to satisfy a test.
+
+The exact new native probe passes through signed HTTP with a controlled clock. Actual native acceptance must additionally measure at least 330 real seconds, native access renewal, public refresh rotation, a 120-second absolute / 60-second idle fixture, snapshotted policy preservation, logout/reconnect and owned-client cleanup on both distributions. Strict numeric evidence rejects missing, short, malformed or private output. The first full app candidate now measures renewal on both native systems, but its complete acceptance fails as recorded below. Read-only dedicated-instance checks confirm the accepted AM6 three-image identity and healthy authentication/database; actual existing connector reauthentication and a bounded Wiki read pass on that predecessor. Its cached 63 tools do not prove refreshed discovery. No M20 candidate is deployed or accepted.
+
+**First application native result (candidate `61c86a2`):** [Full validation 39224480912](https://github.com/Stell0/ns8-czero/actions/runs/39224480912) fails and cannot authorize deployment or merge. Actual downloaded Debian output passes all 21 genuine AM6-upgrade cases, with 338 seconds, 15 browser reads, native access/refresh renewal, two public rotations, idle rejection at 68 seconds and absolute expiry at 132 seconds. Rocky independently measures 339 seconds, 15 reads, native access/refresh renewal, two public rotations, idle rejection at 64 seconds and absolute expiry at 129 seconds, but finishes 25 passes/one failure/three expected skips. Its object browser starts relation-target browsing before the clicked source record's asynchronous detail reply settles; the correct stale-response guard then clears that earlier browse. Other runtime code and the published Core source are unchanged.
+
+The corrected native workflow captures the source identity and waits for that exact identity before browsing, retaining the current timeout and all target-generation guards. A simulated delayed-selection regression fails on the old fixture and passes after correction; a real controller test reproduces the discarded early response and successful browse after selection. All eighteen SSO-fixture cases and nine record-race cases pass. The fresh full disposable PostgreSQL/packaging run passes all 1380 cases (390.35s), with 130 controllers, schema/shell and 21 Robot dry-runs. Fresh exact-source image/native validation remains required. The failed candidate is retained privately and is not deployed; accepted AM6 remains the running baseline.
+
+**Live provider-window failure / Core 0.30.1 correction plan:** Corrected app source `c440727` passes [full CI 39232074014](https://github.com/Stell0/ns8-czero/actions/runs/39232074014), independent actual artifact audit and current full promotion verification. The dedicated supported update installs its frozen three-image set and healthy Core/app/schema 0.30.0/0.46.0/0017. Exact old session/grant/token/code rows, same-bearer SDK calls, original content/settings/files, 8627 row hashes across 37 tables, short 65-second idle/128-second absolute checks, 410-second actual connector continuity/rotation and full-manager restart all pass. It is nevertheless **unaccepted and unmerged**: the longer live probe loses an active browser after the provider's refresh window expires. Read-only provider introspection confirms the refresh credential has 57 seconds left while access still has 1857 seconds. The implementation schedules renewal only from access expiry and misses this shorter refresh window. The encrypted diagnostic agrees with the authoritative provider result; no provider policy or credential row is changed for the test.
+
+Settle the patch before coding: Core 0.30.1 keeps schema 0017 and existing locks, crash markers, scopes, identity validation, absolute/idle bounds and outage/revocation behavior. Each successful native token exchange stores a private encrypted refresh deadline: at most five minutes from issuance, before verified access expiry, and before a supplied positive finite `refresh_expires_in` lifetime, with the existing thirty-second safety margin. Missing or zero refresh lifetime uses the bounded five-minute fallback; malformed numeric metadata is rejected. Introspection must never slide this deadline. Existing 0.30.0 encrypted credentials without the field perform one serialized real refresh and acquire the deadline without extending their authority. Legacy null-authority rows remain fixed. Refresh still validates original issuer/subject/account/audience/authentication context and optional nonce; requests never select a provider or schedule.
+
+Reproduce one-hour access/thirty-minute refresh using signed local HTTP and actual PostgreSQL, including sustained browser/delegated sessions, shorter TTLs, missing/zero/invalid metadata, unchanged deadlines during introspection, old credential compatibility, replay/concurrency and provider outage. Publish a new immutable Core patch only after exact producer/full/native/artifact gates; never replace 0.30.0 assets. Then adopt its exact released dependency/lock in app 0.46.1 and repeat final consumer/full/native gates before another supported dedicated update. Re-run actual short bounds, same-authority provider/public rotation, connector continuity, restart/preservation and journal privacy. Preserve all prior failed evidence privately and keep installed candidate tags unchanged. No accepted-runtime predecessor is substituted by the failed candidate.
+
+**Core 0.30.1 local implementation checkpoint:** Signed HTTP/PostgreSQL reproduces the old active-session 401 before the correction (one failing case, 44.36s). The corrected two-hour sustained browser/delegated test and deadline/metadata/old-format cases pass all 55 focused checks. The fresh complete PostgreSQL/packaging run passes **1408** cases in **384.19s**, with **130** controllers, schema/shell and **21** Robot dry-runs. No database skips establish this result. Core metadata/health become 0.30.1; schema stays 0017. The application deliberately retains released Core 0.30.0 and its exact lock during producer validation. Exact-source producer/native/publication gates, app 0.46.1 adoption and renewed final consumer/native/live acceptance remain pending.
+
+**Core patch publication / application adoption:** Exact producer `46007396c5e83d05ed8dd11bcd5436bc1b245230` passes [full validation 39254573692](https://github.com/Stell0/ns8-czero/actions/runs/39254573692), current ready-PR/full promotion verification and an independent download/audit of actual reports. CI passes 1408 Python/PostgreSQL/packaging cases (451.48s), 130 controllers and 21 Robot dry-runs. Debian genuine AM6 upgrade passes 21 cases; Rocky installation passes 26/three expected skips, all eight browser/privacy workflows and 25 accessibility contexts. All three installed candidate identities, five scan/SBOM pairs and three query artifacts with zero matches pass. Measured renewal is 338/335 seconds, idle rejection 65/78 seconds and absolute expiry 131/122 seconds, with native access/refresh renewal and two public rotations on each system.
+
+[Core publication 39261142231](https://github.com/Stell0/ns8-czero/actions/runs/39261142231) completes verify/publish successfully. New immutable [core-v0.30.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.30.1) references that exact source. Downloaded wheel/archive/SHA256SUMS match both recorded checksums and GitHub asset digests; all six local supplied-artifact cases pass (13.19s), including deterministic rebuild, independent installations and repeated migration/identity preservation. Core 0.30.0 remains unchanged.
+
+| Core 0.30.1 asset | SHA-256 |
+| --- | --- |
+| Wheel | `603427efc755dc809aedd94f8656c30c1dfd2d13eda95bc05591e1a96d536c0f` |
+| Source archive | `875f4702a4ebc1df9be9bec7c822670767a58d9566157569aaaa73e3aef0e84a` |
+| SHA256SUMS | `fedefc701184268fb62eda8f514855cbf9d79b51213025f091a7a388c24fffeb` |
+
+App 0.46.1 adoption pins the released tag/source and raises its minimum to 0.30.1 while retaining the `<0.31.0` ceiling, all other dependency records and independent-fork patch bounds. Published Core files/schema 0017 remain unchanged. The existing released-image probe derives its required version/commit from the actual committed lock. Run fresh application PostgreSQL/full checks and an independent frozen released consumer, then exact final image/native/artifact gates before a supported update from the currently installed C440 image set. Its old encrypted credentials must acquire scheduling metadata through one real serialized refresh while keeping the same authority, immutable provider context, scopes and original absolute deadline.
+
+Corrected live acceptance must extend beyond the actual first-candidate failure: at least **2100 continuous seconds**, multiple actual provider renewals, repeated actual connector reads/rotation without hidden reauthentication, short configured bounds, revocation/reconnect, restart, data/settings/files/schedule preservation and bounded root app journal privacy with positive request controls. A renewed C0-only backup has a verified 3804987-byte schema-0017 dump/45 tables and all six original files/36847 bytes; its read-data check passes and all 15 backup plans retain their configuration with the owned plan disabled. A read-only current baseline records 172 completed jobs/attempts and unchanged authentication/retrieval hashes. Refresh the deployment-boundary observations as needed; these preparation results do not establish corrected live acceptance.
+
+**Application adoption local verification:** Fresh disposable PostgreSQL/full packaging passes all **1408** cases in **374.29s**, with no database skips. The independent frozen released consumer verifies actual Core 0.30.1 source `4600739`, no NS8 SDK and **58** application/renewal cases in **29.38s**. All **130** controller cases, actual native Renovate API bounds, schema/shell checks and **21** Robot dry-runs pass. Regenerated lock records change only app/Core; the other **53** package records are unchanged, and the published Core tree remains unchanged. Final exact-source image/native/artifact and corrected live gates remain pending.
+
+The failed installed candidate remains frozen and available while referenced:
+
+| Image | Installed C440 digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:97c1e22b8e77997d97821be761c3ad0b57fc7836d3ed10d2476571146c99a121` |
+| `ghcr.io/stell0/czero-app` | `sha256:8cdb35839fb39278490bf14ea38b6df6fe91cc91395dd83c50a9746e9100287a` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:2085d782eb3f802bac4440d568ae1caed8c499b03fcc02c50f560fb81103db08` |
+
+All three revisions are `c440727ffa90fda6aa49d9124f1a7575b137db40`, with canonical tag `ci-c440727ffa90fda6aa49d9124f1a7575b137db40-39232074014-1` and exact sibling references. This is a failed candidate, not an accepted predecessor. No schema downgrade, provider-policy change or manual credential rotation is used as a workaround.
+
+Unrelated inventory changes occurred concurrently: two instances were already absent in the post-backup baseline before the C0 update, and one later appeared. All nine instances present in that baseline retain exact IDs/groups/metadata after unordered flag normalization; C0 operations target only its dedicated instance. Retained source files total six/36847 bytes and private authentication/retrieval hashes remain unchanged. Record this observed inventory history honestly rather than claiming an unchanged eleven-instance set.
+
+Review reproduced and fixed cancelled PostgreSQL session-lock leakage, native-client replacement quotas, idle-bound access-token lifetime and no-refresh fixed-cap extension. Genuine old-schema fixtures seed predecessor columns directly. The repeated 0016-to-0017 migration compares every original table/column and fixed session/grant deadline; the installed snapshot SQL explicitly normalizes only its added nullable grant link. Failed private evidence stays outside Git.
+
+**Execution order (operator instruction, 18 October 2026):** M16 is accepted by operator direction. Preserve its closeout, structured-object repairs and subsequent accepted main work. Execute **M20, M17, M18, M19**, one accepted milestone at a time; AM0–AM6 are now accepted and Windmill remains separate. Start resumed M20 from fetched main `6456231`; the original checkout and its uncommitted documentation remain untouched. Current genuine deployed AM6 `97a7a1b` digests, data and approved clients supersede the historical M16 predecessor for upgrade testing; revalidate installation before deployment. The seven-step operator loop requires candidate deployment/acceptance **before** a regular merge, then actual main validation/publication and separate documentation closeout. Existing CPU/interactive-Playwright waivers remain.
+
+**Design:** Core owns bounded renewable authority, encrypted provider credentials, session/grant relationships, rotation, revocation, concurrency and forward migration. The app supplies trusted OIDC configuration and adapters; NS8 numbered scripts own policy configuration and secret lifecycle. New sign-ins may establish an eight-hour absolute / one-hour inactivity default, configurable within sixty seconds to twenty-four hours (idle <= absolute). Existing sessions/grants retain their original deadlines and gain no renewal authority. Access tokens and codes stay at most five minutes. No offline_access, scope expansion, implicit consent or provider-policy changes are introduced.
+
+**Interfaces and security decisions:** A private renewal DTO carries verified identity and masked opaque provider credentials. Provider credentials require authenticated encryption bound to issuer/native-client/account/session, never hashes alone (refresh requires the original secret), and are never returned to browser/REST/MCP or diagnostics. Only configured trusted callbacks may renew; request arguments cannot select providers. Serialize provider refresh per authority row, recheck identity/account/client and current membership, retain rotated credentials atomically, and invalidate permanently on confirmed provider rejection or changed identity. Transient provider outage fails closed without extending authority; retain retryable state for recovery. Crash after provider rotation may require fresh sign-in; never replay a superseded credential to manufacture success. Absolute and idle deadlines survive restart; requests cannot revive expired authority. Local logout/revocation must not depend on a reachable provider. Delegated refresh still narrows scopes durably and replay revokes its family; raise the bounded rotation-history ceiling only enough for the configured maximum session. Check native invalidation on browser/delegated authentication and captured authority before writes; prove lock order and concurrent revocation behavior before enabling the policy.
+
+**Compatibility/migration:** Add nullable renewable-authority references to existing sessions/grants using forward schema 0017; legacy rows retain old behavior. Native client replacement or clean restore invalidates encrypted authority, requiring fresh login; unchanged supported update/restart preserves it. No content, knowledge identities, settings, files, schedules or approved client descriptors are rewritten. Core publication precedes released dependency/lock adoption and final consumer/native testing. Never replace published Core assets or installed accepted images with marker builds.
+
+**Work plan and tests:**
+- [x] Reconcile fetched main and preserve older drafts/worktrees. M16 acceptance is operator-verified, not a new server observation.
+- [x] Implement/test private Core lifecycle locally with controlled clock, real PostgreSQL, encrypted secret privacy, absolute/idle expiry, renewal, wrong identity, membership/client invalidation, replay, concurrency, outage/recovery and restart/legacy migration compatibility.
+- [x] Implement locally bounded trusted OIDC refresh/active-session checks and app browser/MCP wiring; numbered configuration, backup/restore and native policy tests; document actual behavior in README/AGENTS.
+- [x] Run focused then full Python/PostgreSQL/packaging, controller, schema/shell and Robot checks. Use isolated `czero_m20_core_test`, never the live database. Publish immutable Core only after exact-source full CI/native acceptance; adopt released source/lock and rerun final consumer/image/native checks.
+- [x] Open focused PR without unsolicited reviewer; require current `C0 merge gate`, actual native reports, all privacy artifacts and primary review. Freeze candidate tag/three revisions/digests and verify full promotion proof before live use.
+- [x] Agent verifies dedicated host/module/baseline and supported backup, deploys only candidate C0 images through canonical targeted native update, waits for readiness and compares data/settings/files/schedules/jobs and unrelated inventory. Keep referenced tags unchanged.
+- [x] On the dedicated instance measure fresh browser and actual ChatGPT MCP sessions beyond five minutes, actual renewal/rotation, configured absolute/idle bounds, signed-in REST, revoke/rejected-read/reconnect and worker health. Use isolated reversible fixtures; destructive provider outage/recovery/replay/concurrency remain disposable. Audit bounded actual root app journal with health/auth/token/MCP positive controls; private evidence stays outside Git.
+- [x] Record deployed source/digests/live results in PR; regular merge only after acceptance, verify actual main CI/publication, separate closeout PR/checks in three documents and freeze accepted runtime as M17 predecessor.
+
+**Settled implementation decisions (resumption):** Keep the eight-hour absolute/one-hour idle default, configurable 60–86400 seconds with idle <= absolute. Only fresh trusted sign-in with actual provider refresh authority opts in; legacy rows keep their original deadlines. Provider introspection checks native activity on each browser/delegated authentication; renewal uses bounded same-origin confidential-client refresh and validates stable issuer/subject/account/audience and optional refreshed ID-token nonce. No provider or scope is request-selected. During transient introspection/explicit provider-503 outage, deny without extending clocks and permit retry before idle/absolute expiry. An ambiguous refresh transport failure or durable in-progress marker from a crashed check requires fresh sign-in, preventing reuse of possibly rotated native credentials.
+
+Core binds captured browser actors to the actual persisted session and authority, rechecked inside service transactions just like delegated grants. Per-authority session advisory locking serializes checks across commits; commit the in-progress marker before contacting the provider and clear it only with a definitive successful/retryable outcome. Network work holds no role/grant/content transaction locks. Local logout validates cookie-bound CSRF and Origin and revokes without provider authentication. Existing role/client/grant locks retain order; shared native-revocation lock 49382 follows role/client/grant locks for content writes, and explicit logout/revocation takes it exclusively. Renewal checking uses its own 49383 session-lock namespace and never waits on those locks while holding a privileged transaction. Test concurrent logout/role/client disable and captured actors after waits, crash markers and rotation ambiguity before app enablement. Native secrets remain private files; derive authenticated-encryption keys from the existing native client secret so native-client/secret replacement invalidates old ciphertext. Policy is non-secret numbered-script configuration, preserved through supported update/restart/backup and checked on restore.
+
+Publish Core 0.30.0/schema 0017 only after producer exact-source full gates; then adopt immutable release in app 0.46.0 and rerun consumer/full/native gates before deployment. Freeze all three installed AM6 CI digests from its closeout as the genuine native/live predecessor. Core changes remain independently installable. Signed real-HTTP fixtures must exercise the actual adapters with controlled clock; native/live tests additionally measure real elapsed sessions beyond five minutes. A successful SDK simulation is not an unobserved ChatGPT UI observation.
+
+**References:** Existing NS8 native authorization-code/refresh client pattern and C0 signed OIDC fixture are the reuse points; domain renewal is absent from existing code. [OIDC Core refresh validation](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens) and [OAuth security BCP refresh protection](https://www.rfc-editor.org/rfc/rfc9700.html#name-refresh-token-protection) govern identity continuity and replay handling. Implementation/CI/native/live results pending; no renewable runtime or new deployment is claimed.
+
+### M20 main recovery-fixture correction — 20 October 2026
+
+[Main 39381904479](https://github.com/Stell0/ns8-czero/actions/runs/39381904479) passes 1408 local cases, image/released-Core checks and Debian upgrade 21, but fails Rocky's active-grant recovery fixture with `ValueError` after its configured update (25 passes/one failure/three expected skips). That failed run blocks its own publication; corrected-main completion is recorded below. Preserve failed private artifacts and the accepted installed `4137048` runtime; no failed candidate is promoted.
+
+**Reproduced compatibility defect:** The recovery fixture passes PostgreSQL JSON timestamp text directly to `datetime.fromisoformat`. Actual Python 3.9 rejects fractional-second lengths one, two, four and five, while accepting zero, three and six; PostgreSQL can omit trailing fractional zeros. This reproduces the recovery failure class without capturing private grant rows; the failed VM's exact timestamp is not available. See [Python 3.9's supported grammar](https://docs.python.org/3.9/library/datetime.html#datetime.datetime.fromisoformat). Application Python/Core authority are unchanged.
+
+**Work plan:** Use a timezone-aware, Python-3.9-compatible recovery-only parser for PostgreSQL's optional one-to-six fractional digits, preserving the exact instant and the existing unexpired-grant assertion. Add actual fixture regressions for trimmed fractions, timezone offsets, absent fractions, invalid/naive values and expired grants; run them on actual Python 3.9 and current Python, then real PostgreSQL recovery integration and full exact-source CI/native/main gates. No retry, deadline extension, snapshot rewrite, Core publication or live deployment is required for this Git-only fixture correction. Separate three-document closeout remains PR 23 after successful reviewed promotion/main completion.
+
+**Local correction verification:** The original `verify_persistence` fails at its expiry parser on actual Python 3.9 for synthetic `.12345+00:00`; PostgreSQL independently emits that exact representation for `.123450+00`. The fixed fixture passes four actual Python-3.9 cases (including 21 precision/offset combinations and expiry rejection before refresh), 84 focused real PostgreSQL/OAuth cases and all **1412** Python/PostgreSQL/packaging cases in **399.88s**, without database skips. All 130 controller cases, schema/shell checks and 21 Robot dry-runs pass. App/Core/lock/image/lifecycle/CI files are unchanged. [PR 24](https://github.com/Stell0/ns8-czero/pull/24), source `9d060788ea4e6564915371d45f0b54567d3d611e`, passes [full validation 39388460390](https://github.com/Stell0/ns8-czero/actions/runs/39388460390): 1412 local cases, Debian genuine upgrade 21, Rocky installation 26/three expected skips/all eight browsers, 25 numeric accessibility contexts, three clean query artifacts and five scan/SBOM pairs. Actual downloaded artifacts, fresh registry identities and full promotion proof pass. The operator regularly merges it as `8ca30ac3362d8619c4ba8840a6c54abf0e80a7f8`; [corrected main 39397121223](https://github.com/Stell0/ns8-czero/actions/runs/39397121223) completes successfully, including the actual canonical publication job. No replacement live deployment is required for this Git-only correction.
+
+**Corrected main completion:** Exact source `8ca30ac3362d8619c4ba8840a6c54abf0e80a7f8` passes all **1412** actual Python/PostgreSQL/packaging cases in **464.04s**, 130 controllers, 21 Robot dry-runs, schema/shell/Renovate, producer/released-Core/runtime/license checks, all five scan/SBOM pairs, the merge gate and canonical publication. Independently downloaded native reports pass Debian genuine AM6 upgrade **21** and Rocky installation **26/three expected skips**, all **eight** browser workflows/privacy guards, **25** numeric accessibility contexts and **three** query artifacts with zero candidates. Both actual checkout results and all three installed candidate identities match this source. Actual renewable sessions measure **337/339 seconds** with stable bounds, idle expiry at **61/64 seconds**, absolute expiry at **126/129 seconds**, native/public rotation and revocation/reconnect controls. Full promotion verification passes; six fresh registry reads verify all `main`/`latest` digests, revisions and exact immutable sibling references. The local suite has no database skips. No stable module release is claimed.
+
+Canonical publication uses immutable candidate tag `ci-8ca30ac3362d8619c4ba8840a6c54abf0e80a7f8-39397121223-1`:
+
+| Image | Corrected-main canonical digest (not installed) |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:0391c812cd8ae21fe06fbfca8db4fc577c15ceb70682ef93f514ae8a621e0245` |
+| `ghcr.io/stell0/czero-app` | `sha256:a5032d1b17d2f9b5912270a2d131f056722ae776ed8fb79fc2262dcc42718aac` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:36bdf1d543bcf0b9d9846807e83f862e3ec47be392ca6e9c2db8b0086bc55876` |
+
+Only `PLAN.md` and two Git-only test files differ from accepted live source `4137048`; runtime/Core/app/schema/lock/container/lifecycle/CI bytes are unchanged. Main publication does not replace the accepted installation below. Raw proof, failed evidence and credentials stay outside Git.
+
+## M20 corrected runtime closeout — 20 October 2026
+
+**Runtime, corrected main and documentation closeout acceptance pass.** [PR 22](https://github.com/Stell0/ns8-czero/pull/22) is regularly merged as `cba48675b1d6d4096e4c6411e8ef8220deba982f`; its tree is identical to accepted candidate `4137048c23d62fac7ee8909385856cbf9fa84116`. Core/app/schema are **0.30.1/0.46.1/0017**. This checkpoint supersedes earlier pending/failure status while preserving that history. [Final ready-PR validation 39282323268](https://github.com/Stell0/ns8-czero/actions/runs/39282323268) and [deployed-candidate validation 39264711915](https://github.com/Stell0/ns8-czero/actions/runs/39264711915) complete successfully. [Main validation 39381904479](https://github.com/Stell0/ns8-czero/actions/runs/39381904479) fails Rocky active-grant recovery with `ValueError` (25 passes/one failure/three expected skips), while all 1408 local cases, image/released-Core checks and Debian upgrade 21 pass. All eight Rocky browser workflows and the three downloaded query-artifact audits pass. The reproduced Python-3.9 timestamp-parsing defect is fixed by regularly merged PR 24; corrected main `8ca30ac` passes full acceptance/publication and independently audited native/artifact/registry proof above. The failed run remains historical evidence. PR 23 is regularly merged as `010c40e`; actual main 39418222344 passes its lightweight documentation checks and merge gate. M20 is closed and M17 is active.
+
+Local application verification passes 1408 actual Python/PostgreSQL/packaging cases, 58 independently frozen released-consumer cases, 130 controller cases and 21 Robot dry-runs, plus schema/shell/Renovate checks. Final ready-PR actual downloaded reports independently pass Debian genuine AM6 upgrade 21 and Rocky installation 26/three expected skips, all eight browser workflows/privacy guards, 25 numeric accessibility contexts, three query artifacts with zero candidates and all five scan/SBOM pairs. Core 0.30.1 publication/checksums above remain immutable; no Core rebuild or module release is implied.
+
+The dedicated installation retains canonical tag `ci-4137048c23d62fac7ee8909385856cbf9fa84116-39264711915-1`. All three installed revisions are `4137048c23d62fac7ee8909385856cbf9fa84116`, with exact sibling references and the following frozen digests:
+
+| Image | Accepted installed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:f7ccdae519d6c5093065c0db7976ca63fe330e50b7698de38802e4429e691878` |
+| `ghcr.io/stell0/czero-app` | `sha256:7004386631a5d91a04c46cb2819576260791e0a45f5d957c68e15032f5e4b615` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:3ec7585ed0e68fcb094a0565fb01da83f46b9c731bfe07d223de6f5a8af6d128` |
+
+Keep these installed tags/digests available and unchanged. Successful main or documentation checks do not replace the accepted deployment. After this closeout's lightweight main result passes, these are M17's genuine predecessor images, rather than canonical corrected-main, earlier AM6 or failed C440 candidates.
+
+**Actual dedicated acceptance (19 October 2026):** Supported C0-only backup/read-data verifies a 3759064-byte schema-0017 dump with 45 tables and six retained originals/36847 bytes. Canonical targeted update completes in 24.84 seconds. Old-format native credentials perform a genuine serialized refresh while retaining account/native identity, immutable provider context, scopes, original absolute bounds and exact session/grant/token/code rows. Browser continuity measures 2110 seconds/102 actual reads/seven credential snapshots; the actual ChatGPT connector measures 2274 seconds/eight reads/eight distinct native access/refresh pairs without hidden reauthentication. It reads retained historical Wiki content and reads again after full-manager restart and cleanup. A transient DNS retry stayed within existing authority; failed probes remain private evidence, not passes. Actual fresh SDK discovery sees 76 tools on both protocol modes; the connector's cached 63-tool list does not establish fresh discovery or prompt quality.
+
+Configured 120-second absolute/60-second idle fixtures expire at measured 129/75 seconds; defaults return to eight hours/one hour and existing long-session bounds remain unchanged. Expired public access is rejected while its browser remains valid; same-grant public refresh succeeds at 299 seconds. C0-only full-manager restart preserves immediate same-cookie/bearer access and exact authority rows across snapshots, both SDK modes, eight exact content views and three schedules. All 8755 pre-update and 8758 pre-restart rows across 37 domain tables, six originals, configuration hashes and 178 pre-update/179 pre-restart terminal jobs/attempts are preserved. Nine unrelated module identities are exact immediately around each C0 action. One unrelated removal/addition between actions was already present before the restart baseline; no unchanged-original-eleven claim is made.
+
+Public revocation rejects the same bearer and refresh while the browser stays valid; reconnect works. Local logout rejects its browser and linked bearer. Valid same-bearer REST/MCP controls precede the isolated client-disable denial; the browser remains admitted. Both owned temporary clients are disabled with only their expected revision increments; the other 23 approved client descriptors and working connector remain unchanged. The final bounded root app journal has 479 entries and successful health/authorization/token/MCP positive controls (6/8/22/26). OAuth query, issued-secret, credential/cookie, bare-opaque/JWT and traceback audits have zero matches. Raw evidence stays outside Git; eighteen checkpoint evidence hashes are reverified. [Sanitized live PR evidence](https://github.com/Stell0/ns8-czero/pull/22#issuecomment-6271648419) records the tested deployed candidate.
+
+**Closeout completed:** the operator regularly merges three-document PR 23 as `010c40e`; actual [main 39418222344](https://github.com/Stell0/ns8-czero/actions/runs/39418222344) completes successfully with documentation checks and the merge gate. Corrected runtime main acceptance/publication and actual native/artifact/registry audits above pass; documentation checks do not require replacement images or QEMU. M17 is next; M18/M19 and further agent-memory work remain deferred. Preserve original dirty documents, recovered drafts, failed private evidence, interactive Playwright/CPU-quota waivers and the working installation.
+
+## Integration M17 — Profile identity (closed)
+
+**Entry gate:** PR 23 is regularly merged as `010c40ede36ca28b68c68d3f6601c47037d55995`; actual main [39418222344](https://github.com/Stell0/ns8-czero/actions/runs/39418222344) completes successfully with documentation classification/checks and the merge gate. M20 is closed. Work starts from that verified main in a separate feature worktree/environment; preserve old worktrees and dirty documents. The accepted installed `4137048` source and all three frozen digests above are the genuine M17 predecessor, not corrected-main/marker images.
+
+**Behavior and interfaces:** Add catalog-bound `get_profile` and `GET /api/v1/profile` using existing transactional Core `AccessService.profile`. Require verified current Reader-or-higher and actual `c0:read`. Empty MCP arguments reject extra fields. The profile-only output has required nonblank string `id` and optional string `name`, `email`, `nickname`, with no extra fields/nulls. Return the persisted account UUID, nonblank stored display name/username as name/nickname; omit email because no verified stored source exists. Missing/invalid identity fails closed without inventing an ID or borrowing another account. `/api/v1/me` remains unchanged. See [OpenAI's profile contract](https://developers.openai.com/plugins/build/auth#support-multiple-accounts).
+
+**Responsibilities and compatibility:** App owns typed projection, REST binding and trusted `_meta["openai/profile"]: true`; Core already owns account identity and transactional session/grant/membership validation. Keep the existing securitySchemes middleware, matching `c0:read` metadata, current/legacy text/structured parity and all 76 existing contracts. Profile annotations are read-only/idempotent/non-destructive/closed-world. Full catalog becomes 77. App becomes 0.47.0; Core 0.30.1, schema 0017, immutable released dependency and other 53 lock records stay unchanged. No migration, Core release, new native action or lifecycle behavior is needed.
+
+**Native fixture decisions:** Extend the first Debian genuine-upgrade case to provision disposable SSO at the suite's eventual changed hostname. Capture owner/member `/api/v1/me` IDs on frozen M20, update to candidate, refresh the existing test TLS drop-ins and compare profile IDs. Restore the member's unadmitted status and clear application authentication using supported configuration before inherited authentication-disabled controls. Later SSO provisioning reuses that exact private IdP/host fixture, rather than creating a second provider or changing its credentials. Predecessor probes never request the new tool/capabilities. Keep existing case counts, both native distributions, eight browser workflows, private stdin, exact recovery snapshots, and actual report/privacy audits. Extend later update/clean restore and renewal probes with stable profile assertions.
+
+**Local implementation verification:** All **1432** actual Python/PostgreSQL/packaging cases pass in **427.68s**, with no database skips. All **130** controller cases, schema/shell checks and **21** Robot dry-runs pass. An independent frozen consumer installs released Core 0.30.1 at `46007396c5e83d05ed8dd11bcd5436bc1b245230` outside the checkout, without the NS8 Agent SDK, and passes **28** PostgreSQL-backed profile/renewal HTTP cases in **20.87s**. The fifteen dedicated profile cases include REST/current/legacy schema/metadata parity, credential isolation, rename/refresh/reconnect/scope stability, independent-database identities, failure without a placeholder and actual signed-HTTP predecessor-fixture positive/tampered-ID controls. Only the app self-version changes in the lock; all 54 other package records, including released Core, are unchanged. The first full local run exposes a static health-version guard mismatch (1431 passes/one failure); comparing parsed health JSON fixes it, and the successful fresh full result above supersedes it. Failed private evidence is retained. Exact CI/native/deployment/ChatGPT acceptance remains pending.
+
+**Native fixture correction:** M17 candidate `cc474d3` full CI [39424286234](https://github.com/Stell0/ns8-czero/actions/runs/39424286234) failed its Debian predecessor-account seed: a denied-admission browser was reused for the later admitted reader, although the provider SSO session survived denial. The disposable fixture now uses separate browsers for these flows, as the established native membership probe does. The signed-HTTP fixture regression models the retained provider session and rejects reuse. M17 was not deployed. The correction passes 38 focused cases; both signed-HTTP negative controls reject the original fixture. A fresh full local run passes all **1432** cases in **453.93s** with no skips. A new exact-source full CI run is required.
+
+**Tests and acceptance:**
+- [x] REST/current/legacy MCP exact schema, empty inputs, trusted metadata and authorization parity; invalid identity/static errors and no unrelated/private fields.
+- [x] Repeated calls, refresh/reconnect/scope upgrade/rename retain ID; distinct accounts, reused usernames and independent databases differ. Current membership/client/grant/session expiry/revocation reject access; write/admin-only scope cannot authorize profile.
+- [x] Focused then full actual PostgreSQL/Python/packaging, controller, schema/shell/Robot, released-Core/image/license/scans and both native suites; no database skips counted as passes. Inspect actual source/digests/reports and privacy artifacts.
+- [x] Agent freezes candidate images, backs up/revalidates the dedicated instance and deploys only its C0 through supported canonical targeted update before merge. Verify readiness, data/settings/files/schedules/jobs/unrelated inventory, restart, renewal beyond five minutes and bounded positive-control root journal privacy. Destructive recovery stays disposable.
+- [x] Actual ChatGPT shows the expected connected-account label after reconnect and reads retained content again without another login, by operator confirmation. Server SDK/raw current and legacy discovery verify the profile contract. Model-exposed tool counts do not establish runtime profile discovery.
+- [x] Operator developer review and regular merge of PR 25, actual full main validation/publication and downloaded source/image/native/privacy/scan audits.
+- [x] Separate three-document lightweight closeout PR 26 and completed main marker. Preserve working clients and frozen accepted images. M18 implementation waits for that marker; M19/further agent-memory work remain deferred and both existing waivers remain.
+
+### M17 deployed acceptance and closeout — 20 October 2026
+
+**Source and review:** [PR 25](https://github.com/Stell0/ns8-czero/pull/25) is reviewed and regularly merged by the operator as `e7a35d2ce18bfd748f59929a27a2869563150e46`. Its tree is identical to accepted `14e4d01dce8c2ed7ae2217138c22d462edd95227`. [Candidate full validation 39428464950](https://github.com/Stell0/ns8-czero/actions/runs/39428464950) completes successfully: **1432** actual PostgreSQL/Python/packaging cases, **130** controllers, **21** Robot dry-runs, producer/released-Core/images/licenses/scans, Debian genuine M20 upgrade **21** (including both predecessor-profile checks), and Rocky installation **26 / three expected skips**, all **eight** automated browser workflows/privacy guards. Actual downloaded reports verify **25** numeric accessibility contexts, all three source/image identities, five scan/inventory pairs and **three** query artifacts with zero matches. Both native renewable measurements reach **338 seconds**. Final local validation passes 1432 cases in 453.93 seconds with no skips, 38 focused cases and 28 independent frozen released-Core consumer cases. The earlier failed native fixture and its correction remain recorded above.
+
+**Genuine deployed predecessor for M18:** The agent performs the supported canonical targeted update only on the dedicated C0 instance, following a C0-only backup. Actual backup inspection verifies a 3,802,230-byte dump, 45 tables/schema 0017 and six original files/36,847 bytes; repository read-data checking passes. All three installed revisions/digests match the accepted candidate immediately after update and at final verification. Keep this installed tag available and unchanged: `ci-14e4d01dce8c2ed7ae2217138c22d462edd95227-39428464950-1`.
+
+| Installed image | Frozen digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:35e59a9b22f15d2c97abcb27bbca39ffbfedbf1371c87c973c826b3a3712fe93` |
+| `ghcr.io/stell0/czero-app` | `sha256:262ae4389e92722c5805798c3572899270151fb42214096a07fcd5a05c6fb05d` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:9191737a16b0c152f03368f5fd20b45942303857f844c949e1c7ea81e3083ed8` |
+
+Main or documentation images do not replace this accepted installation. No Core release/migration, native lifecycle change or stable module release is involved.
+
+**Live identity and lifecycle:** The same browser, opaque account ID, native authority and delegated grant survive the update and full dedicated-manager restart, including exact grant/token/code row comparisons. Actual native renewal crosses the original access expiry at **497.69 seconds**, rotates access/refresh credentials and preserves identity and configured absolute/idle bounds. A continuous profile watch completes **369.46 seconds / 19 reads**. REST, current/legacy SDK and raw-wire profiles agree on identity, strict public fields and trusted metadata. Public revocation, local logout and disabling the owned isolated client reject the same previously valid REST/profile/MCP credentials after positive controls. Reconnect and fresh sign-in retain the account ID. The isolated client is disabled, its fixture browsers are logged out, and all **25** original approved-client descriptors are unchanged.
+
+**Actual ChatGPT:** The operator initially observes two login prompts during reconnect/tool refresh, then successful retained-content reading. The cause of those initial prompts is not established. The follow-up explicitly confirms **“Correct account name; read works without login.”** Actual connector reads also pass, including immutable historical content and another read more than five minutes later without another login. This establishes the observed account-label/reconnect/read outcome; no repeated-login failure or exact client-side cause is inferred from log counts. The model-exposed tool inventory is not used as a proxy for runtime profile discovery.
+
+**Preservation and privacy:** All **8,825** original rows across **37** domain tables, the unchanged 45-table schema, six original files, configuration/private-setting hashes, eight exact retained HTTP content views and three schedule configurations survive. The manager restart also preserves its fresh **8,826-row** baseline; terminal succeeded jobs/attempts advance from 201 to 202, with no failures and healthy timer/worker state. All ten original unrelated instances retain their ID/group/metadata. One independent addition during the update observation window is recorded; all eleven pre-manager instances remain unchanged around the restart. No agent action targets that addition. All **15** backup-plan configurations and instance memberships are unchanged; the owned one-off plan remains disabled. Its expected last-execution status changes after the successful backup, so raw returned status is distinguished from configuration. The final bounded root journal filtered by verified app UID/container contains **407** entries and successful health/authorization/token/MCP positive controls **6/4/78/111**. OAuth-query, issued-secret, generic credential/cookie/opaque, JWT and traceback candidates are all zero. Raw private and failed evidence remains outside Git; final evidence hashes and all five original worktree/document baselines are verified.
+
+[Sanitized live acceptance evidence](https://github.com/Stell0/ns8-czero/pull/25#issuecomment-6293318946) records the deployed source and digests. **Executed main verification:** [Main full validation/publication 39441440675](https://github.com/Stell0/ns8-czero/actions/runs/39441440675) at `e7a35d2` is completed/successful. Actual local logs pass **1432** cases; actual downloaded Debian genuine upgrade passes **21** and Rocky installation passes **26 / three expected skips**, all eight browsers/privacy guards and 25 numeric accessibility contexts. Both app checkout `git log` results equal `e7a35d2`; all three installed CI image identities and three query artifacts pass, with zero query matches. Main native renewal measures **337/338 seconds**, absolute **128/130** and idle **64/65**, with rotation/revocation/reconnect checks passing. All five scan/inventory pairs are inspected; tracked vendor findings remain maintenance work (application166, database413, UI7), not a clean-vulnerability or stable-release claim. The actual main-publication artifact and fresh anonymous reads of all three `main` and `latest` aliases match the fully accepted immutable main candidate, including revision/digests and immutable sibling references. Full promotion verification passes. These publication images do not replace the accepted installed `14e4d01` trio.
+
+**Closeout gate:** PR 26 is reviewed and approved by the operator for adding this executed main evidence and regular merge after checks. Its first draft run passes documentation but correctly fails the ready-for-review gate; ready-source run **39443344636** at `c59efde` completes successfully. This final evidence update still requires its own successful documentation checks and actual main marker before M18 starts. Existing interactive Playwright and CPU-quota waivers remain unchanged.
+
+**M17 closeout completed:** [PR26](https://github.com/Stell0/ns8-czero/pull/26), exact source `82308c3`, passes ready documentation CI39450205370 and is regularly merged as `9aa2363`. Its actual main39450459776 completes successfully and exact-source documentation promotion verification passes. All three accepted deployed14e4d01 images remain unchanged as M18’s genuine predecessor.
+
+## Integration M18 — Tool guidance (accepted and closed)
+
+**Entry passed:** operator-reviewed closeout [PR 26](https://github.com/Stell0/ns8-czero/pull/26) is regularly merged as `9aa23633b34cd628e1baada449dc501e5924c14f`; actual [main 39450459776](https://github.com/Stell0/ns8-czero/actions/runs/39450459776) is completed/successful with documentation checks and exact promotion verification. M17 is closed. M18 begins from that verified marker on `feat/m18-tool-guidance` in a separate worktree/environment. The genuinely installed `14e4d01` trio frozen above is the upgrade predecessor. Preserve all original dirty documents, drafts, approved clients and existing waivers. M18 acceptance is not yet claimed.
+
+**Behavior and responsibilities:** Audit the existing **77** tools without renaming operations or changing handlers, authorization, stored data or result contracts. Application presentation owns trusted per-operation descriptions and explicit safety hints; Core 0.30.1/schema 0017 and released dependency remain unchanged. App is 0.48.0. Bind guidance only to registered names, never retrieved content. Keep actual Core read-only metadata, all required OAuth scope schemes, the profile marker and current/legacy SDK wire behavior. Describe external configured inference and queued job/schedule effects accurately. Distinguish irreversible/removal/overwrite effects from additive creation, and required durable replay keys from writes that cannot promise retry idempotency. Unknown future tools receive conservative hints until reviewed. No facade, runtime generative handler or new tool is justified without measured need.
+
+**Contracts and documentation:** Descriptions must explain user intent, prerequisites and recoverable failures for source evidence/citations, Wiki content/history, graph/entities versus typed objects, ordinary versus structured search, exact space/version selection, annotation observations, create-only versus revision-protected updates, queued readiness and administration. Add parameter help without loosening validation. Compare the complete baseline after removing only documentation fields: names, input/output types/limits/required fields, roles/scopes and REST bindings stay equal. Reuse descriptions and safety metadata across MCP, REST/OpenAPI and capabilities. Discovery hints never grant authority; role denial, scope consent, CSRF, revision/retry and request bounds remain authoritative.
+
+**Reproducible prompt evaluation:** Freeze synthetic prompts, expected evidence and a rubric before comparing M17 and M18 catalogs. Cover cited research, exact source passages and readiness, graph/objects, ambiguous pages/spaces, stale writes, uncertain replay versus changed requests, role denial versus scope upgrade, malicious retrieved instructions, exact applicability/unknown verification, unsupported binary upload and profile identity. Capture actual model calls/responses with catalog/corpus hashes, model/version, parameters, trials and bounded steps. Grade valid tool/argument selection, task completion, immutable citations, forbidden actions/cross-space fallback, clarification/denial handling and call/latency cost. Include deliberately unsafe/fabricated traces as negative controls. Deterministic replay proves the grader, never model quality. Use only synthetic evidence for API evaluation; private outputs/credentials stay outside Git. The operator selects a Codex runner plus testing skill and authorizes fresh isolated evaluation sessions. Use fresh sessions, real disposable MCP operations and independent trace/database grading, with expected answers outside the tested workspace. A repository testing skill orchestrates the suite; any product workflow skill introduced later requires a separate with/without comparison. Pin the harness/model/instructions and keep the corpus portable. Preflight actual MCP discovery/calls and reject ignored configuration, unsupported tool routing or missing traces as runner failures, never as application/model-quality results. Normal local Codex-managed authentication stays in the Codex process; no credentials enter Git or public CI. Planning preflight on installed Codex 0.163.0 finds native CLI MCP discovery fails with an unsupported tool-search call (also reproduced on isolated 0.162.0 and direct fallback); the independent Python MCP probe passes. The chosen pinned app-server driver preloads actual discovered tool definitions and forwards calls through the real MCP client. Its strict probe passes with one actual MCP call, zero unrelated server startups and plugins/memories/project instructions disabled. This experimental interface is version-pinned and its eager-discovery limitation is reported; it does not prove native Codex discovery or actual ChatGPT quality. The testing skill belongs in repository-only `.agents/skills/c0-evaluate-tools`, outside evaluated workspaces and runtime images. Report model and actual ChatGPT observations separately; do not infer improved quality from metadata snapshots.
+
+**Implementation decisions before code:** Add app-owned `tool_guidance.py` for all 77 trusted names, descriptions and standard boolean annotations. Keep Core’s `read_only` authoritative; individually review all **34** mutations, including **21** required-replay-key operations and **13** without that promise. Destructive hints cover overwrites/removals/retractions/security changes/mixed batches/arbitrary trusted jobs; provider-capable search and job/schedule effects get conservative open-world hints. Reuse fresh presentation metadata in actual-scope REST/MCP capabilities and OpenAPI, while keeping role-eligible tool discovery and actual-scope execution separate. Add targeted parameter descriptions only. A schema-aware structural fingerprint preserves property names such as `title`/`description`, literal defaults/enum/const data, all constraints and references while excluding documentation annotations. No new facade, Core change, migration or provider call is introduced by guidance.
+
+**Evaluation execution:** Implement a development-only runner and repository testing skill. Compare accepted M17 source against the committed candidate using the same pinned Codex0.163 app-server driver, requested operator model `gpt-6-astra`/high reasoning, corpus and fixture semantics. Record resolved backend identity only if actually reported. Preload real discovered definitions and actual server guidance; forward calls through the authenticated MCP client, keeping credentials/ground truth outside an empty tested workspace. Enforce 180-second case and 16-call bounds, bounded schemas/output/traces, private unique run directories and cleanup. Disable other tools/servers/plugins/memories/project instructions. First run eight cases: cited source research, graph versus objects, typed-record creation, ambiguous space clarification, real concurrent Wiki conflict/reconciliation, Reader denial, explicit scope-consent handling and malicious retrieved instructions. Extend with queued extraction, uncertain replay, exact version filters, changed-content unknown verification, unsupported binary upload, missing evidence, current profile and no Shared fallback after denial. Freeze prompts/rubric before measuring; all critical safety/state/citation expectations and negative controls must pass. Record every failed run and report completion/valid calls/citations/conflicts/denials, prohibited actions, latency and token use. Repeat critical cases to expose variance; passing fixture replay is not model-quality evidence. No model credentials or actual paid/model sessions run in public CI. Independently forward-test the orchestrator skill on raw failed artifacts without revealing expected conclusions.
+
+**Validation and deployment:** Focused schema/hint/role/scope/current/legacy/raw-wire and grader-negative checks precede full actual PostgreSQL/Python/packaging, controller/schema/shell/Robot and independent released-Core checks. Require exact-source completed image/native CI, actual report/source/image/privacy/scan inspection, then agent-performed dedicated-only backup and canonical targeted update. Native upgrade tests use all three genuine M17 digests above and retain eight browser workflows, stable profile identity, grant recovery and private artifact handling. On the dedicated instance verify readiness, original rows/files/settings/schedules/clients, unrelated inventory, actual authenticated REST/MCP/citations, renewal and restart, isolated reversible workflow fixtures and bounded root app journals with positive controls. Preserve the original connection and disable temporary clients. Actual ChatGPT guidance acceptance and measured prompt results are required. Destructive recovery remains disposable.
+
+**Local development checkpoint (20 October):** The full suite passes **1476 actual Python/PostgreSQL/packaging cases without skips** in 479.51s. Five subsequently added grader regressions pass (26 runner controls total); 81 independent physically installed frozen app/released-Core checks, 130 controllers, schema/shell and 21 Robot dry runs pass. The schema command initially fails with the default read-only Go cache; an explicit workspace cache passes. The repository testing skill validates and an independent fresh Codex audit of raw failed discovery artifacts correctly rejects a quality/acceptance claim. Original fixture/driver failures remain private. All16 real dirty-development Codex cases pass independently regraded state/safety checks after correcting expected event-cursor bookkeeping and legitimate consent/no-evidence/space-boundary handling. Original grades are retained and no model calls are rerun for that regrade. This preflight refines the grader before the frozen baseline/candidate comparison; it is not exact committed-source quality or native/live acceptance. Final prose review, baseline comparison, critical repeats, CI and deployed ChatGPT checks remain pending. See [the runner guide](../../docs/tool-evaluations.md).
+
+**Frozen evaluation correction:** Clean source `4e72419` passes all1481 local cases in490.94s and opens [PR27](https://github.com/Stell0/ns8-czero/pull/27), with no requested reviewer. Both initial frozen16-case arms pass. In the critical repeat, M17 correctly creates by create-only `wiki_pages_upsert`; the version-1 fixture only hides replies for `wiki_pages_create`, so its intended uncertainty is never injected. Preserve the raw trial and original failed grade as a harness defect, not a model failure or evidence of improvement. Rubric2 accepts both valid creation routes, injects the same committed-response loss and requires exact operation/argument replay. Quote the requested body explicitly and check stored body/title/provenance as well as counts. Real PostgreSQL/MCP regressions cover both. Rerun both frozen arms/critical repeats and exact current-head CI after this test-only correction; app metadata/runtime/Core/schema remain unchanged. Earlier CI39458121591 remains running and is not cancelled or substituted for final-head acceptance.
+
+**Native and grader finalization:** The superseded4e Debian report fails first because `CzeroSso.predecessor_profile` still expects0.46.1 while the frozen genuine M17 image is0.47.0; later configured-state/TLS/recovery failures cascade from that incomplete setup. Actual failed reports pass the OAuth-query privacy audit and remain private. Pass predecessor/current expected versions explicitly from Robot, bind them to the frozen baseline/current manifest in a regression, and exercise the actual wrapper before fresh exact-source native CI. No application runtime file changes. Corrected ccfc local validation passes1482 actual cases without skips in462.87s. Its rubric2 baseline correctly searches all four authorized spaces and asks which Handover to update; the narrow two-space grader incorrectly fails it. Preserve that original trace/grade as another evaluator defect. Final rubric3 derives discovery scope from actual authorized results and verifies semantic read routes against stored facts: complete citations or a read version/document/chunk chain, object-list readback, Wiki resolution/history, entity relations and exact current annotation/profile identity. Strict no-extra-write, implicit/denied-selector, immutable-identity/hash and replay/conflict checks remain. Actual API positive/negative controls pass86 focused cases. Record matching Python/runtime dependency inventories, freeze this final rubric and run fresh uniform baseline/candidate trials/critical repeats, followed by final-head CI/native/live gates. No improvement is claimed from either evaluator defect.
+
+**Promotion checklist:**
+- [x] M17 closeout/main entry gate and focused M18 plan settled before code.
+- [x] All 77 contracts audited; trusted descriptions/hints and targeted parameter help, unchanged domain/schema/dependencies.
+- [x] Reproducible baseline/candidate prompt measurements and grader negative controls; no unmeasured model-quality claim.
+- [x] Focused/full local and independent consumer checks; exact completed candidate CI/native/publication and actual artifact audits.
+- [x] Dedicated supported update, preservation/privacy/lifecycle and operator post-reconnect ChatGPT workflow acceptance against frozen source/digests, within recorded limits.
+- [x] Operator regularly merges PR27, preserving the exact tested source.
+- [x] Actual main full acceptance/publication, separate reviewed three-document closeout/main marker; see M19 entry below. Further AM/Windmill remains deferred.
+
+### M18 executed evidence and closeout — 20 October 2026
+
+**Status:** [PR27](https://github.com/Stell0/ns8-czero/pull/27) is merged by the operator as `73a04e1d183e9841c7c7636c8886b08b42cc45bb` at 20:08:29 UTC. Its two-parent regular merge preserves candidate `93b9546529c623a5620fa0c585f8216bfec5e58f` and has an identical tree. GitHub has no separate review record; do not invent one. App/Core/schema are **0.48.0/0.30.1/0017**. Candidate implementation, measurements and dedicated backend acceptance below pass within the recorded limits. Actual [main full validation/publication 39489443427](https://github.com/Stell0/ns8-czero/actions/runs/39489443427) completes successfully, with the independent audits below passing. Operator post-reconnect ChatGPT UI acceptance and the passive unrelated-inventory diagnosis below are now recorded. This separate three-document closeout/main marker remains a gate. **M18 closeout subsequently passes at `426bcb6`; M19 entry below records the final verified marker.** Historical development checkpoints above are superseded only by these executed results, not erased.
+
+**Exact candidate checks:** [Full 39466269075](https://github.com/Stell0/ns8-czero/actions/runs/39466269075) completes successfully at `93b9546`. Local clean-source verification passes 1499 actual Python/PostgreSQL/packaging cases without skips in 468.99s; the actual downloaded CI log independently confirms 1499/no skips in 355.01s. Focused evaluator/native-wrapper/real-MCP coverage passes 86; independently installed released-Core/frozen consumer 81, JavaScript 130, schema/shell and Robot 21 dry runs pass. The repository testing skill validates and independently rejects raw failed discovery artifacts as quality evidence. Core's immutable released Git pin remains `46007396c5e83d05ed8dd11bcd5436bc1b245230`; no Core publication, migration, dependency change beyond the app version, facade or lifecycle behavior change is introduced.
+
+Actual downloaded native reports pass Debian 13 genuine M17 upgrade 21/no skips and Rocky 9 installation 26/three expected skips, with all eight actual browser workflows/privacy guards and 25 numeric accessibility contexts. Three actual report/browser-log privacy artifacts contain zero OAuth-query candidates. Actual workflow checkout logs and all three installed image revisions/digests match the candidate. Native sessions measure 337/336 seconds with actual native/public refresh rotation, absolute/idle bounds, revocation and reconnect. All five actual scan/SBOM pairs are inspected. Vendor findings remain maintenance/release work; no stable release or finding-free claim is made. Superseded native setup and evaluator failures remain retained privately.
+
+**Frozen Codex measurement:** The operator-selected runner uses Codex 0.163.0, requested/reported `gpt-6-astra`, high reasoning, rubric 3, sixteen tasks and eight critical repeats per arm. Clean baseline `14e4d01` and candidate `93b9546` run 48 fresh unique sessions. Actual RPC requests/results/final responses link to independently regraded PostgreSQL effects; critical safety, immutable evidence, denial, ambiguity, conflict/replay and malicious-content expectations pass. Final prose is reviewed by the implementing agent, not described as independent human review. Both arms use matching Python 3.12.13 and all thirteen recorded runtime-library versions.
+
+| Observed result | M17 baseline | M18 candidate |
+| --- | --- | --- |
+| Passing trials | 24/24 | 24/24 |
+| Actual MCP calls | 88 | 82 |
+| Input tokens, including cached | 2,197,780 | 2,632,152 |
+| Cached input tokens | 1,771,904 | 2,192,384 |
+| Output tokens | 8,880 | 8,266 |
+| Median case elapsed seconds | 37.24 | 35.08 |
+
+Both arms reach the observed completion ceiling; **no completion improvement or causal performance claim** is supported by this sample. Driver SHA256 is `b10ec1d8a9130012f8e9a50d66f51f9fa3c0c7ea412b1a6187a98d7be1841c42`; corpus SHA256 `31b7afebc005a9d28791fba2fe2b5fb4afb5ec4e2fa74dcd71218efde9ab58a7`; runtime inventory SHA256 `43b8f29638a6994f128114648ff50fcb7f552f1f44e3449d1372908d26eab76c`. No immutable backend snapshot is available. The experimental app-server interface eagerly loads actual MCP definitions and forwards real calls after native Codex discovery fails preflight. This does not prove native Codex discovery, client confirmation behavior or actual ChatGPT UI quality. Producer/model Starlette 1.9.0 differs from separately verified frozen consumer/image 1.7.0. Expected answers, credentials, database access and grading remain outside empty evaluated workspaces; no model credentials/calls enter public CI. The original lost-reply and authorized-space grader defects are preserved, corrected uniformly and followed by fresh final comparison; neither is counted as a model failure or improvement. See [recorded model evidence](https://github.com/Stell0/ns8-czero/pull/27#issuecomment-6297447862) and [the runner guide](../../docs/tool-evaluations.md).
+
+**Frozen deployed candidate:** The agent performs the supported targeted dedicated-instance update in 24.6s, after fresh registry checks and a verified C0-only encrypted backup. Module/app/database versions, readiness and installed identities pass immediately after update, after full-manager restart and at final verification. Preserve tag `ci-93b9546529c623a5620fa0c585f8216bfec5e58f-39466269075-1` and these immutable references while installed:
+
+| Image | Installed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:ae588e3c32e6fdc65a27cbc2c66ba1005c4d5ab5daef9c0328676795e52d4240` |
+| `ghcr.io/stell0/czero-app` | `sha256:ccb0f181852cc004e594fc6b3896ba5a29528c4679284adeede6b2c6f809a28c` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:9522bc903cfc5037f6e322cf13300ae1f2935b9098d2555b786815e93c52bade` |
+
+All three OCI revisions equal `93b9546`; the module names the exact candidate sibling tags. Fresh final registry reads confirm availability/identity. Main and documentation-marker images do not replace this installation. Freeze it as M19's genuine predecessor only after M18 acceptance and closeout-main checks.
+
+**Backup and preservation:** Supported backup passes repository full read-data verification, actual PostgreSQL dump inspection (3,809,672 bytes, 45 tables, schema 0017) and all six original-file hashes (36,847 bytes). All fifteen prior backup-plan configurations remain equal; the owned one-off plan completes and is disabled. Update/full-manager restart retain 8838 original domain rows across 37 tables, all 45 schema tables, original settings/private-file hashes, eight authenticated HTTP content views and three schedule configurations. The restart also preserves the 8842-row pre-manager state. Original 205 terminal jobs/attempts remain; final 207 jobs/attempts are successful and worker/timer health passes. All 26 original approved client descriptors remain exact. Private credentials/raw database/journal evidence remain outside Git; original dirty documents and four preserved M20 worktrees pass unchanged-head/status/document-hash checks.
+
+**Live metadata and workflow:** Actual Admin capabilities/OpenAPI retain all 77 input/output/authority fingerprints and route bindings. Current/legacy raw MCP exposes four explicit safety booleans, matching OAuth schemes/profile metadata and exact citations. Read-only tools total 43, but actual `c0:read` capabilities correctly contain 35 because eight read-only Admin operations require admin scope; role-eligible discovery remains 77. Explicit read/write consent yields 61 capabilities; read-only invocation of a write raises only the required insufficient-scope challenge. The earlier private probe's mistaken 43-capability expectation is retained as a probe correction, not a runtime failure. No broadened discovery scope authorizes execution.
+
+One owned Wiki page passes exact create/update replay, changed-request/stale-revision conflicts, current read-back/history, archive and immutable historical read. Independent SQL proves exactly one archived page, three revisions, three events, three successful receipts and cursor advance 3, with no unexplained domain additions or new source files. Its one owned client is disabled after cookie-free positive REST/MCP 200 controls; the same authority then receives 401 and refresh 400. Browser survival of client disable is checked, then explicit owned browser logout succeeds. Existing connection/client configuration is preserved.
+
+**Identity, renewal and actual connector:** Update/restart retain native/account/session identity, original absolute/idle bounds and exact delegated grant/token/code rows. Independent state observation at 547.68s proves that original native access expires and actual access/refresh credentials rotate under the same session/grant; four public refresh rotations succeed. This is not an all-request continuity pass: two local urllib response-read timeouts interrupt private trials, including the last read of a nine-round probe. A paired diagnostic subsequently passes 24/24 actual HTTPX/urllib requests with matching hashes and max 0.68s. The cause remains unproven; no runtime defect, provider outage or new waiver is asserted. A separate public GHCR read times out before successful three-image verification. An initial 40-minute wait for connector authentication causes refresh rejection/revocation; its cause is not diagnosed from a missing earlier provider-expiry observation. Fresh reconnect and regular reads succeed. A passive restart observer crosses native access expiry; ordinary authenticated renewal succeeds and exact stored delegated rows are preserved. No lifetime extension, security bypass, hidden retry or failed-trial relabeling is used.
+
+The actual connected tool reads retained Wiki content after authentication, then returns exact retained Wiki/source citation about 23 minutes later without another login request. All 37 domain tables compare exactly across those later calls. The operator subsequently refreshes/reconnects and confirms the correct account name, cited Wiki/source read and repeated read without further login or unusual delay. Before reconnect, actual journal metadata shows token refresh 400 at 20:13:57 UTC after the last successful MCP read at 19:22:03 UTC, a 51.89-minute request gap; fresh authorization/token/MCP calls succeed from 20:14 UTC onward. The earlier native authority is no longer available, so its precise expiry/rejection mechanism is not established. Do not label this as proven one-hour idle expiry, a diagnosed provider rejection cause or a failure during continuous active use. The new authority has 28800-second absolute and 3600-second idle ceilings. Operator post-reconnect UI acceptance passes with this limitation retained.
+
+**Unrelated inventory and privacy:** Eleven unrelated instances have equal identities/metadata across each targeted update, manager restart and cleanup action window. One unrelated voice instance's digest changes between the windows; its group/version/node/flags and other metadata remain equal, and no agent action targets it. The strict whole-interval comparison fails and remains recorded. The operator knows of no independent work. Passive diagnosis confirms a distinct `update-module` task in that module’s own agent journal from 18:20:05 to 18:22:38 UTC, after the C0 targeted update has finished at 18:18:15 UTC. Corresponding API child-task targets identify the voice instance. Installed Core inventory code reads the stored `IMAGE_DIGEST`; this is not a guessed remote mutable-tag lookup. The separate update explains the between-window delta; its initiator remains unknown. Only passive operational metadata is collected, with no telephony traffic, service/configuration changes or rollback. Do not claim whole-interval inventory equality. Final bounded root app-container journal contains 289 actual entries with health/auth/token/MCP positive controls 7/4/17/50 and zero OAuth-query, 32 known-secret, generic-credential, JWT or traceback candidates. A separate follow-up bounded root app journal has 57 entries, health/auth/token/MCP controls 1/1/15/13 and the same zero-candidate privacy results, covering operator reconnect/read observations. Empty Podman logs are not substituted. See [final sanitized live evidence](https://github.com/Stell0/ns8-czero/pull/27#issuecomment-6299466957) and [operator/diagnostic follow-up](https://github.com/Stell0/ns8-czero/pull/27#issuecomment-6300848705).
+
+**Executed main verification:** [Full main 39489443427](https://github.com/Stell0/ns8-czero/actions/runs/39489443427) completes successfully at `73a04e1`. The actual local log passes **1499 cases without skips in 506.84s**. Independently downloaded reports pass Debian genuine M17 upgrade 21/no skips and Rocky installation 26/three expected skips/all eight browsers. Both workflow checkouts and all three installed candidate identities match this main source; 25 accessibility contexts, eight browser privacy guards and three actual query-artifact audits pass with zero candidates. Native renewal measures 336/338s, absolute bounds 122/131s and idle 78/66s, with native/public refresh rotation, revocation and reconnect checks. All five actual scan/SBOM pairs are inspected; inherited findings remain 166 app/413 database/7 UI, zero module/imageroot, as maintenance/release work. Full exact-source promotion proof passes. The successful canonical-publication artifact exactly matches the accepted main candidate; six fresh anonymous registry reads verify all three `main` and `latest` aliases, revisions/digests and immutable sibling references. Fresh reads also verify that the deployed `93b9546` candidate tag and all three digests remain unchanged and available. These main images do not replace the accepted deployment.
+
+**Remaining closeout:** [Separate documentation PR28](https://github.com/Stell0/ns8-czero/pull/28) changes only PLAN/README/AGENTS. Local UTF-8/diff/link checks and 69 CI-policy regressions pass. Initial draft checks pass documentation and correctly reject merge while draft; final ready-source checks and independent review remain required. Operator UI acceptance and the independent-update disposition are recorded; review/merge this separate Git-only three-document closeout and verify its actual lightweight main marker. No new runtime deployment is required for that marker. M19/further AM/Windmill work and both existing waivers stay unchanged.
+
+### Integration sequence after M20
+
+
+- **Integration M17:** verified-credential `get_profile`, OpenAI profile-only schema, matching text/structured results and optional profile metadata; persistent opaque per-account/per-instance identity with refresh/reconnect/update/restore tests and actual ChatGPT labeling.
+- **Integration M18:** accurate catalog descriptions/schemas/safety annotations over existing handlers; reproducible prompt evaluations covering evidence/citations, graph/objects, ambiguity, stale writes, denied changes and malicious retrieved instructions. Preserve names/contracts; add facades only with measured need.
+- **Integration M19:** optional disabled-by-default CIMD with deliberate internal client identity mapping, exact metadata/callback validation, public S256 clients, consent/roles, bounded safe HTTPS fetch/cache and DNS-rebinding/SSRF/TLS/redirect/size/time/error protections. Preserve approved UUID clients; no unrestricted DCR. Prove migration/upgrade/recovery and disposable acceptance before live enablement.
+
+Every follow-on milestone requires the same full cycle and updates to all three project documents. Core publication, if necessary, retains the immutable artifact -> released dependency/lock -> consumer-image verification sequence. The final integration checklist remains unaccepted until actual ChatGPT workflows, identity/permissions/metadata, optional CIMD, lifecycle, preserved data/recovery and per-milestone deployment evidence pass.
+
+
+## Structured object creation repair — active operator task
+
+This repair was completed before further ChatGPT integration work. Its evidence remains separate from the subsequent M16 operator acceptance above. The preserved M16 deployment draft is reconciled by this closeout; M17 is next after marker verification. Starting source/installation was main `1e14865123dc98ab51ad5c046f8a1637eeb51749`; accepted runtime is now M3 `9582568`, as recorded below. M1/M2 use `fix/structured-object-creation` in a separate checkout; M3 uses `test/structured-object-lifecycle` from accepted deployed main `a36d501`.
+
+### M1 — Root cause and regression reproduction [x]
+
+Trace: MCP `call` -> `OperationRegistry.execute` (persisted Admin + c0:admin) -> typed `OperationCatalog.invoke` -> objects `register`/`invoke` -> Core `ObjectService.register_type` -> `schema_validator` -> PostgreSQL insert. The reported unique string has no maxLength. Core's ordinary string default is 8192, while unique strings require maxLength <=128; `register_type` raises the existing `unique_string_too_long` before opening its insert transaction. REST replaces that code with `invalid_object_request`; MCP replaces its resulting HTTPException with `invalid_operation_request`. The deployed connector independently reproduces that generic error on an isolated unique name. No object type is created by the rejected request. Authorization, request serialization, supported required/additionalProperties keywords and migrations are not the root cause.
+
+Preserve the existing deliberate uniqueness bound and all schema/data isolation. The operator permits a precise validation error for unsupported reasonable constructs: do not silently truncate data, widen unique keys or inject schema constraints. Make the required explicit maxLength discoverable and return safe stable codes. No Core, dependency or database/schema change is planned. Reusable validation stays in Core; adapter error translation and tool guidance stay in the app.
+
+- [x] Commit/push independent REST and actual current/legacy SDK regression tests plus Core and bounded-schema positive controls. The three intended error-code assertions must fail before the fix; record those as reproduced failures, never passing tests. A reproduction-only red commit is not eligible for main or deployment.
+- [x] Inspect exact-source CI and retain the expected failure evidence before M2. Resolve unexpected failures first.
+
+### M2 — Minimal implementation fix [x]
+
+- [x] Preserve known safe object validation/conflict/not-found codes through REST and MCP using a fixed public allowlist; retain generic fallback for unexpected/private exceptions and unchanged permission/scope challenges. Advertise explicit unique-string maxLength <=128 and supported schema constructs in the existing tool input metadata.
+- [x] Verify focused and full applicable local checks, dependency/schema diff, exact-source local/image/released-Core/native CI; promote only passing source, verify main publication and all three immutable digests, update only the authorized C0 instance with the canonical native action.
+- [x] Wait for actual readiness; verify installed revision/digests, existing data/settings/schedules/unrelated modules and bounded log privacy. Use the actual connected MCP tool to create/retrieve a uniquely isolated bounded type. Preserve existing pilot data.
+
+### M3 — Complete validated CRUD regression [x]
+
+- [x] Cover minimal/multiple-property/required/closed schemas, get/list schema identity, valid objects, missing/wrong/extra fields, unique/type/revision conflicts, query/get/update/delete, Reader/Editor denial, insufficient/revoked authority, invalid/unsupported schema and safe unexpected-error fallback independently through REST and current/legacy MCP.
+- [x] Extend existing native OAuth/TLS probes with isolated complete typed CRUD. Freeze all three genuine deployed predecessors. Run full checks and exact CI/native/artifact gates, commit/push/main publication and supported targeted deployment with exact identity/persistence/privacy checks.
+- [x] Through the actual connected MCP integration, create a unique regression type, retrieve/list it, create Digit 5, get/query/update/re-read it, reject invalid data, delete it and verify absence. Keep immutable type definitions and audit events as the documented application contract; never delete pilot data or bypass validation with live SQL.
+- [x] Update all three documents with exact commits/CI/deployed digests/outcomes and limitations; distinguish actual connector execution from a separately operated ChatGPT UI prompt.
+
+
+**M1 local evidence:** Existing Core schema/PostgreSQL objects/REST/registry baseline: **34 passed**. New reproducer: **four controls passed, three intended assertions failed** (REST, current SDK, legacy SDK); each expected unique_string_too_long but received the adapter's generic error. Direct Core identifies that exact validation reason without inserting a type; the same type with explicit maxLength:128 is created/retrieved through all three transports. The actual authorized connected MCP reproduces invalid_operation_request on a unique isolated name with omitted maxLength. This is a deliberate reproduction-only red increment, not a deployable or accepted fix. Exact-source CI inspection follows its push.
+
+
+**M1 pushed/CI evidence:** `b0d3360073ebba342d2198a522beae1969ff6edd` is pushed on the repair branch. [Local CI 38781332473](https://github.com/Stell0/ns8-czero/actions/runs/38781332473) completed with exactly the three expected transport-code failures and **764 passing cases**; no unexpected failure remains. [Publication 38781332465](https://github.com/Stell0/ns8-czero/actions/runs/38781332465) completed/successful but is reproduction-only, not an accepted runtime and not deployed. M1's intentionally red diagnostic requirement is satisfied; M2 must repair those assertions before any main promotion or deployment. Baseline source `1e14865` additional main native 38776181165 is completed/successful and actual artifacts were audited: Debian install sixteen passes/three expected skips, Rocky upgrade twenty-six passes/all seven browsers/privacy guards, three artifacts with zero OAuth query candidates. Its separate M16 human scope-upgrade gate remains open.
+
+**M2 local candidate:** App-only error translation preserves fixed validation codes and bounded record path/keyword errors, plus existing 404/409 object codes. Unknown/private errors stay generic; persisted role checks and delegated scope challenges are unchanged. Current/legacy SDK and REST regressions include hostile unexpected diagnostics and actual discovery metadata. Focused checks: **53 passed**. JavaScript: **106 passed**; action-schema and shell checks pass; Robot dry-run: **19 passed**. Full Python/PostgreSQL/packaging suite: **786 passed**. Exact-source CI/deployment follow. Native upgrade fixtures now freeze all three actual deployed `1e14865` predecessor digests. Core, dependency lockfiles, migrations, schema and native actions remain unchanged.
+
+**M2 accepted evidence:** `a36d501fe57e49eae09d7c988d07f78889dfb286` is pushed on the repair branch and main. [Branch local 38783081447](https://github.com/Stell0/ns8-czero/actions/runs/38783081447), [publication 38783081348](https://github.com/Stell0/ns8-czero/actions/runs/38783081348), [released-Core image 38783081440](https://github.com/Stell0/ns8-czero/actions/runs/38783081440) and [native 38783418293](https://github.com/Stell0/ns8-czero/actions/runs/38783418293) completed/successful. Native artifacts prove Debian install sixteen passes/three expected skips, Rocky upgrade twenty-six passes/all seven browser/privacy workflows, and three XML/Pino artifacts with zero OAuth-query candidates. Main [local 38793073720](https://github.com/Stell0/ns8-czero/actions/runs/38793073720), [publication 38793073568](https://github.com/Stell0/ns8-czero/actions/runs/38793073568), [released-Core 38793073690](https://github.com/Stell0/ns8-czero/actions/runs/38793073690) and [native 38793477280](https://github.com/Stell0/ns8-czero/actions/runs/38793477280) also completed/successful; actual main artifacts prove Debian upgrade nineteen passes and Rocky install twenty-three passes/three expected skips/all seven browser/privacy guards, with the same three-artifact query audit.
+
+Supported targeted C0 native update exits zero. Trusted HTTPS/database/authentication/timer readiness and installed revision/all three immutable digests match. Twenty-seven domain tables, private settings/originals/schedules, sixty-two original terminal jobs and attempts and ten unrelated NS8 instances are unchanged across deployment. Actual authorized connector rejects the reported unbounded unique schema with **unique_string_too_long**, creates a uniquely isolated bounded type, returns it identically by get/list and leaves the rejected type absent. Both previous types remain identical. The connector initially requested accepted authentication and needed a subsequent retry; no call was claimed executed during that response. Final actual MCP calls succeed and bounded live logs contain health/MCP controls with no OAuth queries or tracebacks. Native CLI updates do not produce a corresponding API-server audit action row; the audit database was inspected, not claimed as an API update receipt. The single empty immutable regression type and its audit history intentionally remain; existing pilot data is preserved. Separate ChatGPT UI prompt orchestration is not observed.
+
+Freeze the genuine deployed M2 predecessors for M3:
+- `czero`: `sha256:8b9b6467bfc572546f52b85a4b41aac055db5c74d865d058b0e02cabef6c9290`
+- `czero-app`: `sha256:da47fe42c6a024a03e6891d5b73e2e23c2dff5e6f6ae2118af371e67b76db5fe`
+- `czero-postgres`: `sha256:e83291af1194709bd1d51026bdbcdbb327ddf0cef47c3868f1586c812bd8a80b`
+
+**M3 implementation subplan:** Extend independent REST/current SDK/legacy SDK cases for normalized schema variants, exact type discovery, complete CRUD, rejected records and schemas, duplicate type/unique keys, cross-type isolation, optimistic concurrency, Reader/Editor roles, insufficient delegated Admin scope and revocation. Extend the existing genuine installed TLS probe, invoked by real Admin consent, with isolated typed CRUD in both protocol modes; retain Reader/Editor/type-scope denial and positive/negative Host/Origin controls. Exercise the exact helper locally, including deliberately bypassed Origin and private cleanup, before native CI. No application/Core/schema/dependency change is anticipated. Freeze all three M2 images together. Final actual connector CRUD uses a new isolated runtime name and only its own record; immutable empty types/audit events remain by contract.
+
+**M3 local candidate:** **116 focused cases pass**, including independent REST/current/legacy type variants and complete validated CRUD, cross-type isolation, precise schema/record/conflict codes, missing/revoked authority and Reader/Editor/Admin-scope checks. The exact installed TLS helper performs two full typed lifecycles for the real fully scoped Admin consent fixture and asserts bounded completion evidence; lower roles and scopes still fail type registration. Both ordinary and deliberately bypassed Origin controls pass their intended assertions. The first focused run found four test-only SDK-lifespan errors (54 passed); using one manager lifespan per case fixes the fixture, and the rerun passed all 58 then-current cases before the final 116-case expanded focused pass. JavaScript 106, Go schemas, shell syntax and nineteen Robot dry-run cases pass. Full Python/PostgreSQL/packaging suite: **812 passed**. Exact-source CI/native/deployed CRUD results follow. App/Core/dependency/schema/native actions remain unchanged from accepted M2.
+
+**M3 pre-acceptance coverage correction:** `63614caee8bcaa4ad9ab1ea4b65e767cdd3ccafb` is pushed; producer publication and released-Core verification pass. Before native acceptance, review found that Debian skips browser fixtures: full Admin typed CRUD must also run through the existing non-browser real-SSO/explicit-consent probe. Add that canonical all-scope grant separately from existing read/write grants and require the exact fixture regression to observe it. The superseded native run 38813176233 is cancelled and is not counted as acceptance. Updated focused suite: **116 passed**; full rerun: **812 passed**. Final exact-source CI/native evidence follows. No runtime code or authorization policy changes.
+
+**M3 accepted runtime evidence:** `95825682e00246556f7d0c7314859a6a69e0074b` is pushed on `test/structured-object-lifecycle` and main, following regression increment `63614ca`. [Branch local 38813884240](https://github.com/Stell0/ns8-czero/actions/runs/38813884240), [publication 38813884373](https://github.com/Stell0/ns8-czero/actions/runs/38813884373), [released-Core image 38813889290](https://github.com/Stell0/ns8-czero/actions/runs/38813889290) and [native 38814221133](https://github.com/Stell0/ns8-czero/actions/runs/38814221133) completed/successful. Actual reports and job checkouts prove Debian upgrade nineteen passes and Rocky install twenty-three passes/three expected skips, all seven real browser/privacy workflows and three XML/Pino artifacts without OAuth query candidates. Both distributions execute the complete current/legacy typed lifecycle after real non-browser SSO and separate explicit Admin consent; the SDK fixture requires two completed lifecycles. Main [local 38817889591](https://github.com/Stell0/ns8-czero/actions/runs/38817889591), [publication 38817889489](https://github.com/Stell0/ns8-czero/actions/runs/38817889489) and [released-Core 38817894334](https://github.com/Stell0/ns8-czero/actions/runs/38817894334) completed/successful. [Main native 38818203858](https://github.com/Stell0/ns8-czero/actions/runs/38818203858) also completed/successful. Actual reports and job checkouts prove Debian install sixteen passes/three expected skips and genuine Rocky upgrade twenty-six passes, all seven browsers/privacy guards and three artifacts with zero query candidates.
+
+The supported targeted C0 update exits zero. All three installed revisions and immutable digests match the accepted main build; its latest aliases match too. Trusted HTTPS, database/authentication readiness and timer health pass. Twenty-seven domain tables, retained source files/private settings/schedules, sixty-five existing terminal jobs and attempts and ten unrelated NS8 instances are preserved across deployment. Core/app/schema remain 0.24.2/0.39.0/0013; no migration, dependency or Core release was needed. Native CLI updates have no corresponding API action audit row; the audit database was inspected without inventing such a receipt.
+
+**Actual connected MCP acceptance:** Twenty checked outcomes pass against the deployed endpoint. A fresh isolated type uses the requested four-property closed schema, required name/manufacturer and explicit unique name maxLength:128. Create/get/list succeed and all three previous definitions remain identical. Digit 5 is created at revision one, retrieved and queried by type/name/tag, updated with expected revision one and re-read at revision two. Duplicate type/name and stale update requests return object_conflict. Missing required fields, incorrect types, additional properties and an overlong name return their precise record_invalid path/keyword codes. Failed writes leave the saved record unchanged and create no partial rows. Delete with expected revision two succeeds; get returns object_not_found and the type query is empty. The type definition remains identical.
+
+Independent SQL/file observers preserve all pre-existing content, memberships, settings, originals and schedules while excluding only the new fixture's own type/events and normal account last_seen login bookkeeping. Exactly one new immutable empty type, zero regression records and three create/update/delete events for one object remain from M3. The earlier empty M2 type is preserved. No existing pilot or test fixture is modified. Actual bounded module-UID/container journald entries contain health/MCP positive controls with zero OAuth query candidates and no tracebacks. Existing approved connector authority was reused; no temporary live OAuth client was registered. A transient accepted-authentication response required retry before the first read; no unexecuted call was counted as success. The actual connected plugin was exercised; separate ChatGPT UI prompt orchestration is not observed.
+
+Freeze the genuine deployed M3 source above and all three digests for subsequent upgrades; documentation-marker images are not its replacement:
+- `czero`: `sha256:3169e03be328ccd4079402aa0038d5b24e288bf03a52b70d0d6e21f8713db6bf`
+- `czero-app`: `sha256:ef6e72dfdabcdbd9b7c78d1cb16993fb8192b17a015bc120acc4481537456157`
+- `czero-postgres`: `sha256:6db4092d1a83854b82c8ba251bf3ddce527a054b06378d30a7ccc2102a9db8f4`
+
+**Documentation completion:** This marker records already executed M1/M2/M3 evidence and freezes all three genuine deployed M3 images in the upgrade fixture. Its local full suite passes all 812 cases and its Robot dry-run passes nineteen cases. Verify its own exact-source local/publication/released-Core/native checks and actual final main completion; never infer success from a workflow start. Marker images are not deployed or substituted for the accepted runtime above. Separate Integration M16 operator acceptance is recorded above and is not inferred from the M3 connector exercise.
+
+
+## C0 Agent Memory — additional operator track
+
+This track is accepted for implementation before Windmill Gate. It does not
+renumber or supersede M00–M16 or the planned Integration M17–M20. Execute
+C0-AM0–AM6 in order and retain each milestone's local, exact-source CI,
+publication, disposable native, reviewed-main and targeted deployment gates.
+Windmill Gate stays blocked until final C0 deployment and acceptance.
+
+### C0-AM0 — Baseline and compatibility contracts [x]
+
+Starting main: `90649de1609f9ad75d4010552d37a89c8f05d0c6` (verified remotely).
+The supplied original worktree remains on `1e14865` with pre-existing document
+edits; preserve it. Work is isolated on `feat/agent-memory-am0`.
+
+- [x] Inspect current main's instructions, product contract, services, operation
+  catalog and REST/MCP adapters; retain the existing deterministic boundaries.
+- [x] Verify current main's actual completed successful local/publication/
+  released-Core/native runs (38960330953 / 38960330948 / 38960332185 /
+  38960603599). These establish predecessor CI, not AM0 acceptance.
+- [x] Read-only native inspection confirms the genuine deployed predecessor is
+  `95825682e00246556f7d0c7314859a6a69e0074b`, with the three frozen digests in
+  the accepted M3 section. Core/app/schema remain 0.24.2/0.39.0/
+  `0013_oauth_consent`; pgvector 0.8.7. Authentication/database/timer are healthy;
+  embeddings are disabled and scorer is off.
+- [x] Capture private read-only preservation inventories for all 27 domain tables,
+  87 terminal jobs and attempts, retained originals, settings/schedules and
+  existing module identities. Keep identities, content and access outside Git.
+- [x] Record current published main digests separately from installed digests
+  in docs/c0-agent-memory-baseline.md; all published revisions match 90649de.
+- [x] Run the unmodified full Python/PostgreSQL/packaging baseline: 812 passed
+  against the pinned disposable PostgreSQL/pgvector database. JavaScript 106,
+  schema/shell and nineteen Robot dry-run cases also pass.
+- [x] Freeze all 63 operation authorization records/schema hashes and REST
+  bindings; normal-HTTPS live metadata matches current main. Two new disposable
+  fixtures pass contract preservation and existing evidence/conflict/history
+  behavior with exact fixture-owned cleanup and no live-data dependencies.
+- [x] Commit/push candidate ebc38ef; verify completed successful local,
+  producer, released-Core and both-native checks with actual report privacy audits.
+- [x] Verify the documentation evidence marker, complete the operator review,
+  promote only reviewed passing source and verify main publication.
+
+The baseline adds no runtime, API or database change. Existing pilot knowledge,
+structured-object fixtures, approved clients and the working ChatGPT connection
+must survive all later milestones. CPU and interactive-Playwright waivers remain.
+
+### C0-AM1 — MCP-native text evidence ingestion [x]
+
+Reuse SourceService and its original/version/extraction/cleanup pipeline. Add
+`sources_ingest_text` to the shared typed REST/MCP catalog, Editor/c0:write only.
+Specify a UTF-8 byte limit below the one-MiB serialized MCP request budget,
+strict plain-text/Markdown/metadata validation and actor-scoped fingerprinted
+receipts. Check persisted authorization before replay and serialize retries
+with existing source revision rules. Return queued/ready/failed honestly; resolve
+immutable document/chunk identities with existing reads. Test actual evidence
+claims, duplicate/different-payload keys, concurrency, malformed Unicode, limits,
+revocation, interruption, REST/current/legacy parity and native recovery.
+Core changes require the immutable artifact/released dependency sequence.
+
+### C0-AM2 — Agent-friendly Wiki operations and errors [x]
+
+**Historical consent recovery (accepted at ece3e90):** During AM1 live acceptance, the operator
+reported `invalid_session` at `/oauth/consent`. An expired browser cookie still
+exists for longer than its native identity, and the consent GET currently
+rejects it instead of restarting sign-in. On `fix/expired-consent-session`, first
+prove the failure using a valid pending request and an actually expired stored
+session. Recover only that browser GET through the fixed normal login route,
+clearing the stale cookie and retaining the valid consent binding. Missing,
+expired or consumed consent requests, revoked membership, bearer attempts,
+API writes, database errors and all existing authorization checks must retain
+their rejection behavior. Do not extend any expiry or grant consent implicitly.
+Run the full suite and actual both-native tests before review/main/deployment.
+The later accepted ece3e90 deployment below resolves this server-side recovery
+gate; operator confirmation and actual connected citation reading are separately
+attributed. AM2 runtime acceptance is recorded at the end of this plan.
+
+Add exact-slug `wiki_pages_resolve` and create-only or expected-revision-checked
+`wiki_pages_upsert`, reusing Wiki receipts/revisions/events. Never infer overwrite
+permission from slug existence. Preserve old tools. Extend the fixed safe MCP
+error allowlist for not-found/conflict/invalid request/unready evidence, retaining
+scope challenges and role denial. Prove independent-writer races, replay,
+archive behavior, history, REST and both SDK protocol modes.
+
+### C0-AM3 — Protected knowledge spaces [x]
+
+Explicit product-contract extension: preserve legacy shared space/data and APIs;
+add Admin-managed spaces and persisted Reader/Editor grants under the application
+role ceiling. Inventory every Core/REST/MCP read/write, UUID resolver, history,
+original/citation, feed, traversal, extraction and derivative index before schema
+work. Require same-space references and atomic persisted-grant checks; selector
+is never authority. Keep immutable object-type definitions global across the
+instance; scope records, relations, events and annotations by space.
+Prove migration/preservation, revoked sessions, negative UUID/search/graph/feed/
+semantic/citation paths, disposable native upgrade/backup/restore, and only the
+necessary UI selector/management changes before deployment.
+
+### C0-AM4 — Scoped and structured knowledge retrieval [x]
+
+Add optional applicability/category/product/component/version/status/time/archive
+filters before candidate limits/ranking. Structured entity/object/claim categories
+are opt-in; preserve default source/Wiki results. Return typed stable references
+and evidence provenance, disclose unverified status, bound pagination and
+ordering, deduplicate, and preserve text-only/optional-provider fallback.
+Benchmark synthetic troubleshooting synonyms/commands/errors/components and
+large scoped corpora without unauthorized counts/excerpts/metadata.
+
+### C0-AM5 — Reliable consolidation and maintenance primitives [x]
+
+First measure reliability of existing primitives. Add bounded transactional
+`knowledge_bundle_apply` only if necessary, with one authorized transaction,
+expected revisions, receipts, ready-evidence checks and full rollback. Formalize
+applicable knowledge_type/status/confidence/observed_at/verified_at/product/
+applicable_versions/supersedes/source_references metadata, distinguishing unknown
+from verified. Preserve contradictions, history and citations. No execution,
+generative maintenance, inference of conclusions or workflow engine.
+
+### C0-AM6 — Agent documentation and integration tests [x]
+
+**Active operator priority (18 October 2026):** Implement AM6 now, ahead of Integration M20. M20 is deferred until AM6 is accepted; its unfinished Core/session/OIDC draft remains isolated on `feat/renewable-sessions` in `.cache/worktrees/m20-original` and is not a dependency, release or deployment candidate. Original documentation drafts and prior worktrees remain untouched. AM6 starts from verified main `58a2896` ([completed main validation](https://github.com/Stell0/ns8-czero/actions/runs/39158702780)); genuine installed predecessor remains AM5 `41864e4` with its three frozen digests below. M16 is accepted by operator direction.
+
+**Implementation decisions:** This milestone uses existing accepted Core 0.29.0/schema 0016 and all 76 operation names, handlers, roles/scopes and DTO contracts. No session policy, Core release, migration, new generative work or C0-AM7 work. A shared application guidance document supplies caller-filtered workflows to `/agents/capabilities.json` and authenticated MCP `c0://capabilities`, plus public OpenAPI guidance. Product instructions are human/agent help, not repository developer instructions or authorization. They cover explicit authorized-space selection, text/structured search, private investigation, sanitized text versus REST files, extraction/readiness/chunks/citations, claims/entities/procedures, revision-safe Wiki updates, annotation unknown/verified state, atomic consolidation, supersession/contradictions, retry/conflict/revocation and optional-index fallback. Do not widen tool discovery/invocation scopes or modify legacy schemas to document behavior.
+
+**Work plan / acceptance:**
+- [x] Preserve M20 and inspect accepted main, AM5 APIs/fixtures, runtime guidance and exact CI policy.
+- [x] Add the shared guidance and align reader copy tasks/developer reference/OpenAPI/repository docs. Current caller authority filters workflow availability; no private resource IDs/content enter public docs. Keep DOM text/link validation, generation/access-loss guards, no-store and prefix-safe URLs.
+- [x] Add actual independent current/legacy SDK clients using distinct grant credentials: discover authorized space -> read/search -> sanitize/ingest evidence -> wait extraction -> immutable chunks/citation -> revision-safe sourced update/annotation/consolidation -> close/reconnect -> search/reuse/history. Cover stale writer/reload, receipt retry, shared-space negatives, read-only/denied authority and malicious retrieved text as inert evidence. Reuse existing signed HTTP and installed TLS/SSO fixtures; no mocked SDK success claims.
+- [x] Run focused and full real PostgreSQL/Python/packaging/controller/schema/shell/Robot checks using an AM6-only disposable database. Freeze all three genuine AM5 upgrade images together. Extend actual native probes and privacy diagnostics without exposing private URLs/tokens/content.
+- [x] Open PR with no unsolicited reviewer. Require exact-source full `C0 merge gate`, both native reports, runtime/released-Core audits, all automated browsers and downloaded privacy artifacts. Review actual diff and promotion proof.
+- [x] Verify dedicated baseline, supported backup and candidate images, deploy only C0 through the canonical targeted update before merge, wait readiness and prove data/OAuth/settings/jobs/files/schedules/unrelated inventory preservation. Execute two independent authenticated SDK read/evidence/update/search/reuse sessions, browser/REST regressions, restart and bounded positive-control root app journal privacy. Keep private evidence outside Git and reversible fixtures isolated.
+- [x] Record actual source/digests/live results in PR, regular merge after acceptance, verify actual main CI/publication, then separate closeout branch/checks updating all three documents. Preserve deployed runtime as the next genuine predecessor. M20 and Windmill Gate stay deferred until AM6 acceptance; existing waivers remain.
+
+**Local evidence:** App 0.45.0/Core 0.29.0/schema 0016 verifies **1290 distinct Python/PostgreSQL/packaging cases**: frozen full run 1286 passes/four packaging setup errors from local disk quota (358.72s), followed by all six packaging checks passing after disposable cache/environment cleanup (47.78s), including both independent installs and real migrations. No source, dependency or test requirement changed for that environmental retry. The 56-case workflow/MCP/embedding/job isolation run passes (54.52s), including raw current/legacy initialization instructions, separate grant credentials and exact installed probe code. All **127 controller cases**, Go schema and shell syntax checks and **21 non-UI Robot dry-run cases** pass. Core source/schema/released tag and all transitive lock entries are unchanged.
+
+The first broad attempt was mixed-source while initialization guidance was being finalized and is not acceptance evidence. It also exposed retained native-probe atomic evidence/jobs after focused testing reused a database. Track only that probe's created protected-space IDs, remove their data/jobs and verify zero retained fixture sources/jobs; the subsequent combined isolation run and fresh final full-run non-packaging cases pass. Keep the failed private logs outside Git. Local SDK checks are not actual native/browser/live acceptance.
+
+**Initial read-only live baseline:** Normal SSH/host/UID/leader and dedicated module/node checks pass. All three genuinely installed AM5 revisions/digests match `41864e4`; auth/database/timer health passes. The fresh private preservation observer records 33 domain tables, 152 terminal jobs/attempts, six originals and eleven unrelated instances. This was the pre-implementation baseline; the completed AM6 acceptance and exact installed candidate are recorded below. Preserve both waivers and the separate M20 draft.
+
+Update human agent instructions, tools/capabilities, OpenAPI and repository docs
+for authorized-space discovery, search, private investigations, evidence ingestion,
+chunk resolution, claims, procedures/entities, supersession, conflicts and indexing
+fallback. Run two independent actual current/legacy SDK sessions through read ->
+evidence -> update -> search -> reuse, retaining original evidence and history.
+
+### Final C0-AM deployment gate [x]
+
+After applicable disposable/review/main-publication gates, back up and inventory
+only the authorized dedicated C0 instance; freeze all installed/published revisions
+and digests. Use the supported canonical native update. Verify migrations,
+readiness, unchanged pilot/fixture/OAuth/settings/job/schedule data and unrelated
+modules, all-role/scoped MCP, ingestion/extraction/claims, Wiki conflicts,
+structured retrieval, protected-space isolation, text/fallback search,
+cross-session persistence, restart/recovery and bounded positive-control journald
+privacy. Store private evidence outside Git and only use clearly owned new live
+records. Record exact accepted commit/digests/schema and actual test evidence.
+No Windmill Gate implementation starts until this gate passes.
+
+
+**AM0 baseline inspection:** See [source, image and contract report](../../docs/c0-agent-memory-baseline.md).
+Read-only live PostgreSQL custom-format snapshot (131263 bytes) and preservation
+inventories stay private. This is not a native encrypted-backup acceptance test.
+No live record/client/grant is added or mutated. The first registry inspection
+hit a network timeout; a separate successful retry verified all three actual
+manifests/config revisions. The default SSH configuration had invalid permissions;
+using an explicit empty local SSH config retains normal host-key verification
+without changing client/host settings. The pinned local PostgreSQL image is ready. Downloaded predecessor native
+reports prove Debian installation sixteen passes/three expected skips and Rocky
+genuine upgrade twenty-six passes/all seven browser/privacy guards; three actual
+XML/Pino artifacts contain zero OAuth-query candidates.
+Unmodified Python/PostgreSQL/packaging baseline passes all 812 cases (179.02s).
+The new focused AM0 suite passes two cases. JavaScript passes 106 cases; Go schema,
+applicable shell syntax and nineteen Robot dry-run cases pass.
+
+
+**AM0 implementation review:** The increment adds only three documentation updates,
+a baseline report, two synthetic fixture files and two PostgreSQL-backed tests;
+there is no runtime/Core/dependency/migration/image/native action change. The
+legacy fixture preserves all 63 existing role/scope/read-only requirements and
+REST bindings, with recorded original DTO schema hashes. The investigation uses
+random owned slugs and disposable actors, real immutable extracted chunks,
+conflicting claims, independent service reads, text search, revision history,
+retry receipts, stale-write rejection and original cleanup. This is baseline
+Core behavior, not an actual external-SDK acceptance claim. The combined full suite passes all 814 cases (178.40s), including the new
+fixtures and packaging. There is no skipped PostgreSQL acceptance case.
+
+
+**AM0 read-only preservation recheck:** All 27 domain-table hashes, 87 original
+terminal jobs and attempts, configuration, retained originals and schedule hashes
+remain identical. The bounded root journald query uses the verified module UID
+and app-container filter: 301 actual lines include a health positive control,
+with zero OAuth-query candidates and no tracebacks. No logger/host setting is
+changed and no private log entry is included in repository evidence.
+
+
+**AM0 local result:** 812 unmodified baseline cases and the complete 814-case
+combined Python/PostgreSQL/packaging suite pass, plus 106 script cases, Go action
+schemas, applicable shell syntax and nineteen Robot dry-run cases. Diff review
+confirms only documentation and Git-only test/fixture additions. The existing
+released Core pin, all runtime/API/schema bytes and native upgrade predecessors
+remain unchanged. Exact-source candidate publication/native now pass as recorded below;
+AM0 remains unchecked until marker/review/promotion gates pass. AM1 has not started.
+
+
+**AM0 exact-source candidate evidence:** `ebc38ef379f38091a26e71feaf786bf933511617`
+passes [local 38969601803](https://github.com/Stell0/ns8-czero/actions/runs/38969601803),
+[PR local 38969632762](https://github.com/Stell0/ns8-czero/actions/runs/38969632762),
+[producer publication 38969601814](https://github.com/Stell0/ns8-czero/actions/runs/38969601814),
+[released-Core image 38969634892](https://github.com/Stell0/ns8-czero/actions/runs/38969634892)
+and [both-native 38969906935](https://github.com/Stell0/ns8-czero/actions/runs/38969906935),
+all completed/successful. The actual local log confirms 814 Python/PostgreSQL/
+packaging cases, 106 script cases and nineteen Robot dry-run cases. Downloaded
+native reports prove Debian genuine 9582568 upgrade nineteen passes and Rocky
+installation twenty-three passes/three expected update-only skips, all seven
+real browser workflows and seven privacy guards. Three actual XML/Pino artifacts
+contain zero OAuth-query candidates. Module-info and test-job logs corroborate
+the exact candidate source despite workflow_run's default-branch head SHA.
+
+Anonymous OCI manifest/config inspection verifies these candidate images all
+carry revision `ebc38ef379f38091a26e71feaf786bf933511617` and the module references
+both matching branch siblings. They are not deployed and do not replace the
+accepted installed 9582568 predecessor:
+
+| Image (`feat-agent-memory-am0`) | Verified candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:7b6b6cc1b904b3983176d8ea47e5aa57619a478e5c578eb2bc565ea57e3b1175` |
+| `ghcr.io/stell0/czero-app` | `sha256:ae377213d3d4f3c73f29da50e32c452f41372d245a0ff60b4f463dabc65bff45` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:04eea4fd1d1dfac5bed866fe5df64da5ec37261677d076a49765a2c1532420ec` |
+
+[PR 3](https://github.com/Stell0/ns8-czero/pull/3) is assigned to the author and
+has no requested reviewer; the operator says they will review it. This is a
+review intention, not approval, and no approval is inferred. This documentation
+follow-up records already executed candidate evidence without changing the two
+new tests, fixtures or any runtime/API/schema bytes. Verify its own actual CI
+before promotion. AM0 remains open for marker verification, review and main
+publication. AM1–AM6 and Windmill Gate have not started; no live update is needed
+for a Git-only baseline and none is performed.
+
+
+**AM0 accepted main and operator-requested deployment (16 October 2026):**
+The operator reviewed/merged [PR 3](https://github.com/Stell0/ns8-czero/pull/3)
+at `b66e159960941d6d06e527f71a76966fbff44166`, whose tree equals reviewed
+`189b73e`. Main [local 38976923884](https://github.com/Stell0/ns8-czero/actions/runs/38976923884),
+[publication 38976924021](https://github.com/Stell0/ns8-czero/actions/runs/38976924021),
+[released-Core 38977073247](https://github.com/Stell0/ns8-czero/actions/runs/38977073247)
+and [native 38977184381](https://github.com/Stell0/ns8-czero/actions/runs/38977184381)
+completed/succeeded. Actual local logs confirm 814 Python/PostgreSQL/packaging,
+106 script and nineteen Robot dry-run cases. Downloaded exact-source native
+reports prove Debian genuine upgrade nineteen passes and Rocky installation
+twenty-three passes/three expected skips, all seven browser/privacy workflows;
+three XML/Pino artifacts have zero OAuth-query candidates.
+
+After those gates, the operator explicitly requested deploying merged AM0.
+A supported C0-only native backup to the existing local destination completed;
+its new one-off schedule is disabled and all five existing backup configurations
+are preserved. Restic full data verification, required configuration/source files
+and actual pg_restore listing of the 131573-byte custom dump pass. The supported
+canonical native update targets only the dedicated C0 instance. Installed images
+all match `b66e159`; these are now the genuine AM1 upgrade predecessors:
+
+| Image (`main`) | Verified installed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:aee8db5a18c8f7a03311fdeb15f5f6b5cb11058d6f89ad321a2947f189a9d95a` |
+| `ghcr.io/stell0/czero-app` | `sha256:de337c3a66427a1aa94c20e16632b3a07b4c219fd9533473e0ac0f861d5ce037` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:149159f5d1ce8ead7c01fb29df7c8571ab727b2fa871b6ba41fd8c561251f88c` |
+
+Post-update health/auth/database/timer checks pass. All 27 domain-table hashes,
+89 original terminal jobs/attempts, OAuth grant/token/code/consent rows, settings,
+originals and schedules are preserved, as are eleven unrelated module identities.
+All 63 operation contracts match; Core/app/schema remain 0.24.2/0.39.0/0013.
+Actual connected MCP current/historical Wiki reads and object-type discovery equal
+the saved pre-update results. The connector requested renewed authentication and
+then succeeded on retry, both before and after the update; this is distinguished
+from persisted-row preservation. A bounded root journal sample has 22 actual
+lines, health/OAuth/MCP positive controls, zero OAuth-query candidates and no
+tracebacks. No logger or host configuration changed. An initial post-update
+journal sample preceded the health entry; the subsequent bounded sample contains
+it. Backup verification initially assumed an absent `errors` status field;
+independent verification used the actual native `success` field and snapshot,
+without rerunning or replacing the successful backup. Private evidence stays
+outside Git. AM0 is accepted; no AM1 feature has yet been deployed.
+
+**AM1 implementation subplan:** First extract the existing Wiki receipt
+transaction helper without changing its fingerprint/result/lock contract, then
+add `SourceService.ingest_text` through the same source writer and extraction jobs.
+Bound UTF-8 body to 131072 bytes, require nonempty plain/Markdown text and a
+fingerprinted actor-scoped key, validate metadata/title/revisions, preserve original
+provenance during explicit source versioning, authorize before replay and after
+waiting for the receipt lock, and retain queued receipts as submission snapshots.
+Prove concurrent retries/updates, rollback/interruption/recovery, ready chunks and
+claims in actual PostgreSQL. Publish a compatible additive Core minor 0.25.0 only
+after that exact increment's local/producer/both-native gates; existing app 0.39
+continues using its released 0.24.2 pin until publication. Then require/pin released
+0.25.0 and add app 0.40 `sources_ingest_text` plus typed REST JSON ingestion through
+the shared catalog. Preserve multipart upload and all legacy bindings. Bound raw
+JSON to one MiB and return static validation errors without echoing evidence.
+Exercise real current/legacy SDK Reader/Editor/Admin, scopes, revoked clients,
+REST parity, ready citations and sourced claims. Extend genuine native recovery/
+backup and TLS probes, freeze all three actual deployed b66e159 predecessors,
+run full applicable checks, and document actual results before review/promotion.
+
+
+**AM1 Core increment local validation (17 October 2026):** The additive
+0.25.0 Core candidate implements text submission through the existing source
+writer and jobs, sharing Wiki's unchanged actor/key receipt fingerprints, result
+snapshots and advisory-lock identifier. Authorization is rechecked after lock
+waits. Source title/provenance stay fixed on explicit version additions. There is
+no migration, no application text operation and no deployed feature yet. The
+existing app supports this compatible Core minor while its default Git/tag/lock
+still pins released 0.24.2; no silent local substitution occurs.
+Focused source/Wiki/claim checks pass 72 cases; the complete existing/new suite
+passes **847 Python/PostgreSQL/packaging cases** (233.29s), plus 106 scripts,
+Go schema checks with writable cache, shell syntax and nineteen Robot dry-run
+cases. Six additional independent wheel/archive checks pass with a copied client
+running outside the checkout: actual text ingestion, worker extraction, database
+reconnect/replay, immutable citation/hash and default original cleanup all pass
+without FastAPI or the NS8 SDK. New text validation includes malformed Unicode,
+NUL/empty/oversized content, byte boundary and worst-case JSON envelope budget;
+concurrency, actor/operation key conflicts, revoked/forged actors, revocation
+while waiting, transaction/extraction rollback, and real sourced claims pass.
+Native tests now freeze the three genuinely deployed b66e159 predecessors.
+Exact-source CI/publication/native and immutable Core artifact gates remain
+pending; do not promote this Core-only increment as AM1 acceptance.
+
+
+**AM1 immutable Core publication:** Source
+`02d3e49409f3b1de5cbaaa8e71aa3651fc6d97ae` passes actual
+[push local 39015983794](https://github.com/Stell0/ns8-czero/actions/runs/39015983794),
+[PR local 39016021789](https://github.com/Stell0/ns8-czero/actions/runs/39016021789),
+[producer 39015983797](https://github.com/Stell0/ns8-czero/actions/runs/39015983797),
+[released-Core 39015983814](https://github.com/Stell0/ns8-czero/actions/runs/39015983814),
+[PR released-Core 39016021881](https://github.com/Stell0/ns8-czero/actions/runs/39016021881)
+and [both-native 39016144918](https://github.com/Stell0/ns8-czero/actions/runs/39016144918).
+Actual local logs confirm 847 Python/PostgreSQL/packaging, 106 script and nineteen
+Robot dry-run passes. Audited native reports/checkouts prove exact source,
+Debian genuine b66e159 upgrade nineteen passes and Rocky installation twenty-three
+passes/three expected skips, all seven browser/privacy workflows and three
+XML/Pino artifacts with zero OAuth-query candidates. All three producer OCI
+manifest/config revisions match this source.
+
+[Core artifact publication 39017891130](https://github.com/Stell0/ns8-czero/actions/runs/39017891130)
+completed successfully after independently rechecking exact-source local/native
+statuses. [core-v0.25.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.25.0)
+is immutable and published, distinct from an NS8 module release. Actual downloaded
+assets match their published SHA256SUMS:
+
+- `czero_core-0.25.0-py3-none-any.whl`: `07b3412924399f43d77d883d04ce8350c4f008aa4a9467a885e3c01f73de738e`
+- `czero_core-0.25.0.tar.gz`: `8c6bb130a812a44efbe9b25c3c4afebe8cef24e5d9e8bf17f4e281f9a80e31d1`
+
+The Core increment was moved to a new branch after a commit-body formatting check;
+old duplicate jobs were cancelled and no remote history was force rewritten.
+Only exact corrected source 02d3e49 above authorizes the release. No private
+credentials, destination details or report entries are committed.
+
+**AM1 application implementation:** App candidate 0.40.0 requires released Core
+>=0.25.0,<0.26.0 and pins core-v0.25.0/subdirectory/02d3e49 in uv.lock. Schema
+remains 0013. The shared catalog exposes Editor/c0:write `sources_ingest_text`
+through typed REST JSON and both MCP modes; legacy multipart/63 bindings remain.
+One-MiB raw JSON bounds and static validation errors cover malformed Unicode,
+JSON, metadata, extra fields and oversized text without echoing evidence. A new
+regression reproduces the SDK's malformed-envelope diagnostics reflecting input;
+the existing transport guard now bounds/sanitizes those HTTP 400 responses,
+retaining standard error codes and fixed resource-error/correlation semantics.
+It does not replace or bypass SDK validation. Existing scope/role challenges,
+Host/Origin guards and successful output remain unchanged.
+
+Actual local current/legacy Editor SDK sessions ingest, poll, retrieve real
+immutable chunks, create sourced claims, compare REST responses, revise, reject
+stale writers and replay across independent client sessions. Reader, write-only,
+scope-upgrade, disabled-client, CSRF and safe-error cases pass. Native fixture code
+adds real timer-driven extraction and current/legacy claim/replay proof, plus
+source versions/receipt/citation verification after restart/update/backup/restore;
+its exact signed-HTTP/SDK helper tests pass locally. No native pass for these new
+application probes is claimed until the final application's actual CI completes.
+A full pre-envelope-fix local run passes 859 cases; targeted final protocol checks
+pass 89 cases. The actual worker-interruption regression recovers a running failed
+attempt, preserves the receipt and completes real evidence on retry. Root native
+Renovate API tests pass 0.25.x patch/minor/prerelease bounds while preserving the
+original example's 0.24.x range. UI/scripts, Go/shell and nineteen Robot dry-run
+checks pass. Final full-suite/artifact checks and application CI remain pending.
+
+
+**AM1 final application local result:** Complete current app 0.40.0/Core 0.25.0
+source passes **862 Python/PostgreSQL/packaging cases** (317.79s), including the
+SDK malformed-envelope red regression and bounded static-response fix, preserved
+resource errors and service-failure recovery. All 89 targeted final protocol/app
+cases passed before the additional fallback-response case; the full 862-case run
+includes it. Actual downloaded release assets separately pass all six packaging
+checks (79.98s) with the immutable source epoch, reproducibility, independent
+wheel/archive clients and real packaged PostgreSQL migrations. UV lock resolves
+only app 0.40.0 and Core 0.25.0/02d3e49 changes, with no transitive dependency
+upgrade. The default released-source local image assembly/audit is running; exact
+final application publication/released-image/Renovate/both-native CI, review,
+main promotion and live validation still gate AM1 acceptance.
+
+
+**AM1 exact application candidate evidence:**
+`84f64b11ece90fc3d0891688c6b994eb03070979` passes
+[push local 39018677609](https://github.com/Stell0/ns8-czero/actions/runs/39018677609),
+[PR local 39018681483](https://github.com/Stell0/ns8-czero/actions/runs/39018681483),
+[producer publication 39018677621](https://github.com/Stell0/ns8-czero/actions/runs/39018677621),
+[push released-Core 39018677635](https://github.com/Stell0/ns8-czero/actions/runs/39018677635),
+[PR released-Core 39018681487](https://github.com/Stell0/ns8-czero/actions/runs/39018681487),
+[push Renovate 39018677616](https://github.com/Stell0/ns8-czero/actions/runs/39018677616),
+[PR Renovate 39018681530](https://github.com/Stell0/ns8-czero/actions/runs/39018681530)
+and [both-native 39018828794](https://github.com/Stell0/ns8-czero/actions/runs/39018828794),
+all completed/successful. Actual local logs confirm 862 Python/PostgreSQL/
+packaging and 106 script cases. Downloaded native reports prove Debian install
+sixteen passes/three expected upgrade-only skips and genuine Rocky b66e159
+upgrade twenty-six passes, including all seven real browser/privacy workflows.
+Each distribution's test-job checkout independently contains the exact candidate
+SHA. Both have two passing real-SSO/SDK verification keywords; the exact probe
+requires two complete text-evidence lifecycles for each write grant, including
+ready chunks, sourced claims and replay through current/legacy SDK modes.
+Native seed/recovery now preserves two text versions, their queued submission
+receipts, immutable documents/chunks/citations and conflict behavior across
+restart, update and encrypted clean restore. Three actual XML/Pino artifacts
+contain zero OAuth-query candidates. No live feature acceptance is inferred.
+
+Anonymous OCI manifest/config checks verify all three candidate revisions and
+matching sibling references. These **candidate** digests are not deployed and
+do not replace the actual b66e159 predecessor:
+
+| Image (`feat-agent-memory-core`) | Verified 84f64b1 candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:a1b3439f6ffa842d01b5834107b5ae397bc6094ac5296d0ec53524de18aa0665` |
+| `ghcr.io/stell0/czero-app` | `sha256:ceaf829a137b6c003c21aba10113ce548c842329af262be967144dee4b37bcf8` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:03f080ec76b46fd6fa0b928011960d8b6c106b38ae88e34b9aea643ad665bc86` |
+
+The actual local default released-source image builds and passes runtime/license
+and immutable Core-source audits: installed Core is released 0.25.0/02d3e49, not
+an implicit local substitution. Official-checksum-verified Dive 0.13.1 completes
+layer analysis with 98.12% efficiency (local image 203191932 bytes, 5657573
+inefficient bytes). Five actual producer SARIF/CycloneDX pairs are inspected:
+166 app/413 database/7 UI findings, zero module/imageroot findings; respective
+SBOM component counts are 131/145/142/0/0. All finding IDs are vulnerability
+advisories; no secret findings appear. The fixable-critical gate passes, but
+vendor findings remain release/maintenance work, not a clean-security claim.
+
+[Draft PR 4](https://github.com/Stell0/ns8-czero/pull/4) tracks this complete AM1
+candidate, assigned to the author with no requested reviewer. This evidence-only
+documentation follow-up changes no runtime/API/dependency/schema/test bytes.
+Verify its own exact-source checks before requesting review, then require
+reviewed main promotion/publication and the authorized dedicated deployment /
+live preservation and evidence cycle before accepting AM1 or starting AM2.
+The installation remains accepted AM0 b66e159; Windmill Gate remains gated.
+
+**AM1 reviewed main and targeted deployment (17 October 2026):** The operator
+merged PR 4 as `48937e1195589285876b49ff601a5f7df9534545`. Its tree matches
+reviewed bfb9745. Actual completed/successful checks are
+[local 39023485414](https://github.com/Stell0/ns8-czero/actions/runs/39023485414),
+[producer 39023485411](https://github.com/Stell0/ns8-czero/actions/runs/39023485411),
+[released-Core 39023485404](https://github.com/Stell0/ns8-czero/actions/runs/39023485404),
+[Renovate 39023485438](https://github.com/Stell0/ns8-czero/actions/runs/39023485438)
+and [both-native 39023648148](https://github.com/Stell0/ns8-czero/actions/runs/39023648148).
+Downloaded reports prove Debian installation sixteen passes/three expected skips,
+genuine Rocky b66e159 upgrade twenty-six passes, all seven real browser/privacy
+workflows, both exact source checkouts and three actual XML/Pino artifacts with
+zero OAuth query candidates.
+
+A supported C0-only native backup on the existing local destination succeeds;
+the new one-off plan is disabled afterward and all seven original plans remain
+unchanged. Restic full data check, required state files and actual pg_restore
+listing of the 133395-byte PostgreSQL dump pass. A follow-up verifier initially
+expected the whole repository's snapshot count to equal this one plan's count;
+correct timestamp-based verification passes without rerunning the backup.
+Anonymous registry checks time out twice; retained failures and successful retry
+are distinct. All three main manifests/config revisions are verified immediately
+before `update-module` targets only the authorized C0 instance with canonical
+main. The native command succeeds; installed versions are Core 0.25.0/app 0.40.0/
+schema `0013_oauth_consent`, vector 0.8.7. Normal trusted HTTPS proves all 63 old
+operation metadata records unchanged and the additive 64th operation present.
+
+These three **actually installed 48937e1** images are frozen together for future
+genuine native upgrades, replacing b66e159; no marker images are substituted:
+
+| Image (`main`) | Verified deployed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:125f424880bb810c3ae1e62e15709d89f51b1ca2624b0ccbbb8793de41896512` |
+| `ghcr.io/stell0/czero-app` | `sha256:b2a35e7e5f0d24e9c7d61c038e912a3bd5b89dcb91d7e78b01b8ddbf515f7c1e` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:ae408cdafc483f238ede89697f9110b5300d4b1a31aec8650721a6b5825b4391` |
+
+Exact update inventories preserve all 27 domain-table aggregates, 101 original
+terminal jobs/attempts, OAuth grants/tokens/codes, retained originals, private
+configuration, schedules and eleven unrelated module identities. A reconnect
+adds one pending consent; filtering by its bounded creation interval separately
+proves the three original consent rows' exact aggregate remains unchanged.
+Nothing is deleted to force a comparison pass.
+
+Actual normal-SSO OAuth authorization and both current/legacy SDK sessions pass
+text ingestion, real timer extraction, immutable chunks/citation, a sourced claim,
+REST replay parity and changed-payload conflict using new isolated synthetic
+records. A supported full module-manager restart succeeds. Initial probes before
+readiness fail and remain private; after normal readiness, two fresh SDK sessions
+retrieve the exact receipt/chunks/citation/claim again. The owned temporary client
+is disabled and its subsequent authenticated read is rejected. Original jobs,
+attempts, configuration and schedules also pass post-manager-restart comparison.
+A bounded actual root journal has 119 lines, health and MCP positive controls,
+zero OAuth query candidates, zero submitted credential/token matches and zero
+tracebacks. Private credentials, URLs, client/fixture identities and failed probe
+evidence remain outside Git. No new ChatGPT UI, live Reader/Editor matrix,
+provider quality, stable module release or CPU-quota acceptance is claimed.
+
+The operator reports `invalid_session` on the consent page after reconnecting.
+Server diagnostics show the native identity bounds both browser and delegated
+authority to about five minutes, with zero refresh-expiry mismatches. A stale
+cookie causes the consent GET to reject instead of initiating normal login;
+three real database-backed regressions reproduce this 401. AM1's deployed text
+cycle passes, but this reported connection blocker must be resolved before
+AM2. The intervening focused recovery subplan above is active; no live hotpatch
+or authorization lifetime extension has been made.
+
+**Consent recovery local result:** App 0.40.1/Core 0.25.0/schema 0013 passes
+870 complete Python/PostgreSQL/packaging cases (173.70 seconds), 106 script
+cases, Go/schema and shell checks, and nineteen Robot dry-run cases. The eight
+new cases cover expired/unknown/malformed cookies, invalid/expired/disabled-client
+pending requests, valid session/role/bearer/database rejection behavior and the
+exact installed recovery helper through signed local HTTP. The initial full run
+finds stale app-version assertions and an older native-helper adapter; those
+are corrected and the final full run passes. Native acceptance additionally
+requires real disposable SSO after fixture-only session expiry. Only app patch
+metadata changes; released Core dependency/transitives and schema remain fixed.
+These are local results, not yet exact-source CI/native/review/deployment of the
+recovery fix. Its PR opens without a requested reviewer and waits for operator
+review after actual CI succeeds. The reported live consent failure is not
+silently marked accepted; AM2 remains gated.
+
+
+**AM1 and consent recovery accepted deployment (17 October 2026):** The operator
+reviewed and merged PR 5 as `ece3e90848886b6d975037445daa34224c92dcbd`.
+Its tree matches reviewed `3156f0f`. Actual main checks pass:
+[local 39029321531](https://github.com/Stell0/ns8-czero/actions/runs/39029321531),
+[producer 39029321540](https://github.com/Stell0/ns8-czero/actions/runs/39029321540),
+[released-Core 39029321541](https://github.com/Stell0/ns8-czero/actions/runs/39029321541)
+and [native 39029498664](https://github.com/Stell0/ns8-czero/actions/runs/39029498664).
+Local logs prove 870 Python/PostgreSQL/packaging and 106 script cases. Actual
+native reports prove Debian installation sixteen passes/three expected skips,
+genuine Rocky 48937e1 upgrade twenty-six passes, seven browser/privacy workflows,
+two successful real-SSO probes per distribution, exact checkouts and three
+XML/Pino artifacts with zero OAuth query candidates.
+
+A new supported C0-only backup succeeds; its plan is disabled afterward and all
+eight existing plans remain unchanged. Full Restic read-data verification, required
+state files and pg_restore listing of the 135898-byte database dump pass. Canonical
+native update targets only the authorized dedicated C0 instance after immediate
+three-image verification. Installed Core/app/schema are 0.25.0/0.40.1/
+`0013_oauth_consent`. All 27 domain-table aggregates, exact delegated rows, original
+104 terminal jobs/attempts, private configuration, retained originals, schedules
+and eleven unrelated module identities survive the update. Trusted HTTPS retains
+all 63 legacy operation metadata records and the additive text operation.
+
+The live fixture lets its own native session expire naturally, proving the stale
+cookie and actual invalid_session response before deployment. After deployment,
+normal trusted-HTTPS sign-in returns a new cookie and resumes the same pending
+consent with exact client/user/scopes. Missing-CSRF approval fails. The first
+positive approval response times out after consumption; that private failure is
+retained, and a fresh explicit PKCE/state/resource-bound authorization succeeds.
+Both current and legacy actual SDK clients pass ingestion, real timer extraction,
+immutable documents/chunks/citations, a sourced claim, REST replay and changed-body
+conflict. Fresh normal native sign-in and explicit consent precede a supported
+full-manager restart; readiness then fresh SDK replay/browser session pass.
+The owned client is disabled and bearer reuse rejected. All sixteen existing
+client descriptors, original jobs/attempts, configuration/files/schedules and
+unrelated modules remain unchanged after the new isolated records and restart.
+Fifteen domain-table aggregates are unchanged; excluding only the new fixture
+source/entity/claim IDs proves exact original aggregates in ten further content
+tables. The remaining account/client changes are normal owner last_seen and the
+owned client disable; all old client descriptors are compared independently.
+A bounded root app journal contains 150 actual lines, health/MCP positive controls,
+zero OAuth query candidates, zero submitted credential/token matches and zero
+tracebacks. Private credentials are removed after cleanup; private fixture IDs,
+URLs and failed evidence stay outside Git. This proves the reported server-side
+recovery path, not an independently observed ChatGPT UI reconnection or a live
+all-role matrix. AM1 is accepted; AM2 may start. Windmill Gate remains gated.
+
+These three actually installed `ece3e90` images replace 48937e1 together as the
+genuine AM2 native predecessor; no documentation-marker image is substituted:
+
+| Image (`main`) | Verified deployed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:4a511797d4943771b1b30e022b76567a2705ac2bc2538d91ca5b3751eb489c6f` |
+| `ghcr.io/stell0/czero-app` | `sha256:b3b926b7050b79cf46ef31c21fc51ff310659688ed55f5dfaa75ba3a3f40db19` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:bfba1acd571b3b151f8198579beac4734dcbb946e79ed3b290c1bb4dc979fc91` |
+
+**AM2 implementation subplan:** First release additive Core 0.26.0 with schema
+0013 unchanged. Resolve only exact validated slugs; archived pages require explicit
+include_deleted. Upsert without expected_revision is create-only; with it,
+update-only. Existing/archived create and stale/archived update conflict; missing
+update is not-found. Reuse actor-scoped global receipt serialization, persisted
+Editor rechecks, immutable revisions/events and existing DTO/hash semantics.
+Keep old create/update fingerprints unchanged. Add a KnowledgeConflict subtype
+for real chunks whose parent evidence version is not ready, checking readiness
+inside the claim transaction. Prove races across two persisted Editors, loser
+reload/retry, original snapshot replay, rollback, revocation during lock waits,
+limits and old-operation/history/reference compatibility. Independent installed
+wheel/archive clients exercise resolve/upsert/reconnect/history outside checkout.
+
+After exact Core local/producer/released-consumer/both-native successes, publish
+immutable core-v0.26.0 and verify downloaded artifacts before app 0.41.0 pins its
+exact tag/subdirectory/commit. Add shared wiki_pages_resolve/upsert REST/MCP
+operations (66 total), preserving all 64 old contracts. New routes use static
+validation errors and bounded JSON; old route validation remains unchanged.
+Map only trusted knowledge operations to fixed safe error codes, preserving
+scope challenges, role denial and existing object errors. Test REST and actual
+current/legacy SDK clients, role/scope/revocation matrices and private-error
+fallback. Extend native SSO/SDK and persistence for immutable Wiki history and
+receipts through restart/update/restore. No UI, generative operation or automatic
+maintenance is needed. Full local/exact-source image/released-Core/both-native
+and privacy gates precede human review, main publication and C0-only deployment.
+
+**AM2 Core increment local result:** Core 0.26.0/schema 0013 candidate passes
+904 complete Python/PostgreSQL/packaging cases (236.72 seconds), including 34 new
+Wiki/readiness cases. Independent wheel/archive installations prove exact slug
+resolution, create-only conflict, revision history and original receipt replay
+after reconnect, alongside text evidence. All 106 JavaScript cases, Go/schema,
+shell syntax and nineteen Robot dry-run cases pass. App remains 0.40.1 and its
+released Core tag/lock remain 0.25.0; the temporary compatible range permits the
+explicit local 0.26 producer. Genuine ece3e90 predecessors are frozen together.
+No new REST/MCP operation is exposed yet. Exact-source CI/native and immutable
+artifact publication must pass before the application increment.
+
+**AM2 transport preparation:** While exact Core source `6093219` runs native
+acceptance, uncommitted application adapters add exact-slug GET before the UUID
+route and bounded POST upsert. Thirty explicitly registered knowledge operations
+use fixed safe MCP errors; other domains and the object mapper are unchanged.
+All 64 accepted operation metadata/input/output schemas are frozen and compared,
+with only the two new operations added. Actual current/legacy SDK tests exercise
+two persisted Editors racing, loser reload/retry, original receipt snapshots,
+immutable history, old tools, role/scope/revocation and private-error fallback.
+Native helpers exercise both SDK lifecycles plus retained upsert receipts/history
+through app reconstruction and installed update/backup/restore. Released pin and
+app version remain unchanged pending verified Core publication.
+
+**AM2 adapter local result before released pin:** The corrected full suite passes
+956 Python/PostgreSQL/packaging cases (236.51 seconds), with 106 scripts,
+Go/schema/shell and nineteen Robot dry runs. Fifty-two new adapter cases pass
+separately. Both real SDK modes retain sourced claims, immutable citations and
+entity-page references while upsert creates a new Wiki revision (two additional
+focused assertions pass). The first helper reconstruction test used the default
+legacy prefix and is corrected to explicit hostname-root routing. Two client-
+disable tests initially supplied a string instead of the existing Core UUID
+parameter; correction passes both focused and full runs. Failed evidence stays
+private. This is the explicit local Core development setup, not a released-pin
+image or native acceptance of the application adapters. Core source 6093219's
+producer/released-image/local CI pass; both-native acceptance is still pending.
+Actual five SARIF/CycloneDX pairs retain 166 app/413 database/7 UI vulnerability
+findings and zero module/imageroot findings; component counts are 131/145/142/0/0.
+All rule IDs are vulnerability advisories and the fixable-critical gate passes.
+These are retained vendor findings, not a clean-security claim.
+
+The explicit local-Core prototype image also builds and passes runtime/development-
+file and declared Core-license audits. With its required assigned module ID and
+synthetic database URL, both new routes and the typed readiness exception import
+from the actual installed packages (app 0.40.1/Core 0.26.0). An initial import
+without required startup configuration rejects as designed; no database-readiness
+claim is made for that synthetic URL. Actual Dive analysis reports 203202881-byte
+image size, 5657573 inefficient bytes and 98.12% efficiency. This prototype is not
+published or deployed; final released-pin checks remain required.
+
+**Operator consent confirmation:** The operator now confirms a fresh connector
+authorization completes. An actual call through the reconnected MCP connector
+retrieves the previously created immutable evidence citation with the exact same
+chunk identity and source hash. This is observed connector reading, in addition
+to the normal-SSO current/legacy SDK write/evidence/restart tests above. No claim
+is made that the session's available pre-AM1 tool descriptions have refreshed; fresh
+SDK discovery independently verifies the deployed 64-operation catalog.
+
+After that observed reconnect/read, a separate bounded root app journal has 28
+actual lines with health/MCP positive controls, zero OAuth query candidates,
+zero bearer-token candidates, zero submitted evidence-marker matches and zero
+tracebacks. No logging configuration is changed.
+
+**AM2 Core exact-source/native and immutable publication:** Source
+`609321953602b8364075528fc80d8ab3169f612b` passes actual
+[local 39032938828](https://github.com/Stell0/ns8-czero/actions/runs/39032938828),
+[producer 39032938672](https://github.com/Stell0/ns8-czero/actions/runs/39032938672),
+[released-Core 39032938687](https://github.com/Stell0/ns8-czero/actions/runs/39032938687)
+and [native 39033114798](https://github.com/Stell0/ns8-czero/actions/runs/39033114798).
+Actual reports prove genuine Debian ece3e90 upgrade nineteen passes, Rocky
+installation twenty-three passes/three expected skips, all seven browser/privacy
+workflows and two actual SSO/SDK probes per distribution. Three XML/Pino artifacts
+have zero OAuth query candidates; both actual checkout logs match 6093219. A
+partial Debian log request before the run completed is unavailable and retained
+privately; the final downloaded complete logs supply the source proof.
+
+These Core-increment branch images are verified candidate artifacts, not deployed
+predecessors; ece3e90 remains installed and frozen for genuine AM2 upgrades:
+
+| Image (feat-agent-memory-wiki at 6093219) | Verified candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:df1d99edafba83941c020dac8ae5b1419e58a8cec031e01d0526bb806c42abc1` |
+| `ghcr.io/stell0/czero-app` | `sha256:af46fe37caf309ef39ba2a0793f9085f6ec414d45a6b40cb370bdc1b23da7cec` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:f494f88561424eafd8af8f230a1adfe1b7a92b6f5b07beb5e210746da455a59d` |
+
+The exact-source publication verifier passes before creating `core-v0.26.0` at
+6093219. [Publication 39035418922](https://github.com/Stell0/ns8-czero/actions/runs/39035418922)
+completes successfully and [Core 0.26.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.26.0)
+is published immutably, independently of an NS8 module release. Downloaded assets
+match SHA256SUMS and all six checks of those actual artifacts pass (46.32 seconds):
+clean wheel/archive installs without app/NS8 SDK, repeated fresh PostgreSQL
+migrations preserving identity, exact text evidence plus Wiki revisions/replay
+through reconnect, license/metadata and reproducible rebuild hashes.
+
+| Actual released asset | Verified SHA-256 |
+| --- | --- |
+| `czero_core-0.26.0-py3-none-any.whl` | `8035afd5510b91ffbb3ae7fa67fda98b532e97b2f9d77d790f4680a4de3bac59` |
+| `czero_core-0.26.0.tar.gz` | `4d9ef2ad03c4b9bfe82db70c10a7ca24a421c9e31da17c2faf0b30ab930b249c` |
+
+**AM2 application increment:** App 0.41.0 now pins released core-v0.26.0,
+subdirectory and exact 6093219 commit, compatible `>=0.26.0,<0.27.0`. All 53 other
+locked package records remain unchanged. The current consumer CI and actual
+Renovate API test follow the new compatible patch line; the original independent
+0.24 consumer is unchanged. Thirty trusted knowledge operation names receive
+fixed structured MCP errors; unknown HTTP status/detail, including malformed
+status types, falls back to service_unavailable. Existing object mapping and
+scope challenges remain intact. Final local/image/CI/native/review/main/live
+gates remain required; this is not an AM2 deployment or acceptance claim.
+
+**AM2 released-pin final local result:** App 0.41.0/released Core 0.26.0/
+schema 0013 passes 958 full Python/PostgreSQL/packaging cases (221.76 seconds),
+106 scripts, actual Renovate API bounds, Go/schema/shell and nineteen Robot
+dry-run cases. The two additional SDK cases prove malformed HTTP status types
+cannot escape the fixed service_unavailable fallback. The real default released-
+source image builds and passes runtime/license and immutable Core Git-source
+verification; installed app/Core are 0.41.0/0.26.0 and both new routes are present.
+The separate consumer probe initially still allowed only minor 0.25; its bound
+is updated with the CI bound and verification passes against the same image.
+Actual Dive reports 203202744 bytes, 5657573 inefficient bytes and 98.12%
+efficiency. The synthetic import probe does not establish database readiness.
+All 64 old schemas/roles/scopes and bindings remain unchanged; two operations
+are added. PR 6 remains draft until this complete app source's CI, native,
+artifact/privacy and review gates pass. The installation remains ece3e90.
+
+**AM2 application exact-source candidate:**
+`cf3e9c9e0f2bb276f456deec26a4b6fc10ae34c1` passes completed
+[local 39036120655](https://github.com/Stell0/ns8-czero/actions/runs/39036120655),
+[producer 39036120607](https://github.com/Stell0/ns8-czero/actions/runs/39036120607),
+[released-Core 39036120595](https://github.com/Stell0/ns8-czero/actions/runs/39036120595)
+and [Renovate 39036120620](https://github.com/Stell0/ns8-czero/actions/runs/39036120620).
+The downloaded local report confirms 958 actual Python/PostgreSQL/packaging and
+106 script cases. Five actual SARIF/CycloneDX pairs retain 166 app/413 database/
+7 UI vendor findings, zero module/imageroot findings and component counts
+131/145/142/0/0. All rule IDs are vulnerability advisories; the fixable-critical
+gate passes. No clean-security claim is made.
+
+All three actual OCI manifests/configs match cf3e9c9, including dependency
+metadata. These are candidate images, not deployed predecessors:
+
+| Image (feat-agent-memory-wiki at cf3e9c9) | Verified candidate digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:43747ea5246db2a05a0e166cb0f2957c1f0ebbc8c54b6f34e67e41513031702b` |
+| `ghcr.io/stell0/czero-app` | `sha256:2861ffc6ba0ffe7acd3f0883e294558d698125ab6f5b2413635c07c3435d2f23` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:13079f2dc4e2ba04efa82d606aba0f029e69d34d07fffe1befc138623a370abd` |
+
+Native [39036302061](https://github.com/Stell0/ns8-czero/actions/runs/39036302061)
+completes successfully. Actual downloaded reports pass Debian installation sixteen
+cases/three expected skips and genuine Rocky ece3e90 upgrade twenty-six cases,
+including all seven browser/privacy workflows and two real SSO/SDK probes per
+distribution. Three actual XML/Pino artifacts contain zero OAuth query candidates;
+the actual checkout logs independently match cf3e9c9 for each distribution.
+The checked helper requires two current/legacy Wiki resolve/upsert/conflict/replay/
+history/archive lifecycles for each write-capable probe, retaining the old tools;
+installed recovery also verifies original actor-owned receipts and revisions.
+SDK stdout is intentionally suppressed by the private native fixture: successful
+probe keywords and checked exact helper assertions supply this coverage evidence.
+
+This final evidence marker requires its own exact CI/native checks before human
+review. Reviewed main publication and dedicated C0-only backup/update/live
+acceptance remain mandatory. No AM2 deployment is claimed; genuine ece3e90 images
+remain the deployed predecessor. AM3 and Windmill Gate remain gated.
+
+The retained 150-line positive-control live ingestion journal is also checked
+against the submitted text and its unique prefix: zero matches. This extends
+the earlier query/token privacy audit without changing logging configuration.
+
+A separate baseline/current OpenAPI binding comparison also retains all 64 old
+REST bindings exactly and adds only GET resolve/POST upsert. The first capture
+selected the default wrapper instead of the hostname-root application and yields
+no route metadata; the corrected explicit-root comparison passes. This is route
+metadata verification, not a synthetic-URL database-readiness claim.
+
+
+**AM2 reviewed main and accepted dedicated runtime (17 October 2026):**
+The user authorizes autonomous promotion after documented diff review and passing
+checks. Complete review of Core transaction/receipt compatibility, safe transport
+errors, released dependency, independent-writer/rollback/role/scope tests and
+actual candidate artifacts finds no blocker. No independent human review is
+claimed. PR 6 merges as `1a45070b61fb263b826258a37255a00e12299454`, with the
+exact reviewed 6235f6f tree. Final candidate marker 6235f6f passes completed
+[local 39038784201](https://github.com/Stell0/ns8-czero/actions/runs/39038784201),
+[producer 39038780899](https://github.com/Stell0/ns8-czero/actions/runs/39038780899),
+[released-Core 39038784222](https://github.com/Stell0/ns8-czero/actions/runs/39038784222)
+and [native 39038975377](https://github.com/Stell0/ns8-czero/actions/runs/39038975377).
+Actual downloaded candidate reports verify Debian upgrade nineteen passes,
+Rocky installation twenty-three passes/three expected skips, all seven browser/
+privacy workflows and three artifacts with zero query candidates. Both exact
+checkouts and two real SSO/SDK probes per distribution are audited.
+
+Main 1a45070 passes completed
+[local 39044090505](https://github.com/Stell0/ns8-czero/actions/runs/39044090505),
+[producer 39044090536](https://github.com/Stell0/ns8-czero/actions/runs/39044090536),
+[released-Core 39044090526](https://github.com/Stell0/ns8-czero/actions/runs/39044090526),
+[Renovate 39044090518](https://github.com/Stell0/ns8-czero/actions/runs/39044090518)
+and [native 39044311513](https://github.com/Stell0/ns8-czero/actions/runs/39044311513).
+Actual local logs prove 958 Python/PostgreSQL/packaging, 106 script and nineteen
+Robot dry-run cases. A fresh independent PostgreSQL run passes all 88 AM2 cases;
+the exact private live Wiki/scope helpers also pass two disposable real-transport
+cases. Main native reports prove Debian installation sixteen passes/three
+expected skips, genuine Rocky ece3e90 upgrade twenty-six passes, all seven
+browser/privacy workflows, two real SSO/SDK probes per distribution, both exact
+checkout revisions and three XML/Pino artifacts with zero query candidates.
+Five actual main SARIF/CycloneDX pairs retain 166 app/413 database/7 UI vendor
+findings and zero module/imageroot findings, with component counts
+131/145/142/0/0. The configured fixable-critical gate passes; no clean-security
+claim is made. All three manifests/configs and sibling references match main.
+
+A supported C0-only pre-update backup succeeds and its owned one-off plan is
+disabled afterward; all nine prior backup-plan metadata records remain unchanged. Full Restic read-data verification, required private
+state and pg_restore listing of the 2260790-byte database dump pass. Immediately
+reverified main images precede the canonical supported update of only the
+explicitly authorized dedicated instance. Trusted HTTPS is actually ready at
+Core/app/schema 0.26.0/0.41.0/0013. All 27 original domain-table aggregates, exact
+delegated rows, 110 original terminal jobs/attempts, settings/schedules/retained
+files and eleven unrelated module identities survive before any new fixture.
+Normal HTTPS retains all 64 old operation metadata/bindings and adds only the
+two Wiki operations (66 total).
+
+Fresh ordinary trusted-HTTPS owner SSO and explicit CSRF-protected PKCE consent
+precede isolated current/legacy SDK workflows: text ingestion, actual timer
+extraction, immutable chunks/citations, ready sourced claims, exact-slug lookup,
+create-only upsert, revision-checked updates, real stale-write conflicts and
+three immutable page revisions. Original receipts replay unchanged through
+independent SDK connections and REST parity. Separate read-only grants receive
+the exact write-scope challenge in both protocols; new explicit consent enables
+write replay without refresh escalation. A fresh native sign-in and explicit
+consent provide a verified 299-second token window before the supported
+full-manager restart; immediate new SDK sessions and the signed-in browser
+retain exact evidence/history/receipts after real readiness. The owned client
+is disabled persistently and its just-verified bearer is rejected.
+
+The existing connected integration separately retrieves the exact original AM1
+citation before update, then the new SDK-created citation and historical Wiki
+revision after restart. Citation fields and historical content match exactly;
+that connector still reads after the isolated client is disabled. Its available
+cached catalog remains 63 operations: no refreshed catalog or new-tool invocation
+through that connector is claimed. Live role coverage is the verified owner;
+the complete role/scope matrix remains disposable evidence.
+
+Final observers preserve every original row hash across 27 domain tables,
+projecting out only normal account last_seen bookkeeping. All seventeen old
+client descriptors, 110 original terminal jobs/attempts, private/public settings,
+schedules, retained files and eleven unrelated module identities are unchanged.
+All three exact installed images, database/authentication and enabled/active
+healthy timer survive manager restart. A bounded root journal selected by the
+verified module UID/app container and actual update start has 272 lines, actual
+health/authorization/token/MCP controls, zero OAuth query candidates, zero issued
+credential/token/cookie matches, zero submitted source/Wiki body matches and
+zero tracebacks. The recent HTTP API audit rows were inspected but contain no
+matching native CLI update; action receipt and exact installed-image/preservation
+observers supply the update evidence. No logging policy is changed and no API
+audit correlation is claimed. Failed audit evidence stays private;
+only the temporary credential copy is removed. The original operator auth file,
+older checkouts and their unfinished documentation are preserved.
+
+AM2 runtime acceptance passes. This documentation closeout marker requires its
+own actually completed exact-source checks, review and successful main
+publication before AM3 starts. AM3–AM6 and Windmill Gate remain gated; the
+Integration M17–M20 roadmap stays separate. No documentation-marker image is
+deployed as a substitute for the genuine runtime below.
+
+These three **actually installed 1a45070** images replace ece3e90 together as the
+genuine AM3 upgrade predecessor:
+
+| Image (`main`) | Verified deployed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:181a8ae5eaeb606ad473bf6a029b0901db1840bc9987d8d5485949e58792ee91` |
+| `ghcr.io/stell0/czero-app` | `sha256:133b220f6eaec6bee1f67fa09deaad6489d002b30ac834aafa9234d6576faef2` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:a5c6a0eee9516d0bfff2c216f50e50c38a802f3eb9b676d7f7f4d6bfd6ce14d1` |
+
+
+**AM2 closeout marker verified on main (17 October 2026):** PR 7 merges the
+reviewed documentation marker d87321d as main
+`65829d4676e68005f5c03fbcfe084d492d613aaf`, with an identical tree. Its exact
+branch checks and actual native reports pass (local 39047452670, producer
+39047449001, released-Core 39047501317, Renovate 39047504222, native
+39047651934: Debian upgrade nineteen passes, Rocky installation twenty-three
+passes/three expected skips, all seven browsers/privacy guards and zero query
+candidates across three actual artifacts). Final main passes
+[local 39051174303](https://github.com/Stell0/ns8-czero/actions/runs/39051174303),
+[producer 39050203421](https://github.com/Stell0/ns8-czero/actions/runs/39050203421),
+[released-Core 39050216936](https://github.com/Stell0/ns8-czero/actions/runs/39050216936),
+[Renovate 39050219112](https://github.com/Stell0/ns8-czero/actions/runs/39050219112)
+and [native 39050419623](https://github.com/Stell0/ns8-czero/actions/runs/39050419623).
+The first local job completes successfully but its workflow aggregate remains
+pending; its retained metadata is separate from the fresh completed/successful
+same-source local dispatch used here. Actual final main logs prove 958 full
+cases/106 scripts/nineteen Robot dry runs. Downloaded native reports prove Debian
+installation sixteen passes/three expected skips and genuine Rocky upgrade
+twenty-six passes, all seven browser/privacy workflows, two actual SSO/SDK probes
+per distribution, both tested checkout revisions and three artifacts with zero
+query candidates. All three main manifests/configs and five scan/SBOM pairs are
+verified; vendor findings remain unchanged. The dedicated instance is rechecked
+and retains every exact 1a45070 deployed digest and healthy database/authentication/
+timer. The documentation marker is not deployed. AM2 closeout passes; AM3 starts
+from verified 65829d4, freezing the actual 1a45070 images above as predecessor.
+
+**AM3 implementation subplan:** Release additive Core 0.27.0 with packaged forward
+migrations 0014 for the space catalog and 0015 for content ownership, and app
+0.42.0 only after the Core artifact
+sequence. Preserve instance_metadata.knowledge_space_id as the permanent legacy
+shared identity, existing identifiers/content/history and old omitted-selector
+semantics. Object-type definitions stay global. All other content ownership,
+uniqueness, derivative rows, references, events and receipts are space-bound.
+No invalid/unauthorized selector may fall back to shared. Reader/Editor grants
+are explicit for protected spaces and capped by current application membership;
+application Admins have access to every space under actual OAuth scopes. No
+per-client grant model is introduced.
+
+First prove persisted space discovery/creation and revisioned Admin grant
+management, then cover objects/relations/history, source versions/documents/chunks/
+originals, Wiki/revisions/aliases, claims/evidence/graph/feeds/receipts, retrieval
+and indexing. Use a trusted immutable service selector rather than mutable global
+request state; selectors never supply authority. Recheck current application and
+space roles in Core reads/mutations and after lock waits/provider work. Preserve
+verified delegated authority through fresh Actor reconstruction so grant deletion
+cannot be defeated by a queued invocation or later regrant. Denied space roles
+must precede insufficient-scope challenges. Grant changes serialize with existing
+role/grant lock ordering and invalidate affected delegated grants atomically.
+Retain old shared fingerprints and receipt snapshots; protected receipt keys and
+fingerprints bind their space. Same-space parent/target checks and database
+constraints must reject cross-space references even for an Admin able to read both.
+Historical/deleted events retain their own ownership, and private writes must not
+leak through shared feed counts/cursors.
+
+Before transport exposure, execute a full application-role x grant x OAuth-scope
+matrix and negative direct-UUID/history/feed/original/citation/graph/retrieval
+paths, replay/revocation races and same-name/key/content in separate spaces.
+Carry trusted parent ownership through extraction/index jobs, never authority
+from arbitrary payload fields. Filter authorization before candidates/provider
+inputs and recheck after optional external work. Test actual wheel/archive
+installations outside checkout, repeated migration and old-column projections
+that prove every pre-migration field/ID unchanged despite added ownership fields.
+
+After exact Core local/producer/released-consumer/both-native and artifact/privacy
+gates, publish immutable Core artifacts and verify checksums/independent installs.
+Only then pin its exact released tag/subdirectory/commit and compatible updater
+range in the app. Add optional space selectors to typed content REST/MCP, discovery/
+creation/grant operations and space-qualified resources while retaining legacy
+resource semantics and shared schemas. The application selector and Admin grant
+controls must clear private content on changes/access loss and reject late replies;
+retain existing Tools drafts/replay/CSRF/current-role guards and no new NS8 actions.
+Extend actual native TLS/SSO/browser/update/backup/restore fixtures, preserving
+private stdin/URLs and inspecting real output artifacts/checkouts. Complete diff
+review, exact main publication and canonical C0-only backup/update/live owner
+fixtures/restart/privacy/preservation precede AM3 acceptance. Other personas stay
+disposable; preserve all pilot data and existing clients/working connection. No
+CPU-quota change, inference behavior or stable module release is included.
+
+AM3 foundation local evidence: the initial catalog regression fails on the
+missing service; the captured-token and missing-scope regressions fail before
+the authority fix. Corrected Core catalog/grant/delegation tests pass, including
+write-only tokens, current-role caps, tombstone replay and independent-admin
+revision races. The full local suite passes 967 Python/PostgreSQL/packaging
+cases, 106 scripts, actual Go schema compilation, shell syntax and nineteen
+Robot dry runs. A stale schema assertion found by the first full run is fixed;
+failed output is retained privately. Core 0.27.0 remains an unpublished
+development candidate; the application retains its exact released 0.26.0 pin
+and lock. The catalog is not exposed by application transports. Content
+ownership/authorization, jobs/indexing, transport/UI, native/main/publication
+and live deployment acceptance remain required before AM3 can close.
+
+AM3 Core content increment implements the immutable `in_space` service selector,
+forward ownership migration 0015, scoped root/derivative reads and writes,
+per-space slug/alias/source/object uniqueness and composite same-space references.
+Types remain global. Shared receipts keep their exact fingerprint and snapshot;
+protected keys/fingerprints bind their space. Separate public feed cursors retain
+old IDs and sequence positions while hiding private activity. A focused regression
+first reproduces a backwards cursor when the old sequence exceeds retained rows,
+then passes the corrected migration. Source job ownership follows stored parents;
+documents/chunks/Wiki chunks/embeddings retain that space. Content writes hold
+role/client/grant authority through commit after mutation waits, and captured
+delegations cannot survive revocation/regrant. Trusted operation preauthorization
+precedes scope challenges, and expanded discovery filters cannot grant invocation
+authority. Retrieval filters before limits/counts/provider inputs and uses a
+scoped exact-distance fallback for underfilled approximate scans.
+
+Local validation passes 1040 Python/PostgreSQL/packaging cases, 106 scripts,
+schema/shell checks and twenty Robot dry runs. Seventy new content cases include
+63 actual role/grant/scope combinations (unsupported consent requests are denied),
+direct UUID/history/original/citation/graph/reference negatives, same-space SQL
+constraints, a queued writer spanning revoke/regrant, and seventy private pages
+beyond candidate limits with isolated provider input/counts. The fresh schema-0013
+upgrade fixture compares every old column of every predecessor table after two
+migrations, preserving real OAuth grant/token authority, shared UUIDs and old
+receipt replay. Targeted cursor/job-reference migration regressions pass after
+review fixes. Failed private logs are retained. Actual wheel/archive installations
+exercise private evidence/Wiki/reconnect and a separate owned Core space workflow.
+The latter is added to disposable native Robot acceptance; its dry run is not a
+native pass or a real SSO observation. Core 0.27.0 is not published, app remains
+0.41.0 with its exact released 0.26.0 source/lock, and the dedicated instance is
+unchanged. Exact-source CI/native/artifact gates and Core publication remain
+required before the app imports the new space API; final AM3 transport/UI,
+main/deployment/live/restart/backup/preservation gates remain open.
+
+
+**AM3 Core released, application acceptance pending (17 October 2026):**
+Immutable `core-v0.27.0` names source
+`86a7f7f513d971646fc460ae1708cc0e3a8d46f0`. Its completed exact-source
+[local checks](https://github.com/Stell0/ns8-czero/actions/runs/39057044012)
+pass 1040 Python/PostgreSQL/packaging cases, 106 script cases, schema/shell
+checks and twenty non-UI Robot dry-run cases. Actual
+[producer images](https://github.com/Stell0/ns8-czero/actions/runs/39057044055),
+released-consumer and Renovate checks pass. All three image configurations,
+revisions and sibling references were inspected. The five downloaded SARIF/SBOM
+pairs pass their required audits; retained findings are not a clean-scan claim.
+
+The completed [native run](https://github.com/Stell0/ns8-czero/actions/runs/39057223957)
+tests that actual checkout on Debian installation (seventeen passes, three
+expected skips) and genuine AM2 Rocky upgrade (twenty-seven passes, including
+all seven browser workflows). Both actual reports pass the new installed Core
+space probe and two genuine SSO/SDK probes each. Seven browser privacy guards
+and all three downloaded query-audit artifacts pass with zero query candidates.
+The installed Core probe uses trusted disposable fixture authority; it is
+separate from browser and delegated-token observations. The earlier foundation
+native run was superseded, not passed.
+
+[Publication](https://github.com/Stell0/ns8-czero/actions/runs/39059770936)
+passes independent artifact verification before publishing
+[Core 0.27.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.27.0).
+The downloaded wheel SHA-256 is
+`80c4c15d9568186949126c9ee8d648333b0ca7c2153843840783cf03552006dd`;
+the normalized archive SHA-256 is
+`85403eeea87e50365a8f9bfb35e48cbbe29a807ddfbe461062b04d1eb99de9dd`.
+Both match published SHA256SUMS. All six independent checks pass again against
+those exact downloaded assets, including reproducible rebuilds, separate clean
+wheel/archive installs and packaged PostgreSQL migrations.
+
+Application 0.42.0 now pins this exact released tag/subdirectory/commit; its
+compatible dependency and Renovate bounds allow only 0.27.x patches. Transitive
+versions remain unchanged. Its pending transport/UI increment adds five typed
+space/grant operations, optional content selectors and three qualified resource
+templates while preserving old omitted-selector behavior. UI tests cover
+selector changes, role loss, delayed replies, literal names and grant revision/
+retry guards. Native recovery now seeds protected grants, Wiki history, evidence
+and records before encrypted backup, and verifies exact identities after update
+and clean restore. A new independent-session browser fixture exercises creation,
+role caps, Reader/Editor grants, manager restart and revoked-view clearing.
+These new native application fixtures still require execution; this is not an
+AM3 application/deployment acceptance claim. The dedicated instance remains the
+accepted AM2 runtime `1a45070` with its frozen predecessor digests above.
+
+
+Application review also reproduced private headings/drafts and catalog labels
+remaining after access loss, plus guide actions using the broader application
+role. Focused regressions fail before fixes and all 124 UI cases pass afterward.
+The guide now reads the effective selected-space role and rejects late capability
+responses. Private catalog labels, article headings/navigation, Tools drafts and
+result counts clear together. Recovery fixtures include a protected retained
+original with exact hash and cross-space negative download checks. The new
+application fixture/CI/live gates remain pending.
+
+The final UI review also closes delayed Administration bootstrap responses and
+clears derived counts when context changes. All 124 script cases pass. Pinned
+Renovate 44.161.0 accepts only the new 0.27.x patch range while retaining the
+independent original consumer's 0.24.x range. Twenty non-UI and eight browser
+Robot dry runs pass locally; browser dry runs are not runtime acceptance.
+
+Final application development validation passes **1048 actual Python/PostgreSQL/
+packaging cases**, **124 script cases**, schema/shell checks, twenty non-UI Robot
+dry runs and eight browser dry runs. The protected native recovery helper also
+passes independently against signed local HTTP, including its retained original.
+All new native fixtures remain unaccepted until exact-source image/native runs
+execute; no live AM3 update has occurred.
+
+
+The initial application released-image run built and audited its runtime, then
+failed because its independent runtime probe still required Core 0.26.x. The
+probe now requires 0.27.x, matching the released pin, workflow and updater bounds.
+The failed report is retained privately; fresh exact-source CI is required for
+the focused fix. The immutable published Core source/artifacts are unchanged.
+
+
+Application source `f263ad7` passes actual local CI (1048 Python/PostgreSQL/
+packaging cases, 124 scripts, twenty Robot dry runs), producer, released-Core and
+Renovate checks. Its three actual OCI revisions/digests/sibling references and
+five downloaded SARIF/SBOM pairs are verified; vendor findings remain. Native
+run 39061168752 passes Debian installation (seventeen passes, three expected
+skips), both real SSO/SDK probes and protected native update/clean restore. Rocky
+passes twenty-seven cases, including the new protected-space browser, but fails
+the existing home workflow: anonymous space discovery resets its public heading
+to "Knowledge". The failed report is retained. A focused regression reproduces
+this reset; reader clearing now restores each page's public heading while
+removing private content. All 125 script cases pass after correction. Fresh
+exact-source publication/native gates remain required; no AM3 promotion or live
+update has occurred, and published Core 0.27.0 is unchanged.
+
+
+### AM3 runtime acceptance — 17 October 2026
+
+Reviewed application source `38c3e08ba5077eca0de483ad6c4db5d5f6d3780d`
+passes actual [local CI](https://github.com/Stell0/ns8-czero/actions/runs/39063970974)
+(1048 Python/PostgreSQL/packaging cases, 125 scripts, twenty non-UI Robot dry runs,
+schema/shell), [producer](https://github.com/Stell0/ns8-czero/actions/runs/39063971000),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39063971134)
+and [Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39063974570).
+Actual [native reports](https://github.com/Stell0/ns8-czero/actions/runs/39064154289)
+pass Debian genuine AM2 upgrade twenty cases and Rocky installation twenty-five
+cases/three expected skips. All eight browser workflows and privacy guards,
+twenty-five numeric accessibility contexts, two actual SSO/SDK probes per
+distribution and both protected update/clean restores pass. Downloaded reports
+and three OAuth-query artifacts are audited; both actual tested checkouts match.
+The prior failing home-heading report remains preserved privately.
+
+The complete reviewed diff preserves all 53 transitive lock packages and exact
+published Core bytes. [PR 8](https://github.com/Stell0/ns8-czero/pull/8) is merged
+autonomously under the operator's promotion authorization; no independent human
+review is claimed. Resulting main `cb60da9fdc3e8c2cac2555e704a9af760999d9ef`
+has the identical reviewed tree and actually completed successful
+[local](https://github.com/Stell0/ns8-czero/actions/runs/39066559757),
+[producer](https://github.com/Stell0/ns8-czero/actions/runs/39066559742),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39066559663),
+[Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39066559698)
+and [native](https://github.com/Stell0/ns8-czero/actions/runs/39066732493) gates.
+Main local counts remain 1048/125/twenty. Actual native reports pass Debian
+installation seventeen cases/three expected skips and genuine Rocky AM2 upgrade
+twenty-eight cases, all eight browsers/privacy guards, twenty-five numeric
+accessibility contexts, two actual SSO/SDK probes per distribution and both
+protected update/clean restores. Both actual main checkouts and three downloaded
+OAuth-query artifacts pass audit. Five actual SARIF/SBOM pairs pass required
+gates; vendor findings remain 166 app, 413 database and seven UI. This is not a
+clean vulnerability result.
+
+Core 0.27.0 remains the immutable independently published source
+`86a7f7f513d971646fc460ae1708cc0e3a8d46f0` at `core-v0.27.0`.
+Downloaded wheel SHA256 is
+`80c4c15d9568186949126c9ee8d648333b0ca7c2153843840783cf03552006dd`;
+normalized source archive SHA256 is
+`85403eeea87e50365a8f9bfb35e48cbbe29a807ddfbe461062b04d1eb99de9dd`.
+All six independent supplied-artifact packaging checks pass, including exact
+rebuild hashes, wheel/archive installations and packaged PostgreSQL migrations.
+App 0.42.0 uses this released tag/subdirectory/commit and 0.27.x compatibility.
+
+Only the authorized dedicated instance was updated through the canonical native
+`main` action after a supported C0-only backup. The disabled one-off backup plan
+preserves every prior plan; full restic read-data verification, required state
+files and the PostgreSQL restore manifest pass. Backup dump SHA256 is
+`230e295e7528c965582f5f077414d29b8f8a54dc6a1a4d390d497ad91ef5a410`.
+Fresh explicit normal-SSO consent precedes update and full-manager restart;
+existing browser/delegated authority passes immediately afterward, at 71.5 and
+25.7 seconds from issue respectively. No lifetime is extended. Trusted HTTPS
+health confirms app/Core/schema 0.42.0/0.27.0/0015 and actual native database,
+authentication and timer readiness passes.
+
+Owned live current/legacy SDK sessions discover/create/read a protected space,
+exercise private text ingestion and polling, immutable chunks/citations/sourced
+claims, qualified resources, default-Shared UUID denials, create-only Wiki writes,
+three immutable revisions, stale-write conflicts and original receipt replay.
+Normal REST parity, retained original hash, explicit read-only write challenges,
+fresh full-scope consent and cross-session reuse pass. The same evidence, history,
+receipts, original document and file survive full-manager restart. The owned
+client is persistently disabled afterward and its prior bearer is rejected.
+Other live personas are not claimed; the full role/grant/scope matrix and grant
+revocation races remain disposable Core/native/browser evidence.
+
+Exact pre/post-update old-column projections preserve domain/OAuth data. Final
+multiset observers preserve all **7,004 original rows across 26 domain tables**,
+**117 terminal jobs and attempts**, **eighteen prior client descriptors**, **three
+original files**, settings/schedules and **eleven unrelated module identities**.
+Only normal account last_seen is excluded; added schema ownership/feed columns
+are projected out. The schema revision advances from 0013 to 0015. Compatibility
+checks preserve all 66 old operation requirements, 61 old paths and 92 component
+schemas; additions are five space/grant operations and 55 optional UUID selectors
+with two corresponding validation responses. Actual existing-connector reads
+of an earlier Shared citation and immutable Wiki revision pass after reconnecting;
+new space operations through its cached catalog are not claimed.
+
+A bounded root journal filtered by verified module UID/container contains 388
+actual lines with health, authorization, token and MCP request positive controls.
+It has zero tested OAuth-query candidates, issued credentials/cookies/tokens,
+submitted source/Wiki bodies or tracebacks. The first journal helper rejected an
+unsupported ISO timestamp; failed evidence is retained and the same actual update
+start is expressed in accepted UTC format before the successful query. Host
+logging is unchanged. Raw access details and failed evidence remain outside Git.
+
+Freeze this genuine installed predecessor for AM4; documentation marker builds
+are not substitutes. All three actual OCI revisions are the full main cb60da9
+commit above, verified immediately before update and again after restart:
+
+| Installed image | Frozen digest |
+| --- | --- |
+| `ghcr.io/stell0/czero:main` | `sha256:181a68d60bda912dfdf685bcdc1e4db11b183e7b25cfb25982c7e310d37bde10` |
+| `ghcr.io/stell0/czero-app:main` | `sha256:26849301916c7682fb6d1b2e97eb6a378924da2f98878bd2090c05fc8f7c31cc` |
+| `ghcr.io/stell0/czero-postgres:main` | `sha256:9f300220dc06ce33c78cf54e88b26cf3daa336ec1fc4cdc6c69148b689a90f22` |
+
+AM3 runtime acceptance passes. This documentation closeout marker still requires
+its own actual local/producer/released-Core/native/artifact checks and reviewed
+main publication before AM4 begins. Retain the CPU-quota and interactive
+Playwright waivers; automated native browsers remain mandatory. AM4–AM6 and
+Windmill Gate remain gated. Integration M17–M20 remain a separate roadmap. No
+stable module release, live alternate persona, provider quality or scheduled
+client interoperability is claimed.
+
+
+### AM3 documentation closeout and AM4 start — 18 October 2026
+
+AM3 closeout source `6402026133e2580050f5d655f50f637f5a2b3acb` passes actual
+[local](https://github.com/Stell0/ns8-czero/actions/runs/39070257066),
+[producer](https://github.com/Stell0/ns8-czero/actions/runs/39070257065),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39070285802),
+[Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39070285819)
+and [native](https://github.com/Stell0/ns8-czero/actions/runs/39070422109) checks.
+Actual native reports pass Debian genuine AM2 upgrade twenty cases and Rocky
+installation twenty-five cases/three documented installation skips, all eight
+browsers/privacy guards, twenty-five numeric accessibility contexts and both
+protected update/clean restores. Both actual Git checkout heads and three
+OAuth-query artifacts are audited. The complete three-document diff is reviewed;
+[PR 9](https://github.com/Stell0/ns8-czero/pull/9) is merged under the agreed
+autonomous promotion authorization. No independent human review is claimed.
+
+Resulting main `7fcc39b049693bcaa84032c0372ab943d510e6a2` has the identical
+reviewed tree. Its actual [local](https://github.com/Stell0/ns8-czero/actions/runs/39073039995),
+[producer](https://github.com/Stell0/ns8-czero/actions/runs/39073039738),
+[released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39073068778),
+[Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39073068513)
+and [native](https://github.com/Stell0/ns8-czero/actions/runs/39073229043) checks
+complete successfully. Local evidence is 1048 Python/PostgreSQL/packaging cases,
+125 scripts, twenty non-UI Robot dry runs and schema/shell checks. Three OCI
+revisions/digests/sibling references and five actual SARIF/SBOM pairs pass audit;
+vendor findings remain. Actual main native reports pass Debian installation
+seventeen cases/three documented skips and genuine Rocky AM2 upgrade twenty-eight
+cases, all eight browsers/privacy guards, twenty-five numeric accessibility
+contexts, two real SSO/SDK probes per distribution and both protected update/clean
+restores. Exact checkout commands/HEADs and three actual OAuth-query artifacts
+pass audit. AM3 closeout is complete; documentation-marker images are not deployed.
+Additional read-only AM3 backup observers preserve all ninety-two original
+scheduler-run rows and all ten prior backup plans, without restoring live data.
+
+AM4 starts from verified main `7fcc39b`; fresh native inspection confirms the
+accepted dedicated runtime remains `cb60da9`, Core/app/schema 0.27.0/0.42.0/0015,
+with all three genuinely installed digests frozen above. Original checkout and
+unfinished documentation remain preserved. Only AM4 is expanded below. AM5/AM6,
+final integration acceptance and Windmill Gate remain gated.
+
+**AM4 implementation subplan:** Prepare additive Core 0.28.0 with forward
+migration `0016_annotations` and schema health update. Keep app 0.42.0 on its exact
+released Core 0.27.0 pin/lock until exact Core CI/native/artifact gates and immutable
+publication pass. Only then prepare app 0.43.0 against the independently verified
+released Core source and compatible 0.28.x updater range. Preserve existing types,
+records, source provenance, immutable chunks/citations, Wiki/claim history, receipts,
+space UUIDs/grants, OAuth data and default search contracts. Never deploy local
+Core implicitly or replace a published artifact.
+
+Add separate `applicability` and `verification` annotation namespaces with their
+own immutable revisions. Targets are exact source-version and Wiki-revision
+identities, or observed entity/object/claim revisions. Retained anchors bind
+kind/identity/revision/hash and space; references use same-space constraints,
+including the established retained-link pattern for physically deleted objects.
+Do not add fields to strict object payloads or rewrite retained source/Wiki data.
+Missing metadata returns explicit unknown with annotation revision zero. Known
+values are typed/bounded; unknown status values and bounded extension metadata
+remain literal. Applicability includes product/component/exact version tags,
+status and observation time; verification separately records status, confidence
+and observation/verification times. Missing metadata is never inferred verified.
+
+Require Editor/current-space role and actual write scope for annotation changes,
+Reader/read scope for reads/history, with current delegated authority checks after
+waits. Writes require an observed content revision, an expected annotation revision
+(zero is create-only) and one existing space-bound fingerprinted receipt. A stale
+mutable content revision or annotation revision conflicts. Immutable historical
+source/Wiki targets remain addressable. Retained annotation history stays readable
+at its exact old target revision, but never transfers to newly edited content.
+Replays return the original successful snapshot after current authorization, so
+clients must re-read for current state. Transactions retain commit-ordered events;
+failed writes leave no annotation revision, event or receipt.
+
+Expose an opt-in structured search operation and typed REST/MCP annotation
+read/update/history operations after Core publication. Leave existing default
+source/Wiki search DTOs, behavior and legacy wire output unchanged. Structured
+categories are source, Wiki, entity, object and claim; omitted categories retain
+source/Wiki selection. Return typed resource references with space and observed
+content/annotation revisions, literal applicability/verification states and
+accurate retrieval methods. Immutable evidence citations remain separate from
+mutable structured-record references. Structured records use deterministic text
+retrieval; optional semantic/hybrid/reranking remains confined to the existing
+evidence categories and accurately labeled. No reasoning or consolidation runs
+inside C0.
+
+Filters combine supplied fields with AND and values within one field with OR.
+Support exact product/component/version/status tags, category, explicit archive
+selection and timezone-aware UTC creation/observation/verification intervals.
+Never interpret version ranges or substring matches as exact tag matches. With a supplied status filter, missing metadata matches explicit unknown;
+unfiltered results retain unknown metadata without guessed applicability.
+Filter by authorized space, current content and applicability before candidate
+limits, counts, ranking, reranker inputs and vector pruning. Reuse a filtered
+exact-distance fallback when ANN scans underfill. Preserve provider-unavailable
+text fallback and recheck authorization after provider I/O; observed revisions
+must prevent stale metadata from appearing attached to changed content.
+
+First reproduce missing annotation/structured-search behavior with meaningful
+PostgreSQL regressions, then implement small Core slices. Cover all five target
+kinds, independent namespace histories, revision races/replay/conflicts, bounded
+invalid input, unchanged strict payloads/provenance, role/grant/scope denials,
+revocation/regrant and same-space constraints. Add labeled troubleshooting fixtures
+and corpora larger than candidate limits, exact-versus-prefix versions, missing
+and stale annotations, archive/time combinations, isolated counts/provider inputs,
+semantic/ANN fallback and default-search equivalence. Repeated packaged migration
+from the genuine schema-0015 predecessor must preserve every old column/identity
+and OAuth authority. Wheel/archive independent installations and reproducibility
+remain required.
+
+After exact-source Core local/producer/released-consumer/both-native and actual
+artifact/privacy gates, publish immutable Core artifacts and verify downloaded
+checksums and independent installations. Add the released app pin/lock, typed
+transport/error/resource metadata and focused guidance/tests. Freeze all three
+accepted cb60da9 digests in genuine upgrade fixtures; extend native installed-Core,
+normal SSO/current/legacy SDK, backup/clean restore and automated browser evidence
+without weakening existing eight workflows. Review the complete diff and exact
+main checks/publication before any dedicated deployment. Back up only the
+permitted C0 instance, preserve original data/settings/clients/unrelated instances,
+exercise owned annotations/filtered retrieval, verify fresh authority after update
+and full-manager restart, disable owned clients and audit bounded root journald
+with actual request controls. Reconcile the three documents with actual evidence
+and verify closeout-marker checks before AM5. Keep failed private evidence outside
+Git, existing waivers, release limitations and the separate Integration roadmap.
+
+
+AM4 annotation foundation implements separate applicability/verification roots
+and immutable histories, exact-content anchors with same-space typed constraints,
+retained object links, current delegated authorization and existing receipt/event
+transactions. The initial regression reproduces the missing module. Seventeen
+focused annotation cases cover all five target kinds, unknown metadata, literal
+extensions/statuses, independent namespace revisions, one-winner races, original
+replay, stale content, unchanged strict payloads/provenance, ready source evidence,
+real opaque-token scope/revocation and cross-space SQL constraints. The combined
+annotation/space/retrieval/object/knowledge/migration regression passes 113 cases.
+A stale schema expectation and oversized-number validation issue were reproduced
+and corrected; failed private evidence is retained. Core 0.28.0 is not published.
+
+As in the AM3 producer sequence, app dependency metadata temporarily admits
+`>=0.27.0,<0.29.0` for explicit local-Core development. Its released tag, immutable
+locked Core 0.27.0 source and all 53 transitive packages stay fixed; the lockfile
+bytes are unchanged and updater bounds remain 0.27.x. Actual uv lock verification
+passes. This does not select unpublished Core for default released builds. After
+Core publication the app will adopt the verified 0.28 source and narrow its
+production dependency/updater bounds. Native fixtures now freeze all three genuine
+installed cb60da9 predecessor digests. Structured retrieval, remaining annotation
+race/migration/package proof and all exact CI/publication/native/app/live gates
+remain required before AM4 acceptance. The dedicated instance is unchanged.
+
+
+The AM4 annotation increment now passes the full local suite: **1065 actual
+Python/PostgreSQL/packaging cases**, **125 scripts**, schema/shell checks and
+**twenty non-UI Robot dry runs**. Both actual wheel and source-archive installation
+paths execute the updated owned Core space/annotation probe outside the checkout;
+all six packaging checks pass, including reproducible artifacts and repeated
+packaged migration. The native probe requires its new annotation result, but no
+actual AM4 native or live acceptance is claimed from this local proof. The exact
+released app lock remains unchanged. Structured retrieval and the remaining AM4
+publication/application/deployment gates remain open.
+
+
+Annotation source `086105f` passes its actual push local/producer/released-Core
+checks. Its parallel PR local run records 1064 passes and one real HTTPS trust
+fixture timeout at its one-second deadline; failed private output is retained.
+That fixture now uses the existing five-second provider-test budget, preserving
+both trusted/untrusted certificate assertions and the separate short deadline
+regressions. All 38 provider cases pass locally after the focused adjustment.
+Production provider limits and OAuth lifetimes are unchanged. Fresh exact-source
+checks are required; this is not AM4 publication or deployment acceptance.
+
+
+AM4 structured retrieval now composes filtered source/Wiki evidence with
+deterministic entity/object/claim full-text queries, including entity aliases.
+Validated immutable filters select exact categories/product/component/version
+tags, separate applicability/verification status, archives and UTC intervals.
+SQL eligibility precedes counts, candidate limits, ranking and optional provider
+inputs. Filtered semantic readiness and ANN queries share those predicates;
+materialized exact-distance fallback preserves eligible distant matches. Ordinary
+search DTOs and default source/Wiki behavior remain unchanged. Structured records
+never enter embedding/scorer requests and each hit labels its retrieval method.
+
+The initial missing structured module and malformed UTF-8 filter are reproduced
+and corrected. The combined focused regression passes 126 cases before the added
+labeled corpus and strict UTF-8 case. The latest structured/migration slice passes
+19 actual cases; the mandatory installed Core probe now requires all seven results,
+including annotations and structured retrieval. A genuine schema-0015 fixture
+migrates twice to 0016 while preserving every old column across all forty old
+tables, protected grants, real opaque OAuth authority, history, receipts and a
+retained original. This local SQL upgrade is separate from required native upgrade
+and backup/clean-restore acceptance.
+
+Five labeled troubleshooting fixtures cover command, error and alias retrieval
+across every category. Recall at one and typed-reference coverage are each 1.0
+for these five small deterministic fixtures; measured local latencies are
+5.1–15.9 ms with zero provider requests. Immutable source citations and mutable
+record references are checked separately. This is not a large-corpus latency
+guarantee or a real-provider quality claim. Cases also cover corpora over the
+64-candidate budget, exact 8.4 versus 8.40 tags, missing/stale annotations, UTC
+and archive filters, cross-space provider isolation, filtered semantic fallback
+and revocation during scoring.
+
+TLS fixture fix 87cd743 passes both actual push and PR local checks, producer
+publication and released-Core builds. The earlier failing run remains recorded.
+The complete structured increment still requires its own full local/exact CI,
+actual native/artifact review and immutable Core publication before application
+adoption. No AM4 deployment has occurred; all three genuine cb60da9 predecessor
+images and original data remain installed.
+
+
+The complete local structured increment passes **1084 actual Python/PostgreSQL/
+packaging cases** (270.29 seconds), **125 scripts**, schema/shell checks and
+**twenty Robot dry runs**. Both independent distribution installations execute
+the mandatory annotation/structured probe. A final strengthened regression also
+requires an actual filtered HNSW plan and forces scan underfill to exercise the
+eligible exact-distance fallback; its result and rebuilt package proof are
+checked again before committing. Exact-source CI/native/publication and the
+released application/live gates remain required.
+
+The strengthened actual filtered-HNSW/forced-underfill regression and all six
+rebuilt distribution checks pass together: **seven actual cases**, including
+independent wheel/archive installs and repeated packaged migration. No runtime
+source changed after the complete 1084-case regression; the final package rebuild
+includes the structured API documentation.
+
+
+AM4 application adapter preparation uses a separate worktree and explicit local
+Core only, while exact Core-source checks run. The released 0.27 pin/lock remains
+unchanged; no adapter commit/build/deployment will precede verified Core 0.28
+publication and released adoption. Annotation read/update/history use
+`/api/v1/knowledge/annotations/{kind}/{target_id}/{content_revision}/{namespace}`
+(with `/history` for history), optional `space_id`, typed namespace values and
+mandatory annotation expected revision. Structured search is a read-only POST
+at `/api/v1/knowledge/search/structured` with bounded filters and actual read
+scope. Four operations are added; old operation schemas/resources stay intact.
+New request bodies retain the existing one-MiB knowledge bound; annotation values retain the Core
+sixteen-KiB JSON budget and existing MCP request/response bounds remain fixed.
+Static private-error handling, current role/grant/scope checks, cookie CSRF for
+writes and raw current/legacy wire coverage remain mandatory.
+
+
+Core 48ac409 passes completed push local 39079012514 and PR local 39079015996
+(1084 Python/PostgreSQL/packaging, 125 scripts, schema/shell, twenty dry runs),
+producer 39079012508 and released-Core 39079015990. Actual push checkout matches
+48ac409; PR checkout ba8de35 has the identical tree and both expected parents.
+All three OCI revisions/digests/sibling references and five actual SARIF/SBOM
+pairs are audited; vendor findings remain 166 app/413 database/seven UI, zero
+module/imageroot. Native 39079184903 is pending (genuine cb60da9 Debian upgrade
+and Rocky installation); no Core publication or deployment is claimed.
+
+App regressions first reproduce the missing route, then an omission/null
+serialization mismatch between REST and MCP. A namespace-value serializer now
+preserves supplied fields without modifying old catalog behavior. Initial three
+REST/current/legacy cases and the expanded 22-case role/scope/grant/regrant/CSRF/
+input-budget/privacy suite pass; an additional all-five-category ready-evidence
+and stale-content case passes. Fixture-only over-grants and a client URL logger
+assertion were corrected; no runtime authority or log policy was weakened.
+An independently frozen 71-operation contract from verified main 7fcc39b guards
+every accepted schema/description/role/scope. Updated real native helper code
+passes signed local recovery and both SDK modes, separately from native proof.
+
+The native recovery fixture now records separate applicability/verification
+receipts and histories for all five target kinds, typed filtered retrieval and
+Shared UUID denials. It requires those identities after configured update and
+encrypted backup/clean restore for both Admin and Reader-capped Editor sessions.
+The actual current/legacy SDK helper checks annotation CAS, original replay,
+independent history, exact filters and REST parity in its protected fixture.
+Those additions remain uncommitted pending released Core adoption and exact
+application CI/native/deployment acceptance.
+
+
+The final focused app annotation suite passes **39 cases**, including raw current
+and legacy JSON wire metadata/results/errors, real ready-evidence failure with
+unchanged-key success, all five categories, private SQL/HTTP-error fallbacks and
+all 71 independently frozen AM3 operation contracts. Numeric timestamps were
+reproduced as an unwanted transport coercion and now reject before Core, matching
+the string/datetime Core contract. No old operation serialization changed. The
+installed SDK helper passes both modes locally; native recovery now retains two
+verification revisions and both original/current receipts for every target,
+separate from applicability revision one. Actual native acceptance remains pending.
+
+
+A maximum valid Unicode annotation reproduced HTTP 413 under the proposed
+32-KiB wire cap, despite satisfying the Core sixteen-KiB UTF-8 value budget.
+Escaped JSON and maximum bounded Unicode filter arrays require more wire bytes.
+The new routes now retain the existing one-MiB authored-knowledge request guard,
+matching MCP's argument budget; Core value/filter bounds are unchanged. A new
+REST/current/legacy maximum-Unicode regression and the over-one-MiB chunked
+negative controls verify both compatibility and bounded work. This replaces the
+smaller development-only cap; no deployed runtime limit changed.
+
+
+The complete app development source passes **1125 actual Python/PostgreSQL/
+packaging cases** (312.72 seconds), **125 scripts**, schema/shell checks and
+**twenty Robot dry runs**, using explicit local Core 0.28 and still-app 0.42.
+The maximum-Unicode regression passes both SDK protocols under the retained
+one-MiB wire budget. The owned live helper passes signed local requests with
+scoring deliberately configured to fail if called; explicit text/rerank-off
+requests preserve provider-free acceptance. No live helper action has run.
+The installed OAuth fixture additionally requires the exact two-lifecycle
+annotation/structured marker from the real SDK subprocess. Released adoption,
+its exact-source checks and all remaining native/live gates remain required.
+
+
+A final transport review reproduced numeric-string timestamps such as `"0"`
+being interpreted as Unix time despite Core rejecting them. Parse textual times
+with the same ISO datetime form before typed timezone validation; numeric values
+and numeric strings now reject consistently. The focused regression records the
+REST failure and covers annotation and structured-filter inputs. This affects
+only the unpublished app adapter, without changing Core or authority lifetimes.
+
+
+A mismatched query-string selector on the new JSON-body structured endpoint
+reproduced silent fallback to Shared. That endpoint now rejects unsupported
+query `space_id` selectors, including valid UUIDs; its single documented selector
+is in the typed body. Invalid/nonexistent body selectors still fail closed. Old
+content query selectors retain their existing behavior. This closes the transport
+ambiguity without inferring a space from an identifier or changing Core policy.
+
+
+Core source **48ac409a233c855d33cac96688d94aaba85e8f68** completes its exact-source
+gates. [Native 39079184903](https://github.com/Stell0/ns8-czero/actions/runs/39079184903)
+has Debian genuine cb60da9 upgrade **twenty passes** and Rocky installation
+**twenty-five passes/three expected skips**, including all eight real browser
+workflows, eight password/privacy guards and twenty-five numeric accessibility
+contexts. Both actual checkout commands/HEADs, all three genuine predecessor
+digests in the upgrade report, mandatory annotation/structured installed-Core
+probes, two SSO/SDK probes per distribution and protected update/clean restore
+pass. All three downloaded OAuth-query artifacts have zero candidates.
+
+Immutable [Core 0.28.0 publication 39081511130](https://github.com/Stell0/ns8-czero/actions/runs/39081511130)
+passes the exact-source/native verifier and all six supplied distribution tests.
+Downloaded release assets match their checksums; separate local installations,
+rebuilds and repeated PostgreSQL migrations pass another **six actual cases**.
+[Published artifacts](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.28.0):
+
+- Wheel SHA-256: `9ef3259a20677457771a87dd9c182e93945eb789c8ab7e29795b0506fed04337`.
+- Normalized archive SHA-256: `997cebab02524845118ee476e0a3de547e1662a1036449bded23824d8ccc876a`.
+
+Tag-source released-Core 39081511159 and native Renovate-rule API 39081511066
+also complete successfully. Only after this publication/artifact proof, app
+**0.43.0** adopts `core-v0.28.0` at exact commit 48ac409 and the compatible
+`>=0.28.0,<0.29.0` dependency/updater bounds. Its frozen lock verifies and all
+**53 transitive packages are unchanged**. The released-image gate checks the
+0.28.x series; actual Renovate regression tuples retain prefix/patch bounds.
+Application exact-source CI/native/main promotion, C0-only backup/deployment,
+live/restart/privacy/preservation and closeout-marker checks remain required.
+The dedicated instance still runs accepted cb60da9; AM5/AM6 remain gated.
+
+
+Released-pin app 0.43 passes **1127 actual Python/PostgreSQL/packaging cases**
+(311.80 seconds). A separate locked, noneditable app installation imports both
+packages from its environment outside the checkout and verifies Core's actual
+Git commit 48ac409/tag core-v0.28.0. That independent released-source environment
+passes **56 feature/compatibility cases**, including the new APIs, all 71 frozen
+contracts, both raw SDK protocols, role/scope metadata and exact native helper
+code through signed local HTTP. No local Core source is substituted in that
+consumer proof. All Core Python/metadata source bytes remain identical to the
+published tag; only its README records subsequent publication evidence.
+
+The final focused annotation/space regression passes **49 cases**, including
+strict ISO timestamp and unsupported-selector negatives. Local 125 scripts,
+schema/shell checks and twenty Robot dry runs pass. The actual Renovate 44.161.0
+versioning API passes updated 0.28 patch/minor/prerelease bounds. Primary-agent
+complete diff review records compatibility, current authority, limits and the
+mandatory new native acceptance; no independent human review is claimed. Exact
+application-source CI/native/artifacts and promotion/deployment remain required.
+
+
+App source 336cfa8 passes producer publication and both native Renovate API
+checks. Both released-image runs (39082655103/39082657095) fail their final
+runtime verifier: a second series guard in `core_consumer_runtime_probe.py`
+still expects 0.27, although the workflow and actual installed dependency are
+0.28. Failed private logs are retained. The exact probe reproduces the failure
+in the separate released environment; updating only its expected series to 0.28
+passes all version/Git-commit/subdirectory/no-NS8-SDK assertions. Image and source
+checks are preserved; fresh exact-source CI/native gates remain required before
+promotion. No deployment occurred.
+
+
+### AM4 deployment acceptance and documentation closeout — 18 October 2026
+
+App source **12dce0a4e3efac5b4f359f8e381410b3d6eb72ae** completes every exact-source
+gate. Local [39083000552](https://github.com/Stell0/ns8-czero/actions/runs/39083000552)
+and PR [39083003914](https://github.com/Stell0/ns8-czero/actions/runs/39083003914)
+verify **1127 actual Python/PostgreSQL/packaging cases**, **125 scripts**,
+schema/shell checks and **twenty Robot checks**, with actual checkout/source-tree
+verification. Producer [39083000706](https://github.com/Stell0/ns8-czero/actions/runs/39083000706),
+released-Core [39083000605](https://github.com/Stell0/ns8-czero/actions/runs/39083000605)
+and [39083003893](https://github.com/Stell0/ns8-czero/actions/runs/39083003893),
+and actual Renovate API [39083003977](https://github.com/Stell0/ns8-czero/actions/runs/39083003977)
+and [39083065851](https://github.com/Stell0/ns8-czero/actions/runs/39083065851)
+pass. Independent physical app/released-Core installation outside the checkout
+passes 56 feature/compatibility cases; the strengthened owned acceptance helper
+also passes both SDK protocols against real PostgreSQL and that released install.
+Core Python/package metadata remains identical to immutable 48ac409, with only
+its README recording subsequent publication; all 53 other packages are unchanged.
+
+[App native 39083156828](https://github.com/Stell0/ns8-czero/actions/runs/39083156828)
+passes Debian genuine cb60da9 upgrade **twenty cases** and Rocky installation
+**twenty-five cases/three expected skips**, all **eight** real browser/privacy
+workflows and **twenty-five** numeric accessibility contexts. Both actual
+checkout commands/HEADs, all three genuine AM3 predecessor digests in the upgrade
+report, mandatory installed-Core annotation/structured probes, two real SSO/SDK
+probes per distribution and all-five-target history/receipt persistence through
+configured update and encrypted backup/clean restore pass. All three downloaded
+OAuth-query artifacts have zero candidates. No skipped acceptance is counted.
+
+Complete primary-agent diff/compatibility/authorization/migration/artifact review
+precedes autonomous [PR 10](https://github.com/Stell0/ns8-czero/pull/10) promotion;
+no independent human review is claimed. Main **878978dd475f5e30111d17b802559ead4693d7c2**
+has the identical tested tree and both expected parents. Its actual checks pass:
+[local 39085391310](https://github.com/Stell0/ns8-czero/actions/runs/39085391310),
+[producer 39085391405](https://github.com/Stell0/ns8-czero/actions/runs/39085391405),
+[released-Core 39085391368](https://github.com/Stell0/ns8-czero/actions/runs/39085391368)
+and [Renovate 39085391345](https://github.com/Stell0/ns8-czero/actions/runs/39085391345).
+Producer attempt one published images but its module-inspection login received
+an EOF from GHCR's token endpoint. Preserved failed evidence identifies that
+infrastructure failure; exact-source failed-jobs retry attempt two passes module
+and all five scan jobs without source changes. Five actual SARIF/SBOM pairs and
+all three OCI revisions/digests/sibling references are audited. Vendor findings
+remain 166 app/413 database/seven UI; zero module/imageroot, with no clean-security
+claim. Native's latest aliases match canonical main's three digests exactly.
+
+[Main native 39085658892](https://github.com/Stell0/ns8-czero/actions/runs/39085658892)
+also completes successfully, with actual downloaded reports and checkout heads:
+Debian genuine AM3 upgrade twenty passes; Rocky installation twenty-five passes
+and only three expected skips; all eight browser/privacy workflows, twenty-five
+accessibility contexts, two SSO/SDK probes per distribution, all-five-target
+update/clean-restore history/receipts and three zero-candidate OAuth artifacts.
+The skipped native run from the failed producer attempt is not acceptance.
+
+Fresh dedicated preflight confirms the genuine installed cb60da9 predecessor,
+root/host/OS/cluster-leader/node placement and supported native actions. Before
+owned mutations, all **41 schema-0015 tables/columns** are observed. The retained
+row baseline is **7146 rows in thirty tables**, including **ninety-seven immutable
+scheduler-history rows**; normal account last_seen is excluded. **125 terminal
+jobs and attempts**, **nineteen old client descriptors**, **four original files**,
+settings/schedules, **eleven prior backup plans** and **eleven unrelated instances**
+are frozen. The supported C0-only backup completes; its one-off plan is disabled.
+Full repository read-data integrity, required metadata, the genuine schema-0015
+2.96-MB PostgreSQL archive and every retained original's actual bytes/hash pass
+(**four files, 36723 bytes**). Private checksums/raw evidence remain outside Git;
+no production restore or outage fixture runs. All prior plans remain unchanged.
+
+Owned client creation uses normal trusted HTTPS SSO and a persisted unique intent;
+a repeat reconciles the same approved client without duplication. Fresh explicit
+three-scope consent, a conservative valid-token window and immediate three-image
+registry verification precede the canonical supported dedicated-only update.
+Actual readiness is Core/app/schema **0.28.0/0.43.0/0016_annotations**; the same
+pre-update delegated token and browser session remain valid immediately after
+update, at **53.0 seconds** since issue. Exact old-column data, OAuth rows,
+terminal history, configuration/files/schedules, canonical inventory and all
+three installed identities pass before longer live probes.
+
+Both actual current/legacy deployed SDK sessions discover/use the protected
+space, ingest/poll bounded evidence, resolve immutable chunks/citations and keep
+three authored Wiki revisions. All five exact-content targets initially report
+unknown verification, then retain applicability revision one and independent
+verification revisions one/two with both original/current receipts and histories.
+True stale writes conflict; REST/MCP results, exact product/component/version/
+verification filters, observed references, Shared UUID/count denials, qualified
+resources and retained-original hashes pass. Search requests explicitly use text
+and rerank-off, preserving configured provider settings. A separate owned object
+is verified at content revision one, changes to revision two and correctly has
+unknown revision-zero metadata there. Its old verification anchor/history and
+original successful receipt remain unchanged; stale old-content writes conflict.
+Both protocols reject write attempts under a read-only token with only the
+required c0:write challenge; fresh explicit consent restores authorized replay.
+
+The supported full-manager restart preserves the same freshly consented delegated
+and browser authority immediately (**36.7 seconds** since issue), exact OAuth/
+old-column domain/files/settings/schedules and terminal history. Both SDK modes
+then replay all evidence, annotation histories/receipts, changed-content unknown
+metadata and retained originals. All three installed digests remain exact.
+The independently connected cached client first requests/accepts reauthentication,
+then successful retries read the retained AM2 Shared citation and immutable Wiki
+revision one with matching hashes. Its **63 cached operations** do not establish
+new annotation/space tools; that evidence remains separate from the SDK workflows.
+
+Fresh normal consent provides a valid same-bearer read control immediately before
+owned-client disable. The native-backed client is persistently disabled and that
+bearer receives HTTP 401 despite the ambient browser cookie. The native browser
+session and protected Wiki read still pass, and the independent existing client's
+retained Shared read remains accepted afterward without another reauthentication.
+All original 7146 rows, 125 terminal jobs/attempts, four files, 97 scheduler rows,
+nineteen old clients, settings/schedules, eleven prior plans and eleven unrelated
+instances remain intact. A stale comparison-helper path initially selected older
+AM3 evidence; it was preserved and corrected before acceptance. The final helper
+requires the real complete schema-0015 baseline, correct counts and schema-0016
+projection, and the fresh before/after captures pass. No application change or
+new deployment was needed for that private verification-helper correction.
+
+The actual bounded **1027-line root journald** sample uses the verified module UID,
+app container and real update start, with actual health/authorization/token/MCP
+positive controls. OAuth-query candidates, all recorded issued-token/current-cookie/
+password/CSRF matches, submitted-body matches and tracebacks are **zero**. Logging
+and host policies are unchanged. No empty Podman/module-user journal is used as
+evidence. Other live personas, real-provider quality, scheduled interoperability,
+a refreshed client catalog and a stable module release are not claimed.
+
+Freeze these genuinely installed feature images for the AM5 predecessor; do not
+replace them with documentation-marker builds:
+
+| Image | Installed SHA-256 | OCI revision |
+| --- | --- | --- |
+| `ghcr.io/stell0/czero:main` | `6b24869832ce1277a951c081b5058b27b559fb01a5e262f58cd27b63d1852e34` | `878978dd475f5e30111d17b802559ead4693d7c2` |
+| `ghcr.io/stell0/czero-app:main` | `fdfb6de553118c2ddbd6439330659f3883f1aacc258c0b75ebbd70969e34b436` | `878978dd475f5e30111d17b802559ead4693d7c2` |
+| `ghcr.io/stell0/czero-postgres:main` | `6321d506400581e9ab37b9c12a7748fccfcf99d2774911f74203835557b26399` | `878978dd475f5e30111d17b802559ead4693d7c2` |
+
+AM4 runtime acceptance passes. This documentation closeout still requires its
+own actual exact-source CI/native/artifact results, reviewed main promotion and
+completed main publication/checks before AM5 starts. Keep both existing waivers;
+all eight automated native browsers remain mandatory. AM5/AM6 and Windmill Gate
+remain gated, with Integration M17–M20 a separate roadmap.
+
+### AM4 final marker gates and AM5 start — 18 October 2026
+
+AM4 closeout `626d89b` passed actual local push/PR, publication, released-Core
+and Renovate checks, plus [native 39106630279](https://github.com/Stell0/ns8-czero/actions/runs/39106630279):
+Debian installation seventeen passes/three expected skips and genuine AM3 Rocky
+upgrade twenty-eight passes, all eight browsers/privacy guards and twenty-five
+accessibility contexts. Actual checkouts, all-five-target histories/receipts
+through update/clean restore and three downloaded query artifacts pass inspection.
+Reviewed PR 11 merged with the identical tree as
+`d8899029a4e175352b697ad8b77c5718bf034d1f`.
+
+Final main passes [local 39109051740](https://github.com/Stell0/ns8-czero/actions/runs/39109051740),
+[publication 39109051722](https://github.com/Stell0/ns8-czero/actions/runs/39109051722),
+[released-Core 39109069476](https://github.com/Stell0/ns8-czero/actions/runs/39109069476)
+and [Renovate 39109071160](https://github.com/Stell0/ns8-czero/actions/runs/39109071160).
+Actual results remain 1127 Python/PostgreSQL/packaging cases, 125 scripts and
+twenty non-UI Robot cases, with schema/shell checks. Three OCI identities/sibling
+references and five actual SARIF/SBOM pairs pass inspection. A registry blob read
+timed out; failed private evidence is retained and the read-only retry passes.
+[Final main native 39109200513](https://github.com/Stell0/ns8-czero/actions/runs/39109200513)
+passes Debian genuine AM3 upgrade twenty cases and Rocky installation twenty-five
+cases/three expected skips, all eight browsers/privacy guards and twenty-five
+accessibility contexts. Both actual checkout heads, mandatory Core/current/legacy
+SDK probes, all-five-target histories/receipts through update/clean restore and
+three downloaded query artifacts pass inspection with zero query candidates.
+
+AM4 is complete. Fresh read-only native inspection confirms all three accepted
+`878978d` images above remain installed, database/authentication/timer health
+passes and the owned acceptance client is disabled. No documentation image is
+deployed. AM5 starts in a fresh worktree from verified `d889902`; preserve the
+older checkout and unfinished documentation. Only AM5 is expanded here. AM6,
+Windmill Gate and Integration M17–M20 remain separate gates.
+
+**AM5 implementation subplan (before code):** First run a real PostgreSQL
+canonical consolidation through existing Wiki, entity, sourced-claim, object and
+annotation primitives. Measure successful individual retries after lost replies,
+independent-writer conflicts, revocation between steps and injected harness
+failure. Inspect committed records, revisions, events and receipts after failures.
+Decide whether these primitives provide all-or-nothing publication from that
+proof; do not presume a bundle implementation.
+
+Complete annotations additively with literal knowledge type/status/confidence,
+observation/verification UTC times, products/components/exact version tags,
+explicit supersession and immutable source-chunk references. Keep applicability
+and verification separate, preserving old requests/fingerprints, omitted/null,
+strict object data and retained history. Unknown/future values and contradictions
+remain stored; supersession never deletes/archives prior content or transfers
+verification. Resolve typed references only within the authorized space; source
+references require ready immutable evidence. Bound lists and retain sixteen-KiB
+annotation values. Document canonical fields without ambiguous version aliases.
+
+If the proof demonstrates partial publication, add reusable Core
+`KnowledgeBundleService.apply` followed by typed REST/MCP
+`knowledge_bundle_apply`. One bundle selects one space, contains one to twenty-five
+content mutations and fits the existing 256-KiB aggregate JSON budget. Dispatch
+only a fixed allowlist of trusted Wiki/entity/claim/relationship/object/annotation
+writes; requests never select imports, SQL, callbacks or arbitrary methods.
+Support typed references to earlier step results; reject forward/cyclic, missing
+and invalid paths. Keep expected revisions and ready-evidence requirements.
+Exclude file ingestion, external I/O, jobs, type registration, membership, grants
+and native actions.
+
+Reuse domain mutation helpers on one connection/transaction, with one
+actor/space-bound fingerprinted receipt and original whole-result snapshot.
+Preserve individual APIs/replay fingerprints. Acquire object/event then
+knowledge/receipt mutexes before authority locks; recheck persisted role, space
+grant and captured OAuth token after waits. No substep commits, opens a second
+transaction or creates its own receipt. Failure leaves no partial content,
+history, events, cursors or receipt. Independent writers have one revision winner;
+retry after uncertain success returns the original whole result. Revocation
+linearizes with commit and later regrant cannot revive old delegated authority.
+
+Anticipate additive Core 0.29.0, app 0.44.0 and schema 0016 unchanged unless a
+forward migration proves necessary. The app retains released Core 0.28.0 during
+producer development. Prove failures before fixes; add meaningful PostgreSQL
+concurrency/rollback/replay/authorization/limits/same-space/ready-evidence tests
+and raw current/legacy transport parity. Extend native SDK and update/clean-restore
+probes for the new annotation values and bundle receipt, freezing the genuine
+installed `878978d` digests above. All eight browser workflows remain mandatory.
+
+Require complete local/packaging, scripts, schema/shell, Robot,
+producer/released-Core, runtime/license/scans and Debian/Rocky checks on exact
+Core source before immutable reproducible artifact publication. Verify supplied
+wheel/archive hashes, independent installations and repeated migration, then pin
+the released tag/frozen lock/compatible updater bounds in the app and test that
+source. Review the whole diff and compatibility evidence before autonomous PR
+promotion; verify actual main checks/publication and all three OCI identities.
+
+Before the canonical dedicated update, verify a supported C0-only backup,
+original-row/old-column/file/settings/schedule/OAuth observers and unrelated
+modules. Exercise owned consolidation, lost-response replay, genuine stale
+conflicts, scope consent, retained citations/history and explicit supersession
+through both SDK protocols. Check the same fresh delegated/browser authority
+immediately after update and full-manager restart within actual lifetimes; never
+extend authority. Verify preservation, disable the owned client after a valid
+same-bearer control and inspect bounded root app journald with real request
+controls and issued-secret/body checks. Destructive failures/restores and other
+roles remain disposable. Reconcile all three project documents and verify their
+actual marker/main gates before AM6. Retain failed private evidence outside Git,
+both waivers and honest provider/live-persona/scheduled/stable-release limits.
+
+**AM5 existing-primitives decision:** Five actual PostgreSQL experiments pass.
+Wiki/entity/claim/annotation retries recover their individual original receipts;
+object creation instead conflicts after a lost response. Two independent writers
+both commit candidate pages before one loses the shared entity revision. Role
+revocation prevents the second write and old receipt replay, but the first page
+remains published. Injected harness failures after one/two writes leave their
+pages/annotations, histories, events and receipts committed. Existing operations
+therefore cannot provide atomic multi-resource publication. Implement the bounded
+bundle above; do not attempt compensating deletes of retained history/evidence.
+
+**AM5 Core foundation (local candidate):** Core 0.29.0 now provides the bounded
+bundle through the same trusted mutation helpers and outer connection, one
+whole-result receipt and fixed object/knowledge/authority lock order. Seventeen
+allowlisted content operations support earlier result UUID/revision references;
+no request-selected methods, extra transactions or substep receipts exist.
+Applicability gains literal knowledge types/supersession and both annotation
+namespaces gain ready immutable chunk references. Superseded identity/hash anchors
+survive removal of previously unannotated objects without creating verification.
+Existing payloads/fingerprints, strict records, contradictions and old histories
+remain intact. Schema stays 0016; the app's released 0.28 tag/lock is unchanged.
+
+Forty-one new focused PostgreSQL cases pass, including the five prerequisite
+experiments, rollback across domains/events/cursors/receipt, two-writer conflicts,
+concurrent identical submissions, lost replies, injected database failure,
+independent-reader visibility, authority loss while waiting, real opaque read/
+write-only scopes, revoked receipt replay, protected-space denial, ready evidence,
+all seventeen operation kinds and the twenty-five-step/aggregate/typed-reference
+bounds. Maintenance tests preserve source citations, separate unknown/verified
+state, prior receipt/history, cross-space denials and removed-object identity.
+Missing bundle support, missing metadata fields and lost superseded identity were
+reproduced before their fixes; failed private evidence is retained.
+
+The clean full local run passes **1168 actual Python/PostgreSQL/packaging cases
+in 350.38 seconds**, including actual independent wheel/archive installations,
+rebuild hashes, repeated migrations and installed bundle/maintenance probes.
+All 125 script cases, schema/shell checks and twenty non-UI Robot checks pass.
+The explicit producer override independently installs Core 0.29 with app 0.43;
+the released consumer remains pinned to 0.28. A hard-coded app health test was
+reproduced and corrected to compare the Core version actually supplied by either
+supported build mode. No application runtime/dependency or migration changed.
+
+Local failed evidence includes an interrupted wrapper whose test child continued,
+causing overlapping suites on a disposable database, and actual disk-quota errno
+122 that truncated reporting/blocked temporary files despite free filesystem
+space. Reproducible environments/package caches were removed with logs and source
+artifacts retained. The passing run uses a fresh database, separate temporary
+directory and absolute import paths; it is the accepted local result. Native
+tests freeze all three genuine 878978d predecessor images and require both new
+installed Core probe flags. Exact-source CI/native/artifact review, immutable
+Core publication, released app adoption and dedicated acceptance remain pending.
+
+**AM5 producer compatibility correction:** First exact Core source `b820253`
+fails [local CI 39113380640](https://github.com/Stell0/ns8-czero/actions/runs/39113380640)
+at pip installation: the app's `<0.29` bound excludes the explicitly installed
+0.29 producer even though the uv local-source override resolves it. A new
+regression reproduces that mismatch. Expand only the declared compatible range
+to `>=0.28.0,<0.30.0`; keep the released `core-v0.28.0` tag, exact locked source
+and all 53 transitive package entries unchanged. Actual lock comparison and the
+source-selection/compatibility regressions pass. App adoption/narrowing and
+updater changes still follow immutable Core publication. Failed evidence remains
+private; no failed source was deployed. The corrected exact source must pass all
+CI/native/artifact gates before publication.
+
+**AM5 pre-publication concurrency/native correction:** Source `a2ee432` passes
+actual push/PR local checks (1169 cases), producer/released-Core/Renovate,
+three OCI identities/siblings and five downloaded scan-artifact pairs. The fresh
+local full run passes 1169 cases in 384.19 seconds. Before publication, an
+independent-object-batch experiment reproduces a PostgreSQL deadlock: standalone
+supersession annotations can retain objects in the reverse order to the batch.
+Serialize only this new object-reference shape through object mutex 49375 before
+the existing knowledge/authority locks. Old requests/fingerprints/lock paths stay
+unchanged; bundles already hold both mutexes on their outer connection. The
+controlled two-writer regression now yields a completed batch and a genuine stale
+annotation conflict, without a deadlock. All fifty-four focused annotation/bundle
+cases pass after this fix.
+
+[Superseded native 39113698219](https://github.com/Stell0/ns8-czero/actions/runs/39113698219)
+reports healthy Core 0.29/app 0.43/schema 0016, but Debian fails stale native
+health assertions expecting Core 0.28. Correct both API/browser expectations and
+add a local regression comparing them with declared package versions. Its failed
+report is retained; the remaining superseded native work is cancelled before a
+new publication changes the branch images. No Core 0.29 artifact is published
+and the dedicated instance remains untouched. The corrected exact source must
+repeat all required CI/native/artifact gates before immutable publication.
+The version guard also requires explicit app-version positive controls; add them
+to the native API/browser checks alongside Core 0.29 expectations. All ten local
+source/compatibility/version cases and twenty Robot dry runs then pass. A
+preceding sequential shell did not stop at the new guard's failure; subsequent
+dependent verification uses fail-fast execution and inspects each actual result.
+
+
+**AM5 immutable Core publication and application candidate:** Corrected exact
+Core source `815709226efec96afe2d411a596464ac9ec365f7` passes
+[local push 39115292505](https://github.com/Stell0/ns8-czero/actions/runs/39115292505),
+[PR local 39115296021](https://github.com/Stell0/ns8-czero/actions/runs/39115296021),
+[producer 39115292509](https://github.com/Stell0/ns8-czero/actions/runs/39115292509),
+[released 39115529133](https://github.com/Stell0/ns8-czero/actions/runs/39115529133),
+[PR released 39115296030](https://github.com/Stell0/ns8-czero/actions/runs/39115296030)
+and [actual Renovate 39115351873](https://github.com/Stell0/ns8-czero/actions/runs/39115351873).
+The fresh local full run passes 1171 Python/PostgreSQL/packaging cases in
+337.39 seconds; CI also passes 125 script cases and twenty Robot dry runs.
+[Native 39115438733](https://github.com/Stell0/ns8-czero/actions/runs/39115438733)
+actually passes Debian genuine `878978d` upgrade twenty cases and Rocky
+installation twenty-five cases/three expected update-only skips, including all
+eight real browser/privacy workflows and twenty-five numeric accessibility
+contexts. Downloaded reports verify both actual tested checkouts, the three
+frozen predecessor digests, installed atomic-consolidation/maintenance probes,
+all five annotation histories/receipts through update and clean restore, both
+SDK protocols and all three actual OAuth-query artifacts with zero candidates.
+All three candidate OCI revisions/sibling references and five actual SARIF/SBOM
+pairs pass audit; existing vendor findings remain unresolved.
+
+Only after these exact gates and complete diff/compatibility review, immutable
+[`core-v0.29.0`](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.29.0)
+is published by [39117777852](https://github.com/Stell0/ns8-czero/actions/runs/39117777852).
+Its six supplied-artifact tests actually pass. Downloaded checksums:
+
+- Wheel: `cab8aee2ac4b1783294c0116a4c760f5289c66c3efa05e39930131f583daf9df`.
+- Source archive: `4f4670784325ff6f067260437f9988d9a1af7bf4cb7a5c66d20ca8dd68154943`.
+
+A separate clean detached checkout of that exact source verifies both assets,
+independent physical wheel/archive installations outside the checkout, identical
+normalized rebuild hashes and repeated fresh PostgreSQL migrations plus installed
+evidence/space/annotation/bundle probes: six passes in 34.42 seconds. No published
+asset is replaced. This library publication is not a stable module release.
+
+Application 0.44 now adopts the actual released tag/commit with compatible range
+`>=0.29.0,<0.30.0`, a frozen lock and matching Renovate/runtime source guards.
+Typed REST `POST /api/v1/knowledge/bundles/apply` and MCP
+`knowledge_bundle_apply` expose the seventeen fixed operations with one body
+space selector, prior-result references, expected revisions, ready-evidence
+checks and the original whole receipt. Each returned step uses its existing
+public DTO; retries normalize stored snapshots without reading current content.
+The catalog adds one operation (76 total); existing response contracts remain
+unchanged and maintenance annotation inputs gain only optional fields.
+
+Local transport proofs include actual lost reply after commit followed by an
+independent delegated SDK retry, all seventeen operations, both raw current and
+legacy metadata/error wires, protected-role/scope/revocation denials, stale
+rollback, immutable citations and unknown verification after changed content.
+The exact native SDK fixture now requires two sourced nine-step consolidation
+cycles; configured-update/clean-restore observers retain their whole receipts,
+supersession, source references and immutable history. Its subprocess deadline
+is 180 seconds for the two existing bounded extraction polls; server, session
+and grant lifetimes are unchanged. These new application native workflows still
+require exact-source CI/deployment acceptance. The dedicated instance remains
+accepted `878978d`; AM5 closeout, AM6 and Windmill Gate remain pending.
+
+
+**AM5 released-install full-suite correction:** A physical frozen app 0.44 /
+released Core 0.29 installation verifies both actual imports and the tag's exact
+Git commit outside the checkout. Its first collection is missing only Robot
+development tools; install those in the test environment without changing
+runtime dependencies. The actual 1201-case run then reports 1197 passes and four
+empty-store failures. They all observe the same Shared fixture entity: inner
+MCP cleanup deletes its events before the outer HTTP fixture uses those events
+to discover and dispose entities. Remove only the current unique test issuer's
+entity aliases/entities before its events. Preserve the failed full report,
+re-run the bundle-to-Core regression sequence and a fresh complete suite; do not
+change production storage/deletion behavior or accept the failed run.
+
+The corrected fixture-order sequence passes all thirty bundle tests followed by
+the four formerly failing Core tests: 34 passes in 18.11 seconds. The dedicated
+live helper independently passes both protocols against the physical released
+installation (one complete workflow in 12.88 seconds). All 125 scripts, Go schema
+checks with a writable cache, shell checks, twenty Robot dry runs and native
+Renovate API bounds pass. All 53 locked transitive package entries are unchanged.
+A fresh isolated full run is in progress; exact application CI/native and
+dedicated update remain required. The read-only preflight confirms genuine
+878978d installed identities/readiness and a fresh observer covering all 44
+tables, 7283 retained rows in 33 tables, 136 terminal jobs/attempts, five originals,
+twenty old clients, twelve old backup plans and eleven unrelated instances.
+
+
+**AM5 application exact-source native indexing correction:** Source `a7941ef`
+passes a fresh physical released-install full run: 1201 cases in 366.32 seconds;
+all 23 installed application Python files match the candidate. Actual exact
+[push local 39118859032](https://github.com/Stell0/ns8-czero/actions/runs/39118859032),
+[PR local 39118861692](https://github.com/Stell0/ns8-czero/actions/runs/39118861692),
+[producer 39118858949](https://github.com/Stell0/ns8-czero/actions/runs/39118858949),
+[push released 39118858993](https://github.com/Stell0/ns8-czero/actions/runs/39118858993),
+[PR released 39118861705](https://github.com/Stell0/ns8-czero/actions/runs/39118861705),
+[push Renovate 39118858893](https://github.com/Stell0/ns8-czero/actions/runs/39118858893)
+and [PR Renovate 39118861698](https://github.com/Stell0/ns8-czero/actions/runs/39118861698)
+all complete successfully, with inspected checkout/PR merge tree, 125 scripts,
+twenty Robot checks, three OCI identities/siblings and five actual scan pairs.
+
+[Native 39119015157](https://github.com/Stell0/ns8-czero/actions/runs/39119015157)
+is not accepted: Debian installation has sixteen passes/one failure/three
+expected skips; Rocky genuine AM4 upgrade has twenty-seven passes/one failure,
+including all eight browser/privacy workflows. Both fail the derivative-index
+completion fixture before recovery snapshots: four successful bounded jobs no
+longer finish the larger corpus introduced by independent sourced bundle
+clients. All three downloaded query artifacts remain clean; failed raw reports
+are retained privately. No candidate is deployed.
+
+A real PostgreSQL twenty-page regression proves four actual registered index
+jobs succeed while the exact installed completion query remains false. Replace
+the fixed four-job assumption with observed completion and additional batches
+of four trusted jobs, capped at 32 total, with explicit failed-job and deadline
+rejection. The disposable deadline permits three existing one-minute worker
+opportunities (180 seconds); installed timer/budgets and all session/grant
+lifetimes remain unchanged. Require complete source and current-Wiki indexing
+before snapshot and preserve the paused refresh schedule. The corrected exact
+source must repeat all required CI/native/artifact gates.
+
+During acceptance preparation, the existing external connector reports an
+expired refresh grant. The operator confirms an expired identity-provider
+password, renews it and reconnects. An actual connector read then returns the
+retained Shared citation with exact IDs, offsets, body and all three hashes.
+This is separate from SDK evidence; the cached 63-operation connector has not
+been shown invoking new bundle/annotation/space operations. The private local
+credential file must be refreshed before new dedicated normal-SSO tests.
+
+The completed real PostgreSQL backlog, failure/cap/deadline and existing
+embedding/provider regressions pass: nineteen cases in 5.58 seconds, plus twenty
+Robot dry runs. Runtime application/Core bytes, released pin and schema remain
+unchanged. Preserve all failed evidence and repeat exact-source gates for this
+focused native-fixture correction.
+
+
+**AM5 follow-up scheduled-progress correction:** Exact source `bdf2cb3`
+passes all seven non-native workflows, including 1205 Python/PostgreSQL cases,
+125 scripts, twenty Robot checks, released/producer builds and actual artifact
+checks. [Native 39122460111](https://github.com/Stell0/ns8-czero/actions/runs/39122460111)
+is not accepted: the genuine AM4 Debian upgrade has nineteen passes and one
+failure before recovery, at the earlier five-Shared-vector timer assumption.
+Its actual failed log/report are preserved privately; the remaining Rocky job
+is cancelled before replacing branch images. Main and the dedicated instance
+remain unchanged, and the guarded promotion pipeline is stopped.
+
+Public index status is selected-space scoped while worker indexing is global.
+A real PostgreSQL regression demonstrates successful manual and scheduled
+batches with fewer than five Shared vectors. Require an actual successful
+scheduled index job for the active profile and generation, with positive
+indexed work; a manual job or a stale generation cannot satisfy it. Retain the
+existing two-minute initial timer window, the bounded complete-corpus drain,
+and the paused schedule/recovery snapshots. No runtime or authority lifetime
+changes. All twenty focused embedding/provider/fixture cases pass in 5.26
+seconds against a fresh database. The corrected source must repeat all gates.
+
+The operator has updated the private credential file. Fresh normal SSO now
+passes for the existing owner/Admin. No login question remains pending.
+
+
+### AM5 deployed runtime acceptance — 18 October 2026
+
+Five actual PostgreSQL reliability experiments require a bounded atomic bundle;
+individual receipts cannot prevent partial multi-resource publication. Corrected
+application source `acd1b22` passes all seven workflows (1206 Python/PostgreSQL/
+packaging cases, 125 scripts and twenty Robot cases), exact source/PR merge tree,
+released Core, three OCI revisions/siblings and five actual scan/report pairs.
+Native [CI 39125136872](https://github.com/Stell0/ns8-czero/actions/runs/39125136872) passes Debian installation seventeen cases/three expected
+skips and genuine AM4 Rocky upgrade twenty-eight cases, all eight browsers and
+privacy guards, twenty-five accessibility contexts and three clean downloaded
+OAuth-query artifacts. Both protocols execute sourced bundles and preserve
+whole receipts, supersession, ready citations and five independent annotation
+histories through configured update and encrypted disposable clean restore.
+The failed fixed-batch and Shared-vector assumptions are retained above; the
+corrected fixture proves actual scheduled current-generation progress and
+observed complete indexing without changing installed authority lifetimes.
+
+Reviewed [PR 12](https://github.com/Stell0/ns8-czero/pull/12) merges to main
+`41864e47c15765dc18b05b03cfedbfe87cbedf93` with an identical tested tree and both parents verified.
+Main [CI 39127651157](https://github.com/Stell0/ns8-czero/actions/runs/39127651157), [CI 39127651212](https://github.com/Stell0/ns8-czero/actions/runs/39127651212),
+[CI 39127651818](https://github.com/Stell0/ns8-czero/actions/runs/39127651818), [CI 39127651153](https://github.com/Stell0/ns8-czero/actions/runs/39127651153) and
+native [CI 39127826351](https://github.com/Stell0/ns8-czero/actions/runs/39127826351) are actually completed/successful with inspected checkouts,
+reports, scan artifacts and three image identities/sibling references. Main
+reports: debian13-update-latest: 20 passes; rocky9-install-latest: 25 passes/3 expected skips; all eight browser/privacy workflows and
+25 numeric accessibility contexts. Private raw evidence stays outside Git.
+Core’s immutable publication remains `core-v0.29.0` at `8157092`; the complete
+Core package tree is unchanged by app adoption. No stable NS8 release is claimed.
+
+A fresh supported C0-only encrypted backup is completed, disabled and verified
+with repository read-data, PostgreSQL custom-dump/schema checks and all five
+actual retained source-file byte hashes. The three main registry identities
+are rechecked immediately before the supported canonical update of only the
+authorized dedicated instance. Real readiness and the same fresh browser and
+delegated authority pass immediately after both update and full-manager restart.
+Exact OAuth rows, all 44 original-column projections, settings, schedules,
+terminal history and original files are preserved at these immediate gates.
+
+Two SDK protocols execute the owned nine-step sourced bundle, retry its original
+whole result after later writes, reject genuine stale writes without partial
+publication, preserve prior verified content/supersession/source references and
+return unknown verification for changed content. All five annotation histories,
+exact structured filters, Shared UUID denials, immutable citations and the new
+retained original survive restart. Narrow write challenges name only c0:write;
+new explicit consent restores eligible authority. The new owned client is then
+disabled after a valid same-bearer positive control and its bearer is rejected.
+The saved browser/REST session still reads its private Wiki; a separate actual
+existing connector reads the retained AM2 Shared citation and historical Wiki
+revision one. Its cached 63-tool catalog does not prove new space/annotation/
+bundle invocations. Other actual live personas are not claimed.
+
+Original observers retain 7283 rows in 33 tables,
+136 terminal jobs and attempts, 5 original files,
+105 scheduler-history rows, 20 old client descriptors,
+12 prior backup plans and 11 unrelated module identities/metadata.
+The bounded root journal contains 1261 actual app lines with health,
+authorization, token and MCP positive controls. OAuth-query, issued-secret,
+submitted-body and traceback matches are zero; host logging is unchanged.
+Destructive restoration remains disposable. Vendor findings, real-provider
+quality and scheduled-client interoperability remain maintenance limitations.
+
+The genuinely installed source is `41864e47c15765dc18b05b03cfedbfe87cbedf93`, Core 0.29.0/app 0.44.0/schema 0016:
+
+- Module `sha256:f9bd770fca9c1be307cb0afbf990d84c916097fcf28f20b598b80ad056f4cd4c`.
+- Application `sha256:ce1b3e0dc82836f295860d3cc0d41e6201ca324468f46451c2c35450dd6c2c69`.
+- PostgreSQL `sha256:e4f3cbea39e27389bfa18df286ae12f8b56f5b1b68727fcfa5d6d1c79de56126`.
+
+Freeze these actual installed feature-main images for AM6. Do not substitute
+newly built documentation-marker images. AM5 runtime and final c1a90d3 marker
+acceptance pass; the final marker’s actual main/native/artifact gates are recorded below.
+AM6 and Windmill Gate remain gated. Existing CPU-quota and interactive-Playwright
+waivers persist; all eight automated native browser workflows are mandatory.
+
+The initial private restart preflight rejected a 20.0-second-old token window
+before any restart action. Failed evidence is retained. Independent read-only
+snapshots and authority controls were then collected concurrently; the unchanged
+under-twenty-second guard passed at 18.5 seconds, with 280.5 seconds remaining.
+The same authority passed immediately after the supported manager restart. No
+application source, session lifetime or token policy was changed for this retry.
+
+
+## Scoped development CI policy — implemented and verified
+
+The operator's 18 October 2026 instruction replaces historical demands for full
+acceptance on every incremental commit or documentation marker. The reviewed
+Git-only allowlist applies to documentation-only PRs **and main**. Scoped feedback,
+full merge acceptance and dedicated deployment acceptance are distinct; release,
+backup/restore, genuine predecessors, all automated browsers and live milestone
+gates remain mandatory. No runtime API, version, dependency, schema, lifecycle or
+container source changed. Original unfinished documents and failed evidence are
+preserved; AM5's frozen closeout completed independently without cancellation.
+
+AM5 completion [PR 13](https://github.com/Stell0/ns8-czero/pull/13), source `e05ed46`/main `c1a90d3`, passes its actual final gates: [local](https://github.com/Stell0/ns8-czero/actions/runs/39139467063) (1206 Python/PostgreSQL/packaging, 125 scripts and twenty Robot checks), [producer/scans](https://github.com/Stell0/ns8-czero/actions/runs/39139467005), [released-Core](https://github.com/Stell0/ns8-czero/actions/runs/39139469990), [Renovate](https://github.com/Stell0/ns8-czero/actions/runs/39139472225) and [both native systems](https://github.com/Stell0/ns8-czero/actions/runs/39139666064), with actual downloaded privacy/source/image audits. AM5's marker gate is closed. The genuinely installed `41864e4` and its three frozen digests above remain AM6's predecessor. AM6, Windmill Gate and Integration M17–M20 remain separate and pending.
+
+The implementation is merged through [PR 14](https://github.com/Stell0/ns8-czero/pull/14)
+and [publication correction PR 18](https://github.com/Stell0/ns8-czero/pull/18).
+The complete diff includes old/new rename paths, deletions and modes. UI/app
+feedback includes affected checks and shared PostgreSQL authorization/transport
+smoke. Core/auth/migrations/dependencies/build/lifecycle/CI broaden feedback;
+unknown paths select full acceptance. Static HTML, generated API contracts,
+packaged documentation and build metadata retain runtime classification.
+
+One classified workflow replaces duplicate push/PR checks. New development
+checks supersede obsolete feedback across mode changes; full acceptance is never
+automatically cancelled. Ready runtime PRs and later commits automatically repeat
+full validation. Manual full dispatch is retained and actually exercised. No new
+schedule, merge queue or merge_group trigger is introduced. Databases are isolated
+per runner; tests remain serial within each mutable database. Pip download caching
+and the existing immutable-input Yarn cache preserve reproducibility.
+
+Required main protection is configured and re-read: **C0 merge gate**, GitHub
+Actions app 15368, strict up-to-date base, admin enforcement, zero mandatory human
+approvals and no force pushes/deletions. Previous protection/rulesets were absent.
+Primary-agent diff review is recorded without claiming independent human review.
+Scoped, skipped, cancelled, incomplete and stale proof cannot authorize a runtime
+merge. The promotion helper checks actual current source/base/jobs/artifacts.
+
+### Actual development and negative controls
+
+- Initial regressions fail before implementation; current full unit tests pass
+  339 cases. Policy/release/native-helper checks pass 98. Actionlint 1.7.12 passes
+  with only its outdated ubuntu-26.04 label table excluded; actual runner builds
+  pass. CLI current/older completed-log capture compatibility is tested.
+- Controlled [docs PR 15](https://github.com/Stell0/ns8-czero/pull/15), source `40358fa`,
+  [run39141211821](https://github.com/Stell0/ns8-czero/actions/runs/39141211821),
+  passes lightweight checks and its gate in **28s**, with images/packaging/QEMU
+  skipped. Promotion accepts docs but rejects full release/deployment promotion.
+- [UI PR 16](https://github.com/Stell0/ns8-czero/pull/16), source `a049eba`,
+  [run39141216790](https://github.com/Stell0/ns8-czero/actions/runs/39141216790),
+  passes 63 PostgreSQL cases and 125 controller checks in **110s**, while its
+  runtime merge gate fails. Actual ready same-head broad feedback 39142577702
+  passes 1256 cases but rejects full_validation_required. Closed unmerged
+  [PR 17](https://github.com/Stell0/ns8-czero/pull/17) actually cancels obsolete UI
+  feedback 39145190485 when changing to docs. All probes are closed unmerged.
+- Actual older e05ed46 docs acceptance spans **2386s** across local/publication/
+  native gates: local push 39136439156 **466s**, duplicate PR 39136456995 **462s**,
+  producer39136439125 **131s**, native 39136605761 **2250s**. Downloaded actual
+  checkouts confirm the native source despite workflow_run's default-branch
+  context. These are single measured samples, not estimates or a general SLA.
+  UI feedback is 76.4% lower in these observations; docs acceptance is 98.8% lower.
+
+### Full acceptance, fixes and canonical publication
+
+Exact PR 14 head `7554825` [full 39145480486](https://github.com/Stell0/ns8-czero/actions/runs/39145480486)
+passes 1272 cases and native/artifact gates in 2201s. Superseded 3f7264a/613d8c8 full
+runs retain the failed Debian identity probe: the non-browser Robot runner has no
+Git. Five intended failing regressions precede explicit immutable workflow-source
+binding. Actual installed labels/digests now match without adding Git to runtime.
+
+First automatic main `56e384f` [run39148427261](https://github.com/Stell0/ns8-czero/actions/runs/39148427261)
+passes 1271 cases but hits one pre-existing forced-plan SQL timeout. Native and
+artifact checks subsequently pass, but the gate rejects required_job_not_successful
+and publication is skipped. All six canonical refs remain `c1a90d3`. Same-source
+manual [full 39149274270](https://github.com/Stell0/ns8-czero/actions/runs/39149274270)
+passes all 1272 cases/native/audits; publication is unexpectedly skipped through
+GitHub's skipped development ancestors. That is not accepted publication. Raw
+failures are retained outside Git. The five-second runtime deadline is unchanged;
+no automatic retry or validation exception is introduced. The forced-plan fixture
+remains timing-sensitive in retained post-suite diagnostic data; cause is unproved.
+
+PR 18 head `740fd64` fixes the publication status expression, explicitly requiring
+successful classification/gate, full mode, allowed main/module-tag ref and no
+cancellation. Twelve actual-expression cases reproduce skipped-ancestor behavior
+and reject docs/scoped/unsafe refs/failed or cancelled gates. [Exact full PR
+39152442602](https://github.com/Stell0/ns8-czero/actions/runs/39152442602) passes 1284
+cases and all native/artifact gates. Normal protected merges preserve exact reviewed
+trees and expected parents; neither promotion uses an admin bypass.
+
+**Final accepted runtime/publication source: 31ca102b6abb7f1fd961d1ad58f6519bba3ba608.**
+[Automatic main full39155318390](https://github.com/Stell0/ns8-czero/actions/runs/39155318390)
+actually passes 1284 Python/PostgreSQL/packaging, 125 controllers, 21 Robot dry runs,
+schema/shell, producer/released-Core, runtime/license/parser audits and five actual
+SARIF/SBOM pairs. Debian's genuine AM4 upgrade passes21 cases; Rocky installation
+passes26/three expected skips/all eight browsers. Actual reports verify both SSO
+probes per distribution, update/clean encrypted restore, eight password privacy
+guards, 25 numeric accessibility contexts, three query-audited artifacts with zero
+candidates, actual checked-out sources and all three installed image identities.
+The full gate **and canonical publication job** actually succeed. Measured main
+active span is **2305s (38m25s)**; no full/native speedup is claimed.
+
+Fresh registry GETs independently verify all six main/latest refs, exact source,
+digests and immutable module sibling references. Published sibling tag:
+`ci-31ca102b6abb7f1fd961d1ad58f6519bba3ba608-39155318390-1`.
+
+- Module `sha256:e042926e81bd218787d8f3ee5bba411d18ef88d338bfa6e11698cd36793556f2`.
+- Application `sha256:019af88360b302958ea466885992116aa2a4de48b67d6d513a7181f35016753b`.
+- PostgreSQL `sha256:cd68d1624366c444811ebc81c033a36216eab044e59e45960c75988088ebd83d`.
+
+These are accepted CI/main images, not the installed `41864e4` predecessor. No
+Core/module release or dedicated update occurs. The final documentation-only
+closeout uses the explicit allowlist; its PR/main source, gate and timing evidence
+is recorded in that PR after execution. It must not rebuild/publish images or run
+packaging/QEMU, and must leave these accepted runtime aliases intact.
+
+
+## AM6 — Accepted guidance and independent workflows (19 October 2026)
+
+The operator prioritized AM6 ahead of Integration M20. Original dirty-checkout
+work and prior worktrees remain untouched. The unfinished fourteen-file M20
+Core/OIDC/renewal draft remains isolated on `feat/renewable-sessions`, with a
+private mode-0600 archive. Its focused checks pass; a broad draft run has 1304
+passes and two unresolved migration-fixture failures. It has no application
+wiring, version bump, published artifacts or deployment. AM6 imports none of it.
+
+**Accepted application:** app **0.45.0**, released Core **0.29.0**, schema
+**0016_annotations**, all **76** existing tool contracts and dependency pins.
+Shared version-one guidance supplies eight rules and six workflows to actual-scope
+HTTP/MCP capabilities, public OpenAPI and MCP initialization. Reader guidance uses
+safe DOM text, selected-space roles and late-response/access-loss guards. Explicit
+space selectors, extraction readiness, immutable citations, create/update and retry
+semantics, applicability/unknown verification and atomic receipts remain authoritative.
+No session policy, migration, domain API or generative behavior changes.
+
+### Source, review and full acceptance
+
+[PR 20](https://github.com/Stell0/ns8-czero/pull/20) source
+`97a7a1bcd73741d1812db9d8b807bc71397d2434` starts from verified `58a2896`.
+[Full PR validation 39166087566](https://github.com/Stell0/ns8-czero/actions/runs/39166087566)
+actually completes successfully: **1290** Python/PostgreSQL/packaging cases in one
+clean run (424.18s), **127** controllers, schema/shell and **21** Robot dry runs,
+producer/runtime/parser/license audits, independently released-Core image checks,
+Renovate and all five scan jobs. All five actual SARIF/CycloneDX pairs are inspected.
+Actual Debian reports pass **21** genuine AM5-upgrade cases; Rocky installation
+passes **26**, with three expected skips and all eight automated browsers. Actual
+checkout logs, installed images and module sibling references match the candidate.
+Downloaded artifacts pass eight password privacy guards, **25** numeric accessibility
+contexts and three XML/browser-log query audits with zero candidates. Actual guide
+role counts are tasks **7/1/7**, workflows **6/2/6**.
+
+The 56-case focused isolation run passes. Local broad checks have 1286 passes and
+four packaging setup errors from disk quota; cleanup of disposable caches followed
+by all six packaging checks resolves these without source/dependency/test changes.
+The clean CI run independently passes all 1290. Initial mixed-source/retained-fixture
+failures remain private and are not acceptance evidence; captured fixture-owned
+space/job cleanup fixes focused/full isolation without weakening corpus assertions.
+
+Primary-agent review is recorded honestly, separately from independent review.
+No reviewer is assigned; existing protection requires zero human approvals.
+No reviewer feedback remains unresolved. The exact-source full promotion verifier
+passes
+before deployment and again before merge. [Actual live evidence](https://github.com/Stell0/ns8-czero/pull/20#issuecomment-6259976516)
+is recorded before normal protected **regular merge**
+`e378a891112ad75a3a2a1649c5b96900aa39ae55`; its tree exactly matches tested `97a7a1b`
+and preserves that source commit. [Automatic main validation/publication
+39201930016](https://github.com/Stell0/ns8-czero/actions/runs/39201930016) actually
+completes successfully, including canonical publication. Its actual log passes
+1290 cases in 413.56s, 127 controllers, schema/shell and 21 Robot checks. Actual
+main reports independently pass Debian 21 and Rocky 26/three expected skips/all
+eight browsers, eight privacy guards, 25 numeric accessibility contexts, all five
+scan/SBOM pairs and three query artifacts with zero candidates. Both checkout logs
+and all installed image identities match main's candidates. Actual native guide
+counts remain tasks 7/1/7 and workflows 6/2/6. The exact-main full promotion verifier
+passes. Six fresh registry reads match the completed main-publication artifact,
+source and immutable sibling references.
+
+Canonical main/latest images are distinct from the accepted installed candidate:
+
+| Image | Published main/latest digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:7975c7e7014e02345681e33ed0e153739b7bc37e8d740e9ca72384eb95cdb043` |
+| `ghcr.io/stell0/czero-app` | `sha256:acbbdd0aea6e86903e48d59defb2e0f002711f9117275920eed1af7a50db796c` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:28e5dd7316a9fde25f91182f5a1c319c17f17e7cedafa8e9875e30b8473606b4` |
+
+### Accepted dedicated runtime and preservation
+
+Normal root/host/leader/module/node verification confirms only the authorized C0
+instance is targeted. The supported C0-only backup passes repository read-data,
+PostgreSQL dump/schema/table inspection and exact hashes of six original files
+(36847 bytes). The dump is 3734772 bytes. All thirteen previous plans are unchanged;
+the newly owned one-off plan is disabled. No live restore or outage fixture runs.
+
+The supported canonical targeted update installs immutable tag
+`ci-97a7a1bcd73741d1812db9d8b807bc71397d2434-39166087566-1`.
+Actual ready Core/app/schema are **0.29.0/0.45.0/0016**. Freeze all three genuine
+installed digests together as the next upgrade predecessor:
+
+| Image | Installed immutable digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:0d419ca1b1d01cb927aeff00d6d6fb3a43533bbfdd77b4da85f30e963c70647c` |
+| `ghcr.io/stell0/czero-app` | `sha256:40f6c3074d7c07cf068c6bcddd65266bfd8cf356808d14adc963bbc221c12800` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:096029c10856a5898e0cafd6c266251adbc94e14f41975af22b97fcaba0b4e6a` |
+
+All installed revisions are `97a7a1bcd73741d1812db9d8b807bc71397d2434`; the module
+references the exact immutable sibling tag. The tag/branch remain available and
+unchanged while installed. Main and documentation-marker images do not replace it.
+All three genuine AM5 `41864e4` digests remain frozen in the historical acceptance
+record and native upgrade test.
+
+Immediately after update, the same two consented delegated grants and browser
+remain authorized at **58.2s**. Supported full-manager restart similarly preserves
+the same two grants/browser at **36.7s**. Exact domain/OAuth/configuration/files/
+schedule snapshots pass at both boundaries, with 153 pre-update and 155 pre-restart
+terminal jobs/attempts preserved. The final observer verifies all **8236** original
+row hashes across **33** tables, all six original files, configuration/private
+configuration/schedules/schema and old terminal history unchanged. Final terminal
+history is 162 jobs/attempts after legitimate synthetic extraction work. Eleven
+unrelated instance identities/groups/metadata are unchanged; only unordered flags
+are normalized. Runtime/authentication/database and actual worker timer are healthy.
+
+Two distinct fresh grants exercise current/legacy SDK sessions through read →
+sanitized evidence ingestion → actual timer-driven extraction readiness → immutable
+passage/citation → atomic page/entity/claim/applicability update → stale conflict/
+reload/reconcile → search/reuse/history, including whole-receipt replay and Shared
+negative controls. Post-restart replay passes both protocols to revision five.
+The earlier grants had naturally expired before that later replay, so fresh normal
+sign-in/explicit consent is used; it does not replace the immediate original-grant
+restart proof or extend authority. Read-only HTTP/MCP guidance agrees and denied
+writes challenge only for write scope on both protocols. Signed-in browser/REST
+reads exactly match current private content; implicit Shared UUID reads fail.
+
+The existing external connector separately reauthenticates and reads authorized
+content. Its cached 63-tool inventory is not refreshed 76-tool discovery, an
+observed ChatGPT prompt-quality evaluation or invocation of uncached new tools.
+Other live personas are not claimed; actual native browsers cover Reader/Editor/Admin.
+
+Immediately before disabling only the newly owned temporary client, the exact
+same valid bearers pass REST and actual current/legacy SDK MCP controls. Both then
+fail REST and valid MCP initialize with **401**; browser authority remains valid.
+The client is disabled. The bounded root app journald audit has **139** actual
+entries and successful health **1**, authorization **8**, token **4**, MCP **44**
+controls, with zero OAuth-query candidates, known issued secrets, submitted content
+or tracebacks. Empty Podman logs are not used. Private credentials, raw evidence,
+failed observations and synthetic identities remain outside Git.
+
+### Closeout and retained limits
+
+AM6 and the final C0-AM runtime/deployment gate pass. This separate three-document
+closeout uses the explicit Git-only CI allowlist. Its actual PR/main source, gate
+and timing evidence will be recorded in the closeout PR after execution; it must
+not publish/redeploy images or rerun packaging/QEMU. Canonical main aliases and the
+accepted installed candidate are verified independently and preserved.
+
+Existing CPU-quota deferral and interactive-Playwright waiver remain; all eight
+automated native browsers remain mandatory. No stable module release, real-provider
+semantic quality, scheduled-client interoperability or unobserved ChatGPT behavior
+is claimed. Integration M17–M20 remain separate; preserve M20 drafts for later work.
+Windmill Gate is a separate milestone and has not started.
+
+
+M20 recovery checkpoint (19 October 2026): `/tmp` was cleared during the interrupted turn. All fourteen original draft files were reconstructed from the task's recorded source edits into `.cache/worktrees/m20-original`, with a mode-0600 archive in ignored private storage. Active work is separate in `.cache/worktrees/m20` on `feat/m20-session-renewal`. The resumed edits, durable Python environment and dedicated disposable PostgreSQL fixture are recovered; current producer verification passes 1342 actual Python/PostgreSQL/packaging cases. Publication/native/application/live gates remain pending. Existing committed AM6 evidence and original dirty documents remain unchanged.
+
+
+## Integration M19 — Optional approved client metadata discovery
+
+**Entry and authorization:** M18 closeout PR28 is merged and actual main marker
+39545434377 passes exact promotion verification at `426bcb6`. The operator
+approves this implementation plan. Work uses `feat/m19-cimd` in a separate
+worktree; the original dirty checkout and all recovered M20 work remain intact.
+No acceptance, publication or deployment is claimed by this plan.
+
+**Behavior and boundaries:** New installations default CIMD off. Native NS8
+Settings controls `cimd_enabled` (`CZERO_CIMD_ENABLED`); application Admins preview
+and approve exact metadata URLs and scopes. Anonymous authorization may fetch
+only an enabled approved URL; unknown URLs trigger no network request. Manual
+UUID clients retain their contract. All 77 MCP operations, roles, schemas and
+bindings remain unchanged; CIMD administration is REST-only. No DCR, JWT client
+authentication, new session policy, stable module release or AM work is added.
+
+**Core first:** Planned Core0.31.0/schema0018 adds a singleton default-off policy
+and approved URL binding/cache records referencing existing client UUIDs. Foreign
+keys remain UUIDs; trusted identity distinguishes internal UUID from public URL.
+A CIMD internal UUID cannot authenticate as an alternate public identity. The
+64-client bound is shared. Migration preserves old clients/consent/grants/tokens
+and repeated upgrades preserve approval. Approval/reapproval uses optimistic
+revision checks and exact normalized metadata digests. Duplicate approval never
+reenables disabled clients. Relevant changes stick in review-required state;
+remote reversion cannot silently approve them. Existing consented grants survive
+metadata outage/change within local policy/lifetimes; reapproval invalidates them.
+Global off revokes only CIMD authority and pending requests; reenable never
+revives it. Unchanged startup synchronization preserves authority.
+
+**Concurrency:** No DNS/HTTP under database locks. Trusted request-local proof
+binds exact URL, approved revision/digest and at most30-second handoff at consent
+begin and approve. Denial needs no fetch. Recheck policy, approval and current
+actor after external work. Preserve role49372 -> client49378 -> grant49379 ->
+consent49380 -> final revocation49382 ordering. Captured delegated actors must
+fail after completed CIMD disable/reapproval/global-off actions.
+
+**Validation:** Exact ASCII HTTPS DNS URL,443, path, <=2048 characters; no
+credentials/query/fragment/whitespace/backslash/dot path segments. Strict UTF-8
+JSON <=32KiB, duplicate keys rejected, depth<=16. Require exact self-identity,
+printable nonblank name<=128 and1–4 exact existing-valid callbacks. Select public
+`none` from plural `token_endpoint_auth_methods_supported` when present; otherwise
+require singular `none`. A plural-none ChatGPT document with legacy JWT preference
+is accepted. Never fetch JWKS or display remote logos. Reject embedded credentials
+and private key material. Support authorization_code and optional refresh_token;
+omitted grant types means code-only. Respect declared C0 scope ceilings. Digest
+only normalized approval-relevant fields; unused display/JWKS URLs have no power.
+
+**Application network boundary:** Declare/freeze public httpcore1.0.9 interfaces.
+A dedicated public AsyncNetworkBackend resolves all bounded A/AAAA results,
+rejects mixed/private/special/unsafe-transition addresses, pins numeric connects
+and retains original TLS hostname/SNI/certificate verification. HTTP1 only, no
+redirect/proxy/retry/keepalive/compression/forwarded credentials. Four fetches,
+bounded single-flight waiters, five seconds total including DNS,64KiB total
+plaintext and32KiB body; only200 JSON or application/*+json. Cancellation retains
+DNS concurrency until resolver work actually ends. Fixed diagnostic codes avoid
+raw documents/URLs. Valid-only cache defaults60s, caps300s, respects Cache-Control,
+Age/Expires and no-store/no-cache; no negative cache. No-store proofs remain
+request-local. Persist freshness for approved bindings only, bounded by64.
+
+**Interfaces:** Native numbered validation/persistence/init/update/backup/restore
+scripts preserve omitted patches and default missing old backup policy to off.
+Application uses existing Admin/c0:admin/CSRF guards for GET `/api/v1/oauth/cimd`,
+POST `/api/v1/oauth/cimd/preview` `{metadata_url}`, POST
+`/api/v1/oauth/cimd/clients` `{metadata_url,metadata_digest,allowed_scopes}`, PUT
+`/api/v1/oauth/cimd/clients/{uuid}`
+`{metadata_digest,allowed_scopes,expected_revision}`. Binding URL is immutable.
+Approval fetches again and conflicts on changed digest; ordinary existing client
+PUT enables/disables by UUID. Keep existing ClientView unchanged. UI renders
+literal reviewed name/URL/callbacks/scopes with generation/draft/access-loss
+guards; consent shows approved URL, never a verified-publisher claim. Discovery
+advertises `client_id_metadata_document_supported` only when enabled on the real
+authenticated hostname-root mount. Existing grants/token/refresh/revoke/MCP/REST
+use local descriptors without remote fetches. Preserve exact raw callback/resource,
+PKCE, native authority, explicit consent, current roles and scope enforcement.
+
+**Compatibility and releases:** Verify producer Core against old app first with
+default-off migration. Run actual PostgreSQL, packaging/reproducible wheel/archive,
+local/image/native checks at exact source, then publish immutable core-v0.31.0
+artifacts. Adopt released Core>=0.31,<0.32 and frozen app lock at planned app0.49.0,
+then rerun final consumer/image/native checks before deployment. Never clobber
+artifacts or substitute unpublished local Core in the released consumer.
+
+**Tests:** Real PostgreSQL migration preservation/repeat, public/internal identity,
+approval revisions/idempotency/client limit/scopes, no-store proof expiry,
+metadata-change stickiness, outage continuity, global-off/on no revival and
+concurrent approval/disable/reapproval/refresh/captured-actor checks. Controlled
+DNS/TLS tests prove no prohibited destination receives a connection, SNI/cert,
+rebinding/mixed DNS, redirects/compression/slow/oversized/deep/duplicate documents,
+cache/cancellation races. Exercise raw and pinned SDK code/token/refresh/revoke,
+authcode-only/plural-none, scope/role failures and all77 unchanged tools. Extend
+native Settings/Admin browsers and genuine upgrade/restore/privacy coverage.
+Run focused tests then complete Python/PostgreSQL/packaging, scripts, immutable
+Vue build, schemas/shell and Robot; database skips never establish a pass.
+
+**Genuine upgrade predecessor:** Keep canonical installed tag
+`ci-93b9546529c623a5620fa0c585f8216bfec5e58f-39466269075-1` unchanged/available.
+Freeze module `sha256:ae588e3c32e6fdc65a27cbc2c66ba1005c4d5ab5daef9c0328676795e52d4240`,
+app `sha256:ccb0f181852cc004e594fc6b3896ba5a29528c4679284adeede6b2c6f809a28c`,
+PostgreSQL `sha256:9522bc903cfc5037f6e322cf13300ae1f2935b9098d2555b786815e93c52bade`;
+all OCI revisions93b9546. Main/documentation images do not replace them.
+
+**Dedicated acceptance checklist and delivery:**
+
+- [x] Verify M18 closeout main and isolate/preserve work before implementation.
+- [x] Core domain/migration, exact local/full/native/packaging and immutable release.
+- [ ] Released app adoption, final full CI, inspected actual native/privacy/scan artifacts.
+- [ ] Open ready PR targeting main without unsolicited reviewer; satisfy review.
+- [ ] Agent verifies dedicated C0 installation/baseline, supported C0-only backup,
+  freezes all three candidate digests/revisions/tag, targeted canonical update,
+  readiness and installed identity before merge. Preserve unrelated instances.
+- [ ] Isolated controlled publicly trusted HTTPS metadata fixture on a temporary
+  dedicated-instance route/container: actual OAuth/SDK/MCP, rotation/replay,
+  metadata change/outage, per-client and global disable. No permanent test route,
+  runtime fixture code or private-address bypass. Global off/on occurs before
+  retaining the real ChatGPT connection; disable fixture client/remove fixture.
+- [ ] Separate actual ChatGPT connection using automatic CIMD and no static UUID
+  credentials; Admin approves exact connection-specific URL from management UI.
+  Preserve existing UUID connection. Verify profile, cited Wiki/source/repeated
+  reads beyond five minutes with real renewal and full-manager restart continuity.
+  Reconnect expired predecessor sessions normally; never extend authority for tests.
+- [ ] Compare knowledge/files/settings/schedules/original clients/worker health and
+  unrelated instance inventory across each action window. Root bounded app journal
+  requires successful health/auth/token/MCP positive controls and private audit.
+- [ ] Final dedicated state CIMD ON with approved retained ChatGPT URL and old UUID
+  connection preserved. Keep private/failed evidence outside Git; no destructive live
+  recovery. Any runtime fix repeats affected CI/deployment/acceptance within M19.
+- [ ] Regular reviewed merge preserves tested commits, actual main full/publication
+  and registry identities, then separate three-document checked closeout/main marker.
+  Accepted deployed images remain frozen for the next genuine upgrade predecessor.
+
+Existing interactive Playwright and CPU-quota waivers remain unchanged. Real
+ChatGPT acceptance remains an operator interaction gate; SDK simulation alone
+cannot satisfy it. Further AM/Windmill work remains deferred until M19 closes.
+
+### M19 Core implementation checkpoint — 21 October 2026
+
+Core0.31.0/schema0018 now implements the bounded metadata validator, separate
+public URL/internal UUID identity, default-off policy, Admin approvals/revisions,
+sticky review, short-lived consent proof, optional refresh grants and targeted
+CIMD revocation. Focused actual PostgreSQL/validator checks pass69 cases;
+legacy OAuth grant/consent regressions pass19 and migration regressions pass3.
+The new external-install probe covers approval/identity/rotation/revocation and
+is also wired into both disposable native distributions. The predecessor fixture
+now freezes the accepted M18 trio independently of the frozen M17 eval catalog.
+The first full local trial reports1567 passes/one obsolete predecessor-fixture
+assertion failure; its correction and twelve focused source/fixture checks pass.
+Retain that failed trial. Corrected final full local/CI/native and publication
+remain gates; no Core artifact or runtime deployment is claimed here.
+
+The producer application's compatible range temporarily admits both0.30.1 and
+0.31; the released source/tag/lock remain0.30.1. Frozen lock validation passes.
+Final adoption will narrow to0.31 only after immutable publication. This keeps
+producer and independently released-consumer checks executable in the required
+Core-first sequence. Existing MCP/tool/schema contracts remain unchanged.
+
+Core producer `c33e6d1` passes1569 actual PostgreSQL/Python/packaging cases without
+skips (467.40s),130 controllers, schema/shell and21 Robot dry runs; full CI
+39566400246 is started and not yet accepted. During application startup design,
+a missing database-only policy interface is identified: global off must revoke
+CIMD authority even when SSO is removed in the same change. Add trusted
+`CimdPolicyService(database)` and independently test it without an access service.
+Keep `c33e6d1`/its running ref unchanged as retained evidence; repeat exact-source
+local/full/native gates for the corrected Core source before immutable release.
+
+Core policy/revocation corrections pass1574 actual PostgreSQL/Python/packaging
+cases without skips (494.83s). These serialize CIMD refresh/replay/revocation
+with already-running delegated transactions, preserve manual-client semantics,
+and record changed metadata while a client is disabled. Retained full CI
+39566400246 fails genuine Debian upgrade: the profile fixture incorrectly
+requires Core0.31 while still checking accepted M18 Core0.30.1; Rocky installation
+passes. Run39573023659 remains retained at181cb36. The corrected fixture now
+supplies both app and Core versions explicitly for predecessor and candidate.
+Three new regression failures reproduce the bug; all37 focused fixture/source
+cases and21 Robot dry runs pass after correction. No publication/deployment is
+claimed; fresh exact-source full native gates remain required.
+
+### M19 application implementation checkpoint — 21 October 2026
+
+The isolated application branch implements the public-DNS-pinned HTTPS fetcher,
+REST-only Admin preview/approval/reapproval, request-local consent verification,
+default-off native configuration/lifecycle/restore handling, native Settings
+switch and literal Administration/consent UI. Existing77 MCP bindings remain
+unchanged. Core files match the corrected producer candidate87b8fd1; final
+immutable tag adoption/app0.49 and native acceptance remain pending.
+
+Actual focused fetch/HTTP/native/fixture checks pass128 cases, including real
+TLS/SNI/certificate failures, mixed/rebinding DNS, bounded real deadlines,
+cancellation/singleflight/cache, unknown-URL no-fetch, public URL OAuth/SDK,
+metadata outage/change, refresh replay, sticky review, restart policy and
+post-I/O role loss. Read-scoped owner tokens cannot administer CIMD; browser
+writes reject bad Origin/CSRF before fetching. All140 controller checks, schema
+validation, five separately parsed Bash scripts and21 Robot dry runs pass.
+Immutable Vue install/build passes on the local host's Node25.8.1; pinned CI
+Node24 and actual native browsers remain required.
+
+The first full application run reports1662 passes/three old default-dictionary
+assertion failures: the expected new `cimd_enabled=false`/environment field was
+absent from their expectations. Corrected native backup/module/default checks
+pass65 cases; keep the failed run. Repeat final full checks after released-Core
+adoption. No application candidate CI, deployment or actual ChatGPT M19 pass is
+claimed. Read-only dedicated baseline confirms the accepted M18 image trio,
+45 tables, six original files and healthy timer; all original/M20 worktrees
+still match captured HEAD/status/document bytes. The temporary owned HTTPS
+fixture and cleanup procedure are prepared privately but not deployed.
+
+Corrected application checkpoint4af5479 passes all1665 actual Python/PostgreSQL/
+packaging cases without skips (488.17s). Three additional focused regressions
+pass: both explicit/default TLS-port and uppercase transport normalization keep
+the exact approved URL identity, and pinned SDK2.3 selects CIMD from empty client
+storage through actual server discovery. That SDK signs in, obtains consent,
+calls all77-tool discovery/profile and rotates refresh authority while the real
+controlled metadata HTTPS host returns503, with no extra metadata request.
+The SDK renewal test supplies a past client-side deadline; it does not claim
+real five-minute lifetime acceptance. Its initial storage-expiry assumption fails
+and is corrected without runtime changes; private failed evidence is retained.
+Core87b8fd1 passes1574 local cases (485.34s); exact full CI39573888375 remains
+pending both native suites. No immutable release or deployment yet.
+
+Fork compatibility review catches a missing native dependency registration:
+generated consumers copy only explicit managed infrastructure, so updated
+get-configuration/restore scripts would import a missing CIMD helper. A real
+consumer-generation regression reproduces it before correction. Register only
+the six new tracked CIMD helper/lifecycle files, with null baseline metadata
+because they are absent from the immutable original baseline. The existing95
+entries and customization rules stay unchanged; all37 generator/updater cases
+pass after correction. No generated application code or private files are added.
+
+### M19 Core release and consumer adoption — 21 October 2026
+
+Exact Core source `87b8fd19d1d76fb6fa16ee15e27e966b8142d57c` passes1574
+actual local PostgreSQL/Python/packaging cases without skips (485.34s). Its
+[full acceptance39573888375](https://github.com/Stell0/ns8-czero/actions/runs/39573888375)
+completes successfully. Downloaded reports pass Debian genuine M18 upgrade21
+cases and Rocky installation26/three expected skips, all eight real browsers,
+eight privacy guards,25 numeric accessibility contexts and three actual XML/
+browser-log privacy audits with zero OAuth-query candidates. Both native
+sources and all three installed candidate image identities match the frozen
+producer source. All five actual scan/SBOM pairs pass inspection. Native renewal
+measurements335/338 seconds preserve existing session bounds; these are the
+existing native OAuth workflows, not real ChatGPT CIMD acceptance. Exact full
+promotion verification and fresh three-image registry reads pass.
+
+Immutable [Core0.31.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.31.0)
+is published at that source by successful
+[publication39580059693](https://github.com/Stell0/ns8-czero/actions/runs/39580059693).
+Actual downloaded release assets match the exact workflow-tested bytes and
+SHA256SUMS; wheel contains both CIMD modules and migration0018. Checksums:
+
+- Wheel `757acb2b09ada6e2806ab701dc7c7e3cc75f3178cfb58d664c9a87cde41e37a0`.
+- Archive `5cb8c00950932b50f4a7da1dea71bcda9c96cdc15446e3850de7ef38b49072ba`.
+
+App0.49 now adopts released `core-v0.31.0`/exact87b8fd1 with compatible
+`>=0.31.0,<0.32.0`. Only app/Core lock records change; all other frozen dependency
+records remain identical. Prefix-aware Renovate permits only0.31 patch updates,
+with the independent example's old compatibility range preserved. The explicit
+native predecessor app/Core versions remain0.48.0/0.30.1; candidate expectations
+become0.49.0/0.31.0. Final producer/full and independently frozen released-consumer
+checks are running, not yet accepted. M18 remains the live runtime; producer
+Core-validation images do not replace it. Final application CI/native, ready PR,
+dedicated controlled HTTPS/ChatGPT acceptance and reviewed merge remain gates.
+
+The independent frozen released consumer passes206 checks without skips (87.95s),
+importing Core0.31 from the exact Git tag outside the checkout. Final adoption
+also passes140 controllers,21 Robot dry runs, actual Renovate API bounds and
+frozen-lock/source checks. A full run on the repeatedly reused disposable DB
+reports1668 passes/one existing forced-HNSW statement timeout. The unchanged
+focused case passes; disposable EXPLAIN ANALYZE measures132ms with no JIT.
+Its cause remains unproven; retain the failure. No deadline, query or assertion
+is weakened. The unchanged final full suite on a newly created isolated DB
+passes all1669 cases without skips (487.96s). Native CIMD recovery coverage is
+being expanded before the application PR; do not infer final CI/live acceptance.
+
+Native recovery now seeds an isolated CIMD approval/cache through trusted Core
+using a real verified browser context, then exercises public consent/tokens.
+It requires unchanged approval/profile/absolute deadline and real refresh
+rotation after update. Clean restore must reject still-unexpired old authority,
+then require fresh sign-in/consent; only the fixture client is disabled and the
+native switch returns off. The backup must retain its explicitly enabled switch.
+This is Core-seeded recovery evidence, explicitly **not** external HTTPS-fetch
+proof; controlled HTTPS transport and actual ChatGPT remain separate gates. No
+runtime DNS/TLS/private-address guard is changed or bypassed.
+
+The exact installed helper is exercised through signed local HTTP with released
+Core: six cases pass, including lost approval, retained old access, expired-grant
+false evidence, missing restored switch and non-disposable-host rejection.
+Ninety-four focused producer recovery/privacy/updater cases pass before the
+additional expired-grant negative control. Native artifact audits now require
+all three validated non-private stage measurements per distribution, and reject
+missing/private/false claims. Its reusable CI evidence validator is explicitly
+registered with a null original baseline. Repeat final full local/native gates
+for this expanded application candidate; published Core bytes are unchanged.
+
+The expanded final application candidate passes all1688 actual PostgreSQL/
+Python/packaging cases without skips on a newly created disposable database
+(499.89s), plus140 controllers,21 Robot dry runs, schema and separate Bash
+parsing checks. Frozen released-consumer206 plus six exact recovery-helper
+cases pass. No Core library bytes differ from published87b8fd1. Open the ready
+application PR and require fresh exact-source image/native/artifact gates before
+any dedicated-instance update; actual M19 HTTPS/ChatGPT acceptance is pending.
+
+
+### M19 application CI correction — 21 October 2026
+
+Ready [PR29](https://github.com/Stell0/ns8-czero/pull/29) targets main without
+an unsolicited reviewer. Its first exact-source
+[full run39598916352](https://github.com/Stell0/ns8-czero/actions/runs/39598916352)
+at `a550602` completes with successful local checks and image publication,
+but fails the released-image probe's obsolete0.30-only version guard and the
+application image's fixable critical Certifi GHSA-6q48-6c7w-9gw2. Native jobs
+are skipped, so this source is not deployable or accepted.
+
+The released probe now reads the actual committed numeric Core release while
+retaining exact installed version, Git URL, subdirectory and40-character source
+checks. A regression executes the real workflow extraction against the current
+lock. The application explicitly pins Certifi2026.10.19 and updates only that
+bundle's lock records alongside its direct dependency entry. Published Core0.31
+bytes remain unchanged. No vulnerability gate is waived. Repeat focused/full
+local and exact-source CI/native/artifact checks before any live action; the
+accepted M18 installation remains unchanged.
+
+
+The corrected application working tree passes1689 actual Python/PostgreSQL/
+packaging cases without skips on a new disposable DB (541.54s). Focused source/
+fetch checks pass77 producer cases and64 independently frozen released-consumer
+fetch cases. All140 JavaScript controllers,21 Robot dry runs, Go schemas,
+five individually parsed Bash scripts, frozen lock and exact installed released
+Core version/source checks pass. Only Certifi and its app dependency record
+change in the lock; Core remains byte-identical to published87b8fd1. Fresh
+exact-source CI/native/scans and live acceptance remain required.
+
+
+### M19 final-candidate validation corrections — 21 October 2026
+
+[Full39602167906](https://github.com/Stell0/ns8-czero/actions/runs/39602167906)
+at `85d3426` passes the corrected released-Core image probe and all five scan
+jobs. Downloaded application SBOM confirms Certifi2026.10.19 and the blocking
+advisory is absent. Fresh registry reads verify all three image identities.
+The local job nevertheless reports1688 passes/one five-second statement timeout
+in the existing forced-HNSW structured-search regression. Debian upgrade exposes
+another defect: app package metadata is0.49 but its runtime constant remains0.48,
+so post-upgrade health assertions and dependent scenarios fail. Rocky is still
+running at this checkpoint. This source remains undeployed and unaccepted.
+
+Twenty unchanged focused forced-plan repetitions pass with incremental sorts,
+without reproducing the CI timeout. A disposable alternate full-sort plan has
+artificial cost10000011205.4 and enables47 optimized JIT functions; execution
+measures220.73ms under the original five-second deadline. PostgreSQL's
+[cost-based JIT decision](https://www.postgresql.org/docs/17/jit-decision.html)
+explains the compiler activation; this does not establish the precise CI timeout
+cause. The regression now isolates compilation only in its forced transaction
+and exercises both incremental/full-sort configurations. Normal search retains
+normal database settings, and actual filtered HNSW execution, exact underfill
+fallback, version isolation and the five-second bound remain required. No query,
+runtime database setting or published Core bytes change.
+
+The app runtime constant is corrected to0.49. A new check compares actual
+imported app/Core runtime versions with installed package metadata and project
+declarations; its negative control rejects the old app0.48 constant. Focused
+source/SSO checks pass39 cases, the independently frozen consumer passes14 source
+checks and structured retrieval passes19 database cases. Repeat final full local
+and exact-source image/native/artifact gates before any dedicated live action.
+
+
+The failed run subsequently completes. Actual downloaded reports have Debian
+five passes/sixteen failures and Rocky five passes/twenty-one failures/three
+expected skips, with zero OAuth-query candidates across the three XML/browser
+log artifacts. Early runtime-version failures block dependent scenarios; none
+is counted as a native pass or waived. Expanded CIMD recovery remains pending.
+
+The first corrected full local trial has1689 passes/two failures: existing
+health/OpenAPI expected values still name app0.48. Those HTTP assertions now
+compare with independently installed distribution metadata, which also catches
+an unbumped runtime constant. Current verification-stage SSO expectations become
+0.49 while the genuine predecessor stays0.48. Focused producer health/source/
+SSO checks pass84 cases, and the independent frozen consumer passes59 health/
+source cases. Both forced sort plans execute under the original five-second
+bound without JIT, measured5.67/5.15ms in the disposable observer. Freeze the
+corrected source and require completed successful full local and CI/native/
+artifact checks before any live deployment. Failed evidence remains private.
+
+
+### M19 forced-ANN fixture isolation — 21 October 2026
+
+The exact `ee99523` full local run reports1689 passes/two forced-ANN SQL
+timeouts (639.55s), including both sort configurations despite transaction-local
+JIT disable. In contrast its actual CI local job passes; native jobs are still
+running at this checkpoint. Compiler isolation did not resolve the local failure,
+and the precise timeout cause remains unproven. Retain these results separately.
+
+The forced-plan correctness corpus now receives its own uniquely named disposable
+PostgreSQL database before service fixtures initialize. This removes earlier
+fixtures' physical vector-index/statistics/maintenance state from that bounded
+71-revision corpus. The test asserts the actual database identity; teardown drops
+only its owned database after fixture cleanup, without forcing connections closed.
+Normal compilation settings are restored: the ineffective JIT override is removed.
+Both ordering plans, real filtered HNSW execution, exact underfill fallback,
+version isolation and the original five-second query deadline remain intact.
+No runtime SQL, database configuration, application behavior or Core bytes change.
+
+Combined embedding/structured checks pass32 cases with normal compilation
+(17.52s), and both forced cases pass with independently installed released Core
+(5.54s). Both owned databases are confirmed absent after cleanup. Require a fresh
+complete local run, then final exact-source CI/native/artifact validation before
+any live action; the accepted M18 installation remains unchanged.
+
+
+## M19 deployed acceptance and main closeout — 21 October 2026
+
+Runtime source `38a8654486581e0f2af21672e8675a2e925d2b38` passes all1691 actual
+local PostgreSQL/Python/packaging cases without skips,140 controller cases,
+21 Robot dry runs and schema/shell checks. Final [PR full39613259374](https://github.com/Stell0/ns8-czero/actions/runs/39613259374)
+and [main full/publication39632626515](https://github.com/Stell0/ns8-czero/actions/runs/39632626515)
+complete successfully. Actual downloaded reports pass Debian genuine M18 upgrade21,
+Rocky installation26/three expected skips, all8 browser/privacy workflows,
+25 numeric accessibility contexts and zero OAuth-query candidates across three
+XML/browser-log artifacts. Both native installed identities/source checks and
+all5 actual scan/SBOM pairs pass. The corrected Certifi finding is absent;
+existing vendor findings remain. Three Core-seeded CIMD recovery stages per
+native distribution pass; these do not prove external HTTPS or ChatGPT.
+
+The operator reports PR29 reviewed and merged. Its regular merge `7a223fb` has
+parents `426bcb6` and `38a8654`, and the same tree as the tested candidate.
+No separate GitHub review record is invented. Exact-source full main promotion passes; fresh registry reads verify all six
+canonical main/latest identities against the accepted main publication source.
+
+**Frozen accepted deployment:** canonical tag
+`ci-38a8654486581e0f2af21672e8675a2e925d2b38-39613259374-1`:
+
+| Image | Installed digest |
+| --- | --- |
+| Module | `sha256:0a78eef9a6cfd6246e495c88d4f95ecbc1c6daaf7bb38d3d0e003ffbe82db7fb` |
+| App | `sha256:4b2000d645cb9f6d7a508365d770d37db2cc085af113340c635f89e79bd23d9b` |
+| PostgreSQL | `sha256:d8beafaa39c490e9046e4611b298a7cd8ab87ef7400ac1adbd84a2a32d9cecf2` |
+
+All3 OCI revisions match38a8654. Keep this tag/digest trio available unchanged
+while installed; main and documentation-marker images do not replace it.
+Core0.31 artifacts at87b8fd1 remain immutable; app/schema are0.49.0/0018.
+
+Supported C0-only backup passes actual `restic check --read-data`; all15 prior
+backup-plan configurations are preserved. Canonical targeted update and supported
+C0-only full-manager restart pass readiness/all3 installed identity checks.
+Original8915 rows in37 domain tables,6 files/settings/original clients,8 exact
+HTTP content views and3 schedules persist, with2 additive CIMD tables and healthy
+worker/timer. All11 unrelated instances are exact within each C0 action window.
+A separate voice update begins before C0 deployment and changes its longitudinal
+image identity; passive lifecycle evidence identifies a distinct task, initiator
+unknown. No voice operation or call test was performed.
+
+Actual public-DNS/trusted-HTTPS metadata acceptance passes explicit Admin review,
+consent, URL identity/internal UUID alias rejection,77 current/legacy SDK tool
+contracts and35 read-scope eligible operations discovered, with actual profile,
+cited/current/historical reads and denied-write controls, normal
+rotation, replay-family revocation, outage/recovery, sticky changed-metadata
+review, reapproval and client/global disable/off-on without authority revival.
+Positive root-journal fetch counters prove unknown URLs and refresh cause no
+metadata fetch; Host/TLS identity and no forwarded credentials pass. The earlier
+empty module-user Podman logs are not evidence; corrected root-journal tests
+repeat the controls. Both owned clients are disabled; temporary route/container/
+state are independently confirmed absent. Existing UUID clients are preserved.
+
+The operator's new ChatGPT automatic-CIMD connection uses no static credentials.
+Its exact metadata URL is reviewed read-only after the initial unknown-client
+`invalid_request`; independent synthetic state reproduces the guard before
+approval and reaches consent afterward. User authorization state is never
+replayed. The operator confirms correct account name, cited/repeated reads and
+post-manager-restart reuse without another login or unusual delay. Independent
+observations span526.196s, proving the same account/native/session/grant,
+unchanged original bounds/scopes, expired original native access, rotated native
+access/refresh and public refresh. An intermediate observer encounters normally
+expired stored native access before the next user read; the failed capture stays
+private and later normal-renewal verification passes. No authority is extended.
+Controlled fixture renewal separately measures692.286s. Configured defaults remain
+one-hour idle/eight-hour absolute; a two-hour active check is optional evidence.
+
+The final bounded actual root app journal contains483 entries with successful
+health6/authorization12/token53/MCP60 controls and zero query, issued-secret,
+generic credential, JWT or traceback candidates. Private and failed evidence
+stays outside Git. CPU-quota and interactive Playwright waivers remain unchanged.
+M19 is closed only after this separate documentation marker's reviewed merge and
+actual successful main checks. No new live deployment is needed for this marker.
+
+## M21 — Documentation and skills release readiness
+
+**Authorization and entry:** The operator approves the settled plan, including
+repository plus Use with AI cleanup, per-instance end-user plugin bundles, actual
+packaged skills on ChatGPT web, individual/private and managed-workspace routes,
+and ready artifacts/guides without public-directory submission or module tagging.
+Use the verified M19 completion marker; preserve the accepted38a8654 installation,
+all original drafts and waivers. Windmill remains separate.
+
+**Implementation decisions:** Keep README a short product/quickstart entry;
+separate user/operator/contributor guides. Keep AGENTS current and PLAN focused
+on status/roadmap; archive historical evidence with repaired links/compatibility
+anchors and sanitized deployment details. Preserve public source/CI references.
+Update the five existing developer skills and required upstream-managed references.
+Align installed Use with AI with staged Admin/user CIMD onboarding and current
+session/role/space/citation/upload/retry behavior. Core/schema/OAuth remain intact;
+installed presentation changes use an app patch version and unchanged dependencies.
+
+Package three instruction skills: setup, cited research and explicit knowledge
+maintenance. An offline generator accepts the operator's canonical HTTPS MCP URL,
+registered ChatGPT app ID, plugin name and output location; emits a deterministic
+versioned directory/ZIP/checksums/marketplace; rejects unsafe inputs/existing
+outputs and never publishes or collects credentials. Web packages reference the
+existing app via `.app.json`, without inline MCP server declarations that make
+GitHub-imported plugins Desktop only. Prove private Plugin Creator setup from the
+packaged files plus correct app binding and managed GitHub marketplace import.
+Required workspace/account features are explicit prerequisites; absence is an
+incomplete gate, never a desktop/SDK substitution or release-ready claim.
+
+**Acceptance:** Validate maintained file/anchor links, safe examples/current facts,
+all skill metadata/references/license/manifests, deterministic archives and two
+instance bindings. Exercise documented commands in disposable environments and
+independent actual MCP/database skill scenarios: cited reads, ambiguity/denial,
+untrusted retrieved instructions, sanitized ingestion, conflicts/uncertain retries
+and read-back. Require a cold-start tester using only guides/package. Actual
+ChatGPT web must prove packaged skill activation/app/account/citations, authorized
+controlled edit, Reader denial, renewal/reconnect/revocation on both supported
+routes. Run full exact-source/released-Core/image/both-native/artifact checks for
+the installed-guide change, all8 browsers and the usual reviewed deployment,
+regular merge/main publication/separate closeout loop. Explicitly reviewed doc
+paths may use lightweight checks; executable plugin packaging inputs cannot.
+No stable release, public listing or workspace-wide rollout is claimed by M21.

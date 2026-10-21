@@ -1,3 +1,5 @@
+> Historical evidence. For current setup, see the [documentation index](index.md); for current acceptance, see [release readiness](release-readiness.md). The measurements and generation-specific instructions below are retained.
+
 # C0 Agent Memory baseline (C0-AM0)
 
 This records the unchanged starting contracts for the separate C0-AM0–AM6

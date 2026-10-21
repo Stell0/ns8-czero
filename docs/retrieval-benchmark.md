@@ -1,3 +1,5 @@
+> Historical evidence. For current setup, see the [documentation index](index.md); for current acceptance, see [release readiness](release-readiness.md). The measurements and generation-specific instructions below are retained.
+
 # Retrieval fixture benchmark
 
 Measured with actual PostgreSQL/pgvector and deterministic protocol mocks. Eight immutable Wiki revisions contain two relevant paraphrases and two keyword distractors for each of two queries. Each query returns at most two results. No generated answers, real provider calls or calibrated model probabilities are tested.
