@@ -342,3 +342,15 @@ def test_native_policy_applies_without_authentication_and_unchanged_sync_is_noop
     native.sync_policy(True)
     with pytest.raises(GrantRejected):
         service.verify(tokens.access_token, resource=RESOURCE)
+
+
+def test_valid_metadata_change_observed_while_disabled_still_requires_review(cimd):
+    service, registry, client, value, metadata, (_, clients, _, session, *_) = cimd
+    clients.set_enabled(session.actor, UUID(client['client_id']), enabled=False, expected_revision=1)
+    changed = metadata(client_name='Changed while disabled')
+    with pytest.raises(CimdRejected):
+        registry.observe(changed, expected_revision=2)
+    assert registry.status(session.actor)['clients'][0]['review_required']
+    clients.set_enabled(session.actor, UUID(client['client_id']), enabled=True, expected_revision=2)
+    with pytest.raises(CimdRejected):
+        registry.approval(value.client_id)
