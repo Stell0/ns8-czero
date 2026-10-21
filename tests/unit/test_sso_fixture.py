@@ -134,6 +134,7 @@ def test_identity_probe_waits_for_health_after_native_restart(monkeypatch, ready
     library._persistence=lambda *args: calls.append('probe')
     library._retrieval=lambda *args: calls.append('retrieval')
     library._oauth_persistence=lambda *args: calls.append('oauth')
+    library._cimd_persistence=lambda *args: calls.append('cimd')
     def wait(self, name, *args):
         assert name == 'Wait Until Keyword Succeeds'
         assert args == ('30s','2s','Check application route')
@@ -142,7 +143,7 @@ def test_identity_probe_waits_for_health_after_native_restart(monkeypatch, ready
     monkeypatch.setattr(BuiltIn, 'run_keyword', wait)
     if ready:
         library.verify_disposable_identity_persistence('czero7')
-        assert calls == ['network','health','probe','retrieval','oauth']
+        assert calls == ['network','health','cimd','probe','retrieval','oauth']
     else:
         with pytest.raises(AssertionError, match='application not ready'):
             library.verify_disposable_identity_persistence('czero7')

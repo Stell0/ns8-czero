@@ -4148,3 +4148,31 @@ Its cause remains unproven; retain the failure. No deadline, query or assertion
 is weakened. The unchanged final full suite on a newly created isolated DB
 passes all1669 cases without skips (487.96s). Native CIMD recovery coverage is
 being expanded before the application PR; do not infer final CI/live acceptance.
+
+Native recovery now seeds an isolated CIMD approval/cache through trusted Core
+using a real verified browser context, then exercises public consent/tokens.
+It requires unchanged approval/profile/absolute deadline and real refresh
+rotation after update. Clean restore must reject still-unexpired old authority,
+then require fresh sign-in/consent; only the fixture client is disabled and the
+native switch returns off. The backup must retain its explicitly enabled switch.
+This is Core-seeded recovery evidence, explicitly **not** external HTTPS-fetch
+proof; controlled HTTPS transport and actual ChatGPT remain separate gates. No
+runtime DNS/TLS/private-address guard is changed or bypassed.
+
+The exact installed helper is exercised through signed local HTTP with released
+Core: six cases pass, including lost approval, retained old access, expired-grant
+false evidence, missing restored switch and non-disposable-host rejection.
+Ninety-four focused producer recovery/privacy/updater cases pass before the
+additional expired-grant negative control. Native artifact audits now require
+all three validated non-private stage measurements per distribution, and reject
+missing/private/false claims. Its reusable CI evidence validator is explicitly
+registered with a null original baseline. Repeat final full local/native gates
+for this expanded application candidate; published Core bytes are unchanged.
+
+The expanded final application candidate passes all1688 actual PostgreSQL/
+Python/packaging cases without skips on a newly created disposable database
+(499.89s), plus140 controllers,21 Robot dry runs, schema and separate Bash
+parsing checks. Frozen released-consumer206 plus six exact recovery-helper
+cases pass. No Core library bytes differ from published87b8fd1. Open the ready
+application PR and require fresh exact-source image/native/artifact gates before
+any dedicated-instance update; actual M19 HTTPS/ChatGPT acceptance is pending.

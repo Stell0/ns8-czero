@@ -53,6 +53,11 @@ bytes or deploy the intermediate Core-producer images. M18 remains installed.
   work plus existing browser Origin/CSRF. Keep all77 MCP contracts unchanged.
   Relevant changes block new consent, while existing grants retain only their
   local authority; reapproval/disable revokes. Never use remote metadata as roles.
+- Native CIMD recovery uses explicitly Core-seeded approved metadata/cache and
+  real browser consent. Require seed/update/restore measurements, unchanged
+  absolute deadline, real refresh, rejection of unexpired old authority and
+  restored native switch/cleanup. These prove recovery, not external fetching;
+  keep real HTTPS/ChatGPT gates separate. Never add a runtime DNS or TLS bypass.
 - Native upgrade profiles explicitly supply predecessor and candidate app AND
   Core versions: an unchanged app version does not imply an unchanged Core.
   Freeze the accepted M18 trio. Exact Core full/native/publication precedes final

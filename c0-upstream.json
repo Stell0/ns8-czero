@@ -507,6 +507,11 @@
       "path": "imageroot/actions/configure-module/39persist-cimd",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "tests/cimd_recovery_evidence.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }
