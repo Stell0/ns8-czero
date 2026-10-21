@@ -4176,3 +4176,33 @@ parsing checks. Frozen released-consumer206 plus six exact recovery-helper
 cases pass. No Core library bytes differ from published87b8fd1. Open the ready
 application PR and require fresh exact-source image/native/artifact gates before
 any dedicated-instance update; actual M19 HTTPS/ChatGPT acceptance is pending.
+
+
+### M19 application CI correction — 21 October 2026
+
+Ready [PR29](https://github.com/Stell0/ns8-czero/pull/29) targets main without
+an unsolicited reviewer. Its first exact-source
+[full run39598916352](https://github.com/Stell0/ns8-czero/actions/runs/39598916352)
+at `a550602` completes with successful local checks and image publication,
+but fails the released-image probe's obsolete0.30-only version guard and the
+application image's fixable critical Certifi GHSA-6q48-6c7w-9gw2. Native jobs
+are skipped, so this source is not deployable or accepted.
+
+The released probe now reads the actual committed numeric Core release while
+retaining exact installed version, Git URL, subdirectory and40-character source
+checks. A regression executes the real workflow extraction against the current
+lock. The application explicitly pins Certifi2026.10.19 and updates only that
+bundle's lock records alongside its direct dependency entry. Published Core0.31
+bytes remain unchanged. No vulnerability gate is waived. Repeat focused/full
+local and exact-source CI/native/artifact checks before any live action; the
+accepted M18 installation remains unchanged.
+
+
+The corrected application working tree passes1689 actual Python/PostgreSQL/
+packaging cases without skips on a new disposable DB (541.54s). Focused source/
+fetch checks pass77 producer cases and64 independently frozen released-consumer
+fetch cases. All140 JavaScript controllers,21 Robot dry runs, Go schemas,
+five individually parsed Bash scripts, frozen lock and exact installed released
+Core version/source checks pass. Only Certifi and its app dependency record
+change in the lock; Core remains byte-identical to published87b8fd1. Fresh
+exact-source CI/native/scans and live acceptance remain required.
