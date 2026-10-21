@@ -4206,3 +4206,53 @@ five individually parsed Bash scripts, frozen lock and exact installed released
 Core version/source checks pass. Only Certifi and its app dependency record
 change in the lock; Core remains byte-identical to published87b8fd1. Fresh
 exact-source CI/native/scans and live acceptance remain required.
+
+
+### M19 final-candidate validation corrections — 21 October 2026
+
+[Full39602167906](https://github.com/Stell0/ns8-czero/actions/runs/39602167906)
+at `85d3426` passes the corrected released-Core image probe and all five scan
+jobs. Downloaded application SBOM confirms Certifi2026.10.19 and the blocking
+advisory is absent. Fresh registry reads verify all three image identities.
+The local job nevertheless reports1688 passes/one five-second statement timeout
+in the existing forced-HNSW structured-search regression. Debian upgrade exposes
+another defect: app package metadata is0.49 but its runtime constant remains0.48,
+so post-upgrade health assertions and dependent scenarios fail. Rocky is still
+running at this checkpoint. This source remains undeployed and unaccepted.
+
+Twenty unchanged focused forced-plan repetitions pass with incremental sorts,
+without reproducing the CI timeout. A disposable alternate full-sort plan has
+artificial cost10000011205.4 and enables47 optimized JIT functions; execution
+measures220.73ms under the original five-second deadline. PostgreSQL's
+[cost-based JIT decision](https://www.postgresql.org/docs/17/jit-decision.html)
+explains the compiler activation; this does not establish the precise CI timeout
+cause. The regression now isolates compilation only in its forced transaction
+and exercises both incremental/full-sort configurations. Normal search retains
+normal database settings, and actual filtered HNSW execution, exact underfill
+fallback, version isolation and the five-second bound remain required. No query,
+runtime database setting or published Core bytes change.
+
+The app runtime constant is corrected to0.49. A new check compares actual
+imported app/Core runtime versions with installed package metadata and project
+declarations; its negative control rejects the old app0.48 constant. Focused
+source/SSO checks pass39 cases, the independently frozen consumer passes14 source
+checks and structured retrieval passes19 database cases. Repeat final full local
+and exact-source image/native/artifact gates before any dedicated live action.
+
+
+The failed run subsequently completes. Actual downloaded reports have Debian
+five passes/sixteen failures and Rocky five passes/twenty-one failures/three
+expected skips, with zero OAuth-query candidates across the three XML/browser
+log artifacts. Early runtime-version failures block dependent scenarios; none
+is counted as a native pass or waived. Expanded CIMD recovery remains pending.
+
+The first corrected full local trial has1689 passes/two failures: existing
+health/OpenAPI expected values still name app0.48. Those HTTP assertions now
+compare with independently installed distribution metadata, which also catches
+an unbumped runtime constant. Current verification-stage SSO expectations become
+0.49 while the genuine predecessor stays0.48. Focused producer health/source/
+SSO checks pass84 cases, and the independent frozen consumer passes59 health/
+source cases. Both forced sort plans execute under the original five-second
+bound without JIT, measured5.67/5.15ms in the disposable observer. Freeze the
+corrected source and require completed successful full local and CI/native/
+artifact checks before any live deployment. Failed evidence remains private.
