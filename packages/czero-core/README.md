@@ -370,3 +370,17 @@ Old renewable credentials acquire this scheduling metadata through a real
 serialized provider refresh; fixed legacy sessions gain no renewal authority.
 Core 0.30.0 remains immutable; corrected 0.30.1 publication and renewed application
 acceptance are pending. Provider configuration is unchanged.
+
+
+## Optional approved client metadata
+
+Core0.31.0/schema0018 adds default-off CIMD policy and Admin-approved exact public
+client URL bindings while preserving manual UUID clients and their stored grants.
+Core validates bounded metadata without HTTP or DNS dependencies; application
+adapters perform safe fetching and supply short-lived trusted verification proofs
+for new consent. Existing grants use approved local metadata through outages.
+Relevant changes require explicit reapproval; global off, reapproval and client
+disable revoke affected authority without reviving tokens when reenabled.
+Publication and application acceptance remain pending in PLAN.md. The producer
+application temporarily accepts both0.30.1 and0.31 while its released source/lock
+remain pinned to0.30.1; final M19 adoption narrows the supported range to0.31.

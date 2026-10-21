@@ -5,12 +5,11 @@ from dataclasses import dataclass, field
 import json
 import re
 import secrets
-from uuid import UUID
 
 from sqlalchemy import text
 
 from .oauth_grants import GrantRejected, _date, _digest
-from .oauth_clients import redirect_uri
+from .oauth_clients import redirect_uri, internal_id
 from .operations import SCOPES
 from .sessions import SessionContext
 
@@ -37,7 +36,7 @@ class OAuthConsentService:
     def __init__(self, grants):
         self.grants = grants
 
-    def begin(self, client_id, *, callback, scopes, challenge, state, resource):
+    def begin(self, client_id, *, callback, scopes, challenge, state, resource, verification=None):
         if (type(scopes) not in (set, frozenset) or not scopes or not scopes <= SCOPES
                 or not isinstance(challenge, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', challenge)
                 or resource != self.grants.resource):
@@ -51,22 +50,29 @@ class OAuthConsentService:
             raise ConsentRejected() from None
         pending = PendingConsent(secrets.token_urlsafe(32), secrets.token_urlsafe(32))
         with self.grants.access.database.engine.begin() as connection:
+            self.grants._lock(connection, roles=True)
             connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
             now = _date(self.grants._now())
             connection.execute(text('DELETE FROM c0_oauth_consent WHERE expires_at<=:now'), {'now': now})
             client = self.grants.clients._registered(connection, client_id)
             if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
                 raise ConsentRejected()
+            if client.get('registration_kind') == 'cimd':
+                from .cimd import CimdRejected
+                try:
+                    self.grants.cimd._check_proof(connection, client, verification)
+                except CimdRejected:
+                    raise ConsentRejected() from None
             if connection.execute(text('SELECT count(*) FROM c0_oauth_consent')).scalar_one() >= 1000:
                 raise ConsentRejected()
             if connection.execute(text('SELECT count(*) FROM c0_oauth_consent WHERE client_id=:id'),
-                    {'id': UUID(client_id)}).scalar_one() >= 32:
+                    {'id': internal_id(client)}).scalar_one() >= 32:
                 raise ConsentRejected()
             connection.execute(text('''INSERT INTO c0_oauth_consent
                 (hash,browser_hash,client_id,client_revision,issuer,native_client,resource,callback,scopes,challenge,state,expires_at)
                 VALUES (:hash,:browser,:client,:revision,:issuer,:native,:resource,:callback,CAST(:scopes AS jsonb),:challenge,:state,:expires)'''),
                 {'hash': _digest(pending.request), 'browser': _digest(pending.binding),
-                 'client': UUID(client_id), 'revision': client['revision'], 'issuer': self.grants.access.issuer,
+                 'client': internal_id(client), 'revision': client['revision'], 'issuer': self.grants.access.issuer,
                  'native': self.grants.native_client, 'resource': resource, 'callback': callback,
                  'scopes': json.dumps(sorted(scopes)), 'challenge': challenge, 'state': state,
                  'expires': _date(self.grants._now() + 300)})
@@ -83,7 +89,7 @@ class OAuthConsentService:
             AND issuer=:issuer AND native_client=:native AND resource=:resource'''), parameters).mappings().one_or_none()
         if row is None:
             raise ConsentRejected()
-        client = self.grants.clients._registered(connection, str(row['client_id']))
+        client = self.grants.clients._by_id(connection, row['client_id'])
         if client is None or client['revision'] != row['client_revision']:
             raise ConsentRejected()
         return row, client
@@ -92,11 +98,11 @@ class OAuthConsentService:
         with self.grants.access.database.engine.connect() as connection:
             row, client = self._request(connection, request, binding)
             # State/challenge/binding and native identity stay out of the UI DTO.
-            return {'client_id': str(row['client_id']), 'client_name': client['client_name'],
+            return {'client_id': client['client_id'], 'client_name': client['client_name'],
                 'callback': row['callback'], 'scopes': row['scopes'], 'resource': row['resource'],
                 'expires_at': row['expires_at']}
 
-    def complete(self, session, request, binding, *, approve, scopes=None):
+    def complete(self, session, request, binding, *, approve, scopes=None, verification=None):
         """Trusted app adapter checks same-origin CSRF before invoking this."""
         if (not isinstance(session, SessionContext) or type(approve) is not bool
                 or session.expires_at.tzinfo is None):
@@ -106,7 +112,7 @@ class OAuthConsentService:
             # creation rolls back both; concurrent completions have one winner.
             self.grants._lock(connection, roles=True)
             connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
-            row, _ = self._request(connection, request, binding)
+            row, client = self._request(connection, request, binding)
             if session.expires_at.timestamp() <= self.grants._now():
                 raise ConsentRejected()
             self.grants.access.checked_actor(connection, session.actor)
@@ -116,7 +122,7 @@ class OAuthConsentService:
                     scopes = frozenset(row['scopes'])
                 if type(scopes) not in (set, frozenset) or not scopes or not scopes <= set(row['scopes']):
                     raise ConsentRejected()
-                code = self.grants._issue_code(connection, session, str(row['client_id']),
-                    callback=row['callback'], scopes=scopes, challenge=row['challenge'], resource=row['resource'])
+                code = self.grants._issue_code(connection, session, client['client_id'],
+                    callback=row['callback'], scopes=scopes, challenge=row['challenge'], resource=row['resource'], verification=verification)
             connection.execute(text('DELETE FROM c0_oauth_consent WHERE hash=:hash'), {'hash': row['hash']})
             return ConsentResult(row['callback'], row['state'], code)

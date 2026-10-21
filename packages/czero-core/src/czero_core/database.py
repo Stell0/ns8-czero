@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0017_session_renewal"
+SCHEMA_REVISION = "0018_cimd_clients"
 
 
 class Database:

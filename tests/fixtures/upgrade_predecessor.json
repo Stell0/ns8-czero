@@ -1,0 +1,12 @@
+{
+  "source": "93b9546529c623a5620fa0c585f8216bfec5e58f",
+  "tag": "ci-93b9546529c623a5620fa0c585f8216bfec5e58f-39466269075-1",
+  "app_version": "0.48.0",
+  "core_version": "0.30.1",
+  "schema_revision": "0017_session_renewal",
+  "images": {
+    "module": "ghcr.io/stell0/czero@sha256:ae588e3c32e6fdc65a27cbc2c66ba1005c4d5ab5daef9c0328676795e52d4240",
+    "app": "ghcr.io/stell0/czero-app@sha256:ccb0f181852cc004e594fc6b3896ba5a29528c4679284adeede6b2c6f809a28c",
+    "postgres": "ghcr.io/stell0/czero-postgres@sha256:9522bc903cfc5037f6e322cf13300ae1f2935b9098d2555b786815e93c52bade"
+  }
+}

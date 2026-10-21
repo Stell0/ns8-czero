@@ -61,7 +61,7 @@ Check application route
     ${health} =    Evaluate    json.loads($output)    modules=json
     Should Be Equal    ${health}[status]    ok
     Should Be Equal    ${health}[database][status]    ok
-    Should Contain    ${output}    "core_version":"0.30.1"
+    Should Contain    ${output}    "core_version":"0.31.0"
     Should Be Equal    ${health}[app_version]    ${expected_app}
 
 Check worker timer recovered
@@ -83,7 +83,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:35e59a9b22f15d2c97abcb27bbca39ffbfedbf1371c87c973c826b3a3712fe93
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:ae588e3c32e6fdc65a27cbc2c66ba1005c4d5ab5daef9c0328676795e52d4240
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -93,9 +93,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 14e4d01 M17 predecessor images.
+        # Freeze all three actually deployed 93b9546 M18 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:262ae4389e92722c5805798c3572899270151fb42214096a07fcd5a05c6fb05d','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:9191737a16b0c152f03368f5fd20b45942303857f844c949e1c7ea81e3083ed8'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:ccb0f181852cc004e594fc6b3896ba5a29528c4679284adeede6b2c6f809a28c','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:9522bc903cfc5037f6e322cf13300ae1f2935b9098d2555b786815e93c52bade'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -109,7 +109,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.47.0
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.48.0
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False
@@ -418,6 +418,16 @@ Verify protected Core spaces in the installed runtime
     Should Be True    ${result}[structured_retrieval]
     Should Be True    ${result}[atomic_consolidation]
     Should Be True    ${result}[maintenance_annotations]
+    Put File    ${CURDIR}/packaging/core_cimd_probe.py    /tmp/czero-core-cimd-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 czero python - < /tmp/czero-core-cimd-probe.py
+    ...    return_rc=True    timeout=30s
+    Should Be Equal As Integers    ${rc}    0
+    ${result} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${result}[approval]
+    Should Be True    ${result}[url_identity]
+    Should Be True    ${result}[rotation]
+    Should Be True    ${result}[revocation]
 
 Verify effective container hardening and memory targets
     Put File    ${CURDIR}/hardening_probe.py    /tmp/czero-hardening-probe.py    mode=0644
@@ -634,7 +644,7 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.30.1"
+    Get Text    body    contains    "core_version":"0.31.0"
     Get Text    body    contains    "app_version":"0.48.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health

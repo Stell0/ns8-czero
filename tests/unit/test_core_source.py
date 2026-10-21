@@ -97,7 +97,18 @@ def test_native_health_expectations_match_the_declared_producer_versions():
 def test_predecessor_and_current_profile_health_bindings_are_explicit():
     root = Path(__file__).parents[2]
     robot = (root/'tests/czero.robot').read_text()
-    predecessor = json.loads((root/'tests/fixtures/tool_guidance/m17_contract.json').read_text())
+    predecessor = json.loads((root/'tests/fixtures/upgrade_predecessor.json').read_text())
     current = tomllib.loads((root/'app/pyproject.toml').read_text())['project']['version']
     calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)',robot)
     assert calls == [('seed',predecessor['app_version']),('verify',current)]
+
+
+def test_native_upgrade_freezes_all_three_accepted_predecessor_images():
+    root = Path(__file__).parents[2]
+    predecessor = json.loads((root/'tests/fixtures/upgrade_predecessor.json').read_text())
+    robot = (root/'tests/czero.robot').read_text()
+    assert re.fullmatch(r'[0-9a-f]{40}', predecessor['source'])
+    assert predecessor['source'] in predecessor['tag']
+    for image in predecessor['images'].values():
+        assert re.fullmatch(r'ghcr.io/stell0/czero(?:-app|-postgres)?@sha256:[0-9a-f]{64}', image)
+        assert image in robot

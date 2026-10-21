@@ -4010,3 +4010,24 @@ all OCI revisions93b9546. Main/documentation images do not replace them.
 Existing interactive Playwright and CPU-quota waivers remain unchanged. Real
 ChatGPT acceptance remains an operator interaction gate; SDK simulation alone
 cannot satisfy it. Further AM/Windmill work remains deferred until M19 closes.
+
+### M19 Core implementation checkpoint — 21 October 2026
+
+Core0.31.0/schema0018 now implements the bounded metadata validator, separate
+public URL/internal UUID identity, default-off policy, Admin approvals/revisions,
+sticky review, short-lived consent proof, optional refresh grants and targeted
+CIMD revocation. Focused actual PostgreSQL/validator checks pass69 cases;
+legacy OAuth grant/consent regressions pass19 and migration regressions pass3.
+The new external-install probe covers approval/identity/rotation/revocation and
+is also wired into both disposable native distributions. The predecessor fixture
+now freezes the accepted M18 trio independently of the frozen M17 eval catalog.
+The first full local trial reports1567 passes/one obsolete predecessor-fixture
+assertion failure; its correction and twelve focused source/fixture checks pass.
+Retain that failed trial. Corrected final full local/CI/native and publication
+remain gates; no Core artifact or runtime deployment is claimed here.
+
+The producer application's compatible range temporarily admits both0.30.1 and
+0.31; the released source/tag/lock remain0.30.1. Frozen lock validation passes.
+Final adoption will narrow to0.31 only after immutable publication. This keeps
+producer and independently released-consumer checks executable in the required
+Core-first sequence. Existing MCP/tool/schema contracts remain unchanged.
