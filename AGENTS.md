@@ -23,23 +23,29 @@ frozen branches must not be cancelled or changed unexpectedly. No test shards
 share a mutable PostgreSQL database; preserve both existing waivers.
 
 
-**Current integration status:** M20, M17 and M18 are closed. M18 candidate
-`93b9546` remains deployed. Operator-merged closeout PR28 produces main `426bcb6`;
-actual main39545434377 and exact promotion verification pass. M19 implementation
-is authorized from that marker in its own worktree. Read the final M19 PLAN
-before editing. Preserve all accepted images, original dirty documents, recovered
-M20 drafts and existing waivers. Historical entry gates below remain evidence of
-those checkpoints, superseded by this current status. Further AM/Windmill stays
-deferred until M19 closes.
+**Current integration status (21 October 2026):** M19 runtime acceptance passes on
+installed `38a8654` (app0.49/Core0.31/schema0018). Operator-reviewed PR29 regularly
+merges as `7a223fb` with the identical tree. Main39632626515 completes successfully;
+actual Debian21/Rocky26+3 reports, all8 browsers/25 accessibility contexts, three
+privacy artifacts and five scan pairs pass independent audits. Actual ChatGPT
+CIMD identity/cited/repeated reads, 526.196s renewal and full-manager restart pass;
+original authority bounds/data/settings/files/schedules/clients remain preserved.
+The final483-entry root app journal has successful request controls and no query,
+credential/JWT/traceback candidates. Keep all three deployed candidate digests in
+PLAN unchanged. This separate three-document closeout still needs reviewed merge
+and successful main marker. M21 documentation/skills work is authorized next;
+Windmill remains separate. Preserve all original dirty documents, recovered M20
+worktrees and both existing waivers. Historical statuses below are superseded by
+this checkpoint, not erased.
 
-## M19 candidate conventions
+## M19 accepted runtime conventions
 
 Core0.31.0/schema0018 is immutable at `87b8fd1`; exact full39573888375, both
 native distributions/all eight browsers and actual artifact audits pass. Core
 publication39580059693 and downloaded asset checksums pass. App0.49 adopts that
-released tag/lock with only0.31 patch compatibility; final app full/consumer/CI/
-native and dedicated acceptance remain pending. Never change published Core
-bytes or deploy the intermediate Core-producer images. M18 remains installed.
+released tag/lock with only0.31 patch compatibility; final app full/consumer/CI,
+native and dedicated acceptance pass. Never change published Core bytes or
+replace accepted runtime images with main/documentation marker builds.
 
 - CIMD defaults off; native Settings owns the trusted switch. Removing SSO or
   hostname-root routing synchronizes policy off and revokes CIMD authority.
