@@ -4081,3 +4081,16 @@ claimed. Read-only dedicated baseline confirms the accepted M18 image trio,
 45 tables, six original files and healthy timer; all original/M20 worktrees
 still match captured HEAD/status/document bytes. The temporary owned HTTPS
 fixture and cleanup procedure are prepared privately but not deployed.
+
+Corrected application checkpoint4af5479 passes all1665 actual Python/PostgreSQL/
+packaging cases without skips (488.17s). Three additional focused regressions
+pass: both explicit/default TLS-port and uppercase transport normalization keep
+the exact approved URL identity, and pinned SDK2.3 selects CIMD from empty client
+storage through actual server discovery. That SDK signs in, obtains consent,
+calls all77-tool discovery/profile and rotates refresh authority while the real
+controlled metadata HTTPS host returns503, with no extra metadata request.
+The SDK renewal test supplies a past client-side deadline; it does not claim
+real five-minute lifetime acceptance. Its initial storage-expiry assumption fails
+and is corrected without runtime changes; private failed evidence is retained.
+Core87b8fd1 passes1574 local cases (485.34s); exact full CI39573888375 remains
+pending both native suites. No immutable release or deployment yet.

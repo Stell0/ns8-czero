@@ -388,3 +388,63 @@ def test_admin_role_is_rechecked_after_metadata_io(cimd_http, application, monke
                 assert (await pending).status_code == 403
                 assert registry.status(owner_actor)['clients'] == []
     asyncio.run(check())
+
+
+def test_sdk_automatically_selects_cimd_from_empty_storage_and_renews_without_fetch(cimd_http, monkeypatch, certificates):
+    from mcp.client.auth.oauth2 import OAuthClientProvider
+    from mcp.shared.auth import OAuthClientMetadata, AuthorizationCodeResult
+    async def check():
+        app, owner, _ = cimd_http
+        class Storage:
+            tokens = client = None
+            async def get_tokens(self): return self.tokens
+            async def set_tokens(self, value): self.tokens = value
+            async def get_client_info(self): return self.client
+            async def set_client_info(self, value): self.client = value
+        storage = Storage()
+        # Keep secrets out of object representations and assertion diagnostics.
+        callback_values = []
+        async with Harness(monkeypatch, certificates) as h:
+            h.headers = [(b'Cache-Control', b'no-store')]
+            app.state.cimd.fetcher = h.fetcher
+            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
+                browser.headers['Authorization'] = 'Bearer ' + owner
+                await approve(browser)
+                browser.headers.pop('Authorization')
+                async def redirect(url):
+                    response = await browser.get(url)
+                    assert response.status_code == 302
+                    profile = await login(browser)
+                    response = await browser.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']},
+                        headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
+                    assert response.status_code == 200
+                    values = parse_qs(urlsplit(response.json()['redirect_uri']).query)
+                    callback_values.append(AuthorizationCodeResult(code=values['code'][0], state=values['state'][0]))
+                async def callback(): return callback_values[-1]
+                def provider():
+                    return OAuthClientProvider(server_url=RESOURCE, client_metadata_url=URL,
+                        client_metadata=OAuthClientMetadata(redirect_uris=[CALLBACK], scope='c0:read',
+                            token_endpoint_auth_method='none', grant_types=['authorization_code', 'refresh_token'],
+                            response_types=['code']), storage=storage, redirect_handler=redirect, callback_handler=callback)
+                child = app.state.mcp_app
+                async with child.router.lifespan_context(child):
+                    async def read(auth):
+                        async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN, auth=auth) as http:
+                            async with Client(streamable_http_client(RESOURCE, http_client=http)) as sdk:
+                                assert len((await sdk.list_tools()).tools) == 77
+                                assert not (await sdk.call_tool('get_profile', {})).is_error
+                    auth = provider()
+                    await read(auth)
+                    assert storage.client.client_id == URL and len(callback_values) == 1
+                    assert storage.tokens.scope == 'c0:read' and len(h.requests) == 4
+                    old_refresh = storage.tokens.refresh_token
+                    # Exercise the SDK's own refresh path using a past local
+                    # deadline; real five-minute continuity is a live gate.
+                    assert auth.context.token_expiry_time is not None
+                    auth.context.token_expiry_time = 1
+                    h.status = 503
+                    await read(auth)
+                    if storage.tokens.refresh_token == old_refresh:
+                        raise AssertionError('SDK did not rotate expired access authority')
+                    assert len(h.requests) == 4 and len(callback_values) == 1
+    asyncio.run(check())

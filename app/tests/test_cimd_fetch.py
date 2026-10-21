@@ -286,3 +286,13 @@ def test_json_media_types_are_accepted(monkeypatch, certificates, content_type):
             h.content_type = content_type
             assert (await h.fetcher.fetch(URL)).metadata.client_id == URL
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('url', ['https://cimd.example.test:443/client.json', 'HTTPS://CIMD.EXAMPLE.TEST:443/client.json'])
+def test_exact_url_identity_survives_transport_host_normalization(monkeypatch, certificates, url):
+    async def check():
+        async with Harness(monkeypatch, certificates) as h:
+            h.body = document(url=url)
+            assert (await h.fetcher.fetch(url)).metadata.client_id == url
+            assert h.connections == [(PUBLIC, 443)] and h.names == [HOST]
+    asyncio.run(check())
