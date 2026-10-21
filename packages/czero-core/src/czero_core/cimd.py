@@ -193,7 +193,7 @@ class CimdService(CimdPolicyService):
         with self.access.database.engine.begin() as connection:
             _lock(connection)
             policy = self._policy(connection)
-            row = connection.execute(text(_QUERY + ' WHERE b.metadata_url=:url AND c.enabled'),
+            row = connection.execute(text(_QUERY + ' WHERE b.metadata_url=:url'),
                                      {'url': metadata.client_id}).mappings().one_or_none()
             if row is None or row['revision'] != expected_revision or row['review_required']:
                 raise CimdRejected()
@@ -206,8 +206,9 @@ class CimdService(CimdPolicyService):
                 now = self._now()
                 connection.execute(text('UPDATE c0_cimd_clients SET verified_at=:now,fresh_until=:fresh WHERE client_id=:id'),
                     {'id': row['client_id'], 'now': _date(now), 'fresh': _date(now + cache_seconds)})
-                result = VerificationProof(self, row['client_id'], metadata.client_id, row['revision'],
-                                           policy['revision'], metadata.digest, now)
+                if row['enabled']:
+                    result = VerificationProof(self, row['client_id'], metadata.client_id, row['revision'],
+                                               policy['revision'], metadata.digest, now)
         if result is None:
             raise CimdRejected()
         return result
