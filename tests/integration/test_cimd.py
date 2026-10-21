@@ -354,3 +354,42 @@ def test_valid_metadata_change_observed_while_disabled_still_requires_review(cim
     clients.set_enabled(session.actor, UUID(client['client_id']), enabled=True, expected_revision=2)
     with pytest.raises(CimdRejected):
         registry.approval(value.client_id)
+
+
+@pytest.mark.parametrize('operation', ['revoke', 'replay', 'rotation'])
+def test_cimd_token_revocation_finishes_after_inflight_actor_transaction(cimd, operation):
+    from threading import Event
+    from time import monotonic
+    service, registry, client, value, _, (_, _, _, session, *_) = cimd
+    tokens = pair(cimd)
+    replay_token = tokens.refresh_token
+    if operation == 'replay':
+        tokens = service.refresh(replay_token, value.client_id, resource=RESOURCE)
+    captured = service.verify(tokens.access_token, resource=RESOURCE).actor
+    entered = Event()
+    def change():
+        entered.set()
+        if operation == 'revoke':
+            service.revoke(tokens.access_token, value.client_id, resource=RESOURCE)
+        elif operation == 'replay':
+            with pytest.raises(GrantRejected):
+                service.refresh(replay_token, value.client_id, resource=RESOURCE)
+        else:
+            service.refresh(tokens.refresh_token, value.client_id, resource=RESOURCE)
+        return 'finished'
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with service.access.database.engine.begin() as connection:
+            service.access.checked_actor(connection, captured)
+            future = pool.submit(change)
+            assert entered.wait(2)
+            deadline, waiting = monotonic() + 3, False
+            while monotonic() < deadline and not future.done():
+                with service.access.database.engine.connect() as observer:
+                    waiting = observer.execute(text('''SELECT EXISTS (SELECT 1 FROM pg_locks
+                        WHERE locktype='advisory' AND objid=49382 AND NOT granted)''')).scalar_one()
+                if waiting:
+                    break
+            assert waiting and not future.done()
+        assert future.result(timeout=3) == 'finished'
+    with pytest.raises(PermissionDenied):
+        service.access.authorize(captured, Role.READER)
