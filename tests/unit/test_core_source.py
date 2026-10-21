@@ -94,6 +94,19 @@ def test_native_health_expectations_match_the_declared_producer_versions():
         assert expected and set(expected)=={declared}
 
 
+def test_runtime_versions_match_the_installed_package_metadata():
+    from importlib.metadata import version
+    from czero_app import __version__ as app_version
+    from czero_core import core_version
+    root = Path(__file__).parents[2]
+    for name, runtime, manifest in (
+        ('czero-app', app_version, 'app/pyproject.toml'),
+        ('czero-core', core_version, 'packages/czero-core/pyproject.toml'),
+    ):
+        declared = tomllib.loads((root/manifest).read_text())['project']['version']
+        assert runtime == version(name) == declared
+
+
 def test_predecessor_and_current_profile_health_bindings_are_explicit():
     root = Path(__file__).parents[2]
     robot = (root/'tests/czero.robot').read_text()

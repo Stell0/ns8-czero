@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
+from importlib.metadata import version
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,6 +13,7 @@ from czero_core import core_version
 from czero_app.main import create_app
 
 STATIC = Path(__file__).resolve().parents[1] / "static"
+APP_VERSION = version('czero-app')
 DATABASE_READY = {"status": "ok", "schema_revision": "0017_session_renewal", "vector_version": "0.8.7"}
 
 
@@ -47,7 +49,7 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
         "service": "czero",
         # Producer Core and the released consumer pin advance independently.
         "core_version": core_version,
-        "app_version": "0.48.0",
+        "app_version": APP_VERSION,
         "database": DATABASE_READY,
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
@@ -87,7 +89,7 @@ def test_openapi_documents_the_health_endpoint(client):
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/health" in document["paths"]
-    assert document["info"]["version"] == "0.48.0"
+    assert document["info"]["version"] == APP_VERSION
     assert document["servers"][0]["url"] == "/czero/czero17"
 
 
