@@ -3981,7 +3981,7 @@ all OCI revisions93b9546. Main/documentation images do not replace them.
 **Dedicated acceptance checklist and delivery:**
 
 - [x] Verify M18 closeout main and isolate/preserve work before implementation.
-- [ ] Core domain/migration, exact local/full/native/packaging and immutable release.
+- [x] Core domain/migration, exact local/full/native/packaging and immutable release.
 - [ ] Released app adoption, final full CI, inspected actual native/privacy/scan artifacts.
 - [ ] Open ready PR targeting main without unsolicited reviewer; satisfy review.
 - [ ] Agent verifies dedicated C0 installation/baseline, supported C0-only backup,
@@ -4103,3 +4103,48 @@ the six new tracked CIMD helper/lifecycle files, with null baseline metadata
 because they are absent from the immutable original baseline. The existing95
 entries and customization rules stay unchanged; all37 generator/updater cases
 pass after correction. No generated application code or private files are added.
+
+### M19 Core release and consumer adoption — 21 October 2026
+
+Exact Core source `87b8fd19d1d76fb6fa16ee15e27e966b8142d57c` passes1574
+actual local PostgreSQL/Python/packaging cases without skips (485.34s). Its
+[full acceptance39573888375](https://github.com/Stell0/ns8-czero/actions/runs/39573888375)
+completes successfully. Downloaded reports pass Debian genuine M18 upgrade21
+cases and Rocky installation26/three expected skips, all eight real browsers,
+eight privacy guards,25 numeric accessibility contexts and three actual XML/
+browser-log privacy audits with zero OAuth-query candidates. Both native
+sources and all three installed candidate image identities match the frozen
+producer source. All five actual scan/SBOM pairs pass inspection. Native renewal
+measurements335/338 seconds preserve existing session bounds; these are the
+existing native OAuth workflows, not real ChatGPT CIMD acceptance. Exact full
+promotion verification and fresh three-image registry reads pass.
+
+Immutable [Core0.31.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.31.0)
+is published at that source by successful
+[publication39580059693](https://github.com/Stell0/ns8-czero/actions/runs/39580059693).
+Actual downloaded release assets match the exact workflow-tested bytes and
+SHA256SUMS; wheel contains both CIMD modules and migration0018. Checksums:
+
+- Wheel `757acb2b09ada6e2806ab701dc7c7e3cc75f3178cfb58d664c9a87cde41e37a0`.
+- Archive `5cb8c00950932b50f4a7da1dea71bcda9c96cdc15446e3850de7ef38b49072ba`.
+
+App0.49 now adopts released `core-v0.31.0`/exact87b8fd1 with compatible
+`>=0.31.0,<0.32.0`. Only app/Core lock records change; all other frozen dependency
+records remain identical. Prefix-aware Renovate permits only0.31 patch updates,
+with the independent example's old compatibility range preserved. The explicit
+native predecessor app/Core versions remain0.48.0/0.30.1; candidate expectations
+become0.49.0/0.31.0. Final producer/full and independently frozen released-consumer
+checks are running, not yet accepted. M18 remains the live runtime; producer
+Core-validation images do not replace it. Final application CI/native, ready PR,
+dedicated controlled HTTPS/ChatGPT acceptance and reviewed merge remain gates.
+
+The independent frozen released consumer passes206 checks without skips (87.95s),
+importing Core0.31 from the exact Git tag outside the checkout. Final adoption
+also passes140 controllers,21 Robot dry runs, actual Renovate API bounds and
+frozen-lock/source checks. A full run on the repeatedly reused disposable DB
+reports1668 passes/one existing forced-HNSW statement timeout. The unchanged
+focused case passes; disposable EXPLAIN ANALYZE measures132ms with no JIT.
+Its cause remains unproven; retain the failure. No deadline, query or assertion
+is weakened. The unchanged final full suite on a newly created isolated DB
+passes all1669 cases without skips (487.96s). Native CIMD recovery coverage is
+being expanded before the application PR; do not infer final CI/live acceptance.

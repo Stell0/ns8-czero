@@ -103,6 +103,7 @@ def test_predecessor_and_current_profile_health_bindings_are_explicit():
     calls = re.findall(r'Predecessor Profile\s+\$\{module_id\}\s+changed-\$\{host\}\s+(seed|verify)\s+([0-9.]+)\s+([0-9.]+)',robot)
     assert calls == [('seed',predecessor['app_version'],predecessor['core_version']),
                      ('verify',current,current_core)]
+    assert '${expected_app}='+current in robot
     assert '${expected_core}='+current_core in robot
     assert 'Should Be Equal    ${health}[core_version]    ${expected_core}' in robot
 

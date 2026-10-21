@@ -56,9 +56,7 @@ The Admin review endpoints are `GET /api/v1/oauth/cimd`,
 browser Origin/CSRF or a verified bearer with Admin scope. The internal Admin
 UUID is distinct from the public metadata URL and cannot authenticate as its
 alias. Clean restore retains approved descriptors but requires fresh native
-sign-in and consent. This candidate targets Core0.31/schema0018 and app0.49;
-immutable publication, final consumer/native checks and real ChatGPT acceptance
-remain gates in [PLAN.md](PLAN.md).
+sign-in and consent. The app0.49 candidate now pins independently published [Core0.31](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.31.0)/schema0018 at exact source `87b8fd1`. Core full/native/publication and actual artifact checks pass; final application consumer/native checks and real ChatGPT acceptance remain gates in [PLAN.md](PLAN.md).
 
 ## Applicability and structured retrieval (AM4)
 

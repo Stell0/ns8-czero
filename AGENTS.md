@@ -34,6 +34,13 @@ deferred until M19 closes.
 
 ## M19 candidate conventions
 
+Core0.31.0/schema0018 is immutable at `87b8fd1`; exact full39573888375, both
+native distributions/all eight browsers and actual artifact audits pass. Core
+publication39580059693 and downloaded asset checksums pass. App0.49 adopts that
+released tag/lock with only0.31 patch compatibility; final app full/consumer/CI/
+native and dedicated acceptance remain pending. Never change published Core
+bytes or deploy the intermediate Core-producer images. M18 remains installed.
+
 - CIMD defaults off; native Settings owns the trusted switch. Removing SSO or
   hostname-root routing synchronizes policy off and revokes CIMD authority.
   Unchanged restart preserves it. Restore retains approvals, rotates native
