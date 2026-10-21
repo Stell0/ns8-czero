@@ -4256,3 +4256,28 @@ source cases. Both forced sort plans execute under the original five-second
 bound without JIT, measured5.67/5.15ms in the disposable observer. Freeze the
 corrected source and require completed successful full local and CI/native/
 artifact checks before any live deployment. Failed evidence remains private.
+
+
+### M19 forced-ANN fixture isolation — 21 October 2026
+
+The exact `ee99523` full local run reports1689 passes/two forced-ANN SQL
+timeouts (639.55s), including both sort configurations despite transaction-local
+JIT disable. In contrast its actual CI local job passes; native jobs are still
+running at this checkpoint. Compiler isolation did not resolve the local failure,
+and the precise timeout cause remains unproven. Retain these results separately.
+
+The forced-plan correctness corpus now receives its own uniquely named disposable
+PostgreSQL database before service fixtures initialize. This removes earlier
+fixtures' physical vector-index/statistics/maintenance state from that bounded
+71-revision corpus. The test asserts the actual database identity; teardown drops
+only its owned database after fixture cleanup, without forcing connections closed.
+Normal compilation settings are restored: the ineffective JIT override is removed.
+Both ordering plans, real filtered HNSW execution, exact underfill fallback,
+version isolation and the original five-second query deadline remain intact.
+No runtime SQL, database configuration, application behavior or Core bytes change.
+
+Combined embedding/structured checks pass32 cases with normal compilation
+(17.52s), and both forced cases pass with independently installed released Core
+(5.54s). Both owned databases are confirmed absent after cleanup. Require a fresh
+complete local run, then final exact-source CI/native/artifact validation before
+any live action; the accepted M18 installation remains unchanged.
