@@ -38,6 +38,8 @@ fetches again and rejects changes since preview. A compatible client uses that
 exact URL as its public client ID; existing manually approved UUID clients keep
 working. Client metadata administration is REST-only and adds no MCP tools.
 
+For ChatGPT, create a separate OAuth connection using CIMD without static client credentials, and copy its exact metadata URL from the connection management page for Admin review. The URL depends on the selected callback mode; use the value shown for that connection. See the [official authentication guidance](https://developers.openai.com/plugins/build/auth).
+
 Only approved enabled URLs can trigger an authorization-time fetch. C0 validates
 all DNS results and pins public peers while verifying the original TLS hostname.
 Fetches have bounded concurrency, duration and response size, with no redirects,
