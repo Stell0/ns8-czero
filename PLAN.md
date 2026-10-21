@@ -4031,3 +4031,12 @@ The producer application's compatible range temporarily admits both0.30.1 and
 Final adoption will narrow to0.31 only after immutable publication. This keeps
 producer and independently released-consumer checks executable in the required
 Core-first sequence. Existing MCP/tool/schema contracts remain unchanged.
+
+Core producer `c33e6d1` passes1569 actual PostgreSQL/Python/packaging cases without
+skips (467.40s),130 controllers, schema/shell and21 Robot dry runs; full CI
+39566400246 is started and not yet accepted. During application startup design,
+a missing database-only policy interface is identified: global off must revoke
+CIMD authority even when SSO is removed in the same change. Add trusted
+`CimdPolicyService(database)` and independently test it without an access service.
+Keep `c33e6d1`/its running ref unchanged as retained evidence; repeat exact-source
+local/full/native gates for the corrected Core source before immutable release.
