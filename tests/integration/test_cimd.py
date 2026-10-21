@@ -326,3 +326,19 @@ def test_cimd_disable_waits_for_inflight_actor_transaction_then_rejects_capture(
         assert not future.result(timeout=3)['enabled']
     with pytest.raises(PermissionDenied):
         service.access.authorize(captured, Role.READER)
+
+
+def test_native_policy_applies_without_authentication_and_unchanged_sync_is_noop(cimd):
+    from czero_core.cimd import CimdPolicyService
+    service, registry, client, value, _, (_, _, _, session, *_) = cimd
+    tokens = pair(cimd)
+    native = CimdPolicyService(service.access.database)
+    assert native.enabled()
+    before = registry.status(session.actor)
+    native.sync_policy(True)
+    assert registry.status(session.actor) == before
+    native.sync_policy(False)
+    assert not native.enabled()
+    native.sync_policy(True)
+    with pytest.raises(GrantRejected):
+        service.verify(tokens.access_token, resource=RESOURCE)

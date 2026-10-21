@@ -65,28 +65,20 @@ _QUERY = '''SELECT c.*,b.client_id,b.metadata_url,b.approved_descriptor,b.metada
     JOIN c0_oauth_clients c ON c.id=b.client_id'''
 
 
-class CimdService:
-    def __init__(self, access, *, now=time.time):
-        self.access = access
-        self.clients = OAuthClientService(access)
-        self._now = now
+class CimdPolicyService:
+    """Trusted installation policy, independent of authentication availability."""
+    def __init__(self, database):
+        self.database = database
 
     def enabled(self):
-        with self.access.database.engine.connect() as connection:
+        with self.database.engine.connect() as connection:
             return connection.execute(text('SELECT enabled FROM c0_cimd_policy WHERE id=1')).scalar_one()
-
-    @staticmethod
-    def _policy(connection):
-        row = connection.execute(text('SELECT * FROM c0_cimd_policy WHERE id=1')).mappings().one()
-        if not row['enabled']:
-            raise CimdRejected()
-        return row
 
     def sync_policy(self, enabled):
         """Trusted native configuration only, never an HTTP administration API."""
         if type(enabled) is not bool:
             raise ValueError('invalid_cimd_policy')
-        with self.access.database.engine.begin() as connection:
+        with self.database.engine.begin() as connection:
             _lock(connection)
             row = connection.execute(text('SELECT * FROM c0_cimd_policy WHERE id=1')).mappings().one()
             if row['enabled'] == enabled:
@@ -96,6 +88,21 @@ class CimdService:
             _revoke(connection)
             connection.execute(text('UPDATE c0_cimd_policy SET enabled=:enabled,revision=revision+1 WHERE id=1'),
                                {'enabled': enabled})
+
+
+class CimdService(CimdPolicyService):
+    def __init__(self, access, *, now=time.time):
+        super().__init__(access.database)
+        self.access = access
+        self.clients = OAuthClientService(access)
+        self._now = now
+
+    @staticmethod
+    def _policy(connection):
+        row = connection.execute(text('SELECT * FROM c0_cimd_policy WHERE id=1')).mappings().one()
+        if not row['enabled']:
+            raise CimdRejected()
+        return row
 
     def status(self, actor):
         with self.access.database.engine.connect() as connection:

@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 
 from czero_core.access import AccessService
+from czero_core.cimd import CimdPolicyService
 from czero_core.cimd_metadata import parse_metadata
 from czero_core.database import Database
 from czero_core.identity import VerifiedIdentity
@@ -49,7 +50,7 @@ def main():
         assert grants.verify(tokens.access_token, resource=resource).client_id == url
         rotated = grants.refresh(tokens.refresh_token, url, resource=resource)
         assert grants.verify(rotated.access_token, resource=resource).actor.user_id == actor.user_id
-        registry.sync_policy(False)
+        CimdPolicyService(database).sync_policy(False)
         registry.sync_policy(True)
         try:
             grants.verify(rotated.access_token, resource=resource)

@@ -384,3 +384,8 @@ disable revoke affected authority without reviving tokens when reenabled.
 Publication and application acceptance remain pending in PLAN.md. The producer
 application temporarily accepts both0.30.1 and0.31 while its released source/lock
 remain pinned to0.30.1; final M19 adoption narrows the supported range to0.31.
+
+The trusted `CimdPolicyService(database)` synchronizes installation policy even
+when authentication is unavailable. It never needs a synthetic account or
+provides administrator approval. `CimdService(access)` adds account-authorized
+approval and consent verification on the same persisted policy.
