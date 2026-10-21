@@ -158,11 +158,19 @@ class OAuthGrantService:
             except RenewalRejected:
                 raise GrantRejected() from None
 
-    def _lock(self, connection, *, roles=False):
-        if roles:
+    def _lock(self, connection, *, roles=False, client_id=None):
+        if roles or (isinstance(client_id, str) and client_id[:8].lower() == 'https://'):
             connection.execute(text('SELECT pg_advisory_xact_lock(49372)'))
         connection.execute(text('SELECT pg_advisory_xact_lock(49378)'))
         connection.execute(text('SELECT pg_advisory_xact_lock(49379)'))
+
+    @staticmethod
+    def _cimd_revocation_lock(connection, client_id):
+        # URL-client rotation/revocation must finish after transactions already
+        # using its old delegated actor. The legacy UUID contract is unchanged.
+        if connection.execute(text('SELECT 1 FROM c0_cimd_clients WHERE client_id=:id'),
+                              {'id': client_id}).scalar_one_or_none():
+            connection.execute(text('SELECT pg_advisory_xact_lock(49382)'))
 
     def _clean(self, connection):
         connection.execute(text('DELETE FROM c0_oauth_grants WHERE expires_at<=:now'), {'now': _date(self._now())})
@@ -291,7 +299,7 @@ class OAuthGrantService:
         digest, challenge = _digest(code), pkce_challenge(verifier)
         self._prepare(code, 'code', client_id, resource)
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('''SELECT * FROM c0_oauth_codes WHERE hash=:hash AND expires_at>:now'''),
                 {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
             if row is None or row['redirect_uri'] != callback or not hmac.compare_digest(row['challenge'], challenge):
@@ -324,7 +332,7 @@ class OAuthGrantService:
         rejected = False
         result = None
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('''SELECT * FROM c0_oauth_tokens
                 WHERE hash=:hash AND kind='refresh' AND expires_at>:now'''),
                 {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
@@ -332,6 +340,7 @@ class OAuthGrantService:
                 raise GrantRejected()
             grant, _ = self._grant(connection, row['grant_id'], client_id, self.resource, check_native=not row['consumed'])
             if row['consumed']:
+                self._cimd_revocation_lock(connection, grant['client_id'])
                 connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
                 rejected = True
             else:
@@ -347,13 +356,14 @@ class OAuthGrantService:
         rejected = False
         result = None
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('''SELECT * FROM c0_oauth_tokens
                 WHERE hash=:hash AND kind='refresh' AND expires_at>:now'''),
                 {'hash': digest, 'now': _date(self._now())}).mappings().one_or_none()
             if row is None:
                 raise GrantRejected()
             grant, _ = self._grant(connection, row['grant_id'], client_id, resource, check_native=not row['consumed'])
+            self._cimd_revocation_lock(connection, grant['client_id'])
             if row['consumed']:
                 # Commit family revocation before reporting replay failure.
                 connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
@@ -410,10 +420,11 @@ class OAuthGrantService:
         except GrantRejected:
             return
         with self.access.database.engine.begin() as connection:
-            self._lock(connection)
+            self._lock(connection, client_id=client_id)
             row = connection.execute(text('SELECT grant_id FROM c0_oauth_tokens WHERE hash=:hash'),
                 {'hash': digest}).mappings().one_or_none()
             if row is None:
                 return
-            self._grant(connection, row['grant_id'], client_id, resource, check_native=False)
+            grant, _ = self._grant(connection, row['grant_id'], client_id, resource, check_native=False)
+            self._cimd_revocation_lock(connection, grant['client_id'])
             connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': row['grant_id']})
