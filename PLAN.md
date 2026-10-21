@@ -4094,3 +4094,12 @@ real five-minute lifetime acceptance. Its initial storage-expiry assumption fail
 and is corrected without runtime changes; private failed evidence is retained.
 Core87b8fd1 passes1574 local cases (485.34s); exact full CI39573888375 remains
 pending both native suites. No immutable release or deployment yet.
+
+Fork compatibility review catches a missing native dependency registration:
+generated consumers copy only explicit managed infrastructure, so updated
+get-configuration/restore scripts would import a missing CIMD helper. A real
+consumer-generation regression reproduces it before correction. Register only
+the six new tracked CIMD helper/lifecycle files, with null baseline metadata
+because they are absent from the immutable original baseline. The existing95
+entries and customization rules stay unchanged; all37 generator/updater cases
+pass after correction. No generated application code or private files are added.
