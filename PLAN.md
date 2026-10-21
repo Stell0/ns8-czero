@@ -1,6 +1,6 @@
 # C0 implementation plan — milestone-by-milestone Codex handoff
 
-**Current checkpoint (21 October 2026):** M20, M17 and M18 are closed. Operator-merged closeout PR28 produces main `426bcb6f7f04da9426b826989f9f1cea2967d2c7`, identical to reviewed `08076c7`; actual [main documentation validation39545434377](https://github.com/Stell0/ns8-czero/actions/runs/39545434377) completes successfully and exact-source promotion verification passes. M19 begins from this marker in its own worktree. Preserve the deployed M18 `93b9546` trio, original dirty documents, recovered drafts and both existing waivers. Further AM/Windmill remains deferred.
+**Current checkpoint (21 October 2026):** M19 runtime acceptance passes. Operator-reviewed PR29 regularly merges tested `38a8654` as `7a223fb` with an identical tree. Actual [main full validation/publication39632626515](https://github.com/Stell0/ns8-czero/actions/runs/39632626515) and independently inspected native/privacy/scan artifacts pass. The accepted installed source remains `38a8654`; documentation/main images do not replace it. This separate closeout still requires reviewed merge and its own successful main marker. M21 documentation/skills release readiness is authorized next; Windmill follows separately. Preserve original drafts, exact deployed images and both existing waivers.
 
 **Historical state:** M00–M14 implementation and acceptance pass under the recorded interactive Playwright and CPU-quota waivers. Exact M14 source 5be82b7 passes local/producer/released-image/both-QEMU and permitted live owner gates. Verify actual main completion-marker CI before treating that marker as verified. No stable module release is claimed. Interactive Playwright remains waived; permitted dedicated live and disposable all-role browser evidence remain required.
 
@@ -4281,3 +4281,122 @@ Combined embedding/structured checks pass32 cases with normal compilation
 (5.54s). Both owned databases are confirmed absent after cleanup. Require a fresh
 complete local run, then final exact-source CI/native/artifact validation before
 any live action; the accepted M18 installation remains unchanged.
+
+
+## M19 deployed acceptance and main closeout — 21 October 2026
+
+Runtime source `38a8654486581e0f2af21672e8675a2e925d2b38` passes all1691 actual
+local PostgreSQL/Python/packaging cases without skips,140 controller cases,
+21 Robot dry runs and schema/shell checks. Final [PR full39613259374](https://github.com/Stell0/ns8-czero/actions/runs/39613259374)
+and [main full/publication39632626515](https://github.com/Stell0/ns8-czero/actions/runs/39632626515)
+complete successfully. Actual downloaded reports pass Debian genuine M18 upgrade21,
+Rocky installation26/three expected skips, all8 browser/privacy workflows,
+25 numeric accessibility contexts and zero OAuth-query candidates across three
+XML/browser-log artifacts. Both native installed identities/source checks and
+all5 actual scan/SBOM pairs pass. The corrected Certifi finding is absent;
+existing vendor findings remain. Three Core-seeded CIMD recovery stages per
+native distribution pass; these do not prove external HTTPS or ChatGPT.
+
+The operator reports PR29 reviewed and merged. Its regular merge `7a223fb` has
+parents `426bcb6` and `38a8654`, and the same tree as the tested candidate.
+No separate GitHub review record is invented. Exact-source full main promotion passes; fresh registry reads verify all six
+canonical main/latest identities against the accepted main publication source.
+
+**Frozen accepted deployment:** canonical tag
+`ci-38a8654486581e0f2af21672e8675a2e925d2b38-39613259374-1`:
+
+| Image | Installed digest |
+| --- | --- |
+| Module | `sha256:0a78eef9a6cfd6246e495c88d4f95ecbc1c6daaf7bb38d3d0e003ffbe82db7fb` |
+| App | `sha256:4b2000d645cb9f6d7a508365d770d37db2cc085af113340c635f89e79bd23d9b` |
+| PostgreSQL | `sha256:d8beafaa39c490e9046e4611b298a7cd8ab87ef7400ac1adbd84a2a32d9cecf2` |
+
+All3 OCI revisions match38a8654. Keep this tag/digest trio available unchanged
+while installed; main and documentation-marker images do not replace it.
+Core0.31 artifacts at87b8fd1 remain immutable; app/schema are0.49.0/0018.
+
+Supported C0-only backup passes actual `restic check --read-data`; all15 prior
+backup-plan configurations are preserved. Canonical targeted update and supported
+C0-only full-manager restart pass readiness/all3 installed identity checks.
+Original8915 rows in37 domain tables,6 files/settings/original clients,8 exact
+HTTP content views and3 schedules persist, with2 additive CIMD tables and healthy
+worker/timer. All11 unrelated instances are exact within each C0 action window.
+A separate voice update begins before C0 deployment and changes its longitudinal
+image identity; passive lifecycle evidence identifies a distinct task, initiator
+unknown. No voice operation or call test was performed.
+
+Actual public-DNS/trusted-HTTPS metadata acceptance passes explicit Admin review,
+consent, URL identity/internal UUID alias rejection,77 current/legacy SDK tool
+contracts and35 read-scope eligible operations discovered, with actual profile,
+cited/current/historical reads and denied-write controls, normal
+rotation, replay-family revocation, outage/recovery, sticky changed-metadata
+review, reapproval and client/global disable/off-on without authority revival.
+Positive root-journal fetch counters prove unknown URLs and refresh cause no
+metadata fetch; Host/TLS identity and no forwarded credentials pass. The earlier
+empty module-user Podman logs are not evidence; corrected root-journal tests
+repeat the controls. Both owned clients are disabled; temporary route/container/
+state are independently confirmed absent. Existing UUID clients are preserved.
+
+The operator's new ChatGPT automatic-CIMD connection uses no static credentials.
+Its exact metadata URL is reviewed read-only after the initial unknown-client
+`invalid_request`; independent synthetic state reproduces the guard before
+approval and reaches consent afterward. User authorization state is never
+replayed. The operator confirms correct account name, cited/repeated reads and
+post-manager-restart reuse without another login or unusual delay. Independent
+observations span526.196s, proving the same account/native/session/grant,
+unchanged original bounds/scopes, expired original native access, rotated native
+access/refresh and public refresh. An intermediate observer encounters normally
+expired stored native access before the next user read; the failed capture stays
+private and later normal-renewal verification passes. No authority is extended.
+Controlled fixture renewal separately measures692.286s. Configured defaults remain
+one-hour idle/eight-hour absolute; a two-hour active check is optional evidence.
+
+The final bounded actual root app journal contains483 entries with successful
+health6/authorization12/token53/MCP60 controls and zero query, issued-secret,
+generic credential, JWT or traceback candidates. Private and failed evidence
+stays outside Git. CPU-quota and interactive Playwright waivers remain unchanged.
+M19 is closed only after this separate documentation marker's reviewed merge and
+actual successful main checks. No new live deployment is needed for this marker.
+
+## M21 — Documentation and skills release readiness
+
+**Authorization and entry:** The operator approves the settled plan, including
+repository plus Use with AI cleanup, per-instance end-user plugin bundles, actual
+packaged skills on ChatGPT web, individual/private and managed-workspace routes,
+and ready artifacts/guides without public-directory submission or module tagging.
+Use the verified M19 completion marker; preserve the accepted38a8654 installation,
+all original drafts and waivers. Windmill remains separate.
+
+**Implementation decisions:** Keep README a short product/quickstart entry;
+separate user/operator/contributor guides. Keep AGENTS current and PLAN focused
+on status/roadmap; archive historical evidence with repaired links/compatibility
+anchors and sanitized deployment details. Preserve public source/CI references.
+Update the five existing developer skills and required upstream-managed references.
+Align installed Use with AI with staged Admin/user CIMD onboarding and current
+session/role/space/citation/upload/retry behavior. Core/schema/OAuth remain intact;
+installed presentation changes use an app patch version and unchanged dependencies.
+
+Package three instruction skills: setup, cited research and explicit knowledge
+maintenance. An offline generator accepts the operator's canonical HTTPS MCP URL,
+registered ChatGPT app ID, plugin name and output location; emits a deterministic
+versioned directory/ZIP/checksums/marketplace; rejects unsafe inputs/existing
+outputs and never publishes or collects credentials. Web packages reference the
+existing app via `.app.json`, without inline MCP server declarations that make
+GitHub-imported plugins Desktop only. Prove private Plugin Creator setup from the
+packaged files plus correct app binding and managed GitHub marketplace import.
+Required workspace/account features are explicit prerequisites; absence is an
+incomplete gate, never a desktop/SDK substitution or release-ready claim.
+
+**Acceptance:** Validate maintained file/anchor links, safe examples/current facts,
+all skill metadata/references/license/manifests, deterministic archives and two
+instance bindings. Exercise documented commands in disposable environments and
+independent actual MCP/database skill scenarios: cited reads, ambiguity/denial,
+untrusted retrieved instructions, sanitized ingestion, conflicts/uncertain retries
+and read-back. Require a cold-start tester using only guides/package. Actual
+ChatGPT web must prove packaged skill activation/app/account/citations, authorized
+controlled edit, Reader denial, renewal/reconnect/revocation on both supported
+routes. Run full exact-source/released-Core/image/both-native/artifact checks for
+the installed-guide change, all8 browsers and the usual reviewed deployment,
+regular merge/main publication/separate closeout loop. Explicitly reviewed doc
+paths may use lightweight checks; executable plugin packaging inputs cannot.
+No stable release, public listing or workspace-wide rollout is claimed by M21.

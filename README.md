@@ -17,7 +17,7 @@ M20 closeout PR 23 is regularly merged as `010c40e`; actual main [39418222344](h
 
 The empty-argument tool is marked `_meta["openai/profile"]: true`, with its closed profile schema and matching text/structured JSON on current and legacy MCP. Identity stays stable across refresh, reconnect, scope upgrades and display-metadata changes; distinct profiles have distinct IDs. This follows [OpenAI's account-profile contract](https://developers.openai.com/plugins/build/auth#support-multiple-accounts). App becomes 0.47.0; Core 0.30.1/schema 0017 and released dependencies remain unchanged. At M17 acceptance, the dedicated instance ran `14e4d01`, reviewed and regularly merged in [PR 25](https://github.com/Stell0/ns8-czero/pull/25) as `e7a35d2`. Exact candidate full CI, actual native/privacy artifacts, targeted update, renewal and full-manager restart pass. The operator confirms the correct connected-account name and another content read without another login. The initial reconnect produced two login prompts before success; their cause is not established. Original content, files, settings, schedules and all 25 existing approved clients are preserved; the isolated test client is disabled. See [PLAN.md](PLAN.md) for frozen installed digests and measured evidence. [Main full validation/publication 39441440675](https://github.com/Stell0/ns8-czero/actions/runs/39441440675) completes successfully with actual native/source/image/privacy/scan audits and verified canonical image identities. The reviewed separate closeout [PR26](https://github.com/Stell0/ns8-czero/pull/26) is regularly merged as `9aa2363`; actual [main documentation validation 39450459776](https://github.com/Stell0/ns8-czero/actions/runs/39450459776) passes. M17 is closed. Its installed images are the genuine M18 upgrade predecessor; the current M18 installation is recorded below.
 
-## Current runtime: M18 tool guidance
+## Historical M18 tool guidance
 
 M18 keeps the existing 77 operations and their validation/authorization contracts. It adds user-facing descriptions, parameter help and explicit standard safety hints to MCP, HTTP capabilities and OpenAPI. Current roles, granted scopes, space access, revision checks and replay receipts remain authoritative. Replay-protected mutations differ from ordinary creates: not every write accepts a key or permits a safe automatic retry. Search and generic jobs/schedules disclose possible configured-provider effects.
 
@@ -27,9 +27,9 @@ The repository-only [testing skill](.agents/skills/c0-evaluate-tools/SKILL.md) a
 
 Supported backup, targeted update and full-manager restart preserve original content, files, settings, schedules and all 26 prior clients. Real MCP metadata, immutable citations, isolated Wiki replay/conflict/history/archive, grant continuity, renewal and client revocation pass. The actual connector reads retained Wiki and source evidence again about 23 minutes after authentication without another login. Two local response-read timeouts interrupt private continuity probes; follow-up transport checks pass 24/24, but the cause remains unproven and failed trials are retained. All unrelated instances match across each C0 action window. A separate voice-module update task is confirmed between windows; its initiator is unknown and its digest change remains recorded. See [PLAN.md](PLAN.md) for exact installed digests, measured evidence and limitations. The operator confirms the correct account name, cited read and repeated read without further login or delay after reconnecting. The earlier refresh rejection follows about 52 minutes without app requests; its precise cause is unproven. M18 closeout/main verification now passes as recorded below; M19 is active and further agent-memory work stays deferred. Keep the installed candidate images available and unchanged.
 
-## M19 client metadata discovery candidate
+## Current runtime: M19 client metadata discovery
 
-M19 is under implementation; the accepted M18 runtime above remains deployed.
+M19 runtime acceptance passes. The dedicated installation runs tested source `38a8654` at app **0.49.0**, released Core **0.31.0** and schema **0018**. Operator-reviewed [PR29](https://github.com/Stell0/ns8-czero/pull/29) is regularly merged as `7a223fb` with the identical tested tree. [Main full validation/publication39632626515](https://github.com/Stell0/ns8-czero/actions/runs/39632626515) completes successfully; downloaded native/privacy/scan audits pass. The separate documentation closeout remains pending its own reviewed merge and main checks.
 New installations keep **Client metadata discovery** off in native Settings.
 With hostname-root routing and sign-in configured, an application Admin can
 preview an exact HTTPS metadata URL in **Administration**, inspect its name,
@@ -56,7 +56,7 @@ The Admin review endpoints are `GET /api/v1/oauth/cimd`,
 browser Origin/CSRF or a verified bearer with Admin scope. The internal Admin
 UUID is distinct from the public metadata URL and cannot authenticate as its
 alias. Clean restore retains approved descriptors but requires fresh native
-sign-in and consent. The app0.49 candidate now pins independently published [Core0.31](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.31.0)/schema0018 at exact source `87b8fd1`. Core full/native/publication and actual artifact checks pass; final application consumer/native checks and real ChatGPT acceptance remain gates in [PLAN.md](PLAN.md).
+sign-in and consent. The app0.49 candidate now pins independently published [Core0.31](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.31.0)/schema0018 at exact source `87b8fd1`. Core and application full/native/released-consumer checks and actual artifact audits pass. The operator confirms the separate actual ChatGPT CIMD connection, correct account name, cited/repeated reads and post-restart continuity without another login or unusual delay. Independent observations span 526.196 seconds with public/native refresh rotation and unchanged identity, scopes and original bounds. Controlled trusted-HTTPS metadata outage/change/reapproval, replay and client/global revocation pass. Original knowledge/files/settings/schedules/clients and worker health remain intact; temporary fixtures are disabled/removed. Keep the three deployed candidate images frozen in [PLAN.md](PLAN.md).
 
 ## Applicability and structured retrieval (AM4)
 
@@ -719,3 +719,8 @@ starts with optional Admin-approved client metadata discovery, default off for
 new installations. Its Core release, application integration and live ChatGPT
 acceptance remain pending; see the settled [M19 plan](PLAN.md). The accepted M18
 installation and recorded limitations remain unchanged.
+
+
+## Documentation and skills release-readiness phase
+
+The operator approves M21 before Windmill: reorganize user/operator/contributor documentation, preserve historical evidence, maintain the five developer skills, align Use with AI and deliver per-instance end-user plugin packages. Actual packaged-skill use in ChatGPT web is required, using an existing registered app reference rather than an inline desktop-only MCP declaration. Prove private Plugin Creator setup and managed GitHub import. This prepares artifacts and guides; public-directory submission, stable module tagging and workspace-wide rollout remain separate. See the settled M21 plan in PLAN.md.
