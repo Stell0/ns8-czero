@@ -155,7 +155,8 @@ def test_filtered_hybrid_and_reranker_never_receive_other_space_or_version(space
     assert [hit['reference']['id'] for hit in private_result['hits']] == [hidden['content']['id']]
 
 
-def test_semantic_candidates_beyond_limit_and_provider_failure_keep_valid_version(indexed, annotations):
+@pytest.mark.parametrize('incremental_sort', ['on', 'off'])
+def test_semantic_candidates_beyond_limit_and_provider_failure_keep_valid_version(indexed, annotations, incremental_sort):
     store, fixture, calls = indexed
     _, wiki, _ = fixture
     for index in range(70):
@@ -177,6 +178,12 @@ def test_semantic_candidates_beyond_limit_and_provider_failure_keep_valid_versio
     # The actual exact-distance query must still find the one eligible revision.
     filtered = FilteredEmbeddingStore(store.database, store.client, store.access, filters)
     with store.database.engine.begin() as connection:
+        # Forced planner penalties can enable expensive JIT compilation for
+        # this tiny fixture. Isolate the ANN/fallback assertion from compiler
+        # startup; ordinary search above keeps the database's normal settings.
+        # Exercise both incremental and full-sort plans under the same deadline.
+        connection.execute(text('SET LOCAL jit=off'))
+        connection.execute(text('SET LOCAL enable_incremental_sort='+incremental_sort))
         connection.execute(text('SET LOCAL enable_seqscan=off'))
         connection.execute(text('SET LOCAL enable_sort=off'))
         plans, fallbacks = [], []
