@@ -146,4 +146,3 @@ def zip_bytes(payload):
             archive.writestr(info, content)
     return output.getvalue()
 
-

@@ -234,10 +234,11 @@ def test_sdk_invalid_text_and_model_errors_are_static(transport,knowledge_http,m
     assert marker not in caplog.text and 'RPC8SECRET' not in caplog.text
 
 
-def test_exact_native_text_seed_and_receipt_recovery_with_signed_rest(knowledge_http):
+def test_exact_native_text_seed_and_receipt_recovery_with_signed_rest(knowledge_http, monkeypatch):
     import importlib.util
     from pathlib import Path
     from fastapi.testclient import TestClient
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1]))
     spec=importlib.util.spec_from_file_location('native_text_probe',Path(__file__).parents[1]/'oidc_probe.py')
     probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
     app,owner,*_=knowledge_http
