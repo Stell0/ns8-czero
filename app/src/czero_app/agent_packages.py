@@ -145,4 +145,3 @@ def zip_bytes(payload):
             info.external_attr = 0o100644 << 16
             archive.writestr(info, content)
     return output.getvalue()
-

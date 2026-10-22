@@ -115,3 +115,20 @@ def test_plugin_request_body_is_bounded_before_json_parsing(application, chunked
                 headers={**headers(profile), 'Content-Type': 'application/json'})
             assert result.status_code == 413
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('value', [
+    {'chatgpt_app_id': 'https://chatgpt.com/oauth/authorize?state=PRIVATE_REJECTED_REFERENCE' + 'x' * 2500},
+    {'chatgpt_app_id': {'token': 'PRIVATE_REJECTED_REFERENCE'}},
+    {'chatgpt_app_id': 'asdk_app_fixture', 'unexpected': 'PRIVATE_REJECTED_REFERENCE'},
+])
+def test_download_schema_errors_do_not_echo_pasted_private_details(application, value):
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=application[0]), base_url=ORIGIN) as http:
+            profile = await signin(http)
+            response = await http.post('/agents/plugin.zip', json=value, headers=headers(profile))
+            assert response.status_code == 422
+            assert 'PRIVATE_REJECTED_REFERENCE' not in response.text
+            assert response.json() == {'detail': 'invalid_chatgpt_connection'}
+            assert response.headers['cache-control'] == 'no-store'
+    asyncio.run(check())
