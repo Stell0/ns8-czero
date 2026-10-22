@@ -8,6 +8,8 @@ M19 runtime source `38a8654` is accepted at app0.49.0/Core0.31.0/schema0018; rev
 
 M21 changes guides, five developer skills, three end-user skills, offline package generation and installed Use with AI presentation. Core/schema/OAuth/dependencies remain unchanged. Actual packaged-skill use on ChatGPT web is required for both private Plugin Creator and managed GitHub import; desktop/SDK/manifest checks do not establish that gate. Missing account/workspace features leave acceptance incomplete. No stable module tag, directory submission or workspace-wide rollout is authorized.
 
+The operator now authorizes the M21 self-service follow-up in PLAN: generated installed skill/plugin downloads, visible OAuth approval, default verified-user Shared read admission and persistent administrator blocks. Earlier M21 Core-unchanged/offline-only constraints are superseded for this scoped work. PR31 main `0040c89` is verified; the current dedicated clean installation runs tested `3730188`, whose three identities are frozen in PLAN. Preserve it and all original dirty work.
+
 ## Responsibilities and routing
 
 - Reusable domain behavior, persisted-role authorization, migrations and concurrency belong in `packages/czero-core`; use `$c0-develop-core`.

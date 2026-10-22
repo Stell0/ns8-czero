@@ -2,21 +2,13 @@
 
 ## Current checkpoint
 
-21 October 2026: M19 runtime acceptance passes. Reviewed PR29 regularly merges tested `38a8654` as `7a223fb` with an identical tree. [Main full validation/publication39632626515](https://github.com/Stell0/ns8-czero/actions/runs/39632626515) and independently inspected native/privacy/scan artifacts pass. [M19 closeout PR30](https://github.com/Stell0/ns8-czero/pull/30) at `8a0144d` passes [its own documentation CI39641566107](https://github.com/Stell0/ns8-czero/actions/runs/39641566107); the operator reviews and approves it, and regular merge `0a9bbb3` passes [main documentation CI39643655916](https://github.com/Stell0/ns8-czero/actions/runs/39643655916). Exact-source promotion verifies the marker. M21 is based on this verified main.
+22 October 2026: PR31 is merged as `0040c8930257e0a605e4768ef76dab84490f8691` with a tree identical to tested `3730188`. [Main39745026479](https://github.com/Stell0/ns8-czero/actions/runs/39745026479) and actual downloaded native/privacy/scan artifacts pass. The dedicated instance was upgraded, verified through restart and then explicitly recreated at the operator's request after a checked backup. It is clean and runs frozen `3730188`, app0.49.1/Core0.31.0/schema0018. Actual fresh ChatGPT/skills acceptance is pending. The operator now authorizes the self-service follow-up below; Core0.31.1/schema0019 implementation is in progress and is not published or deployed.
 
 Historical M00–M20, Agent Memory AM0–AM6, failures, observations, measured limits and exact CI/source identities are retained in the [archived plan](docs/history/PLAN.md). Historical status statements do not reopen accepted work. The original root checkout's dirty documents and recovered M20 worktrees remain untouched.
 
-## Accepted runtime
+## Current installed runtime
 
-The dedicated C0 installation remains source `38a8654486581e0f2af21672e8675a2e925d2b38`, canonical tag `ci-38a8654486581e0f2af21672e8675a2e925d2b38-39613259374-1`, app0.49.0/Core0.31.0/schema0018. Preserve this genuine M21 upgrade predecessor and keep its tag available unchanged while referenced.
-
-| Image | Accepted installed digest |
-| --- | --- |
-| Module | `sha256:0a78eef9a6cfd6246e495c88d4f95ecbc1c6daaf7bb38d3d0e003ffbe82db7fb` |
-| App | `sha256:4b2000d645cb9f6d7a508365d770d37db2cc085af113340c635f89e79bd23d9b` |
-| PostgreSQL | `sha256:d8beafaa39c490e9046e4611b298a7cd8ab87ef7400ac1adbd84a2a32d9cecf2` |
-
-Core source `87b8fd1` / `core-v0.31.0` and published artifacts are immutable. Main or documentation-marker images do not replace the accepted runtime. [Detailed M19 acceptance](docs/history/PLAN.md#m19-deployed-acceptance-and-main-closeout--21-october-2026) retains actual ChatGPT, renewal, data/inventory and journal evidence.
+Source `37301886c4e28a5982c85cd837a113a96a54d2e0`, canonical tag `ci-37301886c4e28a5982c85cd837a113a96a54d2e0-39737449917-1`, app0.49.1/Core0.31.0/schema0018. The follow-up section freezes all three installed digests and records the clean-start evidence. Do not replace these images with documentation/main-marker builds. The earlier accepted M19 source and immutable Core0.31.0 artifacts remain in the [historical evidence](docs/history/PLAN.md#m19-deployed-acceptance-and-main-closeout--21-october-2026).
 
 ## Delivery loop
 
@@ -106,6 +98,41 @@ Both pinned model arms pass14/14 scenarios with46 actual MCP calls each and inde
 Actual operator web testing rejects the first marketplace-shaped ZIP with `Expected a single plugin archive`. The generator now puts one plugin's manifest/app reference/skills at ZIP root, while the directory retains the GitHub marketplace. Regression/determinism/binding/link checks pass44 cases; all9 plugin payload files remain byte-identical to the measured package. A replacement archive is delivered privately; actual upload acceptance and the other web gates remain pending. This correction requires fresh full CI; c630cb6 is not deployed or merged.
 
 The operator separately reports reconnect requesting unapproved `c0:admin`. Read-only inspection confirms the existing client is enabled and approved only for `c0:read`; no scopes have been expanded. Intended research/editing versus administration is pending operator direction. Supported dedicated backup and actual restic read-data check pass with all existing backup plans restored;8 original HTTP views and3 schedules are captured. Deployment is held for corrected candidate acceptance and preservation baselines will be refreshed before update.
+
+## M21 follow-up — Simple self-service ChatGPT onboarding
+
+**Operator direction (22 October):** Simplify `/agents` for nontechnical users: direct personal-Plugins link, suggested C0 name/description/canonical MCP connection with small accessible copy icons, generated instance-specific `.skill` and plugin ZIP downloads, visible client/user permission management, reliable first OAuth sign-in and default Shared read admission for authenticated users. This supersedes M21's earlier presentation-only/Core-unchanged and offline-only packaging limits. Preserve all unfinished work and deployment waivers.
+
+**Verified entry:** PR31 merges as `0040c8930257e0a605e4768ef76dab84490f8691`; its completed main39745026479 and independently inspected native/privacy/scan artifacts pass. Tested/deployed candidate `37301886c4e28a5982c85cd837a113a96a54d2e0` has the same tree. The operator explicitly requests and approves supported removal/recreation for a fully clean start after a supported backup/actual restic read-data check. The new dedicated instance runs app0.49.1/Core0.31.0/schema0018 with restored configuration, one empty Shared space, owner only, zero old clients/content/history/files and three built-in schedules. All eleven unrelated module identities are preserved. The removed native client is absent. Actual fresh ChatGPT acceptance remains pending; no M21 completion is claimed. Deployed images remain frozen at:
+
+| Image | Current installed digest |
+| --- | --- |
+| Module | `sha256:b7177aaed0d61b5ce9913173b25d57fbe150457155619d7f0429afefbc36815e` |
+| App | `sha256:fcd6c9a1552774e065a4ab04ed1f19a9244c708bee9ec4c9407249d1f509ea72` |
+| PostgreSQL | `sha256:7aefea399df70ed31ed294358a768c47c40c58870224828063a765a7ecb5bf53` |
+
+Canonical tag: `ci-37301886c4e28a5982c85cd837a113a96a54d2e0-39737449917-1`. Preserve it as the genuine next upgrade predecessor; documentation/main images do not replace it.
+
+**Settled interfaces and responsibilities:**
+
+- Core0.31.1 adds opt-in new-account Reader admission, persisted explicit account blocking and a bounded browser-bound pending-client authorization service. Schema0019 is additive. Existing Core callers retain closed admission by default. Migration marks existing unadmitted identities blocked, preserving earlier revocations; existing memberships/owners/grants are unchanged. Trusted verified identities alone can receive admission; role/scopes/space grants remain authoritative. Membership removal records a persistent block and revokes existing authority, including after repeated/concurrent sign-in.
+- Pending client authorization stores a validated authorization request for five minutes behind separate opaque request/browser hashes, current issuer/native-client/resource and bounded counts. It performs no network work and grants no authority. Only signed-in users can register an approval request; Admins see bounded pending metadata URLs/callbacks/scopes, never state/PKCE/native secrets. Continuing requires same-origin CSRF, a current verified session, fresh approved client metadata, exact callback/scope validation and one-use transition into existing consent. Expired, disabled, changed, blocked and replayed requests fail closed. Existing UUID clients and approved-client flows retain their validation. Malformed/duplicate/resource/credential requests remain strict errors; valid unapproved CIMD requests get the human flow only while discovery is enabled.
+- The application opts into Reader admission, returns pending onboarding across normal SSO without placing OAuth parameters in redirect URLs, and presents clear approval/continue steps. C0 Administration exposes Users first, then pending ChatGPT connections and reviewed-client controls; no automatic broad client approval or Admin scope is introduced.
+- `/agents` derives name/description/hostname/MCP URL from trusted configured instance metadata. Three compact icon controls retain keyboard labels, copy feedback/manual fallback and stale-response guards. Technical details move to disclosures. A `.skill` ZIP contains one instance-bound memory workflow and declared MCP dependency; it contains no credential. A web plugin ZIP references the user's existing registered ChatGPT app; the UI accepts its technical ID/management URL and explains where to copy it. It does not invent a binding, add inline MCP that makes workspace imports Desktop only, or claim installation grants access.
+- Reuse one application packaging library from offline and HTTP paths. Serve in-memory deterministic bounded archives with explicit filenames/no-store/no-sniff and no remote fetches or writes. Runtime includes only explicitly allowlisted end-user package assets and GPL license; repository development skills/tests/plans stay excluded. Update runtime audits accordingly.
+- Native lifecycle remains numbered scripts. No host logging, shared identity-provider user, unrelated application, CPU-quota or stable-release change is part of this work.
+
+**Delivery:** First validate/publish immutable compatible Core artifacts from exact successful local/both-native source, then pin the application dependency/lock and complete final consumer/image/both-native checks. Use focused commits on an isolated branch, reviewed PR, supported dedicated-instance deployment and actual ChatGPT acceptance before final closeout. Runtime behavior does not deploy from local tests alone.
+
+**Acceptance checklist:**
+
+- [ ] Core database cases: first/concurrent verified admission, wrong/expired issuer identity, unchanged existing roles, persistent block/regrant/revocation, protected-space isolation; genuine schema0018 migration/repeat/restore and package distribution.
+- [ ] Pending-client cases: duplicate/malformed/oversized requests, policy-off/no unauthenticated fetch, cookie/issuer/native/resource bindings, limits/expiry, signed-in queue privacy, Admin-only preview/approval, role-loss/provider failure, one winner/replay, exact callback/PKCE/scopes and unchanged existing clients.
+- [ ] Downloads: two configured instances, deterministic bytes, safe names/app IDs/URLs, no secrets/unrelated assets, valid skill/plugin manifests/references/dependencies, installed-image downloads and package license.
+- [ ] UI: simple signed-out/signed-in states; direct links and suggested text; icon clipboard success/failure/keyboard/accessibility; stale replies/access loss; visible Users/connection approval and Reader/Editor/Admin/blocked behavior in actual native browsers.
+- [ ] Focused plus full Python/PostgreSQL/packaging, JavaScript, schema/shell/Robot and both-native/actual artifact audits; immutable Core release and final released consumer checks.
+- [ ] C0-only backup/update/readiness/data/client/schedule/inventory/restart/journal acceptance; actual fresh ChatGPT OAuth, `.skill` import, plugin import, cited read/repeat and permitted editing/denial. Keep actual web observations distinct from model/SDK checks.
+- [ ] Reviewed regular main promotion, completed main/publication and separate checked evidence closeout; freeze final accepted runtime.
 
 <details>
 <summary>Historical section links</summary>

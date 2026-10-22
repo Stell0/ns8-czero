@@ -15,7 +15,7 @@ Use your administrator's HTTPS C0 address and your own NethServer sign-in. ChatG
 
 ## Status and boundaries
 
-M19 runtime acceptance is complete at app **0.49.0**, Core **0.31.0**, schema **0018**. M19 documentation marker `0a9bbb3` is reviewed, merged and passes its main CI. M21 documentation/plugin work is in development; [release readiness](docs/release-readiness.md) records the remaining gates. No stable NS8 module release or public plugin-directory listing is claimed.
+PR31 documentation/skills implementation is merged and its exact main CI passes. The dedicated test installation runs app **0.49.1**, Core **0.31.0**, schema **0018**, after an explicitly requested clean start. Actual fresh ChatGPT and skill/plugin acceptance remain pending. The operator has authorized a simpler self-service connection/download page and default Shared read access for verified users; those follow-up changes are in development. [Release readiness](docs/release-readiness.md) records the remaining gates. No stable NS8 module release or public plugin-directory listing is claimed.
 
 C0 provides browser readers/tools, authenticated REST/OpenAPI and OAuth-protected MCP. Selected plain text can be ingested through MCP; document-file upload uses REST or Source tools. Authorized changes publish immediately with retained revisions and evidence. C0 does not execute arbitrary assistant commands or provide a general workflow engine.
 
