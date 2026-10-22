@@ -49,7 +49,7 @@ class AppAuth:
         try:
             issuer, client, secret, origin, owner = values
             config = OidcConfig(issuer, client, secret, origin, base_path)
-            access = AccessService(database, issuer, UUID(owner))
+            access = AccessService(database, issuer, UUID(owner), admit_readers=True)
             policy = SessionPolicy(int(os.getenv('CZERO_SESSION_ABSOLUTE_SECONDS', '28800')),
                                    int(os.getenv('CZERO_SESSION_IDLE_SECONDS', '3600')))
             oidc = OidcClient(config)
@@ -200,6 +200,13 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         response = RedirectResponse(destination, status_code=302)
         response.set_cookie("c0_login", pending.browser_binding, max_age=300,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
+        target = request.query_params.get('return_to')
+        if target in ('agents', 'admin'):
+            response.set_cookie('c0_login_return', target, max_age=300,
+                secure=True, httponly=True, samesite='lax', path=cookie_path)
+        else:
+            response.delete_cookie('c0_login_return', path=cookie_path,
+                secure=True, httponly=True, samesite='lax')
         return response
 
     @app.get("/auth/callback", include_in_schema=False)
@@ -233,10 +240,19 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
                                    secure=True, httponly=True, samesite="lax")
             response.delete_cookie("c0_session", path=cookie_path,
                                    secure=True, httponly=True, samesite="lax")
+            response.delete_cookie('c0_login_return', path=cookie_path,
+                secure=True, httponly=True, samesite='lax')
             return response
         destination = cookie_path
+        if request.cookies.get('c0_login_return') in ('agents', 'admin'):
+            destination += request.cookies['c0_login_return']
+        onboarding = getattr(app.state, 'client_onboarding', None)
+        if onboarding is not None and request.cookies.get('c0_onboarding'):
+            # The destination is fixed: original OAuth state stays server-side.
+            # The handoff page explains expiry and never trusts a redirect URL.
+            destination = '/oauth/connect'
         consent = getattr(app.state, 'oauth_consent', None)
-        if consent is not None and request.cookies.get('c0_consent'):
+        if destination == cookie_path and consent is not None and request.cookies.get('c0_consent'):
             from czero_app.oauth_server import pending_cookie
             from czero_core.oauth_consent import ConsentRejected
             try:
@@ -248,6 +264,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         response.set_cookie("c0_session", cookie, max_age=active.sessions.max_session_seconds,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
         response.delete_cookie("c0_login", path=cookie_path, secure=True, httponly=True, samesite="lax")
+        response.delete_cookie('c0_login_return', path=cookie_path,
+            secure=True, httponly=True, samesite='lax')
         return response
 
     @app.post("/auth/logout")

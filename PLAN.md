@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-22 October 2026: PR31 is merged as `0040c8930257e0a605e4768ef76dab84490f8691` with a tree identical to tested `3730188`. [Main39745026479](https://github.com/Stell0/ns8-czero/actions/runs/39745026479) and actual downloaded native/privacy/scan artifacts pass. The dedicated instance was upgraded, verified through restart and then explicitly recreated at the operator's request after a checked backup. It is clean and runs frozen `3730188`, app0.49.1/Core0.31.0/schema0018. Actual fresh ChatGPT/skills acceptance is pending. The operator now authorizes the self-service follow-up below; Core0.31.1/schema0019 implementation is in progress and is not published or deployed.
+22 October 2026: PR31 is merged as `0040c8930257e0a605e4768ef76dab84490f8691` with a tree identical to tested `3730188`. [Main39745026479](https://github.com/Stell0/ns8-czero/actions/runs/39745026479) and actual downloaded native/privacy/scan artifacts pass. The dedicated instance was upgraded, verified through restart and then explicitly recreated at the operator's request after a checked backup. It is clean and runs frozen `3730188`, app0.49.1/Core0.31.0/schema0018. Actual fresh ChatGPT/skills acceptance is pending. The operator now authorizes the self-service follow-up below; Core0.31.1/schema0019 is published from verified `6f1e470`; app0.50.0 adoption and final candidate validation are in progress, not deployed.
 
 Historical M00–M20, Agent Memory AM0–AM6, failures, observations, measured limits and exact CI/source identities are retained in the [archived plan](docs/history/PLAN.md). Historical status statements do not reopen accepted work. The original root checkout's dirty documents and recovered M20 worktrees remain untouched.
 
@@ -276,3 +276,9 @@ These anchors preserve links to the retained historical record.
 <a id="m19-deployed-acceptance-and-main-closeout--21-october-2026"></a>[M19 deployed acceptance and main closeout — 21 October 2026](docs/history/PLAN.md#m19-deployed-acceptance-and-main-closeout--21-october-2026)
 
 </details>
+
+### M21 self-service implementation checkpoint
+
+Core source `6f1e4703f4d027c82ccb03ef8813efe30c650365` passes [full39760439788](https://github.com/Stell0/ns8-czero/actions/runs/39760439788), including local/producer/released-image and both native distributions. Independently downloaded reports verify Debian genuine predecessor upgrade21, Rocky installation26/three expected skips, eight browsers/privacy guards,25 accessibility contexts, three OAuth-query artifacts with zero candidates and five actual scan/SBOM pairs. The full promotion verifier passes. [Core publication39768193889](https://github.com/Stell0/ns8-czero/actions/runs/39768193889) completes successfully at that exact source. Immutable `core-v0.31.1` wheel SHA256 `ec2b9757d5a947f98bc9e743a6d7eb9f5227f59682d6a8a334ea201f5d03d13a`, archive SHA256 `1ee6154ae1e3ed8a1a90684e85d3897034d05cb98733f18611bee84141bcbb5e`; downloaded checksums match. This Core bridge is not the application/live candidate.
+
+Application0.50.0 pins released Core0.31.1 and implements the planned human approval, default Reader/blocked-account UI and generated `.skill`/single-plugin ZIP page. Focused HTTP/download tests pass115 cases; the exact native Core-seeded first-connection/replay helper passes six local HTTP tests. Updated native browser tests download/inspect both archives, and native admission checks require a genuinely new Reader plus persistent blocking. Final full application/consumer/image/native validation, supported dedicated update and actual ChatGPT skill/plugin acceptance remain pending in draft PR32.

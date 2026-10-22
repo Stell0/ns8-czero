@@ -12,6 +12,14 @@ Complete [C0 connection setup](chatgpt.md). From the ChatGPT management page, ob
 
 For web-capable GitHub imports, the package references that existing app through `.app.json`. **Do not add `mcp.json`, `.mcp.json` or inline server declarations**: OpenAI marks imported packages with those declarations Desktop only, even for remote HTTPS servers. [Official workspace import and app-reference guidance](https://learn.chatgpt.com/docs/enterprise/plugin-management).
 
+## Download from your instance
+
+Open **Use with AI** (`/agents`). **Download .skill** generates a ZIP-based skill archive containing `SKILL.md`, `agents/openai.yaml` and the GPL license. Its name and instructions include the configured hostname and canonical MCP URL. Upload it at [ChatGPT Skills](https://chatgpt.com/skill) where that control is available. It uses the connection you created; it does not install or authorize an MCP server by itself.
+
+For the three-workflow plugin, sign in, paste the ordinary ChatGPT connection management-page address or technical app ID, and choose **Download plugin .zip**. Check the instance URL in ChatGPT before downloading. The page accepts a connection-page address, never a full OAuth authorization URL. The generated ZIP contains one plugin at its root, the existing app reference, personalized instance guidance, three skills and their references/license. No password, session or access token is included. Generation cannot prove the app ID belongs to this server; verify it in ChatGPT.
+
+Upload only the generated single-plugin ZIP where ChatGPT offers plugin archive upload. Other installation routes below remain available when your account provides them. Start a new conversation and test an actual read after installing either artifact. Upload acceptance and automatic skill use must be checked on your account.
+
 ## Generate offline
 
 Use Python 3.12 or newer from a reviewed source checkout. No model/API credential or network access is needed by the generator:

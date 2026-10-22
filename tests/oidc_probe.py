@@ -299,6 +299,33 @@ def probe():
         identity_file.write_text(profile["id"])
     session = next(cookie for cookie in owner.cookies if cookie.name == "c0_session")
     assert session.secure and session.has_nonstandard_attr("HttpOnly"), "Session cookie is not protected"
+    # Fresh verified accounts get Shared read access; explicit blocks remain
+    # denied on later sign-ins and genuine upgrades. All users are disposable.
+    fresh_admissions = 0
+    for username in ('c0newreader', 'c0denied', 'c0member'):
+        status, body, _ = owner.api('/api/v1/access/accounts')
+        assert status == 200, 'Owner cannot inspect admission state'
+        account = next((a for a in json.loads(body)['accounts'] if a['username'] == username), None)
+        if account is None:
+            newcomer = Browser(origin)
+            admitted = newcomer.login(username, payload['password'])
+            assert admitted['role'] == 'reader' and not admitted['is_owner'], 'Verified user did not receive default Reader access'
+            status, body, _ = newcomer.api('/api/v1/spaces')
+            visible = json.loads(body)['spaces']
+            assert status == 200 and len(visible) == 1 and visible[0]['shared'], 'Default Reader gained protected-space access'
+            assert newcomer.api('/api/v1/access/accounts')[0] == 403, 'Default Reader gained administrative access'
+            account = {'id': admitted['id']}
+            fresh_admissions += 1
+        status, _, _ = owner.api('/api/v1/access/accounts/' + account['id'], {'role': None}, 'PUT', profile['csrf_token'])
+        assert status == 204, 'Cannot persist explicit account block'
+        blocked = Browser(origin)
+        blocked.login(username, payload['password'], expected=403)
+    admission_proof = STATE / 'default-admission-proof.json'
+    if not admission_proof.exists():
+        assert fresh_admissions >= 1, 'Default admission was not exercised with a fresh native identity'
+        admission_proof.write_text(json.dumps({'fresh_readers': fresh_admissions, 'shared_only': True}))
+        admission_proof.chmod(0o600)
+    print('C0 admission: ' + json.dumps({'fresh_readers': fresh_admissions, 'blocked_signins': 3, 'shared_only': True}))
     denied = Browser(origin)
     denied.login("c0member", payload["password"], expected=403)
     status, body, _ = owner.api("/api/v1/access/accounts")

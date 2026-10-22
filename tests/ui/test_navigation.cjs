@@ -29,6 +29,13 @@ test('clipboard refusal offers manual copy without claiming success',async()=>{
   assert.match(h.status.textContent,/Select and copy/);assert.equal(h.button.disabled,false);
 });
 
+test('compact copy controls name the copied field and reject stale field feedback',async()=>{
+  let finish; const h=setup(()=>new Promise(resolve=>{finish=resolve;}));
+  h.button.dataset.copyName='Description'; h.field.value='C0 Knowledge Storage on example.org';
+  h.button.click();finish();await tick();assert.equal(h.status.textContent,'Description copied.');
+  h.status.textContent='';h.button.click();h.field.value='New instance';finish();await tick();assert.equal(h.status.textContent,'');
+});
+
 test('administration navigation is shown only after a verified Admin reply', async()=>{
   for(const role of ['admin','reader','editor',null]){
     const link={hidden:true};

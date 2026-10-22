@@ -1,0 +1,13 @@
+<!doctype html>
+<!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C0 — Connect your assistant</title><link rel="stylesheet" href="/app.css"></head>
+<body><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" class="connection-page" tabindex="-1">
+<nav aria-label="C0 navigation"><a href="/">C0 home</a> · <a href="/agents">Use with AI</a></nav>
+<p class="eyebrow">C0 knowledge memory</p><h1>Connect your assistant</h1><p id="connect-account" role="status" aria-live="polite">Checking your sign-in…</p>
+<p id="connect-status" class="notice" role="status" aria-live="polite">Preparing this connection…</p>
+<div id="connect-workspace" hidden><section><h2>This connection</h2><dl><dt>Client metadata</dt><dd id="connect-client"></dd><dt>Callback</dt><dd id="connect-callback"></dd></dl></section>
+<section id="connect-review-panel" hidden><h2>Administrator approval</h2><p>A new client needs review before it can ask users to connect. Review its exact identity and callback below. Approval grants no user role or access to a protected space.</p><button id="connect-preview" type="button">Review this connection</button><div id="connect-review" class="connection-review"></div><button id="connect-approve" type="button" disabled>Approve selected permissions</button></section>
+<form id="connect-continue"><fieldset><legend>Permissions for this connection</legend><label id="connect-read-label"><input id="connect-read" type="checkbox" value="c0:read" checked> Read knowledge I can access</label><label id="connect-write-label"><input id="connect-write" type="checkbox" value="c0:write"> Save and update knowledge I can edit</label><details><summary>Administration permission</summary><label id="connect-admin-label"><input id="connect-admin" type="checkbox" value="c0:admin"> Manage C0 access and background tasks</label><p>Ordinary research and Wiki editing do not need administration permission.</p></details></fieldset><button id="connect-next" type="submit" disabled>Continue to consent</button><button id="connect-refresh" type="button" class="secondary">Check approval</button></form>
+<p>Only the permissions you select are requested. Your C0 role and space grants still apply to every operation.</p></div>
+<p><a id="connect-signin" href="/auth/login" hidden>Sign in to C0</a> <a href="/agents">Back to setup</a> <a id="connect-admin-link" href="/admin#cimd-administration" hidden>Manage ChatGPT connections</a></p>
+</main><script src="/oauth/connect.js" defer></script></body></html>

@@ -2,7 +2,7 @@
 
 ## Your account and space
 
-Open the instance URL provided by your administrator and sign in with your domain account. The C0 application account is separate from NS8 cluster administration. If access is denied, ask the C0 owner/Admin to admit your verified account; repeat login after admission. Approval of a ChatGPT connection does not grant membership.
+Open the instance URL provided by your administrator and sign in with your domain account. The C0 application account is separate from NS8 cluster administration. A new verified account receives Reader access to Shared. If access is denied, ask the C0 owner/Admin to check People and permissions for an explicit block or retained earlier denial; repeat login after a role change. Approval of a ChatGPT connection does not grant membership.
 
 Use the space picker to choose the intended knowledge space. Shared is the legacy common space. Protected spaces need explicit grants, capped by your application role; application Admins can access all spaces. A failed or revoked selection is not permission to switch to Shared. Check the account and space again when changing connections.
 

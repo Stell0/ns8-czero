@@ -36,6 +36,7 @@ def cimd_http(application):
     yield PrivateFixture((app, owner, registry))
     registry.sync_policy(False)
     with registry.access.database.engine.begin() as connection:
+        connection.execute(text('DELETE FROM c0_client_onboarding WHERE issuer=:issuer'), {'issuer': registry.access.issuer})
         connection.execute(text('DELETE FROM c0_oauth_clients WHERE id IN (SELECT client_id FROM c0_cimd_clients)'))
     asyncio.run(app.state.cimd.fetcher.aclose())
 
@@ -125,7 +126,10 @@ def test_unknown_urls_and_global_off_never_fetch_and_uuid_clients_continue(cimd_
                 manual = app.state.oauth_clients.register(actor, 'Legacy UUID preserved', [CALLBACK])
                 try:
                     http.headers.pop('Authorization')
-                    await rejected_authorization(http, 'https://unknown.example.test/client.json')
+                    pending = await http.get('/oauth/authorize', params={'client_id': 'https://unknown.example.test/client.json',
+                        'redirect_uri': CALLBACK, 'response_type': 'code', 'code_challenge': 'a' * 43,
+                        'code_challenge_method': 'S256', 'scope': 'c0:read', 'resource': RESOURCE})
+                    assert pending.status_code == 302 and pending.headers['location'] == '/oauth/connect'
                     assert len(h.requests) == 2
                     assert (await http.get('/.well-known/oauth-authorization-server/oauth')).json()['client_id_metadata_document_supported'] is True
                     registry.sync_policy(False)

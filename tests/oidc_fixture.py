@@ -51,7 +51,7 @@ def setup(payload):
     (STATE / "resources.json").write_text(json.dumps({"ldap": ldap}))
     task("module/" + ldap + "/configure-module", {"domain": DOMAIN, "admuser": "c0owner",
          "admpass": payload["password"], "provision": "new-domain"})
-    for username in ("c0member", "c0administrator", "c0denied"):
+    for username in ("c0member", "c0administrator", "c0denied", "c0newreader"):
         task("module/" + ldap + "/add-user", {"user": username, "display_name": username,
                                              "password": payload["password"]})
     PHASE = "IdP installation"

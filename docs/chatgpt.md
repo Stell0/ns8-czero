@@ -5,7 +5,7 @@ Use your instance's URL throughout. This guide requires a ChatGPT account/worksp
 ## 1. Administrator prepares the instance
 
 1. Configure trusted public HTTPS and NethServer sign-in in NS8 Czero Settings.
-2. Sign in to C0 as owner/Admin. Admit the intended user's verified account and grant the intended space access.
+2. Sign in to C0 as owner/Admin. New verified users receive Reader access to Shared; grant Editor/Admin roles or protected-space access only when needed.
 3. Enable **Client metadata discovery** in native Settings. It is off on new installations.
 4. Give the user the canonical MCP URL shown by **Use with AI**, for example `https://knowledge.example.org/mcp`.
 
@@ -13,23 +13,23 @@ Do not use the NS8 cluster address or legacy `/czero/<module-id>` path as an MCP
 
 ## 2. User creates the ChatGPT connection
 
-In ChatGPT on the web, open **Plugins → + → Add custom MCP server**. Enter a recognizable name and your instance's Server URL. Choose **OAuth** and **CIMD / Client ID Metadata Document**, leaving static client ID and secret empty. Review the displayed notice and create the connection/plugin. [Official custom MCP setup](https://developers.openai.com/api/docs/guides/custom-mcp-server).
+Open your instance’s **Use with AI** page (`/agents`). It supplies the instance name, description and Connection URL with small copy icons. In ChatGPT web, open [Plugins → personal](https://chatgpt.com/plugins?directoryTab=personal) → **+ → Add custom MCP server**, and copy those values. Choose **OAuth** and **CIMD / Client ID Metadata Document**, leaving static client ID and secret empty. Review the displayed notice and create the connection/plugin. [Official custom MCP setup](https://developers.openai.com/api/docs/guides/custom-mcp-server).
 
-Open its management page and copy the **exact client metadata URL**, such as `https://chatgpt.com/oauth/<callback-id>/client.json`, and its displayed callback. Send those two values to the C0 Admin. The correct URL depends on callback mode; do not construct it by guessing. [Official authentication guidance](https://developers.openai.com/plugins/build/auth).
-
-An initial attempt may return `{"error":"invalid_request"}` because the new identity has not been approved. That is not a request to enter a secret or disable OAuth. Continue with Admin approval.
-
-Share only the metadata URL and callback, not the entire `/oauth/authorize?...` address: that contains transient state and PKCE values. If you already have that address, its decoded `client_id` identifies the metadata URL; the rest is unnecessary for approval.
+Start **Connect**. C0 opens its sign-in page and then a connection approval page. Sign in with your own domain account. A new verified account receives Reader access to Shared. An explicitly blocked account remains blocked.
 
 ## 3. Administrator reviews and approves
 
-In C0 **Administration**, open client metadata review. Preview the supplied HTTPS metadata URL. Check its name, exact self-identity, callbacks and public authentication method against the user's ChatGPT management page. Approve the exact document initially for **`c0:read`**.
+If you are a C0 Admin, choose **Review this connection** on the connection page. Check the exact client identity and callbacks, leave **Read** selected for research, and choose **Approve selected permissions**. Approval grants no user role and issues no token.
 
-Do not approve a generic replacement URL or use the approval's internal UUID as ChatGPT's client ID. Do not change existing clients to complete this setup. A metadata change between preview and approval requires a new review.
+Other users ask an Admin to open C0 **Administration → ChatGPT connections → Waiting for approval**. After the user signs in, the request appears there with its metadata URL, callback and requested permissions. Choose **Review connection**, preview its metadata and approve only the permissions needed. The user then chooses **Check approval** on their connection page.
+
+Choose **Continue to consent**, review the ordinary OAuth consent page and approve explicitly. Requests expire after five minutes; if needed, start Connect again in ChatGPT. Discovery being enabled does not automatically approve a client. Existing manually approved UUID clients keep their normal flow.
+
+Do not approve a generic replacement URL or use an approval's internal UUID as ChatGPT's client ID. A metadata change between preview and approval requires a new review. Keep full authorization URLs, passwords, tokens and cookies private.
 
 ## 4. User connects and verifies
 
-Select **Connect** afresh in ChatGPT. Complete your domain sign-in and explicit read consent. Install/select the resulting plugin and start a new chat with that connection.
+Complete explicit read consent in the connection opened above, or start a fresh **Connect** if it expired. Install/select the resulting plugin and start a new chat with that connection.
 
 On an empty new instance, first follow the [first-content walkthrough](user-guide.md#first-content-on-a-new-instance) with an owner/Editor account. Then try:
 
@@ -39,7 +39,7 @@ Confirm the correct connected-account name and real citations. A successful tool
 
 ## 5. Add reusable workflow skills
 
-The connection already exposes C0 tools and server guidance. To install the separately packaged setup/research/maintenance skills in **ChatGPT web**, follow [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
+On **Use with AI**, download the generated **.skill** and upload it at [ChatGPT Skills](https://chatgpt.com/skill), where your account supports skill upload. It contains this instance’s hostname and MCP URL. Alternatively, paste your ChatGPT connection page address or technical app ID and download the generated **plugin .zip** for the three setup/research/maintenance workflows. See [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
 
 ## Enable editing deliberately
 
@@ -49,9 +49,9 @@ An application Admin must approve the necessary write scope, and the user needs 
 
 | Symptom | Check and next step |
 | --- | --- |
-| Initial `invalid_request` | Review whether the exact metadata URL/callback was approved; start a fresh Connect afterward. Duplicates, malformed callbacks or wrong resource can also be rejected. |
-| Login succeeds but C0 denies access | Ask the owner/Admin to admit your verified account; client approval grants no membership. |
-| OAuth `invalid_scope` during reconnect | ChatGPT requested a scope outside this client’s approval. Keep research/editing requests to the approved read/write scopes; do not grant Admin merely to silence the error. If administration is explicitly intended, an Admin reviews/reapproves that scope and affected connections consent again. |
+| Initial `invalid_request` | Confirm this instance runs the self-service onboarding update and Client metadata discovery is enabled. Valid new CIMD requests open sign-in/approval; malformed callbacks, duplicate parameters, wrong resource or discovery disabled still fail. Start Connect afresh; keep its full URL private. |
+| Login succeeds but C0 denies access | Ask the owner/Admin to check People and permissions for an explicit block or retained earlier denial. New verified users receive Shared Reader access by default; client approval grants no additional role. |
+| OAuth `invalid_scope` during reconnect | A valid CIMD request outside its approval opens the permission review page. Select only the approved permissions you need, or ask an Admin to review additional scopes. Existing UUID clients retain strict scope errors. Do not grant Admin merely to silence an error. |
 | `insufficient_scope` | Request fresh explicit consent only if your role and approved client permit the operation. Refresh cannot add scope. |
 | Permission denied for a space | Request an authorized grant; do not switch to Shared to bypass denial. |
 | Reconnect after inactivity | Check actual C0 idle/absolute settings and IdP policy. Defaults are one hour idle/eight hours absolute; earlier revocation/provider expiry is possible. |

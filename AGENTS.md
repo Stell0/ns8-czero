@@ -126,3 +126,5 @@ These anchors preserve links to the retained historical record.
 <a id="scoped-ci-policy-accepted-sources"></a>[Scoped CI policy accepted sources](docs/history/AGENTS.md#scoped-ci-policy-accepted-sources)
 
 </details>
+
+M21 self-service Core bridge `6f1e470` has full CI39760439788 and independently audited native/privacy/scan artifacts; immutable Core0.31.1 publication39768193889 passes. App0.50.0 adopts that tag/lock with schema0019, opt-in Shared Reader admission and sticky explicit blocks, bounded no-authority pending connections, explicit reviewed approval/ordinary consent, and per-instance `.skill`/single-plugin ZIP downloads. These application changes are not yet a verified/deployed candidate. Preserve live frozen3730188 on the recreated dedicated instance, previous worktrees and all existing waivers. Continue final exact-source consumer/image/native/live gates before claiming acceptance.

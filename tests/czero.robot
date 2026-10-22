@@ -53,7 +53,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.49.1    ${route_host}=${host}    ${expected_core}=0.31.1
+    [Arguments]    ${expected_app}=0.50.0    ${route_host}=${host}    ${expected_core}=0.31.1
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -119,7 +119,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.49.1    0.31.1
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.50.0    0.31.1
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
         ...    return_rc=True    return_stdout=False    timeout=180s
@@ -659,11 +659,11 @@ Check saved settings and application HTTPS in a browser
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
     Get Text    body    contains    "core_version":"0.31.1"
-    Get Text    body    contains    "app_version":"0.49.1"
+    Get Text    body    contains    "app_version":"0.50.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
-    Get Text    h1    ==    Use with AI
+    Get Text    h1    ==    Use C0 with ChatGPT
     Go To    https://${host}/agents?view=tools
     Get Text    body    contains    search source text.
     Get Text    body    contains    sourced claims and bounded graph queries are available.

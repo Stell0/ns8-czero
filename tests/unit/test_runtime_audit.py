@@ -30,3 +30,33 @@ def test_image_audit_requires_declared_core_license(tmp_path,state):
     else:
         with pytest.raises(SystemExit,match='Core runtime license'):
             module['audit_core_distribution'](tmp_path)
+
+
+@pytest.mark.parametrize('change', ['valid', 'missing', 'extra', 'symlink', 'development_skill'])
+def test_product_workflows_are_a_closed_runtime_allowlist(tmp_path, monkeypatch, change):
+    module = runpy.run_path(str(Path(__file__).parents[1] / 'audit_runtime.py'))
+    monkeypatch.setattr(module['importlib'].util, 'find_spec', lambda name: None)
+    source = Path(__file__).parents[2] / 'plugins/c0-knowledge'
+    product = tmp_path / 'agent-packages'
+    paths = ['plugin.json', 'memory-skill.md', 'LICENSE',
+             'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
+             'skills/c0-maintain-knowledge/SKILL.md',
+             'references/connection.md', 'references/maintenance.md']
+    for name in paths:
+        target = product / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((source / name if name != 'LICENSE' else source.parents[1] / name).read_bytes())
+    if change == 'missing':
+        (product / 'plugin.json').unlink()
+    elif change == 'extra':
+        (product / 'unexpected.txt').write_text('extra')
+    elif change == 'symlink':
+        (product / 'plugin.json').unlink()
+        (product / 'plugin.json').symlink_to(source / 'plugin.json')
+    elif change == 'development_skill':
+        (tmp_path / 'SKILL.md').write_text('developer instructions')
+    if change == 'valid':
+        module['audit'](tmp_path)
+    else:
+        with pytest.raises(SystemExit, match='allowlist|Development files'):
+            module['audit'](tmp_path)

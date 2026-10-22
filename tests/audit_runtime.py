@@ -15,7 +15,17 @@ def audit(root: Path) -> None:
         ".agents", ".codex", ".git", ".github", "tests", "testing",
         "AGENTS.md", "PLAN.md", "SKILL.md", "pyproject.toml", "uv.lock",
     }
+    product = root / 'agent-packages'
+    product_files = {'plugin.json', 'memory-skill.md', 'LICENSE',
+        'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
+        'skills/c0-maintain-knowledge/SKILL.md', 'references/connection.md', 'references/maintenance.md'}
+    allowed_skills = {product / path for path in product_files if path.endswith('/SKILL.md')}
+    if product.exists():
+        actual = {str(path.relative_to(product)) for path in product.rglob('*') if path.is_file()}
+        if actual != product_files or any(path.is_symlink() for path in product.rglob('*')):
+            raise SystemExit('Product workflow assets are missing or outside the explicit allowlist')
     unexpected = sorted(str(p) for p in root.rglob("*") if p.name in forbidden_names
+                        and p not in allowed_skills
                         or p.suffix in {".h", ".pxd", ".pxi", ".pyx"}
                         or (p.name == "templates" and p.parent.name == "alembic")
                         or (p.name == "alembic" and p.parent.name == "bin"))
@@ -23,7 +33,7 @@ def audit(root: Path) -> None:
              if importlib.util.find_spec(name) is not None]
     if unexpected or tools:
         raise SystemExit(f"Development files: {unexpected}; build/test tools: {tools}")
-    print("Application runtime contains no development files or build/test tools")
+    print("Application runtime contains no development files or build/test tools; product workflows are explicitly allowlisted")
 
 
 def audit_core_distribution(root: Path) -> None:

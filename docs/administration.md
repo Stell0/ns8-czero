@@ -18,13 +18,13 @@ In Czero Settings, configure the hostname and certificate option. Enable NethSer
 
 ## Admit users and grant spaces
 
-The owner receives application Admin access. A prospective member first attempts sign-in; an Admin can then admit the verified account from Account/sharing. Select Reader, Editor or Admin deliberately. Native Settings owns the owner selection; a username or token role claim alone grants nothing.
+The owner receives application Admin access. New accounts verified by the configured sign-in provider receive Reader access to Shared automatically. In **Administration → People and permissions**, select Reader, Editor, Admin or **Blocked**, then save. Blocking persists across later sign-ins and revokes existing access. Earlier accounts denied before this update stay blocked until an Admin deliberately changes their role. Native Settings owns the owner selection; a username or token role claim alone grants nothing.
 
 Create protected spaces and explicit grants through the supported application interface/API. Roles and actual OAuth scopes continue to cap access. Revoking membership, a space grant or an approved client takes effect on subsequent authorized operations, including existing sessions.
 
 ## Approve ChatGPT
 
-Use the staged [ChatGPT guide](chatgpt.md). Client metadata discovery defaults **off**. Enable it in native Settings only when wanted. In application Administration, preview and review the exact connection-specific metadata URL before approval. Start with read scope. A user still needs membership, sign-in and explicit consent.
+Use the staged [ChatGPT guide](chatgpt.md). Client metadata discovery defaults **off**. Enable it in native Settings only when wanted. New valid connection requests open sign-in and a human approval page. In **Administration → ChatGPT connections**, review the waiting request, preview the exact metadata identity and callbacks, then approve it. An Admin connecting their own account can review directly on the connection page. Start with read scope. A user still needs membership, sign-in and explicit consent.
 
 Existing manually approved UUID clients remain supported. Keep their exact callbacks and identifiers; enabling CIMD does not migrate them or require replacing a working connection. The internal UUID displayed for a CIMD approval is an administrative identifier, not its public OAuth client ID.
 
