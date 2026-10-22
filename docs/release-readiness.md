@@ -12,7 +12,7 @@ The end-user package template is version 1.0.0. The application presentation pat
 | --- | --- | --- |
 | Current documentation | Correct current guidance, usable navigation, retained archive links, sanitized examples | Local links and independent read-only review pass; final checks pending |
 | Developer skills | Five routed skills with valid references and available prerequisites | Five metadata/reference checks and standalone fork references pass |
-| Package | Valid manifest/app binding, license, deterministic ZIP/checksums, two-instance separation, no secrets/hooks/inline MCP | Local package and published portable schema checks pass; web tests pending |
+| Package | Valid manifest/app binding, license, deterministic ZIP/checksums, two-instance separation, no secrets/hooks/inline MCP | Local package/schema checks pass; first web upload found ZIP-layout error, corrected single-plugin retry pending |
 | Independent behavior | Actual disposable MCP/database checks of citations, ambiguity, denial, injection, ingestion, conflict/retry and read-back | Pending |
 | Cold-start walkthrough | Tester needs only the published guides/package, no private maintainer runbook | Read-only independent walkthrough passes after three corrections; actual account actions pending |
 | Private Creator on web | Actual installed packaged workflows, correct app/account and positive/negative cases | Pending |

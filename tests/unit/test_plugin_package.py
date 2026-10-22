@@ -33,11 +33,14 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
         payload = {n: archive.read(n) for n in archive.namelist()}
         assert list(payload) == sorted(payload)
         assert all(i.date_time == (1980,1,1,0,0,0) and i.external_attr >> 16 == 0o100644 for i in archive.infolist())
-    assert payload == {n:v for n,v in files(a).items() if n not in ('SHA256SUMS','plugin.zip')}
+    prefix='plugins/acme-knowledge/'
+    assert payload == {n.removeprefix(prefix):v for n,v in files(a).items() if n.startswith(prefix)}
+    assert 'plugin.json' in payload and '.app.json' in payload
+    assert not any(n.startswith(('plugins/','.agents/')) for n in payload)
     for line in (a/'SHA256SUMS').read_text().splitlines():
         digest, path = line.split('  ',1)
         assert hashlib.sha256((a/path).read_bytes()).hexdigest() == digest
-    manifest = json.loads(payload['plugins/acme-knowledge/plugin.json'])
+    manifest = json.loads(payload['plugin.json'])
     extension = manifest['extensions']['com.openai']
     base = a/'plugins/acme-knowledge'
     binding = json.loads((base/extension['apps']).read_text())
@@ -45,7 +48,7 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
     assert (base/extension['onboardingSkill']).is_file()
     assert not any(Path(n).name in ('mcp.json','.mcp.json') for n in payload)
     assert not any('mcpServers' in v.decode() for n,v in payload.items() if n.endswith('.json'))
-    assert payload['plugins/acme-knowledge/LICENSE'] == (ROOT/'LICENSE').read_bytes()
+    assert payload['LICENSE'] == (ROOT/'LICENSE').read_bytes()
     market = json.loads((a/'.agents/plugins/marketplace.json').read_text())
     assert a.joinpath(market['plugins'][0]['source']['path']).resolve() == base
     assert DOCS['check']([str(p.relative_to(a)) for p in a.rglob('*.md')], root=a) > 0

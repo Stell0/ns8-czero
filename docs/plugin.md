@@ -26,7 +26,11 @@ python3 scripts/package-chatgpt-plugin.py \
 
 Replace the example URL/app ID/name. The output location must not exist and its parent must exist. The script never overwrites a package, modifies your ChatGPT account, creates a repository or publishes anything. The URL and app ID are configuration, not proof of their association; verify that association in ChatGPT before installation.
 
-Output contains the portable plugin, its skills/references/license, a marketplace tree, `plugin.zip`, `SHA256SUMS` and `INSTALL.md`. Identical inputs/source produce identical archive bytes. Check the checksums before distributing. An operator may keep their generated host/app mapping in a private repository; do not submit another deployment's identity or credentials to this public repository.
+Output contains the portable plugin, its skills/references/license, a marketplace tree, `plugin.zip`, `SHA256SUMS` and `INSTALL.md`. The ZIP contains one plugin with `plugin.json` at its root; the separate directory tree contains the marketplace for GitHub import. Identical inputs/source produce identical archive bytes. Check the checksums before distributing. An operator may keep their generated host/app mapping in a private repository; do not submit another deployment's identity or credentials to this public repository.
+
+## Single-plugin archive upload where available
+
+If ChatGPT offers a plugin archive upload, choose the generated `plugin.zip`. Do not ZIP/upload the whole marketplace directory: that layout can fail with `Expected a single plugin archive`. After import, inspect the saved app binding, all three skills and their reference links. An accepted archive is not proof of a connected account or working workflow; run the tests below. Availability and behavior must be checked on the actual account. Keep private Creator and managed import evidence separate.
 
 ## Individual/private setup in ChatGPT web
 

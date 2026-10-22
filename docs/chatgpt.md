@@ -51,6 +51,7 @@ An application Admin must approve the necessary write scope, and the user needs 
 | --- | --- |
 | Initial `invalid_request` | Review whether the exact metadata URL/callback was approved; start a fresh Connect afterward. Duplicates, malformed callbacks or wrong resource can also be rejected. |
 | Login succeeds but C0 denies access | Ask the owner/Admin to admit your verified account; client approval grants no membership. |
+| OAuth `invalid_scope` during reconnect | ChatGPT requested a scope outside this client’s approval. Keep research/editing requests to the approved read/write scopes; do not grant Admin merely to silence the error. If administration is explicitly intended, an Admin reviews/reapproves that scope and affected connections consent again. |
 | `insufficient_scope` | Request fresh explicit consent only if your role and approved client permit the operation. Refresh cannot add scope. |
 | Permission denied for a space | Request an authorized grant; do not switch to Shared to bypass denial. |
 | Reconnect after inactivity | Check actual C0 idle/absolute settings and IdP policy. Defaults are one hour idle/eight hours absolute; earlier revocation/provider expiry is possible. |

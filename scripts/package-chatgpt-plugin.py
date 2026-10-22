@@ -101,6 +101,11 @@ def build(url, connection, name, output, *, template=TEMPLATE, license_file=ROOT
         f'Required registered app: `{connection}`\n\n'
         'First verify this URL/app association in ChatGPT and complete C0 CIMD approval '
         'and sign-in. Generation does not connect accounts or grant permissions.\n\n'
+        '## Single-plugin upload\n\n'
+        'Where ChatGPT offers a plugin archive upload, use plugin.zip. Its manifest, '
+        'app reference and skills are at the archive root. Do not upload a ZIP of the '
+        'whole marketplace tree: that is not a single plugin archive. Verify the '
+        'imported app binding and all three skills before relying on the upload.\n\n'
         '## Individual/private setup\n\n'
         'In ChatGPT web, invoke Plugin Creator where your account permits it. Attach '
         'the packaged skill and reference files (or the source archive if the creator '
@@ -139,7 +144,11 @@ def build(url, connection, name, output, *, template=TEMPLATE, license_file=ROOT
         archive = staging / 'plugin.zip'
         with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_STORED) as z:
             for path, content in sorted(payload.items()):
-                item = zipfile.ZipInfo(path, date_time=(1980, 1, 1, 0, 0, 0))
+                # Upload accepts one plugin, with its manifest at ZIP root.
+                # The separate on-disk tree retains marketplace metadata.
+                if not path.startswith(base):
+                    continue
+                item = zipfile.ZipInfo(path.removeprefix(base), date_time=(1980, 1, 1, 0, 0, 0))
                 item.create_system = 3
                 item.external_attr = 0o100644 << 16
                 z.writestr(item, content)
