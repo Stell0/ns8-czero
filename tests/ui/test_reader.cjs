@@ -1,6 +1,16 @@
 // Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {fixture,tick,reply,id,page,descendants}=require('./reader_dom.js');
+test('signed-out access preserves the public ChatGPT setup heading and connection',()=>{
+  const h=fixture('agents');let clear;
+  h.window.C0Space={onClear(fn){clear=fn;}};
+  h.node('page-title').textContent='Use C0 with ChatGPT';
+  h.node('agent-mcp-url').value='https://c0.test/mcp';
+  h.reader();clear();
+  assert.equal(h.node('page-title').textContent,'Use C0 with ChatGPT');
+  assert.equal(h.node('agent-mcp-url').value,'https://c0.test/mcp');
+  assert.equal(h.node('reader-root').hidden,true);
+});
 test('real Markdown tokens render headings, lists, tables and code without HTML or remote images',()=>{
   const h=fixture(),body=h.node('body'),toc=h.node('toc');
   h.C.markdown(body,'# Title\n\n<script>alert(1)</script>\n\n**Bold** and `code`.\n\n- First\n- Second\n\n| Field | Value |\n| --- | --- |\n| Status | Ready |\n\n![tracking](https://external.test/track)\n\n[bad](javascript:alert(1))\n\n```html\n<img onerror=evil>\n```',toc);

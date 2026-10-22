@@ -16,7 +16,7 @@
     ++epoch;++selection;++versionSequence;profile=null;article=null;source=null;pages.clear();versions=[];evidence.clear();clearTimeout(pollTimer);
     if($('reader-root'))$('reader-root').hidden=true;
     for(const id of ['tree-status','history-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','guide-rules','guide-workflows','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-version-label','reader-version','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
-    if($('page-title'))$('page-title').textContent={index:'A place to find what we know.',wiki:'Knowledge',sources:'Sources',agents:'Use with AI'}[kind];
+    if($('page-title'))$('page-title').textContent={index:'A place to find what we know.',wiki:'Knowledge',sources:'Sources',agents:'Use C0 with ChatGPT'}[kind];
     for(const id of ['reader-export','reader-json'])if($(id)){$(id).removeAttribute('href');$(id).hidden=true;}
     if($('article-update-task'))$('article-update-task').hidden=true;
     const account=$({wiki:'wiki-account',sources:'sources-account',agents:'guide-status',index:'reader-status'}[kind]);
