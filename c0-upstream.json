@@ -512,6 +512,16 @@
       "path": "tests/cimd_recovery_evidence.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": ".agents/references/development.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/documentation.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

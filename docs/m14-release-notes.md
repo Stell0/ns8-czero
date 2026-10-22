@@ -1,3 +1,5 @@
+> Historical evidence. For current setup, see the [documentation index](index.md); for current acceptance, see [release readiness](release-readiness.md). The measurements and generation-specific instructions below are retained.
+
 # M14 development deployment notes
 
 This candidate hardens the completed C0 reference application. It is not a stable

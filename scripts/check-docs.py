@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 from ci_policy import DOCS
+from documentation import check
 
 selection = json.loads(Path(sys.argv[1]).read_text())
 if selection['kind'] != 'docs' or not selection['paths'] or not set(selection['paths']) <= DOCS:
@@ -22,10 +23,5 @@ for name in selection['paths']:
     text = path.read_text(encoding='utf-8')
     if '\0' in text or re.search(r'^(?:<<<<<<<|=======|>>>>>>>)\s', text, re.M):
         raise SystemExit('Invalid document text: ' + name)
-    # Ignore fenced examples and public/product absolute URLs. Validate local
-    # Markdown file links, without fetching external sites or executing content.
-    prose = re.sub(r'```.*?```', '', text, flags=re.S)
-    for target in re.findall(r'\]\(([^\s)]+\.md)(?:#[^\s)]*)?\)', prose):
-        if '://' not in target and not target.startswith('/') and not (path.parent / target).is_file():
-            raise SystemExit('Broken local document link in ' + name + ': ' + target)
+check([name for name in selection['paths'] if Path(name).exists()])
 print('Reviewed documentation allowlist, UTF-8, diff and local links pass')

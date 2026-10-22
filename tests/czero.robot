@@ -53,7 +53,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.49.0    ${route_host}=${host}    ${expected_core}=0.31.0
+    [Arguments]    ${expected_app}=0.49.1    ${route_host}=${host}    ${expected_core}=0.31.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -83,7 +83,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:ae588e3c32e6fdc65a27cbc2c66ba1005c4d5ab5daef9c0328676795e52d4240
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:0a78eef9a6cfd6246e495c88d4f95ecbc1c6daaf7bb38d3d0e003ffbe82db7fb
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -93,9 +93,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 93b9546 M18 predecessor images.
+        # Freeze all three actually deployed 38a8654 M19 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:ccb0f181852cc004e594fc6b3896ba5a29528c4679284adeede6b2c6f809a28c','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:9522bc903cfc5037f6e322cf13300ae1f2935b9098d2555b786815e93c52bade'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:4b2000d645cb9f6d7a508365d770d37db2cc085af113340c635f89e79bd23d9b','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:d8beafaa39c490e9046e4611b298a7cd8ab87ef7400ac1adbd84a2a32d9cecf2'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -109,7 +109,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.48.0    0.30.1
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.49.0    0.31.0
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False
@@ -119,7 +119,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.49.0    0.31.0
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.49.1    0.31.0
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
         ...    return_rc=True    return_stdout=False    timeout=180s
@@ -659,7 +659,7 @@ Check saved settings and application HTTPS in a browser
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
     Get Text    body    contains    "core_version":"0.31.0"
-    Get Text    body    contains    "app_version":"0.49.0"
+    Get Text    body    contains    "app_version":"0.49.1"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents

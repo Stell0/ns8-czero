@@ -20,6 +20,7 @@ from evaluation.codex_driver import evaluate, fingerprint
 from evaluation.corpus import CASES, INITIAL, RUBRIC_VERSION
 from evaluation.fixture import Fixture, disposable_database
 from evaluation.grader import grade
+from evaluation.skill_input import load_plugin
 
 
 async def run(args):
@@ -38,10 +39,11 @@ async def run(args):
         'psycopg','pydantic','pydantic-core','joserfc','cryptography','jsonschema')
     runtime_versions={name:packages[name] for name in runtime_names}
 
+    skill_instructions, skill_proof = load_plugin(args.plugin) if args.plugin else ('', None)
     proof = {'source':source,'dirty':dirty,'app_version':czero_app.__version__,'rubric_version':RUBRIC_VERSION,
         'driver_sha256':fingerprint({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in driver_files}),
         'corpus_sha256':fingerprint(CASES),'started_at':datetime.now(timezone.utc).isoformat(),
-        'requested_model':args.model,'effort':args.effort,'cases':[],
+        'requested_model':args.model,'effort':args.effort,'cases':[],'plugin':skill_proof,
         'python_version':sys.version,'runtime_versions':runtime_versions,
         'runtime_versions_sha256':fingerprint(runtime_versions),'installed_packages':dict(sorted(packages.items())),
         'boundary':'Experimental eager Codex app-server adapter; real authenticated MCP/DB. No native discovery or ChatGPT quality claim.'}
@@ -67,6 +69,8 @@ async def run(args):
                                 if t.annotations else {}) for t in tools}
                             instructions += '\nClient projection of actual tools/list annotations (advisory, never authorization): '+json.dumps(annotations)
                             instructions += '\nReport the final answer using the required output schema. Citations are exact values read from C0; use an empty list when none support the task. Do not invent successful actions.'
+                            if skill_instructions:
+                                instructions += '\n'+skill_instructions
                             prompt = CASES[case].format(finance_id=fixture.ground['Finance']['id'])
                             async def call(name,arguments):
                                 return await fixture.intercept(client,case,name,arguments)
@@ -109,6 +113,7 @@ async def run(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',required=True,help='New private output directory; never reuse a failed run')
+    parser.add_argument('--plugin',type=Path,help='Generated plugin root; inject allowlisted skills/references and record exact hashes')
     parser.add_argument('--cases',nargs='+',choices=tuple(CASES))
     parser.add_argument('--model',default='gpt-6-astra')
     parser.add_argument('--effort',choices=('low','medium','high','xhigh'),default='high')

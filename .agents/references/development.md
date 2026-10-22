@@ -1,0 +1,11 @@
+# C0 fork development reference
+
+Read the fork's own README, AGENTS, PLAN, dependency manifests and CI workflow before choosing commands or versions. The [upstream development guide](https://github.com/Stell0/ns8-czero/blob/main/docs/development.md) describes the reference application's layout; a standalone Core consumer can have a different layout and test command.
+
+`packages/czero-core` is the independently distributable library in the upstream producer. A fork normally consumes an immutable `core-v<version>` Git tag, the `packages/czero-core` subdirectory and a committed `uv.lock`. Use its declared compatibility range. A local Core override is explicit producer development, never an automatic fallback. Verify fresh PostgreSQL migrations and external wheel/archive installs for library changes; publish a new immutable library release before final consumer acceptance.
+
+Keep application customization, branding, schemas and deployment identities in the fork. The explicit `c0-upstream.json` registry controls infrastructure proposals; new dependencies/references require registration. Trusted updater preview is read-only; apply preserves modified files and records exact unresolved comparison baselines. Review semantic compatibility separately. Do not execute downloaded upstream code while inspecting a proposal.
+
+Use a disposable PostgreSQL/pgvector database for tests; skipped database cases do not establish success. Run the fork's focused checks, then its required complete acceptance. Never share mutable databases across parallel jobs. NS8 runtime changes need exact-source image/native checks, genuine frozen predecessor updates and clean restore. Library-only consumers retain their own narrower CI. Use the current validation entry point rather than historical publisher-dispatch commands.
+
+NethServer lifecycle, container, administrative, commit, PR and release conventions come from the installed [NethServer skills](https://github.com/NethServer/agents). Do not copy those manuals into the fork. Keep credentials and raw private traces out of Git. A managed source URL grants no permission to publish to another repository. Preserve unfinished work in separate worktrees and require the applicable human review and authorized live target before promotion.

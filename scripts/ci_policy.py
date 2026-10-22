@@ -16,8 +16,13 @@ DOCS = frozenset({
     'README.md', 'PLAN.md', 'AGENTS.md', 'docs/ci-policy.md',
     'docs/c0-agent-memory-baseline.md', 'docs/m14-readiness.md',
     'docs/m14-release-notes.md', 'docs/retrieval-benchmark.md',
+    'docs/installation-candidate.md', 'docs/index.md', 'docs/user-guide.md', 'docs/administration.md',
+    'docs/chatgpt.md', 'docs/plugin.md', 'docs/development.md',
+    'docs/reference.md', 'docs/release-readiness.md', 'docs/tool-evaluations.md',
+    'docs/history/README.md', 'docs/history/AGENTS.md', 'docs/history/PLAN.md',
+    '.agents/references/development.md',
     *('.agents/skills/'+name+'/SKILL.md' for name in (
-        'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream')),
+        'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream', 'c0-evaluate-tools')),
 })
 SHA = re.compile(r'[0-9a-f]{40}\Z')
 EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
@@ -53,7 +58,7 @@ def area(path):
     if path.startswith('app/src/czero_app/'):
         return 'app' if Path(path).name in APP_TESTS else 'broad'
     if path.startswith(('packages/', 'app/', 'containers/', 'imageroot/', '.github/',
-                        'scripts/', 'tests/', 'examples/')):
+                        'scripts/', 'tests/', 'examples/', 'plugins/')):
         return 'broad'
     if path in {'build-images.sh', 'renovate.json', 'c0-upstream.json', '.gitignore'}:
         return 'broad'
