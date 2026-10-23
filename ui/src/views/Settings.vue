@@ -119,6 +119,24 @@
                 :description="error.authOptions"
                 :showCloseButton="false"
               />
+              <h3>{{ $t("settings.connection_policy_title") }}</h3>
+              <p>{{ $t("settings.connection_policy_help") }}</p>
+              <NsTextInput
+                v-model="connectionIdleDays"
+                ref="connectionIdleDays"
+                type="number"
+                min="1"
+                max="365"
+                step="1"
+                :label="$t('settings.connection_idle_days')"
+                :disabled="loading.getConfiguration || loading.configureModule"
+              />
+              <NsInlineNotification
+                v-if="error.connection_idle_seconds"
+                kind="error"
+                :description="error.connection_idle_seconds"
+                :showCloseButton="false"
+              />
             </div>
             <RetrievalSettings
               :value="retrieval"
@@ -168,6 +186,7 @@ import to from "await-to-js";
 import { mapState } from "vuex";
 import RetrievalSettings from "../components/RetrievalSettings.vue";
 import { sessionPolicyForm, sessionPolicyPayload } from "../session-policy.mjs";
+import { connectionPolicyForm, connectionPolicyPayload } from "../connection-policy.mjs";
 import {
   retrievalForm,
   retrievalPayload,
@@ -210,6 +229,7 @@ export default {
       owner: "",
       retrieval: retrievalForm(),
       sessionPolicy: sessionPolicyForm(),
+      connectionIdleDays: connectionPolicyForm(),
       identityProviders: [],
       userDomains: [],
       pendingIdentity: null,
@@ -230,6 +250,7 @@ export default {
         authOptions: "",
         retrieval: "",
         session_policy: "",
+        connection_idle_seconds: "",
         cimd_enabled: "",
       },
     };
@@ -371,6 +392,7 @@ export default {
       this.owner = taskResult.output.owner;
       this.retrieval = retrievalForm(taskResult.output.retrieval);
       this.sessionPolicy = sessionPolicyForm(taskResult.output.session_policy);
+      this.connectionIdleDays = connectionPolicyForm(taskResult.output.connection_idle_seconds);
       this.ssoEnabled = Boolean(taskResult.output.user_domain);
       this.pendingIdentity = taskResult.output;
       this.applyIdentitySelection();
@@ -403,6 +425,8 @@ export default {
             this.error.session_policy = this.$t(
               "settings.session_policy_invalid"
             );
+          } else if (field === "connection_idle_seconds") {
+            this.error.connection_idle_seconds = this.$t("settings.connection_policy_invalid");
           } else if (["idp", "user_domain", "owner"].includes(field)) {
             this.error[field] = this.$t("settings.identity_invalid");
           } else {
@@ -422,8 +446,17 @@ export default {
       this.error.owner = "";
       this.error.retrieval = "";
       this.error.session_policy = "";
+      this.error.connection_idle_seconds = "";
       this.error.cimd_enabled = "";
       let sessionPolicy;
+      let connectionIdleSeconds;
+      try {
+        connectionIdleSeconds = connectionPolicyPayload(this.connectionIdleDays);
+      } catch (_) {
+        this.error.connection_idle_seconds = this.$t("settings.connection_policy_invalid");
+        this.focusElement("connectionIdleDays");
+        return;
+      }
       try {
         sessionPolicy = sessionPolicyPayload(this.sessionPolicy);
       } catch (_) {
@@ -480,6 +513,7 @@ export default {
             owner: this.ssoEnabled ? this.owner : "",
             retrieval: retrievalPayload(this.retrieval),
             session_policy: sessionPolicy,
+            connection_idle_seconds: connectionIdleSeconds,
             cimd_enabled: this.cimdEnabled,
           },
           extra: {

@@ -24,6 +24,13 @@
 <div data-account-panel hidden><h2>Account and shared access</h2><p id="database-status" role="status" aria-live="polite">Checking workspace availability...</p>
       <button id="refresh-status" type="button">Check again</button>
       <section aria-labelledby="account-heading"><h2 id="account-heading">Your access</h2><button id="refresh-account" type="button">Refresh access</button></section>
+      <section id="connections-panel" aria-labelledby="connections-heading" hidden>
+        <h2 id="connections-heading">Your connected apps</h2>
+        <p>Background connections continue after browser sign-out. Disconnect an app here to stop its access.</p>
+        <button id="refresh-connections" type="button">Refresh connections</button>
+        <ul id="connections-list"></ul>
+        <p id="connections-message" role="status" aria-live="polite"></p>
+      </section>
       <section id="sharing" aria-labelledby="sharing-heading" hidden>
         <h2 id="sharing-heading">Shared access</h2>
         <p>New verified users receive Reader access to Shared. Choose Editor or Admin to grant more access, or Blocked to prevent future sign-ins. You can also manage people in Administration. The owner is selected in NethServer settings.</p>
@@ -35,5 +42,6 @@
     </div></main>
     <script src="./spaces.js" defer></script><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./status.js" defer></script>
     <script src="./auth.js" defer></script>
+    <script src="./connections.js" defer></script>
   <script src="./navigation.js" defer></script></body>
 </html>

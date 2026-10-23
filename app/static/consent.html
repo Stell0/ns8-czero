@@ -10,9 +10,15 @@
   <p id="client"></p>
   <p id="client-identity" hidden></p>
   <p>Approved callback: <span id="callback"></span></p>
-  <p>Choose the permissions to grant. Access remains bounded by this sign-in and the configured session policy. Signing out ends linked renewable client grants. You can also revoke through the client or ask an Admin to disable it.</p>
+  <p>Choose the permissions to grant. Your current C0 access always applies.</p>
   <form id="consent-form">
     <fieldset id="scopes"><legend>Permissions</legend></fieldset>
+    <div id="background-option" hidden>
+      <label><input id="background" type="checkbox">Keep this connection working in the background</label>
+      <p id="background-help"></p>
+      <p>Background access continues after browser sign-out. Disconnect it from your C0 Account page whenever you want to stop it. If this sign-in does not already support background access, sign in again with the same account.</p>
+    </div>
+    <p>Without background access, this connection ends with the current sign-in and its session limits.</p>
     <button id="approve" type="submit" disabled>Authorize</button>
     <button id="deny" type="button" disabled>Deny</button>
   </form>

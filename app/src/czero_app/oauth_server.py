@@ -6,9 +6,11 @@ import logging
 from pathlib import Path
 import re
 from urllib.parse import urlencode, urlsplit
+from uuid import UUID
 
 from anyio import to_thread
 from fastapi import Depends, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from mcp.server.auth.handlers.authorize import AuthorizationHandler
 from mcp.server.auth.handlers.token import TokenHandler
@@ -41,6 +43,12 @@ class ConsentChoice(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     approve: bool
     scopes: list[str] | None = Field(default=None, max_length=3)
+    persistent: bool = False
+
+
+class BackgroundChoice(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    scopes: list[str] = Field(min_length=1, max_length=3)
 
 
 def pending_cookie(request):
@@ -63,6 +71,16 @@ class PublicRevocationRequest:
 
 
 def install_oauth_server(app, auth, read_context, write_context, static_dir: Path):
+    previous_validation = app.exception_handlers[RequestValidationError]
+
+    @app.exception_handler(RequestValidationError)
+    async def private_oauth_validation(request, error):
+        if request.url.path in ('/oauth/consent', '/oauth/consent/background'):
+            return JSONResponse({'detail':'invalid_consent'}, status_code=422, headers={'Cache-Control':'no-store'})
+        if request.url.path.startswith('/api/v1/oauth/connections/'):
+            return JSONResponse({'detail':'invalid_connection'}, status_code=422, headers={'Cache-Control':'no-store'})
+        return await previous_validation(request, error)
+
     origin = auth.oidc.config.public_origin.rstrip('/')
     grants = OAuthGrantService(auth.access, auth.sessions.client_id, origin + '/mcp', authority=auth.sessions.authority)
     consent = OAuthConsentService(grants)
@@ -162,6 +180,21 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             raise PermissionDenied()
         return auth.sessions.get(request.cookies.get('c0_session'))
 
+    @app.get('/api/v1/oauth/connections')
+    def account_connections(request: Request, context=Depends(read_context)):
+        session = browser_session(request)
+        return {'connections': grants.connections(session.actor), 'csrf_token': session.csrf_token}
+
+    @app.delete('/api/v1/oauth/connections/{identifier}', status_code=204)
+    def disconnect_connection(identifier: UUID, request: Request, context=Depends(write_context)):
+        session = browser_session(request)
+        try:
+            grants.disconnect(session.actor, identifier)
+        except GrantRejected:
+            raise HTTPException(404, 'connection_not_found') from None
+        from fastapi import Response
+        return Response(status_code=204)
+
     @app.get('/oauth/consent', include_in_schema=False)
     def consent_page(request: Request):
         consent.view(*pending_cookie(request))
@@ -195,8 +228,34 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
                     eligible.append(scope)
             except PermissionDenied:
                 pass
+        authority = auth.sessions.authority
+        client = grants.clients._lookup(view['client_id'])
+        supported = (grants.background_enabled and client is not None
+            and 'refresh_token' in client.get('grant_types', ['authorization_code', 'refresh_token']))
+        ready = False
+        seconds = authority.connection_policy.idle_seconds if supported else None
+        if supported and session.native_authority_id is not None:
+            with auth.access.database.engine.connect() as connection:
+                native = authority.peek(connection, session.native_authority_id, account_id=session.actor.user_id)
+            ready = native['authority_kind'] == 'background'
+            if ready:
+                seconds = native['idle_seconds']
         return {**view, 'eligible_scopes':eligible, 'csrf_token':session.csrf_token,
+                'background_supported': bool(supported), 'background_ready': ready,
+                'connection_idle_seconds': seconds,
                 'profile':auth.access.profile(session.actor)}
+
+    @app.post('/oauth/consent/background', include_in_schema=False)
+    async def consent_background(request: Request, choice: BackgroundChoice, context=Depends(write_context)):
+        session = await to_thread.run_sync(partial(browser_session, request))
+        await to_thread.run_sync(partial(consent.prepare_background, session, *pending_cookie(request),
+            scopes=set(choice.scopes)))
+        pending = await to_thread.run_sync(partial(auth.sessions.begin_login, background=True, session=session))
+        response = JSONResponse({'next': '/auth/login'},
+            headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+        response.set_cookie('c0_background_login', pending.state + '.' + pending.browser_binding,
+            max_age=300, secure=True, httponly=True, samesite='lax', path='/')
+        return response
 
     @app.post('/oauth/consent', include_in_schema=False)
     async def consent_complete(request: Request, choice: ConsentChoice, context=Depends(write_context)):
@@ -208,7 +267,8 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
         session = await to_thread.run_sync(partial(browser_session, request))
         try:
             result = await to_thread.run_sync(partial(consent.complete, session, *pending, approve=choice.approve,
-                scopes=set(choice.scopes) if choice.scopes is not None else None, verification=verification))
+                scopes=set(choice.scopes) if choice.scopes is not None else None, verification=verification,
+                persistent=choice.persistent))
         except GrantRejected:
             raise ConsentRejected() from None
         values = {'code':result.code} if result.code else {'error':'access_denied'}
