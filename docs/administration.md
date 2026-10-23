@@ -34,9 +34,11 @@ Reapproval after a relevant document change revokes affected grants. Global disa
 
 Native Settings exposes the idle and absolute bounds. Defaults are 3600 seconds idle and 28800 seconds absolute; the supported relationship is `60 <= idle <= absolute <= 86400`. Check the actual saved settings for your instance. These are ceilings, not a promise that an IdP session lasts that long: provider expiry, logout, membership changes and revocation can end authority earlier.
 
-Short access tokens and normal refresh rotation do not mean that a user should log in every five minutes. Active requests can renew within the original bounds. Once idle/absolute authority expires, reconnect normally; refreshing cannot add scopes or extend the original absolute deadline.
+Short access tokens and normal refresh rotation do not mean that a user should log in every five minutes. Interactive requests can renew within the original bounds. Once idle/absolute browser authority expires, sign in normally; refreshing cannot add scopes or extend that browser's original absolute deadline.
 
-Disable the specific approved client to revoke its grants. Reenable permits fresh consent but does not revive old grants. Local C0 logout revokes the linked browser/native authority; provider sign-out may require its own confirmation. A plugin's installation policy and each user's connection credentials are separate.
+Users can explicitly select background access for each client on the consent page. It requires verified provider offline access with the same account. Existing active offline sign-ins can be reused; otherwise C0 requests another sign-in before final consent. Native Settings exposes its inactivity limit in whole days, from 1 to 365, default 30. This is snapshotted for new connections; changing it does not extend or shorten existing grants. Background access has no fixed maximum duration while used and survives browser logout. Browser idle/absolute limits remain independent.
+
+Users disconnect their own connections from **Account → Your connected apps**. Disable a specific approved client to revoke all its grants; reenable permits fresh consent but does not revive old grants. Membership changes revoke existing authority. Local logout revokes bounded grants and preserves explicitly consented background grants. Provider rejection ends authority; provider sign-out may require its own confirmation and ordinarily preserves offline access. A plugin's installation policy and each user's connection credentials are separate. Database restore with a new native client or secret cannot revive the old connection.
 
 ## Operate and troubleshoot
 

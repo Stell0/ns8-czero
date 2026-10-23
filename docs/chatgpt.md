@@ -37,6 +37,12 @@ On an empty new instance, first follow the [first-content walkthrough](user-guid
 
 Confirm the correct connected-account name and real citations. A successful tool refresh alone does not prove an authenticated content read. Repeat a read after more than five minutes to exercise normal renewal. [Official connection/testing guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
 
+For a connection that should keep working between visits, select **Keep this connection working in the background** on the C0 consent page. If needed, continue through sign-in with the same account, then return and choose **Authorize**. The pending request still expires after five minutes. Grant write permission only when you intend to let the assistant maintain knowledge and both your C0 role and the approved client permit it.
+
+Background connections use short access tokens and rotating refresh credentials. By default they end after thirty days without use; regular use keeps them active without a fixed end date. Your browser still signs out after its usual idle or maximum duration. C0 **Account → Your connected apps → Disconnect** stops a connection, including access it already holds. Client/account revocation and sign-in-provider rejection also stop access. Existing connections keep their original limits until you reconnect and explicitly choose background access.
+
+Background authorization lets a compatible client renew access unattended. Whether a particular ChatGPT scheduled task can use the connection must be verified in that client; enabling background access does not create a schedule or authorize unspecified knowledge changes.
+
 ## 5. Add reusable workflow skills
 
 On **Use with AI**, download the generated **.skill** and upload it at [ChatGPT Skills](https://chatgpt.com/skill), where your account supports skill upload. It contains this instance’s hostname and MCP URL. Alternatively, paste your ChatGPT connection page address or technical app ID and download the generated **plugin .zip** for the three setup/research/maintenance workflows. See [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
