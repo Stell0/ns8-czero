@@ -133,3 +133,21 @@ def test_model_input_is_only_generated_skills_and_references(tmp_path):
     (root/'plugin.json').unlink()
     (root/'plugin.json').symlink_to(ROOT/'plugins/c0-knowledge/plugin.json')
     with pytest.raises(ValueError): loader(root)
+
+
+def test_standalone_memory_skill_is_deterministic_and_instance_specific():
+    from czero_app.agent_packages import skill_payload, zip_bytes
+    first = skill_payload('https://knowledge.example.org/mcp')
+    second = skill_payload('https://other.example.net/mcp')
+    assert set(first) == {'SKILL.md', 'agents/openai.yaml', 'LICENSE'}
+    assert zip_bytes(first) == zip_bytes(skill_payload('https://knowledge.example.org/mcp'))
+    assert zip_bytes(first) != zip_bytes(second)
+    for content in second.values():
+        assert b'knowledge.example.org' not in content and b'{{' not in content
+    frontmatter = second['SKILL.md'].decode().split('---', 2)[1]
+    metadata = dict(line.split(': ', 1) for line in frontmatter.strip().splitlines())
+    assert metadata['name'].startswith('c0-memory-other-example-net-') and len(metadata['name']) <= 64
+    assert 'other.example.net' in metadata['description']
+    assert b'https://other.example.net/mcp' in second['agents/openai.yaml']
+    assert b'transport: "streamable_http"' in second['agents/openai.yaml']
+    assert second['LICENSE'] == (ROOT/'LICENSE').read_bytes()

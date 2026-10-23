@@ -25,6 +25,7 @@ from czero_app.cimd_server import install_cimd_routes
 from czero_core.oauth_grants import OAuthGrantService, GrantRejected
 from czero_core.oauth_consent import ConsentRejected, OAuthConsentService
 from czero_core.operations import SCOPES
+from czero_core.client_onboarding import ClientOnboardingService, OnboardingRejected
 from czero_core.sessions import SessionRejected
 from czero_core.renewal import RenewalRejected, RenewalUnavailable
 from czero_app.oauth_provider import OAuthProvider, raw_request, pending_response, request_kind
@@ -65,6 +66,8 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
     origin = auth.oidc.config.public_origin.rstrip('/')
     grants = OAuthGrantService(auth.access, auth.sessions.client_id, origin + '/mcp', authority=auth.sessions.authority)
     consent = OAuthConsentService(grants)
+    onboarding = ClientOnboardingService(grants)
+    app.state.client_onboarding = onboarding
     cimd = install_cimd_routes(app, grants.cimd, read_context, write_context)
     provider = OAuthProvider(grants, consent, origin, cimd=cimd)
     app.state.delegated_grants, app.state.oauth_consent = grants, consent
@@ -97,6 +100,21 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             return JSONResponse({'error':'invalid_target'}, status_code=400)
         if kind == 'authorize':
             saved = await to_thread.run_sync(partial(grants.clients._lookup, raw.get('client_id')))
+            if saved is not None and raw.get('redirect_uri') not in saved['redirect_uris']:
+                return JSONResponse({'error': 'invalid_request'}, status_code=400)
+            if (raw.get('client_id', '').startswith('https://')
+                    and (saved is None or not set(raw.get('scope', 'c0:read').split()) <= set(saved['allowed_scopes']))
+                    and await to_thread.run_sync(grants.cimd.enabled)):
+                try:
+                    pending = await to_thread.run_sync(partial(onboarding.begin, raw))
+                except OnboardingRejected:
+                    return JSONResponse({'error': 'invalid_request'}, status_code=400)
+                response = RedirectResponse('/oauth/connect', status_code=302,
+                    headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+                response.set_cookie('c0_onboarding', pending.request + '.' + pending.binding,
+                    max_age=300, secure=True, httponly=True, samesite='lax', path='/')
+                response.delete_cookie(COOKIE, path='/', secure=True, httponly=True, samesite='lax')
+                return response
             if saved is None or raw.get('redirect_uri') not in saved['redirect_uris']:
                 return JSONResponse({'error':'invalid_request'}, status_code=400)
         request_token, response_token = raw_request.set(raw), pending_response.set(None)
@@ -108,6 +126,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             if kind == 'authorize' and pending is not None and response.status_code == 302:
                 response.set_cookie(COOKIE, pending.request + '.' + pending.binding, max_age=300,
                     secure=True, httponly=True, samesite='lax', path='/')
+                response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
             response.headers['Cache-Control'] = 'no-store'
             return response
         finally:
@@ -203,4 +222,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
     @app.exception_handler(ConsentRejected)
     def rejected(request, error):
         return JSONResponse({'detail':'invalid_consent'}, status_code=400, headers={'Cache-Control':'no-store'})
+    from czero_app.onboarding import install_onboarding_routes
+    install_onboarding_routes(app, onboarding, cimd, auth, read_context, write_context,
+                              browser_session, static_dir)
     return grants, consent

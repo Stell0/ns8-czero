@@ -59,7 +59,7 @@ def recover_consent_session(module_id, browser, client, *, expire_session=None):
     return profile
 
 
-def issue(browser, profile, client, *, scope='c0:read'):
+def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None):
     verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32)
     challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
     parameters={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],
@@ -76,6 +76,17 @@ def issue(browser, profile, client, *, scope='c0:read'):
         {'Content-Type':'application/x-www-form-urlencoded'})[0]==200,'Installed optional authorization form failed'
     status, _, _=browser.request('/oauth/authorize?'+urlencode(parameters))
     assert status==200,'Installed OAuth consent page unavailable'
+    if prepare_connection is not None:
+        assert browser.api('/oauth/connect/request', {}, 'POST')[0] == 403, 'Installed onboarding CSRF bypass'
+        status, body, _ = browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])
+        assert status == 200, 'Installed connection handoff unavailable'
+        pending = json.loads(body)
+        assert not pending['approved'] and pending['metadata_url'] == client['client_id'], 'Unknown client bypassed approval'
+        assert browser.api('/oauth/consent/request')[0] != 200, 'Unknown client obtained consent before approval'
+        prepare_connection()
+        status, body, _ = browser.api('/oauth/connect/continue', {'scopes': scope.split()}, 'POST', profile['csrf_token'])
+        assert status == 200 and json.loads(body)['next'] == '/oauth/consent', 'Approved connection lost its consent handoff'
+        assert browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])[0] == 410, 'Installed connection handoff replay accepted'
     status, body, _=browser.api('/oauth/consent/request')
     assert status==200,'Installed consent details unavailable'
     view=json.loads(body)

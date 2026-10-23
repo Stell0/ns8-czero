@@ -154,6 +154,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def reader_script() -> FileResponse:
         return FileResponse(static_dir / 'reader.js', media_type='text/javascript')
 
+    @instance_app.get('/agents.js', include_in_schema=False)
+    async def agents_script() -> FileResponse:
+        return FileResponse(static_dir / 'agents.js', media_type='text/javascript')
+
     @instance_app.get('/vendor/markdown-it-15.0.2.min.js', include_in_schema=False)
     async def markdown_script() -> FileResponse:
         return FileResponse(static_dir / 'vendor' / 'markdown-it-15.0.2.min.js', media_type='text/javascript')
@@ -165,6 +169,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get('/cimd.js', include_in_schema=False)
     def cimd_script():
         return FileResponse(static_dir / 'cimd.js', media_type='text/javascript')
+
+    @instance_app.get('/connection-requests.js', include_in_schema=False)
+    def connection_requests_script():
+        return FileResponse(static_dir / 'connection-requests.js', media_type='text/javascript')
 
     @instance_app.get('/admin.js', include_in_schema=False)
     async def admin_script() -> FileResponse:
@@ -226,6 +234,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
                     'scopes': ['c0:read', 'c0:write', 'c0:admin'],
                     'public_clients_only': True, 'dynamic_registration': False} if available else None}
 
+    from czero_app.agent_downloads import install_agent_downloads
+    install_agent_downloads(instance_app, connection_metadata, read_context, write_context)
+
     def capabilities(request):
         context = read_context(request) if (request.headers.get('authorization') is not None
             or request.cookies.get('c0_session')) else None
@@ -246,6 +257,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get("/agents", response_class=HTMLResponse, include_in_schema=False)
     def agents(request: Request, response: Response) -> str:
         response.headers['Cache-Control'] = 'no-store'
+        if request.query_params.get('view') != 'tools':
+            # Public onboarding stays usable after a session expires or an
+            # instance is recreated. Caller-specific details load separately.
+            return (static_dir / 'agents.html').read_text().replace('<!--CAPABILITIES-->', '')
         current = capabilities(request)
         available = ''.join('<li><code>' + escape(operation['name']) + '</code>: '
             + escape(operation['description']) + ' (' + escape(operation['required_scope']) + ')</li>'

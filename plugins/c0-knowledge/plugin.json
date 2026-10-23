@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "c0-knowledge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Research and maintain your C0 knowledge with original evidence and revision history.",
   "license": "GPL-3.0-or-later",
   "extensions": {
@@ -10,10 +10,13 @@
       "onboardingSkill": "./skills/c0-setup/SKILL.md",
       "interface": {
         "displayName": "C0 Knowledge",
-        "shortDescription": "Use your own C0 knowledge instance",
+        "shortDescription": "Your C0 knowledge memory",
         "developerName": "C0 contributors",
         "category": "Productivity",
-        "capabilities": ["Read", "Write"]
+        "capabilities": [
+          "Read",
+          "Write"
+        ]
       }
     }
   }

@@ -8,6 +8,8 @@ M19 runtime source `38a8654` is accepted at app0.49.0/Core0.31.0/schema0018; rev
 
 M21 changes guides, five developer skills, three end-user skills, offline package generation and installed Use with AI presentation. Core/schema/OAuth/dependencies remain unchanged. Actual packaged-skill use on ChatGPT web is required for both private Plugin Creator and managed GitHub import; desktop/SDK/manifest checks do not establish that gate. Missing account/workspace features leave acceptance incomplete. No stable module tag, directory submission or workspace-wide rollout is authorized.
 
+The operator now authorizes the M21 self-service follow-up in PLAN: generated installed skill/plugin downloads, visible OAuth approval, default verified-user Shared read admission and persistent administrator blocks. Earlier M21 Core-unchanged/offline-only constraints are superseded for this scoped work. PR31 main `0040c89` is verified; the current dedicated clean installation runs tested `3730188`, whose three identities are frozen in PLAN. Preserve it and all original dirty work.
+
 ## Responsibilities and routing
 
 - Reusable domain behavior, persisted-role authorization, migrations and concurrency belong in `packages/czero-core`; use `$c0-develop-core`.
@@ -124,3 +126,5 @@ These anchors preserve links to the retained historical record.
 <a id="scoped-ci-policy-accepted-sources"></a>[Scoped CI policy accepted sources](docs/history/AGENTS.md#scoped-ci-policy-accepted-sources)
 
 </details>
+
+M21 self-service Core bridge `6f1e470` has full CI39760439788 and independently audited native/privacy/scan artifacts; immutable Core0.31.1 publication39768193889 passes. App0.50.0 adopts that tag/lock with schema0019, opt-in Shared Reader admission and sticky explicit blocks, bounded no-authority pending connections, explicit reviewed approval/ordinary consent, and per-instance `.skill`/single-plugin ZIP downloads. These application changes are not yet a verified/deployed candidate. Preserve live frozen3730188 on the recreated dedicated instance, previous worktrees and all existing waivers. Continue final exact-source consumer/image/native/live gates before claiming acceptance.

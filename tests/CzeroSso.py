@@ -118,10 +118,25 @@ class CzeroSso:
         previous = builtin.set_log_level("NONE")
         try:
             ssh = builtin.get_library_instance("SSHLibrary")
-            _, errors, rc = ssh.execute_command("python3 /tmp/oidc_probe.py", return_stderr=True, return_rc=True, timeout="180 seconds")
+            output, errors, rc = ssh.execute_command("python3 /tmp/oidc_probe.py", return_stderr=True, return_rc=True, timeout="180 seconds")
             if rc:
                 # Probe emits only fixed assertions or an exception class.
                 raise AssertionError("Real IdP probe: " + errors.strip())
+            lines = [line.removeprefix('C0 admission: ') for line in output.splitlines() if line.startswith('C0 admission: ')]
+            try:
+                proof = json.loads(lines[0]) if len(lines) == 1 else None
+            except ValueError:
+                raise AssertionError('Native default-admission evidence missing or invalid') from None
+            if (not isinstance(proof, dict) or set(proof) != {'fresh_readers', 'blocked_signins', 'shared_only'}
+                    or type(proof['fresh_readers']) is not int or not 0 <= proof['fresh_readers'] <= 3
+                    or proof['blocked_signins'] != 3 or proof['shared_only'] is not True):
+                raise AssertionError('Native default-admission evidence missing or invalid')
+            hidden = builtin.set_log_level('INFO')
+            try:
+                builtin.log('C0 admission: ' + json.dumps(proof, sort_keys=True))
+                builtin.log_to_console('C0 admission: ' + json.dumps(proof, sort_keys=True))
+            finally:
+                builtin.set_log_level(hidden)
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                                        return_rc=True, timeout="180 seconds")
             if rc:
@@ -212,6 +227,19 @@ class CzeroSso:
             if len(lines) != 1:
                 raise AssertionError('Disposable CIMD recovery proof missing')
             proof = validate_cimd_recovery(json.loads(lines[0][len(prefix):]))
+            if operation == 'seed':
+                prefix_onboarding = 'C0 onboarding: '
+                lines_onboarding = [line for line in output.splitlines() if line.startswith(prefix_onboarding)]
+                expected = {'core_seeded_approval': True, 'network_fetch_tested': False,
+                    'unknown_client_handoff': True, 'explicit_consent': True, 'replay_rejected': True}
+                if len(lines_onboarding) != 1 or json.loads(lines_onboarding[0][len(prefix_onboarding):]) != expected:
+                    raise AssertionError('Native first-connection evidence missing or invalid')
+                hidden = builtin.set_log_level('INFO')
+                try:
+                    builtin.log(prefix_onboarding + json.dumps(expected, sort_keys=True))
+                    builtin.log_to_console(prefix_onboarding + json.dumps(expected, sort_keys=True))
+                finally:
+                    builtin.set_log_level(hidden)
             sanitized = prefix + json.dumps(proof, sort_keys=True)
             # Parent recovery methods intentionally hide private command output.
             # Raise logging only around the validated public measurement.
@@ -780,7 +808,7 @@ class CzeroSso:
                     ' browser-prepare '+role,return_stderr=True,return_rc=True,timeout='180 seconds')
                 if rc: raise AssertionError('Cannot prepare OAuth browser request')
                 value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/browser-oauth.json'))
-                run('New Context','ignoreHTTPSErrors=True');run('New Page')
+                run('New Context','ignoreHTTPSErrors=True','acceptDownloads=True');run('New Page')
                 # Private URLs/passwords never enter Robot keyword arguments.
                 browser.go_to(value['authorization_url'])
                 run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
@@ -794,12 +822,30 @@ class CzeroSso:
                 run('Get Element Count','#scopes input:disabled','==',disabled)
                 run('Get Element Count','#scopes input:checked','==',3-disabled)
                 run('Click','#approve')
-                run('Get Text','h1','==','Use with AI')
+                run('Get Text','h1','==','Use C0 with ChatGPT')
                 run('Get Element Count','nav a[aria-current="page"]','==',1)
                 run('Wait For Elements State', '#guide-mcp', 'visible', 'timeout=30s')
                 run('Get Property','#agent-mcp-url','value','==','https://'+host+'/mcp')
+                run('Get Property', '#agent-name', 'value', '==', 'C0')
+                run('Get Property', '#agent-description', 'value', '==', 'C0 Knowledge Storage on ' + host)
+                run('Get Attribute', '#download-skill', 'href', '==', './agents/c0-memory.skill')
+                run('Get Attribute', 'button[data-copy-target="agent-name"]', 'aria-label', '==', 'Copy name')
+                run('Get Attribute', 'button[data-copy-target="agent-description"]', 'aria-label', '==', 'Copy description')
+                with tempfile.TemporaryDirectory(prefix='czero-agent-download-') as directory:
+                    path = Path(directory) / 'memory.skill'
+                    promise = browser.promise_to_wait_for_download(saveAs=str(path))
+                    run('Click', '#download-skill')
+                    browser.wait_for(promise)
+                    self._verify_agent_archive(path, host)
+                    run('Wait For Elements State', '#download-plugin', 'enabled', 'timeout=30s')
+                    browser.fill_text('#chatgpt-connection', 'asdk_app_disposable')
+                    path = Path(directory) / 'plugin.zip'
+                    promise = browser.promise_to_wait_for_download(saveAs=str(path))
+                    run('Click', '#download-plugin')
+                    browser.wait_for(promise)
+                    self._verify_agent_archive(path, host, plugin=True)
                 run('Click','button[data-copy-target="agent-mcp-url"]')
-                run('Get Text','#copy-status','matches',r'^(Server URL copied\.|Select and copy the server URL above\.)$')
+                run('Get Text','#copy-status','matches',r'^(Connection copied\.|Select and copy the connection above\.)$')
                 # The callback query is private and validated by the host probe.
                 value['returned_callback']=browser.get_url()
                 with tempfile.TemporaryDirectory(prefix='czero-oauth-browser-') as directory:
@@ -812,7 +858,8 @@ class CzeroSso:
                 run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
                 assert_accessibility(browser, 'home', role)
                 run('Go To', 'https://' + host + '/agents')
-                run('Get Text', 'h1', '==', 'Use with AI')
+                run('Get Text', 'h1', '==', 'Use C0 with ChatGPT')
+                run('Click', '#reader-root > summary')
                 run('Wait For Elements State', '#guide-tasks > details >> nth=0', 'visible', 'timeout=30s')
                 run('Get Element Count', '#guide-tasks > details', '==', 1 if role == 'reader' else 7)
                 run('Get Element Count', '#guide-workflows > details', '==', 2 if role == 'reader' else 6)
@@ -830,6 +877,18 @@ class CzeroSso:
             raise AssertionError('Disposable OAuth browser failed ('+type(error).__name__+')') from None
         finally:
             builtin.set_log_level(previous)
+
+    @staticmethod
+    def _verify_agent_archive(path, host, plugin=False):
+        from zipfile import ZipFile
+        with ZipFile(path) as archive:
+            names = set(archive.namelist())
+            assert len(names) == (9 if plugin else 3), 'Unexpected generated archive contents'
+            assert 'LICENSE' in names and not names.intersection({'AGENTS.md', 'PLAN.md', 'mcp.json', '.mcp.json'})
+            binding = archive.read('references/instance.md' if plugin else 'SKILL.md').decode()
+            assert host in binding and 'https://' + host + '/mcp' in binding, 'Archive is not bound to this instance'
+            if plugin:
+                assert json.loads(archive.read('.app.json')) == {'apps': {'c0': {'id': 'asdk_app_disposable', 'required': True}}}
 
     @staticmethod
     def _verify_admin_controls(browser, run, role, host, module_id=None):

@@ -21,6 +21,12 @@ scripts outside this package. Optional providers do not determine authorization;
 text search remains independent of inference. Generative operations stay outside
 the runtime.
 
+## Optional verified-user admission and client onboarding
+
+Version0.31.1 adds `AccessService(..., admit_readers=True)` for applications that admit new verified users as Readers. The default remains closed admission for existing consumers. An explicit `set_role(..., None)` persists a block, so repeated sign-in cannot readmit a revoked user. Migration0019 preserves existing accounts without membership as blocked; owner identity and existing explicit roles remain authoritative. An application Admin must explicitly grant an old blocked identity access. Protected-space grants and delegated scopes are unchanged.
+
+`ClientOnboardingService` stages a valid public metadata-URL authorization request for at most five minutes. Separate opaque browser/request bindings, issuer/native/resource/policy revision checks, count limits and current verified sessions protect the handoff. It never fetches metadata or approves a client. Only signed-in, CSRF-protected requests appear in the Admin queue. Trusted adapters use the ordinary reviewed CIMD flow, then atomically consume the handoff into ordinary consent with explicitly selected requested/approved scopes. State and PKCE values remain private; role changes, policy changes, expiry and replay fail closed. This is independent of HTTP/UI and preserves legacy approved-client behavior.
+
 ## Building and verifying
 
 From the repository root:

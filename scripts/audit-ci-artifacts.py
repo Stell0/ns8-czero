@@ -62,6 +62,12 @@ def audit_reports(directory, source, images, logs):
         assert len(measured) == 1, 'One measured renewal proof per native distribution is required'
         renewal.append(validate_measurement(measured[0]))
         cimd_recovery.append(require_cimd_recovery(marker_values(html.unescape(raw), 'C0 CIMD recovery: ')))
+        admission = marker_values(html.unescape(raw), 'C0 admission: ')
+        assert len(admission) == 2 and any(p['fresh_readers'] >= 1 for p in admission), 'Native fresh Reader admission missing'
+        assert all(p['blocked_signins'] == 3 and p['shared_only'] is True for p in admission), 'Native persistent blocking missing'
+        onboarding = marker_values(html.unescape(raw), 'C0 onboarding: ')
+        assert onboarding == [{'core_seeded_approval': True, 'network_fetch_tested': False,
+            'unknown_client_handoff': True, 'explicit_consent': True, 'replay_rejected': True}], 'Native first-connection proof missing'
         root = ET.fromstring(raw)
         tests = list(root.iter('test'))
         assert tests and all(t.find('status').get('status') in {'PASS', 'SKIP'} for t in tests)

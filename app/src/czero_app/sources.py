@@ -147,6 +147,8 @@ class UploadBodyLimit:
                 limited, maximum = True, 1048576
             if resource.startswith(('oauth/', '/oauth/')):
                 limited, maximum = True, 16384
+            if path.endswith('/agents/plugin.zip'):
+                limited, maximum = True, 4096
         size = 0
         async def bounded_receive():
             nonlocal size

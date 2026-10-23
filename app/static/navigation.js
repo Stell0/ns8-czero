@@ -24,13 +24,16 @@
       const field = document.getElementById(button.dataset.copyTarget);
       const status = document.getElementById(button.dataset.copyStatus || 'copy-status');
       const value = field.value;
+      const label = button.dataset.copyName || 'Server URL';
       button.disabled = true;
       try {
         await navigator.clipboard.writeText(value);
-        status.textContent = 'Server URL copied.';
+        if (field.value === value) status.textContent = label + ' copied.';
       } catch (_) {
-        field.focus(); field.select();
-        status.textContent = 'Select and copy the server URL above.';
+        if (field.value === value) {
+          field.focus(); field.select();
+          status.textContent = 'Select and copy the ' + label.toLowerCase() + ' above.';
+        }
       } finally { button.disabled = false; }
     });
   }

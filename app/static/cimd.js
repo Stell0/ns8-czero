@@ -6,6 +6,7 @@
   if (!panel) return;
   let profile = null, enabled = false, epoch = 0, listSeq = 0, previewSeq = 0, draft = 0;
   let selected = null, reviewed = null, busy = false;
+  let knownClients = [];
   const allowed = () => profile?.role === 'admin';
   const node = (tag, text) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; return value; };
   const message = text => { el('cimd-form-status').textContent = text; };
@@ -17,7 +18,7 @@
     ++previewSeq; reviewed = null; el('cimd-review').replaceChildren(); controls();
   }
   function clear() {
-    ++epoch; ++listSeq; ++draft; profile = null; selected = null; enabled = false; busy = false;
+    ++epoch; ++listSeq; ++draft; profile = null; selected = null; enabled = false; busy = false; knownClients = [];
     invalidate(); panel.hidden = true; el('cimd-clients').replaceChildren();
     el('cimd-url').value = ''; el('cimd-url').readOnly = false;
     el('cimd-list-status').textContent = ''; message('');
@@ -64,6 +65,7 @@
       const value = await api('oauth/cimd');
       if (sequence !== listSeq || captured !== epoch) return;
       enabled = value.enabled;
+      knownClients = value.clients;
       el('cimd-list-status').textContent = enabled ? 'Enabled in NethServer settings. Only individually approved URLs can connect.' :
         'Disabled in NethServer settings. Metadata clients cannot connect; manually approved clients remain available.';
       el('cimd-clients').replaceChildren();
@@ -94,6 +96,13 @@
     } catch (error) { if (sequence === listSeq && captured === epoch) el('cimd-list-status').textContent = error.message; }
   }
   el('cimd-url').addEventListener('input', () => { ++draft; selected = null; invalidate(); });
+  if (document.addEventListener) document.addEventListener('c0:review-client', event => {
+    if (!allowed() || busy || typeof event.detail?.metadata_url !== 'string') return;
+    const client = knownClients.find(item => item.metadata_url === event.detail.metadata_url);
+    choose(client || null);
+    if (!client) el('cimd-url').value = event.detail.metadata_url;
+    el('cimd-url').focus();
+  });
   for (const scope of ['read', 'write', 'admin']) el('cimd-' + scope).addEventListener('change', () => { ++draft; });
   el('cimd-new').addEventListener('click', () => { if (allowed() && !busy) choose(); });
   el('cimd-refresh').addEventListener('click', () => { if (allowed()) clients(); });

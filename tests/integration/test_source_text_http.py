@@ -193,7 +193,7 @@ def test_rest_text_errors_limits_unicode_and_logs_do_not_echo_evidence(knowledge
             schema=(await http.get('/openapi.json')).json()
             error=schema['paths'][PATH]['post']['responses']['422']['content']['application/json']['schema']
             assert error['$ref'].endswith('/TextRequestError')
-            guide=(await http.get('/agents')).text
+            guide=(await http.get('/agents?view=tools')).text
             assert 'sources_ingest_text' in guide and '128 KiB' in guide
             # Existing endpoint validation retains its original contract.
             old=await http.post('/api/v1/source-versions/not-a-uuid/retry',json={'expected_generation':'invalid'})
@@ -234,10 +234,11 @@ def test_sdk_invalid_text_and_model_errors_are_static(transport,knowledge_http,m
     assert marker not in caplog.text and 'RPC8SECRET' not in caplog.text
 
 
-def test_exact_native_text_seed_and_receipt_recovery_with_signed_rest(knowledge_http):
+def test_exact_native_text_seed_and_receipt_recovery_with_signed_rest(knowledge_http, monkeypatch):
     import importlib.util
     from pathlib import Path
     from fastapi.testclient import TestClient
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1]))
     spec=importlib.util.spec_from_file_location('native_text_probe',Path(__file__).parents[1]/'oidc_probe.py')
     probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
     app,owner,*_=knowledge_http

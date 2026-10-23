@@ -89,9 +89,11 @@ def seed(module_id, browser, profile, *, directory=STATE, control_fn=control):
     document = {'client_id': public_id, 'client_name': 'Disposable Core-seeded CIMD recovery',
         'redirect_uris': ['http://127.0.0.1:8765/callback'], 'token_endpoint_auth_method': 'none',
         'grant_types': ['authorization_code', 'refresh_token'], 'response_types': ['code'], 'scope': 'c0:read'}
-    approval = control_fn(module_id, 'seed', browser, profile, document)
     public = {'client_id': public_id, 'redirect_uris': document['redirect_uris']}
-    pair = issue(browser, profile, public)
+    pair = issue(browser, profile, public,
+        prepare_connection=lambda: control_fn(module_id, 'seed', browser, profile, document))
+    print('C0 onboarding: ' + json.dumps({'core_seeded_approval': True, 'network_fetch_tested': False,
+        'unknown_client_handoff': True, 'explicit_consent': True, 'replay_rejected': True}, sort_keys=True))
     assert pair['expires_in'] > 180, 'Insufficient native CIMD token window'
     assert request_pair(browser, pair, profile['id']) == 200, 'Native CIMD delegated profile failed'
     approval = control_fn(module_id, 'inspect', browser, profile, document)

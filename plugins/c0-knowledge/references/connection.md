@@ -2,11 +2,11 @@
 
 The instance URL and registered app ID are in `instance.md`. Check that the user selected that app. Never choose a similarly named C0 connection automatically.
 
-1. An instance administrator configures trusted public HTTPS, NethServer sign-in, owner/member access and Client metadata discovery in NS8 Settings. Approval of an OAuth client grants no user membership.
-2. In ChatGPT web, create a custom MCP connection using the instance's `/mcp` URL, OAuth and CIMD, with no static client ID or secret.
-3. Copy only the exact client metadata URL shown for that connection, such as `https://chatgpt.com/oauth/<callback-id>/client.json`. An application Admin previews and approves it in C0 Administration, initially for `c0:read`.
-4. An initial `invalid_request` can mean that this exact client/callback has not yet been approved. Check the reviewed identity and callback; do not guess a different URL or weaken validation. Start a fresh Connect attempt after approval.
-5. Complete provider sign-in and explicit consent. Install/select the associated plugin in a new conversation. Check `get_profile` and authorized spaces before reading content.
+1. An instance administrator configures trusted public HTTPS, NethServer sign-in and Client metadata discovery. New verified users normally receive Reader access to Shared; explicitly blocked users stay blocked.
+2. In ChatGPT web, open Plugins → personal → + → Add custom MCP server. Use this instance's `/mcp` URL, OAuth and CIMD, with no static client ID or secret.
+3. A new connection opens C0 sign-in and a browser-bound approval page. Sign in with your own account. If you are a C0 Admin, review the exact metadata identity/callback and approve only needed scopes. Other users ask an Admin to review the waiting connection under Administration → ChatGPT connections.
+4. Choose approved permissions, continue to explicit consent and confirm them. Requests expire after five minutes; start Connect again if needed. An enabled discovery setting does not automatically approve every client. Malformed requests and wrong callbacks/resources still fail.
+5. Install/select the associated plugin in a new conversation. Check `get_profile` and authorized spaces before reading content. Enabling write/admin scopes requires deliberate client approval, sufficient user role and fresh consent; refresh cannot add them.
 
 Reader membership and read consent support research. Edits need effective Editor access in the selected space, approved write scope and explicit write consent. Admin permission is separate. Ask the appropriate administrator when a grant is missing; never change grants as part of setup.
 

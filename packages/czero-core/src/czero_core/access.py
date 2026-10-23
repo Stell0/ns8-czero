@@ -20,17 +20,23 @@ class AccessService:
     rechecks persisted membership, including calls with a stale Actor.
     """
 
-    def __init__(self, database: Database, issuer: str, owner_account_key: UUID):
+    def __init__(self, database: Database, issuer: str, owner_account_key: UUID, *, admit_readers=False):
+        if type(admit_readers) is not bool:
+            raise ValueError('invalid_admission_policy')
         self.database = database
         self.issuer = issuer
         self.owner_account_key = UUID(str(owner_account_key))
+        self.admit_readers = admit_readers
 
     def resolve(self, identity: VerifiedIdentity) -> Actor:
-        if identity.issuer != self.issuer or identity.expires_at <= time.time():
+        if (not isinstance(identity, VerifiedIdentity) or identity.issuer != self.issuer
+                or identity.expires_at <= time.time()):
             raise PermissionDenied()
         # Keep an authenticated, unadmitted profile for owner-reviewed sharing.
         # Commit the identity separately; recording it confers no permission.
         with self.database.engine.begin() as connection:
+            if self.admit_readers:
+                connection.execute(text('SELECT pg_advisory_xact_lock(49372)'))
             user_id = connection.execute(text("""
                 INSERT INTO c0_accounts (id, issuer, account_key, subject, username, display_name)
                 VALUES (:id, :issuer, :key, :subject, :username, :display_name)
@@ -41,6 +47,11 @@ class AccessService:
             """), {"id": uuid4(), "issuer": self.issuer, "key": UUID(identity.account_key),
                    "subject": identity.subject, "username": identity.username,
                    "display_name": identity.display_name}).scalar_one()
+            if self.admit_readers and UUID(identity.account_key) != self.owner_account_key:
+                connection.execute(text('''INSERT INTO c0_memberships(account_id,role)
+                    SELECT :id,'reader' WHERE NOT EXISTS
+                    (SELECT 1 FROM c0_account_blocks WHERE account_id=:id)
+                    ON CONFLICT(account_id) DO NOTHING'''), {'id': user_id})
         with self.database.engine.connect() as connection:
             return self._actor(connection, user_id)
 
@@ -158,8 +169,11 @@ class AccessService:
             connection.execute(text('UPDATE c0_native_authority SET revoked=true,credential=NULL,checking=false WHERE account_id=:id'),
                                {'id': account_id})
             if role is None:
+                connection.execute(text('INSERT INTO c0_account_blocks(account_id) VALUES (:id) ON CONFLICT DO NOTHING'),
+                                   {'id': account_id})
                 connection.execute(text("DELETE FROM c0_memberships WHERE account_id = :id"), {"id": account_id})
             else:
+                connection.execute(text('DELETE FROM c0_account_blocks WHERE account_id=:id'), {'id': account_id})
                 connection.execute(text("""
                     INSERT INTO c0_memberships (account_id, role) VALUES (:id, :role)
                     ON CONFLICT (account_id) DO UPDATE SET role = EXCLUDED.role

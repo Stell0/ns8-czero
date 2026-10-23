@@ -37,6 +37,11 @@ class OAuthConsentService:
         self.grants = grants
 
     def begin(self, client_id, *, callback, scopes, challenge, state, resource, verification=None):
+        with self.grants.access.database.engine.begin() as connection:
+            return self._begin(connection, client_id, callback=callback, scopes=scopes,
+                challenge=challenge, state=state, resource=resource, verification=verification)
+
+    def _begin(self, connection, client_id, *, callback, scopes, challenge, state, resource, verification=None):
         if (type(scopes) not in (set, frozenset) or not scopes or not scopes <= SCOPES
                 or not isinstance(challenge, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', challenge)
                 or resource != self.grants.resource):
@@ -49,33 +54,32 @@ class OAuthConsentService:
         except ValueError:
             raise ConsentRejected() from None
         pending = PendingConsent(secrets.token_urlsafe(32), secrets.token_urlsafe(32))
-        with self.grants.access.database.engine.begin() as connection:
-            self.grants._lock(connection, roles=True)
-            connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
-            now = _date(self.grants._now())
-            connection.execute(text('DELETE FROM c0_oauth_consent WHERE expires_at<=:now'), {'now': now})
-            client = self.grants.clients._registered(connection, client_id)
-            if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
-                raise ConsentRejected()
-            if client.get('registration_kind') == 'cimd':
-                from .cimd import CimdRejected
-                try:
-                    self.grants.cimd._check_proof(connection, client, verification)
-                except CimdRejected:
-                    raise ConsentRejected() from None
-            if connection.execute(text('SELECT count(*) FROM c0_oauth_consent')).scalar_one() >= 1000:
-                raise ConsentRejected()
-            if connection.execute(text('SELECT count(*) FROM c0_oauth_consent WHERE client_id=:id'),
-                    {'id': internal_id(client)}).scalar_one() >= 32:
-                raise ConsentRejected()
-            connection.execute(text('''INSERT INTO c0_oauth_consent
-                (hash,browser_hash,client_id,client_revision,issuer,native_client,resource,callback,scopes,challenge,state,expires_at)
-                VALUES (:hash,:browser,:client,:revision,:issuer,:native,:resource,:callback,CAST(:scopes AS jsonb),:challenge,:state,:expires)'''),
-                {'hash': _digest(pending.request), 'browser': _digest(pending.binding),
-                 'client': internal_id(client), 'revision': client['revision'], 'issuer': self.grants.access.issuer,
-                 'native': self.grants.native_client, 'resource': resource, 'callback': callback,
-                 'scopes': json.dumps(sorted(scopes)), 'challenge': challenge, 'state': state,
-                 'expires': _date(self.grants._now() + 300)})
+        self.grants._lock(connection, roles=True)
+        connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
+        now = _date(self.grants._now())
+        connection.execute(text('DELETE FROM c0_oauth_consent WHERE expires_at<=:now'), {'now': now})
+        client = self.grants.clients._registered(connection, client_id)
+        if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
+            raise ConsentRejected()
+        if client.get('registration_kind') == 'cimd':
+            from .cimd import CimdRejected
+            try:
+                self.grants.cimd._check_proof(connection, client, verification)
+            except CimdRejected:
+                raise ConsentRejected() from None
+        if connection.execute(text('SELECT count(*) FROM c0_oauth_consent')).scalar_one() >= 1000:
+            raise ConsentRejected()
+        if connection.execute(text('SELECT count(*) FROM c0_oauth_consent WHERE client_id=:id'),
+                {'id': internal_id(client)}).scalar_one() >= 32:
+            raise ConsentRejected()
+        connection.execute(text('''INSERT INTO c0_oauth_consent
+            (hash,browser_hash,client_id,client_revision,issuer,native_client,resource,callback,scopes,challenge,state,expires_at)
+            VALUES (:hash,:browser,:client,:revision,:issuer,:native,:resource,:callback,CAST(:scopes AS jsonb),:challenge,:state,:expires)'''),
+            {'hash': _digest(pending.request), 'browser': _digest(pending.binding),
+             'client': internal_id(client), 'revision': client['revision'], 'issuer': self.grants.access.issuer,
+             'native': self.grants.native_client, 'resource': resource, 'callback': callback,
+             'scopes': json.dumps(sorted(scopes)), 'challenge': challenge, 'state': state,
+             'expires': _date(self.grants._now() + 300)})
         return pending
 
     def _request(self, connection, request, binding):
