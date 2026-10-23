@@ -223,11 +223,14 @@ def prepare_browser(module_id, role):
         assert status == 200, 'Cannot prepare consent browser membership'
         member=next(a for a in json.loads(body)['accounts'] if a['username']=='c0member')
         assert browser.api('/api/v1/access/accounts/'+member['id'],{'role':role},'PUT',profile['csrf_token'])[0] == 204, 'Cannot set consent browser role'
-    descriptor={'client_name':'<img src=x onerror=alert(1)> consent browser client',
+    # Cleanup disables each owned client. An identical descriptor is an
+    # idempotent retry and correctly cannot reenable that registration.
+    descriptor={'client_name':'<img src=x onerror=alert(1)> consent browser '+role+' '+secrets.token_hex(8),
                 'redirect_uris':[browser.origin+'/agents'],'allowed_scopes':['c0:read','c0:write','c0:admin']}
     status, body, _=browser.api('/api/v1/oauth/clients',descriptor,'POST',profile['csrf_token'])
     assert status == 201, 'Cannot approve consent browser client'
-    client=json.loads(body);verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32)
+    client=json.loads(body);assert client['enabled'], 'Consent browser client is disabled'
+    verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32)
     challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
     parameters={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],
                 'response_type':'code','code_challenge':challenge,'code_challenge_method':'S256',
