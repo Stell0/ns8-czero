@@ -370,3 +370,45 @@ def test_exact_installed_probe_requires_valid_positive_control_and_proxy_rejecti
                     {'id':UUID(identifier)}).scalar_one()==0
                 assert connection.execute(text('SELECT count(*) FROM c0_jobs WHERE space_id=:id'),
                     {'id':UUID(identifier)}).scalar_one()==0
+
+
+@pytest.mark.parametrize('write_scope',[False,True])
+def test_exact_recovery_sdk_preserves_history_and_requires_actual_write_scope(transport,knowledge_http,monkeypatch,write_scope):
+    import importlib.util
+    from pathlib import Path
+    app,_,_,_,_,token,owner_token,_=transport
+    identity=app.state.auth.oidc.verify_access_token(owner_token)
+    scopes={'c0:read','c0:write'} if write_scope else {'c0:read'}
+    pair=token(identity,scopes)
+    path=Path(__file__).resolve().parents[1]/'mcp_tls_probe.py'
+    spec=importlib.util.spec_from_file_location('installed_recovery_probe',path)
+    probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
+    monkeypatch.setattr(probe,'NodeTransport',lambda *_:httpx2.ASGITransport(app=app))
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+owner_token}) as owner:
+            response=await owner.post('/api/v1/wiki/pages',json={'slug':'recovery-guard-'+uuid4().hex,
+                'title':'Recovery retained Wiki','body':'Original retained content','idempotency_key':uuid4().hex})
+            assert response.status_code==201
+            page=response.json()
+            before=(await owner.get('/api/v1/knowledge/changes',params={'limit':100})).json()
+            async with app.router.lifespan_context(app):
+                # The negative control supplies a real read-only token despite
+                # the fixture's claimed read/write mode; metadata cannot grant scope.
+                value={'origin':ORIGIN,'address':None,'ca':None,'access_token':pair.access_token,
+                    'scope':'c0:read c0:write','preserve_knowledge':True,'recovery_page':page['id']}
+                if write_scope:await probe.check(value)
+                else:
+                    with pytest.raises(BaseExceptionGroup) as raised:
+                        await probe.check(value)
+                    errors=[]
+                    def collect(error):
+                        if isinstance(error,BaseExceptionGroup):
+                            for child in error.exceptions:collect(child)
+                        else:errors.append(error)
+                    collect(raised.value)
+                    assert len(errors)==1 and isinstance(errors[0],AssertionError)
+                    assert str(errors[0])=='Recovery write authorization or revision guard failed'
+            assert (await owner.get('/api/v1/wiki/pages/'+page['id'])).json()==page
+            assert (await owner.get('/api/v1/knowledge/changes',params={'limit':100})).json()==before
+    asyncio.run(check())

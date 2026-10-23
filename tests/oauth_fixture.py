@@ -109,12 +109,13 @@ def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None)
     return pair
 
 
-def sdk(module_id, origin, pair, *, scope='c0:read'):
+def sdk(module_id, origin, pair, *, scope='c0:read', preserve_knowledge=False, recovery_page=None):
     # No credentials in command arguments or Git; public probe code is passed
     # as the command and the private JSON arrives only on stdin.
     source=Path('/tmp/mcp_tls_probe.py').read_text()
     payload={'origin':origin,'address':'10.0.2.2','ca':'/czero-test-ca.pem',
-        'access_token':pair['access_token'],'scope':scope}
+        'access_token':pair['access_token'],'scope':scope,'preserve_knowledge':preserve_knowledge,
+        'recovery_page':recovery_page}
     result=subprocess.run(['runagent','-m',module_id,'podman','exec','-i','czero','python','-c',source],
         input=json.dumps(payload).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180)
     if result.returncode:
@@ -123,10 +124,12 @@ def sdk(module_id, origin, pair, *, scope='c0:read'):
                      if line.startswith(('Installed MCP client failed: ', 'Installed MCP assertion failed: '))), '')
         raise AssertionError(safe or 'Installed TLS SDK protocol assertions failed')
     assert result.stdout.strip().endswith(b'checks passed'),'Installed TLS SDK success marker missing'
-    if 'c0:write' in scope.split():
+    if preserve_knowledge:
+        assert b'Installed recovery cursor-preserving write guards completed: 2' in result.stdout, 'Installed recovery authorization proof missing'
+    if not preserve_knowledge and 'c0:write' in scope.split():
         assert b'Installed text evidence lifecycles completed: 2' in result.stdout, 'Installed text evidence lifecycle proof missing'
         print('Disposable installed text ingestion, chunks and sourced claims: current and legacy')
-    if {'c0:read','c0:write','c0:admin'} <= set(scope.split()):
+    if not preserve_knowledge and {'c0:read','c0:write','c0:admin'} <= set(scope.split()):
         assert b'Installed typed object lifecycles completed: 2' in result.stdout, 'Installed full typed CRUD evidence missing'
         assert b'Installed applicability and structured retrieval lifecycles completed: 2' in result.stdout, 'Installed annotation/structured retrieval proof missing'
         assert b'Installed atomic consolidation lifecycles completed: 2' in result.stdout, 'Installed atomic consolidation proof missing'

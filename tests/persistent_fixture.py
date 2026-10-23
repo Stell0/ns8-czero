@@ -16,12 +16,12 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 
 FIELDS = {'browser_absolute_seconds','elapsed_seconds','browser_expired','refresh_after_browser_expiry',
     'logout_preserved_background','read_write_sdk','old_generation_replay_revoked','self_disconnect_revoked',
-    'client_disabled','provider_credential_revoked','policy_restored'}
+    'client_disabled','provider_credential_revoked','policy_restored','new_connection_policy_applied'}
 RECOVERY_FIELDS = {
     'seed': {'rows_captured','background_consent'},
-    'update': {'rows_preserved','refresh_rotated','old_grant_unexpired'},
+    'update': {'rows_preserved','refresh_rotated','old_grant_unexpired','knowledge_cursor_preserved'},
     'restore': {'rows_preserved','old_grant_unexpired','old_authority_rejected',
-        'fresh_background_consent','client_disabled','provider_credential_revoked','policy_restored'},
+        'fresh_background_consent','client_disabled','provider_credential_revoked','policy_restored','knowledge_cursor_preserved'},
 }
 
 
@@ -66,7 +66,7 @@ class Form(HTMLParser):
         if tag=='form':self.active=False
 
 
-def issue(browser,profile,client,password,*,offline=False):
+def issue(browser,profile,client,password,*,offline=False,expect_policy=None):
     verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32);scopes=['c0:read','c0:write']
     query={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],'response_type':'code',
         'code_challenge_method':'S256','code_challenge':base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode(),
@@ -75,6 +75,10 @@ def issue(browser,profile,client,password,*,offline=False):
     status,body,_=browser.api('/oauth/consent/request');assert status==200
     initial=json.loads(body)
     assert initial['background_supported'] and not initial['background_requested']
+    if expect_policy is not None:
+        assert not initial['background_ready'] and initial['connection_idle_seconds']==expect_policy
+        status,_,_=browser.api('/oauth/consent',{'approve':True,'scopes':scopes,'persistent':True},'POST',profile['csrf_token'])
+        assert status==400, 'Previous offline policy authorized a new connection'
     if offline:
         status,body,_=browser.api('/oauth/consent/background',{'scopes':scopes},'POST',profile['csrf_token'])
         assert status==200 and json.loads(body)=={'next':'/auth/login'}, 'Background sign-in handoff failed'
@@ -128,7 +132,7 @@ try:
     'issuer':auth.access.issuer,'client':auth.sessions.client_id}).mappings().one()
    assert row['authority_kind']=='background' and row['expires_at'] is None
    assert json.loads(auth.sessions.authority._open(row))['offline'] is True
-   print(json.dumps({'id':str(row['id']),'browser_expires':row['browser_expires'].timestamp()}))
+   print(json.dumps({'id':str(row['id']),'browser_expires':row['browser_expires'].timestamp(),'idle_seconds':row['idle_seconds']}))
   else:
    row=c.execute(text('SELECT * FROM c0_native_authority WHERE id=:id AND issuer=:issuer AND native_client=:client'),
     {'id':UUID(request['id']),'issuer':auth.access.issuer,'client':auth.sessions.client_id}).mappings().one()
@@ -208,11 +212,54 @@ def run(module_id):
         assert fresh.api('/auth/logout',{},'POST',owner['csrf_token'])[0]==200
         assert native(module_id,{'operation':'revoke','id':snapshot['id']})=={'provider_revoked':True}
         snapshot=None
-        return validate({'browser_absolute_seconds':120,'elapsed_seconds':int(time.monotonic()-started),
+        measured=int(time.monotonic()-started)
+        assert policy_change(module_id,settings,personas)
+        return validate({'browser_absolute_seconds':120,'elapsed_seconds':measured,
             **{key:True for key in FIELDS-{'browser_absolute_seconds','elapsed_seconds'}}})
     finally:
         if changed:configure(settings['session_policy'])
         if snapshot is not None:native(module_id,{'operation':'revoke','id':snapshot['id']})
+
+
+def policy_change(module_id,settings,personas):
+    """New consent gets the current setting; old grants keep their snapshot."""
+    from oidc_fixture import task
+    from oidc_probe import Browser
+    from oauth_fixture import registered
+    from renewal_fixture import public_refresh
+    original=settings['connection_idle_seconds'];assert original==30*86400
+    browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
+    client=registered(browser,profile,client_name='Disposable background policy')
+    snapshots=[];changed=False
+    def capture():
+        cookie=next(c.value for c in browser.cookies if c.name=='c0_session')
+        row=native(module_id,{'operation':'snapshot','cookie':cookie});snapshots.append(row)
+        return row
+    try:
+        first,profile=issue(browser,profile,client,personas['password'],offline=True)
+        assert capture()['idle_seconds']==original
+        changed=True
+        task('module/'+module_id+'/configure-module',{'host':settings['host'],
+            'lets_encrypt':settings['lets_encrypt'],'connection_idle_seconds':7*86400})
+        second,profile=issue(browser,profile,client,personas['password'],offline=True,expect_policy=7*86400)
+        assert capture()['idle_seconds']==7*86400
+        assert public_refresh(browser,client,first)[0]==200, 'Policy change invalidated an existing connection'
+        assert public_refresh(browser,client,second)[0]==200, 'New policy connection could not renew'
+    finally:
+        if changed:
+            task('module/'+module_id+'/configure-module',{'host':settings['host'],
+                'lets_encrypt':settings['lets_encrypt'],'connection_idle_seconds':original})
+        status,body,_=browser.api('/api/v1/me')
+        if status!=200:
+            browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
+        else:profile=json.loads(body)
+        assert browser.api('/api/v1/oauth/clients/'+client['client_id'],
+            {'enabled':False,'expected_revision':client['revision']},'PUT',profile['csrf_token'])[0]==200
+        for row in snapshots:
+            assert native(module_id,{'operation':'revoke','id':row['id']})=={'provider_revoked':True}
+        assert browser.api('/auth/logout',{},'POST',profile['csrf_token'])[0]==200
+        assert task('module/'+module_id+'/get-configuration',{})['connection_idle_seconds']==original
+    return True
 
 
 def recovery(module_id,operation):
@@ -233,7 +280,12 @@ def recovery(module_id,operation):
         pair,_=issue(active,actor,client,personas['password'],offline=True)
         return pair
     def verified_sdk(module,origin,pair):
-        with redirect_stdout(io.StringIO()):sdk(module,origin,pair,scope=pair['scope'])
+        # Exact knowledge observers were captured before update/backup. Check
+        # write authorization with a stale revision, keeping those observers
+        # untouched; full successful read/write runs in the standalone probe.
+        page=json.loads((STATE/'expected-identities.json').read_text())['knowledge']['page']['id']
+        with redirect_stdout(io.StringIO()):
+            sdk(module,origin,pair,scope=pair['scope'],preserve_knowledge=True,recovery_page=page)
     try:
         browser=Browser('https://'+personas['host']);profile=browser.login('c0owner',personas['password'])
         if operation=='seed':

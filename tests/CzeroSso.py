@@ -187,7 +187,7 @@ class CzeroSso:
                 self._offline_provider_done = True
             if not getattr(self, '_persistent_connection_done', False):
                 output, _, rc = ssh.execute_command('python3 /tmp/persistent_fixture.py ' + shlex.quote(module_id),
-                    return_stderr=True, return_rc=True, timeout='420 seconds')
+                    return_stderr=True, return_rc=True, timeout='600 seconds')
                 if rc:
                     raise AssertionError('Installed persistent-connection probe failed')
                 lines = output.splitlines()

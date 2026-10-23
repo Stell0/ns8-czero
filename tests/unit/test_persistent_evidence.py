@@ -16,7 +16,7 @@ VALID={'browser_absolute_seconds':120,'elapsed_seconds':140,
 @pytest.mark.parametrize('change',[
     {'elapsed_seconds':119},{'elapsed_seconds':301},{'browser_absolute_seconds':True},
     {'browser_expired':1},{'self_disconnect_revoked':False},{'policy_restored':False},
-    {'provider_credential_revoked':False},{'private':'private-persistent-canary'},
+    {'provider_credential_revoked':False},{'new_connection_policy_applied':False},{'private':'private-persistent-canary'},
 ])
 def test_unmeasured_failed_or_private_background_evidence_is_rejected(change):
     with pytest.raises(AssertionError,match='^Persistent connection evidence invalid$'):
@@ -60,7 +60,7 @@ def test_all_three_background_recovery_stages_are_required():
 
 
 @pytest.mark.parametrize('change',[{'stage':[]},{'inactivity_seconds':True},{'inactivity_seconds':30*86400},
-    {'rows_preserved':False},{'old_authority_rejected':False},{'provider_credential_revoked':False},
+    {'rows_preserved':False},{'old_authority_rejected':False},{'provider_credential_revoked':False},{'knowledge_cursor_preserved':False},
     {'private':'private-recovery-canary'}])
 def test_failed_or_private_background_recovery_is_rejected(change):
     with pytest.raises(AssertionError,match='^Persistent recovery evidence invalid$'):

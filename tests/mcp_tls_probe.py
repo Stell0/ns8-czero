@@ -456,6 +456,34 @@ async def agent_workflow(client, space_id, previous=None, extraction=None, evide
     return previous
 
 
+async def recovery_guard(client, http, page_id):
+    """Verify actual write authority without changing the recovery observer."""
+    async def changes():
+        result=[];after=0
+        for _ in range(20):
+            response=await http.get('/api/v1/knowledge/changes',params={'after':after,'limit':100})
+            assert response.status_code==200, 'Recovery knowledge cursor read failed'
+            rows=response.json()['changes']
+            assert all(row['id']>after for row in rows), 'Recovery cursor pagination did not advance'
+            result.extend(rows)
+            if len(rows)<100:return result
+            after=rows[-1]['id']
+        raise AssertionError('Recovery knowledge cursor exceeded fixture bound')
+    before=await changes()
+    result=await client.call_tool('wiki_pages_get',{'page_id':page_id})
+    assert not result.is_error, 'Recovery retained Wiki read failed'
+    page=json.loads(result.content[0].text)
+    rejected=await client.call_tool('wiki_pages_update',{'page_id':page_id,'data':{
+        'expected_revision':page['revision']+1,'title':page['title'],'body':page['content']['body'],
+        'metadata':page.get('metadata',{}),'idempotency_key':'recovery-cas-'+uuid4().hex}})
+    # A scope or role denial cannot establish that write authorization survived.
+    assert rejected.is_error and rejected.content[0].text=='knowledge_conflict', 'Recovery write authorization or revision guard failed'
+    assert rejected.meta['c0/error']=={'code':'knowledge_conflict','status':409}, 'Recovery conflict metadata changed'
+    retained=await client.call_tool('wiki_pages_get',{'page_id':page_id})
+    assert not retained.is_error and json.loads(retained.content[0].text)==page, 'Recovery guarded write changed the retained Wiki'
+    assert await changes()==before, 'Recovery SDK probe changed knowledge cursor history'
+
+
 async def check(value):
     origin = value['origin']
     typed_lifecycles = 0
@@ -463,6 +491,9 @@ async def check(value):
     wiki_lifecycles = 0
     consolidation_lifecycles = 0
     guided_lifecycles, guided_state = 0, None
+    preserve=value.get('preserve_knowledge',False)
+    assert type(preserve) is bool
+    recovery_checks=0
     transport = NodeTransport(urlsplit(origin).hostname, value['address'], value['ca'])
     async with httpx2.AsyncClient(transport=transport, base_url=origin, timeout=20,
             headers={'Authorization':'Bearer ' + value['access_token']}) as http:
@@ -546,6 +577,11 @@ async def check(value):
                     assert profile_result.is_error and profile_result.content[0].text == 'insufficient_scope', 'Installed profile bypassed read scope'
                 result = await client.call_tool('object_types_list', {})
                 assert not result.is_error and result.structured_content == expected, 'Installed REST/MCP result mismatch'
+                if preserve:
+                    assert {'c0:read','c0:write'} <= set(value['scope'].split()), 'Recovery probe requires read/write authority'
+                    await recovery_guard(client,http,value['recovery_page'])
+                    recovery_checks+=1
+                    continue
                 if role != 'admin' or 'c0:admin' not in value['scope'].split():
                     denied = await client.call_tool('object_types_create', {'data':{
                         'name':'denied-'+uuid4().hex,'label':'Disposable role boundary','schema':{'type':'object'}}})
@@ -636,7 +672,7 @@ async def check(value):
             # Origin still reaches the canonical route and must fail there.
             status = (await http.post('/mcp', json=guard_body, headers={**guard_headers, **headers})).status_code
             assert status in allowed, 'Installed %s guard returned HTTP %d' % (label, status)
-    expected_typed = 2 if role == 'admin' and {'c0:read','c0:write','c0:admin'} <= set(value['scope'].split()) else 0
+    expected_typed = 2 if not preserve and role == 'admin' and {'c0:read','c0:write','c0:admin'} <= set(value['scope'].split()) else 0
     assert typed_lifecycles == expected_typed, 'Installed typed lifecycle coverage mismatch'
     print('Installed typed object lifecycles completed: %d' % typed_lifecycles)
     assert protected_lifecycles==expected_typed, 'Installed protected-space lifecycle coverage mismatch'
@@ -646,10 +682,12 @@ async def check(value):
     print('Installed atomic consolidation lifecycles completed: %d' % consolidation_lifecycles)
     assert guided_lifecycles==expected_typed,'Installed guided independent-session coverage mismatch'
     print('Installed guided agent lifecycles completed: %d' % guided_lifecycles)
-    assert wiki_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed Wiki lifecycle coverage mismatch'
+    assert wiki_lifecycles == (2 if not preserve and 'c0:write' in value['scope'].split() else 0), 'Installed Wiki lifecycle coverage mismatch'
     print('Installed Wiki memory lifecycles completed: %d' % wiki_lifecycles)
-    assert text_lifecycles == (2 if 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'
+    assert text_lifecycles == (2 if not preserve and 'c0:write' in value['scope'].split() else 0), 'Installed text lifecycle coverage mismatch'
     print('Installed text evidence lifecycles completed: %d' % text_lifecycles)
+    assert recovery_checks==(2 if preserve else 0), 'Installed recovery authorization coverage mismatch'
+    print('Installed recovery cursor-preserving write guards completed: %d' % recovery_checks)
     print('Installed TLS SDK current/legacy tools, resources, REST parity, scopes and host/origin checks passed')
 
 
