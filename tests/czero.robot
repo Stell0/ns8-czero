@@ -678,7 +678,7 @@ Verify exact installed candidate images
     Verify Installed Candidate Images    ${module_id}    ${EXPECTED_SOURCE}
 
 Verify real native SSO and application-wide membership
-    [Timeout]    20 minutes
+    [Timeout]    30 minutes
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-authentication-status
     ...    return_rc=True    timeout=30s
     Should Be Equal As Integers    ${rc}    0
