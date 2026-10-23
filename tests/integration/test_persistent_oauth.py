@@ -95,6 +95,21 @@ def test_inactivity_expiry_is_not_revived(persistent):
     with pytest.raises(GrantRejected):refresh(f,pair)
 
 
+@pytest.mark.parametrize('boundary',[-1,0])
+def test_access_activity_keeps_current_refresh_valid_until_exact_inactivity_deadline(persistent,boundary):
+    f=persistent;pair=f['issue']();f['current'][0]+=120
+    f['grants'].verify(pair.access_token,resource=RESOURCE)
+    with f['database'].engine.connect() as c:
+        assert c.execute(text('''SELECT t.expires_at=g.idle_until FROM c0_oauth_tokens t
+            JOIN c0_oauth_grants g ON g.id=t.grant_id WHERE g.account_id=:id AND t.kind='refresh' '''),
+            {'id':f['context'].actor.user_id}).scalar_one() is True
+    f['current'][0]+=30*86400+boundary
+    if boundary==0:
+        with pytest.raises(GrantRejected):refresh(f,pair)
+    else:
+        assert refresh(f,pair).scopes==pair.scopes
+
+
 def test_delegated_activity_does_not_extend_browser_idle_deadline(persistent):
     f=persistent;pair=f['issue']()
     captured=f['context'].actor
@@ -157,11 +172,15 @@ def test_refresh_narrowing_cannot_be_reversed(persistent):
 def test_provider_outage_does_not_extend_idle_and_recovers(persistent):
     f=persistent;pair=f['issue']()
     with f['database'].engine.connect() as c:
-        before=c.execute(text('SELECT idle_until FROM c0_oauth_grants WHERE account_id=:id'),{'id':f['context'].actor.user_id}).scalar_one()
+        before=c.execute(text('''SELECT g.idle_until,t.expires_at FROM c0_oauth_grants g
+            JOIN c0_oauth_tokens t ON t.grant_id=g.id AND t.kind='refresh'
+            WHERE account_id=:id'''),{'id':f['context'].actor.user_id}).one()
     f['current'][0]+=86400;f['failure'][0]=RenewalUnavailable()
     with pytest.raises(RenewalUnavailable):refresh(f,pair)
     with f['database'].engine.connect() as c:
-        assert c.execute(text('SELECT idle_until FROM c0_oauth_grants WHERE account_id=:id'),{'id':f['context'].actor.user_id}).scalar_one()==before
+        assert c.execute(text('''SELECT g.idle_until,t.expires_at FROM c0_oauth_grants g
+            JOIN c0_oauth_tokens t ON t.grant_id=g.id AND t.kind='refresh'
+            WHERE account_id=:id'''),{'id':f['context'].actor.user_id}).one()==before
     f['failure'][0]=None
     assert refresh(f,pair)
 

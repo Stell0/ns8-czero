@@ -204,9 +204,16 @@ class OAuthGrantService:
                 self._lock(connection, roles=True, client_id=client['client_id'])
                 self._grant(connection, row['id'], client['client_id'], resource)
                 native = self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
+                activity = {'id': row['id'], 'now': _date(self._now()),
+                    'idle': _date(self._now() + native['idle_seconds'])}
                 connection.execute(text('''UPDATE c0_oauth_grants SET last_used_at=:now,idle_until=:idle
-                    WHERE id=:id AND persistent'''), {'id': row['id'], 'now': _date(self._now()),
-                    'idle': _date(self._now() + native['idle_seconds'])})
+                    WHERE id=:id AND persistent'''), activity)
+                # A successful access-token use also counts as activity. Keep
+                # the current refresh credential aligned with that deadline;
+                # otherwise it could expire before the grant's advertised idle
+                # bound. Old generations remain replay-only and are not revived.
+                connection.execute(text("""UPDATE c0_oauth_tokens SET expires_at=:idle
+                    WHERE grant_id=:id AND kind='refresh' AND NOT consumed"""), activity)
 
     def _lock(self, connection, *, roles=False, client_id=None):
         if roles or (isinstance(client_id, str) and client_id[:8].lower() == 'https://'):
