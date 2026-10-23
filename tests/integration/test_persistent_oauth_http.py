@@ -166,3 +166,49 @@ def test_background_consent_keeps_the_chunked_body_limit(renewing_app):
                 headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token'],'Content-Type':'application/json'})
             assert response.status_code == 413
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('days',[7,45])
+def test_new_connection_uses_current_policy_instead_of_previous_offline_signin(renewing_app,days):
+    from czero_core.renewal import ConnectionPolicy
+    async def check():
+        app,saved,_,state=renewing_app
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+            old_pair,profile=await background_pair(client,saved,state)
+            # A settings update restarts the app with a new policy; the saved
+            # native authority and its existing grants retain their old limit.
+            app.state.auth.sessions.authority.connection_policy=ConnectionPolicy(days*86400)
+            await authorize(client,saved,scope='c0:read c0:write')
+            view=(await client.get('/oauth/consent/request')).json()
+            assert view['background_supported'] and not view['background_ready']
+            assert view['connection_idle_seconds']==days*86400
+            assert (await refresh(client,saved,old_pair)).status_code==200
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('days',[7,45])
+def test_direct_consent_cannot_reuse_previous_policy_but_new_offline_signin_can(renewing_app,days):
+    from czero_core.renewal import ConnectionPolicy
+    from sqlalchemy import text
+    from uuid import UUID
+    async def check():
+        app,saved,_,state=renewing_app
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+            old_pair,profile=await background_pair(client,saved,state)
+            app.state.auth.sessions.authority.connection_policy=ConnectionPolicy(days*86400)
+            await authorize(client,saved,scope='c0:read c0:write')
+            result=await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read','c0:write'],'persistent':True},
+                headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
+            assert result.status_code==400 and result.json()=={'detail':'invalid_consent'}
+            state['offline']=False
+            new_pair,current=await background_pair(client,saved,state)
+            assert current['id']==profile['id'] and new_pair['refresh_token']!=old_pair['refresh_token']
+            assert (await refresh(client,saved,old_pair)).status_code==200
+            assert (await refresh(client,saved,new_pair)).status_code==200
+            with app.state.auth.access.database.engine.connect() as c:
+                durations=c.execute(text('''SELECT n.idle_seconds FROM c0_oauth_grants g
+                    JOIN c0_native_authority n ON n.id=g.native_authority_id
+                    WHERE g.account_id=:id AND g.persistent ORDER BY n.idle_seconds'''),
+                    {'id':UUID(profile['id'])}).scalars().all()
+            assert durations==sorted([30*86400,days*86400])
+    asyncio.run(check())

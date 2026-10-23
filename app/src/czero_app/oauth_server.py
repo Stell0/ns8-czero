@@ -180,6 +180,18 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             raise PermissionDenied()
         return auth.sessions.get(request.cookies.get('c0_session'))
 
+    def background_ready(session):
+        # The NS8 setting applies to new connections. Reuse an offline sign-in
+        # only when its saved policy matches the current setting; existing
+        # grants keep their own native authority and original policy.
+        if not grants.background_enabled or session.native_authority_id is None:
+            return False
+        authority = auth.sessions.authority
+        with auth.access.database.engine.connect() as connection:
+            native = authority.peek(connection, session.native_authority_id, account_id=session.actor.user_id)
+        return (native['authority_kind'] == 'background'
+            and native['idle_seconds'] == authority.connection_policy.idle_seconds)
+
     @app.get('/api/v1/oauth/connections')
     def account_connections(request: Request, context=Depends(read_context)):
         session = browser_session(request)
@@ -232,14 +244,8 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
         client = grants.clients._lookup(view['client_id'])
         supported = (grants.background_enabled and client is not None
             and 'refresh_token' in client.get('grant_types', ['authorization_code', 'refresh_token']))
-        ready = False
         seconds = authority.connection_policy.idle_seconds if supported else None
-        if supported and session.native_authority_id is not None:
-            with auth.access.database.engine.connect() as connection:
-                native = authority.peek(connection, session.native_authority_id, account_id=session.actor.user_id)
-            ready = native['authority_kind'] == 'background'
-            if ready:
-                seconds = native['idle_seconds']
+        ready = bool(supported and background_ready(session))
         return {**view, 'eligible_scopes':eligible, 'csrf_token':session.csrf_token,
                 'background_supported': bool(supported), 'background_ready': ready,
                 'connection_idle_seconds': seconds,
@@ -265,6 +271,8 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             view = await to_thread.run_sync(partial(consent.view, *pending))
             verification = await cimd.verification(view['client_id'])
         session = await to_thread.run_sync(partial(browser_session, request))
+        if choice.approve and choice.persistent and not await to_thread.run_sync(partial(background_ready, session)):
+            raise ConsentRejected()
         try:
             result = await to_thread.run_sync(partial(consent.complete, session, *pending, approve=choice.approve,
                 scopes=set(choice.scopes) if choice.scopes is not None else None, verification=verification,
