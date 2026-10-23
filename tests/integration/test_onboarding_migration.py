@@ -48,8 +48,12 @@ def test_0018_upgrade_preserves_rows_and_old_denials_through_repeat_migration():
             c.execute(text("INSERT INTO c0_memberships(account_id,role) VALUES (:id,'editor')"), {'id': editor_id})
         with database.engine.connect() as c:
             tables = c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
+            columns = {t:c.execute(text('''SELECT column_name FROM information_schema.columns
+                WHERE table_schema='public' AND table_name=:table ORDER BY ordinal_position'''),
+                {'table':t}).scalars().all() for t in tables}
             def snapshot(connection):
-                return {t: connection.execute(text('SELECT row_to_json(r)::text FROM "' + t + '" r ORDER BY row_to_json(r)::text')).scalars().all() for t in tables}
+                return {t: connection.execute(text('SELECT row_to_json(r)::text FROM (SELECT '+
+                    ','.join('"'+column+'"' for column in columns[t])+' FROM "'+t+'") r ORDER BY row_to_json(r)::text')).scalars().all() for t in tables}
             before = snapshot(c)
         service = AccessService(database, issuer, owner_key, admit_readers=True)
         for _ in range(2):

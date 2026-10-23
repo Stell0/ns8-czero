@@ -107,7 +107,7 @@ def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(
             migrate_database(database)
             with database.engine.connect() as connection:
                 assert snapshot(connection) == before
-                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0019_client_onboarding'
+                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0020_persistent_oauth'
                 assert connection.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one() == shared
             delegated = tokens.verify(pair.access_token, resource=resource).actor
             assert knowledge.get_page(delegated, first['id']) == current

@@ -71,15 +71,19 @@ def test_0017_upgrade_preserves_all_old_rows_and_new_policy_defaults_off():
                  'until': datetime.fromtimestamp(now + 300, timezone.utc)})
         with database.engine.connect() as c:
             tables = c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
+            columns = {t:c.execute(text('''SELECT column_name FROM information_schema.columns
+                WHERE table_schema='public' AND table_name=:table ORDER BY ordinal_position'''),
+                {'table':t}).scalars().all() for t in tables}
             def snapshot(connection):
-                return {table: connection.execute(text('SELECT row_to_json(t)::text FROM "' + table + '" t ORDER BY row_to_json(t)::text')).scalars().all() for table in tables}
+                return {t:connection.execute(text('SELECT row_to_json(r)::text FROM (SELECT '+
+                    ','.join('"'+v+'"' for v in columns[t])+' FROM "'+t+'") r ORDER BY row_to_json(r)::text')).scalars().all() for t in tables}
             before = snapshot(c)
         registry = CimdService(access)
         for _ in range(2):
             migrate_database(database)
             with database.engine.connect() as c:
                 assert snapshot(c) == before
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0019_client_onboarding'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0020_persistent_oauth'
                 assert c.execute(text('SELECT count(*) FROM c0_cimd_clients')).scalar_one() == 0
                 assert tuple(c.execute(text('SELECT id,enabled,revision FROM c0_cimd_policy')).one()) == (1, False, 1)
             registry.sync_policy(False)

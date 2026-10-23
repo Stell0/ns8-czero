@@ -45,6 +45,8 @@ def provider():
         assert body['grant_type'] == ['refresh_token']
         assert body['refresh_token'] == ['private-refresh']
         result = {'access_token': token(), 'refresh_token': 'rotated-private-refresh', 'token_type': 'Bearer'}
+        if 'scope' in options:
+            result['scope'] = options['scope']
         if 'refresh_lifetime' in options:
             result['refresh_expires_in'] = options['refresh_lifetime']
         if options['nonce'] is not None:
@@ -202,3 +204,37 @@ def test_old_encrypted_credential_performs_one_real_refresh_then_acquires_deadli
     second=client.check_renewal(first.credential)
     assert json.loads(second.credential)['refresh_after']==json.loads(first.credential)['refresh_after']
     assert calls[-1][0].endswith('/check')
+
+
+def test_offline_renewal_retains_attestation_across_rotation_and_checks(provider):
+    client, options, calls, credential = provider
+    options['scope'] = 'openid profile offline_access'
+    saved = json.loads(credential(exp=int(time.time()) + 10))
+    saved['offline'] = True
+    result = client.check_renewal(json.dumps(saved))
+    assert result.offline and json.loads(result.credential)['offline'] is True
+    assert calls == [('/realm/token', ['grant_type', 'refresh_token'])]
+    checked = client.check_renewal(result.credential)
+    assert checked.offline and json.loads(checked.credential)['offline'] is True
+    assert calls[-1][0] == '/realm/check'
+
+
+@pytest.mark.parametrize('scope', [None, '', 'openid profile'])
+def test_offline_refresh_cannot_drop_provider_attestation(provider, scope):
+    client, options, _, credential = provider
+    if scope is not None:
+        options['scope'] = scope
+    saved = json.loads(credential(exp=int(time.time()) + 10))
+    saved['offline'] = True
+    with pytest.raises(RenewalRejected):
+        client.check_renewal(json.dumps(saved))
+
+
+@pytest.mark.parametrize('offline', ['true', 1, None, {}])
+def test_malformed_saved_offline_attestation_never_contacts_provider(provider, offline):
+    client, _, calls, credential = provider
+    saved = json.loads(credential())
+    saved['offline'] = offline
+    with pytest.raises(RenewalRejected):
+        client.check_renewal(json.dumps(saved))
+    assert calls == []

@@ -40,12 +40,23 @@ class SessionPolicy:
 
 
 @dataclass(frozen=True)
+class ConnectionPolicy:
+    idle_seconds: int = 30 * 86400
+
+    def __post_init__(self):
+        if type(self.idle_seconds) is not int or not 60 <= self.idle_seconds <= 31536000:
+            raise ValueError('invalid_connection_policy')
+
+
+@dataclass(frozen=True)
 class RenewalResult:
     identity: VerifiedIdentity
     credential: str = field(repr=False)
+    offline: bool = False
 
     def __post_init__(self):
         if (not isinstance(self.identity, VerifiedIdentity)
+                or type(self.offline) is not bool
                 or not isinstance(self.credential, str) or not 1 <= len(self.credential.encode()) <= 32768):
             raise RenewalRejected()
 
@@ -64,7 +75,7 @@ class NativeAuthorityService:
     No grant lock is acquired here; grant callers authenticate before taking
     their grant lock, and captured-operation checks use only persisted proof.
     """
-    def __init__(self, access, client_id, secret, check, *, policy=None, now=time.time):
+    def __init__(self, access, client_id, secret, check, *, policy=None, connection_policy=None, now=time.time):
         if (not isinstance(client_id, str) or not 1 <= len(client_id) <= 128
                 or not isinstance(secret, str) or len(secret.encode()) < 32 or not callable(check)):
             raise ValueError('invalid_renewal_configuration')
@@ -72,11 +83,15 @@ class NativeAuthorityService:
         self.policy = policy if policy is not None else SessionPolicy()
         if not isinstance(self.policy, SessionPolicy):
             raise ValueError('invalid_session_policy')
+        if connection_policy is not None and not isinstance(connection_policy, ConnectionPolicy):
+            raise ValueError('invalid_connection_policy')
+        self.connection_policy = connection_policy
         self._now = now
         # Domain-separated key; native-secret/client replacement invalidates old
         # ciphertext without storing a decryption key in the database/backup.
         context = json.dumps(['c0-native-authority-v1', access.issuer, client_id]).encode()
         self._key = OctKey.import_key(hmac.digest(secret.encode(), context, 'sha256'))
+        self._refresh_key = hmac.digest(secret.encode(), b'c0-persistent-refresh-v1\0' + context, 'sha256')
 
     def _seal(self, row, credential):
         payload = json.dumps({'binding': self._binding(row), 'credential': credential}, separators=(',', ':'))
@@ -88,7 +103,8 @@ class NativeAuthorityService:
 
     @staticmethod
     def _binding(row):
-        return [str(row['id']), str(row['account_id']), row['issuer'], row['native_client'], row['subject']]
+        value = [str(row['id']), str(row['account_id']), row['issuer'], row['native_client'], row['subject']]
+        return value + ['background'] if row.get('authority_kind') == 'background' else value
 
     def _open(self, row):
         try:
@@ -103,8 +119,10 @@ class NativeAuthorityService:
         except (JoseError, ValueError, KeyError, TypeError, UnicodeError):
             raise RenewalRejected() from None
 
-    def create(self, connection, actor, result):
+    def create(self, connection, actor, result, *, background=False):
         if not isinstance(result, RenewalResult):
+            raise RenewalRejected()
+        if type(background) is not bool or background and (self.connection_policy is None or not result.offline):
             raise RenewalRejected()
         current = self._now()
         identity = result.identity
@@ -119,6 +137,12 @@ class NativeAuthorityService:
         connection.execute(text('SELECT pg_advisory_xact_lock_shared(49372)'))
         self.access._actor(connection, actor.user_id).require(Role.READER)
         connection.execute(text('SELECT pg_advisory_xact_lock(49374)'))
+        connection.execute(text('''UPDATE c0_native_authority n SET revoked=true,credential=NULL,checking=false
+            WHERE authority_kind='background' AND issuer=:issuer AND native_client=:client
+            AND NOT EXISTS(SELECT 1 FROM c0_sessions s WHERE s.native_authority_id=n.id AND s.expires_at>:now)
+            AND NOT EXISTS(SELECT 1 FROM c0_oauth_grants g WHERE g.native_authority_id=n.id
+                AND g.persistent AND g.idle_until>:now)'''),
+            {'issuer':self.access.issuer,'client':self.client_id,'now':_date(current)})
         for table in ('c0_sessions', 'c0_oauth_grants'):
             connection.execute(text(f"""DELETE FROM {table} s USING c0_native_authority n
                 WHERE s.native_authority_id=n.id
@@ -136,23 +160,29 @@ class NativeAuthorityService:
         if total >= 1000 or owned >= 32:
             raise RenewalRejected()
         row = {'id': uuid4(), 'account_id': actor.user_id, 'issuer': identity.issuer,
-               'native_client': self.client_id, 'subject': identity.subject}
-        absolute = current + self.policy.absolute_seconds
+               'native_client': self.client_id, 'subject': identity.subject,
+               'authority_kind': 'background' if background else 'session'}
+        absolute = None if background else current + self.policy.absolute_seconds
+        idle_seconds = self.connection_policy.idle_seconds if background else self.policy.idle_seconds
         connection.execute(text('''INSERT INTO c0_native_authority
-            (id,account_id,issuer,native_client,subject,credential,verified_until,expires_at,idle_until,idle_seconds)
-            VALUES (:id,:account_id,:issuer,:native_client,:subject,:credential,:verified,:expires,:idle,:seconds)'''),
+            (id,account_id,issuer,native_client,subject,credential,verified_until,expires_at,idle_until,idle_seconds,authority_kind)
+            VALUES (:id,:account_id,:issuer,:native_client,:subject,:credential,:verified,:expires,:idle,:seconds,:kind)'''),
             {**row, 'credential': self._seal(row, result.credential), 'verified': _date(identity.expires_at),
-             'expires': _date(absolute), 'idle': _date(min(absolute, current + self.policy.idle_seconds)),
-             'seconds': self.policy.idle_seconds})
-        return row['id'], _date(absolute)
+             'expires': _date(absolute) if absolute is not None else None,
+             'idle': _date(current + idle_seconds if background else min(absolute, current + idle_seconds)),
+             'seconds': idle_seconds, 'kind': 'background' if background else 'session'})
+        return row['id'], _date(absolute) if absolute is not None else None
 
     def peek(self, connection, identifier, *, account_id=None):
         row = connection.execute(text('''SELECT * FROM c0_native_authority WHERE id=:id
             AND issuer=:issuer AND native_client=:client AND NOT revoked
-            AND expires_at>:now AND idle_until>:now AND verified_until>:now'''),
+            AND (expires_at>:now OR (authority_kind='background' AND expires_at IS NULL))
+            AND idle_until>:now AND verified_until>:now'''),
             {'id': identifier, 'issuer': self.access.issuer, 'client': self.client_id,
              'now': _date(self._now())}).mappings().one_or_none()
         if row is None or (account_id is not None and row['account_id'] != account_id):
+            raise RenewalRejected()
+        if row['authority_kind'] == 'background' and self.connection_policy is None:
             raise RenewalRejected()
         self.access._actor(connection, row['account_id']).require(Role.READER)
         return row
@@ -197,7 +227,9 @@ class NativeAuthorityService:
                 raise RenewalRejected()
             current = self._now()
             try:
-                if row['revoked'] or row['checking'] or min(row['expires_at'], row['idle_until']) <= _date(current):
+                if (row['revoked'] or row['checking'] or row['idle_until'] <= _date(current)
+                        or row['expires_at'] is not None and row['expires_at'] <= _date(current)
+                        or row['authority_kind'] == 'background' and self.connection_policy is None):
                     raise RenewalRejected()
                 self.access._actor(connection, row['account_id']).require(Role.READER)
                 credential = self._open(row)
@@ -230,7 +262,8 @@ class NativeAuthorityService:
             identity = proof.identity
             try:
                 if (row is None or row['revoked'] or not row['checking']
-                        or min(row['expires_at'], row['idle_until']) <= _date(current)):
+                        or row['idle_until'] <= _date(current)
+                        or row['expires_at'] is not None and row['expires_at'] <= _date(current)):
                     raise RenewalRejected()
                 account = connection.execute(text('SELECT account_key FROM c0_accounts WHERE id=:id'),
                     {'id': row['account_id']}).scalar_one()
@@ -238,11 +271,13 @@ class NativeAuthorityService:
                         or identity.account_key != str(account) or not math.isfinite(identity.expires_at)
                         or identity.expires_at <= current):
                     raise RenewalRejected()
+                if row['authority_kind'] == 'background' and not proof.offline:
+                    raise RenewalRejected()
                 self.access._actor(connection, row['account_id']).require(Role.READER)
                 connection.execute(text("""UPDATE c0_native_authority SET credential=:credential,
                     verified_until=:verified,idle_until=LEAST(expires_at,:idle),checking=false WHERE id=:id"""),
                     {'id': identifier, 'credential': self._seal(row, proof.credential),
-                     'verified': _date(min(identity.expires_at, row['expires_at'].timestamp())),
+                     'verified': _date(min(identity.expires_at, row['expires_at'].timestamp()) if row['expires_at'] is not None else identity.expires_at),
                      'idle': _date(current + row['idle_seconds'])})
                 result = self.peek(connection, identifier)
             except (RenewalRejected, PermissionDenied):
