@@ -28,7 +28,7 @@ REQUIRED_UI = {
     'Check hybrid search, citations and Reader behavior in a browser',
     'Check protected spaces, grants and revocation in a browser',
 }
-QUERY = re.compile(r'[?&](?:state|nonce|code_challenge|code|access_token|id_token)=')
+QUERY = re.compile(r'[?&](?:state|nonce|code_challenge|code|access_token|id_token|refresh_token)=')
 
 
 def gh(*args):
