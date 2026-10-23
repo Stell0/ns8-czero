@@ -53,9 +53,11 @@ def test_actual_report_audit_rejects_missing_cimd_recovery(tmp_path):
     valid = {'elapsed_seconds': 330, 'browser_reads': 17, 'native_access_renewals': 1, 'native_refresh_rotated': 1,
         'public_refresh_rotations': 2, 'idle_elapsed_seconds': 80, 'absolute_elapsed_seconds': 140,
         'absolute_bound_preserved': 1, 'logout_and_reconnect': 1, 'client_disabled': 1}
+    offline = runpy.run_path(str(ROOT/'tests/offline_provider_probe.py'))['EXPECTED']
     for name in ('debian', 'rocky'):
         p = tmp_path/name;p.mkdir()
-        (p/'output.xml').write_text('<robot><msg>C0 renewable session: ' + json.dumps(valid) + '</msg></robot>')
+        (p/'output.xml').write_text('<robot><msg>C0 renewable session: ' + json.dumps(valid) +
+            '</msg><msg>C0 offline provider: ' + json.dumps(offline) + '</msg></robot>')
     audit = runpy.run_path(str(ROOT/'scripts/audit-ci-artifacts.py'))['audit_reports']
     with pytest.raises(AssertionError, match='All three measured CIMD recovery stages'):
         audit(tmp_path, 'a'*40, [], '')

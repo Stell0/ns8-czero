@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tests'))
 from renewal_evidence import validate_measurement
 from cimd_recovery_evidence import require_stages as require_cimd_recovery
+from offline_provider_probe import validate as validate_offline_provider
 
 
 REQUIRED_UI = {
@@ -61,6 +62,9 @@ def audit_reports(directory, source, images, logs):
         measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
         assert len(measured) == 1, 'One measured renewal proof per native distribution is required'
         renewal.append(validate_measurement(measured[0]))
+        offline = marker_values(html.unescape(raw), 'C0 offline provider: ')
+        assert len(offline) == 1, 'One real offline-provider proof per native distribution required'
+        validate_offline_provider(offline[0])
         cimd_recovery.append(require_cimd_recovery(marker_values(html.unescape(raw), 'C0 CIMD recovery: ')))
         admission = marker_values(html.unescape(raw), 'C0 admission: ')
         assert len(admission) == 2 and any(p['fresh_readers'] >= 1 for p in admission), 'Native fresh Reader admission missing'

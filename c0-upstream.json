@@ -522,6 +522,11 @@
       "path": "scripts/documentation.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "tests/offline_provider_probe.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

@@ -11,6 +11,7 @@ from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
 from renewal_evidence import validate_measurement
+from offline_provider_probe import validate as validate_offline_provider
 from cimd_recovery_evidence import validate_measurement as validate_cimd_recovery
 
 
@@ -36,7 +37,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -161,6 +162,25 @@ class CzeroSso:
                 finally:
                     builtin.set_log_level('NONE')
                 self._renewal_probe_done = True
+            if not getattr(self, '_offline_provider_done', False):
+                output, _, rc = ssh.execute_command('python3 /tmp/offline_provider_probe.py ' + shlex.quote(module_id),
+                    return_stderr=True, return_rc=True, timeout='180 seconds')
+                if rc:
+                    raise AssertionError('Installed offline-provider probe failed')
+                lines = output.splitlines()
+                try:
+                    proof = (validate_offline_provider(json.loads(lines[0].removeprefix('C0 offline provider: ')))
+                             if len(lines) == 1 and lines[0].startswith('C0 offline provider: ') else None)
+                except (ValueError, TypeError):
+                    raise AssertionError('Offline provider evidence invalid') from None
+                if proof is None:
+                    raise AssertionError('Offline provider evidence missing')
+                builtin.set_log_level('INFO')
+                try:
+                    builtin.log('C0 offline provider: ' + json.dumps(proof, sort_keys=True), console=True)
+                finally:
+                    builtin.set_log_level('NONE')
+                self._offline_provider_done = True
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                 return_rc=True, timeout="180 seconds")
             if rc:
