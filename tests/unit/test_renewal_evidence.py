@@ -13,6 +13,9 @@ VALID={'elapsed_seconds':330,'browser_reads':17,'native_access_renewals':1,'nati
     'absolute_bound_preserved':1,'logout_and_reconnect':1,'client_disabled':1}
 ADMISSION = 'C0 admission: ' + json.dumps({'fresh_readers': 1, 'blocked_signins': 3, 'shared_only': True})
 OFFLINE = 'C0 offline provider: ' + json.dumps(runpy.run_path(str(ROOT/'tests/offline_provider_probe.py'))['EXPECTED'])
+PERSISTENT_FIELDS = runpy.run_path(str(ROOT/'tests/persistent_fixture.py'))['FIELDS']
+PERSISTENT = 'C0 persistent connection: ' + json.dumps({'browser_absolute_seconds':120,'elapsed_seconds':140,
+    **{key:True for key in PERSISTENT_FIELDS-{'browser_absolute_seconds','elapsed_seconds'}}})
 
 
 @pytest.mark.parametrize('changes', [
@@ -31,7 +34,7 @@ def test_native_wrapper_records_only_validated_measurement_once(monkeypatch):
     commands=[];logged=[]
     def execute(command,**kwargs):
         commands.append(command)
-        value=json.dumps(VALID) if 'renewal_fixture.py' in command else OFFLINE if 'offline_provider_probe.py' in command else ADMISSION if command.endswith('oidc_probe.py') else ''
+        value=json.dumps(VALID) if 'renewal_fixture.py' in command else OFFLINE if 'offline_provider_probe.py' in command else PERSISTENT if 'persistent_fixture.py' in command else ADMISSION if command.endswith('oidc_probe.py') else ''
         return (value,'',0) if kwargs.get('return_stderr') else (value,0)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:SimpleNamespace(execute_command=execute))
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
@@ -40,6 +43,7 @@ def test_native_wrapper_records_only_validated_measurement_once(monkeypatch):
     library.verify_disposable_sso('czero901')
     assert sum('renewal_fixture.py' in command for command in commands)==1
     assert sum('offline_provider_probe.py' in command for command in commands)==1
+    assert sum('persistent_fixture.py' in command for command in commands)==1
     renewal = [value for value in logged if value.startswith('C0 renewable session: ')]
     assert len(renewal)==1 and json.loads(renewal[0].split(': ',1)[1])==VALID
 

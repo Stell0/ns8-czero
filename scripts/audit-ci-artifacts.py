@@ -14,6 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tests'))
 from renewal_evidence import validate_measurement
 from cimd_recovery_evidence import require_stages as require_cimd_recovery
 from offline_provider_probe import validate as validate_offline_provider
+from persistent_fixture import validate as validate_persistent_connection
+from persistent_fixture import require_recovery as require_persistent_recovery
 
 
 REQUIRED_UI = {
@@ -56,7 +58,7 @@ def marker_values(logs, marker):
 def audit_reports(directory, source, images, logs):
     reports = sorted(directory.rglob('output.xml'))
     assert len(reports) == 2, 'Both native reports are required'
-    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []
+    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []; persistent = []; background_recovery = []
     for report in reports:
         raw = report.read_text()
         measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
@@ -66,6 +68,10 @@ def audit_reports(directory, source, images, logs):
         assert len(offline) == 1, 'One real offline-provider proof per native distribution required'
         validate_offline_provider(offline[0])
         cimd_recovery.append(require_cimd_recovery(marker_values(html.unescape(raw), 'C0 CIMD recovery: ')))
+        background = marker_values(html.unescape(raw), 'C0 persistent connection: ')
+        assert len(background) == 1, 'One measured persistent connection proof per native distribution required'
+        persistent.append(validate_persistent_connection(background[0]))
+        background_recovery.append(require_persistent_recovery(marker_values(html.unescape(raw),'C0 persistent recovery: ')))
         admission = marker_values(html.unescape(raw), 'C0 admission: ')
         assert len(admission) == 2 and any(p['fresh_readers'] >= 1 for p in admission), 'Native fresh Reader admission missing'
         assert all(p['blocked_signins'] == 3 and p['shared_only'] is True for p in admission), 'Native persistent blocking missing'
@@ -113,14 +119,16 @@ def audit_reports(directory, source, images, logs):
         assert value['source'] == source
         assert [i['digest'] for i in value['images']] == [i['digest'] for i in images[1:]], 'Installed app/database digests differ'
     measurements = marker_values(logs, 'C0 accessibility: ')
-    assert len(measurements) >= 25
+    assert len(measurements) >= 28
+    assert {value['role'] for value in measurements if value.get('page') == 'account'} == {'admin', 'editor', 'reader'}, 'Account connection controls were not checked for every role'
     for value in measurements:
         assert all(type(v) is int and v >= 0 for k, v in value.items() if k not in {'page', 'role'})
         assert all(v == 0 for k, v in value.items() if k.startswith(('unnamed_', 'missing_')))
     return {'source': source, 'accepted': True, 'reports': summaries, 'browser_workflows': 8,
             'privacy_guards': privacy, 'query_artifacts': audited, 'oauth_query_candidates': 0,
             'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
-            'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery}
+            'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery,
+            'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery}
 
 
 def main():

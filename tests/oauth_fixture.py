@@ -156,12 +156,13 @@ def snapshot(module_id, client_id):
                               'psql','-U','czero','-d','czero','-At','-c',query]))
 
 
-def seed_persistence(module_id, browser, profile, *, snapshot_fn=snapshot):
-    client = registered(browser, profile, client_name='Disposable active grant recovery')
-    pair = issue(browser, profile, client)
+def seed_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, issue_fn=issue,
+        filename='expected-oauth-grant.json', client_name='Disposable active grant recovery'):
+    client = registered(browser, profile, client_name=client_name)
+    pair = issue_fn(browser, profile, client)
     rows = snapshot_fn(module_id, client['client_id'])
     assert len(rows['grants'] or []) == 1 and len(rows['tokens'] or []) == 2, 'Active recovery grant missing'
-    path = STATE / 'expected-oauth-grant.json'
+    path = STATE / filename
     path.write_text(json.dumps({'module_id':module_id,'client':client,'pair':pair,'rows':rows}))
     path.chmod(0o600)
 
@@ -173,8 +174,9 @@ def parse_grant_expiry(value):
     return datetime.strptime(value, pattern).astimezone(timezone.utc)
 
 
-def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk_fn=sdk):
-    path = STATE / 'expected-oauth-grant.json'
+def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk_fn=sdk, issue_fn=issue,
+        filename='expected-oauth-grant.json'):
+    path = STATE / filename
     expected = json.loads(path.read_text())
     client, pair = expected['client'], expected['pair']
     assert snapshot_fn(module_id, client['client_id']) == expected['rows'], 'Recovered OAuth grant/token/code rows changed'
@@ -183,16 +185,17 @@ def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk
                'refresh_token':pair['refresh_token'],'resource':browser.origin+'/mcp'}
     restored = module_id != expected['module_id']
     # An expired grant would not prove restored native-client binding.
-    assert all(parse_grant_expiry(row['expires_at']) > datetime.now(timezone.utc)
+    assert all(parse_grant_expiry(row['idle_until'] if row.get('persistent') else row['expires_at']) > datetime.now(timezone.utc)
                for row in expected['rows']['grants']), 'Recovery grant expired before binding assertion'
     status, body, _ = browser.request('/oauth/token',urlencode(refresh).encode(),'POST',headers)
     if restored:
         assert status == 400, 'Clean restore accepted previous native-client refresh'
         assert browser.request('/api/v1/object-types',headers={'Authorization':'Bearer '+pair['access_token']})[0] == 401, 'Clean restore accepted previous native-client access'
-        pair = issue(browser, profile, client)
+        pair = issue_fn(browser, profile, client)
     else:
         assert status == 200, 'Update lost active refresh authority'
         pair = json.loads(body)
+        assert pair['refresh_token'] != expected['pair']['refresh_token'], 'Recovered refresh did not rotate'
     sdk_fn(module_id, browser.origin, pair)
     expected.update(module_id=module_id, pair=pair, rows=snapshot_fn(module_id,client['client_id']))
     path.write_text(json.dumps(expected)); path.chmod(0o600)
@@ -251,7 +254,38 @@ def complete_browser(module_id):
     sdk(module_id,browser.origin,pair,scope=pair['scope'])
     status, _, _=browser.request('/api/v1/access/accounts',headers={'Authorization':'Bearer '+pair['access_token']})
     assert status == (200 if value['role']=='admin' else 403), 'Consent browser delegated Admin boundary failed'
+    if value.get('persistent'):
+        from uuid import UUID
+        from oidc_fixture import command
+        identifier=str(UUID(value['client']['client_id']))
+        query="SELECT json_build_object('native',native_authority_id,'persistent',persistent) FROM c0_oauth_grants WHERE client_id='"+identifier+"'"
+        row=json.loads(command(['runagent','-m',module_id,'podman','exec','czero-postgres','psql','-U','czero','-d','czero','-At','-c',query]))
+        assert row['persistent'] is True and row['native'], 'Browser background grant was not persisted'
+        value['native_authority_id']=str(UUID(row['native']))
+        path=STATE/'browser-oauth.json';path.write_text(json.dumps(value));path.chmod(0o600)
     print('Disposable real consent controls, role narrowing and TLS SDK checks passed')
+
+
+def browser_disconnected(module_id):
+    from uuid import UUID
+    from oidc_fixture import command
+    value=json.loads((STATE/'browser-oauth.json').read_text());identifier=str(UUID(value['client']['client_id']))
+    query="SELECT count(*) FROM c0_oauth_grants WHERE client_id='"+identifier+"'"
+    assert command(['runagent','-m',module_id,'podman','exec','czero-postgres','psql','-U','czero','-d','czero','-At','-c',query]).strip()=='0'
+    print('Disposable account disconnect removed the client authority')
+
+
+def cleanup_browser(module_id):
+    value=json.loads((STATE/'browser-oauth.json').read_text())
+    personas=json.loads((STATE/'personas.json').read_text());assert personas['host'].endswith('.test')
+    if value.get('persistent'):
+        from persistent_fixture import native
+        assert native(module_id,{'operation':'revoke','id':value['native_authority_id']})=={'provider_revoked':True}
+    browser=Browser(value['origin']);profile=browser.login('c0owner',personas['password'])
+    assert browser.api('/api/v1/oauth/clients/'+value['client']['client_id'],
+        {'enabled':False,'expected_revision':value['client']['revision']},'PUT',profile['csrf_token'])[0]==200
+    browser.logout(profile)
+    print('Disposable browser client disabled and owned offline credentials revoked')
 
 
 def run(module_id):
@@ -291,6 +325,8 @@ if __name__=='__main__':
     try:
         if len(sys.argv) > 2 and sys.argv[2] == 'browser-prepare': prepare_browser(sys.argv[1],sys.argv[3])
         elif len(sys.argv) > 2 and sys.argv[2] == 'browser-complete': complete_browser(sys.argv[1])
+        elif len(sys.argv) > 2 and sys.argv[2] == 'browser-disconnected': browser_disconnected(sys.argv[1])
+        elif len(sys.argv) > 2 and sys.argv[2] == 'browser-cleanup': cleanup_browser(sys.argv[1])
         elif len(sys.argv) > 2: persistence(sys.argv[1], sys.argv[2])
         else: run(sys.argv[1])
     except AssertionError as error:print(str(error),file=sys.stderr);sys.exit(1)

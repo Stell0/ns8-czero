@@ -36,6 +36,7 @@ class RecoveryDates(unittest.TestCase):
 
     def recovery(self, expires_at):
         pair = {'access_token': 'synthetic-access', 'refresh_token': 'synthetic-refresh'}
+        rotated = {**pair, 'refresh_token': 'synthetic-rotated-refresh'}
         rows = {'grants': [{'expires_at': expires_at}], 'tokens': [], 'codes': []}
         expected = {'module_id': 'czero1', 'client': {'client_id': 'synthetic-client'},
                     'pair': pair, 'rows': rows}
@@ -48,12 +49,12 @@ class RecoveryDates(unittest.TestCase):
 
             def request(self, path, *args):
                 calls.append(path)
-                return 200, json.dumps(pair).encode(), self.origin + path
+                return 200, json.dumps(rotated).encode(), self.origin + path
 
         self.fixture.verify_persistence('czero1', Browser(), {},
             snapshot_fn=lambda *args: rows,
             sdk_fn=lambda *args: calls.append('sdk'))
-        return calls, pair
+        return calls, rotated
 
     def test_native_recovery_accepts_trimmed_fraction(self):
         calls, pair = self.recovery('2099-01-02T03:04:05.12345+00:00')

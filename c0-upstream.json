@@ -527,6 +527,41 @@
       "path": "tests/offline_provider_probe.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero_connection_policy.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-create-connection-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/create-module/33connection-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/update-module.d/53connection-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/14validate-connection-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/39persist-connection-policy",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/persistent_fixture.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }
