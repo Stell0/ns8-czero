@@ -28,7 +28,7 @@ def verify_profile(browser, me):
     return value
 
 
-def predecessor(stage):
+def predecessor(stage, *, reader_admission=False):
     from oidc_probe import Browser
     assert stage in ('seed', 'verify'), 'Invalid predecessor profile stage'
     personas = json.loads((STATE / 'personas.json').read_text())
@@ -37,7 +37,7 @@ def predecessor(stage):
     me = owner.login('c0owner', personas['password'])
     member = Browser(owner.origin)
     saved = STATE / 'predecessor-profiles.json'
-    if stage == 'seed':
+    if stage == 'seed' and not reader_admission:
         denied = Browser(owner.origin)
         denied.login('c0member', personas['password'], expected=403)
         status, body, _ = owner.api('/api/v1/access/accounts')
@@ -46,6 +46,8 @@ def predecessor(stage):
         status, _, _ = owner.api('/api/v1/access/accounts/' + account['id'], {'role':'reader'}, 'PUT', me['csrf_token'])
         assert status == 204, 'Cannot admit predecessor reader'
     current = member.login('c0member', personas['password'])
+    if stage == 'seed' and reader_admission:
+        assert current['role'] == 'reader' and current['is_owner'] is False, 'Predecessor default Reader admission differs'
     assert me['id'] != current['id'], 'Distinct predecessor accounts share an identity'
     if stage == 'seed':
         old = os.umask(0o077)
@@ -66,7 +68,8 @@ def predecessor(stage):
 
 if __name__ == '__main__':
     try:
-        predecessor(sys.argv[1])
+        assert len(sys.argv) in (2,3) and (len(sys.argv)==2 or sys.argv[2]=='--reader-admission')
+        predecessor(sys.argv[1], reader_admission=len(sys.argv)==3)
         print('Disposable genuine predecessor profile identity checks passed')
     except Exception as error:
         print(str(error) if isinstance(error, AssertionError) else type(error).__name__, file=sys.stderr)

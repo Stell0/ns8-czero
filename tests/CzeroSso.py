@@ -95,7 +95,9 @@ class CzeroSso:
                 self._network(ssh, module_id)
             builtin.run_keyword('Wait Until Keyword Succeeds', '30s', '2s',
                 'Check application route', expected_app, host, expected_core)
-            _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage),
+            predecessor = json.loads((Path(__file__).parent / 'fixtures/upgrade_predecessor.json').read_text())
+            admission = ' --reader-admission' if stage == 'seed' and predecessor.get('reader_admission') is True else ''
+            _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage) + admission,
                 return_stderr=True, return_rc=True, timeout='180 seconds')
             if rc:
                 raise AssertionError('Genuine predecessor profile identity check failed')

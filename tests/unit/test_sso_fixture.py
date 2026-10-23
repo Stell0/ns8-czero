@@ -324,5 +324,6 @@ def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,st
     library.predecessor_profile('czero7','czero7.test',stage,expected_app,expected_core)
     assert waits == [('Wait Until Keyword Succeeds','30s','2s','Check application route',expected_app,'czero7.test',expected_core)]
     assert network == ([(ssh,'czero7')] if stage=='verify' else [])
-    assert calls == ['python3 /tmp/profile_fixture.py '+stage,'python3 /tmp/oidc_fixture.py check-logs czero7']
+    admission = ' --reader-admission' if stage=='seed' else ''
+    assert calls == ['python3 /tmp/profile_fixture.py '+stage+admission,'python3 /tmp/oidc_fixture.py check-logs czero7']
     assert levels == ['NONE','INFO']
