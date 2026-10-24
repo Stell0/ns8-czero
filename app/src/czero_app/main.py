@@ -170,6 +170,22 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def admin_page() -> FileResponse:
         return FileResponse(static_dir / 'admin.html', media_type='text/html')
 
+    @instance_app.get('/admin/advanced', include_in_schema=False)
+    async def advanced_page() -> FileResponse:
+        return FileResponse(static_dir / 'admin-advanced.html', media_type='text/html')
+
+    @instance_app.get('/admin/work', include_in_schema=False)
+    async def background_work_page() -> FileResponse:
+        return FileResponse(static_dir / 'admin-work.html', media_type='text/html')
+
+    @instance_app.get('/admin/spaces', include_in_schema=False)
+    async def protected_spaces_page() -> FileResponse:
+        return FileResponse(static_dir / 'admin-spaces.html', media_type='text/html')
+
+    @instance_app.get('/workspace-access.js', include_in_schema=False)
+    async def workspace_access_script() -> FileResponse:
+        return FileResponse(static_dir / 'workspace-access.js', media_type='text/javascript')
+
     @instance_app.get('/cimd.js', include_in_schema=False)
     def cimd_script():
         return FileResponse(static_dir / 'cimd.js', media_type='text/javascript')
@@ -315,6 +331,16 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
             issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth')
         instance_app.state.mcp_app = mcp_child
         instance_app.mount('/', mcp_child, name='mcp')
+    elif auth is not None:
+        # Keep first-party access administration on supported legacy REST
+        # mounts without advertising or mounting OAuth/MCP on those paths.
+        from czero_core.oauth_grants import OAuthGrantService
+        from czero_app.workspace_access import install_workspace_routes
+        workspace_grants = OAuthGrantService(auth.access, auth.sessions.client_id,
+            auth.oidc.config.public_origin.rstrip('/') + base_path + '/mcp',
+            authority=auth.sessions.authority)
+        install_workspace_routes(instance_app, workspace_grants, read_context, write_context, None)
+
 
     default_openapi = instance_app.openapi
 

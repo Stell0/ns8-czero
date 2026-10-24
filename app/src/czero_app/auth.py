@@ -11,7 +11,7 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import APIKeyCookie, HTTPBearer
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import SQLAlchemyError
 
 from czero_core.access import AccessService
@@ -78,6 +78,7 @@ class RequestAccess:
 class RoleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     role: Role | None
+    expected_revision: int | None = Field(default=None, strict=True, ge=1, le=9223372036854775806)
 
 
 def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> tuple:
@@ -184,10 +185,13 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         if context.scopes is not None and 'c0:admin' not in context.scopes:
             raise PermissionDenied()
         try:
-            configured().access.set_role(context.actor, account_id, data.role)
+            configured().access.set_role(context.actor, account_id, data.role, expected_revision=data.expected_revision)
         except PermissionDenied:
             raise
-        except ValueError:
+        except ValueError as error:
+            from czero_core.access import AccessConflict
+            if isinstance(error, AccessConflict):
+                raise HTTPException(409, "access_changed") from None
             raise HTTPException(404, "account_not_found") from None
         return Response(status_code=204)
 

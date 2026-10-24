@@ -166,14 +166,23 @@ def test_records_offer_schema_fields_and_explicit_json_editor(client):
     assert 'innerHTML' not in script.text and 'fetch(' not in script.text
 
 
-def test_admin_page_uses_existing_role_guarded_apis_and_local_assets(client):
+def test_access_page_has_one_people_table_and_no_background_work(client):
     page=client('/czero/czero17/admin')
-    assert page.status_code==200 and 'id="admin-workspace" hidden' in page.text
-    assert './admin.js' in page.text and 'UTC interval schedules' in page.text
-    script=client('/czero/czero17/admin.js')
+    assert page.status_code==200 and 'id="access-workspace" hidden' in page.text
+    assert './workspace-access.js' in page.text and 'Username' in page.text and 'Full name' in page.text
+    assert all(label in page.text for label in ('Read','Write','Manage','Status','Actions'))
+    assert page.text.count('<table')==1
+    assert all(value not in page.text for value in ('id="job-form"','id="schedule-form"','./admin.js','./cimd.js'))
+    script=client('/czero/czero17/workspace-access.js')
     assert script.status_code==200 and 'innerHTML' not in script.text
-    assert 'expected_revision' in script.text and 'idempotency_key' in script.text
-    assert 'X-C0-CSRF' in script.text
+    assert 'expected_revision' in script.text and 'X-C0-CSRF' in script.text
+    for name in ('advanced','spaces','work'):
+        separate=client('/czero/czero17/admin/'+name)
+        assert separate.status_code==200 and '<base href="../">' in separate.text
+        assert 'id="access-people"' not in separate.text
+    assert 'id="job-form"' in client('/czero/czero17/admin/work').text
+    assert 'id="client-form"' in client('/czero/czero17/admin/advanced').text
+    assert 'id="space-administration"' in client('/czero/czero17/admin/spaces').text
 
 
 def test_wiki_graph_offers_readable_nodes_edges_and_references(client):

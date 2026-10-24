@@ -77,7 +77,7 @@
           approved_descriptor: client.approved_descriptor, verified_at: client.verified_at, fresh_until: client.fresh_until}, null, 2)));
         const review = node('button', 'Review this client'); review.type = 'button';
         review.addEventListener('click', () => { if (allowed() && !busy) choose(client); });
-        const toggle = node('button', client.enabled ? 'Disable metadata client' : 'Enable metadata client'); toggle.type = 'button';
+        const toggle = node('button', client.enabled ? 'Disable application for everyone' : 'Enable application for everyone'); toggle.type = 'button';
         toggle.addEventListener('click', async () => {
           if (!allowed() || toggle.disabled || sequence !== listSeq || captured !== epoch) return;
           toggle.disabled = true;

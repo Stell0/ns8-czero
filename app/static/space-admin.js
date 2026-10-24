@@ -75,7 +75,7 @@
     const attempt=pendingCreate;$('create-space').disabled=true;
     try{
       const result=await api('spaces','POST',{name,idempotency_key:attempt.key});if(captured!==epoch)return;
-      pendingCreate=null;const target=new URL('./admin',window.location.href);target.searchParams.set('space_id',result.id);
+      pendingCreate=null;const target=new URL('./admin/spaces',document.baseURI || window.location.href);target.searchParams.set('space_id',result.id);
       if(window.C0Space)window.C0Space.clear('Opening the new protected space…');window.location.assign(target.href);
     }catch(error){if(captured===epoch)$('space-create-status').textContent=error.message;}
     finally{if(captured===epoch)$('create-space').disabled=false;}

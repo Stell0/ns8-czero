@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C0 — Advanced application settings</title><base href="../"><link rel="stylesheet" href="./app.css"></head>
+<body data-page="admin-secondary"><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1">
+<nav class="topbar" aria-label="C0 navigation">
+<a class="brand" href="./" aria-label="C0 home">C0<span>Knowledge</span></a>
+<form class="header-search" action="./search" method="get"><label class="sr-only" for="site-query">Search knowledge</label><input id="site-query" name="query" type="search" placeholder="Search knowledge…" maxlength="512" required><button type="submit">Search</button></form>
+<a href="./wiki">Knowledge</a><a href="./sources">Sources</a><a href="./agents">Use with AI</a>
+<details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
+<a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
+</nav>
+
+
+<h1>Advanced application settings</h1><nav class="admin-navigation" aria-label="Administration"><a href="./admin">Workspace access</a><a href="./admin/spaces">Protected spaces</a><a href="./admin/work">Background work</a><a href="./admin/advanced">Advanced</a></nav><p id="admin-account" role="status" aria-live="polite">Checking access…</p><a id="admin-signin" href="./auth/login?return_to=admin" hidden>Sign in with NethServer</a><div id="admin-workspace" hidden><section id="cimd-administration" aria-labelledby="cimd-heading" hidden><h2 id="cimd-heading">ChatGPT connections</h2>
+<p>Enabling discovery is the first step; each connection still needs approval. Use Workspace access for pending requests. These settings affect application approval for every user.</p><h3>Approved connections</h3><p>NethServer settings controls whether this optional feature is enabled. Review each exact HTTPS URL and its callbacks before approving it. Approval permits a client to request user consent; it grants no account access. Remote logos and keys are not loaded.</p>
+<button id="cimd-refresh" type="button">Refresh metadata clients</button><ul id="cimd-clients"></ul><p id="cimd-list-status" role="status" aria-live="polite"></p>
+<button id="cimd-new" type="button">New metadata client</button>
+<form id="cimd-form"><label for="cimd-url">Exact client metadata URL</label><input id="cimd-url" type="url" required maxlength="2048" placeholder="https://client.example.com/oauth/client.json">
+<fieldset><legend>Permissions to allow after review</legend><label><input id="cimd-read" type="checkbox" checked> Read authorized spaces</label><label><input id="cimd-write" type="checkbox"> Write authorized spaces</label><label><input id="cimd-admin" type="checkbox"> Manage application access and tasks</label></fieldset>
+<button id="cimd-preview" type="submit" disabled>Preview metadata</button><button id="cimd-approve" type="button" disabled>Approve reviewed metadata</button></form>
+<div id="cimd-review"></div><p id="cimd-form-status" role="status" aria-live="polite"></p></section>
+<section aria-labelledby="clients-heading"><h2 id="clients-heading">External clients</h2><p>Approve exact callbacks and bounded scopes. Users must still sign in and consent. IDs for metadata clients are for administration; connect using their approved URLs below. Disabling a client invalidates its old access; enabling it requires fresh consent.</p>
+<button id="refresh-clients" type="button">Refresh clients</button><ul id="client-list"></ul><p id="client-status" role="status" aria-live="polite"></p>
+<form id="client-form"><label for="client-name">Client name</label><input id="client-name" required maxlength="128">
+<label for="client-callbacks">Exact callback URLs (one per line)</label><textarea id="client-callbacks" required rows="4" maxlength="8192"></textarea>
+<fieldset><legend>Allowed permissions</legend><label><input id="client-read" type="checkbox" checked> Read authorized spaces</label><label><input id="client-write" type="checkbox"> Write authorized spaces</label><label><input id="client-admin" type="checkbox"> Manage application access and tasks</label></fieldset>
+<button id="approve-client" type="submit">Approve public client</button></form></section>
+</div></main><script src="./site.js" defer></script><script src="./admin.js" defer></script><script src="./cimd.js" defer></script><script src="./navigation.js" defer></script></body></html>

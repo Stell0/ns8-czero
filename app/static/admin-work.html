@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C0 — Background work</title><base href="../"><link rel="stylesheet" href="./app.css"></head>
+<body data-page="admin-secondary"><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" tabindex="-1">
+<nav class="topbar" aria-label="C0 navigation">
+<a class="brand" href="./" aria-label="C0 home">C0<span>Knowledge</span></a>
+<form class="header-search" action="./search" method="get"><label class="sr-only" for="site-query">Search knowledge</label><input id="site-query" name="query" type="search" placeholder="Search knowledge…" maxlength="512" required><button type="submit">Search</button></form>
+<a href="./wiki">Knowledge</a><a href="./sources">Sources</a><a href="./agents">Use with AI</a>
+<details class="menu"><summary>Tools</summary><div class="menu-items"><a href="./wiki?view=tools">Articles and knowledge model</a><a href="./sources?view=tools">Upload and manage sources</a><a href="./objects">Structured records</a><a href="./agents?view=tools">Developer reference</a></div></details>
+<a href="./?view=account">Account</a><a href="./admin" data-admin-link hidden>Administration</a>
+</nav>
+
+
+<h1>Background work</h1><nav class="admin-navigation" aria-label="Administration"><a href="./admin">Workspace access</a><a href="./admin/spaces">Protected spaces</a><a href="./admin/work">Background work</a><a href="./admin/advanced">Advanced</a></nav><p id="admin-account" role="status" aria-live="polite">Checking access…</p><a id="admin-signin" href="./auth/login?return_to=admin" hidden>Sign in with NethServer</a><div id="admin-workspace" hidden><section aria-labelledby="jobs-heading"><h2 id="jobs-heading">Background jobs</h2><p>Only installed deterministic handlers can run. Jobs survive restarts; a timer normally wakes the worker within a minute.</p>
+<button id="refresh-jobs" type="button">Refresh jobs</button><ul id="job-list"></ul><p id="job-status" role="status" aria-live="polite"></p>
+<form id="job-form"><label for="job-handler">Registered task</label><select id="job-handler" required></select><label for="job-payload">Task input (JSON object)</label><textarea id="job-payload" rows="3" maxlength="16384">{}</textarea><button id="enqueue-job" type="submit">Queue job</button></form>
+<section id="job-detail" hidden><h3>Selected job and attempts</h3><pre id="job-data"></pre><pre id="job-runs"></pre></section></section>
+<section aria-labelledby="schedules-heading"><h2 id="schedules-heading">UTC interval schedules</h2><p>Intervals range from one minute to 31 days. Missed runs coalesce into one job. Times below use UTC.</p><button id="refresh-schedules" type="button">Refresh schedules</button><ul id="schedule-list"></ul><p id="schedule-status" role="status" aria-live="polite"></p>
+<form id="schedule-form"><label for="schedule-name">Schedule name</label><input id="schedule-name" required maxlength="64" pattern="[a-z][a-z0-9_.-]*"><label for="schedule-handler">Registered task</label><select id="schedule-handler" required></select><label for="schedule-payload">Task input (JSON object)</label><textarea id="schedule-payload" rows="3" maxlength="16384">{}</textarea><label for="schedule-interval">Interval in seconds</label><input id="schedule-interval" type="number" min="60" max="2678400" step="1" value="3600" required><button id="create-schedule" type="submit">Create schedule</button></form>
+<section id="schedule-detail" hidden><h3>Selected schedule</h3><p id="schedule-identity"></p><form id="schedule-edit"><label for="schedule-enabled"><input id="schedule-enabled" type="checkbox"> Enabled</label><label for="schedule-edit-interval">Interval in seconds</label><input id="schedule-edit-interval" type="number" min="60" max="2678400" step="1" required><button id="save-schedule" type="submit">Save schedule</button></form><pre id="schedule-runs"></pre></section></section>
+</div></main><script src="./site.js" defer></script><script src="./admin.js" defer></script><script src="./navigation.js" defer></script></body></html>
