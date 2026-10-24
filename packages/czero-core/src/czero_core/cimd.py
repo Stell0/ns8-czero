@@ -139,51 +139,57 @@ class CimdService(CimdPolicyService):
 
     def approve(self, actor, metadata, *, scopes=('c0:read',), expected_digest,
                 client_id=None, expected_revision=None, cache_seconds=0):
+        with self.access.database.engine.begin() as connection:
+            _lock(connection)
+            return self._approve(connection, actor, metadata, scopes=scopes, expected_digest=expected_digest,
+                client_id=client_id, expected_revision=expected_revision, cache_seconds=cache_seconds)
+
+    def _approve(self, connection, actor, metadata, *, scopes, expected_digest,
+                 client_id=None, expected_revision=None, cache_seconds=0):
+        """Shared locked transaction; callers must hold the normal CIMD locks."""
         scopes = self._scopes(metadata, scopes)
         if metadata.digest != expected_digest:
             raise ClientConflict()
         if (not 0 <= cache_seconds <= 300 or (client_id is not None and
                 (not isinstance(client_id, UUID) or type(expected_revision) is not int))):
             raise ValueError('invalid_client_update')
-        with self.access.database.engine.begin() as connection:
-            _lock(connection)
-            self.clients._authorize(connection, actor)
-            self._policy(connection)
-            row = connection.execute(text(_QUERY + ' WHERE b.metadata_url=:url'),
-                                     {'url': metadata.client_id}).mappings().one_or_none()
-            if client_id is None and row is not None:
-                if row['metadata_digest'] != expected_digest or row['scopes'] != scopes:
-                    raise ClientConflict()
-                return _view(row)  # Never reenable or clear a sticky review.
-            if client_id is not None:
-                if (row is None or row['client_id'] != client_id or row['revision'] != expected_revision
-                        or expected_revision >= 2147483646):
-                    raise ClientConflict()
-                _revoke(connection, client_id)
-                connection.execute(text('''UPDATE c0_oauth_clients SET name=:name,redirect_uris=CAST(:uris AS jsonb),
-                    scopes=CAST(:scopes AS jsonb),revision=revision+1 WHERE id=:id'''),
-                    {'id': client_id, 'name': metadata.client_name, 'uris': json.dumps(metadata.redirect_uris),
-                     'scopes': json.dumps(scopes)})
-            else:
-                if connection.execute(text('SELECT count(*) FROM c0_oauth_clients')).scalar_one() >= 64:
-                    raise ValueError('oauth_client_limit')
-                client_id = uuid4()
-                # A dedicated namespace cannot collide with legacy descriptor digests.
-                connection.execute(text('''INSERT INTO c0_oauth_clients(id,name,descriptor_hash,redirect_uris,scopes)
-                    VALUES (:id,:name,:hash,CAST(:uris AS jsonb),CAST(:scopes AS jsonb))'''),
-                    {'id': client_id, 'name': metadata.client_name, 'hash': 'cimd:' + client_id.hex,
-                     'uris': json.dumps(metadata.redirect_uris), 'scopes': json.dumps(scopes)})
-            now = self._now()
-            connection.execute(text('''INSERT INTO c0_cimd_clients
-                (client_id,metadata_url,approved_descriptor,metadata_digest,verified_at,fresh_until)
-                VALUES (:id,:url,CAST(:descriptor AS jsonb),:digest,:now,:fresh)
-                ON CONFLICT (client_id) DO UPDATE SET approved_descriptor=EXCLUDED.approved_descriptor,
-                    metadata_digest=EXCLUDED.metadata_digest,verified_at=EXCLUDED.verified_at,
-                    fresh_until=EXCLUDED.fresh_until,review_required=false'''),
-                {'id': client_id, 'url': metadata.client_id, 'descriptor': json.dumps(metadata.descriptor()),
-                 'digest': metadata.digest, 'now': _date(now), 'fresh': _date(now + cache_seconds)})
-            return _view(connection.execute(text(_QUERY + ' WHERE b.client_id=:id'),
-                                           {'id': client_id}).mappings().one())
+        self.clients._authorize(connection, actor)
+        self._policy(connection)
+        row = connection.execute(text(_QUERY + ' WHERE b.metadata_url=:url'),
+                                 {'url': metadata.client_id}).mappings().one_or_none()
+        if client_id is None and row is not None:
+            if row['metadata_digest'] != expected_digest or row['scopes'] != scopes:
+                raise ClientConflict()
+            return _view(row)  # Never reenable or clear a sticky review.
+        if client_id is not None:
+            if (row is None or row['client_id'] != client_id or row['revision'] != expected_revision
+                    or expected_revision >= 2147483646):
+                raise ClientConflict()
+            _revoke(connection, client_id)
+            connection.execute(text('''UPDATE c0_oauth_clients SET name=:name,redirect_uris=CAST(:uris AS jsonb),
+                scopes=CAST(:scopes AS jsonb),revision=revision+1 WHERE id=:id'''),
+                {'id': client_id, 'name': metadata.client_name, 'uris': json.dumps(metadata.redirect_uris),
+                 'scopes': json.dumps(scopes)})
+        else:
+            if connection.execute(text('SELECT count(*) FROM c0_oauth_clients')).scalar_one() >= 64:
+                raise ValueError('oauth_client_limit')
+            client_id = uuid4()
+            # A dedicated namespace cannot collide with legacy descriptor digests.
+            connection.execute(text('''INSERT INTO c0_oauth_clients(id,name,descriptor_hash,redirect_uris,scopes)
+                VALUES (:id,:name,:hash,CAST(:uris AS jsonb),CAST(:scopes AS jsonb))'''),
+                {'id': client_id, 'name': metadata.client_name, 'hash': 'cimd:' + client_id.hex,
+                 'uris': json.dumps(metadata.redirect_uris), 'scopes': json.dumps(scopes)})
+        now = self._now()
+        connection.execute(text('''INSERT INTO c0_cimd_clients
+            (client_id,metadata_url,approved_descriptor,metadata_digest,verified_at,fresh_until)
+            VALUES (:id,:url,CAST(:descriptor AS jsonb),:digest,:now,:fresh)
+            ON CONFLICT (client_id) DO UPDATE SET approved_descriptor=EXCLUDED.approved_descriptor,
+                metadata_digest=EXCLUDED.metadata_digest,verified_at=EXCLUDED.verified_at,
+                fresh_until=EXCLUDED.fresh_until,review_required=false'''),
+            {'id': client_id, 'url': metadata.client_id, 'descriptor': json.dumps(metadata.descriptor()),
+             'digest': metadata.digest, 'now': _date(now), 'fresh': _date(now + cache_seconds)})
+        return _view(connection.execute(text(_QUERY + ' WHERE b.client_id=:id'),
+                                       {'id': client_id}).mappings().one())
 
     def observe(self, metadata, *, expected_revision, cache_seconds=0):
         """Attest a trusted fetch/cache hit; commit changed-document review first."""

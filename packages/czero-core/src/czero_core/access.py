@@ -12,6 +12,11 @@ from .identity import Actor, PermissionDenied, Role, VerifiedIdentity
 from .spaces import require_scope
 
 
+class AccessConflict(ValueError):
+    def __init__(self):
+        super().__init__('access_changed')
+
+
 class AccessService:
     """One configured issuer/owner and three roles for the shared instance.
 
@@ -145,7 +150,9 @@ class AccessService:
             """), {"id": actor.user_id, "issuer": self.issuer}).mappings().one()
             return {**dict(row), "role": current.role.value, "is_owner": current.is_owner}
 
-    def set_role(self, actor: Actor, account_id: UUID, role: Role | None) -> None:
+    def set_role(self, actor: Actor, account_id: UUID, role: Role | None, *, expected_revision: int | None = None) -> None:
+        if expected_revision is not None and (type(expected_revision) is not int or not 1 <= expected_revision < 9223372036854775807):
+            raise ValueError('invalid_access_revision')
         if role is not None and not isinstance(role, Role):
             raise ValueError("invalid_role")
         with self.database.engine.begin() as connection:
@@ -156,13 +163,27 @@ class AccessService:
             current.require(Role.ADMIN)
             require_scope(current, Role.ADMIN)
             target = connection.execute(text("""
-                SELECT account_key FROM c0_accounts WHERE id = :id AND issuer = :issuer
+                SELECT account_key,access_revision FROM c0_accounts WHERE id = :id AND issuer = :issuer
                 FOR UPDATE
-            """), {"id": account_id, "issuer": self.issuer}).scalar_one_or_none()
+            """), {"id": account_id, "issuer": self.issuer}).mappings().one_or_none()
             if target is None:
                 raise ValueError("account_not_found")
-            if target == self.owner_account_key:
+            if target['account_key'] == self.owner_account_key:
                 raise PermissionDenied()
+            if expected_revision is not None:
+                if target['access_revision'] != expected_revision:
+                    raise AccessConflict()
+                saved = connection.execute(text('SELECT role FROM c0_memberships WHERE account_id=:id'),
+                                           {'id': account_id}).scalar_one_or_none()
+                blocked = connection.execute(text('SELECT 1 FROM c0_account_blocks WHERE account_id=:id'),
+                                             {'id': account_id}).scalar_one_or_none() is not None
+                if saved == (role.value if role else None) and blocked == (role is None):
+                    return
+            updated = connection.execute(text('UPDATE c0_accounts SET access_revision=access_revision+1 '
+                'WHERE id=:id AND access_revision<9223372036854775807 RETURNING access_revision'),
+                {'id': account_id}).scalar_one_or_none()
+            if updated is None:
+                raise AccessConflict()
             # Delegation never survives a membership change, including a later
             # regrant of the same role. Grant issuance takes this role lock too.
             connection.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account_id})

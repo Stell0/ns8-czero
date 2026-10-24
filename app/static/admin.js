@@ -3,18 +3,21 @@
 'use strict';
 (() => {
   const el = id => document.getElementById(id);
+  const hasClients = Boolean(el('client-form')), hasWork = Boolean(el('job-form'));
+  const empty = id => el(id)?.replaceChildren();
+  const setValue = (id, value) => { if(el(id))el(id).value=value; };
   let profile = null, clientSeq = 0, jobSeq = 0, scheduleSeq = 0, adminEpoch = 0;
   let jobDetailSeq = 0, scheduleDetailSeq = 0, selectedSchedule = null, pendingJob = null;
   const allowed = () => profile && profile.role === 'admin';
   if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
     ++adminEpoch;++clientSeq;++jobSeq;++scheduleSeq;++jobDetailSeq;++scheduleDetailSeq;
     profile=null;selectedSchedule=null;pendingJob=null;el('admin-workspace').hidden=true;
-    for(const id of ['client-list','job-list','schedule-list','job-handler','schedule-handler'])el(id).replaceChildren();
+    for(const id of ['client-list','job-list','schedule-list','job-handler','schedule-handler'])empty(id);
     el('admin-account').textContent='Space access changed. Choose a permitted space.';
-    for(const id of ['client-status','job-status','schedule-status','job-data','job-runs','schedule-runs','schedule-identity'])el(id).textContent='';
-    for(const id of ['client-name','client-callbacks','job-payload','schedule-name','schedule-payload'])el(id).value='';
+    for(const id of ['client-status','job-status','schedule-status','job-data','job-runs','schedule-runs','schedule-identity'])message(id,'');
+    for(const id of ['client-name','client-callbacks','job-payload','schedule-name','schedule-payload'])setValue(id,'');
   });
-  const message = (id, text) => { el(id).textContent = text; };
+  const message = (id, text) => { if(el(id))el(id).textContent = text; };
   const jsonObject = text => {
     const value = JSON.parse(text);
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Enter a JSON object.');
@@ -40,7 +43,7 @@
         el('admin-workspace').hidden = true;
         el('admin-signin').hidden = false;
         message('admin-account', 'Access changed. Sign in again or ask an Admin.');
-        for (const id of ['client-list', 'job-list', 'schedule-list']) el(id).replaceChildren();
+        for (const id of ['client-list', 'job-list', 'schedule-list']) empty(id);
         for (const id of ['job-data', 'job-runs', 'schedule-runs']) message(id, '');
       }
       const errors = {
@@ -74,7 +77,7 @@
         const details = document.createElement('pre');
         details.textContent = JSON.stringify({client_id: client.client_id, redirect_uris: client.redirect_uris, allowed_scopes: client.allowed_scopes}, null, 2);
         row.append(details);
-        const toggle = button(client.enabled ? 'Disable client' : 'Enable client', async () => {
+        const toggle = button(client.enabled ? 'Disable application for everyone' : 'Enable application for everyone', async () => {
           if (toggle.disabled || !allowed()) return;
           toggle.disabled = true;
           try {
@@ -140,9 +143,9 @@
     } catch (error) { if (seq === scheduleDetailSeq) message('schedule-status', error.message); }
   }
   for (const [id, action] of [['refresh-clients', clients], ['refresh-jobs', jobs], ['refresh-schedules', schedules]]) {
-    el(id).addEventListener('click', action);
+    el(id)?.addEventListener('click', action);
   }
-  el('client-form').addEventListener('submit', async event => {
+  el('client-form')?.addEventListener('submit', async event => {
     event.preventDefault(); const save = el('approve-client');
     if (save.disabled || !allowed()) return;
     const name = el('client-name').value, callbacks = el('client-callbacks').value;
@@ -156,7 +159,7 @@
     } catch (error) { message('client-status', error.message); }
     finally { save.disabled = false; }
   });
-  el('job-form').addEventListener('submit', async event => {
+  el('job-form')?.addEventListener('submit', async event => {
     event.preventDefault(); const save = el('enqueue-job');
     if (save.disabled || !allowed()) return;
     const selection = jobDetailSeq;
@@ -173,7 +176,7 @@
     } catch (error) { message('job-status', inputError(error)); }
     finally { save.disabled = false; }
   });
-  el('schedule-form').addEventListener('submit', async event => {
+  el('schedule-form')?.addEventListener('submit', async event => {
     event.preventDefault(); const save = el('create-schedule');
     if (save.disabled || !allowed()) return;
     const selection = scheduleDetailSeq;
@@ -187,7 +190,7 @@
     } catch (error) { message('schedule-status', inputError(error)); }
     finally { save.disabled = false; }
   });
-  el('schedule-edit').addEventListener('submit', async event => {
+  el('schedule-edit')?.addEventListener('submit', async event => {
     event.preventDefault(); const save = el('save-schedule');
     if (save.disabled || !selectedSchedule || !allowed()) return;
     const seq = scheduleDetailSeq, id = selectedSchedule.id;
@@ -207,13 +210,14 @@
       if (!response.ok) throw new Error('Sign in with an admitted application Admin account.');
       const current=await response.json();if(captured!==adminEpoch)return;profile=current;
       message('admin-account', 'Signed in as ' + profile.username + ' · ' + profile.role);
-      if (!allowed()) { message('admin-account', 'Only application Admins can manage clients and tasks.'); return; }
+      if (!allowed()) { message('admin-account', 'Only application Admins can manage these settings.'); return; }
       el('admin-workspace').hidden = false;
-      await Promise.all([clients(), jobs(), schedules()]);
+      await Promise.all([...(hasClients ? [clients()] : []), ...(hasWork ? [jobs(), schedules()] : [])]);
+      if (!hasWork) return;
       const result = await api('jobs/handlers');
       if (!allowed()) return;
       for (const id of ['job-handler', 'schedule-handler']) {
-        el(id).replaceChildren();
+        empty(id);
         for (const handler of result.handlers) {
           const option = document.createElement('option'); option.value = handler.name;
           option.textContent = handler.name + ' · ' + handler.timeout_seconds + ' second limit'; el(id).append(option);

@@ -291,6 +291,9 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
     def rejected(request, error):
         return JSONResponse({'detail':'invalid_consent'}, status_code=400, headers={'Cache-Control':'no-store'})
     from czero_app.onboarding import install_onboarding_routes
+    from czero_app.workspace_access import install_workspace_routes
+    install_workspace_routes(app, grants, read_context, write_context, cimd)
+
     install_onboarding_routes(app, onboarding, cimd, auth, read_context, write_context,
                               browser_session, static_dir)
     return grants, consent

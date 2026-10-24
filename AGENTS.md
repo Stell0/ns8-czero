@@ -1,5 +1,40 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+## People-first access implementation — 24 October 2026
+
+The operator approved the complete design in PLAN. Work is isolated on
+feat/people-first-access from frozen PR33 source4d61cf2; PR33 and the dedicated
+installation remain unchanged. The current installation is frozen PR33 source
+4d61cf2 app0.51/Core0.32/schema0020; full40014653046 and server acceptance pass,
+while actual ChatGPT reuse beyond24h and human review remain pending. Older
+fa64 installed-runtime statements below are predecessor checkpoints.
+Core0.33/schema0021 adds safe request IDs and
+account access revisions, first-party bounded Admin summaries, exact decline,
+request-bound reuse of CIMD approval and per-grant disconnect. Preserve default
+verified Shared Reader admission, explicit blocks, independent OAuth scopes,
+owner protection and protected-space boundaries. Application adoption follows
+verified immutable Core publication: core-v0.33.0 at ec2ac4f, full40082329366
+and publisher40086544147 pass with independently audited native/artifact evidence.
+The app pins its released tag/lock; final app native/live acceptance remains
+pending. The initial local released-Core whole matrix passes1959 with no database
+skips; Node24 controllers178, schema/shell/docs and21 Robot dry runs pass.
+A later native fixture cleanup correction restores original discovery even on
+browser failure; its full released-Core rerun passes1961 without skips. Keep
+the first71b3d96 acceptance run intact and require fresh exact CI for this fix.
+Freeze all three genuine installed4d61cf2 images for upgrade coverage,
+including existing background grant rows and rotating refresh. No model quota retry, schedule or stable
+release is authorized. Record actual UI/native/live results before acceptance.
+
+The application transport/UI now has one people/application table and separate
+/admin/advanced, /admin/spaces and /admin/work surfaces. Preserve mount prefixes
+with the subpages' base URI. Legacy Account links to access instead of editing
+membership; ordinary self-service connections stay unchanged. Native browser
+fixtures test a fixed public example-only JSON metadata document through actual
+production DNS/TLS/MIME checks, plus exact disconnect and block/restart/unblock.
+Keep test-workspace-client-v1 fixture branch unchanged. Do not use raw GitHub
+content as a CIMD endpoint: its text/plain response correctly fails MIME checks.
+
+
 Read [README](README.md), the active milestone in [PLAN](PLAN.md) and the relevant repository skill. Current user/operator instructions supersede historical workflow statements. Detailed past decisions and measured evidence live in [archived agent conventions](docs/history/AGENTS.md) and [archived milestones](docs/history/PLAN.md); consult the relevant topic when needed.
 
 ## Current work and preservation
@@ -11,6 +46,17 @@ M19 runtime source `38a8654` is accepted at app0.49.0/Core0.31.0/schema0018; rev
 M21 changes guides, five developer skills, three end-user skills, offline package generation and installed Use with AI presentation. Core/schema/OAuth/dependencies remain unchanged. Actual packaged-skill use on ChatGPT web is required for both private Plugin Creator and managed GitHub import; desktop/SDK/manifest checks do not establish that gate. Missing account/workspace features leave acceptance incomplete. No stable module tag, directory submission or workspace-wide rollout is authorized.
 
 The operator authorizes the M21 self-service follow-up in PLAN: generated installed skill/plugin downloads, visible OAuth approval, default verified-user Shared read admission and persistent administrator blocks. Earlier M21 Core-unchanged/offline-only constraints are superseded for this scoped work. PR31 main `0040c89` and its clean-start `3730188` installation are historical checkpoints; current PR32/deployed `fa64f3d` identities are frozen above and in PLAN. Preserve all original dirty work.
+
+Administration subpages use a base URI. Skip links must retain the current
+document and selected-space query; shared navigation corrects links resolved
+against another local page. Preserve the stronger resolved URL/target guard and
+actual native Tab/Enter/main-focus checks. An unresolved fragment attribute is
+not sufficient evidence. First source71b3d96 has Debian21 passes but Rocky24
+passes/two failures/three expected skips; all ten access stages pass and all
+three query artifacts are clean, but full acceptance fails. Discovery cleanup
+is corrected in45f9163. The skip fix passes1963 full released-Core cases with
+no database skips and185 Node24 checks; require its own fresh exact-source
+CI/images/native/live acceptance before any deployment or promotion.
 
 ## Responsibilities and routing
 

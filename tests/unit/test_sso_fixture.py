@@ -250,7 +250,7 @@ def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeyp
 def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatch, accessibility_measurement):
     calls=[]
     browser=SimpleNamespace(get_text=lambda selector:json.dumps({'id':'00000000-0000-4000-8000-000000000001','state':'succeeded'}),
-        evaluate_javascript=accessibility_measurement)
+        evaluate_javascript=accessibility_measurement,get_url=lambda:'https://czero7.test/admin/work')
     library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
     library._verify_admin_controls(browser,lambda name,*args:calls.append((name,args)),'admin','czero7.test')
     assert ('Select Options By',('#job-handler','value','health')) in calls
@@ -259,7 +259,7 @@ def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatc
     for role in ('reader','editor'):
         denied=[]
         library._verify_admin_controls(browser,lambda name,*args:denied.append((name,args)),role,'czero7.test')
-        assert ('Wait For Elements State',('#admin-workspace','hidden')) in denied
+        assert ('Wait For Elements State',('#access-workspace','hidden')) in denied
         assert all(name not in ('Click','Fill Text') for name,_ in denied)
 
 
@@ -308,15 +308,17 @@ def test_existing_sso_fixture_requires_exact_host_provider_and_valid_tls(tmp_pat
 
 
 @pytest.mark.parametrize('stage,expected_app,expected_core',[
-    ('seed','0.50.0','0.31.1'),('verify','0.51.0','0.32.0')])
+    ('seed','0.51.0','0.32.0'),('verify','0.52.0','0.33.0')])
 def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,stage,expected_app,expected_core):
     calls,levels,network = [],[],[]
     def execute(command,**options):
         calls.append(command)
-        return ('','',0) if options.get('return_stderr') else ('',0)
+        return ('C0 predecessor background: '+json.dumps({'stage':stage,'verified':True}),'',0) if options.get('return_stderr') else ('',0)
     ssh = SimpleNamespace(execute_command=execute)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh)
-    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level: levels.append(level) or 'INFO')
+    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level: levels.append(level) or ('NONE' if level=='INFO' else 'INFO'))
+    monkeypatch.setattr(BuiltIn,'log',lambda *args:None)
+    monkeypatch.setattr(BuiltIn,'log_to_console',lambda *args:None)
     waits=[]
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,*args: waits.append(args))
     library = runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
@@ -325,5 +327,36 @@ def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,st
     assert waits == [('Wait Until Keyword Succeeds','30s','2s','Check application route',expected_app,'czero7.test',expected_core)]
     assert network == ([(ssh,'czero7')] if stage=='verify' else [])
     admission = ' --reader-admission' if stage=='seed' else ''
-    assert calls == ['python3 /tmp/profile_fixture.py '+stage+admission,'python3 /tmp/oidc_fixture.py check-logs czero7']
-    assert levels == ['NONE','INFO']
+    assert calls == ['python3 /tmp/profile_fixture.py '+stage+admission+' --background-module czero7','python3 /tmp/oidc_fixture.py check-logs czero7']
+    assert levels == ['NONE','INFO','NONE','INFO']
+
+
+@pytest.mark.parametrize('original', [False, True])
+def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, original):
+    import shlex
+    changed=[]
+    def execute(command, **options):
+        if '/get-configuration' in command:
+            return json.dumps({'cimd_enabled':original}),0
+        if '/configure-module' in command:
+            args=shlex.split(command)
+            changed.append(json.loads(args[args.index('--data')+1])['cimd_enabled'])
+            return '',0
+        assert command == 'python3 /tmp/access_fixture.py czero7 prepare'
+        return 'C0 workspace access: '+json.dumps({'phase':'prepare','fresh_reader':True,'pending_request':True}),'',0
+    monkeypatch.setattr(BuiltIn,'get_library_instance',lambda *args:SimpleNamespace(execute_command=execute))
+    monkeypatch.setattr(BuiltIn,'log_to_console',lambda *args:None)
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    def fail_browser(*args):raise AssertionError('Forced browser stop')
+    with pytest.raises(AssertionError,match='Forced browser stop'):
+        library._verify_people_access(None,fail_browser,'czero7.test','czero7')
+    assert changed == [True,original]
+
+
+@pytest.mark.parametrize('after', ['https://c0.test/?space_id=selected#main-content',
+    'https://c0.test/admin/spaces?space_id=other#main-content'])
+def test_native_skip_guard_rejects_page_or_space_changes(after):
+    urls=iter(['https://c0.test/admin/spaces?space_id=selected',after])
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    with pytest.raises(AssertionError,match='Skip link changed page or selected space'):
+        library._verify_skip_link(SimpleNamespace(get_url=lambda:next(urls)),lambda *args:None)

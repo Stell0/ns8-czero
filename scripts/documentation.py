@@ -11,7 +11,7 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDES = ('installation-candidate', 'index', 'user-guide', 'administration', 'chatgpt', 'plugin',
-          'development', 'reference', 'release-readiness', 'ci-policy',
+          'development', 'reference', 'workspace-access', 'release-readiness', 'ci-policy',
           'tool-evaluations', 'retrieval-benchmark', 'c0-agent-memory-baseline',
           'm14-readiness', 'm14-release-notes')
 MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',

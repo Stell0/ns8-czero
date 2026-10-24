@@ -66,10 +66,58 @@ def predecessor(stage, *, reader_admission=False):
     owner.logout(me)
 
 
+def predecessor_background(module_id, stage):
+    """Prove exact pre-migration background authority, then clean only its client."""
+    from oidc_probe import Browser
+    from oauth_fixture import seed_persistence, verify_persistence
+    from persistent_fixture import issue, native
+    assert stage in ('seed', 'verify')
+    personas = json.loads((STATE / 'personas.json').read_text())
+    assert personas['host'].endswith('.test'), 'Background predecessor requires a disposable hostname'
+    browser = Browser('https://' + personas['host'])
+    profile = browser.login('c0owner', personas['password'])
+    filename = 'predecessor-background.json'
+    def create(active, actor, client):
+        return issue(active, actor, client, personas['password'], offline=True)[0]
+    def read_profile(module, origin, pair):
+        # An independent empty cookie jar proves delegated authority alone.
+        delegated = Browser(origin)
+        status, body, _ = delegated.request('/api/v1/profile',
+            headers={'Authorization':'Bearer ' + pair['access_token']})
+        assert status == 200 and json.loads(body)['id'] == profile['id'], 'Upgraded background read failed'
+    if stage == 'seed':
+        seed_persistence(module_id, browser, profile, issue_fn=create, filename=filename,
+            client_name='Disposable genuine predecessor background connection')
+    else:
+        verify_persistence(module_id, browser, profile, filename=filename, sdk_fn=read_profile)
+    value = json.loads((STATE / filename).read_text())
+    assert len(value['rows']['grants']) == 1
+    grant = value['rows']['grants'][0]
+    assert grant['persistent'] is True and grant['expires_at'] is None and grant['native_authority_id']
+    if stage == 'verify':
+        # Exact-row comparison and successful rotating refresh have completed.
+        client = value['client']
+        assert browser.api('/api/v1/oauth/clients/' + client['client_id'],
+            {'enabled':False, 'expected_revision':client['revision']}, 'PUT', profile['csrf_token'])[0] == 200
+        assert Browser(browser.origin).request('/api/v1/profile',
+            headers={'Authorization':'Bearer ' + value['pair']['access_token']})[0] == 401
+        assert native(module_id, {'operation':'revoke', 'id':grant['native_authority_id']}) == {'provider_revoked':True}
+    print('C0 predecessor background: ' + json.dumps({'stage':stage, 'verified':True}, sort_keys=True))
+
+
 if __name__ == '__main__':
     try:
-        assert len(sys.argv) in (2,3) and (len(sys.argv)==2 or sys.argv[2]=='--reader-admission')
-        predecessor(sys.argv[1], reader_admission=len(sys.argv)==3)
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument('stage', choices=('seed','verify'))
+        parser.add_argument('--reader-admission', action='store_true')
+        parser.add_argument('--background-module')
+        args = parser.parse_args()
+        if args.background_module and args.stage == 'verify':
+            predecessor_background(args.background_module, args.stage)
+        predecessor(args.stage, reader_admission=args.reader_admission)
+        if args.background_module and args.stage == 'seed':
+            predecessor_background(args.background_module, args.stage)
         print('Disposable genuine predecessor profile identity checks passed')
     except Exception as error:
         print(str(error) if isinstance(error, AssertionError) else type(error).__name__, file=sys.stderr)

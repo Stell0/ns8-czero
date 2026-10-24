@@ -1,5 +1,186 @@
 # C0 roadmap and implementation status
 
+## Operator priority — people-first workspace access (24 October 2026)
+
+## Approved people-first Workspace Access page
+
+Status: approved by operator on 24 October 2026; implementation in isolated feat/people-first-access. No live changes yet.
+
+Current dedicated runtime remains frozen PR33 source4d61cf2, app0.51/Core0.32/schema0020,
+with exact full40014653046 and server acceptance recorded in PR33. Operator
+ChatGPT/background reuse beyond24h and human review remain pending; PR33 is still
+open. Its deployed images are not changed by this access-page implementation.
+Older fa64 installed-runtime statements below describe the prior checkpoint.
+Inspected: verified main d4a97349e8e7aa83789b82a78eccbc075c754e84 and pending deployed persistent-connection source 4d61cf2c6ab6e2f175297272073d75efce55bec4 (PR33 still open). Preserve PR33 source, installation, its outstanding client acceptance and all earlier worktrees. Implement separately after design agreement; do not add these changes to frozen PR33.
+
+## Existing model
+
+- AccessService owns persisted application roles, verified identity display metadata and explicit account blocks. Verified new users receive Shared Reader admission in the application. A block survives renewed/renamed sign-ins. The configured owner is always Admin and cannot be changed/blocked through this service.
+- set_role invalidates every OAuth grant and native authority for the target, even on a same-role call. The UI must skip unchanged saves and warn before real role changes. Regrant does not restore old credentials.
+- ClientOnboardingService holds bounded, signed-in, five-minute requests. Its current admin DTO has username/metadata URL/callback/scopes/approval, but no account ID, full name or safe action handle. There is no Decline operation.
+- CimdClientService performs reviewed exact-metadata/client approval with digest and revision checks. Approval is application-wide for that exact client identity; it is not a user role or consent grant. Reapproval can invalidate that application's connections for other users. Existing UUID clients remain independent.
+- OAuthGrantService exposes only first-party own-account connection listing and disconnect. It cannot currently list/disconnect another user's individual connection as an administrator.
+- OAuth scopes are independent: c0:admin does not imply c0:read or c0:write. Protected-space grants further cap Reader/Editor access; application Admin has implicit access to all spaces.
+
+## Proposed presentation
+
+/admin becomes Workspace access. A pending-request count and jump link precede one main table: Username | Full name | Read | Write | Manage | Status | Actions. Group rows by stable account identity. People with actionable pending requests sort first, then other people by username; each person has a primary row, followed by relevant application/request/connection rows. Show application name beneath the username on those rows. Never merge client identities merely because names match. Unknown/unreviewed application names display Application awaiting review with a hostname as an origin cue, without fetching remote assets. Verified metadata review supplies the name.
+
+Primary person permissions represent current workspace role: Reader=yes/no/no; Editor=yes/yes/no; Admin=yes/yes/yes; Blocked=no/no/no. An explicit Change permissions control offers these three presets rather than implying unsupported arbitrary combinations. The owner is labelled Owner with locked controls. Full name is verified display metadata, with an em dash when absent; it never determines identity or authority.
+
+Application rows distinguish Requested, Consented and Effective using literal labels in each relevant permission cell. A pending request has no effective connection access. A connection's effective capability requires its consented scope AND current application role, and remains subject to the selected space; display a persistent note that the table is workspace-level and protected spaces need separate grants. Never infer broader scopes from Manage. Do not claim provider availability from saved connection metadata.
+
+| Row/state | Meaning | Available actions |
+| --- | --- | --- |
+| Person: Access enabled | Current Reader/Editor/Admin membership, no statement about an application connection | Change permissions; Block user; Details |
+| Person: Owner | Configured immutable application owner | Details |
+| Person: Blocked | Persisted account block; no effective access | Unblock user (explicit role selection); Details |
+| Person: No access | No membership and no explicit block, if a closed-admission Core consumer produces this state | Grant permissions; Block user; Details |
+| Application request: Needs application approval | Exact client/callback not approved | Approve; Decline; Details |
+| Application request: Needs additional application permissions | Client approved but requested scopes exceed its approval | Approve; Decline; Details |
+| Application request: Waiting for user consent | Current exact application/callback/scopes approved; no matching consented connection yet | Details; dismiss the still-pending handoff through Decline if needed |
+| Application connection: Connected | Locally valid, consented grant; show last use and session/background label | Disconnect application connection; Details |
+| Application connection: Needs reconnect | Revoked, expired, policy-invalid or unavailable authority observed during this page session | Details; reconnect guidance; no fabricated durable history |
+
+An expired/declined/disconnected request or grant disappears from refreshed active rows, with a clear action confirmation. Do not invent a permanent disconnected/declined audit ledger where none exists. If a person has both a usable connection and a request for additional permissions, show both so the pending request does not imply that current access stopped. Blocked users' stale requests cannot be approved to bypass the block.
+
+Technical IDs, metadata URLs, callbacks, exact scope names, revisions and timestamps live in Details/Advanced; required application-origin and approval-impact information remains visible in the approval review. Advanced contains manual client configuration, metadata diagnostics and explicitly global Enable/Disable application controls. Protected-space management remains a separate clearly linked page. Jobs and schedules move to a separate Background work page; none are loaded by the access page.
+
+## Action semantics
+
+- Approve opens a focused review with verified application name/origin, requested permissions, current user permissions, selected application permission ceiling and affected-user warning if updating an existing approval. Preserve preview/digest/revision checks, current policy, exact callbacks and post-I/O authorization checks. Approval changes only the exact application approval. It never changes membership, issues tokens, adds scopes to existing tokens, grants protected spaces or automatically approves a blocked person. Preserve earlier approved scopes unless the administrator explicitly edits the application-wide ceiling under Advanced. The requester must continue and explicitly consent. If requested Write/Manage exceeds their role, offer a separate Change permissions action; never silently combine them.
+- Decline cancels only that exact browser-bound pending handoff, after current Admin authorization and CSRF. It does not block the user, disable the application, disconnect an existing connection or prevent a fresh request. A stale/expired request returns a safe refresh-required result. The requester's existing handoff cannot continue after decline.
+- Change permissions changes the person's application Reader/Editor/Admin role through AccessService. Warn that it invalidates all that person's application connections and requires sign-in/consent again. Manage additionally grants application-wide administration and implicit access to every protected space. Unchanged saves do nothing. Use optimistic state checks to reject stale saves.
+- Disconnect application connection deletes only the selected user's exact grant, invalidating its access/refresh credentials. Keep membership, other grants including the same app's separate grants, app approval and space grants. Allow fresh consent later. Do not revoke shared native authority and accidentally break sibling connections.
+- Block user persists the existing explicit block and invalidates all target authority through AccessService. It cannot block the configured owner. Repeated provider sign-in cannot restore admission. Unblock explicitly selects a role and does not restore old connections. Existing protected-space grants retain their current stored policy.
+- Disable application is an Advanced, explicitly global action, distinct from user blocking and per-connection disconnect; enabling later requires fresh consent and does not revive old grants. No action uses the label Revoke.
+
+## Missing API support and proposed additions
+
+1. Extend the Admin account read DTO with explicit block state and a version/state precondition; bound and paginate rather than silently omit people beyond the current default 100. Keep current services and role/scope checks. Add an optional expected-state precondition to role writes without breaking existing callers.
+2. Extend the Admin request DTO with stable account ID, full name, safe opaque request action handle, current role/block state and explicit application approval state. Add a narrow Admin decline method/HTTP endpoint which cancels only that handoff. Do not expose its cookie binding, raw hash, state, PKCE challenge or credentials. A safe handle implementation and any additive persistence requirements must be settled before coding.
+3. Add bounded, first-party Admin connection reads and exact targeted disconnect, reusing OAuthGrantService locking/revocation checks. Return only safe grant summaries, account/client identities, actual scopes and validity/last-use metadata. Existing own-account endpoints keep their behavior; these additions do not automatically become MCP tools. Guard targets by issuer/native client/resource and current persisted Admin authority, with browser Origin/CSRF on writes.
+4. Use existing CIMD preview/approve and manual client APIs, not a new approval engine. Bind any request shortcut to a live request plus verified metadata and expected revision so a stale request cannot broaden approval silently. Clearly report reapproval impact. Do not auto-approve requested Manage or automatically modify roles.
+5. Compose the page from trusted Core summaries; do not implement authorization with browser-only joins. Apply existing lock ordering, transaction rechecks, bounded queries and response-generation/access-loss guards. Concurrent decline/continue, role edits, disconnect/refresh and block/sign-in require one consistent outcome. Audit existing native credential/session validity semantics before choosing the Connected DTO predicate.
+
+## Implementation and acceptance after agreement
+
+Create a dedicated feature worktree; record the final plan in PLAN.md before coding. Reusable read/decline/admin-disconnect/precondition behavior belongs in Core, HTTP/UI in app; no ns8-idp changes. Publish immutable Core only after exact-source local/package/native gates, then pin app dependency/lock and rerun consumer gates. Any required migration is additive and must preserve old identities, grants, blocks, history and settings.
+
+Update README, AGENTS, administrator/user guides and interface documentation. Remove duplicate Admin membership editors from Account or replace them with a link to Workspace access, while preserving ordinary users' own connected-app controls.
+
+Verify real disposable Reader, Editor and Admin browser workflows over native SSO/HTTPS: default Shared Reader; pending approval and decline; independent role elevation versus application approval and explicit consent; read-only token remains read-only after role/approval changes; independent manage-only scopes; exact per-grant disconnect with sibling/other-user positive controls; persistent block across repeated login and restart; explicit unblock without token resurrection; owner protection; Shared/protected-space boundaries; global client-disable distinction; pagination/stale responses/stale saves/CSRF; no jobs/schedules requests from access page; keyboard/accessibility and actual privacy artifacts. Run focused PostgreSQL/HTTP/UI checks then full packaging/JS/schema/shell/both native CI and actual report audits. Existing interactive Playwright and CPU-quota waivers remain unchanged. Supported dedicated-instance deployment/live acceptance follows reviewable exact CI images and preserves unrelated modules and the working connection candidate. No destructive recovery runs live.
+
+## Implementation checkpoint — 24 October
+
+Core0.33/schema0021 is published from immutable source
+`ec2ac4f263a4736a6426c671a0353a4e764509f8`. Its exact
+[full40082329366](https://github.com/Stell0/ns8-czero/actions/runs/40082329366)
+and promotion verifier pass:1936 actual Python/PostgreSQL/packaging cases without
+skips, Debian genuine upgrade21, Rocky installation26/three expected skips,
+eight real browser workflows/privacy guards,28 numeric accessibility contexts,
+three inspected OAuth-query artifacts with zero candidates and five actual
+scan/SBOM pairs. [Publisher40086544147](https://github.com/Stell0/ns8-czero/actions/runs/40086544147)
+completes successfully. Downloaded immutable
+[core-v0.33.0 assets](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.33.0)
+match checksums and every Core Python byte matches the verified source:
+wheel SHA256 `61ccec3abce4216e663251d4502723c02b2819e9e919526e9735fc060bdf8777`,
+archive `13759f5af182819e7b0bc1cc889f89df8e880ad48b57e8e1fa0330219b078c9d`.
+Both supplied distributions install independently and expose the new service
+outside the source tree, without application/NS8 dependencies. Do not replace
+these artifacts. These native results precede the new application UI.
+
+Retained earlier failures are resolved: c01f013 found one genuine schema0015
+legacy account-list regression (1933 passes/one failure);999aada preserves that
+old query and passes1934. Source d6cc0e3 corrects in-progress provider-check
+status and passes1935 locally, but its native40079749606 has one asynchronous
+protected-space UI synchronization failure; it is not accepted. The final app
+waits for the exact selected space before its assertions. Core ec2ac4f also
+preserves the existing configured-owner override when schema0019 left an old
+block marker, without deleting data or changing grants. Its local whole run
+has1935 passes/one five-second statement-timeout setup error under host load;
+the affected24-case SDK group reruns successfully and the exact CI1936-case
+whole matrix passes. Keep failed private evidence; never present failed runs
+as whole-suite passes.
+
+Application0.52 pins the released Core0.33 tag and immutable source in its lock.
+It implements the approved table, browser-only access API and separate
+Advanced/Protected spaces/Background work surfaces. Legacy mounts retain
+first-party access controls without mounting or advertising OAuth/MCP. The
+earlier draft whole matrix passes1936 without skips; later focused transport,
+native and consumer checks pass, and current Node24 controllers pass178.
+The final whole consumer matrix against the actual published wheel passes1959
+without skips in651.65s; current controller checks pass178. Schema
+compilation, individually parsed shell inputs and21 Robot dry runs pass; dry
+runs are not native browser acceptance.
+
+Final native tests freeze all three genuine installed PR33 source4d61cf2
+images, app0.51/Core0.32/schema0020, in upgrade_predecessor.json and Robot.
+They require exact existing background grant/token/code rows, successful
+rotating refresh and a delegated profile read after upgrade, followed by
+isolated client/provider cleanup. Artifact audits additionally require ten
+independent measured access stages: actual approval and decline, one-connection
+disconnect with sibling/other-user controls, persistent blocking across two
+sign-ins and an observed native service restart, unblocking without old-token
+revival, and Reader/Editor/Admin browser permission changes. The two new fixture
+and audit dependencies are explicitly registered for managed consumer delivery.
+No new access-page native or live pass is claimed.
+
+Production MetadataFetcher fetches the fixed public JSON example through real
+public DNS/TLS/MIME validation, digest
+`8f2cafd1a4bfd3c7469bd0f9f59c0c5281c4c26464966ec36c7a43d161337d5b`.
+Keep test-workspace-client-v1 at9fc9594 unchanged. No security-policy weakening
+or live instance/user change has occurred. Final exact-source app CI/images,
+both native distributions, actual report/privacy inspection, supported dedicated
+update/live acceptance and reviewed promotion remain required. PR33 stays open
+and frozen with its separate human/actual-ChatGPT acceptance gates.
+
+### Native findings and corrections
+
+The first application full run
+[40088486541](https://github.com/Stell0/ns8-czero/actions/runs/40088486541)
+at71b3d96 is unaccepted: actual Debian genuine predecessor upgrade21 passes;
+Rocky installation24 passes/two failures/three expected skips. All ten measured
+people-access phases pass independent strict grading, including approval,
+exact decline/disconnect, persistent block across renewed sign-in and an
+observed service restart, unblock without old-token revival and all three
+permission presets. Three actual XML/browser-log query artifacts contain zero
+OAuth-query candidates. Passing those stages does not establish full acceptance.
+
+The subsequent Advanced check fails because the new browser fixture leaves
+discovery enabled before the original disabled-policy check. Source45f9163
+restores the original boolean in finally on both success and failure. Two
+forced-browser-stop regressions and39 existing focused cases pass; its complete
+released-Core matrix passes1961 without skips in609.86s and21 Robot dry runs
+pass. Its full40091589934 remains intact and running; do not cancel it.
+
+A separate protected-space failure is the actual numeric accessibility guard:
+missing_skip_target=1. A subpage base URI plus space-link rewriting can send the
+skip link to another document. The correction preserves the current document,
+selected-space query and legacy prefix in shared navigation. The probe now
+checks the resolved origin/path/query/fragment target instead of only the raw
+fragment attribute. It rejects both another page and another space. Actual
+native Tab/Enter/focus checks cover Advanced, Background work and Protected
+spaces, preserving the existing ordinary-page keyboard check. Current Node24
+checks pass185, focused Python43 and21 Robot dry runs pass; the complete
+released-Core matrix passes1963 without skips in600.14s. Require a fresh
+exact-source full/image/native
+acceptance for this runtime correction. Neither older candidate may be deployed
+or merged. Core0.33 artifacts and the installed PR33 runtime stay unchanged.
+
+## Settled implementation interfaces
+
+Core 0.33 / schema0021 adds c0_accounts.access_revision (monotonic bigint) and a separate random UUID c0_client_onboarding.id. Neither is authority. AccessService keeps legacy set_role behavior; optional expected_revision rejects stale edits and skips unchanged UI saves. WorkspaceAccessService(grants) supplies first-party Admin summaries, bounded account pages (25, max100), per-person request/connection pages (10, max50), request-bound preview/approval and decline, and exact per-grant disconnect. All pages report has_more. Reads expose locally observed connection state only; stale provider verification is renewal_required, not a false assertion of successful access or permanent disconnection. No provider network call occurs in overview transactions. Existing application/client scope contracts remain unchanged.
+
+Routes: GET /api/v1/access/workspace?offset=&limit=; GET /api/v1/access/accounts/{id}/applications?offset=&limit=; POST /api/v1/access/requests/{id}/preview; POST /api/v1/access/requests/{id}/approve; DELETE /api/v1/access/requests/{id}; DELETE /api/v1/access/connections/{id}. Existing PUT account role gains optional expected_revision. The request approval reuses CimdService's same transaction implementation, verifies the still-live request and account after I/O, preserves existing approved scopes and rejects disabled clients. Approval of a blocked account fails. No new MCP tool or discovery default is added.
+
+UI routes: /admin (access and lazy Advanced), /admin/spaces, /admin/work (jobs/schedules). Preserve existing manual client and space/task controllers on their separate surfaces. Account links to Workspace access instead of duplicating role edits; self-service connection controls remain unchanged. App adoption follows verified immutable Core publication, not an unreviewed dependency replacement. PR33 stays frozen; this stacked branch cannot merge before its predecessor and own gates.
+
+
+---
+
+## Earlier roadmap checkpoint
+
 ## Operator priority — persistent OAuth connections (23 October 2026)
 
 The operator authorizes unattended ChatGPT maintenance connections after reviewing token lifetime and revocation tradeoffs. Keep five-minute access tokens and rotating refresh credentials; new explicitly consented background connections have a thirty-day inactivity deadline and no fixed maximum lifetime. Normal browser sessions retain their current bounds. Existing grants are never silently upgraded. Scheduling or running knowledge maintenance is outside this implementation; actual multi-day ChatGPT scheduling remains acceptance work.

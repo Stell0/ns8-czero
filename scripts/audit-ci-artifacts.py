@@ -16,6 +16,7 @@ from cimd_recovery_evidence import require_stages as require_cimd_recovery
 from offline_provider_probe import validate as validate_offline_provider
 from persistent_fixture import validate as validate_persistent_connection
 from persistent_fixture import require_recovery as require_persistent_recovery
+from workspace_access_evidence import require_stages as require_workspace_access
 
 
 REQUIRED_UI = {
@@ -124,11 +125,17 @@ def audit_reports(directory, source, images, logs):
     for value in measurements:
         assert all(type(v) is int and v >= 0 for k, v in value.items() if k not in {'page', 'role'})
         assert all(v == 0 for k, v in value.items() if k.startswith(('unnamed_', 'missing_')))
+    predecessor_background = marker_values(logs, 'C0 predecessor background: ')
+    assert sorted(predecessor_background, key=lambda value:value['stage']) == [
+        {'stage':'seed','verified':True}, {'stage':'verify','verified':True}], 'Predecessor background upgrade was not verified'
+    assert all(type(value['verified']) is bool for value in predecessor_background)
+    access = require_workspace_access(marker_values(logs, 'C0 workspace access: '))
     return {'source': source, 'accepted': True, 'reports': summaries, 'browser_workflows': 8,
             'privacy_guards': privacy, 'query_artifacts': audited, 'oauth_query_candidates': 0,
             'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
             'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery,
-            'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery}
+            'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery,
+            'workspace_access_measurements':access,'predecessor_background':predecessor_background}
 
 
 def main():

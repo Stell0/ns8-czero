@@ -31,7 +31,7 @@ function documentFixture(options = {}) {
     getElementById(id) { return ids[id] || null; },
     querySelector(selector) {
       if (selector === 'main') return options.noMain ? null : {};
-      if (selector === '.skip-link') return element('A', {attributes: {href: options.badTarget ? '#missing' : '#main-content'}});
+      if (selector === '.skip-link') return element('A', {attributes: {href: options.skipTarget || (options.badTarget ? '#missing' : '#main-content')}});
       return options.noNavigation ? null : {};
     },
     querySelectorAll(selector) {
@@ -39,10 +39,11 @@ function documentFixture(options = {}) {
       return selector === 'a[href]' ? links : controls;
     },
   };
+  document.baseURI=options.baseURI;
   return {document, controls, links};
 }
 function run(fixture) {
-  const check = vm.runInNewContext(source, {document: fixture.document,
+  const check = vm.runInNewContext(source, {document: fixture.document, URL, window:{location:{href:'https://c0.example.test/admin/spaces?space_id=selected'}},
     getComputedStyle: () => ({visibility: 'visible'})});
   return JSON.parse(JSON.stringify(check()));
 }
@@ -88,9 +89,22 @@ test('survives Robot Browser function conversion with leading license comments',
   // A leading line comment after return causes automatic semicolon insertion.
   const fixture = documentFixture();
   const check = vm.runInNewContext('new Function(' + JSON.stringify('return ' + source) + ')()',
-    {document: fixture.document, getComputedStyle: () => ({visibility: 'visible'})});
+    {document: fixture.document, URL, window:{location:{href:'https://c0.example.test/admin/spaces?space_id=selected'}}, getComputedStyle: () => ({visibility: 'visible'})});
   assert.equal(typeof check, 'function');
   assert.equal(check().unnamed_controls, 0);
   const unwrapped = source.slice(source.indexOf('\n') + 1, source.lastIndexOf('\n)'));
   assert.equal(vm.runInNewContext('new Function(' + JSON.stringify('return ' + unwrapped) + ')()'), undefined);
+});
+
+
+test('accepts an explicit skip destination only on the same document and query',()=>{
+  assert.equal(run(documentFixture({baseURI:'https://c0.example.test/',skipTarget:'https://c0.example.test/admin/spaces?space_id=selected#main-content'})).missing_skip_target,0);
+});
+for(const [title,options] of [
+  ['fragment resolved against another base document',{baseURI:'https://c0.example.test/'}],
+  ['another page',{skipTarget:'/wiki?space_id=selected#main-content'}],
+  ['another space selection',{skipTarget:'?space_id=other#main-content'}],
+  ['an external origin',{skipTarget:'https://other.example.test/admin/spaces?space_id=selected#main-content'}],
+])test('rejects a skip link to '+title,()=>{
+  assert.equal(run(documentFixture(options)).missing_skip_target,1);
 });

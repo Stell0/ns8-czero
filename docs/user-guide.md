@@ -2,7 +2,7 @@
 
 ## Your account and space
 
-Open the instance URL provided by your administrator and sign in with your domain account. The C0 application account is separate from NS8 cluster administration. A new verified account receives Reader access to Shared. If access is denied, ask the C0 owner/Admin to check People and permissions for an explicit block or retained earlier denial; repeat login after a role change. Approval of a ChatGPT connection does not grant membership.
+Open the instance URL provided by your administrator and sign in with your domain account. The C0 application account is separate from NS8 cluster administration. A new verified account receives Reader access to Shared. If access is denied, ask the C0 owner/Admin to check Workspace access for an explicit block or retained earlier denial; repeat login after a role change. Approval of a ChatGPT connection does not grant membership.
 
 Use the space picker to choose the intended knowledge space. Shared is the legacy common space. Protected spaces need explicit grants, capped by your application role; application Admins can access all spaces. A failed or revoked selection is not permission to switch to Shared. Check the account and space again when changing connections.
 
@@ -57,3 +57,5 @@ Use your owner/Editor account and choose the intended authorized space. This sma
 5. After [connecting ChatGPT](chatgpt.md), ask it to read that article, find the original demonstration-gauge passage in the same space and cite its immutable evidence. Make no changes. Confirm the answer says that this is synthetic data and includes the actual source identity.
 
 For a maintenance test, explicitly request one small edit to this owned page after the Admin approves write scope and you consent. Read it back and check its new revision/history. A Reader connection should explain denial and leave content unchanged. Keep the fixture available for repeat/renewal tests; archive the test page through its normal controls when finished rather than deleting retained evidence.
+
+Administrators use [Workspace access](workspace-access.md) for people, application requests and individual connections. Application approval does not give a user extra permissions; they must still consent.

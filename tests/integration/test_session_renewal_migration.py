@@ -79,7 +79,7 @@ def test_0016_upgrade_preserves_legacy_browser_grants_and_all_original_columns(m
             assert oauth_fixture.snapshot('czero901', client['client_id']) == native_before
             with database.engine.connect() as c:
                 assert snapshot(c)==before
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0020_persistent_oauth'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0021_workspace_access'
                 assert c.execute(text('SELECT count(*) FROM c0_native_authority')).scalar_one()==0
                 assert c.execute(text('SELECT native_authority_id FROM c0_sessions')).scalar_one() is None
                 assert c.execute(text('SELECT native_authority_id FROM c0_oauth_grants')).scalar_one() is None

@@ -428,3 +428,30 @@ The trusted `CimdPolicyService(database)` synchronizes installation policy even
 when authentication is unavailable. It never needs a synthetic account or
 provides administrator approval. `CimdService(access)` adds account-authorized
 approval and consent verification on the same persisted policy.
+
+## Workspace access administration (0.33.0)
+
+`WorkspaceAccessService(grants)` composes existing access, onboarding, CIMD and
+OAuth grant services for a first-party administrator. `overview(actor, limit=25,
+offset=0)` returns safe account summaries, explicit block state, permission
+revision and pending count. `applications(actor, account_id, limit=10, offset=0)`
+returns exact request/connection summaries with `has_more`. Requested scopes,
+consented scopes and current effective capabilities remain distinct. Manage
+scope implies neither Read nor Write. These summaries do not contact providers
+or extend authority; a stale provider proof is `renewal_required`.
+
+`decline(actor, request_id)` cancels one five-minute onboarding handoff;
+`disconnect(actor, grant_id)` removes one matching connection, waiting for
+in-flight operations without revoking sibling native authority. Request-bound
+`approve(...)` uses the existing CIMD transaction, rechecks the current user,
+policy and request, preserves prior allowed scopes and rejects disabled clients.
+It changes no membership and issues no credentials. All these methods require a
+current first-party Admin; they are not newly exposed MCP operations.
+
+`AccessService.set_role(..., expected_revision=n)` optionally rejects stale
+edits with `AccessConflict`, including role changes followed by a return to the
+same role. An unchanged revision-bound save does nothing. Legacy calls retain
+their existing invalidation behavior. Real changes invalidate the target's
+connections. Blocking remains explicit and persistent; the owner cannot be
+blocked. Schema0021 adds only an account access revision and a separate random
+request UUID; browser request secrets and all original authority remain intact.

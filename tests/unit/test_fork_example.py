@@ -68,3 +68,14 @@ def test_generated_fork_has_complete_native_cimd_dependencies(tmp_path):
                  'imageroot/actions/configure-module/14validate-cimd',
                  'imageroot/actions/configure-module/39persist-cimd'):
         assert (destination / name).is_file() and (destination / name).stat().st_mode & 0o111
+
+
+def test_generated_consumer_includes_workspace_audit_dependencies(tmp_path):
+    destination=tmp_path/'consumer'
+    EXAMPLE.create(destination,ROOT)
+    validator=destination/'tests/workspace_access_evidence.py'
+    assert validator.is_file()
+    import runpy
+    module=runpy.run_path(str(validator))
+    assert 'blocked_after_restart' in module['EXPECTED']
+    assert (destination/'tests/access_fixture.py').is_file()

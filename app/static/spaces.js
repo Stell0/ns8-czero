@@ -18,14 +18,14 @@
   function apiURL(path) {
     const value=path.startsWith('./api/v1/')?path:'./api/v1/'+path;
     if(!supplied)return value;
-    const url=new URL(value,window.location.href), base=new URL('./api/v1/',window.location.href);
+    const url=new URL(value,document.baseURI || window.location.href), base=new URL('./api/v1/',document.baseURI || window.location.href);
     const local=url.pathname.slice(base.pathname.length);
     if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:me|wiki|sources|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
     return url.pathname+url.search+url.hash;
   }
   function pageURL(value) {
     if(!supplied)return value;
-    const url=new URL(value,window.location.href), base=new URL('./',window.location.href);
+    const url=new URL(value,document.baseURI || window.location.href), base=new URL('./',document.baseURI || window.location.href);
     if(url.origin!==base.origin || !url.pathname.startsWith(base.pathname) ||
        !['','wiki','sources','objects','search','agents','admin'].includes(url.pathname.slice(base.pathname.length)) || url.searchParams.has('space_id'))return value;
     url.searchParams.set('space_id',identifier);return url.pathname+url.search+url.hash;
