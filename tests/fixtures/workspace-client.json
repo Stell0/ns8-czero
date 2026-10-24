@@ -1,0 +1,9 @@
+{
+  "client_id": "https://cdn.jsdelivr.net/gh/Stell0/ns8-czero@test-workspace-client-v1/tests/fixtures/workspace-client.json",
+  "client_name": "C0 disposable access browser",
+  "redirect_uris": ["https://client.example.test/callback"],
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "scope": "c0:read c0:write"
+}
