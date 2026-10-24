@@ -43,3 +43,27 @@ C0 stores and serves knowledge, evidence, immutable history, deterministic jobs 
 Optional embeddings/scoring can incur configured external-provider effects. Text search remains usable independently. Retrieval/provider quality needs corpus-specific evaluation. Session policy, safe metadata fetching and retained evidence contracts remain enforced by Core/application code, not by plugin instructions.
 
 See [Administration](administration.md) for lifecycle/security operations, [Development](development.md) for extension boundaries and the [historical evidence](history/PLAN.md) for executed compatibility limits.
+
+## First-party workspace access
+
+The people-first page uses browser-only Admin routes under `/api/v1/access`.
+`GET /workspace?limit=25&offset=0` returns safe account summaries, permission
+revisions and the active request count. `GET /accounts/{id}/applications` uses
+limit10 (maximum50) and offset; both pages return `has_more`. Account pages allow
+maximum100. These summaries confer no authority and make no provider request.
+
+`POST /requests/{id}/preview` fetches verified metadata after authorization and
+rechecks the request/current account after I/O. `POST /requests/{id}/approve`
+requires its reviewed digest, explicit allowed scopes and existing client ID /
+expected revision when reapproving. Core preserves earlier approved scopes and
+checks the still-live exact callback/request and current block/policy.
+`DELETE /requests/{id}` declines only that handoff; `DELETE /connections/{id}`
+disconnects only the exact grant within the configured issuer/native/resource.
+Writes require the browser cookie, same-origin Origin and CSRF. Native and
+delegated bearer credentials cannot use these new routes. They add no MCP tools.
+
+The existing `PUT /accounts/{id}` accepts optional `expected_revision`. A stale
+revision returns409; unchanged revision-bound saves do not invalidate authority.
+Real role changes and persistent blocks retain existing invalidation semantics.
+Legacy account-list shape and legacy callers remain unchanged. Schema0021 adds
+only `c0_accounts.access_revision` and a distinct random onboarding request UUID.

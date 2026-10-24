@@ -4,13 +4,32 @@
 
 The operator approved the complete design in PLAN. Work is isolated on
 feat/people-first-access from frozen PR33 source4d61cf2; PR33 and the dedicated
-installation remain unchanged. Core0.33/schema0021 adds safe request IDs and
+installation remain unchanged. The current installation is frozen PR33 source
+4d61cf2 app0.51/Core0.32/schema0020; full40014653046 and server acceptance pass,
+while actual ChatGPT reuse beyond24h and human review remain pending. Older
+fa64 installed-runtime statements below are predecessor checkpoints.
+Core0.33/schema0021 adds safe request IDs and
 account access revisions, first-party bounded Admin summaries, exact decline,
 request-bound reuse of CIMD approval and per-grant disconnect. Preserve default
 verified Shared Reader admission, explicit blocks, independent OAuth scopes,
 owner protection and protected-space boundaries. Application adoption follows
-verified immutable Core publication. No model quota retry, schedule or stable
+verified immutable Core publication: core-v0.33.0 at ec2ac4f, full40082329366
+and publisher40086544147 pass with independently audited native/artifact evidence.
+The app pins its released tag/lock; final app native/live acceptance remains
+pending. The final local released-Core whole matrix passes1959 with no database
+skips; Node24 controllers178, schema/shell/docs and21 Robot dry runs pass.
+Freeze all three genuine installed4d61cf2 images for upgrade coverage,
+including existing background grant rows and rotating refresh. No model quota retry, schedule or stable
 release is authorized. Record actual UI/native/live results before acceptance.
+
+The application transport/UI now has one people/application table and separate
+/admin/advanced, /admin/spaces and /admin/work surfaces. Preserve mount prefixes
+with the subpages' base URI. Legacy Account links to access instead of editing
+membership; ordinary self-service connections stay unchanged. Native browser
+fixtures test a fixed public example-only JSON metadata document through actual
+production DNS/TLS/MIME checks, plus exact disconnect and block/restart/unblock.
+Keep test-workspace-client-v1 fixture branch unchanged. Do not use raw GitHub
+content as a CIMD endpoint: its text/plain response correctly fails MIME checks.
 
 
 Read [README](README.md), the active milestone in [PLAN](PLAN.md) and the relevant repository skill. Current user/operator instructions supersede historical workflow statements. Detailed past decisions and measured evidence live in [archived agent conventions](docs/history/AGENTS.md) and [archived milestones](docs/history/PLAN.md); consult the relevant topic when needed.

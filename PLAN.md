@@ -1,8 +1,16 @@
-# Operator priority — people-first workspace access (24 October 2026)
+# C0 roadmap and implementation status
 
-# Proposed people-first Workspace Access page
+## Operator priority — people-first workspace access (24 October 2026)
+
+## Approved people-first Workspace Access page
 
 Status: approved by operator on 24 October 2026; implementation in isolated feat/people-first-access. No live changes yet.
+
+Current dedicated runtime remains frozen PR33 source4d61cf2, app0.51/Core0.32/schema0020,
+with exact full40014653046 and server acceptance recorded in PR33. Operator
+ChatGPT/background reuse beyond24h and human review remain pending; PR33 is still
+open. Its deployed images are not changed by this access-page implementation.
+Older fa64 installed-runtime statements below describe the prior checkpoint.
 Inspected: verified main d4a97349e8e7aa83789b82a78eccbc075c754e84 and pending deployed persistent-connection source 4d61cf2c6ab6e2f175297272073d75efce55bec4 (PR33 still open). Preserve PR33 source, installation, its outstanding client acceptance and all earlier worktrees. Implement separately after design agreement; do not add these changes to frozen PR33.
 
 ## Existing model
@@ -63,6 +71,70 @@ Update README, AGENTS, administrator/user guides and interface documentation. Re
 
 Verify real disposable Reader, Editor and Admin browser workflows over native SSO/HTTPS: default Shared Reader; pending approval and decline; independent role elevation versus application approval and explicit consent; read-only token remains read-only after role/approval changes; independent manage-only scopes; exact per-grant disconnect with sibling/other-user positive controls; persistent block across repeated login and restart; explicit unblock without token resurrection; owner protection; Shared/protected-space boundaries; global client-disable distinction; pagination/stale responses/stale saves/CSRF; no jobs/schedules requests from access page; keyboard/accessibility and actual privacy artifacts. Run focused PostgreSQL/HTTP/UI checks then full packaging/JS/schema/shell/both native CI and actual report audits. Existing interactive Playwright and CPU-quota waivers remain unchanged. Supported dedicated-instance deployment/live acceptance follows reviewable exact CI images and preserves unrelated modules and the working connection candidate. No destructive recovery runs live.
 
+## Implementation checkpoint — 24 October
+
+Core0.33/schema0021 is published from immutable source
+`ec2ac4f263a4736a6426c671a0353a4e764509f8`. Its exact
+[full40082329366](https://github.com/Stell0/ns8-czero/actions/runs/40082329366)
+and promotion verifier pass:1936 actual Python/PostgreSQL/packaging cases without
+skips, Debian genuine upgrade21, Rocky installation26/three expected skips,
+eight real browser workflows/privacy guards,28 numeric accessibility contexts,
+three inspected OAuth-query artifacts with zero candidates and five actual
+scan/SBOM pairs. [Publisher40086544147](https://github.com/Stell0/ns8-czero/actions/runs/40086544147)
+completes successfully. Downloaded immutable
+[core-v0.33.0 assets](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.33.0)
+match checksums and every Core Python byte matches the verified source:
+wheel SHA256 `61ccec3abce4216e663251d4502723c02b2819e9e919526e9735fc060bdf8777`,
+archive `13759f5af182819e7b0bc1cc889f89df8e880ad48b57e8e1fa0330219b078c9d`.
+Both supplied distributions install independently and expose the new service
+outside the source tree, without application/NS8 dependencies. Do not replace
+these artifacts. These native results precede the new application UI.
+
+Retained earlier failures are resolved: c01f013 found one genuine schema0015
+legacy account-list regression (1933 passes/one failure);999aada preserves that
+old query and passes1934. Source d6cc0e3 corrects in-progress provider-check
+status and passes1935 locally, but its native40079749606 has one asynchronous
+protected-space UI synchronization failure; it is not accepted. The final app
+waits for the exact selected space before its assertions. Core ec2ac4f also
+preserves the existing configured-owner override when schema0019 left an old
+block marker, without deleting data or changing grants. Its local whole run
+has1935 passes/one five-second statement-timeout setup error under host load;
+the affected24-case SDK group reruns successfully and the exact CI1936-case
+whole matrix passes. Keep failed private evidence; never present failed runs
+as whole-suite passes.
+
+Application0.52 pins the released Core0.33 tag and immutable source in its lock.
+It implements the approved table, browser-only access API and separate
+Advanced/Protected spaces/Background work surfaces. Legacy mounts retain
+first-party access controls without mounting or advertising OAuth/MCP. The
+earlier draft whole matrix passes1936 without skips; later focused transport,
+native and consumer checks pass, and current Node24 controllers pass178.
+The final whole consumer matrix against the actual published wheel passes1959
+without skips in651.65s; current controller checks pass178. Schema
+compilation, individually parsed shell inputs and21 Robot dry runs pass; dry
+runs are not native browser acceptance.
+
+Final native tests freeze all three genuine installed PR33 source4d61cf2
+images, app0.51/Core0.32/schema0020, in upgrade_predecessor.json and Robot.
+They require exact existing background grant/token/code rows, successful
+rotating refresh and a delegated profile read after upgrade, followed by
+isolated client/provider cleanup. Artifact audits additionally require ten
+independent measured access stages: actual approval and decline, one-connection
+disconnect with sibling/other-user controls, persistent blocking across two
+sign-ins and an observed native service restart, unblocking without old-token
+revival, and Reader/Editor/Admin browser permission changes. The two new fixture
+and audit dependencies are explicitly registered for managed consumer delivery.
+No new access-page native or live pass is claimed.
+
+Production MetadataFetcher fetches the fixed public JSON example through real
+public DNS/TLS/MIME validation, digest
+`8f2cafd1a4bfd3c7469bd0f9f59c0c5281c4c26464966ec36c7a43d161337d5b`.
+Keep test-workspace-client-v1 at9fc9594 unchanged. No security-policy weakening
+or live instance/user change has occurred. Final exact-source app CI/images,
+both native distributions, actual report/privacy inspection, supported dedicated
+update/live acceptance and reviewed promotion remain required. PR33 stays open
+and frozen with its separate human/actual-ChatGPT acceptance gates.
+
 ## Settled implementation interfaces
 
 Core 0.33 / schema0021 adds c0_accounts.access_revision (monotonic bigint) and a separate random UUID c0_client_onboarding.id. Neither is authority. AccessService keeps legacy set_role behavior; optional expected_revision rejects stale edits and skips unchanged UI saves. WorkspaceAccessService(grants) supplies first-party Admin summaries, bounded account pages (25, max100), per-person request/connection pages (10, max50), request-bound preview/approval and decline, and exact per-grant disconnect. All pages report has_more. Reads expose locally observed connection state only; stale provider verification is renewal_required, not a false assertion of successful access or permanent disconnection. No provider network call occurs in overview transactions. Existing application/client scope contracts remain unchanged.
@@ -74,7 +146,7 @@ UI routes: /admin (access and lazy Advanced), /admin/spaces, /admin/work (jobs/s
 
 ---
 
-# C0 roadmap and implementation status
+## Earlier roadmap checkpoint
 
 ## Operator priority — persistent OAuth connections (23 October 2026)
 
