@@ -1,5 +1,18 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+## People-first access implementation — 24 October 2026
+
+The operator approved the complete design in PLAN. Work is isolated on
+feat/people-first-access from frozen PR33 source4d61cf2; PR33 and the dedicated
+installation remain unchanged. Core0.33/schema0021 adds safe request IDs and
+account access revisions, first-party bounded Admin summaries, exact decline,
+request-bound reuse of CIMD approval and per-grant disconnect. Preserve default
+verified Shared Reader admission, explicit blocks, independent OAuth scopes,
+owner protection and protected-space boundaries. Application adoption follows
+verified immutable Core publication. No model quota retry, schedule or stable
+release is authorized. Record actual UI/native/live results before acceptance.
+
+
 Read [README](README.md), the active milestone in [PLAN](PLAN.md) and the relevant repository skill. Current user/operator instructions supersede historical workflow statements. Detailed past decisions and measured evidence live in [archived agent conventions](docs/history/AGENTS.md) and [archived milestones](docs/history/PLAN.md); consult the relevant topic when needed.
 
 ## Current work and preservation

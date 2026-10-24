@@ -1,5 +1,12 @@
 # C0 (Czero) — Knowledge for people and AI assistants
 
+The approved people-first access page is in development on an isolated branch.
+It keeps application approval, user roles and individual connection disconnect
+separate. Core0.33/schema0021 provides the supporting bounded administration
+operations; the deployed runtime and PR33 stay frozen during implementation.
+No access-page browser/native/live acceptance is claimed yet. See [PLAN](PLAN.md).
+
+
 C0 is a knowledge application for NethServer 8. Read a Wiki, retain original source passages and citations, and let an authorized AI assistant research or maintain that knowledge through MCP. Reader, Editor and Admin membership controls access, including protected knowledge spaces. Optional inference helps retrieval; it does not control authorization.
 
 ## Start here
