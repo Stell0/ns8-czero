@@ -16,8 +16,11 @@ owner protection and protected-space boundaries. Application adoption follows
 verified immutable Core publication: core-v0.33.0 at ec2ac4f, full40082329366
 and publisher40086544147 pass with independently audited native/artifact evidence.
 The app pins its released tag/lock; final app native/live acceptance remains
-pending. The final local released-Core whole matrix passes1959 with no database
+pending. The initial local released-Core whole matrix passes1959 with no database
 skips; Node24 controllers178, schema/shell/docs and21 Robot dry runs pass.
+A later native fixture cleanup correction restores original discovery even on
+browser failure; its full released-Core rerun passes1961 without skips. Keep
+the first71b3d96 acceptance run intact and require fresh exact CI for this fix.
 Freeze all three genuine installed4d61cf2 images for upgrade coverage,
 including existing background grant rows and rotating refresh. No model quota retry, schedule or stable
 release is authorized. Record actual UI/native/live results before acceptance.

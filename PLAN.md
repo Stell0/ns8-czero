@@ -135,6 +135,19 @@ both native distributions, actual report/privacy inspection, supported dedicated
 update/live acceptance and reviewed promotion remain required. PR33 stays open
 and frozen with its separate human/actual-ChatGPT acceptance gates.
 
+### Native fixture isolation correction
+
+Review of the first frozen application candidate71b3d96 finds the people-access
+browser fixture leaves discovery enabled before the following Advanced check
+expects the original disabled policy. Restore the original boolean in finally
+on both success and failure. Two forced-browser-stop regressions and39 existing
+focused cases pass; the complete released-Core matrix passes1961 without skips
+in609.86s and21 Robot dry runs pass. The original full40088486541 remains intact:
+its Debian job completes successfully, but both actual native reports and full
+acceptance are not yet established. Publish and validate a fresh exact source;
+do not deploy the superseded candidate or infer native acceptance from local
+checks. This correction changes test isolation, not Core or application behavior.
+
 ## Settled implementation interfaces
 
 Core 0.33 / schema0021 adds c0_accounts.access_revision (monotonic bigint) and a separate random UUID c0_client_onboarding.id. Neither is authority. AccessService keeps legacy set_role behavior; optional expected_revision rejects stale edits and skips unchanged UI saves. WorkspaceAccessService(grants) supplies first-party Admin summaries, bounded account pages (25, max100), per-person request/connection pages (10, max50), request-bound preview/approval and decline, and exact per-grant disconnect. All pages report has_more. Reads expose locally observed connection state only; stale provider verification is renewal_required, not a false assertion of successful access or permanent disconnection. No provider network call occurs in overview transactions. Existing application/client scope contracts remain unchanged.

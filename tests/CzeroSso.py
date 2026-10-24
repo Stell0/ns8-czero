@@ -1101,55 +1101,65 @@ class CzeroSso:
             assert measured['phase']==name,'Native access phase differs'
             measurements.append(measured)
             BuiltIn().log_to_console(marker+json.dumps(measured,sort_keys=True))
-        request=json.dumps({'host':host,'lets_encrypt':False,'cimd_enabled':True})
-        _,rc=ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/configure-module --data '+shlex.quote(request),
-                                return_rc=True,timeout='180 seconds')
-        assert rc==0,'Native access discovery setup failed'
-        phase('prepare')
-        run('Reload');run('Get Text','#pending-summary','contains','pending application request')
-        row='#access-people tr.access-application:has-text("Application awaiting review")'
-        run('Click',row+' button:text-is("Approve")')
-        run('Wait For Elements State','#access-approve-save','enabled','timeout=30s')
-        run('Get Text','#access-review-info','contains','C0 disposable access browser')
-        run('Get Property','#access-approve-write','checked','==',False)
-        run('Get Property','#access-approve-manage','checked','==',False)
-        run('Click','#access-approve-save')
-        run('Get Text','#access-message','contains','Application approved.')
-        phase('approved')
-        value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
-        # Cancel the new sibling, retaining the first request to prove exact targeting.
-        run('Click','#access-refresh')
-        row='#access-people tr.access-application:not([data-application-id="'+value['request_id']+'"]):has(button:text-is("Decline"))'
-        run('Click',row+' button:text-is("Decline")');run('Click','#access-confirm-save')
-        run('Get Text','#access-message','contains','Access updated.')
-        phase('declined')
-        value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
-        run('Click','#access-refresh')
-        row='#access-people tr[data-application-id="'+value['connection_ids'][0]+'"]'
-        run('Click',row+' button:text-is("Disconnect application connection")');run('Click','#access-confirm-save')
-        run('Get Text','#access-message','contains','Access updated.')
-        phase('disconnected')
-        person='#access-people tr.access-person[data-account-id="'+value['member_id']+'"]'
-        run('Click',person+' button:text-is("Block user")');run('Click','#access-confirm-save')
-        run('Get Text','#access-message','contains','Access updated.')
-        phase('blocked')
-        # Restart while blocked; normal admission must not revive the account.
-        _,rc=ssh.execute_command('api-cli run node/1/restart-module --data '+shlex.quote(json.dumps({'module_id':module_id})),
-                                return_rc=True,timeout='180 seconds')
-        assert rc==0,'Native access restart failed'
-        BuiltIn().run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route')
-        phase('blocked_after_restart')
-        run('Reload');run('Click',person+' button:text-is("Unblock user")')
-        run('Select Options By','#access-role','value','reader');run('Click','#access-role-save')
-        run('Get Text','#access-message','contains','Permissions saved.')
-        phase('unblocked')
-        for selected,stage in [('editor','editor_permissions'),('admin','manage_permissions'),('reader','reader_permissions')]:
-            run('Click',person+' button:text-is("Change permissions")')
-            run('Select Options By','#access-role','value',selected);run('Click','#access-role-save')
+        output,rc=ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/get-configuration',
+                                      return_rc=True,timeout='180 seconds')
+        assert rc==0,'Native access discovery baseline unavailable'
+        original=json.loads(output)['cimd_enabled'];assert type(original) is bool
+        def discovery(enabled):
+            request=json.dumps({'host':host,'lets_encrypt':False,'cimd_enabled':enabled})
+            _,rc=ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/configure-module --data '+shlex.quote(request),
+                                    return_rc=True,timeout='180 seconds')
+            assert rc==0,'Native access discovery change failed'
+        try:
+            discovery(True)
+            phase('prepare')
+            run('Reload');run('Get Text','#pending-summary','contains','pending application request')
+            row='#access-people tr.access-application:has-text("Application awaiting review")'
+            run('Click',row+' button:text-is("Approve")')
+            run('Wait For Elements State','#access-approve-save','enabled','timeout=30s')
+            run('Get Text','#access-review-info','contains','C0 disposable access browser')
+            run('Get Property','#access-approve-write','checked','==',False)
+            run('Get Property','#access-approve-manage','checked','==',False)
+            run('Click','#access-approve-save')
+            run('Get Text','#access-message','contains','Application approved.')
+            phase('approved')
+            value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
+            # Cancel the new sibling, retaining the first request to prove exact targeting.
+            run('Click','#access-refresh')
+            row='#access-people tr.access-application:not([data-application-id="'+value['request_id']+'"]):has(button:text-is("Decline"))'
+            run('Click',row+' button:text-is("Decline")');run('Click','#access-confirm-save')
+            run('Get Text','#access-message','contains','Access updated.')
+            phase('declined')
+            value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
+            run('Click','#access-refresh')
+            row='#access-people tr[data-application-id="'+value['connection_ids'][0]+'"]'
+            run('Click',row+' button:text-is("Disconnect application connection")');run('Click','#access-confirm-save')
+            run('Get Text','#access-message','contains','Access updated.')
+            phase('disconnected')
+            person='#access-people tr.access-person[data-account-id="'+value['member_id']+'"]'
+            run('Click',person+' button:text-is("Block user")');run('Click','#access-confirm-save')
+            run('Get Text','#access-message','contains','Access updated.')
+            phase('blocked')
+            # Restart while blocked; normal admission must not revive the account.
+            _,rc=ssh.execute_command('api-cli run node/1/restart-module --data '+shlex.quote(json.dumps({'module_id':module_id})),
+                                    return_rc=True,timeout='180 seconds')
+            assert rc==0,'Native access restart failed'
+            BuiltIn().run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route')
+            phase('blocked_after_restart')
+            run('Reload');run('Click',person+' button:text-is("Unblock user")')
+            run('Select Options By','#access-role','value','reader');run('Click','#access-role-save')
             run('Get Text','#access-message','contains','Permissions saved.')
-            phase(stage)
-        require_workspace_access(measurements)
-        run('Click','#access-refresh');assert_accessibility(browser,'admin','admin')
+            phase('unblocked')
+            for selected,stage in [('editor','editor_permissions'),('admin','manage_permissions'),('reader','reader_permissions')]:
+                run('Click',person+' button:text-is("Change permissions")')
+                run('Select Options By','#access-role','value',selected);run('Click','#access-role-save')
+                run('Get Text','#access-message','contains','Permissions saved.')
+                phase(stage)
+            require_workspace_access(measurements)
+            run('Click','#access-refresh');assert_accessibility(browser,'admin','admin')
+        finally:
+            discovery(original)
+
 
     @keyword
     def assert_disposable_sso_browser_password_is_private(self):

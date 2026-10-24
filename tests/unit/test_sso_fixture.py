@@ -329,3 +329,25 @@ def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,st
     admission = ' --reader-admission' if stage=='seed' else ''
     assert calls == ['python3 /tmp/profile_fixture.py '+stage+admission+' --background-module czero7','python3 /tmp/oidc_fixture.py check-logs czero7']
     assert levels == ['NONE','INFO','NONE','INFO']
+
+
+@pytest.mark.parametrize('original', [False, True])
+def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, original):
+    import shlex
+    changed=[]
+    def execute(command, **options):
+        if '/get-configuration' in command:
+            return json.dumps({'cimd_enabled':original}),0
+        if '/configure-module' in command:
+            args=shlex.split(command)
+            changed.append(json.loads(args[args.index('--data')+1])['cimd_enabled'])
+            return '',0
+        assert command == 'python3 /tmp/access_fixture.py czero7 prepare'
+        return 'C0 workspace access: '+json.dumps({'phase':'prepare','fresh_reader':True,'pending_request':True}),'',0
+    monkeypatch.setattr(BuiltIn,'get_library_instance',lambda *args:SimpleNamespace(execute_command=execute))
+    monkeypatch.setattr(BuiltIn,'log_to_console',lambda *args:None)
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    def fail_browser(*args):raise AssertionError('Forced browser stop')
+    with pytest.raises(AssertionError,match='Forced browser stop'):
+        library._verify_people_access(None,fail_browser,'czero7.test','czero7')
+    assert changed == [True,original]
