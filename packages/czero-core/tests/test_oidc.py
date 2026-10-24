@@ -114,7 +114,7 @@ def provider():
             assert body["redirect_uri"] == [ORIGIN + "/auth/callback"]
             assert request.headers["authorization"].startswith("Basic ")
             return httpx2.Response(200, json={"access_token": tokens["Bearer"], "id_token": tokens["ID"],
-                                              "token_type": "Bearer", "expires_in": 300})
+                                              "token_type": "Bearer", "expires_in": 300, **tokens.get('extra', {})})
         return httpx2.Response(404)
     config = OidcConfig(ISSUER, "czero1", secret, ORIGIN)
     client = OidcClient(config, transport=httpx2.MockTransport(handle))
@@ -183,3 +183,23 @@ def test_logout_url_contains_exact_return_uri_and_no_token_hint(provider):
     client, _, _, _, _, _ = provider
     query = parse_qs(urlsplit(client.logout_url()).query)
     assert query == {"client_id": ["czero1"], "post_logout_redirect_uri": [ORIGIN + "/"]}
+
+
+def test_background_login_requests_offline_scope_without_changing_callback(provider):
+    client,_,_,nonce,verifier,tokens=provider
+    identity=client.verify_access_token(tokens['Bearer'])
+    pending=PendingLogin('unit-only-state','unit-only-browser',nonce,verifier,True,identity.account_key)
+    query=parse_qs(urlsplit(client.authorization_url(pending)).query)
+    assert set(query['scope'][0].split())=={'openid','profile','offline_access'}
+    assert query['redirect_uri']==[ORIGIN+'/auth/callback'] and query['code_challenge_method']==['S256']
+
+
+def test_background_exchange_requires_offline_grant_and_exact_expected_account(provider):
+    client,_,_,nonce,verifier,tokens=provider
+    identity=client.verify_access_token(tokens['Bearer'])
+    login=LoginSecrets(nonce,verifier,True,identity.account_key)
+    with pytest.raises(TokenRejected):client.exchange_renewable('unit-only-code',login)
+    tokens['extra']={'refresh_token':'unit-only-offline-refresh','scope':'openid profile offline_access','refresh_expires_in':0}
+    result,renewal=client.exchange_renewable('unit-only-code',login)
+    assert result.account_key==identity.account_key and renewal.offline
+    with pytest.raises(TokenRejected):client.exchange_renewable('unit-only-code',LoginSecrets(nonce,verifier,True,str(uuid4())))

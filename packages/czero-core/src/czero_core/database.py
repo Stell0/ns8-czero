@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0019_client_onboarding"
+SCHEMA_REVISION = "0020_persistent_oauth"
 
 
 class Database:

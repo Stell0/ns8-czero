@@ -20,6 +20,6 @@ configure_browser_diagnostics()
 def assert_no_oauth_queries(paths):
     for path in paths:
         path = Path(path)
-        if path.exists() and re.search(r'[?&](?:state|nonce|code_challenge|code|access_token|id_token)=',
+        if path.exists() and re.search(r'[?&](?:state|nonce|code_challenge|code|access_token|id_token|refresh_token)=',
                 unescape(path.read_text(errors='replace'))):
             raise AssertionError('OAuth query values entered browser test output')

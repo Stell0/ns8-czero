@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from .oauth_grants import GrantRejected, _date, _digest
 from .oauth_clients import redirect_uri, internal_id
+from .identity import Role
 from .operations import SCOPES
 from .sessions import SessionContext
 
@@ -104,12 +105,32 @@ class OAuthConsentService:
             # State/challenge/binding and native identity stay out of the UI DTO.
             return {'client_id': client['client_id'], 'client_name': client['client_name'],
                 'callback': row['callback'], 'scopes': row['scopes'], 'resource': row['resource'],
-                'expires_at': row['expires_at']}
+                'expires_at': row['expires_at'], 'background_requested': row['background_requested']}
 
-    def complete(self, session, request, binding, *, approve, scopes=None, verification=None):
+    def prepare_background(self, session, request, binding, *, scopes):
+        """Stage explicit offline sign-in, preserving the original five-minute bound."""
+        if (not self.grants.background_enabled or not isinstance(session, SessionContext)
+                or session.expires_at.timestamp() <= self.grants._now()
+                or type(scopes) not in (set, frozenset) or not scopes):
+            raise ConsentRejected()
+        with self.grants.access.database.engine.begin() as connection:
+            self.grants._lock(connection, roles=True)
+            connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
+            row, _ = self._request(connection, request, binding)
+            actor = self.grants.access.checked_actor(connection, session.actor)
+            if not scopes <= set(row['scopes']) or row['expected_account_id'] not in (None, actor.user_id):
+                raise ConsentRejected()
+            for scope, role in [('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
+                if scope in scopes:
+                    actor.require(role)
+            connection.execute(text('''UPDATE c0_oauth_consent SET background_requested=true,
+                expected_account_id=:account,scopes=CAST(:scopes AS jsonb) WHERE hash=:hash'''),
+                {'account':actor.user_id,'scopes':json.dumps(sorted(scopes)),'hash':row['hash']})
+
+    def complete(self, session, request, binding, *, approve, scopes=None, verification=None, persistent=False):
         """Trusted app adapter checks same-origin CSRF before invoking this."""
         if (not isinstance(session, SessionContext) or type(approve) is not bool
-                or session.expires_at.tzinfo is None):
+                or session.expires_at.tzinfo is None or type(persistent) is not bool):
             raise ConsentRejected()
         with self.grants.access.database.engine.begin() as connection:
             # Stable lock order: role -> grant -> consent. Failed consent/code
@@ -119,7 +140,9 @@ class OAuthConsentService:
             row, client = self._request(connection, request, binding)
             if session.expires_at.timestamp() <= self.grants._now():
                 raise ConsentRejected()
-            self.grants.access.checked_actor(connection, session.actor)
+            actor = self.grants.access.checked_actor(connection, session.actor)
+            if row['expected_account_id'] not in (None, actor.user_id):
+                raise ConsentRejected()
             code = None
             if approve:
                 if scopes is None:
@@ -127,6 +150,7 @@ class OAuthConsentService:
                 if type(scopes) not in (set, frozenset) or not scopes or not scopes <= set(row['scopes']):
                     raise ConsentRejected()
                 code = self.grants._issue_code(connection, session, client['client_id'],
-                    callback=row['callback'], scopes=scopes, challenge=row['challenge'], resource=row['resource'], verification=verification)
+                    callback=row['callback'], scopes=scopes, challenge=row['challenge'], resource=row['resource'],
+                    verification=verification, persistent=persistent)
             connection.execute(text('DELETE FROM c0_oauth_consent WHERE hash=:hash'), {'hash': row['hash']})
             return ConsentResult(row['callback'], row['state'], code)

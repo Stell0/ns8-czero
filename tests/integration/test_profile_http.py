@@ -184,7 +184,8 @@ def test_independent_database_assigns_distinct_identity_for_same_native_account(
 
 
 @pytest.mark.parametrize('tamper', [False, True])
-def test_exact_predecessor_profile_fixture_uses_old_me_then_verified_new_profile(application, monkeypatch, tmp_path, tamper):
+@pytest.mark.parametrize('reader_admission', [False, True])
+def test_exact_predecessor_profile_fixture_uses_old_me_then_verified_new_profile(application, monkeypatch, tmp_path, tamper, reader_admission):
     import sys
     from pathlib import Path
     from fastapi.testclient import TestClient
@@ -193,6 +194,7 @@ def test_exact_predecessor_profile_fixture_uses_old_me_then_verified_new_profile
     monkeypatch.setattr(profile_fixture,'STATE',tmp_path)
     (tmp_path/'personas.json').write_text(json.dumps({'host':'c0.example.test','password':'fixture-only'}))
     app,owner_token,member_token,*_=application
+    app.state.auth.access.admit_readers = reader_admission
     phase=['seed'];calls=[]
     verifier=app.state.auth.oidc.verify_access_token
     def native_names(raw):
@@ -217,7 +219,7 @@ def test_exact_predecessor_profile_fixture_uses_old_me_then_verified_new_profile
             return response.status_code,response.content,str(response.url)
         def logout(self,me):self.http.close()
     monkeypatch.setattr(oidc_probe,'Browser',Browser)
-    profile_fixture.predecessor('seed')
+    profile_fixture.predecessor('seed', reader_admission=reader_admission)
     saved=tmp_path/'predecessor-profiles.json'
     assert saved.stat().st_mode & 0o777==0o600
     values=json.loads(saved.read_text());assert values['c0owner']!=values['c0member']

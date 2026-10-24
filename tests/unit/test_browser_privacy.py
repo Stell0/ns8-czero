@@ -18,7 +18,7 @@ def test_supported_node_log_level_is_set_before_browser_subprocess(monkeypatch):
 
 @pytest.mark.parametrize('query', ['state=private-fixture-value', 'nonce=private-fixture-value',
     'code_challenge=private-fixture-value', 'code=private-fixture-value',
-    'access_token=private-fixture-value', 'id_token=private-fixture-value'])
+    'access_token=private-fixture-value', 'id_token=private-fixture-value', 'refresh_token=private-fixture-value'])
 def test_browser_response_diagnostics_cannot_publish_oauth_query_values(tmp_path, query):
     check=runpy.run_path(str(ROOT/'browser_privacy.py'))['assert_no_oauth_queries']
     path=tmp_path/'playwright-log.txt'

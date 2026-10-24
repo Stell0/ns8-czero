@@ -154,6 +154,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def reader_script() -> FileResponse:
         return FileResponse(static_dir / 'reader.js', media_type='text/javascript')
 
+    @instance_app.get('/connections.js', include_in_schema=False)
+    async def connections_script() -> FileResponse:
+        return FileResponse(static_dir / 'connections.js', media_type='text/javascript')
+
     @instance_app.get('/agents.js', include_in_schema=False)
     async def agents_script() -> FileResponse:
         return FileResponse(static_dir / 'agents.js', media_type='text/javascript')

@@ -27,6 +27,39 @@ Version0.31.1 adds `AccessService(..., admit_readers=True)` for applications tha
 
 `ClientOnboardingService` stages a valid public metadata-URL authorization request for at most five minutes. Separate opaque browser/request bindings, issuer/native/resource/policy revision checks, count limits and current verified sessions protect the handoff. It never fetches metadata or approves a client. Only signed-in, CSRF-protected requests appear in the Admin queue. Trusted adapters use the ordinary reviewed CIMD flow, then atomically consume the handoff into ordinary consent with explicitly selected requested/approved scopes. State and PKCE values remain private; role changes, policy changes, expiry and replay fail closed. This is independent of HTTP/UI and preserves legacy approved-client behavior.
 
+## Explicit background connections (0.32)
+
+`NativeAuthorityService(..., connection_policy=ConnectionPolicy())` opts into
+provider-attested offline authority with a thirty-day inactivity window and no
+fixed maximum lifetime. The default remains bounded interactive authority.
+New grants need explicit `persistent=True` consent and a same-account offline
+sign-in; existing grants keep their original deadlines. Browser cookies retain
+their configured idle and maximum lifetimes independently of offline activity.
+Browser logout revokes bounded grants while
+preserving explicitly consented background grants; connection disconnect and
+current client/account revocation still deny delegated operations.
+
+`SessionService.begin_login(background=True, session=verified_session)` binds a
+five-minute, one-use login to the verified account. The OIDC adapter requests and
+requires `offline_access` and verifies the same immutable identity on return and
+renewal. Ordinary login never requests offline access. Pending consent can be
+prepared for that round trip without extending expiry or enlarging scopes.
+
+Persistent access tokens still expire within five minutes. Refresh credentials
+rotate; a keyed family/generation authenticator detects reuse of any issued old
+generation while retaining only the current refresh hash. The opaque token
+contains a 96-bit random family locator, a 32-bit generation and a 128-bit
+domain-separated HMAC; client/resource/native identity bind its authentication.
+Fabricated, future and wrong-client credentials confer no authority and cannot
+revoke another family. Counter exhaustion fails closed. Existing random tokens
+and bounded replay-history behavior remain supported. Signing/encryption keys
+derive from the native client secret, outside database backups.
+
+Provider support, application transport/consent, migrations, independent
+artifacts, both native distributions and actual multi-day ChatGPT use each
+require verification. See the repository PLAN for executed release/acceptance
+evidence; the library contract alone does not establish application readiness.
+
 ## Building and verifying
 
 From the repository root:

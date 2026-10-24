@@ -131,7 +131,7 @@ def test_repeat_migration_preserves_types_records_relations_and_events(objects):
     assert svc.relations(owner,source['id'])[0]['id']==relation['id']
     events=svc.events(owner); after=events[0]['id']
     assert all(e['id']>after for e in svc.events(owner,after=after))
-    assert svc.database.health()['schema_revision']=='0019_client_onboarding'
+    assert svc.database.health()['schema_revision']=='0020_persistent_oauth'
 
 
 def test_event_cursor_cannot_skip_an_uncommitted_earlier_write(objects,monkeypatch):

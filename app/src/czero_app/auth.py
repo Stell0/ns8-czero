@@ -20,7 +20,7 @@ from czero_core.identity import Actor, PermissionDenied, Role, TokenRejected
 from czero_core.oidc import OidcClient, OidcConfig, OidcUnavailable
 from czero_core.sessions import LoginStateRejected, SessionRejected, SessionService
 from czero_core.oauth_grants import GrantRejected
-from czero_core.renewal import NativeAuthorityService, RenewalRejected, RenewalUnavailable, SessionPolicy
+from czero_core.renewal import ConnectionPolicy, NativeAuthorityService, RenewalRejected, RenewalUnavailable, SessionPolicy
 
 
 class SafeAccessLog(logging.Filter):
@@ -54,7 +54,9 @@ class AppAuth:
                                    int(os.getenv('CZERO_SESSION_IDLE_SECONDS', '3600')))
             oidc = OidcClient(config)
             try:
-                authority = NativeAuthorityService(access, client, secret, oidc.check_renewal, policy=policy)
+                connections = ConnectionPolicy(int(os.getenv('CZERO_CONNECTION_IDLE_SECONDS', '2592000')))
+                authority = NativeAuthorityService(access, client, secret, oidc.check_renewal,
+                    policy=policy, connection_policy=connections)
                 return cls(access, SessionService(access, client, authority=authority), oidc)
             except (TypeError, ValueError):
                 oidc.close()
@@ -192,12 +194,21 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     @app.get("/auth/login", include_in_schema=False)
     def login(request: Request):
         active = configured()
-        pending = active.sessions.begin_login()
-        if request.query_params.get("switch_account") == "true":
+        background = request.cookies.get('c0_background_login')
+        if background is not None:
+            match = re.fullmatch(r'([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})', background)
+            if match is None:
+                raise LoginStateRejected()
+            pending = active.sessions.pending_login(*match.groups())
+        else:
+            pending = active.sessions.begin_login()
+        if background is not None or request.query_params.get("switch_account") == "true":
             destination = active.oidc.authorization_url(pending, reauthenticate=True)
         else:
             destination = active.oidc.authorization_url(pending)
         response = RedirectResponse(destination, status_code=302)
+        response.delete_cookie('c0_background_login', path=cookie_path,
+            secure=True, httponly=True, samesite='lax')
         response.set_cookie("c0_login", pending.browser_binding, max_age=300,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
         target = request.query_params.get('return_to')
@@ -219,7 +230,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         else:
             identity = active.oidc.exchange(request.query_params.get("code"), login)
         try:
-            cookie = active.sessions.create(identity, renewal=renewal)
+            extra = {'background': True, 'expected_account_key': login.expected_account_key} if login.background else {}
+            cookie = active.sessions.create(identity, renewal=renewal, **extra)
         except PermissionDenied:
             active.sessions.destroy(request.cookies.get("c0_session"))
             # Admission failure does not clear the provider's SSO session.

@@ -49,7 +49,7 @@ def renewing_app(monkeypatch, request):
     monkeypatch.setattr(oidc_module, 'time', SimpleNamespace(time=lambda:clock[0], monotonic=time.monotonic))
     def signed(kind, context, **claims):
         value = jwt.encode({'alg':'RS256','kid':'trusted'}, {'iss':issuer,'sub':'owner','aud':'czero901',
-            'azp':'czero901','ldap_uuid':str(owner),'preferred_username':'owner','typ':kind,
+            'azp':'czero901','ldap_uuid':state.get('account_key',str(owner)),'preferred_username':'owner','typ':kind,
             'iat':clock[0]-1,'exp':clock[0]+state.get('access_seconds',300), **claims}, signer)
         state['values'].append(value)
         return value
@@ -67,7 +67,7 @@ def renewing_app(monkeypatch, request):
             state['checks'] += 1
             return httpx2.Response(200, json={'active':state['active'] and clock[0]<state.get('provider_session_until',float('inf'))})
         if body['grant_type'] == ['authorization_code']:
-            context = {'nonce':state['nonce'], 'auth_time':clock[0]}
+            context = {'nonce':state['nonce'], 'auth_time':clock[0], 'offline':state.get('offline',False)}
             assert body['code'] == ['private-code']
         else:
             assert body['grant_type'] == ['refresh_token']
@@ -81,6 +81,8 @@ def renewing_app(monkeypatch, request):
         result={'token_type':'Bearer','expires_in':state.get('access_seconds',300),
             'access_token':signed('Bearer',context), 'refresh_token':refresh,
             'id_token':signed('ID',context,nonce=context['nonce'],auth_time=context['auth_time'])}
+        if context['offline']:
+            result['scope'] = state.get('offline_scope','openid profile offline_access')
         if state.get('refresh_seconds') is not None:
             result['refresh_expires_in']=state['refresh_seconds']
             context['refresh_deadline']=clock[0]+state['refresh_seconds']

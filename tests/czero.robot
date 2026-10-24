@@ -53,7 +53,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.50.0    ${route_host}=${host}    ${expected_core}=0.31.1
+    [Arguments]    ${expected_app}=0.51.0    ${route_host}=${host}    ${expected_core}=0.32.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -83,7 +83,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:b7177aaed0d61b5ce9913173b25d57fbe150457155619d7f0429afefbc36815e
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:acdd8f9b06b3cb0fd9ce8f45367ddf4aba26bf6a5a7f51d423b0e904642604c5
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -93,9 +93,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 3730188 predecessor images.
+        # Freeze all three actually deployed fa64f3d predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:fcd6c9a1552774e065a4ab04ed1f19a9244c708bee9ec4c9407249d1f509ea72','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:7aefea399df70ed31ed294358a768c47c40c58870224828063a765a7ecb5bf53'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:0273abd79473dadc2b106f5d4d32e0471c29729c78c6f4d3d6c4763a1b818ed1','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:80d8f51e603f6ba59d300d94a3d9b2e725f3a3f699c44bd4981170c58ead4bf2'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -109,7 +109,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.49.1    0.31.0
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.50.0    0.31.1
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False
@@ -119,7 +119,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.50.0    0.31.1
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.51.0    0.32.0
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
         ...    return_rc=True    return_stdout=False    timeout=180s
@@ -658,8 +658,8 @@ Check saved settings and application HTTPS in a browser
     Click    \#refresh-status
     Get Text    \#database-status    ==    Workspace ready
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.31.1"
-    Get Text    body    contains    "app_version":"0.50.0"
+    Get Text    body    contains    "core_version":"0.32.0"
+    Get Text    body    contains    "app_version":"0.51.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents
@@ -678,7 +678,7 @@ Verify exact installed candidate images
     Verify Installed Candidate Images    ${module_id}    ${EXPECTED_SOURCE}
 
 Verify real native SSO and application-wide membership
-    [Timeout]    20 minutes
+    [Timeout]    30 minutes
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-authentication-status
     ...    return_rc=True    timeout=30s
     Should Be Equal As Integers    ${rc}    0

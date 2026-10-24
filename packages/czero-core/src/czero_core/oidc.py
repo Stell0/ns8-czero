@@ -156,14 +156,14 @@ class OidcClient:
             self._keys_until = time.monotonic() + 300
             return self._verifier
 
-    def _oauth_client(self) -> OAuth2Client:
+    def _oauth_client(self, *, background=False) -> OAuth2Client:
         return OAuth2Client(self.config.client_id, self.config.client_secret,
-            scope="openid profile", redirect_uri=self.config.callback_uri,
+            scope="openid profile offline_access" if background else "openid profile", redirect_uri=self.config.callback_uri,
             code_challenge_method="S256", timeout=3.0, follow_redirects=False, transport=self._transport)
 
     def authorization_url(self, pending: PendingLogin, *, reauthenticate: bool = False) -> str:
         metadata = self._discovery()
-        with self._oauth_client() as client:
+        with self._oauth_client(background=pending.background) as client:
             url, _ = client.create_authorization_url(metadata["authorization_endpoint"],
                 state=pending.state, nonce=pending.nonce, code_verifier=pending.code_verifier,
                 **({"prompt": "login"} if reauthenticate else {}))
@@ -177,7 +177,7 @@ class OidcClient:
             raise TokenRejected()
         metadata = self._discovery()
         try:
-            with self._oauth_client() as client:
+            with self._oauth_client(background=login.background) as client:
                 result = client.fetch_token(metadata["token_endpoint"], grant_type="authorization_code",
                     code=code, code_verifier=login.code_verifier)
         except (httpx2.HTTPError, OAuth2Error, ValueError):
@@ -187,6 +187,9 @@ class OidcClient:
             identity = verifier.verify_id_token(result["id_token"], nonce=login.nonce, access_token=result["access_token"])
             access = verifier.verify_access_token(result["access_token"])
             if access.account_key != identity.account_key or access.subject != identity.subject:
+                raise TokenRejected()
+            if login.background and (identity.account_key != login.expected_account_key
+                    or 'offline_access' not in str(result.get('scope', '')).split()):
                 raise TokenRejected()
             return replace(identity, expires_at=min(identity.expires_at, access.expires_at)), result
         except (KeyError, TypeError):
@@ -223,8 +226,8 @@ class OidcClient:
             raise TokenRejected() from None
         credential = json.dumps({'access': result['access_token'], 'refresh': refresh,
                                  'nonce': login.nonce, 'id_context': original,
-                                 'refresh_after': refresh_after})
-        return identity, RenewalResult(identity, credential)
+                                 'refresh_after': refresh_after, 'offline': login.background})
+        return identity, RenewalResult(identity, credential, offline=login.background)
 
     def _private_post(self, url, data, *, reject=False, rotating=False):
         try:
@@ -264,6 +267,9 @@ class OidcClient:
         """
         try:
             saved = json.loads(credential)
+            offline = saved.get('offline', False)
+            if type(offline) is not bool:
+                raise RenewalRejected()
             access_token, refresh, nonce = (saved[name] for name in ('access', 'refresh', 'nonce'))
             if any(not isinstance(v, str) or not 1 <= len(v) <= 16384 for v in (access_token, refresh, nonce)):
                 raise RenewalRejected()
@@ -298,6 +304,8 @@ class OidcClient:
                     {'grant_type': 'refresh_token', 'refresh_token': refresh}, reject=True, rotating=True)
                 if str(result.get('token_type', '')).lower() != 'bearer':
                     raise RenewalRejected()
+                if offline and 'offline_access' not in str(result.get('scope', '')).split():
+                    raise RenewalRejected()
                 access_token = result['access_token']
                 identity = verifier.verify_access_token(access_token)
                 if 'id_token' in result:
@@ -318,7 +326,7 @@ class OidcClient:
                     raise RenewalRejected()
             return RenewalResult(identity, json.dumps({'access': access_token, 'refresh': refresh,
                                                        'nonce': nonce, 'id_context': original,
-                                                       'refresh_after': refresh_after}))
+                                                       'refresh_after': refresh_after, 'offline': offline}), offline=offline)
         except (OidcUnavailable, RenewalUnavailable):
             raise RenewalUnavailable() from None
         except (KeyError, TypeError, ValueError, TokenRejected):

@@ -593,6 +593,61 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
     asyncio.run(check())
 
 
+def test_native_browser_roles_do_not_reuse_disabled_client(oauth_app, application, tmp_path, monkeypatch):
+    """Run the real fixture's prepare/cleanup cycle against signed HTTP/SQL."""
+    from dataclasses import replace
+    import sys
+    app, _, _, _ = oauth_app
+    _, owner_token, member_token, *_ = application
+    access = app.state.auth.access
+    with pytest.raises(PermissionDenied):
+        access.resolve(replace(app.state.auth.oidc.verify_access_token(member_token), username='c0member'))
+    path = Path(__file__).resolve().parents[1] / 'oauth_fixture.py'
+    sys.path.insert(0, str(path.parent))
+    try:
+        spec = importlib.util.spec_from_file_location('native_role_clients', path)
+        fixture = importlib.util.module_from_spec(spec); spec.loader.exec_module(fixture)
+    finally:
+        sys.path.remove(str(path.parent))
+    monkeypatch.setattr(fixture, 'STATE', tmp_path)
+    (tmp_path / 'personas.json').write_text(json.dumps({'host':'c0.example.test','password':'unused'}))
+    identifiers = []
+    with TestClient(app, base_url=ORIGIN) as client:
+        identity = app.state.auth.oidc.verify_access_token(owner_token)
+        cookie = app.state.auth.sessions.create(identity)
+        client.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
+        profile = client.get('/api/v1/me').json()
+        class Browser:
+            origin = ORIGIN
+            def login(self, *_): return profile
+            def logout(self, *_): pass  # Provider logout is covered by native acceptance.
+            def api(self, path, data=None, method=None, csrf=None):
+                headers = {'Origin':ORIGIN}
+                if csrf: headers['X-C0-CSRF'] = csrf
+                result = client.request(method or 'GET', path, json=data, headers=headers)
+                return result.status_code, result.content, str(result.url)
+        monkeypatch.setattr(fixture, 'Browser', lambda *_: Browser())
+        try:
+            for role in ('admin', 'reader', 'editor', 'admin'):
+                fixture.prepare_browser('czero1', role)
+                value = json.loads((tmp_path / 'browser-oauth.json').read_text())
+                identifier = value['client']['client_id']
+                assert value['client']['enabled'], 'Fixture reused a disabled registration'
+                assert identifier not in identifiers, 'Fixture reused another case client'
+                identifiers.append(identifier)
+                result = client.get(value['authorization_url'], follow_redirects=False)
+                assert result.status_code == 302 and result.headers['location'] == ORIGIN + '/oauth/consent'
+                assert '<img' in value['client']['client_name']
+                fixture.cleanup_browser('czero1')
+                assert client.get(value['authorization_url'], follow_redirects=False).status_code == 400
+                for previous in identifiers:
+                    assert app.state.oauth_clients._lookup(previous) is None
+        finally:
+            with access.database.engine.begin() as connection:
+                for identifier in identifiers:
+                    connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id':UUID(identifier)})
+
+
 @pytest.mark.parametrize("restored", [False, True])
 def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, application, tmp_path, monkeypatch, restored):
     app,_,_,_=oauth_app

@@ -11,6 +11,9 @@ from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
 from renewal_evidence import validate_measurement
+from offline_provider_probe import validate as validate_offline_provider
+from persistent_fixture import validate as validate_persistent_connection
+from persistent_fixture import validate_recovery as validate_persistent_recovery
 from cimd_recovery_evidence import validate_measurement as validate_cimd_recovery
 
 
@@ -18,7 +21,7 @@ def assert_accessibility(browser, page, role):
     fields = {'controls_checked', 'links_checked', 'unnamed_controls', 'unnamed_links',
               'missing_language', 'missing_main', 'missing_h1', 'missing_navigation', 'missing_skip_target'}
     result = browser.evaluate_javascript(None, Path(__file__).with_name('accessibility_probe.js').read_text())
-    if (page not in {'home', 'records', 'sources', 'wiki', 'search', 'agents', 'admin'}
+    if (page not in {'home', 'account', 'records', 'sources', 'wiki', 'search', 'agents', 'admin'}
             or role not in {'admin', 'reader', 'editor'} or not isinstance(result, dict)
             or set(result) != fields or any(type(v) is not int or not 0 <= v <= 10000 for v in result.values())):
         raise AssertionError('Accessibility smoke measurement invalid')
@@ -36,7 +39,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -94,7 +97,9 @@ class CzeroSso:
                 self._network(ssh, module_id)
             builtin.run_keyword('Wait Until Keyword Succeeds', '30s', '2s',
                 'Check application route', expected_app, host, expected_core)
-            _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage),
+            predecessor = json.loads((Path(__file__).parent / 'fixtures/upgrade_predecessor.json').read_text())
+            admission = ' --reader-admission' if stage == 'seed' and predecessor.get('reader_admission') is True else ''
+            _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage) + admission,
                 return_stderr=True, return_rc=True, timeout='180 seconds')
             if rc:
                 raise AssertionError('Genuine predecessor profile identity check failed')
@@ -161,6 +166,44 @@ class CzeroSso:
                 finally:
                     builtin.set_log_level('NONE')
                 self._renewal_probe_done = True
+            if not getattr(self, '_offline_provider_done', False):
+                output, _, rc = ssh.execute_command('python3 /tmp/offline_provider_probe.py ' + shlex.quote(module_id),
+                    return_stderr=True, return_rc=True, timeout='180 seconds')
+                if rc:
+                    raise AssertionError('Installed offline-provider probe failed')
+                lines = output.splitlines()
+                try:
+                    proof = (validate_offline_provider(json.loads(lines[0].removeprefix('C0 offline provider: ')))
+                             if len(lines) == 1 and lines[0].startswith('C0 offline provider: ') else None)
+                except (ValueError, TypeError):
+                    raise AssertionError('Offline provider evidence invalid') from None
+                if proof is None:
+                    raise AssertionError('Offline provider evidence missing')
+                builtin.set_log_level('INFO')
+                try:
+                    builtin.log('C0 offline provider: ' + json.dumps(proof, sort_keys=True), console=True)
+                finally:
+                    builtin.set_log_level('NONE')
+                self._offline_provider_done = True
+            if not getattr(self, '_persistent_connection_done', False):
+                output, _, rc = ssh.execute_command('python3 /tmp/persistent_fixture.py ' + shlex.quote(module_id),
+                    return_stderr=True, return_rc=True, timeout='600 seconds')
+                if rc:
+                    raise AssertionError('Installed persistent-connection probe failed')
+                lines = output.splitlines()
+                try:
+                    proof = (validate_persistent_connection(json.loads(lines[0].removeprefix('C0 persistent connection: ')))
+                             if len(lines) == 1 and lines[0].startswith('C0 persistent connection: ') else None)
+                except (ValueError, TypeError):
+                    raise AssertionError('Persistent connection evidence invalid') from None
+                if proof is None:
+                    raise AssertionError('Persistent connection evidence missing')
+                builtin.set_log_level('INFO')
+                try:
+                    builtin.log('C0 persistent connection: ' + json.dumps(proof, sort_keys=True), console=True)
+                finally:
+                    builtin.set_log_level('NONE')
+                self._persistent_connection_done = True
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                 return_rc=True, timeout="180 seconds")
             if rc:
@@ -261,6 +304,22 @@ class CzeroSso:
                 ' ' + operation, return_stderr=True, return_rc=True, timeout='300 seconds')
             if rc:
                 raise AssertionError('Disposable OAuth recovery: ' + errors.strip())
+            output, _, rc = ssh.execute_command('python3 /tmp/persistent_fixture.py ' + shlex.quote(module_id) +
+                ' ' + shlex.quote(operation), return_stderr=True, return_rc=True, timeout='300 seconds')
+            if rc:
+                raise AssertionError('Disposable persistent recovery failed')
+            lines=output.splitlines();prefix='C0 persistent recovery: '
+            try:
+                proof=(validate_persistent_recovery(json.loads(lines[0][len(prefix):]))
+                       if len(lines)==1 and lines[0].startswith(prefix) else None)
+            except (ValueError,TypeError):
+                raise AssertionError('Persistent recovery evidence invalid') from None
+            if proof is None:raise AssertionError('Persistent recovery evidence missing')
+            builtin.set_log_level('INFO')
+            try:
+                sanitized=prefix+json.dumps(proof,sort_keys=True)
+                builtin.log(sanitized);builtin.log_to_console(sanitized)
+            finally:builtin.set_log_level('NONE')
         finally:
             builtin.set_log_level(previous)
 
@@ -821,6 +880,25 @@ class CzeroSso:
                 disabled={'admin':0,'editor':1,'reader':2}[role]
                 run('Get Element Count','#scopes input:disabled','==',disabled)
                 run('Get Element Count','#scopes input:checked','==',3-disabled)
+                run('Wait For Elements State','#background','visible','timeout=30s')
+                assert browser.get_property('#background','checked') is False, 'Background consent was preselected'
+                run('Get Text','#background-help','contains','30 days')
+                if role == 'admin':
+                    run('Check Checkbox','#background')
+                    run('Get Text','#approve','==','Continue to background sign-in')
+                    run('Click','#approve')
+                    run('Wait For Elements State','input[name="password"]','visible','timeout=30s')
+                    if browser.get_element_count('input[name="username"]:visible'):
+                        browser.fill_text('input[name="username"]','c0owner')
+                    browser.fill_text('input[name="password"]',self._browser_password)
+                    run('Click','#kc-login')
+                    run('Wait For Elements State','#approve, [name="accept"]','visible','timeout=30s')
+                    if browser.get_element_count('[name="accept"]'):
+                        run('Click','[name="accept"]')
+                    run('Wait For Elements State','#approve','enabled','timeout=30s')
+                    assert browser.get_property('#background','checked') is True, 'Background choice was lost'
+                    run('Get Text','#approve','==','Authorize')
+                    value['persistent'] = True
                 run('Click','#approve')
                 run('Get Text','h1','==','Use C0 with ChatGPT')
                 run('Get Element Count','nav a[aria-current="page"]','==',1)
@@ -854,6 +932,16 @@ class CzeroSso:
                 _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
                     ' browser-complete',return_stderr=True,return_rc=True,timeout='300 seconds')
                 if rc: raise AssertionError('Real OAuth browser/token assertions failed')
+                run('Go To','https://'+host+'/?view=account')
+                target = 'button[aria-label=' + json.dumps('Disconnect ' + value['client']['client_name']) + ']'
+                run('Wait For Elements State',target,'visible','timeout=30s')
+                run('Get Element Count','#connections-list img','==',0)
+                assert_accessibility(browser,'account',role)
+                run('Click',target)
+                run('Wait For Elements State',target,'hidden','timeout=30s')
+                _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
+                    ' browser-disconnected',return_stderr=True,return_rc=True,timeout='60 seconds')
+                if rc: raise AssertionError('Account disconnect did not revoke the browser client')
                 run('Go To', 'https://' + host + '/')
                 run('Wait For Elements State', '#sign-out', 'visible', 'timeout=30s')
                 assert_accessibility(browser, 'home', role)
@@ -869,6 +957,9 @@ class CzeroSso:
                     run('Get Text', '#guide-workflows', 'contains', 'whole receipt')
                 assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host, module_id)
+                _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+
+                    ' browser-cleanup',return_stderr=True,return_rc=True,timeout='180 seconds')
+                if rc: raise AssertionError('OAuth browser cleanup failed')
                 run('Close Context')
             _, rc=ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs '+shlex.quote(module_id),
                                      return_rc=True,timeout='180 seconds')

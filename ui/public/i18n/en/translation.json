@@ -100,7 +100,11 @@
         "cimd_title": "Client metadata discovery",
         "cimd_enabled": "Allow approved client metadata URLs",
         "cimd_help": "Disabled by default. Application Administrators must review each exact HTTPS metadata URL and its callbacks in Administration before a client can connect. Turning this off revokes metadata-client connections; existing manually approved clients stay available.",
-        "cimd_invalid": "Choose whether approved client metadata URLs are allowed."
+        "cimd_invalid": "Choose whether approved client metadata URLs are allowed.",
+        "connection_policy_title": "Background connections",
+        "connection_policy_help": "Users explicitly approve background access for each app. New connections expire after this many days without use. Active connections have no fixed maximum duration. Changing this setting does not change existing connections. Browser session limits still apply.",
+        "connection_idle_days": "Inactivity limit (days)",
+        "connection_policy_invalid": "Enter a whole number of days from 1 to 365."
     },
     "about": {
         "title": "About"

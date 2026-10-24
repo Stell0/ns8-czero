@@ -43,6 +43,7 @@ ExecStart=/usr/bin/podman run \
     --env=CZERO_BASE_PATH=${CZERO_BASE_PATH} \
     --env=CZERO_SESSION_ABSOLUTE_SECONDS=${CZERO_SESSION_ABSOLUTE_SECONDS} \
     --env=CZERO_SESSION_IDLE_SECONDS=${CZERO_SESSION_IDLE_SECONDS} \
+    --env=CZERO_CONNECTION_IDLE_SECONDS=${CZERO_CONNECTION_IDLE_SECONDS} \
     ${CZERO_APP_IMAGE}
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/czero.ctr-id -t 10
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/czero.ctr-id

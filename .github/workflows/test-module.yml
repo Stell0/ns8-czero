@@ -41,6 +41,7 @@ jobs:
       args: '-v SCENARIO:update -v EXPECTED_SOURCE:${{ inputs.source }}'
       artifact_suffix: update
       run_ui_tests: false
+      timeout_minutes: 90
   rocky:
     uses: NethServer/ns8-github-actions/.github/workflows/test-on-qemu.yml@v1
     with:
@@ -52,3 +53,4 @@ jobs:
       args: '-v SCENARIO:install -v EXPECTED_SOURCE:${{ inputs.source }}'
       artifact_suffix: install
       run_ui_tests: true
+      timeout_minutes: 90
