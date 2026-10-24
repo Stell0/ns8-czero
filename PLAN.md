@@ -4,16 +4,127 @@
 
 ## Approved people-first Workspace Access page
 
-Status: approved by operator on 24 October 2026; implementation in isolated feat/people-first-access. No live changes yet.
+Status: implementation, exact-source distribution/native checks, dedicated-instance
+acceptance and reviewed promotion pass. The current accepted runtime is app0.52 /
+Core0.33 / schema0021 at frozen source `e384bed`; PR33 and PR34 are merged.
+See the executed evidence and frozen image identities below. The following design
+and preimplementation model are retained to explain the accepted behavior.
 
-Current dedicated runtime remains frozen PR33 source4d61cf2, app0.51/Core0.32/schema0020,
-with exact full40014653046 and server acceptance recorded in PR33. Operator
-ChatGPT/background reuse beyond24h and human review remain pending; PR33 is still
-open. Its deployed images are not changed by this access-page implementation.
-Older fa64 installed-runtime statements below describe the prior checkpoint.
-Inspected: verified main d4a97349e8e7aa83789b82a78eccbc075c754e84 and pending deployed persistent-connection source 4d61cf2c6ab6e2f175297272073d75efce55bec4 (PR33 still open). Preserve PR33 source, installation, its outstanding client acceptance and all earlier worktrees. Implement separately after design agreement; do not add these changes to frozen PR33.
+## Accepted runtime and promotion — 24 October 2026
+
+The operator reviewed and approved PR33 followed by PR34, and separately
+confirmed the existing ChatGPT web connection worked without manual reconnect
+for more than 24 hours. [PR33](https://github.com/Stell0/ns8-czero/pull/33)
+merged regularly as `cd17a02`; its
+[main40101415111](https://github.com/Stell0/ns8-czero/actions/runs/40101415111),
+canonical publication, full promotion proof and independently inspected native,
+privacy and scan artifacts pass. This closes the outstanding web observation;
+it does not establish scheduled-task interoperability.
+
+The accepted application source is `e384bed641ac0bdc97212def22db521c0ab2e4c7`,
+app **0.52.0**, released Core **0.33.0**, schema **0021_workspace_access**.
+Its [full40093959067](https://github.com/Stell0/ns8-czero/actions/runs/40093959067)
+and independent artifact audit pass: Debian genuine PR33 upgrade 21 passes,
+Rocky installation 26 passes/three expected skips, eight real browser workflows
+and privacy guards, 30 numeric accessibility contexts, ten independently typed
+access stages, three actual query artifacts with zero candidates and five
+scan/SBOM pairs. The local final released-wheel consumer run passes 1963 actual
+Python/PostgreSQL/packaging cases without database skips in 600.14 seconds;
+Node24 controllers pass 185, with schema/shell and 21 Robot dry runs. The native
+browser results establish workflows for Reader, Editor and Admin accounts,
+including administrator approval/decline, exact disconnect, persistent blocking
+across repeated sign-in and actual service restart, and unblock without old-token
+resurrection. Sibling/other-user controls and protected-space boundaries pass.
+
+After PR33 merged, integration head `cc8c2cf` merged only the approved ancestry:
+its entire tracked file tree equals the reviewed and deployed `e384bed` tree.
+[Full40101567741](https://github.com/Stell0/ns8-czero/actions/runs/40101567741)
+and independent actual artifact audit pass the same 21/26/three-skip, eight
+browser/privacy, 30-accessibility and ten-stage gates. Exact current-head/base
+promotion verification passes. [PR34](https://github.com/Stell0/ns8-czero/pull/34)
+merged regularly as `05ce22c26055cf321e8a3d90471406dbc11e99dd`, retaining those
+source commits and the identical accepted file tree.
+
+Resulting main [40106287084](https://github.com/Stell0/ns8-czero/actions/runs/40106287084)
+is completed/successful at `05ce22c`. Actual main logs confirm 1963
+Python/PostgreSQL/packaging passes in 714.95 seconds, 185 controller passes with
+no skips/failures and 21 Robot dry runs. Producer/released-Core builds, image
+identity checks, five scan/SBOM pairs, both native distributions, artifact audit,
+merge gate and canonical publication all succeed. Independent downloaded reports
+confirm Debian21, Rocky26/three expected skips, all eight browser/privacy workflows,
+30 numeric accessibility contexts, ten access stages and three query artifacts
+with zero candidates. Exact-source promotion verification passes. Six fresh
+registry reads verify all three main/latest aliases against the published source
+and digests. The accepted dedicated runtime remains frozen at e384bed.
+
+### Dedicated-instance acceptance and frozen predecessor
+
+Only the dedicated C0 instance was updated using the supported canonical native
+action after a C0-only backup and actual backup-data integrity read. Update
+completion took 24.71 seconds. Readiness, the installed module/app/database
+identities, route, certificate, worker and timer checks pass after update and
+supported full-manager restart. Preserve this accepted installation and tag as
+the next milestone's genuine upgrade predecessor:
+
+| Image | Frozen digest |
+| --- | --- |
+| Module | `sha256:3e16e819787850a4a9f90016a946a3bbb71c3d8bb5073c42b22ac344df68f2fa` |
+| Application | `sha256:90903768ec49e84d9439530da48864eebe1bdb9a0a5d5cee59ae64be19200d11` |
+| PostgreSQL | `sha256:0907ed3c57b4d2b34d84d2a168a7718b143fd07f37b0a9048fa1a7f50aee7dbe` |
+
+All three revisions are `e384bed641ac0bdc97212def22db521c0ab2e4c7`; the canonical
+candidate tag is `ci-e384bed641ac0bdc97212def22db521c0ab2e4c7-40093959067-1`.
+Keep that tag available and unchanged while the installation references it.
+Integration, main and documentation publications do not replace this accepted
+runtime. Public examples use `https://c0.example.org`; private deployment
+identities, credentials, raw journals and evidence stay outside Git.
+
+Independent before/update/restart/final observers preserve all 40 original domain
+tables and 247 original stable rows, existing column values, settings, mounts,
+authentication/retrieval configuration, schedules, terminal jobs/attempts and all
+nine unrelated instances, including each exact C0 action window. The additive
+migration introduces only two columns, no new table. Original stored files and
+active Shared Wiki/source lists are empty: metadata reads prove authenticated
+access, without a claim of nonempty retained content evidence. One existing
+background grant retains its fixed authority while normal activity and refresh
+generation advance. No real user's permissions, block or application approval
+was changed for live testing.
+
+Live signed-in owner/browser, authenticated REST and current/legacy SDK profile
+and repeated explicit-space Wiki/source list reads pass after update and manager
+restart. Isolated owned grants prove exact disconnect: target access401 and
+refresh400, sibling access200 and rotating refresh200; membership and client
+approval remain unchanged. Both temporary read-only manual clients were disabled,
+all their grants reject access and the owned browser session was logged out.
+No fixture content or schedule was created live; destructive recovery and other
+role browser workflows remain disposable.
+
+The existing connected-tool path works without manual reconnect across a
+measured 627-second window and the update/restart. A read-only server observer
+separately proves two public refresh generations on the same original background
+grant and native authority, with last use beyond the previously observed access
+deadline; it does not inspect the user's raw credentials. This is distinguished
+from the operator's separate more-than-24-hour ChatGPT web observation.
+
+Bounded root application journals use the verified module UID and container:
+90 entries from 13:40:45–13:47:50 UTC after update and 93 entries from
+13:52:23–13:55:28 UTC after restart. Both windows have positive health, owner
+profile, guide, authorization, token and MCP request controls. Actual OAuth query,
+known-issued-secret, generic credential, JWT and traceback candidate counts are
+all zero. Empty Podman logs are not used as evidence; host logging is unchanged.
+
+The access-page implementation and persistent-connection observation are
+accepted. This separate three-document closeout requires its own lightweight PR
+and main gate and independent review. It changes no package or runtime input and
+must not replace the accepted installation. Existing interactive Playwright and
+CPU-quota waivers remain unchanged. M21 packaged-skill web use, quota-blocked
+model evaluations, actual scheduled-client interoperability and vendor findings
+remain separate release-readiness work. No stable module release is claimed.
 
 ## Existing model
+
+This is the inspected preimplementation model; the settled interfaces and accepted
+runtime above supersede its missing-API statements.
 
 - AccessService owns persisted application roles, verified identity display metadata and explicit account blocks. Verified new users receive Shared Reader admission in the application. A block survives renewed/renamed sign-ins. The configured owner is always Admin and cannot be changed/blocked through this service.
 - set_role invalidates every OAuth grant and native authority for the target, even on a same-role call. The UI must skip unchanged saves and warn before real role changes. Regrant does not restore old credentials.
@@ -124,16 +235,14 @@ disconnect with sibling/other-user controls, persistent blocking across two
 sign-ins and an observed native service restart, unblocking without old-token
 revival, and Reader/Editor/Admin browser permission changes. The two new fixture
 and audit dependencies are explicitly registered for managed consumer delivery.
-No new access-page native or live pass is claimed.
+This was the pre-acceptance checkpoint; final native and live results are recorded above.
 
 Production MetadataFetcher fetches the fixed public JSON example through real
 public DNS/TLS/MIME validation, digest
 `8f2cafd1a4bfd3c7469bd0f9f59c0c5281c4c26464966ec36c7a43d161337d5b`.
 Keep test-workspace-client-v1 at9fc9594 unchanged. No security-policy weakening
-or live instance/user change has occurred. Final exact-source app CI/images,
-both native distributions, actual report/privacy inspection, supported dedicated
-update/live acceptance and reviewed promotion remain required. PR33 stays open
-and frozen with its separate human/actual-ChatGPT acceptance gates.
+was introduced. This historical checkpoint preceded the accepted exact-source
+CI, native, dedicated update/live and reviewed promotion results recorded above.
 
 ### Native findings and corrections
 
@@ -152,7 +261,9 @@ discovery enabled before the original disabled-policy check. Source45f9163
 restores the original boolean in finally on both success and failure. Two
 forced-browser-stop regressions and39 existing focused cases pass; its complete
 released-Core matrix passes1961 without skips in609.86s and21 Robot dry runs
-pass. Its full40091589934 remains intact and running; do not cancel it.
+pass. Its completed [full40091589934](https://github.com/Stell0/ns8-czero/actions/runs/40091589934)
+remains failed: Debian21 passes, Rocky25 passes/one skip-target failure/three
+expected skips, with three query artifacts containing zero candidates.
 
 A separate protected-space failure is the actual numeric accessibility guard:
 missing_skip_target=1. A subpage base URI plus space-link rewriting can send the
@@ -163,10 +274,10 @@ fragment attribute. It rejects both another page and another space. Actual
 native Tab/Enter/focus checks cover Advanced, Background work and Protected
 spaces, preserving the existing ordinary-page keyboard check. Current Node24
 checks pass185, focused Python43 and21 Robot dry runs pass; the complete
-released-Core matrix passes1963 without skips in600.14s. Require a fresh
-exact-source full/image/native
-acceptance for this runtime correction. Neither older candidate may be deployed
-or merged. Core0.33 artifacts and the installed PR33 runtime stay unchanged.
+released-Core matrix passes1963 without skips in600.14s. Fresh
+exact-source full/image/native acceptance followed at e384bed, as recorded
+above. Neither older candidate was deployed or merged. Core0.33 artifacts remain
+immutable; the accepted installation is now the corrected e384bed runtime.
 
 ## Settled implementation interfaces
 
@@ -174,12 +285,17 @@ Core 0.33 / schema0021 adds c0_accounts.access_revision (monotonic bigint) and a
 
 Routes: GET /api/v1/access/workspace?offset=&limit=; GET /api/v1/access/accounts/{id}/applications?offset=&limit=; POST /api/v1/access/requests/{id}/preview; POST /api/v1/access/requests/{id}/approve; DELETE /api/v1/access/requests/{id}; DELETE /api/v1/access/connections/{id}. Existing PUT account role gains optional expected_revision. The request approval reuses CimdService's same transaction implementation, verifies the still-live request and account after I/O, preserves existing approved scopes and rejects disabled clients. Approval of a blocked account fails. No new MCP tool or discovery default is added.
 
-UI routes: /admin (access and lazy Advanced), /admin/spaces, /admin/work (jobs/schedules). Preserve existing manual client and space/task controllers on their separate surfaces. Account links to Workspace access instead of duplicating role edits; self-service connection controls remain unchanged. App adoption follows verified immutable Core publication, not an unreviewed dependency replacement. PR33 stays frozen; this stacked branch cannot merge before its predecessor and own gates.
+UI routes: /admin (access), /admin/advanced (technical client controls), /admin/spaces, /admin/work (jobs/schedules). Preserve existing manual client and space/task controllers on their separate surfaces. Account links to Workspace access instead of duplicating role edits; self-service connection controls remain unchanged. App adoption follows verified immutable Core publication, not an unreviewed dependency replacement. PR33 was kept frozen and merged first; PR34 then passed its own current-head gates and merged.
 
 
 ---
 
 ## Earlier roadmap checkpoint
+
+The sections below retain the earlier plan and observations. Their pending/current
+installation statements are historical; the accepted-runtime section above is
+authoritative for PR33/PR34 and the installed predecessor. Other M21 release gates
+remain open as explicitly stated.
 
 ## Operator priority — persistent OAuth connections (23 October 2026)
 

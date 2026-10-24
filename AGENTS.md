@@ -1,62 +1,82 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-## People-first access implementation — 24 October 2026
+## Accepted people-first access — 24 October 2026
 
-The operator approved the complete design in PLAN. Work is isolated on
-feat/people-first-access from frozen PR33 source4d61cf2; PR33 and the dedicated
-installation remain unchanged. The current installation is frozen PR33 source
-4d61cf2 app0.51/Core0.32/schema0020; full40014653046 and server acceptance pass,
-while actual ChatGPT reuse beyond24h and human review remain pending. Older
-fa64 installed-runtime statements below are predecessor checkpoints.
-Core0.33/schema0021 adds safe request IDs and
-account access revisions, first-party bounded Admin summaries, exact decline,
-request-bound reuse of CIMD approval and per-grant disconnect. Preserve default
+PR33 and PR34 are reviewed and regularly merged, in that order. The operator
+confirms the existing ChatGPT web connection worked without manual reconnect for
+more than 24 hours. PR33 main `cd17a02` full40101415111, publication and actual
+native/privacy/scan audits pass. PR34 accepted deployed source `e384bed` passes
+full40093959067; integrated head `cc8c2cf` and merge `05ce22c` have exactly the
+same tracked file tree. Integration full40101567741 and actual artifact audit
+pass. Resulting main full40106287084 is completed/successful, including canonical
+publication. Independent downloaded native/privacy/scan audits, exact-source
+promotion proof and six fresh main/latest registry identity reads pass.
+
+The accepted dedicated installation is app0.52.0 / released Core0.33.0 /
+schema0021 at `e384bed641ac0bdc97212def22db521c0ab2e4c7`. Freeze all three
+installed digests and the immutable candidate tag in PLAN as the next genuine
+upgrade predecessor. Never replace it with integration/main/documentation images.
+Core tag core-v0.33.0 remains immutable at `ec2ac4f`; exact full40082329366,
+publisher40086544147, downloaded checksums and independent supplied installs pass.
+
+Final local released-Core validation passes 1963 actual Python/PostgreSQL/packaging
+cases without database skips, 185 Node24 controllers, schema/shell/docs and 21
+Robot dry runs. Actual accepted native reports pass Debian upgrade 21, Rocky
+installation 26/three expected skips, all eight browser workflows/privacy guards,
+30 numeric accessibility contexts, ten strictly graded access stages and three
+OAuth-query artifacts with zero candidates. Preserve failed earlier evidence;
+71b3d96 and 45f9163 were not accepted or deployed.
+
+Core owns request IDs, account access revisions and first-party Admin summaries,
+request-bound approval/decline and exact per-grant disconnect. Preserve default
 verified Shared Reader admission, explicit blocks, independent OAuth scopes,
-owner protection and protected-space boundaries. Application adoption follows
-verified immutable Core publication: core-v0.33.0 at ec2ac4f, full40082329366
-and publisher40086544147 pass with independently audited native/artifact evidence.
-The app pins its released tag/lock; final app native/live acceptance remains
-pending. The initial local released-Core whole matrix passes1959 with no database
-skips; Node24 controllers178, schema/shell/docs and21 Robot dry runs pass.
-A later native fixture cleanup correction restores original discovery even on
-browser failure; its full released-Core rerun passes1961 without skips. Keep
-the first71b3d96 acceptance run intact and require fresh exact CI for this fix.
-Freeze all three genuine installed4d61cf2 images for upgrade coverage,
-including existing background grant rows and rotating refresh. No model quota retry, schedule or stable
-release is authorized. Record actual UI/native/live results before acceptance.
+owner protection and protected-space boundaries. Application approval, user role
+and disconnect remain distinct. Unchanged revision-bound role saves do nothing;
+legacy role calls retain invalidation. The old account-list SQL remains compatible
+with schema0015. Preserve the configured-owner override without deleting an older
+block marker. Locally observed connection summaries do not prove provider health.
 
-The application transport/UI now has one people/application table and separate
-/admin/advanced, /admin/spaces and /admin/work surfaces. Preserve mount prefixes
-with the subpages' base URI. Legacy Account links to access instead of editing
-membership; ordinary self-service connections stay unchanged. Native browser
-fixtures test a fixed public example-only JSON metadata document through actual
-production DNS/TLS/MIME checks, plus exact disconnect and block/restart/unblock.
-Keep test-workspace-client-v1 fixture branch unchanged. Do not use raw GitHub
-content as a CIMD endpoint: its text/plain response correctly fails MIME checks.
+The browser-only access API serves one people/application table at /admin;
+/admin/advanced, /admin/spaces and /admin/work keep technical clients, protected
+spaces and background work separate. Account links to access instead of a duplicate
+membership editor. Ordinary self-service connections are unchanged. Subpages retain
+mount prefixes. Preserve request/draft/access-loss guards, exact CSRF and current
+Core authorization. The native public metadata fixture uses real DNS/TLS/MIME;
+keep test-workspace-client-v1 at 9fc9594 unchanged. No ns8-idp change is required.
 
+Supported dedicated C0 backup/integrity, update/readiness and manager restart pass.
+Observers preserve 40 original domain tables/247 stable rows, settings/schedules,
+one existing background grant and nine unrelated instances. Two temporary clients
+are disabled. Live owner/REST/current+legacy SDK and existing connected-tool reads
+pass; actual Reader/Editor/Admin action workflows are disposable native evidence.
+Shared content is empty, so do not claim nonempty retained-body evidence. Bounded
+root application journals have 90/93 entries with real request positive controls
+and zero query/credential candidates. Private evidence stays outside Git. Separate
+three-document closeout checks/review must pass; accepted images remain deployed.
 
 Read [README](README.md), the active milestone in [PLAN](PLAN.md) and the relevant repository skill. Current user/operator instructions supersede historical workflow statements. Detailed past decisions and measured evidence live in [archived agent conventions](docs/history/AGENTS.md) and [archived milestones](docs/history/PLAN.md); consult the relevant topic when needed.
 
 ## Current work and preservation
 
-The operator now authorizes persistent background OAuth connections in PLAN. PR32 is merged as `d4a9734`; main39933530291, actual downloaded native/privacy/scan artifacts and the full promotion verifier pass. Keep the dedicated installation on frozen `fa64f3d` app0.50.0/Core0.31.1/schema0019 while application 0.51 adoption is validated on an isolated branch. Core 0.32/schema 0020 is independently published from 22d8134 after full 39964867651 and actual downloaded native/privacy/scan audits; publication 39972262492 and downloaded asset checksums pass. Application 0.51 pins that release. PR33 sourcebc59aab passes1910 local cases and CI local/images, but review found old-policy offline reuse for new consent after a settings change. Do not deploy that superseded candidate. Its completed full39976845841 native run fails exact recovery history on both distributions after SDK test writes advanced the captured cursor; the Rocky consent-help failure cascades from interrupted restoration. Preserve the failed reports, zero-query privacy evidence and frozen source. Recovery verification now uses scope-authorized stale-write rejection while retaining exact page/history observers; standalone actual successful writes remain mandatory. The correction requires a matching saved/current policy or fresh same-account offline sign-in, leaving existing grants unchanged. Fresh corrected-source full/native/live gates remain pending. Real connection/read succeeds; other M21 package/model gates remain incomplete. The existing provider issued verified offline authorization, renewed after its owned session logout and rejected revoked refresh credentials in private controlled probes, including the new adapter. All test offline credentials were revoked; no IdP configuration/code change is currently required. Preserve original dirty work, M20 worktrees, source history and waivers.
+Persistent background OAuth and the access page are accepted as recorded above
+and in PLAN. The original PR33 policy/recovery failures are retained as historical
+evidence there; they are resolved by the accepted source. Preserve original dirty
+work, M20 worktrees, drafts, immutable Core artifacts and waivers. M21 packaged-skill
+web use, quota-blocked model cases, actual scheduled-client interoperability and
+vendor findings remain separate release work. No stable module release is claimed.
 
 M19 runtime source `38a8654` is accepted at app0.49.0/Core0.31.0/schema0018; reviewed closeout PR30 regularly merges as `0a9bbb3` and actual main39643655916 passes. M21 documentation/skills release readiness is authorized. M21 is based on that verified marker. Preserve all original dirty documents, recovered M20 worktrees, unfinished drafts, immutable Core artifacts and the three accepted image identities in PLAN. Never replace an accepted installation with documentation-marker images. Windmill remains separate.
 
 M21 changes guides, five developer skills, three end-user skills, offline package generation and installed Use with AI presentation. Core/schema/OAuth/dependencies remain unchanged. Actual packaged-skill use on ChatGPT web is required for both private Plugin Creator and managed GitHub import; desktop/SDK/manifest checks do not establish that gate. Missing account/workspace features leave acceptance incomplete. No stable module tag, directory submission or workspace-wide rollout is authorized.
 
-The operator authorizes the M21 self-service follow-up in PLAN: generated installed skill/plugin downloads, visible OAuth approval, default verified-user Shared read admission and persistent administrator blocks. Earlier M21 Core-unchanged/offline-only constraints are superseded for this scoped work. PR31 main `0040c89` and its clean-start `3730188` installation are historical checkpoints; current PR32/deployed `fa64f3d` identities are frozen above and in PLAN. Preserve all original dirty work.
+The operator authorizes the M21 self-service follow-up in PLAN: generated installed skill/plugin downloads, visible OAuth approval, default verified-user Shared read admission and persistent administrator blocks. Earlier M21 Core-unchanged/offline-only constraints are superseded for this scoped work. PR31 main `0040c89` and its clean-start `3730188` installation are historical checkpoints; PR32/deployed `fa64f3d` identities are historical; current accepted images are frozen above and in PLAN. Preserve all original dirty work.
 
 Administration subpages use a base URI. Skip links must retain the current
 document and selected-space query; shared navigation corrects links resolved
-against another local page. Preserve the stronger resolved URL/target guard and
-actual native Tab/Enter/main-focus checks. An unresolved fragment attribute is
-not sufficient evidence. First source71b3d96 has Debian21 passes but Rocky24
-passes/two failures/three expected skips; all ten access stages pass and all
-three query artifacts are clean, but full acceptance fails. Discovery cleanup
-is corrected in45f9163. The skip fix passes1963 full released-Core cases with
-no database skips and185 Node24 checks; require its own fresh exact-source
-CI/images/native/live acceptance before any deployment or promotion.
+against another local page. Preserve the resolved URL/target guard and actual
+native Tab/Enter/main-focus checks on Advanced, Background work and Protected
+spaces. An unresolved fragment attribute is not sufficient evidence. Native
+fixture cleanup restores the original discovery policy even on browser failure.
 
 ## Responsibilities and routing
 
