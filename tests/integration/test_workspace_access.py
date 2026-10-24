@@ -15,11 +15,22 @@ from czero_core.oauth_clients import ClientConflict
 from czero_core.client_onboarding import OnboardingRejected
 from czero_core.oauth_grants import GrantRejected, _digest
 from czero_core.workspace_access import WorkspaceAccessService, permissions
-from test_access import access, owner_actor, identity, record_unadmitted, account_named
+from test_access import access, owner_actor, identity, record_unadmitted, account_named as legacy_account_named
 from test_persistent_oauth import persistent, refresh, RESOURCE
 from test_client_onboarding import onboarding, parameters, cimd, grants, application
 
 pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason='disposable PostgreSQL required')
+
+
+def account_named(service, actor, name):
+    # Legacy listings keep their schema/API contract. Inspect new persisted
+    # revision/block state independently; workspace summaries are tested below.
+    account = legacy_account_named(service, actor, name)
+    with service.database.engine.connect() as c:
+        state = c.execute(text('SELECT access_revision,EXISTS(SELECT 1 FROM c0_account_blocks b '
+            'WHERE b.account_id=a.id) AS blocked FROM c0_accounts a WHERE id=:id'),
+            {'id': account['id']}).mappings().one()
+    return {**account, **state}
 
 
 def test_revision_rejects_stale_and_aba_permission_changes(access):
