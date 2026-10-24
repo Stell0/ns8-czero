@@ -133,8 +133,7 @@ class AccessService:
             rows = connection.execute(text("""
                 SELECT a.id, a.username, a.display_name, a.account_key, a.last_seen,
                        CASE WHEN a.account_key = :owner THEN 'admin' ELSE m.role END AS role,
-                       a.account_key = :owner AS is_owner, a.access_revision,
-                       EXISTS (SELECT 1 FROM c0_account_blocks b WHERE b.account_id=a.id) AS blocked
+                       a.account_key = :owner AS is_owner
                 FROM c0_accounts a LEFT JOIN c0_memberships m ON m.account_id = a.id
                 WHERE a.issuer = :issuer ORDER BY a.username, a.id LIMIT :limit
             """), {"owner": self.owner_account_key, "issuer": self.issuer, "limit": limit}).mappings().all()
