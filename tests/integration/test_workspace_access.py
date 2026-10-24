@@ -225,3 +225,18 @@ def test_inflight_native_check_is_renewal_not_a_false_reconnect(persistent):
     with f['database'].engine.begin() as c:
         c.execute(text('UPDATE c0_native_authority SET checking=false WHERE account_id=:id'),{'id':owner.user_id})
     assert service.applications(owner,owner.user_id)['applications'][0]['status']=='connected'
+
+
+def test_historical_owner_denial_marker_never_blocks_implicit_owner(persistent):
+    f=persistent;owner=f['context'].actor;pair=f['issue']();service=WorkspaceAccessService(f['grants'])
+    # Schema0019 backfilled missing memberships, including implicit owners.
+    # Native owner selection also overrides an existing account's denial.
+    with f['database'].engine.begin() as c:
+        c.execute(text('INSERT INTO c0_account_blocks(account_id) VALUES(:id)'),{'id':owner.user_id})
+    row=service.overview(owner)['accounts'][0]
+    assert row['is_owner'] and row['role']=='admin' and not row['blocked']
+    assert all(row['permissions'].values())
+    assert service.applications(owner,owner.user_id)['applications'][0]['status']=='connected'
+    assert f['grants'].verify(pair.access_token,resource=RESOURCE).actor.is_owner
+    with f['database'].engine.connect() as c:
+        assert c.execute(text('SELECT count(*) FROM c0_account_blocks WHERE account_id=:id'),{'id':owner.user_id}).scalar_one()==1
