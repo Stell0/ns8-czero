@@ -562,6 +562,16 @@
       "path": "tests/persistent_fixture.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "tests/workspace_access_evidence.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/access_fixture.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

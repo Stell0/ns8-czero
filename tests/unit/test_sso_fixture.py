@@ -259,7 +259,7 @@ def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatc
     for role in ('reader','editor'):
         denied=[]
         library._verify_admin_controls(browser,lambda name,*args:denied.append((name,args)),role,'czero7.test')
-        assert ('Wait For Elements State',('#admin-workspace','hidden')) in denied
+        assert ('Wait For Elements State',('#access-workspace','hidden')) in denied
         assert all(name not in ('Click','Fill Text') for name,_ in denied)
 
 
@@ -308,15 +308,17 @@ def test_existing_sso_fixture_requires_exact_host_provider_and_valid_tls(tmp_pat
 
 
 @pytest.mark.parametrize('stage,expected_app,expected_core',[
-    ('seed','0.50.0','0.31.1'),('verify','0.51.0','0.33.0')])
+    ('seed','0.51.0','0.32.0'),('verify','0.52.0','0.33.0')])
 def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,stage,expected_app,expected_core):
     calls,levels,network = [],[],[]
     def execute(command,**options):
         calls.append(command)
-        return ('','',0) if options.get('return_stderr') else ('',0)
+        return ('C0 predecessor background: '+json.dumps({'stage':stage,'verified':True}),'',0) if options.get('return_stderr') else ('',0)
     ssh = SimpleNamespace(execute_command=execute)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh)
-    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level: levels.append(level) or 'INFO')
+    monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level: levels.append(level) or ('NONE' if level=='INFO' else 'INFO'))
+    monkeypatch.setattr(BuiltIn,'log',lambda *args:None)
+    monkeypatch.setattr(BuiltIn,'log_to_console',lambda *args:None)
     waits=[]
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,*args: waits.append(args))
     library = runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
@@ -325,5 +327,5 @@ def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,st
     assert waits == [('Wait Until Keyword Succeeds','30s','2s','Check application route',expected_app,'czero7.test',expected_core)]
     assert network == ([(ssh,'czero7')] if stage=='verify' else [])
     admission = ' --reader-admission' if stage=='seed' else ''
-    assert calls == ['python3 /tmp/profile_fixture.py '+stage+admission,'python3 /tmp/oidc_fixture.py check-logs czero7']
-    assert levels == ['NONE','INFO']
+    assert calls == ['python3 /tmp/profile_fixture.py '+stage+admission+' --background-module czero7','python3 /tmp/oidc_fixture.py check-logs czero7']
+    assert levels == ['NONE','INFO','NONE','INFO']

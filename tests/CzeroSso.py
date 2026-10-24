@@ -15,6 +15,8 @@ from offline_provider_probe import validate as validate_offline_provider
 from persistent_fixture import validate as validate_persistent_connection
 from persistent_fixture import validate_recovery as validate_persistent_recovery
 from cimd_recovery_evidence import validate_measurement as validate_cimd_recovery
+from workspace_access_evidence import validate_measurement as validate_workspace_access
+from workspace_access_evidence import require_stages as require_workspace_access
 
 
 def assert_accessibility(browser, page, role):
@@ -39,7 +41,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py", "access_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -99,10 +101,22 @@ class CzeroSso:
                 'Check application route', expected_app, host, expected_core)
             predecessor = json.loads((Path(__file__).parent / 'fixtures/upgrade_predecessor.json').read_text())
             admission = ' --reader-admission' if stage == 'seed' and predecessor.get('reader_admission') is True else ''
-            _, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage) + admission,
+            background = ' --background-module ' + shlex.quote(module_id) if predecessor.get('background_grant') is True else ''
+            output, _, rc = ssh.execute_command('python3 /tmp/profile_fixture.py ' + shlex.quote(stage) + admission + background,
                 return_stderr=True, return_rc=True, timeout='180 seconds')
             if rc:
                 raise AssertionError('Genuine predecessor profile identity check failed')
+            if background:
+                lines = [line.removeprefix('C0 predecessor background: ') for line in output.splitlines() if line.startswith('C0 predecessor background: ')]
+                expected = {'stage':stage, 'verified':True}
+                if len(lines) != 1 or json.loads(lines[0]) != expected or type(json.loads(lines[0]).get('verified')) is not bool:
+                    raise AssertionError('Genuine predecessor background evidence missing')
+                hidden = builtin.set_log_level('INFO')
+                try:
+                    builtin.log('C0 predecessor background: ' + json.dumps(expected, sort_keys=True))
+                    builtin.log_to_console('C0 predecessor background: ' + json.dumps(expected, sort_keys=True))
+                finally:
+                    builtin.set_log_level(hidden)
             _, rc = ssh.execute_command('python3 /tmp/oidc_fixture.py check-logs ' + shlex.quote(module_id),
                 return_rc=True, timeout='180 seconds')
             if rc:
@@ -721,15 +735,18 @@ class CzeroSso:
                 browser.fill_text('input[name="password"]',self._browser_password)
                 run('Click','#kc-login');run('Wait For Elements State','#sign-out','visible','timeout=30s')
             def admin_role(role):
-                run('Go To','https://'+host+'/?view=account')
-                run('Select Options By','select[aria-label="Access for c0member"]','value',role)
-                run('Click','button[aria-label="Save access for c0member"]')
-                run('Get Text','#sharing-status','==','Access saved')
+                run('Go To','https://'+host+'/admin')
+                row='#access-people tr.access-person:has(th:text-is("c0member"))'
+                run('Click',row+' button:text-is("Change permissions")')
+                run('Select Options By','#access-role','value',role)
+                run('Click','#access-role-save')
+                run('Get Text','#access-message','matches','Permissions (saved|are unchanged).*')
             owner_context=run('New Context','ignoreHTTPSErrors=True');run('New Page');login('c0owner')
             stage='space-creation';admin_role('editor')
-            run('Go To','https://'+host+'/admin')
+            run('Go To','https://'+host+'/admin/spaces')
             name='<img src=x onerror=alert(1)> protected-'+secrets.token_hex(4)
             run('Fill Text','#space-name',name);run('Click','#create-space')
+            run('Wait For Elements State','#managed-space:has-text('+json.dumps(name)+')','visible','timeout=30s')
             run('Get Text','#managed-space','==','Protected space: '+name)
             identifier=parse_qs(urlsplit(browser.get_url()).query)['space_id'][0]
             run('Get Element Count','#managed-space img, #space-selector img','==',0)
@@ -774,7 +791,7 @@ class CzeroSso:
             run('Get Text','#reader-document','contains','Selected native memory evidence')
             run('Get Text','#reader-excerpt','contains','Selected native memory evidence')
             assert_accessibility(browser,'sources','reader')
-            run('Switch Context',owner_context);run('Go To','https://'+host+'/admin?space_id='+identifier)
+            run('Switch Context',owner_context);run('Go To','https://'+host+'/admin/spaces?space_id='+identifier)
             stage='editor-grant';grant('editor')
             run('Switch Context',member_context);run('Go To',tools)
             run('Click','#wiki-pages button:text-is('+json.dumps(title)+')')
@@ -985,15 +1002,21 @@ class CzeroSso:
     def _verify_admin_controls(browser, run, role, host, module_id=None):
         run('Go To', 'https://' + host + '/admin')
         if role != 'admin':
-            run('Get Text', '#admin-account', 'contains', 'Only application Admins')
-            run('Wait For Elements State', '#admin-workspace', 'hidden')
-            run('Wait For Elements State', '#cimd-administration', 'hidden')
+            run('Get Text', '#admin-account', 'contains', 'Only C0 administrators')
+            run('Wait For Elements State', '#access-workspace', 'hidden')
             run('Wait For Elements State', 'nav a[data-admin-link]', 'hidden')
             assert_accessibility(browser, 'admin', role)
             return
-        run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
+        run('Wait For Elements State', '#access-workspace', 'visible', 'timeout=30s')
         run('Wait For Elements State', 'nav a[data-admin-link]', 'visible', 'timeout=30s')
         run('Get Element Count', 'nav a[aria-current="page"]', '==', 1)
+        run('Get Element Count', '#job-form, #schedule-form, #client-form', '==', 0)
+        run('Get Text', '#people-table caption', '==', 'People, application requests and connections')
+        assert_accessibility(browser, 'admin', role)
+        if module_id is not None:
+            CzeroSso._verify_people_access(browser, run, host, module_id)
+        run('Go To', 'https://' + host + '/admin/advanced')
+        run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
         run('Wait For Elements State', '#cimd-administration', 'visible', 'timeout=30s')
         run('Wait For Elements State', '#cimd-preview', 'disabled', 'timeout=30s')
         if module_id is not None:
@@ -1025,8 +1048,10 @@ class CzeroSso:
         run('Click', '#approve-client')
         row = '#client-list li:has-text("' + name + '")'
         run('Wait For Elements State', row, 'visible', 'timeout=30s')
-        run('Click', row + ' button:text-is("Disable client")')
-        run('Wait For Elements State', row + ' button:text-is("Enable client")', 'visible', 'timeout=30s')
+        run('Click', row + ' button:text-is("Disable application for everyone")')
+        run('Wait For Elements State', row + ' button:text-is("Enable application for everyone")', 'visible', 'timeout=30s')
+        run('Go To', 'https://' + host + '/admin/work')
+        run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
         run('Select Options By', '#job-handler', 'value', 'health')
         run('Fill Text', '#job-payload', '{}')
         run('Click', '#enqueue-job')
@@ -1060,6 +1085,71 @@ class CzeroSso:
         run('Get Property', '#schedule-enabled', 'checked', '==', False)
         run('Get Property', '#schedule-edit-interval', 'value', '==', '7200')
         assert_accessibility(browser, 'admin', role)
+
+    @staticmethod
+    def _verify_people_access(browser, run, host, module_id):
+        """Actual native SSO/HTTPS; browser mutates, independent HTTP grades."""
+        ssh=BuiltIn().get_library_instance('SSHLibrary');measurements=[]
+        def phase(name):
+            output,_,rc=ssh.execute_command('python3 /tmp/access_fixture.py '+shlex.quote(module_id)+' '+name,
+                return_stderr=True,return_rc=True,timeout='180 seconds')
+            assert rc==0,'Native access fixture failed at '+name
+            marker='C0 workspace access: '
+            lines=[line for line in output.splitlines() if line.startswith(marker)]
+            assert len(lines)==1,'Native access measurement missing'
+            measured=validate_workspace_access(json.loads(lines[0][len(marker):]))
+            assert measured['phase']==name,'Native access phase differs'
+            measurements.append(measured)
+            BuiltIn().log_to_console(marker+json.dumps(measured,sort_keys=True))
+        request=json.dumps({'host':host,'lets_encrypt':False,'cimd_enabled':True})
+        _,rc=ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/configure-module --data '+shlex.quote(request),
+                                return_rc=True,timeout='180 seconds')
+        assert rc==0,'Native access discovery setup failed'
+        phase('prepare')
+        run('Reload');run('Get Text','#pending-summary','contains','pending application request')
+        row='#access-people tr.access-application:has-text("Application awaiting review")'
+        run('Click',row+' button:text-is("Approve")')
+        run('Wait For Elements State','#access-approve-save','enabled','timeout=30s')
+        run('Get Text','#access-review-info','contains','C0 disposable access browser')
+        run('Get Property','#access-approve-write','checked','==',False)
+        run('Get Property','#access-approve-manage','checked','==',False)
+        run('Click','#access-approve-save')
+        run('Get Text','#access-message','contains','Application approved.')
+        phase('approved')
+        value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
+        # Cancel the new sibling, retaining the first request to prove exact targeting.
+        run('Click','#access-refresh')
+        row='#access-people tr.access-application:not([data-application-id="'+value['request_id']+'"]):has(button:text-is("Decline"))'
+        run('Click',row+' button:text-is("Decline")');run('Click','#access-confirm-save')
+        run('Get Text','#access-message','contains','Access updated.')
+        phase('declined')
+        value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
+        run('Click','#access-refresh')
+        row='#access-people tr[data-application-id="'+value['connection_ids'][0]+'"]'
+        run('Click',row+' button:text-is("Disconnect application connection")');run('Click','#access-confirm-save')
+        run('Get Text','#access-message','contains','Access updated.')
+        phase('disconnected')
+        person='#access-people tr.access-person[data-account-id="'+value['member_id']+'"]'
+        run('Click',person+' button:text-is("Block user")');run('Click','#access-confirm-save')
+        run('Get Text','#access-message','contains','Access updated.')
+        phase('blocked')
+        # Restart while blocked; normal admission must not revive the account.
+        _,rc=ssh.execute_command('api-cli run node/1/restart-module --data '+shlex.quote(json.dumps({'module_id':module_id})),
+                                return_rc=True,timeout='180 seconds')
+        assert rc==0,'Native access restart failed'
+        BuiltIn().run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route')
+        phase('blocked_after_restart')
+        run('Reload');run('Click',person+' button:text-is("Unblock user")')
+        run('Select Options By','#access-role','value','reader');run('Click','#access-role-save')
+        run('Get Text','#access-message','contains','Permissions saved.')
+        phase('unblocked')
+        for selected,stage in [('editor','editor_permissions'),('admin','manage_permissions'),('reader','reader_permissions')]:
+            run('Click',person+' button:text-is("Change permissions")')
+            run('Select Options By','#access-role','value',selected);run('Click','#access-role-save')
+            run('Get Text','#access-message','contains','Permissions saved.')
+            phase(stage)
+        require_workspace_access(measurements)
+        run('Click','#access-refresh');assert_accessibility(browser,'admin','admin')
 
     @keyword
     def assert_disposable_sso_browser_password_is_private(self):
