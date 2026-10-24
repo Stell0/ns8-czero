@@ -250,7 +250,7 @@ def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeyp
 def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatch, accessibility_measurement):
     calls=[]
     browser=SimpleNamespace(get_text=lambda selector:json.dumps({'id':'00000000-0000-4000-8000-000000000001','state':'succeeded'}),
-        evaluate_javascript=accessibility_measurement)
+        evaluate_javascript=accessibility_measurement,get_url=lambda:'https://czero7.test/admin/work')
     library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
     library._verify_admin_controls(browser,lambda name,*args:calls.append((name,args)),'admin','czero7.test')
     assert ('Select Options By',('#job-handler','value','health')) in calls
@@ -351,3 +351,12 @@ def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, or
     with pytest.raises(AssertionError,match='Forced browser stop'):
         library._verify_people_access(None,fail_browser,'czero7.test','czero7')
     assert changed == [True,original]
+
+
+@pytest.mark.parametrize('after', ['https://c0.test/?space_id=selected#main-content',
+    'https://c0.test/admin/spaces?space_id=other#main-content'])
+def test_native_skip_guard_rejects_page_or_space_changes(after):
+    urls=iter(['https://c0.test/admin/spaces?space_id=selected',after])
+    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    with pytest.raises(AssertionError,match='Skip link changed page or selected space'):
+        library._verify_skip_link(SimpleNamespace(get_url=lambda:next(urls)),lambda *args:None)

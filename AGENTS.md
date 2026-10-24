@@ -47,6 +47,17 @@ M21 changes guides, five developer skills, three end-user skills, offline packag
 
 The operator authorizes the M21 self-service follow-up in PLAN: generated installed skill/plugin downloads, visible OAuth approval, default verified-user Shared read admission and persistent administrator blocks. Earlier M21 Core-unchanged/offline-only constraints are superseded for this scoped work. PR31 main `0040c89` and its clean-start `3730188` installation are historical checkpoints; current PR32/deployed `fa64f3d` identities are frozen above and in PLAN. Preserve all original dirty work.
 
+Administration subpages use a base URI. Skip links must retain the current
+document and selected-space query; shared navigation corrects links resolved
+against another local page. Preserve the stronger resolved URL/target guard and
+actual native Tab/Enter/main-focus checks. An unresolved fragment attribute is
+not sufficient evidence. First source71b3d96 has Debian21 passes but Rocky24
+passes/two failures/three expected skips; all ten access stages pass and all
+three query artifacts are clean, but full acceptance fails. Discovery cleanup
+is corrected in45f9163. The skip fix passes1963 full released-Core cases with
+no database skips and185 Node24 checks; require its own fresh exact-source
+CI/images/native/live acceptance before any deployment or promotion.
+
 ## Responsibilities and routing
 
 - Reusable domain behavior, persisted-role authorization, migrations and concurrency belong in `packages/czero-core`; use `$c0-develop-core`.

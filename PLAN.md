@@ -135,18 +135,38 @@ both native distributions, actual report/privacy inspection, supported dedicated
 update/live acceptance and reviewed promotion remain required. PR33 stays open
 and frozen with its separate human/actual-ChatGPT acceptance gates.
 
-### Native fixture isolation correction
+### Native findings and corrections
 
-Review of the first frozen application candidate71b3d96 finds the people-access
-browser fixture leaves discovery enabled before the following Advanced check
-expects the original disabled policy. Restore the original boolean in finally
-on both success and failure. Two forced-browser-stop regressions and39 existing
-focused cases pass; the complete released-Core matrix passes1961 without skips
-in609.86s and21 Robot dry runs pass. The original full40088486541 remains intact:
-its Debian job completes successfully, but both actual native reports and full
-acceptance are not yet established. Publish and validate a fresh exact source;
-do not deploy the superseded candidate or infer native acceptance from local
-checks. This correction changes test isolation, not Core or application behavior.
+The first application full run
+[40088486541](https://github.com/Stell0/ns8-czero/actions/runs/40088486541)
+at71b3d96 is unaccepted: actual Debian genuine predecessor upgrade21 passes;
+Rocky installation24 passes/two failures/three expected skips. All ten measured
+people-access phases pass independent strict grading, including approval,
+exact decline/disconnect, persistent block across renewed sign-in and an
+observed service restart, unblock without old-token revival and all three
+permission presets. Three actual XML/browser-log query artifacts contain zero
+OAuth-query candidates. Passing those stages does not establish full acceptance.
+
+The subsequent Advanced check fails because the new browser fixture leaves
+discovery enabled before the original disabled-policy check. Source45f9163
+restores the original boolean in finally on both success and failure. Two
+forced-browser-stop regressions and39 existing focused cases pass; its complete
+released-Core matrix passes1961 without skips in609.86s and21 Robot dry runs
+pass. Its full40091589934 remains intact and running; do not cancel it.
+
+A separate protected-space failure is the actual numeric accessibility guard:
+missing_skip_target=1. A subpage base URI plus space-link rewriting can send the
+skip link to another document. The correction preserves the current document,
+selected-space query and legacy prefix in shared navigation. The probe now
+checks the resolved origin/path/query/fragment target instead of only the raw
+fragment attribute. It rejects both another page and another space. Actual
+native Tab/Enter/focus checks cover Advanced, Background work and Protected
+spaces, preserving the existing ordinary-page keyboard check. Current Node24
+checks pass185, focused Python43 and21 Robot dry runs pass; the complete
+released-Core matrix passes1963 without skips in600.14s. Require a fresh
+exact-source full/image/native
+acceptance for this runtime correction. Neither older candidate may be deployed
+or merged. Core0.33 artifacts and the installed PR33 runtime stay unchanged.
 
 ## Settled implementation interfaces
 

@@ -2,6 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 'use strict';
 (() => {
+  // A subpage base URL must not send its skip link to a different page.
+  for (const link of document.querySelectorAll('a.skip-link')) {
+    const current = new URL(window.location.href);
+    const target = new URL(link.getAttribute('href') || '', document.baseURI || current.href);
+    if (target.origin === current.origin && target.hash &&
+        (target.pathname !== current.pathname || target.search !== current.search)) {
+      current.hash = target.hash;
+      link.href = current.href;
+    }
+  }
   const adminLinks = document.querySelectorAll('a[data-admin-link]');
   if (adminLinks.length) {
     fetch('./api/v1/me', {cache: 'no-store'}).then(async response => {

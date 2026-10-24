@@ -28,6 +28,14 @@
   const links = Array.from(document.querySelectorAll('a[href]')).filter(visible);
   const skip = document.querySelector('.skip-link');
   const target = skip?.getAttribute('href') || '';
+  let localSkipTarget = false;
+  try {
+    const current = new URL(window.location.href);
+    const destination = new URL(target, document.baseURI || current.href);
+    localSkipTarget = Boolean(target && destination.origin === current.origin &&
+      destination.pathname === current.pathname && destination.search === current.search &&
+      destination.hash && document.getElementById(decodeURIComponent(destination.hash.slice(1))));
+  } catch { /* Malformed links must fail the same numeric guard. */ }
   return {
     controls_checked: controls.length,
     links_checked: links.length,
@@ -37,7 +45,7 @@
     missing_main: document.querySelector('main') ? 0 : 1,
     missing_h1: document.querySelectorAll('h1').length === 1 ? 0 : 1,
     missing_navigation: document.querySelector('nav[aria-label="C0 navigation"]') ? 0 : 1,
-    missing_skip_target: target.startsWith('#') && document.getElementById(target.slice(1)) ? 0 : 1,
+    missing_skip_target: localSkipTarget ? 0 : 1,
   };
 }
 

@@ -88,7 +88,8 @@ fresh consent and does not revive old credentials. Manually approved UUID client
 remain independent of optional client metadata discovery, which defaults off.
 
 Use **Protected spaces** for space-specific grants and **Background work** for
-jobs and schedules. The Workspace access page does not load background tasks.
+jobs and schedules. The Workspace access page does not load background tasks. The **Skip to content**
+link keeps you on the current page and preserves the selected space.
 A user's **Account → Your connected apps** still manages their own connections.
 
 The supported legacy NS8 URL still offers first-party people and permission

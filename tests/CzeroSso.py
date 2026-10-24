@@ -756,7 +756,13 @@ class CzeroSso:
                 run('Click',row+' button')
                 run('Get Text',row+' [role="status"]','contains','Grant saved.')
             grant('reader')
+            stage='space-navigation'
+            run('Reload')
+            run('Wait For Elements State','#managed-space:has-text('+json.dumps(name)+')','visible','timeout=30s')
+            run('Get Text','#managed-space','==','Protected space: '+name)
+            CzeroSso._verify_skip_link(browser,run)
             assert_accessibility(browser,'admin','admin')
+            stage='private-wiki-creation'
             tools='https://'+host+'/wiki?view=tools&space_id='+identifier
             run('Go To',tools);run('Wait For Elements State','#wiki-workspace','visible','timeout=30s')
             run('Click','#new-page');run('Fill Text','#wiki-slug','private/'+secrets.token_hex(4))
@@ -999,6 +1005,17 @@ class CzeroSso:
                 assert json.loads(archive.read('.app.json')) == {'apps': {'c0': {'id': 'asdk_app_disposable', 'required': True}}}
 
     @staticmethod
+    def _verify_skip_link(browser, run):
+        from urllib.parse import urlsplit
+        before=urlsplit(browser.get_url())
+        run('Press Keys','body','Tab')
+        run('Wait For Elements State','.skip-link','focused')
+        run('Press Keys','.skip-link','Enter')
+        run('Wait For Elements State','#main-content','focused')
+        after=urlsplit(browser.get_url())
+        assert before._replace(fragment='')==after._replace(fragment=''), 'Skip link changed page or selected space'
+
+    @staticmethod
     def _verify_admin_controls(browser, run, role, host, module_id=None):
         run('Go To', 'https://' + host + '/admin')
         if role != 'admin':
@@ -1018,6 +1035,7 @@ class CzeroSso:
         run('Go To', 'https://' + host + '/admin/advanced')
         run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
         run('Wait For Elements State', '#cimd-administration', 'visible', 'timeout=30s')
+        CzeroSso._verify_skip_link(browser,run)
         run('Wait For Elements State', '#cimd-preview', 'disabled', 'timeout=30s')
         if module_id is not None:
             ssh = BuiltIn().get_library_instance('SSHLibrary')
@@ -1052,6 +1070,7 @@ class CzeroSso:
         run('Wait For Elements State', row + ' button:text-is("Enable application for everyone")', 'visible', 'timeout=30s')
         run('Go To', 'https://' + host + '/admin/work')
         run('Wait For Elements State', '#admin-workspace', 'visible', 'timeout=30s')
+        CzeroSso._verify_skip_link(browser,run)
         run('Select Options By', '#job-handler', 'value', 'health')
         run('Fill Text', '#job-payload', '{}')
         run('Click', '#enqueue-job')

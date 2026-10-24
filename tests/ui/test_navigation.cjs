@@ -10,7 +10,7 @@ function setup(write) {
   const links=['./','./objects','./sources'].map(href=>({href,attributes:{},setAttribute(k,v){this.attributes[k]=v;}}));
   const field={value:'https://c0.example.test/mcp',focus(){this.focused=true;},select(){this.selected=true;}};
   const status={textContent:''}; const button={dataset:{copyTarget:'url'},disabled:false,addEventListener(_,fn){this.click=fn;}};
-  const document={querySelectorAll(selector){return selector.startsWith('nav')?links:selector==='a[data-admin-link]'?[]:[button];},getElementById(id){return id==='copy-status'?status:field;}};
+  const document={querySelectorAll(selector){return selector.startsWith('nav')?links:['a[data-admin-link]','a.skip-link'].includes(selector)?[]:[button];},getElementById(id){return id==='copy-status'?status:field;}};
   vm.runInNewContext(source,{document,URL,navigator:{clipboard:{writeText:write}},window:{location:{href:'https://c0.example.test/czero/czero17/objects',pathname:'/czero/czero17/objects'}}});
   return {links,field,status,button};
 }
@@ -43,4 +43,23 @@ test('administration navigation is shown only after a verified Admin reply', asy
     vm.runInNewContext(source,{document,URL,window:{location:{href:'https://c0.test/',pathname:'/'}},fetch:async()=>({ok:role!==null,json:async()=>({role})})});
     await tick();assert.equal(link.hidden,role!=='admin');
   }
+});
+
+
+test('nested administration skip links retain their document, prefix and selected-space query',()=>{
+  for(const suffix of ['admin/advanced','admin/work','admin/spaces?space_id=00000000-0000-4000-8000-000000000001']){
+    for(const prefix of ['/', '/czero/czero17/']){
+      const current='https://c0.example.test'+prefix+suffix;
+      const link={href:'#main-content',getAttribute(){return this.href;}};
+      const document={baseURI:'https://c0.example.test'+prefix,querySelectorAll(selector){return selector==='a.skip-link'?[link]:[];}};
+      vm.runInNewContext(source,{document,URL,window:{location:{href:current}}});
+      assert.equal(link.href,current+'#main-content');
+    }
+  }
+});
+test('ordinary skip links keep their original local fragment',()=>{
+  const link={href:'#main-content',getAttribute(){return this.href;}};
+  const document={querySelectorAll(selector){return selector==='a.skip-link'?[link]:[];}};
+  vm.runInNewContext(source,{document,URL,window:{location:{href:'https://c0.example.test/wiki?view=tools'}}});
+  assert.equal(link.href,'#main-content');
 });
