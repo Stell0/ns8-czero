@@ -1,11 +1,9 @@
 # C0 (Czero) — Knowledge for people and AI assistants
 
-The approved people-first [Workspace access page](docs/workspace-access.md) is implemented on an isolated branch; final distribution/native/live acceptance is pending.
-It keeps application approval, user roles and individual connection disconnect
-separate. Core0.33/schema0021 provides the supporting bounded administration
-operations; the deployed runtime and PR33 stay frozen during implementation.
-No access-page browser/native/live acceptance is claimed yet. See [PLAN](PLAN.md).
-
+The [Workspace access page](docs/workspace-access.md) puts people, pending requests
+and Read/Write/Manage permissions in one table. Application approval, user roles
+and individual connection disconnect remain separate, with technical configuration
+under Advanced and background work on its own page.
 
 C0 is a knowledge application for NethServer 8. Read a Wiki, retain original source passages and citations, and let an authorized AI assistant research or maintain that knowledge through MCP. Reader, Editor and Admin membership controls access, including protected knowledge spaces. Optional inference helps retrieval; it does not control authorization.
 
@@ -22,7 +20,19 @@ Use your administrator's HTTPS C0 address and your own NethServer sign-in. ChatG
 
 ## Status and boundaries
 
-PR32 self-service onboarding is merged with verified main/publication and native artifacts. The dedicated instance now runs the frozen PR33 background-connection candidate, app **0.51.0**, Core **0.32.0**, schema **0020**, after native and server preservation/renewal/revocation acceptance. Actual ChatGPT reuse beyond24 hours and PR33 review remain pending. Background access uses explicit consent, thirty-day inactivity, short access tokens and effective revocation. The people-first access candidate is app **0.52.0** with independently published Core **0.33.0**, schema **0021**; final app CI/native/live acceptance remains pending. The operator previously confirmed ChatGPT connection/read; packaged-skill use and remaining model evaluations are separate gates. [Release readiness](docs/release-readiness.md) records the remaining work. No stable NS8 module release or public plugin-directory listing is claimed.
+The accepted dedicated runtime is app **0.52.0**, released Core **0.33.0**, schema
+**0021**, at frozen source `e384bed`. Persistent background connections and the
+people-first access page are reviewed and merged through PR33/PR34; exact-source
+CI, both native distributions, actual Reader/Editor/Admin browser workflows and
+dedicated-instance update/restart acceptance pass. The operator confirms ChatGPT
+web reuse beyond 24 hours without manual reconnect. Background access uses explicit
+consent, thirty-day inactivity, short access tokens and effective revocation.
+Existing grants are never silently upgraded. See [PLAN](PLAN.md) for main validation,
+frozen image identities and the distinction between live and disposable evidence.
+
+[Release readiness](docs/release-readiness.md) still tracks packaged-skill web use,
+remaining model evaluations, actual scheduled-client interoperability and vendor
+findings. No stable NS8 module release or public plugin-directory listing is claimed.
 
 C0 provides browser readers/tools, authenticated REST/OpenAPI and OAuth-protected MCP. Selected plain text can be ingested through MCP; document-file upload uses REST or Source tools. Authorized changes publish immediately with retained revisions and evidence. C0 does not execute arbitrary assistant commands or provide a general workflow engine.
 
