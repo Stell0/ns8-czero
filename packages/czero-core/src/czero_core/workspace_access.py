@@ -152,7 +152,7 @@ class WorkspaceAccessService:
             # A stale provider proof may renew normally. It is not a reconnect
             # requirement, nor does this summary extend deadlines/check authority.
             if (native is None or native['account_id'] != account['id'] or native['revoked']
-                    or native['checking'] or native['idle_until']<=now
+                    or native['idle_until']<=now
                     or native['expires_at'] is not None and native['expires_at']<=now
                     or native['authority_kind']=='background' and not self.grants.background_enabled):
                 state = 'needs_reconnect'
@@ -161,7 +161,7 @@ class WorkspaceAccessService:
                     self.grants.authority._open(native)
                 except RenewalRejected:
                     state = 'needs_reconnect'
-                if state=='connected' and native['verified_until']<=now:
+                if state=='connected' and (native['checking'] or native['verified_until']<=now):
                     state = 'renewal_required'
         return {'id': row['id'], 'kind': 'connection', 'account_id': account['id'],
                 'client_name': row['client_name'], 'client_id': row['client_id'], 'scopes': row['scopes'],

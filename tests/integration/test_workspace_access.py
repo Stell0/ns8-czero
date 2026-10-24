@@ -208,3 +208,20 @@ def test_decline_and_continue_have_one_winner(onboarding):
             return True
         except OnboardingRejected:return False
     with ThreadPoolExecutor(max_workers=2) as pool:assert sorted(pool.map(run,['decline','continue']))==[False,True]
+
+
+def test_inflight_native_check_is_renewal_not_a_false_reconnect(persistent):
+    f=persistent;service=WorkspaceAccessService(f['grants']);owner=f['context'].actor
+    f['issue']()
+    # Model another connection's current bounded provider call; the Admin
+    # is an independent trusted first-party caller, not that active session.
+    owner=Actor(owner.user_id,Role.ADMIN,True)
+    with f['database'].engine.begin() as c:
+        c.execute(text('UPDATE c0_native_authority SET checking=true WHERE account_id=:id'),{'id':owner.user_id})
+    before=len(f['calls'])
+    row=service.applications(owner,owner.user_id)['applications'][0]
+    assert row['status']=='renewal_required' and not any(row['permissions'].values())
+    assert len(f['calls'])==before
+    with f['database'].engine.begin() as c:
+        c.execute(text('UPDATE c0_native_authority SET checking=false WHERE account_id=:id'),{'id':owner.user_id})
+    assert service.applications(owner,owner.user_id)['applications'][0]['status']=='connected'
