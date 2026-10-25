@@ -1,5 +1,110 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+## Product purpose
+
+C0 is a self-hosted, shared second brain for people and AI assistants, and a foundation for applications built around that knowledge. Read [README](README.md) for the product story and [PLAN](PLAN.md#roadmap) for the current roadmap and acceptance order.
+
+The product develops the LLM Wiki idea into a durable service: preserve original evidence, maintain connected Wiki knowledge, retrieve it through indexed APIs, and let multiple authorized users and assistants work on it. Its second purpose is reuse: a fork should start with working knowledge storage, access control, REST/MCP, UI, skills and delivery tooling. “LAMP for AI” describes this starting-stack ambition; it is not a promise of a hosted model or an autonomous agent runtime.
+
+Changes should strengthen one of those two paths: **use the shared knowledge service**, or **build an application on the reusable base**. Keep ordinary reading, connection setup and administration understandable to nontechnical users.
+
+## Start from the latest original C0 main
+
+The original C0 repository is `https://github.com/Stell0/ns8-czero`. At the start of every task, verify the original remote, fetch its latest `main`, and check out that exact source in an isolated worktree. In a fork, a local or fork `origin/main` is not proof that original C0 is current. Preserve dirty files and application customizations rather than resetting an existing checkout.
+
+Keep development branches rebased on the latest original C0 `main`. Fetch and rebase before opening a PR and whenever that base advances; resolve conflicts semantically, preserve the fork's feature tests, and rerun validation. Do not claim compatibility because the rebase command completed. Inspect and resolve dependency locks, migrations and managed-file comparison state too.
+
+Once a source is frozen for review, publication or deployment, preserve its commits, evidence and immutable image identities. If keeping current requires rewriting frozen history, retain that candidate and produce a new rebased candidate on a separate branch, then repeat its checks and affected acceptance. Never force-push away accepted/deployed evidence or retag its images. The final PR uses a regular merge to retain the newly tested source commits.
+
+Read README, the roadmap and the relevant skill before editing. Use active manifests and locks for versions; archived examples may describe earlier generations. Inspect existing callers and reuse trusted services. Settle behavior, interfaces, compatibility and acceptance before runtime implementation. Preserve recovered M20 worktrees, unfinished drafts and failed/private evidence.
+
+## Build on the base
+
+| Layer | Responsibility |
+| --- | --- |
+| `packages/czero-core` | Reusable knowledge/data services, persisted-role authorization, transactions, migrations and stable contracts |
+| `app` | Reference/fork UI and HTTP/MCP transport composed from trusted Core operations |
+| `imageroot` and `ui` | Numbered NS8 lifecycle/configuration/backup operations and native settings |
+| `plugins/c0-knowledge` | Instance-bound end-user setup, research and knowledge-maintenance instructions |
+| `.agents/skills` and `docs` | Development routing, contributor/operator workflows and public guidance |
+
+Fork-specific screens, branding and workflows belong in the application. Change Core when behavior is reusable, and preserve its independent distribution. Existing typed records and schemas may already express the domain; do not add a parallel database or a custom operation engine without a concrete need.
+
+Forks use the released Core dependency and frozen lock by default. `CZERO_CORE_SOURCE=local` is an explicit producer-development choice, never an automatic fallback. Choose independent module/image identities and publishing permissions before shipping a fork. Do not publish the template's registry tags or replace an immutable upstream Core release. Review managed-file updates through the explicit `c0-upstream.json` registry; preserve customizations and unresolved comparisons.
+
+## Skills and responsibilities
+
+| Work | Skill |
+| --- | --- |
+| Add a feature to the reference app or a fork | [c0-create-feature](.agents/skills/c0-create-feature/SKILL.md) |
+| Change reusable services, migrations or Core packaging | [c0-develop-core](.agents/skills/c0-develop-core/SKILL.md) |
+| Isolate a reusable upstream contribution | [c0-contribute-upstream](.agents/skills/c0-contribute-upstream/SKILL.md) |
+| Review Core or managed-infrastructure upgrades | [c0-upgrade-from-upstream](.agents/skills/c0-upgrade-from-upstream/SKILL.md) |
+| Measure model-driven tool use | [c0-evaluate-tools](.agents/skills/c0-evaluate-tools/SKILL.md) |
+
+Use the installed [NethServer skills](https://github.com/NethServer/agents) for module/container work, native administration, commits, PRs and releases. Do not duplicate their manuals here. End-user skills guide connected assistants; repository skills guide developers. Neither grants authority, and development skills never ship in runtime images.
+
+## Contribute reusable improvements upstream
+
+When a feature or fix can benefit the original C0 base, isolate the reusable change and **open an upstream pull request** against original C0 `main` after its tests pass. Use [c0-contribute-upstream](.agents/skills/c0-contribute-upstream/SKILL.md) for extraction and the installed **nethserver-pr** skill for the actual PR. Do not stop at suggesting a contribution or leave reusable changes mixed with customer-specific branding, private data or unrelated drafts. Keep the application-specific portion in the fork.
+
+Explain the behavior, compatibility and migration impact, include feature regression tests and reproducible validation, and follow the skill's review/assignment rules. Never assign an unsolicited reviewer. Address review feedback; do not merge a failed candidate. Core publication and fork adoption still follow their immutable-release and consumer-verification gates.
+
+## Tests are part of the feature
+
+Before opening a feature/runtime PR, run the complete required base suite on the exact latest original C0 `main` and establish a green baseline. Add tests for the new feature to the branch, then run the complete suite again on the rebased candidate. Resolve base failures before opening the feature PR; retain failed evidence rather than describing a partial run or database skips as a pass. CI checks required by [CI policy](docs/ci-policy.md) must also finish successfully for the exact candidate before merge.
+
+The documentation-only lightweight exception applies to branches developed within original `Stell0/ns8-czero`. **Every contribution from an external fork to original C0 `main` requires full base and candidate checks before opening the upstream PR, including documentation-only contributions.** Complete the database, packaging, image and native matrix; a lightweight automatic docs check does not satisfy this contributor requirement. Arrange any registry-dependent checks on an authorized upstream branch without copying credentials into fork secrets or executing untrusted code with privileged PR events. Record the exact sources and results in the PR.
+
+Feature tests must exercise its observable behavior and the contracts it relies on. Cover the relevant authorization/space/scope boundaries, revisions/retries, migrations/recovery and actual browser workflows when affected. Preserve and run these tests whenever original C0 or the Core dependency changes, so the fork can demonstrate that its own code still works with the new base. Do not weaken base tests, remove regression coverage, skip database cases or silently widen dependency ranges to obtain a pass.
+
+## Keep the Codex plugin and connector current
+
+Check Codex-facing MCP tools, descriptions, schemas, safety annotations, plugin/skill instructions and setup guidance against the actual C0 instance after feature, Core or base upgrades. Update the affected artifacts together; refresh/reload Codex's tool catalog and verify the intended account and a real authorized operation. Include a regression check for changed tool contracts and skill workflows. A matching version string or a successful package build alone is insufficient.
+
+Preserve the registered connection identity and unrelated settings on content-only updates. New scopes need appropriate client approval and fresh explicit OAuth consent; do not silently broaden permissions. Keep end-user plugin/skill content separate from development skills. Documentation-only changes that do not affect a connector contract do not require manufacturing a new plugin version.
+
+## Knowledge and product contracts
+
+Treat source versions and Wiki revisions as durable evidence/history. Content, records, claims, relations and citations are selected within a knowledge space. Record schema definitions are instance-wide. Preserve stable IDs, source hashes/offsets, expected revisions, supported replay receipts and same-space database references. Applicability and verification attach to exact content revisions; changed content does not inherit verified status.
+
+The connected assistant performs reasoning and synthesis. C0 serves knowledge and deterministic registered operations. Its worker extracts/indexes content and runs registered jobs; adding arbitrary model execution or shell commands to a request handler is outside the current product boundary. Optional retrieval providers cannot decide authorization or make ordinary text search depend on a model API.
+
+Describe integrations accurately. C0 ships OAuth-protected MCP, an instance-bound skill and a ChatGPT-specific plugin package. Other assistants use their own connector and skill formats. Separate vendor MCP support from actually tested C0 compatibility. Interactive OAuth success does not establish scheduled execution or packaged-skill acceptance. MCP HTTP 200 can contain a tool error; inspect the tool result and verify saved revisions before claiming success.
+
+The normal browser pages are readers. Keep mutation tools, technical client controls, protected-space grants and jobs/schedules on their established surfaces. Preserve the people-first access page's distinction between application approval, user permissions, exact connection disconnect and persistent blocking. Avoid an ambiguous Revoke action. Authorized knowledge changes publish immediately with retained history; do not invent an extra publication/review stage.
+
+## Contracts to preserve
+
+Authorization uses current persisted Reader/Editor/Admin membership inside Core transactions, explicit protected-space selection and actual delegated scopes. Tool discovery does not grant authority. Preserve lock ordering, immutable evidence/revisions, expected revisions and replay receipts. A denied space must never fall back to Shared. Optional providers cannot decide authorization or make ordinary text retrieval unavailable.
+
+OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. CIMD defaults off, approves exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Remote metadata never supplies roles. Existing UUID clients remain independent.
+
+That absolute bound remains unchanged for existing/interactive grants. Newly consented background grants explicitly opt into a separate offline authority with a snapshotted thirty-day inactivity window and no fixed maximum. Browser cookies, codes and pending consent retain their finite bounds. Background login purpose and expected account bind to one-use persisted state. Rotating persistent refresh credentials use a keyed family/generation proof with bounded database storage and committed replay revocation before SDK scope validation. Preserve client/account/resource/secret bindings, current-role checks, browser-logout versus explicit-disconnect semantics and genuine predecessor recovery; never promote old grants silently. Mandatory native evidence includes real offline issuance, owned provider logout, renewal and revocation; local/fake-clock tests alone do not establish ChatGPT scheduling acceptance.
+
+Reader pages render stored knowledge with local assets and allowlisted DOM text/tokens; raw HTML/images remain inactive. Preserve response-generation/access-loss/draft/replay guards, template IDs and unique attributes. Ordinary readers do not initialize mutation controllers or fetch Admin lists. Use existing space and API selectors; files remain REST uploads.
+
+## Verification and delivery
+
+[CI policy](docs/ci-policy.md) defines automated validation. Draft runtime work gets scoped feedback; ready runtime PRs require full exact-source acceptance. Only explicitly reviewed Git-only documents receive the lightweight exemption; packaged docs, plugin inputs, static app HTML, executable helpers, versions and locks broaden validation. The external-fork contribution requirement above additionally requires full checks even when automation classifies a change as documentation-only.
+
+Require the actual `C0 merge gate` and `scripts/verify-promotion.py --source <full-head-sha> --pr <number>`. Inspect completed successful checks and actual native/privacy/scan artifacts; old, skipped, cancelled or started checks are insufficient. Use `validate.yml` for manual full dispatch. Never cancel a frozen acceptance run or share a mutable PostgreSQL test database across jobs.
+
+Another developer reviews before merge; assign no unsolicited reviewer. Preserve tested commits with a regular merge. Runtime milestones require supported C0-only backup/update, real readiness, exact image/data/settings/files/client/schedule/unrelated-inventory preservation, live acceptance, restart and bounded positive-control root journald audits. Empty Podman logs do not prove privacy. Destructive recovery tests remain disposable. Verify actual main completion/publication, then use a separate checked documentation closeout. Keep failed/private evidence outside Git and public identities sanitized.
+
+The operator's **interactive Playwright** and **container CPU-quota** waivers remain unchanged. Do not introduce `--cpus=2`, change host delegation or claim CPU-rate enforcement. Automated native browsers, memory/swap/tasks limits, parser deadlines and worker lifetime checks remain required.
+
+## Accepted baseline and preserved evidence
+
+The accepted runtime is app **0.52.0**, Core **0.33.0**, schema **0021**, source `e384bed641ac0bdc97212def22db521c0ab2e4c7`. Its exact installed image identities and genuine predecessor policy are recorded in [PLAN](PLAN.md#dedicated-instance-acceptance-and-frozen-predecessor). Keep those tags/digests available; documentation changes do not replace the runtime.
+
+Reviewed closeout PR35 merged as `f735004`; actual main documentation check [40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source promotion verification pass. The full runtime/main publication evidence remains in PLAN. Broader M21 packaged-skill/client/scheduled acceptance and release obligations remain open; no stable module release is claimed.
+
+<details>
+<summary>Operational conventions and acceptance checkpoints retained from earlier work</summary>
+
+The following record describes its stated checkpoints. The current baseline and roadmap above supersede older pending/current-installation wording. Preserve its security, migration and browser regression conventions.
+
 ## Accepted people-first access — 24 October 2026
 
 PR33 and PR34 are reviewed and regularly merged, in that order. The operator
@@ -78,35 +183,8 @@ native Tab/Enter/main-focus checks on Advanced, Background work and Protected
 spaces. An unresolved fragment attribute is not sufficient evidence. Native
 fixture cleanup restores the original discovery policy even on browser failure.
 
-## Responsibilities and routing
 
-- Reusable domain behavior, persisted-role authorization, migrations and concurrency belong in `packages/czero-core`; use `$c0-develop-core`.
-- HTTP/MCP adapters and application UI belong in `app`; use `$c0-create-feature` and trusted Core operation bindings.
-- NS8 lifecycle/configuration/backup belongs in focused numbered `imageroot` scripts. Use installed NethServer module/container/admin skills from https://github.com/NethServer/agents; do not copy their manuals.
-- Use `$c0-contribute-upstream` to isolate reusable fork changes, `$c0-upgrade-from-upstream` for managed-file/Core proposals and `$c0-evaluate-tools` for authorized measured model evaluations.
-- End-user plugin skills in `plugins/c0-knowledge` guide connected assistants. They are separate from repository development instructions and never ship in runtime images.
-
-Use [development commands and contracts](docs/development.md). Active manifests/lock determine current versions; archived examples and the immutable Core README may describe older generations.
-
-## Contracts to preserve
-
-Authorization uses current persisted Reader/Editor/Admin membership inside Core transactions, explicit protected-space selection and actual delegated scopes. Tool discovery does not grant authority. Preserve lock ordering, immutable evidence/revisions, expected revisions and replay receipts. A denied space must never fall back to Shared. Optional providers cannot decide authorization or make ordinary text retrieval unavailable.
-
-OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. CIMD defaults off, approves exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Remote metadata never supplies roles. Existing UUID clients remain independent.
-
-That absolute bound remains unchanged for existing/interactive grants. Newly consented background grants explicitly opt into a separate offline authority with a snapshotted thirty-day inactivity window and no fixed maximum. Browser cookies, codes and pending consent retain their finite bounds. Background login purpose and expected account bind to one-use persisted state. Rotating persistent refresh credentials use a keyed family/generation proof with bounded database storage and committed replay revocation before SDK scope validation. Preserve client/account/resource/secret bindings, current-role checks, browser-logout versus explicit-disconnect semantics and genuine predecessor recovery; never promote old grants silently. Mandatory native evidence includes real offline issuance, owned provider logout, renewal and revocation; local/fake-clock tests alone do not establish ChatGPT scheduling acceptance.
-
-Reader pages render stored knowledge with local assets and allowlisted DOM text/tokens; raw HTML/images remain inactive. Preserve response-generation/access-loss/draft/replay guards, template IDs and unique attributes. Ordinary readers do not initialize mutation controllers or fetch Admin lists. Use existing space and API selectors; files remain REST uploads.
-
-## Verification and delivery
-
-[CI policy](docs/ci-policy.md) is authoritative. Draft runtime work gets scoped feedback; ready runtime PRs require full exact-source acceptance. Only explicitly reviewed Git-only documents receive the lightweight exemption; packaged docs, plugin inputs, static app HTML, executable helpers, versions and locks broaden validation.
-
-Require the actual `C0 merge gate` and `scripts/verify-promotion.py --source <full-head-sha> --pr <number>`. Inspect completed successful checks and actual native/privacy/scan artifacts; old, skipped, cancelled or started checks are insufficient. Use `validate.yml` for manual full dispatch. Never cancel a frozen acceptance run or share a mutable PostgreSQL test database across jobs.
-
-Another developer reviews before merge; assign no unsolicited reviewer. Preserve tested commits with a regular merge. Runtime milestones require supported C0-only backup/update, real readiness, exact image/data/settings/files/client/schedule/unrelated-inventory preservation, live acceptance, restart and bounded positive-control root journald audits. Empty Podman logs do not prove privacy. Destructive recovery tests remain disposable. Verify actual main completion/publication, then use a separate checked documentation closeout. Keep failed/private evidence outside Git and public identities sanitized.
-
-The operator's **interactive Playwright** and **container CPU-quota** waivers remain unchanged. Do not introduce `--cpus=2`, change host delegation or claim CPU-rate enforcement. Automated native browsers, memory/swap/tasks limits, parser deadlines and worker lifetime checks remain required.
+</details>
 
 <details>
 <summary>Historical section links</summary>
