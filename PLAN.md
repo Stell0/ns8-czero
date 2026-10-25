@@ -1,4 +1,54 @@
-# C0 roadmap and implementation status
+# C0 roadmap
+
+C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
+
+## Roadmap
+
+Work through these phases in order. Each phase needs observable results before it is called complete; there are no promised dates.
+
+| Phase | Status | What people should get | Done when |
+| --- | --- | --- | --- |
+| Shared knowledge foundation | Implemented and accepted under development gates | Wiki, original sources/citations, structured records and graph, indexed retrieval, users/protected spaces, browser/REST/MCP and revocable OAuth | Recorded local, released-Core, image, both-native and dedicated-instance acceptance remains valid |
+| 1. Make the first-use experience clear | Active documentation/skills release work, M21 | Someone can understand C0, install an instance, connect the right account, use its skills and fork it from public guidance | A fresh user completes setup, first source, cited read and authorized edit without a private maintainer runbook; packaged-skill web routes are actually exercised |
+| 2. Prove the assistant workflows | Remaining release-readiness work | Repeatable use with connected clients, including unattended maintenance | Fresh scheduled read-only and read/write tests verify results after token expiry, renewal, denial and conflicts; Claude/Grok routes receive their own C0-specific tests |
+| 3. Publish a release operators can trust | Gated | A clearly supported version, installation/upgrade guide and reviewed skills/packages | Required release checks pass, security findings are dispositioned, retrieval quality is measured for the claimed workload, and publication/release scope is explicitly approved |
+| 4. Grow the application foundation | Later, separately planned | More domain applications, richer agent memory and optional workflow integrations | Each extension has its own scope and data/authorization/recovery acceptance; broader agent-memory work follows session-usability acceptance and Windmill follows M21 |
+
+### What already works
+
+- A person can read and maintain knowledge in the browser; an authorized assistant can search/read through MCP and perform explicit knowledge changes.
+- Sources retain versions and extracted passages; Wiki pages retain revisions; evidence, records and graph relationships stay within their selected space.
+- Verified users, Read/Write/Manage roles, protected-space grants, application approval, exact disconnect and persistent blocking are implemented.
+- Text retrieval works without a model provider. Optional embeddings/scoring and a reusable Python Core support applications that need more.
+- NS8 packaging, disposable tests, CI image/native checks and managed fork/Core update mechanisms are implemented.
+
+These capabilities are available in a tested **development candidate**. They do not by themselves establish a stable module release, every client's compatibility or successful unattended agent execution.
+
+### Next acceptance work
+
+1. Complete the public documentation and skill walkthrough, including actual ChatGPT web package installation/account binding and the intended private/managed routes. This documentation refresh clarifies the product and fork story; it does not claim those runtime/platform gates passed.
+2. Maintain the fork workflow: latest original C0 main, rebased development branches, green base tests plus retained feature regressions, tested upstream contributions and current Codex-facing plugin/connector contracts.
+3. Resolve the scheduled-task execution blocker with a visible run trace or controlled reproduction. Verify a read-only run first, then one authorized Wiki update with exactly one new revision and readback. Record real errors rather than interpreting an empty completed run as success.
+4. Keep the working ChatGPT connection and verify Codex independently. A 25 October operator setup proves a dedicated Codex OAuth connection with an exact loopback callback, current profile/protected Wiki reads and an administrator-only read. It does not prove Codex content writes or scheduled execution. Claude and Grok publish MCP connector routes; their C0-specific end-to-end acceptance is still pending.
+5. Finish remaining model-evaluation, actual-provider retrieval-quality and security/release obligations. Runtime changes require their own full acceptance and deployment loop. Stable tagging, public plugin-directory submission and workspace-wide rollout each need explicit scope and approval.
+
+Use [release-readiness requirements](docs/release-readiness.md) for the remaining gate definitions. Its older implementation checkpoints and unchecked historical rows must be read together with the newer accepted-runtime evidence below; they do not undo passed runtime gates. No automatic knowledge-maintenance agent or native Wiki cron handler is proposed as a substitute for testing the external assistant workflow.
+
+## Current baseline
+
+Accepted runtime: app **0.52.0**, released Core **0.33.0**, schema **0021**, source `e384bed641ac0bdc97212def22db521c0ab2e4c7`. Freeze its three [installed image digests](#dedicated-instance-acceptance-and-frozen-predecessor) as the next genuine upgrade predecessor. Documentation/main-marker images do not replace it.
+
+Runtime main `05ce22c` passed full [40106287084](https://github.com/Stell0/ns8-czero/actions/runs/40106287084), canonical publication and independent actual native/privacy/scan audits. Reviewed documentation closeout PR35 merged as `f735004`; its [main40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source documentation promotion verifier pass. Original dirty checkouts, recovered M20 worktrees, drafts and immutable artifacts remain preserved.
+
+## How development proceeds
+
+Agree the behavior and acceptance, implement one focused change in the right layer, verify it with disposable tests, review the PR, and follow the [CI policy](docs/ci-policy.md). Runtime changes also need supported targeted deployment and live preservation/client/restart/journal acceptance before merge, then actual main publication. Internal documentation-only guidance uses its explicit lightweight checks. All external-fork contributions to original C0 main require full base and candidate checks before opening the PR, including documentation-only changes; see [contributor requirements](AGENTS.md#tests-are-part-of-the-feature). Existing interactive Playwright and CPU-quota waivers remain unchanged.
+
+The detailed plan and evidence below preserve decisions, failures, exact sources, image identities and test results. Older “current” or “pending” wording describes its checkpoint; the baseline and roadmap above govern present work.
+
+<details>
+<summary>Detailed implementation plans and acceptance evidence</summary>
+
 
 ## Operator priority — people-first workspace access (24 October 2026)
 
@@ -629,3 +679,5 @@ These anchors preserve links to the retained historical record.
 Core source `6f1e4703f4d027c82ccb03ef8813efe30c650365` passes [full39760439788](https://github.com/Stell0/ns8-czero/actions/runs/39760439788), including local/producer/released-image and both native distributions. Independently downloaded reports verify Debian genuine predecessor upgrade21, Rocky installation26/three expected skips, eight browsers/privacy guards,25 accessibility contexts, three OAuth-query artifacts with zero candidates and five actual scan/SBOM pairs. The full promotion verifier passes. [Core publication39768193889](https://github.com/Stell0/ns8-czero/actions/runs/39768193889) completes successfully at that exact source. Immutable `core-v0.31.1` wheel SHA256 `ec2b9757d5a947f98bc9e743a6d7eb9f5227f59682d6a8a334ea201f5d03d13a`, archive SHA256 `1ee6154ae1e3ed8a1a90684e85d3897034d05cb98733f18611bee84141bcbb5e`; downloaded checksums match. This Core bridge is not the application/live candidate.
 
 Application0.50.0 pins released Core0.31.1 and implements the planned human approval, default Reader/blocked-account UI and generated `.skill`/single-plugin ZIP page. Focused HTTP/download tests pass115 cases; the exact native Core-seeded first-connection/replay helper passes six local HTTP tests. Updated native browser tests download/inspect both archives, and native admission checks require a genuinely new Reader plus persistent blocking. Final full application/consumer/image/native validation, supported dedicated update and actual ChatGPT skill/plugin acceptance remain pending in draft PR32.
+
+</details>
