@@ -25,7 +25,7 @@ def test_all_maintained_navigation_and_skill_references():
         assert metadata['name']==p.parent.name
         assert metadata['description'] and len(metadata['description']) <= 1024
         names.append(metadata['name'])
-    assert len(names)==len(set(names))==8
+    assert len(names)==len(set(names))==9
 
 
 def test_fences_and_duplicate_heading_anchors_match_navigation(tmp_path):

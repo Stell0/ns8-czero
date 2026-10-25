@@ -110,4 +110,6 @@ __pycache__/
 **/build/
 .venv/
 .pytest_cache/
+.local/ingestion/
+.venv-ingestion/
 .playwright-mcp/

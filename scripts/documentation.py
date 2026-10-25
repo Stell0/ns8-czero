@@ -15,11 +15,12 @@ GUIDES = ('installation-candidate', 'index', 'user-guide', 'administration', 'ch
           'tool-evaluations', 'retrieval-benchmark', 'c0-agent-memory-baseline',
           'm14-readiness', 'm14-release-notes')
 MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',
+               'samples/ingestion/README.md',
                *('docs/' + name + '.md' for name in GUIDES),
                'docs/history/README.md', 'docs/history/AGENTS.md', 'docs/history/PLAN.md',
                *('.agents/skills/' + name + '/SKILL.md' for name in (
                    'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream',
-                   'c0-upgrade-from-upstream', 'c0-evaluate-tools')))
+                   'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources')))
 
 
 def prose(text):

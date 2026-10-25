@@ -26,6 +26,11 @@ For example, a support team can retain troubleshooting procedures and the eviden
 
 The useful loop is **collect → connect → ask → improve**. Your assistant can research, summarize and propose or make authorized changes; C0 keeps the resulting knowledge, evidence and history available for the next person or conversation.
 
+For repeatable imports, start with the [ingestion samples](samples/ingestion/README.md):
+a full GitHub project/contributor/document pipeline and shared Python helpers for
+other sources. Public adapters and tests stay in Git; your instance `.env`, update
+scripts, OAuth credentials, datasets and receipts stay in an ignored private job.
+
 ## Use C0
 
 ### Use an existing instance
@@ -137,7 +142,7 @@ There are two audiences, with separate instructions:
 | Audience | Included skills | Purpose |
 | --- | --- | --- |
 | People and connected assistants | `c0-setup`, `c0-research`, `c0-maintain-knowledge`, plus the instance-bound memory skill | Connect the right account, research with citations, and make authorized knowledge changes with revision/retry safeguards |
-| Developers and coding agents | `c0-create-feature`, `c0-develop-core`, `c0-contribute-upstream`, `c0-upgrade-from-upstream`, `c0-evaluate-tools` | Extend an application, improve Core, contribute upstream, review upgrades and evaluate tool guidance |
+| Developers and coding agents | `c0-create-feature`, `c0-develop-core`, `c0-contribute-upstream`, `c0-upgrade-from-upstream`, `c0-evaluate-tools`, `c0-ingest-sources` | Extend an application, improve Core, contribute upstream, review upgrades, evaluate tool guidance and maintain repeatable source ingestion |
 
 Skills describe how to work; Core enforces what is allowed. They do not grant permissions or install an autonomous agent in C0. Repository development skills are kept out of runtime images. See [AGENTS.md](AGENTS.md) for the coding-agent entry point.
 

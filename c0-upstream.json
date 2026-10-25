@@ -572,6 +572,216 @@
       "path": "tests/access_fixture.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": ".agents/skills/c0-ingest-sources/SKILL.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/check-ingestion-public.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/README.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/LICENSE",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/pyproject.toml",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/uv.lock",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/__init__.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/auth.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/client.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/cli.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/errors.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/http.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/jobs.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/sources.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/state.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/__init__.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/bootstrap.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/c0_client.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/config.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/discover.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/github_client.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/metrics.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/models.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/scrape.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/state.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/github_vault/sync.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/scripts/inspect_c0.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/scripts/run_pipeline.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/scripts/scrape_github.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/scripts/update_c0.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/conftest.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/fixtures/events.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_auth.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_client.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_core.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_documents.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_jobs.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_sync.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/MANIFEST.in",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_login_sources.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_ingest/config.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/ingestion/test_ingestion_crawl.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

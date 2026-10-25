@@ -4,6 +4,55 @@ C0 has two uses: a shared second brain for people and assistants, and a reusable
 
 ## Roadmap
 
+### Active implementation — reusable ingestion samples
+
+The operator approves the full GitHub project/contributor/document pipeline as
+an instance-neutral sample and a dedicated ingestion OAuth connection. Add a
+development-only Python package under `samples/ingestion`, with shared SDK/MCP,
+identity/space checks, credential/state storage and source-ingestion helpers.
+Keep GitHub discovery, metrics and mapping separate. Preserve stable external
+keys, immutable snapshots, source-version hashes, receipts, partial coverage,
+bounded work and independent readback; unchanged reruns must not duplicate data.
+
+Local jobs live under ignored `.local/ingestion/<job>` with a runnable wrapper,
+instance `.env`, source configuration, private credentials, snapshots and state.
+Use a dedicated preapproved OAuth public client with exact loopback callback,
+explicit background consent, locked atomic rotation and no unattended interactive
+fallback. Normal sync requires explicit apply and Read/Write; Admin bootstrap is
+separate and never overwrites incompatible global schemas. Preserve the original
+external GitHub directory and migrate its configuration/state without live writes.
+
+Add the `c0-ingest-sources` repository skill, public adapter notes and synthetic
+regressions. Future ingestion first reads samples, implements reusable adapters,
+uses private jobs, verifies actual receipts, removes private material from the
+complete contribution and opens an upstream PR using nethserver-pr. Register
+reusable fork files explicitly and keep all samples out of runtime images.
+
+Acceptance requires full latest-main baseline and candidate checks, GitHub and
+OAuth/state/identity/space/retry privacy regressions, actual disposable MCP/DB
+read/write/conflict/denial/index/readback tests, independent package installation,
+full image/both-native CI and inspected artifacts. No Core/schema/runtime changes,
+makako deployment, live reingestion or installed schedule is part of this phase.
+Record completed evidence and limitations before claiming acceptance.
+
+Implementation checkpoint: the generic package is 0.1.0 and runs independently
+of Core/the application. Current focused source/client/private-job tests and
+actual disposable SDK/OAuth/PostgreSQL, immutable evidence, lost-reply recovery,
+conflict/Reader denial and revocation tests pass. Actual wheel and source-archive
+installations outside the checkout pass. A copied existing private job validates
+offline without content writes; original files remain unchanged and its dedicated
+Read/Write client is approved, with one-time user login pending. No source data,
+instance configuration or credentials are included in this contribution.
+
+Exact original-main baseline `09c10d3` passes full40233296553 and independent
+downloaded artifact inspection: Debian upgrade21, Rocky installation26/three
+expected skips/all8 browsers, 30 accessibility contexts, three OAuth-query
+artifacts with zero candidates and five scan/SBOM pairs. Local broad regressions
+pass 2041 cases after moving disposable packaging files out of quota-limited
+`/tmp`; the failed attempt is retained privately. Final frozen-candidate full
+local/CI checks and PR review remain required. These tools do not replace the
+accepted runtime images or establish actual scheduled-client acceptance.
+
 Work through these phases in order. Each phase needs observable results before it is called complete; there are no promised dates.
 
 | Phase | Status | What people should get | Done when |

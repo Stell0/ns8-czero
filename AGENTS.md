@@ -41,6 +41,7 @@ Forks use the released Core dependency and frozen lock by default. `CZERO_CORE_S
 | Isolate a reusable upstream contribution | [c0-contribute-upstream](.agents/skills/c0-contribute-upstream/SKILL.md) |
 | Review Core or managed-infrastructure upgrades | [c0-upgrade-from-upstream](.agents/skills/c0-upgrade-from-upstream/SKILL.md) |
 | Measure model-driven tool use | [c0-evaluate-tools](.agents/skills/c0-evaluate-tools/SKILL.md) |
+| Ingest or update an external data source | [c0-ingest-sources](.agents/skills/c0-ingest-sources/SKILL.md) |
 
 Use the installed [NethServer skills](https://github.com/NethServer/agents) for module/container work, native administration, commits, PRs and releases. Do not duplicate their manuals here. End-user skills guide connected assistants; repository skills guide developers. Neither grants authority, and development skills never ship in runtime images.
 
@@ -63,6 +64,23 @@ Feature tests must exercise its observable behavior and the contracts it relies 
 Check Codex-facing MCP tools, descriptions, schemas, safety annotations, plugin/skill instructions and setup guidance against the actual C0 instance after feature, Core or base upgrades. Update the affected artifacts together; refresh/reload Codex's tool catalog and verify the intended account and a real authorized operation. Include a regression check for changed tool contracts and skill workflows. A matching version string or a successful package build alone is insufficient.
 
 Preserve the registered connection identity and unrelated settings on content-only updates. New scopes need appropriate client approval and fresh explicit OAuth consent; do not silently broaden permissions. Keep end-user plugin/skill content separate from development skills. Documentation-only changes that do not affect a connector contract do not require manufacturing a new plugin version.
+
+## Reuse ingestion scripts and preserve private jobs
+
+For external-source ingestion and updates, read [samples](samples/ingestion/README.md)
+and use c0-ingest-sources before creating another script. Put reusable source logic,
+synthetic feature tests and acquired source-specific lessons in the public samples;
+reuse their shared client/authentication/state/verification functions. Save each real
+update wrapper and instance `.env`, dedicated credentials, datasets, state, receipts
+and operational notes under ignored `.local/ingestion/<job>/`. Preserve existing
+space/account/external-key mappings and keep the original job until validation passes.
+
+Perform authorized ingestion through those saved scripts and verify actual results.
+Before opening an upstream PR for a new adapter, review the complete diff and run
+the privacy checker with a private deployment denylist. No instance hostname,
+credentials, private identifiers or real dataset enters the contribution. Follow
+the full base/candidate test rule and nethserver-pr workflow above. Do not install
+schedules or broaden authority as a side effect of an ingestion request.
 
 ## Knowledge and product contracts
 
