@@ -38,6 +38,9 @@ until = "2025-12-31T23:59:59Z"
 rolling_days = 730
 overlap_days = 7
 
+[sync]
+publish_wiki = false
+
 [paths]
 snapshots = "data/snapshots"
 state = "data/state"

@@ -13,6 +13,8 @@ identity/space checks, credential/state storage and source-ingestion helpers.
 Keep GitHub discovery, metrics and mapping separate. Preserve stable external
 keys, immutable snapshots, source-version hashes, receipts, partial coverage,
 bounded work and independent readback; unchanged reruns must not duplicate data.
+Wiki summaries are opt-in. Existing pages require matching private receipts for
+ID/revision/body; preserve manual edits and unrelated pages without adoption.
 
 Local jobs live under ignored `.local/ingestion/<job>` with a runnable wrapper,
 instance `.env`, source configuration, private credentials, snapshots and state.
@@ -48,9 +50,11 @@ Exact original-main baseline `09c10d3` passes full40233296553 and independent
 downloaded artifact inspection: Debian upgrade21, Rocky installation26/three
 expected skips/all8 browsers, 30 accessibility contexts, three OAuth-query
 artifacts with zero candidates and five scan/SBOM pairs. Local broad regressions
-pass 2041 cases after moving disposable packaging files out of quota-limited
-`/tmp`; the failed attempt is retained privately. Final frozen-candidate full
-local/CI checks and PR review remain required. These tools do not replace the
+pass 2043 cases at preserved candidate `67c57d5` after moving disposable packaging
+files out of quota-limited `/tmp`; the failed attempt is retained privately.
+Final review adds opt-in Wiki publishing and receipt guards; its 75 focused cases
+and two actual SDK/database cases pass, including preserved human edits. Fresh
+frozen-candidate full local/CI checks and PR review remain required. These tools do not replace the
 accepted runtime images or establish actual scheduled-client acceptance.
 
 Work through these phases in order. Each phase needs observable results before it is called complete; there are no promised dates.

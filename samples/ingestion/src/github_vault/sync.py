@@ -230,6 +230,15 @@ class Updater:
             reads = self.client.read_many([("wiki_pages_get", {"page_id": p["id"]}) for p in pages])
             self.pages = {p["slug"]: p for p in reads}
         current = self.pages.get(slug)
+        if current:
+            previous = next((entry for entry in self.journal.values()
+                if entry["space_id"] == self.client.space_id
+                and entry["external_key"] == "wiki:" + slug
+                and entry["result"].get("id") == current["id"]
+                and entry["result"].get("revision") == current["revision"]
+                and entry["content_sha256"] == digest(current["content"]["body"].encode())), None)
+            if previous is None:
+                raise C0Error("Wiki page lacks a matching receipt or was edited; preserve it and inspect the private journal")
         if current and current["content"]["body"] == body:
             saved = current
             self.stats["wiki_unchanged"] += 1
@@ -290,7 +299,7 @@ def sync(config, args):
                 raise C0Error("required compatible unique type missing; admin bootstrap required: " + name)
             from .bootstrap import check_type
             check_type(types[name])
-        summary = {"snapshot_id": manifest["snapshot_id"], "space_id": space_id, "snapshot_completeness": manifest["completeness"], "aggregate_totals_published": False, "counts": {k: len(v) for k, v in records.items()}}
+        summary = {"snapshot_id": manifest["snapshot_id"], "space_id": space_id, "snapshot_completeness": manifest["completeness"], "aggregate_totals_published": False, "wiki_enabled": config.get("sync", {}).get("publish_wiki", False), "counts": {k: len(v) for k, v in records.items()}}
         if args.dry_run:
             if client.writes != 0:
                 raise C0Error("dry-run performed writes")
@@ -320,21 +329,22 @@ def sync(config, args):
             for d in records["documents"]:
                 updater.relation("documents", d["external_key"], f"repo:{d['repo_id']}")
             updater.search_readmes(root, records["documents"])
-            index = ["# " + config['c0']['space_name'], "", f"Evidence snapshot `{manifest['snapshot_id']}`. UTC window: {manifest['window']['since']} through {manifest['window']['until']}.", "", "Coverage is partial. Counts are observed records, not exhaustive organization or person totals. Employment and maintainership are unknown.", ""]
-            for repo in records["repositories"]:
-                evidence = [d for d in updater.document_results if next(x for x in records["documents"] if x["external_key"] == d["external_key"])["repo_id"] == repo["repo_id"]]
-                if not evidence:
-                    continue
-                lines = [f"# {repo['full_name']}", "", f"Repository: {repo['url']}", "", "Original documentation evidence:", ""]
-                lines += [f"- {d['github_url']} — source `{d['source_id']}`, immutable version `{d['version_id']}`." for d in evidence]
-                # c0:// URIs are advertised by c0://capabilities; no guessed web routes.
-                lines += ["", f"[Original evidence](c0://spaces/{space_id}/source-versions/{evidence[0]['version_id']})", "", "This overview provides source navigation only; no undocumented product claims."]
-                slug = f"github-repository-{repo['repo_id']}"
-                updater.wiki(slug, repo["full_name"], "\n".join(lines))
-                index.append(f"- [{repo['full_name']}]({repo['url']}) — original source version `{evidence[0]['version_id']}`.")
-            # Developer activity stays in structured API evidence; README indexing alone
-            # does not substantiate developer summaries, employment or maintainership.
-            updater.wiki("github-projects-index", config["c0"]["space_name"], "\n".join(index))
+            if config.get("sync", {}).get("publish_wiki", False):
+                index = ["# " + config['c0']['space_name'], "", f"Evidence snapshot `{manifest['snapshot_id']}`. UTC window: {manifest['window']['since']} through {manifest['window']['until']}.", "", "Coverage is partial. Counts are observed records, not exhaustive organization or person totals. Employment and maintainership are unknown.", ""]
+                for repo in records["repositories"]:
+                    evidence = [d for d in updater.document_results if next(x for x in records["documents"] if x["external_key"] == d["external_key"])["repo_id"] == repo["repo_id"]]
+                    if not evidence:
+                        continue
+                    lines = [f"# {repo['full_name']}", "", f"Repository: {repo['url']}", "", "Original documentation evidence:", ""]
+                    lines += [f"- {d['github_url']} — source `{d['source_id']}`, immutable version `{d['version_id']}`." for d in evidence]
+                    # c0:// URIs are advertised by c0://capabilities; no guessed web routes.
+                    lines += ["", f"[Original evidence](c0://spaces/{space_id}/source-versions/{evidence[0]['version_id']})", "", "This overview provides source navigation only; no undocumented product claims."]
+                    slug = f"github-repository-{repo['repo_id']}"
+                    updater.wiki(slug, repo["full_name"], "\n".join(lines))
+                    index.append(f"- [{repo['full_name']}]({repo['url']}) — original source version `{evidence[0]['version_id']}`.")
+                # Developer activity stays in structured API evidence; README indexing alone
+                # does not substantiate developer summaries, employment or maintainership.
+                updater.wiki("github-projects-index", config["c0"]["space_name"], "\n".join(index))
         except Exception as exc:
             error = str(exc)
             log("sync_incomplete", error=error)

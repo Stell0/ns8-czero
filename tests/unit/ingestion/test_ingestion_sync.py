@@ -149,6 +149,42 @@ class SnapshotTests(unittest.TestCase):
 
 
 class UpdaterTests(unittest.TestCase):
+    def test_wiki_receipts_preserve_manual_pages_edits_and_missing_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            client = FakeC0()
+            page = None
+
+            def call(name, **arguments):
+                nonlocal page
+                if name == "wiki_pages_upsert":
+                    data = arguments["data"]
+                    if page:
+                        self.assertEqual(data["expected_revision"], page["revision"])
+                    page = {"id": "page", "slug": data["slug"],
+                            "revision": page["revision"] + 1 if page else 1,
+                            "content": {"body": data["body"]}}
+                    client.writes += 1
+                return copy.deepcopy(page)
+
+            client.call = call
+            client.listing = lambda *a, **k: [page] if page else []
+            journal = Path(directory) / "journal.json"
+            for body in ("first", "first", "updated"):
+                Updater(client, journal, "snapshot", {}).wiki("summary", "Summary", body)
+            self.assertEqual(client.writes, 2)
+            # A same-slug page cannot be adopted, even if its body is identical.
+            with self.assertRaisesRegex(C0Error, "receipt"):
+                Updater(client, Path(directory) / "empty.json", "next", {}).wiki("summary", "Summary", "updated")
+            page["revision"] += 1
+            with self.assertRaisesRegex(C0Error, "edited"):
+                Updater(client, journal, "next", {}).wiki("summary", "Summary", "updated")
+            page["revision"] -= 1
+            page["content"]["body"] = "manual edit"
+            with self.assertRaisesRegex(C0Error, "edited"):
+                Updater(client, journal, "next", {}).wiki("summary", "Summary", "replacement")
+            self.assertEqual(page["content"]["body"], "manual edit")
+            self.assertEqual(client.writes, 2)
+
     def test_native_batch_readback_and_rerun(self):
         with tempfile.TemporaryDirectory() as d:
             c = FakeC0()

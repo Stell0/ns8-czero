@@ -23,7 +23,8 @@ Admin bootstrap when needed; ordinary ingestion cannot overwrite global schemas.
 When the user authorizes an ingestion, validate its snapshot, inspect the configured
 account/capabilities, run a zero-write dry run, apply through the saved script, then
 verify actual content hashes, indexing state and immutable citations/readback.
-Reconcile uncertain writes before retrying. Stop on denied authority, conflicts,
+Make generated Wiki summaries opt-in and preserve manually edited pages with
+matching ID/revision/hash receipts. Reconcile uncertain writes before retrying. Stop on denied authority, conflicts,
 ambiguous targets or uncertain token rotation; preserve the evidence. A task's
 authorization does not authorize unrelated data changes or installing schedules.
 

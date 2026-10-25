@@ -19,6 +19,7 @@ def test_job_creates_private_runner_env_and_config_without_credentials(tmp_path)
     assert 'C0_URL=https://c0.example.org/mcp' in (job / '.env').read_text()
     assert not (job / 'oauth.json').exists()
     config = load(job / 'config/source.toml')
+    assert config['sync']['publish_wiki'] is False
     assert Path(config['paths']['state']).is_relative_to(job)
     assert config['c0']['credentials_file'] == str(job / 'oauth.json')
     with pytest.raises(C0Error):
@@ -86,3 +87,17 @@ def test_each_command_help_needs_no_job_auth_or_writes(command, monkeypatch, cap
     monkeypatch.setattr('c0_ingest.cli.init_job', lambda *a: pytest.fail('help must not create a job'))
     main([command, '--help'])
     assert 'usage:' in capsys.readouterr().out
+
+
+def test_wiki_publishing_requires_boolean_opt_in(tmp_path):
+    job = tmp_path / 'job'
+    init_job(job)
+    path = job / 'config/source.toml'
+    original = path.read_text()
+    path.write_text(original.replace('publish_wiki = false', 'publish_wiki = true'))
+    assert load(path)['sync']['publish_wiki'] is True
+    path.write_text(original.replace('publish_wiki = false', 'publish_wiki = "false"'))
+    with pytest.raises(ValueError, match='boolean'):
+        load(path)
+    path.write_text(original.replace('[sync]\npublish_wiki = false\n', ''))
+    assert load(path)['sync']['publish_wiki'] is False

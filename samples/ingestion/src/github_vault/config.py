@@ -23,6 +23,9 @@ def load(path):
     root = path.parent.parent
     config = tomllib.loads(path.read_text())
     c0 = connection_settings(root)
+    config['sync'] = config.get('sync', {'publish_wiki': False})
+    if type(config['sync'].get('publish_wiki', False)) is not bool:
+        raise ValueError('sync.publish_wiki must be a boolean')
     config['c0'] = c0
     config['paths'] = {k: str(safe_path(root, v)) for k, v in config['paths'].items()}
     config['root'] = str(root)

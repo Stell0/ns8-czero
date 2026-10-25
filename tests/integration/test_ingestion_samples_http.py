@@ -162,8 +162,11 @@ def test_sample_full_sync_readback_repeat_and_uncertain_reply(sample_connection,
                            dry_run=False, apply=True)
     original = GitHubC0.call
     lost = []
+    wiki_requests = []
 
     def uncertain(client, name, **arguments):
+        if name.startswith("wiki_"):
+            wiki_requests.append(name)
         result = original(client, name, **arguments)
         if name == 'sources_ingest_text' and not lost:
             lost.append(result['id'])
@@ -174,7 +177,14 @@ def test_sample_full_sync_readback_repeat_and_uncertain_reply(sample_connection,
         m.setattr(GitHubC0, 'call', uncertain)
         failed, code = sync(config, args)
         assert code == 1 and failed['status'] == 'failed'
-    first, code = sync(config, args)
+    with monkeypatch.context() as m:
+        m.setattr(GitHubC0, 'call', uncertain)
+        first, code = sync(config, args)
+    assert not wiki_requests
+    assert first['stats']['wiki_written'] == 0
+    config['sync'] = {'publish_wiki': True}
+    published, code = sync(config, args)
+    assert code == 2 and published['stats']['wiki_written'] == 2
     assert code == 2 and first['status'] == 'verified_partial'
     assert first['stats']['documents_verified'] == 1 and first['stats']['search_verified'] == 1
     assert counts(knowledge_http[4], selected['space_id'])['c0_source_versions'] == 1
@@ -187,6 +197,28 @@ def test_sample_full_sync_readback_repeat_and_uncertain_reply(sample_connection,
     assert counts(knowledge_http[4], selected['space_id']) == before
     assert requested.count('/oauth/token') == 1  # Actual refresh persisted across new SDK clients.
     assert read(selected['credentials_file'])['refresh_token'] != ''
+    # A human edit must survive a later generated-summary update attempt.
+    client = GitHubC0(selected)
+    client.select_space(selected['space_id'])
+    try:
+        page = next(p for p in client.listing('wiki_pages_list', 'pages')
+                    if p['slug'] == 'github-repository-7')
+        client.call('wiki_pages_upsert', data={'slug': page['slug'], 'title': 'Human notes',
+                    'body': 'Preserve this human edit.', 'expected_revision': page['revision'],
+                    'metadata': {}, 'idempotency_key': uuid4().hex})
+    finally:
+        client.close()
+    before = counts(knowledge_http[4], selected['space_id'])
+    args.dry_run, args.apply = False, True
+    blocked, code = sync(config, args)
+    assert code == 1 and 'receipt' in blocked['error']
+    assert counts(knowledge_http[4], selected['space_id']) == before
+    client = GitHubC0(selected)
+    client.select_space(selected['space_id'])
+    try:
+        assert client.call('wiki_pages_get', page_id=page['id'])['content']['body'] == 'Preserve this human edit.'
+    finally:
+        client.close()
     auth.disconnect(selected)
     with pytest.raises(C0Error):
         GitHubC0(selected)

@@ -157,8 +157,16 @@ independent receipts/readback establish what persisted.
   binary documents and detected secret material are excluded as documented by the
   adapter. Detection is a filter, not proof that arbitrary documents contain no secrets.
 - Preserve original document text, pinned commit permalinks, paths, licenses and
-  hashes. JSON metadata is never wrapped into the source body. Wiki pages are
-  source-navigation summaries; indexed READMEs do not substantiate person metrics.
+  hashes. JSON metadata is never wrapped into the source body. Optional Wiki pages
+  are source-navigation summaries; indexed READMEs do not substantiate person metrics.
+  They are disabled by default: enable `[sync] publish_wiki = true` in the private
+  TOML only when wanted. Disabled publishing makes no Wiki requests.
+- Wiki updates require a private receipt matching the existing page ID, revision
+  and body hash. A manual edit, colliding slug or missing receipt stops publishing
+  without replacing that page. Keep `sync_journal.json` backed up. After an uncertain
+  Wiki reply, inspect the actual page and recover verified receipts, or disable
+  publishing; never reset the journal to force replacement. Earlier non-Wiki
+  writes can already have committed when a Wiki conflict stops the run.
 - Reconcile unique external keys before retrying operations without replay support.
   Run only one updater per target space; separate jobs and legacy scripts do not
   share the same local lock.
