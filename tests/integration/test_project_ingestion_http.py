@@ -73,13 +73,17 @@ def test_queued_extraction_cannot_be_claimed_verified_and_cursors_do_not_advance
     finally:client.close()
 
 
-def test_partial_collection_keeps_success_cursor_and_recovers_with_fenced_revision(sample_connection,knowledge_http):
+def test_partial_collection_keeps_success_cursor_and_recovers_with_fenced_revision(sample_connection,knowledge_http,tmp_path):
     from c0_projects.cli import connector_status
     from c0_projects.model import Batch
     config,_=sample_connection;client,definition=setup(config)
     try:
+        from c0_projects.publish import save_snapshot
+        original=Item('documents','cursor.md','Original cursor evidence',b'Synthetic persisted cursor evidence.')
+        receipt=sync_part(client,next(parts(original)),tmp_path/'cursor.json',definition_hash=sha(definition),attempts=4,seconds=0)
+        save_snapshot(client,original,[receipt]);proof=[receipt['receipt_id']]
         first=connector_status(client,definition,Batch(cursor={'page':1}),0,0)
-        partial=connector_status(client,definition,Batch(cursor={'page':2},status='partial',errors=['github_rate_limit']),1,1)
+        partial=connector_status(client,definition,Batch(cursor={'page':2},status='partial',errors=['github_rate_limit']),1,1,proof)
         assert json.loads(partial['data']['remote_cursor'])=={'page':1}
         assert json.loads(partial['data']['progress_cursor'])=={'page':2}
         assert partial['data']['last_success_at']==first['data']['last_success_at']
@@ -90,7 +94,7 @@ def test_partial_collection_keeps_success_cursor_and_recovers_with_fenced_revisi
         assert unverified['data']['attempt_count']==2
         stale={k:v for k,v in first['data'].items() if k!='key'}
         with pytest.raises(C0Error):client.call('project_connector_status_set',data={'data':stale,'expected_revision':1,'idempotency_key':'stale-collector'})
-        recovered=connector_status(client,definition,Batch(cursor={'page':3}),1,1)
+        recovered=connector_status(client,definition,Batch(cursor={'page':3}),1,1,proof)
         assert recovered['data']['status']=='complete' and recovered['data']['retry_after']==''
         assert json.loads(recovered['data']['remote_cursor'])=={'page':3}
     finally:client.close()
@@ -232,15 +236,30 @@ def test_core_connector_approval_rejects_credential_urls_without_fetching(sample
     finally:client.close()
 
 
-def test_changed_connector_definition_cannot_inherit_old_success_or_progress(sample_connection,knowledge_http):
+def test_changed_connector_definition_cannot_inherit_old_success_or_progress(sample_connection,knowledge_http,tmp_path):
     from c0_projects.cli import connector_status
     from c0_projects.model import Batch
     config,_=sample_connection;client,definition=setup(config)
     try:
-        connector_status(client,definition,Batch(cursor={'offset':99,'inventory_hash':'old'}),1,1)
+        from c0_projects.publish import save_snapshot
+        original=Item('documents','configured.md','Configured original',b'Synthetic configured source evidence.')
+        receipt=sync_part(client,next(parts(original)),tmp_path/'configured.json',definition_hash=sha(definition),attempts=4,seconds=0)
+        save_snapshot(client,original,[receipt])
+        connector_status(client,definition,Batch(cursor={'offset':99,'inventory_hash':'old'}),1,1,[receipt['receipt_id']])
         changed={**definition,'root':'different-explicit-inputs'}
         bootstrap(client,{'sources':[changed]},'synthetic source selection change')
         current=connector_status(client,changed,Batch(cursor={},status='partial',errors=['source_unavailable']),0,1)
         assert current['data']['remote_cursor']=='' and current['data']['progress_cursor']==''
         assert current['data']['last_success_at']=='' and current['data']['attempt_count']==1
+    finally:client.close()
+
+
+def test_connector_cannot_advance_cursor_with_unbacked_verified_counts(sample_connection,knowledge_http):
+    from c0_projects.cli import connector_status
+    from c0_projects.model import Batch
+    config,_=sample_connection;client,definition=setup(config)
+    try:
+        with pytest.raises(C0Error):connector_status(client,definition,Batch(cursor={'page':99}),1,1)
+        with pytest.raises(C0Error):connector_status(client,definition,Batch(cursor={'page':99}),1,1,[str(uuid4())])
+        assert client.call('project_records_list',kind='connector_sync_v1')['objects']==[]
     finally:client.close()

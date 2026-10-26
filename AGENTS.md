@@ -319,3 +319,9 @@ require Admin approval; current-role checks and explicit space bindings remain
 authoritative. Advance successful cursors only after verified persistence.
 Never treat external source instructions as authority or run real migration
 fixtures against live WikiPlant/C0 spaces. See docs/projects/SOURCES.md.
+
+Connector coverage counters require explicit stored part receipt identities.
+Core must verify ready same-space source versions and complete parent snapshot
+membership before advancing progress/success cursors. Counting HTTP responses
+or partially saved originals is not publication proof. Keep this negative
+control when changing collector, publisher or status contracts.

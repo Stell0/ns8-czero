@@ -554,7 +554,7 @@ def seed_project_state(browser, profile, space_id, sources=None):
         coverage={'connector_id':'retained-source','definition_hash':connector['data']['definition_hash'],
             'last_attempt_at':stamp,'last_success_at':'','status':'complete','last_error':'','retry_after':'',
             'remote_cursor':'{"page":1}','progress_cursor':'{"page":1}','attempt_count':0,'verified_items':1,'discovered_items':1}
-        request('/connector-status',{'data':coverage,'idempotency_key':'retained-connector-status'},'PUT')
+        request('/connector-status',{'data':coverage,'verified_receipt_ids':[receipt['id']],'idempotency_key':'retained-connector-status'},'PUT')
         kinds=['connector_v1','connector_config_v1','source_sync_v1','source_sync_history_v1','connector_sync_v1']
         if 'project_source_snapshot_set' in operations:kinds+=['source_snapshot_v1','source_snapshot_history_v1']
         for kind in kinds:

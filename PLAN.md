@@ -876,3 +876,23 @@ Two actual PostgreSQL cursor tests verify retry recovery and configuration-hash
 changes without inherited cursors/watermarks. Compatible Admin configuration
 saves install additive managed record kinds without changing immutable schemas;
 22 project/schema cases pass. Final source candidate CI remains pending.
+
+M2 d2575cc branch run40312131525 local CI passes2113 actual Python/PostgreSQL/
+packaging and191 Node cases; producer, released-Core compatibility and all five
+scans pass. Both native jobs remain running. M1 branch run40311946100 local and
+images/scans pass with both native jobs running. Neither full gate is inferred.
+
+A new actual negative PostgreSQL/SDK regression against d2575cc proves reported
+counts alone could advance a connector cursor. The follow-up requires explicit
+verified part receipt IDs and joins actual ready, non-archived same-space source
+versions with complete parent snapshot membership inside Core. It rejects
+unknown/wrong receipts and unbacked counts. CLI coverage counts only complete
+originals; the native recovery seed submits exact receipt IDs. Eleven signed
+publisher cases and the exact native seed/recovery helper pass locally. Preserve
+the negative evidence and frozen candidate; the correction needs fresh full CI.
+
+The M2 receipt-proof correction passes130 actual signed HTTP/PostgreSQL,
+space/native-helper, guidance and ingestion unit cases. No schema definition,
+OAuth behavior, existing knowledge or deployed image changes. It is committed
+separately; its exact-source full publication/native/artifact gate is required
+before M2 acceptance and M3 implementation.

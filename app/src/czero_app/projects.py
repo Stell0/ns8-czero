@@ -41,6 +41,10 @@ class SourceStatusSet(StrictRequest):
     idempotency_key: str = Field(min_length=1, max_length=128)
 
 
+class ConnectorStatusSet(SourceStatusSet):
+    verified_receipt_ids: list[str] = Field(default_factory=list,max_length=1000,description='Exact verified part receipt IDs from complete stored source snapshots. Core checks actual source versions and immutable snapshot membership before accepting counters/cursors.')
+
+
 class SourceSnapshotSet(StrictRequest):
     connector_id: str = Field(min_length=1,max_length=64)
     external_id: str = Field(min_length=1,max_length=4096)
@@ -116,7 +120,7 @@ def install_project_routes(app, database, auth, read_context, write_context):
         return invoke(space_id, 'save_source_status', context.actor, **data.model_dump())
     @app.put('/api/v1/project/connector-status', response_model=ObjectView)
     @operation('project_connector_status_set', 'Record bounded external connector coverage and counters at its current revision. Failed/partial collection preserves the last successful cursor. This is a collector observation, not proof that the whole external site was audited.', Role.EDITOR, ObjectView, read_only=False, space_field='space_id')
-    def connector_status(data: SourceStatusSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
+    def connector_status(data: ConnectorStatusSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
         return invoke(space_id, 'save_connector_status', context.actor, **data.model_dump())
     @app.put('/api/v1/project/source-snapshot',response_model=ObjectView)
     @operation('project_source_snapshot_set', 'Save the current complete original source snapshot from verified ordered part receipts. Core checks identities, offsets and combined text hash; historical parts remain immutable.', Role.EDITOR,ObjectView,read_only=False,space_field='space_id')

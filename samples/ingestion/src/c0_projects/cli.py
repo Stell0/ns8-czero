@@ -61,7 +61,7 @@ def item_from(directory,entry,connector):
         entry['retrieved_at'],entry['provenance'])
 
 
-def connector_status(client,definition,batch,verified,discovered):
+def connector_status(client,definition,batch,verified,discovered,verified_receipt_ids=None):
     existing=[r for r in listing(client,'project_records_list','objects',kind='connector_sync_v1') if r['data']['connector_id']==definition['id']]
     if len(existing)>1:raise C0Error('ambiguous_connector_state')
     status='complete' if batch.status=='complete' and verified==discovered else 'partial'
@@ -70,7 +70,7 @@ def connector_status(client,definition,batch,verified,discovered):
         'remote_cursor':json.dumps(batch.cursor,sort_keys=True,separators=(',',':')),
         'progress_cursor':json.dumps(batch.cursor,sort_keys=True,separators=(',',':')),
         'verified_items':verified,'discovered_items':discovered}
-    return client.call('project_connector_status_set',data={'data':data,
+    return client.call('project_connector_status_set',data={'data':data,'verified_receipt_ids':verified_receipt_ids or [],
         'expected_revision':existing[0]['revision'] if existing else 0,'idempotency_key':sha(['connector-status',data])})
 
 
@@ -169,7 +169,7 @@ def run(args, *, client_factory=C0):
             for source in manifest['sources']:
                 definition=next((d for d in config['sources'] if d['id']==source['connector_id']),None)
                 if not definition or sha(definition)!=source['definition_hash']:raise C0Error('scan_configuration_changed')
-                approved(client,definition);verified=0;count=0
+                approved(client,definition);verified=0;count=0;verified_refs=[]
                 for entry in source['items']:
                     item=item_from(directory,entry,source['connector_id'])
                     item_results=[]
@@ -188,14 +188,16 @@ def run(args, *, client_factory=C0):
                                     attempts=connection['poll_attempts'],seconds=connection['poll_seconds'])
                             except C0Error:
                                 result={'status':'BLOCKED','external_id':part.external_id,'error':'publication_pending_resume'}
-                            results.append(result);item_results.append(result);verified+=result['status']=='verified'
+                            results.append(result);item_results.append(result)
                     if not args.dry_run and args.operation!='verify' and item_results and all(r['status']=='verified' for r in item_results):
-                        try:save_snapshot(client,item,item_results)
+                        try:
+                            save_snapshot(client,item,item_results)
+                            verified+=len(item_results);verified_refs.extend(r['receipt_id'] for r in item_results)
                         except C0Error:
-                            verified-=len(item_results);results.append({'status':'BLOCKED','external_id':item.external_id,'error':'source_snapshot_pending_resume'})
+                            results.append({'status':'BLOCKED','external_id':item.external_id,'error':'source_snapshot_pending_resume'})
                 batch=Batch(cursor=source['cursor'],status=source['status'],errors=source['errors'],retry_after=source['retry_after'])
                 partial|=batch.status!='complete' or (not args.dry_run and verified!=count)
-                if not args.dry_run and args.operation!='verify' and source.get('attempted',True):connector_status(client,definition,batch,verified,count)
+                if not args.dry_run and args.operation!='verify' and source.get('attempted',True):connector_status(client,definition,batch,verified,count,verified_refs)
             return {'status':'dry_run' if args.dry_run else 'PARTIAL' if partial else 'SAVED','items':len(results),'verified':sum(r['status']=='verified' for r in results),'resource_refs':results},2 if partial else 0
 
 

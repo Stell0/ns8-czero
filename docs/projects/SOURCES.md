@@ -121,7 +121,10 @@ body/hash and actual immutable citations. No claims are created by ingestion.
 
 Managed typed connector config/history, source current/history and connector
 coverage records live in the protected space. Expected revisions reject racing
-collectors. Only verified publication advances partial progress; only complete
+collectors. Connector updates must name the verified part receipt IDs. Core joins them
+to actual ready, non-archived source versions and complete immutable parent
+snapshots; reported counts alone cannot advance a cursor.
+Only verified publication advances partial progress; only complete
 verified collection advances the successful cursor/watermark. Failed extraction
 or lost responses retain recoverable receipts. Bounded exponential retry starts
 at30 seconds, caps atone hour, honors a bounded requested retry up toone day,

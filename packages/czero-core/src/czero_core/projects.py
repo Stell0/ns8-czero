@@ -331,14 +331,22 @@ class ProjectService(SpaceBound):
                 {k:v for k,v in values.items() if k!='key'},previous=previous)
         return self._mutate(actor,'source_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute)
 
-    def save_connector_status(self, actor, data, *, expected_revision=0, idempotency_key):
+    def save_connector_status(self, actor, data, *, verified_receipt_ids=None, expected_revision=0, idempotency_key):
         data=bounded_json(data)
+        from uuid import UUID
+        verified_receipt_ids=[] if verified_receipt_ids is None else verified_receipt_ids
+        if (type(verified_receipt_ids) is not list or len(verified_receipt_ids)>1000
+                or len(set(verified_receipt_ids))!=len(verified_receipt_ids)):
+            raise ValueError('invalid_source_receipt_proof')
+        for value in verified_receipt_ids:
+            if type(value) is not str:raise ValueError('invalid_source_receipt_proof')
+            UUID(value)
         if 'key' in data or type(expected_revision) is not int or expected_revision<0:
             raise ValueError('invalid_connector_status')
         values=validate_record(SCHEMAS['connector_sync_v1'],{'key':'validated',**data})
         if values['remote_cursor']: bounded_json(json.loads(values['remote_cursor']),maximum=4096)
         if values['progress_cursor']: bounded_json(json.loads(values['progress_cursor']),maximum=4096)
-        if values['verified_items']>values['discovered_items']:
+        if values['verified_items']!=len(verified_receipt_ids) or values['verified_items']>values['discovered_items']:
             raise ValueError('invalid_connector_counters')
         if values['status']=='complete' and (values['verified_items']!=values['discovered_items'] or values['last_error']):
             raise ValueError('incomplete_connector_coverage')
@@ -346,6 +354,25 @@ class ProjectService(SpaceBound):
             connector=self._find(connection,'connector_v1',values['connector_id'])['data']
             if connector['definition_hash']!=values['definition_hash']:
                 raise ProjectConflict()
+            if not connector['definition']['enabled'] or values['connector_id'] not in self._manifest(connection)['data']['manifest']['connector_ids']:
+                raise ValueError('source_connector_not_enabled')
+            if verified_receipt_ids:
+                verified=connection.execute(text('''SELECT count(DISTINCT o.id) FROM c0_objects o
+                    JOIN c0_source_versions v ON v.id=CAST(o.data->>'version_id' AS uuid) AND v.space_id=o.space_id
+                    JOIN c0_sources s ON s.id=v.source_id AND s.space_id=v.space_id AND NOT s.deleted
+                    JOIN c0_objects h ON h.space_id=o.space_id AND h.type_name=:history
+                      AND h.data @> jsonb_build_object('connector_id',CAST(:connector AS text),'external_id',o.data->>'external_id','version_id',o.data->>'version_id')
+                    JOIN c0_objects p ON p.space_id=o.space_id AND p.type_name=:snapshot
+                      AND p.data @> jsonb_build_object('connector_id',CAST(:connector AS text),'external_id',o.data->>'parent_external_id','content_hash',o.data->>'parent_content_hash')
+                      AND (p.data->'part_receipt_ids') ? CAST(h.id AS text)
+                    WHERE o.space_id=:space AND o.type_name=:type AND o.id=ANY(CAST(:ids AS uuid[]))
+                      AND o.data->>'connector_id'=:connector AND o.data->>'definition_hash'=:hash
+                      AND o.data->>'sync_status'='verified' AND v.state='ready'
+                      AND v.content_hash=o.data->>'last_content_hash' AND CAST(v.source_id AS text)=o.data->>'source_id'
+                    '''),{'space':self._space_id,'type':PREFIX+'source_sync_v1','ids':verified_receipt_ids,
+                        'history':PREFIX+'source_sync_history_v1','snapshot':PREFIX+'source_snapshot_v1',
+                        'connector':values['connector_id'],'hash':values['definition_hash']}).scalar_one()
+                if verified!=len(verified_receipt_ids):raise ValueError('unverified_connector_publication')
             previous=self._find(connection,'connector_sync_v1',values['connector_id'],required=False)
             if (previous['revision'] if previous else 0)!=expected_revision:
                 raise ProjectConflict()
@@ -363,7 +390,7 @@ class ProjectService(SpaceBound):
                 'progress_cursor':values['progress_cursor'] if values['verified_items']==values['discovered_items'] else matching['data']['progress_cursor'] if matching else '',
                 'remote_cursor':values['remote_cursor'] if values['status']=='complete' else matching['data']['remote_cursor'] if matching else ''}
             return self._save(connection,current,'connector_sync_v1',values['connector_id'],{k:v for k,v in saved.items() if k!='key'},previous=previous)
-        return self._mutate(actor,'connector_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute)
+        return self._mutate(actor,'connector_status',{'data':data,'verified_receipt_ids':verified_receipt_ids,'expected_revision':expected_revision},idempotency_key,execute)
 
     def save_source_snapshot(self, actor, connector_id, external_id, content_hash, part_receipt_ids, *, expected_revision=0, idempotency_key):
         identifier(connector_id)

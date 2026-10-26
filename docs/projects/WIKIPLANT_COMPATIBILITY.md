@@ -79,3 +79,11 @@ Synthetic signed HTTP/PostgreSQL tests cover lost responses, queued extraction,
 changed/unchanged text, multipart PDF, immutable citations and cursor conflicts.
 No real source, live project, external scheduled execution or migration is
 claimed. M3–M8 workflow/report/export acceptance remains outstanding.
+
+M2 cursor-integrity follow-up: an actual negative signed-HTTP regression showed
+that counts alone could claim verified coverage. Connector updates now provide
+actual part receipt IDs, checked inside Core against ready same-space versions,
+enabled approved connectors and complete immutable parent snapshots. Partial
+items do not count until their complete original snapshot is stored. The CLI
+and exact native seed/recovery helper use that contract. Frozen d2575cc remains
+unchanged; the corrective source receives its own full acceptance run.
