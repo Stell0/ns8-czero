@@ -47,9 +47,11 @@ def public_addresses(host, port, timeout):
 
 
 class Fetcher:
-    def __init__(self, config):
+    def __init__(self, config, *, accept_json=False):
+        if type(accept_json) is not bool:raise C0Error('invalid_response_selection')
         self.config=config
         self.requests=0
+        self.accept='application/json' if accept_json else 'text/*, application/xml, application/rss+xml, application/atom+xml, application/pdf'
 
     def get(self, url):
         initial=urlsplit(public_url(url))
@@ -74,7 +76,7 @@ class Fetcher:
                 timer=Timer(self.config['timeout'],expire);timer.daemon=True;timer.start()
                 try:
                     connection.request('GET',(parsed.path or '/')+('?' + parsed.query if parsed.query else ''),
-                        headers={'User-Agent':'c0-projects/0.1','Accept':'text/*, application/xml, application/rss+xml, application/atom+xml, application/pdf'})
+                        headers={'User-Agent':'c0-projects/0.1','Accept':self.accept})
                     response=connection.getresponse()
                     if response.status in (301,302,303,307,308):
                         if redirect==3 or not response.getheader('Location'):

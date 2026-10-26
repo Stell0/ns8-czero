@@ -784,6 +784,11 @@ class CzeroSso:
             run('Get Text','#project-work','contains','phase_incomplete')
             run('Get Text','#project-monitoring','contains','no_material_update')
             run('Get Text','#project-monitoring','contains','queries 1/5')
+            run('Get Text','#project-work','contains','No successful weekly run recorded.')
+            run('Get Text','#project-reports a','contains','Daily report')
+            report_href=browser.get_attribute('#project-reports a','href')
+            assert 'space_id='+identifier in report_href and 'revision=1' in report_href and 'page_id=' in report_href
+            run('Get Text','#project-report-status','contains','external notification are separate')
             run('Get Element Count','#project-content img, #project-content script','==',0)
             assert_accessibility(browser,'projects','admin')
             stage='reader-role-cap'

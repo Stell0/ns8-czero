@@ -44,11 +44,13 @@ All new project selection is explicit, protected and authorization checked. Cros
 | Synthesis | synthesize workflow; applicability/corrections | Wiki revisions, graph, claims, bundles, applicability | Implemented M5 explicit result/Wiki publication proofs and recoverable merge | Core project_evidence.py / plugin | Preserve contradictions/history; new revision needs verification |
 | Wiki body safety | wiki.py; clean Markdown separate from JSON | Bounded Wiki Markdown + separate metadata | Regression guard for serialized page envelope in new workflows | Project publishing/parser | JSON envelope rejected |
 | Reports | reporting.py, ReportPublisher | Replay-safe Wiki revisions/readback | Implemented M5 stable report membership, saved hash/revision, publication observations | Core project_reports.py / c0_projects.reports / app / plugin | test_project_reports.py and test_project_reports_http.py; omissions/retry/Italian |
-| Calendar | calendar.py, calendar schema | Typed objects | Project event contract; shared admission for resulting work | Project schemas/policy | Event/publication/retrieval times separate |
-| Weekly structure | maintenance.py | Changes, references, claims, graph APIs | Bounded audit inventory and persistent checkpoints | Client audit / Core state | Incomplete inventory never complete audit |
-| Semantic rotation | Risk plus persistent rotation cursor | Revision-specific verification | Reviewed IDs/cursor/coverage and agent handoff | Project maintenance records | Rotation progresses; no inherited verification |
-| Archives | archive.py; lineage/evidence capsules | Wiki revision history; explicit archives | Peripheral expiry and compact summaries with retained refs | Core project policy/plugin | No silent reactivation |
-| Release checks | releases.py; upgrade consent | Managed upstream/Core workflow with immutable releases | Bounded metadata check only; no automatic adoption | Client maintenance | Check failure is unknown; no code execution |
+| Calendar | calendar.py, calendar schema | Typed objects | Implemented M6 versioned events, provenance and common admission | Core project_events.py / app | Event/publication/retrieval times separate |
+| Calendar recurrence/precision | Daily/weekly/monthly refresh, partial dates, latest missed coalescing | IANA schedule helpers | Implemented M6 anchored monthly clamps, descriptive partial dates, actual occurrence receipts and persistent causal depth | Core project_events.py | test_project_maintenance.py; urgency cannot reset depth |
+| Weekly structure | maintenance.py | Changes, references, claims, graph APIs | Implemented M6 bounded structural slices/findings/current observations and revision-safe cursors | Core project_maintenance.py / app | Bounded/overlapping cursors; actual native retained records |
+| Semantic rotation | Risk plus persistent rotation cursor | Revision-specific verification | Implemented M6 reviewed exact revisions, rotating slot, stale-selection history and explicit coverage | Core project_maintenance.py / plugin | Rotation progresses; no inherited verification; fake SDK weekly agent |
+| Archives | archive.py; lineage/evidence capsules | Wiki revision history; explicit archives | Implemented M6 distinct actual future weekly expiry, compact capsules and topic lifecycle history | Core project_maintenance.py / plugin | Same run cannot expire its new topic; history and references retained |
+| Release checks | releases.py; upgrade consent | Managed upstream/Core workflow with immutable releases | Implemented M6 bounded public metadata collection, ready source readback and retry history; no adoption | Client maintenance.py / Core project_releases.py | Failed != no_release/up_to_date; no code download/install |
+| Release identity integrity | Published-version metadata comparisons | Immutable Core release/promotion policy | Implemented M6 changed known version identity security alerts; version-only compatibility remains unverified | Core project_releases.py | Changed release ID/commit blocked; partial metadata incomplete |
 | Export | manifest.py, storage_migration.py | Page exports; native encrypted DB/files backup | Versioned project snapshot with integrity and mappings | Client export tools | Determinism/tamper/private selection |
 | Static publishing | Selected wiki files | Markdown export | Explicit page/report allowlist; offline output | Client export tools | No publication or default public export |
 | Recovery | SafeWriter intents/readback; provider generation | NS8 DB/files backup, restart, native update and receipts | Include project typed records; run/attempt recovery | Core + existing NS8 suite | DB restart/backup/upgrade; never live destruction |
@@ -137,3 +139,19 @@ concurrent ownership, publication retry, Italian byte ranges and protected
 isolation. Native recovery retains actual result/report proofs and a simulated
 failed external publication. Exact full/native acceptance remains pending; M6–M8
 remain outstanding. No live migration, deployment or schedule activation occurred.
+
+## M5 acceptance and M6 implementation checkpoint
+
+M5 bf13979 full40395011881 and independently downloaded native/artifact audits
+pass:2189 Python/PostgreSQL/packaging,193 Node,21 Robot; Debian upgrade21,
+Rocky installation26/three expected skips/all8 browsers, privacy8,
+accessibility32 and three zero-candidate query artifacts. Actual external-agent
+and scheduled execution remain unverified.
+
+M6 adds seven REST/MCP operations and trusted nested input schemas, durable audit
+findings/cursors, exact-revision semantic rotation, topic history/peripheral
+capsules, calendar recurrence/admission, bounded metadata release observations
+and reader diagnostics. See [maintenance contracts](MAINTENANCE.md). Real
+PostgreSQL and signed fake-agent SDK tests exercise stored state; native recovery
+fixtures now retain audit/semantic/event records and browser report links.
+M6 exact full/native acceptance remains pending; M7–M8 remain outstanding.

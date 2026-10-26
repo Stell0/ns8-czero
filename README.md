@@ -281,6 +281,9 @@ day budgets, fenced leases and recoverable attempts. The
 primary-topic coverage, project-bound packages and IANA scheduler handoff.
 The [evidence/report contract](docs/projects/REPORTING.md) adds result proofs,
 report membership/readback and independent publication observations.
+The [maintenance contract](docs/projects/MAINTENANCE.md) adds bounded structural
+audits, revision-specific semantic rotation, archive history, calendar admission
+and metadata-only workflow update checks.
 Migration preparation has separate gates. Actual external-agent
 and unattended scheduled execution remain unverified.
 This branch does not migrate real projects, deploy an instance or activate schedules.

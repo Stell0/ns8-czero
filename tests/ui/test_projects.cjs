@@ -1,9 +1,10 @@
 // Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {fixture,tick,reply,id}=require('./reader_dom.js');
-function setup(selected=id(101)) {
+function setup(selected=id(101),diagnostics=null) {
   const h=fixture('projects',selected?'?space_id='+selected:'');let generation=0, clear;
-  h.window.C0Space={identifier:selected,generation:()=>generation,current:value=>value===generation,onClear:callback=>{clear=callback;},request:path=>h.window.fetch(path)};
+  const status=diagnostics || {project_id:selected,manifest_version:1,connectors:[],last_successful_runs:{daily:null,weekly:null},latest_daily_report:null,structural_findings:0,errors:[],errors_may_be_incomplete:false};
+  h.window.C0Space={identifier:selected,generation:()=>generation,current:value=>value===generation,onClear:callback=>{clear=callback;},pageURL:value=>value+'&space_id='+selected,request:path=>path==='project/diagnostics'?(typeof diagnostics==='function'?diagnostics(h):Promise.resolve(reply(status))):h.window.fetch(path)};
   h.clear=()=>{++generation;clear();};
   vm.runInContext(fs.readFileSync('app/static/projects.js','utf8'),h.context);return h;
 }
@@ -61,4 +62,27 @@ test('monitoring displays incomplete checks without claiming a successful waterm
   assert.match(h.node('project-monitoring-status').textContent,/no queued research slots/);
   h.clear();assert.equal(h.node('project-monitoring').children.length,0);
   assert.equal(h.node('project-monitoring-status').textContent,'');
+});
+
+test('latest report is pinned and current source coverage rejects old definitions',async()=>{
+  const diagnostics={project_id:id(101),manifest_version:1,connectors:[{connector_id:'docs',current_definition_verified:false}],
+    last_successful_runs:{daily:{data:{local_cycle_date:'2026-10-25',finished_at:'2026-10-25T08:00:00Z'}},weekly:null},
+    latest_daily_report:{data:{wiki_page_id:id(201),wiki_revision:2,local_date:'2026-10-25',coverage_complete:false}},
+    structural_findings:2,errors:[{}],errors_may_be_incomplete:false};
+  const h=setup(id(101),diagnostics);h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[]}));
+  h.requests[2].resolve(reply({objects:[{data:{connector_id:'docs',status:'complete',verified_items:1,discovered_items:1,last_success_at:'old-success'}}]}));
+  for(const r of h.requests.slice(3,6))r.resolve(reply({objects:[]}));await tick();
+  assert.match(h.node('project-sources').textContent,/configuration changed/);assert.doesNotMatch(h.node('project-sources').textContent,/old-success/);
+  assert.match(h.node('project-work').textContent,/Last successful daily run: 2026-10-25/);
+  const link=h.node('project-reports').children[0].children[0];
+  assert.equal(link.getAttribute('href'),'./wiki?page_id='+id(201)+'&revision=2&space_id='+id(101));
+  assert.match(h.node('project-report-status').textContent,/coverage is incomplete/);
+  h.clear();assert.equal(h.node('project-reports').children.length,0);
+});
+
+test('late diagnostics cannot restore private report links after access loss',async()=>{
+  const h=setup(id(101),h=>h.window.fetch('project/diagnostics'));await complete(h);assert(h.node('project-content').hidden);
+  h.clear();h.requests[6].resolve(reply({project_id:id(101),manifest_version:1,connectors:[],last_successful_runs:{},
+    latest_daily_report:{data:{wiki_page_id:id(201),wiki_revision:1}},errors:[],structural_findings:0}));await tick();
+  assert(h.node('project-content').hidden);assert.equal(h.node('project-reports').children.length,0);
 });

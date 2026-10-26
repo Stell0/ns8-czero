@@ -21,6 +21,7 @@ from .model import load_config, Item, Batch, now, sha
 from .workflow import SourceWorkflow
 from .agent_packages import save_package
 from .reports import save_report,validate_plan
+from .maintenance import check_release,validate_release_plan
 from .publish import approved, listing, parts, sync_part, verify, prior_receipt, locate, save_snapshot
 
 
@@ -103,6 +104,11 @@ def run(args, *, client_factory=C0):
         if args.dry_run or not args.apply or not args.input:raise C0Error('explicit_report_plan_and_apply_required')
         if args.input.is_symlink() or args.input.stat().st_size>262144:raise C0Error('invalid_report_input_file')
         report_plan=validate_plan(json.loads(args.input.read_text()))
+    release_plan=None
+    if args.group=='project' and args.operation=='release-check':
+        if not args.input or (not args.apply and not args.dry_run) or (args.apply and args.dry_run):raise C0Error('explicit_release_plan_and_mode_required')
+        if args.input.is_symlink() or args.input.stat().st_size>16384:raise C0Error('invalid_release_input_file')
+        release_plan=validate_release_plan(json.loads(args.input.read_text()))
     job=(args.job or (args.config.parent.parent if args.config.parent.name=='config' else args.config.parent)).absolute()
     if args.operation=='validate':return {'status':'validated','connectors':len(config['sources']),'writes_c0':0},0
     check_job(job)
@@ -127,9 +133,12 @@ def run(args, *, client_factory=C0):
             client=None
             if args.operation not in ('scan',):
                 client=client_factory(connection,bootstrap=args.operation=='bootstrap');stack.callback(client.close)
-                selected=client.select_space(connection['space_id'],writable=(args.group!='project' or args.operation=='report') and not args.dry_run and args.operation!='verify')
+                selected=client.select_space(connection['space_id'],writable=(args.group!='project' or args.operation in ('report','release-check')) and not args.dry_run and args.operation!='verify')
                 if selected['name']!=connection['space_name']:raise C0Error('target_space_name_changed')
             if args.group=='project':
+                if args.operation=='release-check':
+                    observation=check_release(client,release_plan,dry_run=args.dry_run)
+                    return observation,2 if observation['status'] in ('BLOCKED','PARTIAL') else 0
                 if args.operation=='report':return save_report(client,report_plan),0
                 if args.operation=='schedule':return client.call('project_schedule_get'),0
                 if args.operation=='skill':
@@ -230,7 +239,7 @@ def run(args, *, client_factory=C0):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('group',choices=['sources','auth','project'])
-    parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule','report'])
+    parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule','report','release-check'])
     parser.add_argument('--config',type=Path,required=True)
     parser.add_argument('--job',type=Path)
     parser.add_argument('--dry-run',action='store_true')
@@ -243,8 +252,8 @@ def main(argv=None):
     args=parser.parse_args(argv)
     if args.group=='auth' and args.operation not in ('login','bind-account','disconnect'):parser.error('Choose an auth operation')
     if args.group=='sources' and args.operation in ('login','bind-account','disconnect'):parser.error('Choose a source operation')
-    if args.group=='sources' and args.operation in ('skill','schedule','report'):parser.error('Choose a source operation')
-    if args.group=='project' and args.operation not in ('validate','skill','schedule','report'):parser.error('Choose a project operation')
+    if args.group=='sources' and args.operation in ('skill','schedule','report','release-check'):parser.error('Choose a source operation')
+    if args.group=='project' and args.operation not in ('validate','skill','schedule','report','release-check'):parser.error('Choose a project operation')
     if args.operation in ('sync','resume') and not args.dry_run and not args.apply:parser.error('Choose --dry-run or --apply explicitly')
     try:
         result,code=run(args);print(json.dumps(result,ensure_ascii=False,sort_keys=True));return code

@@ -662,6 +662,28 @@ def seed_project_state(browser, profile, space_id, sources=None):
                     'references':[receipt['id']],'summary':'Synthetic source readback verified',
                     'idempotency_key':'retained-source-phase-'+phase},'POST')
             retained['connector_lease_v1']=request('/records?kind=connector_lease_v1&limit=100')
+        if 'project_audit_step' in operations:
+            weekly=request('/runs/claim',{'workflow_type':'weekly','lease_owner':'synthetic-native-weekly',
+                'config_version':2,'idempotency_key':'retained-weekly-run'},'POST')['records'][0]['data']
+            weekly_lease={key:weekly[key] for key in ('run_id','lease_owner','fencing_generation')}
+            for kind in ('configuration','wiki','claims','documents','chunks','queue','topics','sources'):
+                audit=request('/maintenance/audit',{'lease':weekly_lease,'kind':kind,'limit':10,
+                    'idempotency_key':'retained-audit-'+kind},'POST')
+                assert audit['status']=='SAVED','Synthetic maintenance inventory unexpectedly incomplete'
+            selected=request('/maintenance/semantic/select',{'lease':weekly_lease,
+                'idempotency_key':'retained-semantic-select'},'POST')
+            header=next(row for row in selected['records'] if row['type_name']=='c0_project_semantic_round_v1')
+            for reference in header['data']['selected_ids']:
+                request('/maintenance/semantic/review',{'lease':weekly_lease,'selection_reference':reference,'data':{
+                    'status':'reviewed','assessment':'Actual synthetic fixture revision inspected for recovery.',
+                    'assessment_ref':'synthetic-native:fake-semantic-review','limitations':['No real agent executed.'],
+                    'citation_ids':[],'proposed_question':''},'idempotency_key':'retained-semantic-'+reference},'POST')
+            request('/events',{'data':{'event_id':'retained-event','topic_id':'anchor','title':'Synthetic future conference',
+                'start_time':'2099-06-01','timezone':'Europe/Rome','source_reference':'synthetic-native:calendar'},
+                'idempotency_key':'retained-event'},'PUT')
+            for kind in ('topic_history_v1','event_v1','event_history_v1','audit_v1','audit_finding_v1','audit_cursor_v1',
+                    'audit_observation_v1','semantic_round_v1','semantic_cursor_v1','semantic_selection_v1','semantic_review_v1'):
+                retained[kind]=request('/records?kind='+kind+'&limit=100')
         for kind in ('run_v1','checkpoint_v1','queue_v1','admission_v1','budget_v1','budget_pointer_v1','attempt_v1','invocation_v1'):
             retained[kind]=request('/records?kind='+kind+'&limit=100')
     return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history,'source_records':retained}

@@ -54,6 +54,10 @@ TOPIC = record(key=string(128), schema_version={'type': 'integer', 'const': 1}, 
     direct_contribution=string(2048, minimum=0), assessment_ref=string(512, minimum=0),
     authorization_ref=string(512, minimum=0), authorized_by=string(36, minimum=0),
     created_at=string(40), expires_at=string(40, minimum=0))
+TOPIC_INPUT=deepcopy(TOPIC)
+for _field in ('key','schema_version','authorized_by','created_at','expires_at'):
+    TOPIC_INPUT['properties'].pop(_field)
+TOPIC_INPUT['required']=['topic_id','label','classification']
 CONNECTOR_DEFINITION = record(id=string(64), adapter=string(values=['local_files','http','rss_atom','sitemap','github','c0_space','wikiplant_export']),
     enabled={'type':'boolean'}, include=array(string(512)), paths=array(string(512)), url=string(4096),
     repository=string(150), root=string(1024), source_space_id=string(36), authorization_ref=string(512),
@@ -229,6 +233,55 @@ SCHEMAS.update({
 })
 SCHEMAS['report_history_v1']=SCHEMAS['report_v1']
 SCHEMAS['report_delivery_history_v1']=SCHEMAS['report_delivery_v1']
+
+EVENT_INPUT=record(event_id=string(128),topic_id=string(128),kind=string(values=['event','research_refresh']),
+    title=string(256),description=string(4096,minimum=0),start_time=string(40,minimum=0),end_time=string(40,minimum=0),
+    timezone=string(100),date_precision=string(values=['date','time','month','year','unknown']),
+    source_reference=string(512),status=string(values=['scheduled','tentative','completed','cancelled','unsupported']),
+    refresh_question=string(2048,minimum=0),priority=integer(0,100),expansion_priority=integer(0,100),
+    parent_ids=array(maximum=8),related_pages=array(string(36),maximum=20),lead_days=integer(0,90),
+    recurrence=record(frequency=string(values=['none','daily','weekly','monthly']),interval=integer(1,365),until=string(10,minimum=0)))
+SEMANTIC_INPUT=record(status=string(values=['reviewed','partial','blocked']),assessment=string(4096),
+    assessment_ref=string(512),limitations=array(string(512),maximum=8),citation_ids=array(string(36),maximum=32),
+    proposed_question=string(2048,minimum=0))
+SCHEMAS.update({
+    'topic_history_v1':record(key=string(128),topic_id=string(128),version=integer(1,2147483647),
+        topic=TOPIC,actor_id=string(36),recorded_at=string(40),observation=string(values=['changed','upgrade_snapshot'])),
+    'event_v1':record(key=string(128),project_id=string(36),**EVENT_INPUT['properties'],last_checked_at=string(40)),
+    'event_history_v1':record(key=string(128),event_id=string(128),version=integer(1,2147483647),
+        definition=EVENT_INPUT,actor_id=string(36),recorded_at=string(40)),
+    'event_occurrence_v1':record(key=string(128),event_id=string(128),local_date=string(10),
+        queue_id=string(128,minimum=0),lineage_root_id=string(128,minimum=0),admission_reference=string(36),
+        disposition=string(64),recorded_at=string(40)),
+    'audit_v1':record(key=string(128),run_id=string(64),config_version=integer(1,2147483647),kind=string(32),
+        cursor=string(36,minimum=0),cursor_revision=integer(0,2147483647),scanned=integer(0,10000),finding_count=integer(0,100000),
+        state=string(values=['partial','complete','blocked']),limitations=array(string(512),maximum=8),updated_at=string(40)),
+    'audit_finding_v1':record(key=string(128),audit_reference=string(36),resource_id=string(128),
+        kind=string(64),detail=string(2048),reference_ids=array(string(36),maximum=32),recorded_at=string(40)),
+    'audit_cursor_v1':record(key=string(128),kind=string(32),after_id=string(36,minimum=0),rounds=integer(0,2147483647)),
+    'audit_observation_v1':record(key=string(128),kind=string(32),resource_id=string(128),audit_reference=string(36),
+        issue_count=integer(0,1000),checked_at=string(40)),
+    'semantic_round_v1':record(key=string(128),run_id=string(64),config_version=integer(1,2147483647),
+        selected_ids=array(string(36),maximum=100),inventory_total=integer(0,2147483647),
+        inventory_complete={'type':'boolean'},semantic_coverage_complete={'type':'boolean'},limit=integer(1,100),
+        state=string(values=['partial','complete']),cursor_before=string(36,minimum=0),cursor_after=string(36,minimum=0),cursor_rounds=integer(0,2147483647)),
+    'semantic_cursor_v1':record(key=string(128),last_page_id=string(36,minimum=0),rounds=integer(0,2147483647)),
+    'semantic_selection_v1':record(key=string(128),round_id=string(64),page_id=string(36),wiki_revision_id=string(36),
+        wiki_revision=integer(1,2147483647),content_hash=string(64),state=string(values=['pending','reviewed','partial','blocked'])),
+    'semantic_review_v1':record(key=string(128),selection_reference=string(36),wiki_revision_id=string(36),
+        content_hash=string(64),**SEMANTIC_INPUT['properties'],actor_id=string(36),recorded_at=string(40)),
+    'archive_v1':record(key=string(128),run_id=string(64),topic_id=string(128),topic_snapshot=TOPIC,
+        summary=string(4096),assessment_ref=string(512),reference_ids=array(string(36),maximum=100),archived_at=string(40)),
+    'release_check_v1':record(key=string(128),repository=string(150),installed_version=string(64),
+        latest_version=string(64,minimum=0),metadata_version_id=string(36,minimum=0),metadata_hash=string(64,minimum=0),
+        status=string(values=['available','up_to_date','no_release','failed','partial','security_alert']),
+        summary=string(2048),checked_at=string(40),last_success_at=string(40,minimum=0),
+        week_start=string(10),retry_after=string(40,minimum=0),attempts=integer(1,3)),
+    'release_identity_v1':record(key=string(128),repository=string(150),version=string(64),
+        identity_hash=string(64),metadata_version_id=string(36),observed_at=string(40)),
+})
+SCHEMAS['semantic_selection_history_v1']=SCHEMAS['semantic_selection_v1']
+SCHEMAS['release_check_history_v1']=SCHEMAS['release_check_v1']
 PROJECT_UNIQUE_FIELDS = {'queue_v1': ['key','dedup_key']}
 
 

@@ -68,6 +68,22 @@ def test_actual_sdk_reads_project_and_rejects_missing_or_foreign_space(space_htt
             async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
                     headers={'Authorization':'Bearer ' + pair.access_token}) as http:
                 async with Client(streamable_http_client(RESOURCE,http_client=http), mode=mode) as sdk:
+                    tools={tool.name:tool for tool in (await sdk.list_tools()).tools}
+                    def nested(name,field):
+                        schema=tools[name].input_schema;data=schema['properties']['data']
+                        if '$ref' in data:data=schema['$defs'][data['$ref'].split('/')[-1]]
+                        return data['properties'][field]
+                    event=nested('project_event_set','data')
+                    assert set(event['required'])=={'event_id','topic_id','title','start_time','timezone','source_reference'}
+                    assert event['properties']['recurrence']['additionalProperties'] is False
+                    assert set(nested('project_audit_step','lease')['required'])=={'run_id','lease_owner','fencing_generation'}
+                    topic_schema=nested('project_topic_set','topic')
+                    assert set(topic_schema['required'])=={'topic_id','label','classification'}
+                    assert 'authorized_by' not in topic_schema['properties']
+                    result_schema=nested('project_result_save','data')
+                    assert 'findings' in result_schema['required'] and 'statement' in result_schema['properties']['findings']['items']['required']
+                    manifest=nested('project_initialize','manifest')
+                    assert set(manifest['required'])=={'project_id','space_id','name','purpose','scope'}
                     saved = await sdk.call_tool('project_get', {'space_id':space['id']})
                     assert not saved.is_error and saved.structured_content == expected.json()
                     assert json.loads(saved.content[0].text) == expected.json()

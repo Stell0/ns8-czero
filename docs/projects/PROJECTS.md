@@ -68,7 +68,9 @@ references are explicit. Core records the authorizing account, rather than trust
 an account ID in the request. Only a user anchor may be a primary monitored topic.
 Adjacent relationships must resolve directly to an active user anchor; an adjacent
 chain alone rejects. Peripheral ancestry is terminal. Its fixed expiry is the next
-strictly future weekly occurrence; retries/edits do not extend it. Archived/retired
+strictly future weekly occurrence; retries/edits do not extend it. Expiry is
+enforced at an actual distinct weekly checkpoint at/after that occurrence, as
+documented in [maintenance](MAINTENANCE.md). Archived/retired
 topics do not reactivate through ordinary updates. Parent cycles reject.
 
 Semantic relevance and the interpretation of the human request are supplied by

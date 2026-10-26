@@ -391,3 +391,23 @@ explicitly re-reviewed at their expected revision after claim changes/retraction
 without another attempt; keep all old findings/proofs and completed results
 immutable. A retracted claim can only support an explicitly outdated/contradictory
 historical finding. Reverify updated Wiki/claim state before completing the work.
+
+## Project maintenance conventions
+
+Use bounded audit transactions and individual findings/observations, preserving
+cursor revisions across overlapping runs. A structural slice or selected semantic
+batch is not a full semantic audit. Reviews bind the actual current Wiki revision;
+changed selections retain history and require explicit refresh. Reserve a rotating
+slot so risk selection cannot starve the inventory. Peripheral expiry requires a
+distinct actual future weekly checkpoint; resumed old runs cannot expire their
+own newly created topics. Archive snapshots preserve lineage/evidence and topic
+history, with upgrade snapshots labelled honestly.
+
+Calendar recurrence goes through ordinary queue admission and retains causal
+expansion priority. Bounded history may defer novel candidates visibly; exact
+matches and existing work retain recovery without deleting history. Release
+collection stays external, bounded and metadata-only; failed checks cannot claim
+up-to-date or trigger installation. Reuse trusted Core input schemas in tool
+metadata, keeping Core validation and old released-Core upgrade guards. See
+docs/projects/MAINTENANCE.md. M5 exact full/native acceptance passes; M6 acceptance
+and M7–M8 remain outstanding. No live migration, deployment or schedule activation.

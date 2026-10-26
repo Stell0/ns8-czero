@@ -1130,3 +1130,41 @@ ordinary admission, bounded metadata-only release checks, and reader diagnostics
 for last successful runs, latest report, current connector definitions and gaps.
 Preserve existing limits, evidence, authorization and immutable historical state;
 semantic judgments stay external and no runtime update is installed automatically.
+
+### WikiPlant M5 accepted; M6 implementation
+
+Exact bf13979 full40395011881 is completed/successful. The full acceptance
+verifier and independent downloaded artifact audits pass:2189 Python/PostgreSQL/
+packaging,193 Node,21 Robot dry runs; genuine Debian upgrade21/no skips, Rocky
+installation26/three expected skips/all8 browsers; privacy8, accessibility32,
+three query artifacts/zero candidates and five scan/SBOM pairs. Actual registry
+manifest/config/all13 compressed layers match the source and app digest02a21bad.
+All six product templates and both new Core modules match tracked bytes under
+UID/GID10001; Dive enabled rules pass at98.13% efficiency. No ready-PR promotion,
+Core release, dedicated deployment or actual external-agent execution is claimed.
+
+M6 implements bounded durable structural audit steps, exact-revision semantic
+rotation, immutable topic lifecycle history and compact peripheral archives only
+at a distinct future weekly checkpoint. Calendar events retain date precision,
+bounded daily/weekly/monthly recurrence and missed-refresh coalescing; generated
+work uses ordinary admission and preserves lineage/depth. Release checks use
+bounded external metadata and distinguish failed/incomplete retrieval from
+up-to-date; they never install code. Reader diagnostics show pinned latest report,
+actual successful daily/weekly runs, current connector definitions and gaps.
+Expose trusted Core input schemas in tool metadata where dict fields previously
+hid mandatory nested fields, retaining old-Core upgrade guards and all original
+contracts. Test PostgreSQL recovery/concurrency, scope/fencing, partial audits,
+calendar precision/recurrence, archive history, client metadata and UI access-loss
+guards, then exact full/native/artifact gates before M7. No live migration or
+schedule activation.
+
+M6 implementation checkpoint:20 current focused PostgreSQL/SDK/collector/input
+contract cases pass, including persistent release identity alerts, overlapping
+maintenance cursors, bounded historical admission, exact-revision rotation and
+distinct future archive checkpoints. The signed native protected seed/recovery
+and related maintenance cases pass9, retaining actual audit/semantic/event rows.
+Node195, schema/shell checks,21 Robot dry runs,283 documentation links and the
+93-file contribution privacy scan pass. The broad fresh-database suite is running;
+exact-source remote full/native/image/artifact acceptance is still required.
+Generated weekly/recovery instructions name actual operations and preserve partial
+coverage. No external provider, host task or production migration was executed.

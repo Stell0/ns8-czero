@@ -30,6 +30,10 @@ PHASES = {
 ACTIVE = {'pending','in_progress','retry_wait','awaiting_merge','blocked'}
 
 
+class QueueInventoryBound(ValueError):
+    pass
+
+
 def active_work(data):
     return data['status'] in ACTIVE or (data['status']=='deferred' and data['defer_reason']=='daily_budget')
 
@@ -207,6 +211,7 @@ class ProjectWorkflows:
                 return receipt(status,'checkpoint_already_saved',run_row,previous)
             if run['current_phase']!=phase:raise self.conflict()
             if run['workflow_type']=='daily' and phase=='monitoring' and status=='SAVED':self._monitoring_ready(connection,run)
+            if run['workflow_type']=='weekly' and status=='SAVED':self._weekly_phase_ready(connection,run,phase,references)
             if run['workflow_type'] in ('daily','weekly') and phase=='report' and status=='SAVED':
                 report=self._find(connection,'report_v1',run['workflow_type']+':'+run['local_cycle_date'])
                 values=self._saved_report(connection,report)
@@ -246,17 +251,27 @@ class ProjectWorkflows:
         self._save(connection,current,'budget_pointer_v1','active',{'local_date':day,'window_end':values['window_end']},previous=pointer)
         return budget
 
-    def _queue_rows(self,connection):
+    def _queue_rows(self,connection,*,active_only=False):
         maximum=self._manifest(connection)['data']['manifest']['maintenance']['max_inventory']
+        condition=" AND data->>'status' NOT IN ('complete','archived')" if active_only else ''
         rows=[dict(row) for row in connection.execute(text('''SELECT * FROM c0_objects
-            WHERE space_id=:space AND type_name=:type ORDER BY created_at,id LIMIT :limit'''),
+            WHERE space_id=:space AND type_name=:type'''+condition+' ORDER BY created_at,id LIMIT :limit'),
             {'space':self._space_id,'type':PREFIX+'queue_v1','limit':maximum+1}).mappings()]
-        if len(rows)>maximum:raise ValueError('queue_inventory_incomplete_requires_review')
+        if len(rows)>maximum:raise QueueInventoryBound('queue_inventory_incomplete_requires_review')
         return rows
 
     def _topic_scope(self,connection,topic_id,*,one_off=False):
         topic=self._find(connection,'topic_v1',topic_id)['data']
-        if topic['lifecycle']!='active' or (topic['expires_at'] and timestamp(topic['expires_at'])<=self.clock()):return None
+        if topic['lifecycle']!='active':return None
+        if topic['expires_at'] and timestamp(topic['expires_at'])<=self.clock():
+            # Expiry belongs to a distinct future weekly checkpoint, including recovery.
+            expired=connection.execute(text('''SELECT EXISTS(SELECT 1 FROM c0_objects WHERE space_id=:space
+                AND type_name=:type AND data->>'workflow_type'='weekly'
+                AND (data->>'started_at')::timestamptz>:created
+                AND (data->>'started_at')::timestamptz>=:expiry)'''),
+                {'space':self._space_id,'type':PREFIX+'run_v1','created':timestamp(topic['created_at']),
+                    'expiry':timestamp(topic['expires_at'])}).scalar_one()
+            if expired:return None
         if topic['classification']=='peripheral' and not one_off:return None
         for anchor_id in topic['anchor_ids']:
             anchor=self._find(connection,'topic_v1',anchor_id)['data']
@@ -279,7 +294,10 @@ class ProjectWorkflows:
             if identity in seen:continue
             seen.add(identity)
             if len(seen)>1000:raise ValueError('research_lineage_limit')
-            if identity not in by_id:raise ValueError('unknown_causal_parent')
+            if identity not in by_id:
+                parent_row=self._find(connection,'queue_v1',identity,required=False)
+                if not parent_row:raise ValueError('unknown_causal_parent')
+                by_id[identity]=parent_row
             parent=by_id[identity]['data']
             if parent['terminal'] or parent['status']=='archived' or not self._topic_scope(connection,parent['topic_id']):return False
             pending.extend(parent['parent_ids'])
@@ -298,14 +316,48 @@ class ProjectWorkflows:
         if not normalized_question(candidate['question']):raise ValueError('question_required')
         def execute(connection,current):
             manifest=self._manifest(connection);config=manifest['data']['manifest'];now=self.clock()
+            calendar=self._calendar_context(connection,candidate) if candidate['origin']=='calendar' else None
             self._references(connection,candidate['related_pages'])
-            rows=self._queue_rows(connection)
+            try:rows=self._queue_rows(connection)
+            except QueueInventoryBound:
+                existing=self._find(connection,'queue_v1',candidate['stable_id'],required=False)
+                expected=digest([normalized_question(candidate['question']),digest([candidate[k] for k in ('question_conditions','entity_version','time_window')])])
+                if existing and existing['data']['dedup_key']!=expected:raise self.conflict()
+                if existing is None:
+                    found=connection.execute(text('''SELECT o.* FROM c0_object_keys k JOIN c0_objects o
+                        ON o.id=k.object_id AND o.space_id=k.space_id WHERE k.space_id=:space AND k.type_name=:type
+                        AND k.field='dedup_key' AND k.value=CAST(:value AS jsonb)'''),
+                        {'space':self._space_id,'type':PREFIX+'queue_v1','value':json.dumps(expected)}).mappings().one_or_none()
+                    existing=dict(found) if found else None
+                if existing and existing['data']['dedup_key']==expected:
+                    rows=[existing]
+                    pending=list(candidate['parent_ids']);seen=set()
+                    while pending:
+                        parent=pending.pop()
+                        if parent in seen:continue
+                        seen.add(parent)
+                        if len(seen)>1000:raise ValueError('research_lineage_limit')
+                        parent_row=self._find(connection,'queue_v1',parent)
+                        rows.append(parent_row);pending.extend(parent_row['data']['parent_ids'])
+                else:
+                    bounded_topic=self._topic_scope(connection,candidate['topic_id'],one_off=candidate['origin']=='user')
+                    disposition='defer_capacity';reason='historical_inventory_requires_review'
+                    if not bounded_topic or candidate['excluded']:
+                        disposition='reject_scope';reason='inactive_terminal_or_excluded_topic'
+                    elif set(candidate['anchor_ids'])!=set(bounded_topic['anchor_ids']):
+                        disposition='needs_user_scope_decision';reason='anchor_scope_changed'
+                    elif not self._lineage_allowed(connection,candidate['parent_ids'],{}):
+                        disposition='archive_candidate';reason='terminal_or_out_of_scope_lineage'
+                    held=self._save(connection,current,'admission_v1',uuid4().hex,{'candidate_id':candidate['stable_id'],
+                        'disposition':disposition,'reason':reason,'target_id':'',
+                        'candidate':candidate,'config_version':manifest['data']['version'],'decided_at':now.isoformat()})
+                    return receipt('QUEUED' if disposition=='defer_capacity' else 'BLOCKED',disposition,held)
             by_id={row['data']['stable_id']:row for row in rows}
             context=digest([candidate[k] for k in ('question_conditions','entity_version','time_window')])
             question=normalized_question(candidate['question']);question_key=digest(question)
             dedup=digest([question,context])
             topic=self._topic_scope(connection,candidate['topic_id'],one_off=candidate['origin']=='user')
-            disposition='admit';reason='eligible';target=None;expansion=candidate['priority'];roots=[]
+            disposition='admit';reason='eligible';target=None;expansion=calendar['event']['expansion_priority'] if calendar else candidate['priority'];roots=[]
             if not topic or candidate['excluded']:
                 disposition='reject_scope';reason='inactive_terminal_or_excluded_topic'
             elif set(candidate['anchor_ids'])!=set(topic['anchor_ids']):
@@ -349,7 +401,7 @@ class ProjectWorkflows:
                         raise ValueError('initialization_authorization_required')
                 elif candidate['root_reason']!='independent_external_event' or not candidate['novelty_refs']:
                     raise ValueError('independent_novel_event_required')
-                roots=[candidate['stable_id']]
+                roots=[calendar['lineage_root_id'] if calendar else candidate['stable_id']]
             if candidate['stable_id'] in by_id:
                 target=by_id[candidate['stable_id']]
                 if target['data']['dedup_key']!=dedup:raise self.conflict()
@@ -403,7 +455,11 @@ class ProjectWorkflows:
                 attempt_count=0,retry_after='',result_reference='',last_attempt_id='',admission_ref=str(admission['id']))
             saved=self._save(connection,current,'queue_v1',candidate['stable_id'],values)
             return receipt('QUEUED',disposition,admission,saved,budget)
-        return self._mutate(actor,'queue_admit',candidate,idempotency_key,execute)
+        def admitted(connection,current):
+            result=execute(connection,current)
+            if candidate['origin']=='calendar':self._calendar_admitted(connection,current,candidate,result)
+            return result
+        return self._mutate(actor,'queue_admit',candidate,idempotency_key,admitted)
 
     def retune_queue(self,actor,stable_id,priority,priority_reason,urgency_reason,*,expected_revision,idempotency_key):
         identifier(stable_id)
@@ -433,8 +489,7 @@ class ProjectWorkflows:
         if not admission or admission['config_version']!=self._manifest(connection)['data']['version']:
             return False
         return (bool(self._topic_scope(connection,queue['topic_id'],one_off=queue['origin']=='user'))
-            and self._lineage_allowed(connection,queue['parent_ids'],
-                {row['data']['stable_id']:row for row in self._queue_rows(connection)}))
+            and self._lineage_allowed(connection,queue['parent_ids'],{}))
 
     def reserve(self,actor,lease,*,resume_attempt_id='',idempotency_key):
         if resume_attempt_id:identifier(resume_attempt_id)
@@ -456,7 +511,9 @@ class ProjectWorkflows:
             if run['workflow_type']=='daily':self._monitoring_ready(connection,run)
             budget=self._budget(connection,current,manifest);slot=budget['data']['used']+1
             if slot>budget['data']['total_limit']:return receipt('BLOCKED','daily_budget_exhausted',budget)
-            rows=self._queue_rows(connection);eligible=[];blocked=[]
+            try:rows=self._queue_rows(connection,active_only=True)
+            except QueueInventoryBound:return receipt('BLOCKED','active_inventory_requires_review',budget)
+            eligible=[];blocked=[]
             for row in rows:
                 q=row['data']
                 if q['status'] not in ('pending','retry_wait','deferred'):continue
@@ -471,7 +528,11 @@ class ProjectWorkflows:
                     active=sum(active_work(other['data']) for other in rows)
                     if active>=config['research']['max_active_items']:continue
                     if not q['root_admitted']:
-                        if q['origin']=='initialization' and sum(other['data']['origin']=='initialization' and other['data']['root_admitted'] for other in rows)>=min(5,config['research']['normal_daily_attempts']):continue
+                        if q['origin']=='initialization':
+                            initialized=connection.execute(text('''SELECT count(*) FROM c0_objects WHERE space_id=:space AND type_name=:type
+                                AND data->>'origin'='initialization' AND data->>'root_admitted'='true' '''),
+                                {'space':self._space_id,'type':PREFIX+'queue_v1'}).scalar_one()
+                            if initialized>=min(5,config['research']['normal_daily_attempts']):continue
                         if budget['data']['roots_admitted']>=budget['data']['roots_limit']:continue
                 if slot>budget['data']['ordinary_limit'] and q['priority']!=0:
                     values=data_of(row);values.update(status='deferred',defer_reason='daily_budget')

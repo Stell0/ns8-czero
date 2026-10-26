@@ -228,3 +228,9 @@ The read-only `c0-projects project skill` and `project schedule` commands reuse
 that authenticated private job to save a project-bound package or inspect IANA
 occurrences. See [monitoring and agent contracts](../../docs/projects/MONITORING.md).
 Package generation does not install a host task or establish unattended access.
+
+`c0-projects project release-check --config project.json --input release-plan.json
+--dry-run` collects bounded public workflow release metadata. Explicit `--apply`
+saves and verifies source evidence before a fenced observation. It never installs
+code or instructions. See [maintenance contracts](../../docs/projects/MAINTENANCE.md)
+for plans, trust restrictions, retry limits and incomplete coverage.

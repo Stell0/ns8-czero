@@ -7,6 +7,13 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'project_event_set': 'Save an observed event/refresh definition at its expected revision with provenance. Keep event dates distinct from publication/retrieval, use actual IANA timezone and date precision. Partial dates cannot execute refreshes. Daily/weekly/monthly recurrence is bounded; calendar work still uses common scope/dedup/capacity/lineage admission. Never treat an event as ongoing tracking authorization.',
+    'project_audit_step': 'Under a current weekly/maintenance lease, inspect at most ten stored resources and persist actual structural findings/keyset progress. Repeat with new replay keys until the selected slice is done. Inventory limits and canonical-link-only checks remain explicit. Structural completion is not semantic audit completeness; do not fetch external URLs from C0.',
+    'project_semantic_select': 'Select/resume exact Wiki revisions within the configured bounded review budget. A real rotating slot prevents risk/recent-page selection from starving old pages. Fetch every selected immutable revision before judging it. Explicit refresh_changed handles intervening edits while retaining old selection history; this does not execute a model.',
+    'project_semantic_review': 'Save one selected current-revision assessment, evidence, limitations and actual assessment reference. Partial/blocked assessments are not completed reviews. Continue the persisted selection after interruptions; deeper questions require ordinary queue admission. A complete selected batch does not imply complete global semantic coverage or automatically verify Wiki content.',
+    'project_peripheral_archive': 'Archive only peripheral information due at a distinct future weekly checkpoint, preserving compact summary, actual references and topic history. The weekly run which created the topic cannot expire it. Historical research/evidence is retained and archived topics never silently reactivate. Do not archive approved user topics through this operation.',
+    'project_release_observe': 'Record actual ready saved official workflow release metadata or an explicit retrieval failure. Fresh/complete observation, no release and failed/partial retrieval are distinct. Honor persisted retry bounds and flag changed published identities. This is a metadata check, never permission to install a workflow, Core dependency or runtime upgrade.',
+    'project_diagnostics_get': 'Read selected-project status, actual last successful daily/weekly runs, latest saved report identity and current connector-definition coverage. Bounded incomplete work/findings remain visible. A configured schedule, running lease or saved report does not verify actual external-agent execution or unattended notifications.',
     'project_result_save': 'Save findings against exactly one reserved research attempt or monitoring cycle under its current lease. Use actual ready immutable passage IDs and exact claim revisions. Record observed fact, supported inference, hypothesis, contradiction, outdated assertion or unknown separately. Consequential conclusions need bounded contrary-query observations; pending checks remain PARTIAL.',
     'project_result_publish': 'Verify a saved result against current same-space Wiki revision UUIDs, ready passages and exact claim revisions. Wiki metadata c0_project binds project_id and result_references; put Markdown only in body. A new Wiki revision needs explicit verification. Use the actual returned publication proof when completing research.',
     'project_report_prepare': 'Prepare/resume the stable daily/weekly report under a report-phase or independent report_publication lease. Use project language. Lead with learnings, changed goals, connections, events and uncertainty; include research, deferred investigations and monitoring failures. Amend only at the expected revision.',
@@ -121,6 +128,7 @@ DESCRIPTIONS = {
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
+    'project_event_set','project_audit_step','project_semantic_select','project_semantic_review','project_peripheral_archive','project_release_observe',
     'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',
     'project_monitor_begin','project_monitor_reserve','project_monitor_observe','project_monitor_finish',
@@ -135,6 +143,7 @@ REPLAY_SAFE = frozenset({
 })
 
 DESTRUCTIVE = frozenset({
+    'project_event_set','project_audit_step','project_semantic_select','project_semantic_review','project_peripheral_archive','project_release_observe',
     'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',
     'project_monitor_begin','project_monitor_reserve','project_monitor_observe','project_monitor_finish',

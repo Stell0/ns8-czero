@@ -9,7 +9,7 @@ from sqlalchemy import text
 from .identity import PermissionDenied, Role
 from .objects import ObjectService, ObjectConflict, ObjectNotFound, page
 from .object_schema import bounded_json, validate_record
-from .project_schema import PREFIX, SCHEMAS, normalize_manifest, identifier, next_occurrence, project_unique_fields
+from .project_schema import PREFIX, SCHEMAS, TOPIC_INPUT, normalize_manifest, identifier, next_occurrence, project_unique_fields
 from .receipts import mutate, snapshot
 from .spaces import SpaceBound
 from .project_workflows import ProjectWorkflows
@@ -17,6 +17,9 @@ from .project_monitoring import ProjectMonitoring
 from .project_schedules import ProjectSchedules
 from .project_evidence import ProjectEvidence
 from .project_reports import ProjectReports
+from .project_events import ProjectEvents
+from .project_maintenance import ProjectMaintenance
+from .project_releases import ProjectReleases
 
 
 class ProjectConflict(ObjectConflict):
@@ -31,7 +34,7 @@ def logical_key(kind, identity):
     return hashlib.sha256((kind + '\n' + identity).encode()).hexdigest()
 
 
-class ProjectService(ProjectReports, ProjectEvidence, ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
+class ProjectService(ProjectReleases, ProjectMaintenance, ProjectEvents, ProjectReports, ProjectEvidence, ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
     conflict = ProjectConflict
     def __init__(self, database, access, *, clock=None):
         self.database, self.access = database, access
@@ -176,7 +179,7 @@ class ProjectService(ProjectReports, ProjectEvidence, ProjectSchedules, ProjectM
             'authorization_ref': authorization_ref}, idempotency_key, execute, admin=True)
 
     def set_topic(self, actor, topic, *, expected_revision=0, idempotency_key):
-        topic = bounded_json(topic)
+        topic = validate_record(TOPIC_INPUT,bounded_json(topic))
         allowed = set(SCHEMAS['topic_v1']['properties']) - {'key', 'schema_version', 'authorized_by', 'created_at', 'expires_at'}
         if set(topic) - allowed:
             raise ValueError('invalid_project_topic')
@@ -184,7 +187,7 @@ class ProjectService(ProjectReports, ProjectEvidence, ProjectSchedules, ProjectM
         if type(expected_revision) is not int or expected_revision < 0:
             raise ValueError('invalid_revision')
         def execute(connection, current):
-            self._bootstrap(connection, current, ('manifest_v1', 'config_v1', 'topic_v1'))
+            self._bootstrap(connection, current, ('manifest_v1', 'config_v1', 'topic_v1','topic_history_v1'))
             previous = self._find(connection, 'topic_v1', topic['topic_id'], required=False)
             if (previous['revision'] if previous else 0) != expected_revision:
                 raise ProjectConflict()
@@ -237,7 +240,15 @@ class ProjectService(ProjectReports, ProjectEvidence, ProjectSchedules, ProjectM
                 values['expires_at'] = (previous['data']['expires_at'] if previous and previous['data']['expires_at']
                     else next_occurrence(manifest, 'weekly', self.clock()).isoformat())
             values = validate_record(SCHEMAS['topic_v1'], {'key': logical_key('topic_v1', topic['topic_id']), **values})
-            return self._save(connection, current, 'topic_v1', topic['topic_id'], {k: v for k, v in values.items() if k != 'key'}, previous=previous)
+            if previous and not self._find(connection,'topic_history_v1',topic['topic_id']+':'+str(previous['revision']),required=False):
+                self._save(connection,current,'topic_history_v1',topic['topic_id']+':'+str(previous['revision']),{
+                    'topic_id':topic['topic_id'],'version':previous['revision'],'topic':previous['data'],
+                    'actor_id':str(current.user_id),'recorded_at':self.clock().isoformat(),'observation':'upgrade_snapshot'})
+            saved=self._save(connection, current, 'topic_v1', topic['topic_id'], {k: v for k, v in values.items() if k != 'key'}, previous=previous)
+            self._save(connection,current,'topic_history_v1',topic['topic_id']+':'+str(saved['revision']),{
+                'topic_id':topic['topic_id'],'version':saved['revision'],'topic':saved['data'],
+                'actor_id':str(current.user_id),'recorded_at':self.clock().isoformat(),'observation':'changed'})
+            return saved
         # Initial schema bootstrap is Admin-only. Thereafter Editors can assess adjacent topics.
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor, Role.EDITOR)

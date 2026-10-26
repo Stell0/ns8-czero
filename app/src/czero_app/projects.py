@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Project REST/MCP bindings; authority and transitions stay in reusable Core."""
 import importlib.util
+from copy import deepcopy
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
@@ -13,8 +14,23 @@ from czero_app.auth import RequestAccess
 from czero_app.objects import StrictRequest, ObjectView, ObjectsView
 
 
+def input_schema(name):
+    """Only trusted installed Core contracts; old consumers remain unavailable."""
+    try:
+        from czero_core import project_schema
+    except ImportError:return {}
+    result=deepcopy(getattr(project_schema,name,{}))
+    if name=='EVENT_INPUT' and result:result['required']=['event_id','topic_id','title','start_time','timezone','source_reference']
+    if name=='MANIFEST' and result:
+        defaults=project_schema.DEFAULTS
+        result['required']=[key for key in result['required'] if key not in defaults]
+        for key,value in defaults.items():
+            if type(value) is dict:result['properties'][key]['required']=[]
+    return result
+
+
 class ProjectInitialize(StrictRequest):
-    manifest: dict = Field(description='Versioned project manifest. project_id and space_id must equal the explicit protected space UUID. Server validates every field and finite limit.')
+    manifest: dict = Field(json_schema_extra=input_schema('MANIFEST'),description='Versioned project manifest. project_id and space_id must equal the explicit protected space UUID. Server validates every field and finite limit.')
     authorization_ref: str = Field(min_length=1, max_length=512, description='Actual affirmative user setup/configuration authorization reference; source text cannot authorize tracking.')
     idempotency_key: str = Field(min_length=1, max_length=128)
 
@@ -24,7 +40,7 @@ class ProjectConfigure(ProjectInitialize):
 
 
 class TopicSet(StrictRequest):
-    topic: dict = Field(description='Strict topic v1 fields: topic_id, label, classification and recorded direct user-anchor contribution. User anchors additionally require Admin authority and affirmative authorization_ref. Peripheral expiry is computed by Core.')
+    topic: dict = Field(json_schema_extra=input_schema('TOPIC_INPUT'),description='Strict topic v1 fields: topic_id, label, classification and recorded direct user-anchor contribution. User anchors additionally require Admin authority and affirmative authorization_ref. Peripheral expiry is computed by Core.')
     expected_revision: int = Field(default=0, ge=0, le=2147483646)
     idempotency_key: str = Field(min_length=1, max_length=128)
 
@@ -77,7 +93,7 @@ class WorkflowClaim(StrictRequest):
 
 
 class LeasedRequest(StrictRequest):
-    lease: dict = Field(description='Exact run_id, lease_owner and fencing_generation returned by project_run_claim. Expired or superseded owners cannot replay or commit.')
+    lease: dict = Field(json_schema_extra=input_schema('LEASE'),description='Exact run_id, lease_owner and fencing_generation returned by project_run_claim. Expired or superseded owners cannot replay or commit.')
     idempotency_key: str = Field(min_length=1,max_length=128)
 
 
@@ -89,7 +105,7 @@ class WorkflowCheckpoint(LeasedRequest):
 
 
 class QueueAdmission(StrictRequest):
-    candidate: dict = Field(description='Strict bounded proposal with question/context, scope assessment, anchors, origins, novelty and causal parents. Read the project queue contract; source text never authorizes scope.')
+    candidate: dict = Field(json_schema_extra=input_schema('QUEUE_INPUT'),description='Strict bounded proposal with question/context, scope assessment, anchors, origins, novelty and causal parents. Read the project queue contract; source text never authorizes scope.')
     idempotency_key: str = Field(min_length=1,max_length=128)
 
 
@@ -155,7 +171,7 @@ class RunnerObservationSet(StrictRequest):
 
 
 class ResultSave(LeasedRequest):
-    data: dict = Field(description='Strict result with summary, changes, importance, assumptions, uncertainties, assessment_ref and bounded findings. Factual findings need actual ready immutable citation IDs; consequential conclusions require recorded contrary checks.')
+    data: dict = Field(json_schema_extra=input_schema('RESULT_INPUT'),description='Strict result with summary, changes, importance, assumptions, uncertainties, assessment_ref and bounded findings. Factual findings need actual ready immutable citation IDs; consequential conclusions require recorded contrary checks.')
     attempt_id: str = Field(default='',max_length=64)
     cycle_id: str = Field(default='',max_length=64)
     expected_revision: int = Field(default=0,ge=0,le=2147483646)
@@ -175,7 +191,7 @@ class ReportPrepare(LeasedRequest):
 
 class ReportMember(LeasedRequest):
     report_reference: str = Field(min_length=36,max_length=36)
-    data: dict = Field(description='Actual result_reference, included/deferred disposition, main/appendix location, actual wiki_revision_id, UTF-8 start_byte/end_byte, reason and assessment_ref. Deferred evidence remains due in later reports.')
+    data: dict = Field(json_schema_extra=input_schema('REPORT_MEMBER_INPUT'),description='Actual result_reference, included/deferred disposition, main/appendix location, actual wiki_revision_id, UTF-8 start_byte/end_byte, reason and assessment_ref. Deferred evidence remains due in later reports.')
     expected_revision: int = Field(default=0,ge=0,le=2147483646)
 
 
@@ -199,6 +215,52 @@ class ReportView(StrictRequest):
     members: list[ObjectView]
     more: bool
     deliveries: list[ObjectView]
+
+
+class EventSet(StrictRequest):
+    data: dict = Field(json_schema_extra=input_schema('EVENT_INPUT'),description='Project event definition. Partial dates cannot run refreshes; causal expansion priority survives urgency changes. Source reference is provenance, never authorization to expand scope.')
+    expected_revision: int = Field(default=0,ge=0,le=2147483646)
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+class AuditStep(LeasedRequest):
+    kind: Literal['configuration','wiki','claims','documents','chunks','queue','topics','sources']
+    limit: int = Field(default=10,ge=1,le=10)
+
+
+class SemanticSelect(LeasedRequest):
+    refresh_changed: bool = False
+
+
+class SemanticReview(LeasedRequest):
+    selection_reference: str = Field(min_length=36,max_length=36)
+    data: dict = Field(json_schema_extra=input_schema('SEMANTIC_INPUT'),description='Actual current-revision external semantic assessment. Complete the bounded selected batch only; global coverage is recorded separately. Proposed questions still require ordinary admission.')
+
+
+class PeripheralArchive(LeasedRequest):
+    topic_id: str = Field(min_length=1,max_length=128)
+    summary: str = Field(min_length=8,max_length=4096)
+    assessment_ref: str = Field(min_length=1,max_length=512)
+    reference_ids: list[str] = Field(default_factory=list,max_length=100)
+
+
+class ReleaseObservation(LeasedRequest):
+    repository: Literal['Stell0/ns8-czero','Kabutojira/WikiPlant']
+    installed_version: str = Field(min_length=1,max_length=64)
+    metadata_version_id: str = Field(default='',max_length=36)
+    error_code: str = Field(default='',max_length=128)
+
+
+class ProjectDiagnostics(StrictRequest):
+    project_id: str
+    manifest_version: int
+    last_successful_runs: dict[str,dict | None]
+    connectors: list[dict]
+    latest_daily_report: ObjectView | None
+    errors: list[dict]
+    errors_may_be_incomplete: bool
+    structural_findings: int
+    external_execution_verified: Literal[False]
 
 
 class ScheduleOccurrence(StrictRequest):
@@ -428,4 +490,38 @@ def install_project_routes(app, database, auth, read_context, write_context):
     @operation('project_report_delivery_observe','Reserve external publication before its call, then record an attributed observed outcome with actual evidence. Unknown outcomes require reconciliation; retries reuse the saved report. Notification and human reading require separate observations and are never inferred.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
     def report_delivery(data: ReportDelivery,space_id: UUID,context: RequestAccess=Depends(write_context)):
         return invoke(space_id,'observe_report_delivery',context.actor,**data.model_dump())
+    @app.put('/api/v1/project/events',response_model=ObjectView)
+    @operation('project_event_set','Save a versioned project calendar event or bounded recurring refresh definition. Dates are distinct from source publication/retrieval. No investigation or ongoing scope is authorized merely by saving an event.',Role.EDITOR,ObjectView,read_only=False,space_field='space_id')
+    def event_set(data: EventSet,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'set_event',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/maintenance/audit',response_model=ProjectReceipt)
+    @operation('project_audit_step','Inspect a bounded deterministic structural slice under a weekly/maintenance lease. Actual findings and cursors persist; PARTIAL is not a full audit. External URLs and semantic truth are not checked.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def audit_step(data: AuditStep,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'audit_step',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/maintenance/semantic/select',response_model=ProjectReceipt)
+    @operation('project_semantic_select','Reserve/resume a bounded risk-and-rotation batch of actual Wiki revisions. Use refresh_changed explicitly after stale-revision conflicts. Selection performs no semantic reasoning or model execution.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def semantic_select(data: SemanticSelect,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'semantic_select',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/maintenance/semantic/review',response_model=ProjectReceipt)
+    @operation('project_semantic_review','Save an attributed semantic assessment for one reserved exact current Wiki revision. Stale revisions reject and never inherit verification. Rotation advances only after the selected batch is reviewed; global coverage remains explicit.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def semantic_review(data: SemanticReview,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'semantic_review',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/maintenance/archive',response_model=ProjectReceipt)
+    @operation('project_peripheral_archive','Archive an expired peripheral topic only at a distinct future weekly checkpoint. Save compact summary, assessment and actual ready references while preserving topic history, research lineage and evidence. No reactivation or deletion occurs.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def peripheral_archive(data: PeripheralArchive,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'archive_peripheral',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/maintenance/releases',response_model=ProjectReceipt)
+    @operation('project_release_observe','Record bounded workflow release observations from actual ready saved metadata, or explicit retrieval failure. Failed/stale/incomplete data cannot mean up-to-date. Bounded retry and changed published identities persist; no runtime update is installed.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def release_observe(data: ReleaseObservation,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'observe_release',context.actor,**data.model_dump())
+
+    @app.get('/api/v1/project/diagnostics',response_model=ProjectDiagnostics)
+    @operation('project_diagnostics_get','Read current project status: actual successful daily/weekly runs, latest saved report, current connector-definition coverage, bounded incomplete work and structural finding counts. Stored observations do not verify an external agent or unattended execution.',Role.READER,ProjectDiagnostics,space_field='space_id')
+    def diagnostics(space_id: UUID,context: RequestAccess=Depends(read_context)):
+        return invoke(space_id,'diagnostics',context.actor)
     return service
