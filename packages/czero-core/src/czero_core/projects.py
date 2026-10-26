@@ -15,6 +15,8 @@ from .spaces import SpaceBound
 from .project_workflows import ProjectWorkflows
 from .project_monitoring import ProjectMonitoring
 from .project_schedules import ProjectSchedules
+from .project_evidence import ProjectEvidence
+from .project_reports import ProjectReports
 
 
 class ProjectConflict(ObjectConflict):
@@ -29,7 +31,7 @@ def logical_key(kind, identity):
     return hashlib.sha256((kind + '\n' + identity).encode()).hexdigest()
 
 
-class ProjectService(ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
+class ProjectService(ProjectReports, ProjectEvidence, ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
     conflict = ProjectConflict
     def __init__(self, database, access, *, clock=None):
         self.database, self.access = database, access

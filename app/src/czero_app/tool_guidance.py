@@ -7,6 +7,13 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'project_result_save': 'Save findings against exactly one reserved research attempt or monitoring cycle under its current lease. Use actual ready immutable passage IDs and exact claim revisions. Record observed fact, supported inference, hypothesis, contradiction, outdated assertion or unknown separately. Consequential conclusions need bounded contrary-query observations; pending checks remain PARTIAL.',
+    'project_result_publish': 'Verify a saved result against current same-space Wiki revision UUIDs, ready passages and exact claim revisions. Wiki metadata c0_project binds project_id and result_references; put Markdown only in body. A new Wiki revision needs explicit verification. Use the actual returned publication proof when completing research.',
+    'project_report_prepare': 'Prepare/resume the stable daily/weekly report under a report-phase or independent report_publication lease. Use project language. Lead with learnings, changed goals, connections, events and uncertainty; include research, deferred investigations and monitoring failures. Amend only at the expected revision.',
+    'project_report_member_set': 'Bind each actual result UUID to substantive text in a stored report/appendix Wiki revision using exact UTF-8 byte offsets and an assessment reference. Explain explicit deferrals; deferred completed results remain due. Metadata c0_project must bind project_id and report_reference.',
+    'project_report_finalize': 'Finalize only after storing and reading back the report Wiki revision and all membership entries. Core rejects omitted completed unreported results and records incomplete monitoring. Metadata includes project_id, report_reference and language. SAVED establishes persistence, not external delivery or notification.',
+    'project_report_get': 'Read the requested local-date or latest saved daily/weekly report, pinned Wiki revision/hash and independently attributed delivery observations in this selected space. Continue membership pagination before claiming complete coverage. No mutation occurs.',
+    'project_report_delivery_observe': 'Use a report_publication lease. Save started before external result publication, then actual outcome/evidence references. Reconcile uncertain calls before retrying; bounded failures back off without repeating research. Notification and human reading are separate attributed observations and cannot be inferred from report persistence.',
     'project_agent_package_get': 'Generate a private archive bound to this actual instance, protected space, project, current manifest version, language and approved primary topics. Generation reads only authorized state. Plugin format needs the actual verified app ID; neither format connects an account, installs tasks or proves scheduled execution. Keep the archive private.',
     'project_schedule_get': 'Read desired daily/weekly local occurrences and their UTC instants/cycle dates for this exact protected project. Preserve IANA timezone and DST policy. Configured/enabled is not proof of installed tasks, unattended OAuth, execution or notification.',
     'project_runner_observe': 'Record an attributed operator, external-runner or SDK-simulation observation with a replay key. Reported installation needs actual task/evidence references; reported execution also needs a completed same-project C0 run. This records a report and never installs, authenticates or verifies an external task.',
@@ -114,6 +121,7 @@ DESCRIPTIONS = {
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
+    'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',
     'project_monitor_begin','project_monitor_reserve','project_monitor_observe','project_monitor_finish',
     'project_initialize', 'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set', 'project_run_claim', 'project_run_checkpoint', 'project_queue_admit', 'project_queue_retune', 'project_attempt_reserve', 'project_invocation_set', 'project_research_complete',
@@ -127,6 +135,7 @@ REPLAY_SAFE = frozenset({
 })
 
 DESTRUCTIVE = frozenset({
+    'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',
     'project_monitor_begin','project_monitor_reserve','project_monitor_observe','project_monitor_finish',
     'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set', 'project_run_claim', 'project_run_checkpoint', 'project_queue_admit', 'project_queue_retune', 'project_attempt_reserve', 'project_invocation_set', 'project_research_complete',

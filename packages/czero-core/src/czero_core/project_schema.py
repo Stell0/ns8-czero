@@ -166,6 +166,69 @@ SCHEMAS['runner_observation_v1']=record(key=string(128),project_id=string(36),co
     status=string(values=['unverified','blocked','reported_installed','reported_execution']),
     task_reference=string(512,minimum=0),run_id=string(64,minimum=0),evidence_reference=string(512,minimum=0),
     summary=string(4096),actor_id=string(36),recorded_at=string(40))
+
+CHALLENGE_QUERY=record(request_id=string(128),query=string(512),
+    state=string(values=['succeeded','failed','uncertain']),snapshot_chunk_id=string(36,minimum=0),
+    external_reference=string(512,minimum=0),replaces=string(128,minimum=0))
+CHALLENGE=record(state=string(values=['not_required','not_searched','searched','partial','blocked']),
+    reason=string(2048),strongest_alternative=string(2048,minimum=0),
+    falsification_conditions=array(string(512),maximum=5),queries=array(CHALLENGE_QUERY,maximum=3),
+    counter_citation_ids=array(string(36),maximum=10),coverage=string(2048,minimum=0),
+    conclusion_change=string(2048,minimum=0))
+FINDING_INPUT=record(statement=string(2048),
+    classification=string(values=['observed_fact','supported_inference','hypothesis','contradiction','outdated_assertion','unknown']),
+    confidence=integer(0,100),rationale=string(2048),citation_ids=array(string(36),maximum=32),
+    claim_id=string(36,minimum=0),claim_revision=integer(0,2147483647),consequential={'type':'boolean'},
+    applicability_limits=array(string(512),maximum=8),challenge=CHALLENGE)
+RESULT_INPUT=record(summary=string(8192),changes=string(4096),importance=string(4096),
+    assumptions=array(string(512),maximum=8),uncertainties=array(string(512),maximum=8),
+    assessment_ref=string(512),findings=array(FINDING_INPUT,maximum=20))
+RESULT_INPUT['properties']['findings']['minItems']=1
+SCHEMAS.update({
+    'result_v1':record(key=string(128),result_id=string(64),project_id=string(36),run_id=string(64),
+        attempt_id=string(64,minimum=0),cycle_id=string(64,minimum=0),topic_id=string(),scope_hash=string(64),
+        config_version=integer(1,2147483647),local_date=string(10),content_version=integer(1,2147483647),
+        question=string(2048),summary=string(8192),changes=string(4096),importance=string(4096),
+        assumptions=array(string(512),maximum=8),uncertainties=array(string(512),maximum=8),
+        assessment_ref=string(512),finding_ids=array(string(36),maximum=20),payload_hash=string(64),
+        state=string(values=['awaiting_merge','partial','published']),publication_reference=string(36,minimum=0),
+        saved_at=string(40)),
+    'finding_v1':record(key=string(128),result_id=string(64),content_version=integer(1,2147483647),ordinal=integer(1,20),
+        **FINDING_INPUT['properties'],evidence_hash=string(64),claim_value_hash=string(64,minimum=0),
+        valid_from=string(40,minimum=0),valid_to=string(40,minimum=0)),
+    'result_publication_v1':record(key=string(128),result_reference=string(36),content_version=integer(1,2147483647),
+        config_version=integer(1,2147483647),run_id=string(64),wiki_revision_ids=array(string(36),maximum=20),
+        wiki_hashes=array(string(64),maximum=20),claim_ids=array(string(36),maximum=20),verified_at=string(40)),
+})
+SCHEMAS['result_history_v1']=SCHEMAS['result_v1']
+REPORT_MEMBER_INPUT=record(result_reference=string(36),disposition=string(values=['included','deferred']),
+    location=string(values=['main','appendix']),wiki_revision_id=string(36),start_byte=integer(0,131071),
+    end_byte=integer(1,131072),reason=string(2048,minimum=0),assessment_ref=string(512))
+SCHEMAS.update({
+    'report_v1':record(key=string(128),report_id=string(64),project_id=string(36),
+        report_type=string(values=['daily','weekly']),local_date=string(10),language=string(35),
+        config_version=integer(1,2147483647),source_config_version=integer(1,2147483647),
+        source_run_id=string(64),publisher_run_id=string(64),current_version=integer(0,2147483647),
+        draft_generation=integer(1,2147483647),draft_open={'type':'boolean'},cutoff_at=string(40),
+        included_count=integer(0,10000),deferred_count=integer(0,10000),inventory_hash=string(64),
+        monitoring_expected=integer(0,700),monitoring_complete=integer(0,700),coverage_complete={'type':'boolean'},
+        wiki_page_id=string(36,minimum=0),wiki_revision_id=string(36,minimum=0),wiki_revision=integer(0,2147483647),
+        content_hash=string(64,minimum=0),saved_status=string(values=['draft','saved']),saved_at=string(40,minimum=0)),
+    'report_member_v1':record(key=string(128),report_reference=string(36),report_id=string(64),report_version=integer(1,2147483647),
+        draft_generation=integer(1,2147483647),result_reference=string(36),result_version=integer(1,2147483647),
+        disposition=string(values=['included','deferred']),location=string(values=['main','appendix']),
+        wiki_revision_id=string(36),wiki_hash=string(64),start_byte=integer(0,131071),end_byte=integer(1,131072),
+        entry_hash=string(64),reason=string(2048,minimum=0),assessment_ref=string(512)),
+    'report_delivery_v1':record(key=string(128),report_reference=string(36),report_version=integer(1,2147483647),
+        content_hash=string(64),channel=string(values=['external_result','notification','human_read']),
+        state=string(values=['started','succeeded','failed','uncertain']),attempt_count=integer(0,5),
+        retry_after=string(40,minimum=0),run_id=string(64),fencing_generation=integer(1,2147483647),
+        external_reference=string(512,minimum=0),evidence_reference=string(512,minimum=0),
+        observation_source=string(values=['operator_report','runner_report','sdk_simulation']),
+        recorded_at=string(40),actor_id=string(36)),
+})
+SCHEMAS['report_history_v1']=SCHEMAS['report_v1']
+SCHEMAS['report_delivery_history_v1']=SCHEMAS['report_delivery_v1']
 PROJECT_UNIQUE_FIELDS = {'queue_v1': ['key','dedup_key']}
 
 

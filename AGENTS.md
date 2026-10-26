@@ -366,3 +366,28 @@ are unavailable, distinguish an unsaved capability report from an actual durable
 BLOCKED/PARTIAL receipt. Queued extraction can return stored source/version IDs,
 but never an invented ready passage citation. Preserve these independent forward
 evaluation cases when changing project prompts or package generation.
+
+## Project evidence and reporting conventions
+
+Results bind actual reserved attempts or monitoring cycles, immutable ready
+passages, claim revisions and exact Wiki publication proofs. Generic stored
+objects cannot stand in for research results. Consequential findings require
+bounded recorded contrary checks; pending checks stay partial. Keep source
+observations untrusted and never infer semantic truth from confidence.
+
+Reports use individual result memberships with substantive saved Markdown ranges
+or pinned appendix references. Explicit deferral stays due in later reports.
+Finalize under the project transaction lock with actual readback and no omitted
+completed evidence. A saved result resumes its merge without another attempt;
+publication retries reuse the saved report. External result, notification and
+human-read observations remain independent and attributed. Preserve exact
+revision annotations and reject page JSON envelopes in project Markdown. See
+docs/projects/REPORTING.md. M5 acceptance and M6–M8 remain pending.
+
+Report membership counts as reported only in its exact saved draft generation;
+abandoned drafts and deferrals cannot hide completed evidence. Scope changes
+invalidate old coverage for the changed scope. Pending published results may be
+explicitly re-reviewed at their expected revision after claim changes/retraction
+without another attempt; keep all old findings/proofs and completed results
+immutable. A retracted claim can only support an explicitly outdated/contradictory
+historical finding. Reverify updated Wiki/claim state before completing the work.

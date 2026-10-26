@@ -100,10 +100,28 @@ def test_selected_uninspected_and_queued_sources_cannot_be_successful_coverage(p
         version_id=str(other['id']),citation_ids=[str(chunks[0]['id'])],external_reference='synthetic:wrong-version',summary='Mismatch',idempotency_key='wrong-version')
     service.monitor_observe(owner,lease,inspection['call_id'],'succeeded',version_id=str(version['id']),
         citation_ids=[str(chunks[0]['id'])],external_reference='synthetic:original',summary='Inspected actual immutable passage',idempotency_key='inspected')
-    pending=finish(service,owner,lease,cycle,'complete',result_reference=service.get(owner)['id'])
+    from test_project_evidence import finding,result_data
+    result=row(service.save_result(owner,lease,result_data(finding(chunks[0])),cycle_id=cycle['cycle_id'],idempotency_key='material-result'),'result_v1')
+    pending=finish(service,owner,lease,cycle,'complete',result_reference=result['id'])
     assert pending['status']=='ACCEPTED_PENDING_MERGE'
     assert service.list_records(owner,'monitor_watermark_v1')==[]
     assert service.get(owner)['data']['manifest']['scope']=='Fabricated safe fixtures only'
+    from czero_core.knowledge import KnowledgeService
+    from sqlalchemy import text
+    knowledge=KnowledgeService(service.database,service.access).in_space(service._space_id)
+    wiki=knowledge.create_page(owner,'monitoring/material','Synthetic monitored development',
+        '# Development\n\nThe original supplies a fabricated development within the approved scope.',
+        metadata={'c0_project':{'project_id':str(service._space_id),'result_references':[result['id']]}},idempotency_key='material-wiki')
+    try:
+        service.publish_result(owner,lease,result['id'],[wiki['content']['id']],idempotency_key='material-published')
+        successful=finish(service,owner,lease,cycle,'complete',result_reference=result['id'])
+        assert successful['status']=='SAVED'
+        assert row(successful,'monitor_watermark_v1')['data']['coverage_end']==cycle['coverage_end']
+        assert service.list_records(owner,'budget_v1')==[]
+    finally:
+        with service.database.engine.begin() as connection:
+            for table in ('c0_wiki_chunks','c0_wiki_revisions','c0_wiki_pages','c0_knowledge_events'):
+                connection.execute(text('DELETE FROM '+table+' WHERE space_id=:space'),{'space':service._space_id})
 
 
 def test_monitoring_caps_and_concurrent_reservations_are_atomic(project):

@@ -1,6 +1,8 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Additive project operations; the frozen original 77 contracts remain exact."""
 PROJECT_OPERATIONS = frozenset({
+    'project_result_save','project_result_publish','project_report_prepare','project_report_member_set',
+    'project_report_finalize','project_report_get','project_report_delivery_observe',
     'project_agent_package_get',
     'project_schedule_get','project_runner_observe',
     'project_record_get','project_run_claim','project_run_checkpoint','project_queue_admit',

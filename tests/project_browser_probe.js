@@ -57,5 +57,20 @@ async () => {
   const stale=await fetch('./api/v1/project/attempts/reserve?space_id='+space,{method:'POST',headers,
     body:JSON.stringify({lease,idempotency_key:'browser-stale'}),cache:'no-store'});
   if(stale.status!==409) throw Error('Inactive project lease was accepted');
-  return {initialized:true, replay:true, revision:saved.revision, workflows:true,monitoring:true};
+  const publisher=(await write('/runs/claim',{workflow_type:'report_publication',lease_owner:'synthetic-browser-reporter',
+    config_version:2,cycle_key:'browser-report',idempotency_key:'browser-report-run'})).records[0].data;
+  const reportLease={run_id:publisher.run_id,lease_owner:publisher.lease_owner,fencing_generation:publisher.fencing_generation};
+  const header=(await write('/reports/prepare',{lease:reportLease,report_type:'daily',idempotency_key:'browser-report-prepare'})).records[0];
+  const body='# Daily research\n\nPrimary monitoring found no material synthetic development. Queued research is incomplete. No actual agent executed.';
+  const response=await fetch('./api/v1/wiki/pages?space_id='+space,{method:'POST',headers,cache:'no-store',body:JSON.stringify({
+    slug:'synthetic-browser-report',title:'Synthetic daily report',body,
+    metadata:{c0_project:{project_id:space,report_reference:header.id,language:'en'}},idempotency_key:'browser-report-wiki'})});
+  if(response.status!==201) throw Error('Synthetic report Wiki persistence failed');
+  const wiki=await response.json();
+  await write('/reports/finalize',{lease:reportLease,report_reference:header.id,wiki_revision_id:wiki.content.id,idempotency_key:'browser-report-finalize'});
+  const readback=await fetch('./api/v1/project/reports?space_id='+space,{cache:'no-store'});
+  if(!readback.ok) throw Error('Synthetic report readback failed');
+  const report=await readback.json();
+  if(report.report.data.wiki_revision_id!==wiki.content.id || report.deliveries.length) throw Error('Report identity or delivery observations invalid');
+  return {initialized:true, replay:true, revision:saved.revision, workflows:true,monitoring:true,reports:true};
 }

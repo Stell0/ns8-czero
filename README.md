@@ -279,7 +279,9 @@ topics, authorization and a read-only project overview. The
 day budgets, fenced leases and recoverable attempts. The
 [monitoring/agent contract](docs/projects/MONITORING.md) adds separately capped
 primary-topic coverage, project-bound packages and IANA scheduler handoff.
-Reporting and migration preparation have separate gates. Actual external-agent
+The [evidence/report contract](docs/projects/REPORTING.md) adds result proofs,
+report membership/readback and independent publication observations.
+Migration preparation has separate gates. Actual external-agent
 and unattended scheduled execution remain unverified.
 This branch does not migrate real projects, deploy an instance or activate schedules.
 

@@ -1,6 +1,8 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Fixed project errors shared by current and legacy MCP serialization."""
 PROJECT_OPERATIONS=frozenset({
+    'project_result_save','project_result_publish','project_report_prepare','project_report_member_set',
+    'project_report_finalize','project_report_get','project_report_delivery_observe',
     'project_agent_package_get',
     'project_schedule_get','project_runner_observe',
     'project_monitor_begin','project_monitor_reserve','project_monitor_observe','project_monitor_finish',

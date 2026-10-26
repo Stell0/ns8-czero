@@ -157,17 +157,14 @@ def test_stale_lease_cannot_replay_or_commit_and_uncertain_invocation_not_reissu
     assert service.get_record(owner,'budget_v1','2026-10-25')['data']['used']==1
 
 
-def test_saved_result_recovery_and_phase_checkpoint_readback(project):
+def test_non_result_reference_is_rejected_and_phase_checkpoint_readback(project):
     service,owner=setup(project);lease=claim(service,owner);admit(service,owner,'saved')
     attempt=row(reserve(service,owner,lease),'attempt_v1')['data']
     service.invocation(owner,lease,attempt['attempt_id'],'started',idempotency_key='start')
-    # M5 adds evidence-specific result validation to this stored-reference gate.
     stored=service.get(owner)['id']
-    result=service.invocation(owner,lease,attempt['attempt_id'],'returned',result_reference=stored,idempotency_key='returned')
-    assert result['status']=='ACCEPTED_PENDING_MERGE'
-    assert reserve(service,owner,lease,resume_attempt_id=attempt['attempt_id'])['status']=='ACCEPTED_PENDING_MERGE'
-    done=service.complete_research(owner,lease,attempt['attempt_id'],commit_references=[stored],idempotency_key='merge')
-    assert row(done,'queue_v1')['data']['status']=='complete'
+    with pytest.raises(ValueError):service.invocation(owner,lease,attempt['attempt_id'],'returned',result_reference=stored,idempotency_key='returned')
+    resumed=reserve(service,owner,lease,resume_attempt_id=attempt['attempt_id'])
+    assert row(resumed,'attempt_v1')['data']['state']=='invoking'
     assert service.get_record(owner,'budget_v1','2026-10-25')['data']['used']==1
     first=service.checkpoint_run(owner,lease,'monitoring','SAVED',references=[stored],summary='Stored fixture',idempotency_key='phase')
     assert first==service.checkpoint_run(owner,lease,'monitoring','SAVED',references=[stored],summary='Stored fixture',idempotency_key='phase')

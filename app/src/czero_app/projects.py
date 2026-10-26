@@ -154,6 +154,53 @@ class RunnerObservationSet(StrictRequest):
     idempotency_key: str = Field(min_length=1,max_length=128)
 
 
+class ResultSave(LeasedRequest):
+    data: dict = Field(description='Strict result with summary, changes, importance, assumptions, uncertainties, assessment_ref and bounded findings. Factual findings need actual ready immutable citation IDs; consequential conclusions require recorded contrary checks.')
+    attempt_id: str = Field(default='',max_length=64)
+    cycle_id: str = Field(default='',max_length=64)
+    expected_revision: int = Field(default=0,ge=0,le=2147483646)
+
+
+class ResultPublish(LeasedRequest):
+    result_reference: str = Field(min_length=36,max_length=36)
+    wiki_revision_ids: list[str] = Field(min_length=1,max_length=20)
+
+
+class ReportPrepare(LeasedRequest):
+    report_type: Literal['daily','weekly']
+    local_date: str = Field(default='',max_length=10)
+    amend: bool = False
+    expected_revision: int = Field(default=0,ge=0,le=2147483646)
+
+
+class ReportMember(LeasedRequest):
+    report_reference: str = Field(min_length=36,max_length=36)
+    data: dict = Field(description='Actual result_reference, included/deferred disposition, main/appendix location, actual wiki_revision_id, UTF-8 start_byte/end_byte, reason and assessment_ref. Deferred evidence remains due in later reports.')
+    expected_revision: int = Field(default=0,ge=0,le=2147483646)
+
+
+class ReportFinalize(LeasedRequest):
+    report_reference: str = Field(min_length=36,max_length=36)
+    wiki_revision_id: str = Field(min_length=36,max_length=36)
+
+
+class ReportDelivery(LeasedRequest):
+    report_reference: str = Field(min_length=36,max_length=36)
+    channel: Literal['external_result','notification','human_read']
+    state: Literal['started','succeeded','failed','uncertain']
+    report_version: int | None = Field(default=None,ge=1)
+    external_reference: str = Field(default='',max_length=512)
+    evidence_reference: str = Field(default='',max_length=512)
+    observation_source: Literal['operator_report','runner_report','sdk_simulation'] = 'runner_report'
+
+
+class ReportView(StrictRequest):
+    report: ObjectView | None
+    members: list[ObjectView]
+    more: bool
+    deliveries: list[ObjectView]
+
+
 class ScheduleOccurrence(StrictRequest):
     latest_due: str
     local_cycle_date: str
@@ -347,4 +394,38 @@ def install_project_routes(app, database, auth, read_context, write_context):
             if invoke(space_id,'get_record',context.actor,kind='topic_v1',identity=topic['data']['topic_id'])['revision']!=topic['revision']:
                 raise HTTPException(409,'project_conflict')
         return result
+    @app.post('/api/v1/project/results',response_model=ProjectReceipt)
+    @operation('project_result_save','Save a versioned research or monitoring result under its current lease. Core verifies ready immutable passages, claim revisions and bounded contrary checks. Partial findings remain incomplete; saving does not publish Wiki knowledge.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def result_save(data: ResultSave,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'save_result',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/results/publish',response_model=ProjectReceipt)
+    @operation('project_result_publish','Verify a saved result against actual current same-space Wiki revisions and ready evidence. Wiki metadata must bind the project and result UUIDs. Markdown bodies contain Markdown; metadata remains separate. New revisions require explicit verification.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def result_publish(data: ResultPublish,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'publish_result',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/reports/prepare',response_model=ProjectReceipt)
+    @operation('project_report_prepare','Prepare or resume one stable daily/weekly report draft. A report_publication run can report incomplete research coverage without rerunning research. Amendments require the current expected revision.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def report_prepare(data: ReportPrepare,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'prepare_report',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/reports/members',response_model=ProjectReceipt)
+    @operation('project_report_member_set','Bind a result to its substantive saved report entry or explicit deferral. Core verifies actual Wiki revision, UTF-8 range and hashes. Appendices require saved references; deferred completed evidence remains due for later reporting.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def report_member(data: ReportMember,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'set_report_member',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/reports/finalize',response_model=ProjectReceipt)
+    @operation('project_report_finalize','Save and read back the actual Wiki report revision after checking every completed unreported result is included or explicitly deferred. Coverage failures remain visible. SAVED proves persistence only, not external publication, notification or reading.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def report_finalize(data: ReportFinalize,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'finalize_report',context.actor,**data.model_dump())
+
+    @app.get('/api/v1/project/reports',response_model=ReportView)
+    @operation('project_report_get','Read the exact local-date report or latest saved daily/weekly report with immutable Wiki identity, bounded membership and independent delivery observations. Follow pagination before claiming complete membership.',Role.READER,ReportView,space_field='space_id')
+    def report_get(space_id: UUID,report_type: Literal['daily','weekly']='daily',local_date: str='',limit: int=50,offset: int=0,context: RequestAccess=Depends(read_context)):
+        return invoke(space_id,'get_report',context.actor,report_type=report_type,local_date=local_date,limit=limit,offset=offset)
+
+    @app.post('/api/v1/project/reports/delivery',response_model=ProjectReceipt)
+    @operation('project_report_delivery_observe','Reserve external publication before its call, then record an attributed observed outcome with actual evidence. Unknown outcomes require reconciliation; retries reuse the saved report. Notification and human reading require separate observations and are never inferred.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def report_delivery(data: ReportDelivery,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'observe_report_delivery',context.actor,**data.model_dump())
     return service

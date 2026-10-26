@@ -157,8 +157,7 @@ class ProjectMonitoring:
         return self._workflow_mutate(actor,'monitor_observe',payload,idempotency_key,lease,execute)
 
     def _monitor_material_ready(self,connection,cycle,result_reference):
-        # Evidence/result publication adds its stronger domain check in M5.
-        return False
+        return self._monitor_result_ready(connection,cycle,result_reference)
 
     def monitor_finish(self,actor,lease,cycle_id,status,*,summary,result_reference='',idempotency_key):
         identifier(cycle_id)

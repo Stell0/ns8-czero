@@ -20,6 +20,7 @@ from .adapters import collect, safe_read
 from .model import load_config, Item, Batch, now, sha
 from .workflow import SourceWorkflow
 from .agent_packages import save_package
+from .reports import save_report,validate_plan
 from .publish import approved, listing, parts, sync_part, verify, prior_receipt, locate, save_snapshot
 
 
@@ -97,6 +98,11 @@ def bootstrap(client,config,authorization_ref):
 
 def run(args, *, client_factory=C0):
     config=load_config(args.config,allow_empty_sources=args.group=='project') # Validate before network.
+    report_plan=None
+    if args.group=='project' and args.operation=='report':
+        if args.dry_run or not args.apply or not args.input:raise C0Error('explicit_report_plan_and_apply_required')
+        if args.input.is_symlink() or args.input.stat().st_size>262144:raise C0Error('invalid_report_input_file')
+        report_plan=validate_plan(json.loads(args.input.read_text()))
     job=(args.job or (args.config.parent.parent if args.config.parent.name=='config' else args.config.parent)).absolute()
     if args.operation=='validate':return {'status':'validated','connectors':len(config['sources']),'writes_c0':0},0
     check_job(job)
@@ -121,9 +127,10 @@ def run(args, *, client_factory=C0):
             client=None
             if args.operation not in ('scan',):
                 client=client_factory(connection,bootstrap=args.operation=='bootstrap');stack.callback(client.close)
-                selected=client.select_space(connection['space_id'],writable=args.group!='project' and not args.dry_run and args.operation!='verify')
+                selected=client.select_space(connection['space_id'],writable=(args.group!='project' or args.operation=='report') and not args.dry_run and args.operation!='verify')
                 if selected['name']!=connection['space_name']:raise C0Error('target_space_name_changed')
             if args.group=='project':
+                if args.operation=='report':return save_report(client,report_plan),0
                 if args.operation=='schedule':return client.call('project_schedule_get'),0
                 if args.operation=='skill':
                     if not args.output:raise C0Error('explicit_package_output_required')
@@ -223,20 +230,21 @@ def run(args, *, client_factory=C0):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('group',choices=['sources','auth','project'])
-    parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule'])
+    parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule','report'])
     parser.add_argument('--config',type=Path,required=True)
     parser.add_argument('--job',type=Path)
     parser.add_argument('--dry-run',action='store_true')
     parser.add_argument('--apply',action='store_true')
     parser.add_argument('--authorization-ref')
     parser.add_argument('--output',type=Path)
+    parser.add_argument('--input',type=Path)
     parser.add_argument('--format',choices=['skill','plugin'],default='skill')
     parser.add_argument('--chatgpt-app-id',default='')
     args=parser.parse_args(argv)
     if args.group=='auth' and args.operation not in ('login','bind-account','disconnect'):parser.error('Choose an auth operation')
     if args.group=='sources' and args.operation in ('login','bind-account','disconnect'):parser.error('Choose a source operation')
-    if args.group=='sources' and args.operation in ('skill','schedule'):parser.error('Choose a source operation')
-    if args.group=='project' and args.operation not in ('validate','skill','schedule'):parser.error('Choose a project operation')
+    if args.group=='sources' and args.operation in ('skill','schedule','report'):parser.error('Choose a source operation')
+    if args.group=='project' and args.operation not in ('validate','skill','schedule','report'):parser.error('Choose a project operation')
     if args.operation in ('sync','resume') and not args.dry_run and not args.apply:parser.error('Choose --dry-run or --apply explicitly')
     try:
         result,code=run(args);print(json.dumps(result,ensure_ascii=False,sort_keys=True));return code

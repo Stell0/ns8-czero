@@ -2,8 +2,8 @@
 
 **Not ready for migration.** M0/M1 foundations and M2 source collection are
 accepted on their exact branch CI/native runs, along with M3 coordination.
-M4 monitoring/agents are implemented and under validation; M5–M8 remain
-outstanding. This file is an explicit
+M4 monitoring/agents are accepted; M5 evidence/reporting is implemented and under
+validation. M6–M8 remain outstanding. This file is an explicit
 checkpoint and will be replaced with executed final acceptance evidence.
 No real WikiPlant data, live C0 knowledge, real project spaces or schedules have
 been migrated, modified or activated by this task.
@@ -22,9 +22,9 @@ See the [compatibility matrix](WIKIPLANT_COMPATIBILITY.md),
 | Seven source adapters and private CLI | yes | passed locally | no | Bounded configured selections; no real sources contacted by acceptance fixtures | yes |
 | Immutable source/snapshot/cursor receipts | yes | passed locally | no | One private job per connector; source/run coordination is extended in M3; pending extraction remains incomplete | yes |
 | Durable queue/budget/reservations/fencing | yes | passed locally | no | M3 exact branch/native gate passed; M5 adds evidence-specific completion | yes |
-| Mandatory primary monitoring | yes | passed locally | no | M4 exact native CI pending; material evidence gate completed in M5 | yes |
-| External-agent skills and scheduling handoff | yes | passed locally | no | M4 exact native CI pending; no external task installed or execution observed | yes |
-| Results/evidence/report completeness | no | not_run | no | M5 outstanding | yes |
+| Mandatory primary monitoring | yes | passed locally | no | M4 exact full/native acceptance passes; M5 material evidence gate under validation | yes |
+| External-agent skills and scheduling handoff | yes | passed locally | no | M4 exact full/native acceptance passes; no external task installed or execution observed | yes |
+| Results/evidence/report completeness | yes | passed locally | no | M5 focused actual PostgreSQL/SDK tests pass; exact full/native acceptance pending | yes |
 | Maintenance/calendar/archive/rotation | no | not_run | no | M6 outstanding | yes |
 | Project/static export and offline migration preparation | no | not_run | no | M7 outstanding; no production export/import authorized | yes |
 | Complete synthetic end-to-end acceptance | no | not_run | no | M7/M8 outstanding | yes |
@@ -34,7 +34,7 @@ See the [compatibility matrix](WIKIPLANT_COMPATIBILITY.md),
 
 Evidence levels stay separate:
 
-- Implemented code: M1–M3 accepted on the development branch; M4 under validation.
+- Implemented code: M1–M4 accepted on the development branch; M5 under validation.
 - Local validation: actual PostgreSQL, signed HTTP, OAuth, current/legacy MCP,
   CLI and packaging tests; no database skips counted as passes.
 - Disposable native C0: M0 full baseline audited; M1 corrected Debian upgrade

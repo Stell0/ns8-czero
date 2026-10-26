@@ -207,6 +207,11 @@ class ProjectWorkflows:
                 return receipt(status,'checkpoint_already_saved',run_row,previous)
             if run['current_phase']!=phase:raise self.conflict()
             if run['workflow_type']=='daily' and phase=='monitoring' and status=='SAVED':self._monitoring_ready(connection,run)
+            if run['workflow_type'] in ('daily','weekly') and phase=='report' and status=='SAVED':
+                report=self._find(connection,'report_v1',run['workflow_type']+':'+run['local_cycle_date'])
+                values=self._saved_report(connection,report)
+                if (str(report['id']) not in references or values['source_run_id']!=run['run_id']
+                        or values['draft_open']):raise ValueError('workflow_saved_report_required')
             saved=self._save(connection,current,'checkpoint_v1',identity,
                 {'run_id':run['run_id'],'config_version':run['config_version'],'phase':phase,'status':status,
                  'payload_hash':fingerprint,'references':references,'summary':summary,'recorded_at':self.clock().isoformat()})
@@ -513,7 +518,7 @@ class ProjectWorkflows:
             if attempt['state'] not in allowed[state]:raise self.conflict()
             if state=='returned':
                 if not result_reference:raise ValueError('stored_result_required')
-                self._references(connection,[result_reference])
+                self._research_result(connection,attempt_id,result_reference)
                 queue.update(status='awaiting_merge',result_reference=result_reference,retry_after='')
                 attempt.update(state='result_saved',result_reference=result_reference)
             elif result_reference:raise ValueError('unexpected_result_reference')
@@ -544,6 +549,9 @@ class ProjectWorkflows:
             if not self._queue_current(connection,queue):raise self.conflict()
             if not commit_references:raise ValueError('verified_commit_references_required')
             self._references(connection,commit_references)
+            result=self._research_result(connection,attempt_id,attempt['result_reference'],published=True)
+            if result['data']['publication_reference'] not in commit_references:
+                raise ValueError('result_publication_receipt_required')
             attempt['state']='complete';queue.update(status='complete',retry_after='')
             saved=self._save(connection,current,'attempt_v1',attempt_id,attempt,previous=previous)
             saved_queue=self._save(connection,current,'queue_v1',queue['stable_id'],queue,previous=queue_row)

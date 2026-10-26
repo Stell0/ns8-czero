@@ -774,7 +774,7 @@ class CzeroSso:
             page=browser.get_text('#wiki-identity').split(' · ')[0]
             stage='project-configuration'
             probe=Path(__file__).with_name('project_browser_probe.js').read_text()
-            assert browser.evaluate_javascript(None,'('+probe+')') == {'initialized':True,'replay':True,'revision':2,'workflows':True,'monitoring':True}
+            assert browser.evaluate_javascript(None,'('+probe+')') == {'initialized':True,'replay':True,'revision':2,'workflows':True,'monitoring':True,'reports':True}
             project_url='https://'+host+'/projects?space_id='+identifier
             run('Go To',project_url)
             run('Get Text','#project-title','==','<img src=x> Synthetic research')

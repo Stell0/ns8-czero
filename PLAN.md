@@ -1027,3 +1027,106 @@ templates under UID/GID10001. A metadata-only Docker29 export fails inspection;
 its evidence remains private, and direct verified registry blobs provide the
 analysis archive without changing the image. The prompt/name correction needs
 its own exact-source full/native/artifact acceptance before M4 completes.
+
+### WikiPlant M5 evidence and reporting subplan (gated)
+
+Corrected M4 f2a2a13 full40373013755 is completed/successful. Exact-source
+full acceptance verification and independent downloaded XML/job-log/scan audits
+pass:2163 Python/PostgreSQL/packaging,193 Node,21 Robot dry runs; Debian genuine
+upgrade21/no skips, Rocky installation26/three expected skips/all8 browsers,
+privacy8, numeric accessibility32, three query artifacts/zero candidates and
+all five scan/SBOM pairs. Corrected app registry digest c5639e9c558d4216 matches
+its manifest/config/all13 compressed blobs; exact six product files and actual
+Dive analysis/CI pass at98.13% efficiency. Original5e2432f acceptance/evidence
+is retained unchanged. M4 is accepted on the branch; no ready-PR promotion,
+Core release, deployment, actual external-agent execution or scheduling is
+claimed. M5 now proceeds under the following subplan.
+
+M5 implementation starts only after corrected M4 f2a2a13 full40373013755 and
+its downloaded native/privacy/scanner audits pass. This subplan records design
+preparation while that acceptance is running; it claims no M5 implementation.
+
+Reuse current source/passages, claims, immutable Wiki revisions and exact-target
+annotations. Add strict individual result/finding/publication/report/membership
+and delivery records in existing managed typed storage. Stable result identity
+comes from the actual research attempt or monitoring cycle/scope, retaining
+lost-response recovery without another investigation. Replace M3's deliberately
+generic stored-result reference with actual same-project result/evidence/commit
+verification. Replace M4's conservative pending-material gate with verified
+result/cycle/passage/Wiki publication checks before watermarks advance.
+
+Findings distinguish observed facts, supported inferences, hypotheses,
+contradictions, outdated assertions and unknowns. Validate actual ready immutable
+passages and claim links/revisions. Record bounded contrary checks with their
+observed provenance, alternatives, coverage and limitations; unsearched/failed
+checks cannot support consequential conclusions. Semantic judgments remain
+external. Preserve historical contradictions and exact revision applicability;
+new Wiki revisions receive no automatic predecessor verification.
+
+Keep Markdown separate from page DTOs/metadata and reject serialized page
+envelopes in project publication. Preserve valid fenced JSON examples and the
+future offline legacy frontmatter contract. Reuse existing knowledge operations
+and validate their actual stored revisions/hashes instead of another knowledge
+engine. Any trusted composition uses the existing transaction/connection and
+lock order, never nested public mutations or arbitrary execution.
+
+Reports have stable project/type/local-date identity and individual substantive
+result membership or saved appendix references. Validate completed-but-unreported
+coverage at final save, exposing deferrals and concurrent changes. Preserve all
+existing payload, operation and reference limits. Save/read back actual Markdown
+and immutable Wiki revision before reporting persistence complete. Reports about
+blocked daily runs must remain saveable without declaring failed monitoring
+successful. Report publication can use its independent logical run and retries
+must reuse the saved report without repeating research. External publication,
+notification and human reading remain separate attributed observations.
+
+Test real PostgreSQL evidence/claim/Wiki bindings, queued extraction rejection,
+foreign-space and stale-revision denial, JSON-body regression, result recovery,
+report omission/concurrent membership controls, publication failure recovery and
+English/Italian readable output. Extend actual REST/current/legacy SDK and
+disposable native recovery/browser evidence. Keep actual external agents and
+unattended execution unverified unless independently observed. M6–M8 remain
+outstanding; this task still authorizes no live deployment or migration.
+
+### WikiPlant M5 implemented; exact acceptance pending
+
+Core now persists individual findings/results/versions/publication proofs,
+stable daily/weekly reports, substantive entry/appendix membership and independent
+delivery observations. Seven additive REST/MCP operations preserve the frozen77
+original contracts. Existing source/claim/Wiki/annotation services remain the
+knowledge owners. Ready immutable passage hashes, actual claim revisions and
+bounded contrary observations gate publication. Pending published results may be
+explicitly re-reviewed at their current revision after claim changes/retraction
+without another attempt; completed results remain immutable. Old findings,
+publications and evidence remain available. New Wiki revisions need verification.
+
+Report finalization rejects omitted completed evidence, abandoned draft membership
+and stale scope coverage. Explicit deferrals remain due. Saved appendices require
+an exact revision link. External result publication, notification and reading
+have separate attributed observations; uncertain calls require reconciliation and
+failed publication retries reuse saved research/report state. The deterministic
+client publisher renders externally authored English/Italian or explicitly
+localized prose, verifies saved identities and resumes lost responses. It never
+generates conclusions, sends notifications or truncates oversized content.
+
+Actual local verification:54 focused PostgreSQL/SDK/project/contract cases pass,
+then23 current evidence/report invariants pass, including claim-change recovery,
+scope changes and abandoned drafts. Two client validation cases,48 package/
+documentation/native-fixture cases,193 Node cases, schema/shell checks and21
+Robot dry runs pass. Exact native protected seed/readback passes through signed
+local HTTP for Owner and Reader, retaining actual result/Wiki/report hashes and
+a simulated failed publication. Generated documentation passes281 local links;
+the complete84-file contribution privacy scan passes. The broader early run
+passed2147 cases and failed28 stale109-vs102 tool inventory assertions; after
+updating the additive contract inventory all28 affected cases pass. Exact-source
+remote full/native/image/privacy acceptance remains pending and is required
+before M6. No local skips or fake host outcomes are counted as real external-agent
+or unattended execution. No live data, spaces, schedules or deployment changed.
+
+M6 next, only after M5 acceptance: bounded weekly structural audits and durable
+review cursors, exact-revision semantic rotation, peripheral expiry at a distinct
+future weekly checkpoint, compact historical capsules, project events using
+ordinary admission, bounded metadata-only release checks, and reader diagnostics
+for last successful runs, latest report, current connector definitions and gaps.
+Preserve existing limits, evidence, authorization and immutable historical state;
+semantic judgments stay external and no runtime update is installed automatically.

@@ -28,9 +28,13 @@ Distinguish observed fact, supported inference, hypothesis, contradiction, outda
 
 Write readable Markdown as the Wiki body. Keep structured metadata in metadata fields; never serialize a complete page object or JSON envelope into the body. Use current revisions, supported replay keys and knowledge bundles within their actual operation/payload limits. Read back source, claim and Wiki updates before marking research complete.
 
+Use project_result_save for the reserved attempt or actual monitoring cycle. Findings record classification, confidence, evidence, limitations and assessment. Consequential conclusions need bounded contrary-query observations with ready search-response snapshots; unperformed checks remain partial. Save the returned result UUID in the invocation outcome. Wiki metadata c0_project binds project_id and result_references. Use project_result_publish with actual current Wiki revision UUIDs, then complete research with its stored publication proof. An edited Wiki revision needs explicit new verification.
+
 ## Reports
 
 Prioritize what was learned, changed assumptions, project implications, evidence/confidence, contradictions and next investigations. Include completed work, important queued/deferred work, monitoring coverage/failures and brief operational details in the project's language. Every completed result needs a substantive entry or a saved appendix reference. Save and read back the report and exact revision. Retry publication of the saved report without repeating research. Do not equate a saved report with a delivered notification.
+
+Prepare/resume with project_report_prepare under the report phase or a separate report_publication run when daily work is incomplete. Save Wiki metadata c0_project with project_id, actual report_reference and language. Use project_report_member_set for each result's exact saved Wiki revision and UTF-8 text range, or explicit deferral with a substantive explanation. Finalize with project_report_finalize and read project_report_get. Omitted completed results block finalization; deferred results remain due. Record publication started before its external call and actual outcome through project_report_delivery_observe. Reconcile uncertain outcomes before retrying. Notification and human reading need their own observed evidence; never fabricate them.
 
 ## Maintenance and recovery
 

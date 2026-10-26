@@ -595,6 +595,57 @@ def seed_project_state(browser, profile, space_id, sources=None):
         attempt=next(row['data'] for row in reservation['records'] if row['type_name']=='c0_project_attempt_v1')
         request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'started',
             'external_reference':'synthetic-native:fake-call','idempotency_key':'retained-invocation-start'},'POST')
+        if sources and 'project_result_save' in operations:
+            finding={'statement':'The fabricated original supplies retained synthetic evidence.','classification':'observed_fact','confidence':70,
+                'rationale':'Actual extracted immutable fixture passage.','citation_ids':[sources[0]['chunks'][0]['id']],
+                'claim_id':'','claim_revision':0,'consequential':False,'applicability_limits':['Synthetic fixture only'],
+                'challenge':{'state':'not_required','reason':'Nonconsequential fixture','strongest_alternative':'',
+                    'falsification_conditions':[],'queries':[],'counter_citation_ids':[],'coverage':'','conclusion_change':''}}
+            saved=request('/results',{'lease':lease,'attempt_id':attempt['attempt_id'],'data':{
+                'summary':'Retained synthetic evidence was inspected.','changes':'An unknown fixture fact is now observed.',
+                'importance':'Tests durable project knowledge.','assumptions':[],'uncertainties':['No real provider executed.'],
+                'assessment_ref':'synthetic-native:assessment','findings':[finding]},'idempotency_key':'retained-result'},'POST')
+            result=next(row for row in saved['records'] if row['type_name']=='c0_project_result_v1')
+            request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'returned',
+                'result_reference':result['id'],'idempotency_key':'retained-returned'},'POST')
+            wiki=knowledge_request(browser,profile,'wiki/pages',{'slug':'retained-project-learning','title':'Retained project learning',
+                'body':'# Learning\n\nA fabricated original supplies durable synthetic evidence.',
+                'metadata':{'c0_project':{'project_id':space_id,'result_references':[result['id']]}}},'POST',201)
+            publication=request('/results/publish',{'lease':lease,'result_reference':result['id'],
+                'wiki_revision_ids':[wiki['content']['id']],'idempotency_key':'retained-result-published'},'POST')
+            proof=next(row for row in publication['records'] if row['type_name']=='c0_project_result_publication_v1')
+            request('/attempts/complete',{'lease':lease,'attempt_id':attempt['attempt_id'],'commit_references':[proof['id']],
+                'idempotency_key':'retained-result-completed'},'POST')
+            publisher=request('/runs/claim',{'workflow_type':'report_publication','lease_owner':'synthetic-native-reporter',
+                'config_version':2,'cycle_key':'retained-report','idempotency_key':'retained-report-run'},'POST')['records'][0]['data']
+            report_lease={key:publisher[key] for key in ('run_id','lease_owner','fencing_generation')}
+            header=request('/reports/prepare',{'lease':report_lease,'report_type':'daily',
+                'idempotency_key':'retained-report-prepare'},'POST')['records'][0]
+            body='# Daily research\n\nWe learned that original fixture evidence persists with project lineage.\n\nNo actual external agent or unattended schedule executed.'
+            report=knowledge_request(browser,profile,'wiki/pages',{'slug':'retained-project-report','title':'Retained daily report','body':body,
+                'metadata':{'c0_project':{'project_id':space_id,'report_reference':header['id'],'language':'en'}}},'POST',201)
+            request('/reports/members',{'lease':report_lease,'report_reference':header['id'],'data':{
+                'result_reference':result['id'],'disposition':'included','location':'main','wiki_revision_id':report['content']['id'],
+                'start_byte':0,'end_byte':len(body.encode()),'reason':'','assessment_ref':'synthetic-native:report-entry'},
+                'idempotency_key':'retained-report-member'},'POST')
+            request('/reports/finalize',{'lease':report_lease,'report_reference':header['id'],'wiki_revision_id':report['content']['id'],
+                'idempotency_key':'retained-report-finalize'},'POST')
+            request('/reports/delivery',{'lease':report_lease,'report_reference':header['id'],'channel':'external_result','state':'started',
+                'idempotency_key':'retained-publication-start'},'POST')
+            request('/reports/delivery',{'lease':report_lease,'report_reference':header['id'],'channel':'external_result','state':'failed',
+                'external_reference':'synthetic-native:fake-host-failure','evidence_reference':'synthetic-native:observed-failure',
+                'observation_source':'sdk_simulation','idempotency_key':'retained-publication-failed'},'POST')
+            for kind in ('result_v1','result_history_v1','finding_v1','result_publication_v1','report_v1','report_history_v1',
+                    'report_member_v1','report_delivery_v1','report_delivery_history_v1'):
+                retained[kind]=request('/records?kind='+kind+'&limit=100')
+            # A separate interrupted call retains the original recovery coverage.
+            request('/queue',{'candidate':{**candidate,'stable_id':'retained-second-investigation',
+                'question':'Which separate synthetic development activity changed?','novelty_key':'retained-second-event'},
+                'idempotency_key':'retained-second-admission'},'POST')
+            reserved=request('/attempts/reserve',{'lease':lease,'idempotency_key':'retained-second-attempt'},'POST')
+            attempt=next(row['data'] for row in reserved['records'] if row['type_name']=='c0_project_attempt_v1')
+            request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'started',
+                'idempotency_key':'retained-second-start'},'POST')
         request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'uncertain',
             'error_code':'synthetic_interruption','idempotency_key':'retained-invocation-uncertain'},'POST')
         request('/runs/checkpoint',{'lease':lease,'phase':'research' if 'project_monitor_begin' in operations else 'monitoring','status':'PARTIAL',
@@ -628,6 +679,25 @@ def verify_project_state(browser, profile, expected, *, admin=False):
     assert request('/records?kind=topic_v1&limit=100')['objects'] == [expected['topic']], 'Topic identity/provenance changed'
     for kind,records in expected.get('source_records',{}).items():
         assert request('/records?kind='+kind+'&limit=100')==records,'Project source/workflow state/history changed during recovery'
+    if 'report_v1' in expected.get('source_records',{}):
+        view=request('/reports')
+        assert view['report']==expected['source_records']['report_v1']['objects'][0], 'Saved project report readback changed'
+        assert view['members']==expected['source_records']['report_member_v1']['objects'], 'Report membership changed'
+        assert view['deliveries']==expected['source_records']['report_delivery_v1']['objects'], 'Independent publication receipt changed'
+        for publication in expected['source_records']['result_publication_v1']['objects']:
+            for revision,content_hash in zip(publication['data']['wiki_revision_ids'],publication['data']['wiki_hashes']):
+                # The public Wiki read route uses page identity and revision number.
+                status,body,_=browser.api('/api/v1/wiki/pages?limit=100')
+                assert status==200,'Cannot enumerate retained project Wiki'
+                found=False
+                for page in json.loads(body)['pages']:
+                    status,body,_=browser.api('/api/v1/wiki/pages/'+page['id'])
+                    assert status==200,'Cannot read retained project Wiki'
+                    saved=json.loads(body)
+                    if saved['content']['id']==revision:
+                        assert hashlib.sha256(saved['content']['body'].encode()).hexdigest()==content_hash,'Project Wiki proof content changed'
+                        found=True;break
+                assert found,'Project Wiki publication revision missing'
     if admin:
         status, body, _ = browser.api('/api/v1/project/initialize',expected['setup'],'POST',profile['csrf_token'])
         assert status == 200 and json.loads(body) == expected['initial'], 'Historical initialization receipt changed'

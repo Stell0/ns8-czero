@@ -39,11 +39,11 @@ All new project selection is explicit, protected and authorization checked. Cros
 | Primary monitoring | monitoring.py and main-topic-refresh | Sources/claims/Wiki; no monitoring ledger | Implemented M4 cycles/counters/verified watermarks; material merge gate added in M5 | Core project_monitoring.py / app projects.py | test_project_monitoring.py; fake SDK agent; native recovery |
 | Scheduling | cron templates, schedules.py; native Work tasks | UTC interval deterministic handlers; background OAuth | Implemented M4 IANA occurrences/DST and handoff; actual host execution unverified | Core project_schedules.py / plugin project/scheduler.md | test_project_calendar.py / test_project_schedule.py |
 | Agent integration | One personalized installed skill; skillgen.py | Instance-bound skill/plugin packaging | Implemented M4 project-bound variants and private CLI download; actual installation unverified | app project_agent_packages.py / c0_projects.agent_packages / plugin project/ | test_project_agent_packages.py / test_project_agents_http.py |
-| Evidence review | evidence.py, evidence-quality.md, assessment schemas | Immutable passages, claims, exact-revision annotations | Workflow assessment contracts and citation validation | Core/agent references | Queued extraction denial; actual passage IDs |
-| Adversarial review | ChallengeRecord; bounded contrary searches | Claims and annotations retain evidence | Bounded challenge state; semantic judgment external | Project records/plugin | Unsearched != searched; no truth by confidence |
-| Synthesis | synthesize workflow; applicability/corrections | Wiki revisions, graph, claims, bundles, applicability | Result receipts and resume merge workflow | Core project service/plugin | Preserve contradictions/history |
+| Evidence review | evidence.py, evidence-quality.md, assessment schemas | Immutable passages, claims, exact-revision annotations | Implemented M5 actual result/finding evidence/claim revision validation | Core project_evidence.py / existing knowledge APIs | test_project_evidence.py; queued extraction denial; actual passage IDs |
+| Adversarial review | ChallengeRecord; bounded contrary searches | Claims and annotations retain evidence | Implemented M5 bounded challenge records and ready query snapshots; semantic judgment external | Core project_evidence.py / plugin | Unsearched != searched; no truth by confidence |
+| Synthesis | synthesize workflow; applicability/corrections | Wiki revisions, graph, claims, bundles, applicability | Implemented M5 explicit result/Wiki publication proofs and recoverable merge | Core project_evidence.py / plugin | Preserve contradictions/history; new revision needs verification |
 | Wiki body safety | wiki.py; clean Markdown separate from JSON | Bounded Wiki Markdown + separate metadata | Regression guard for serialized page envelope in new workflows | Project publishing/parser | JSON envelope rejected |
-| Reports | reporting.py, ReportPublisher | Replay-safe Wiki revisions/readback | Stable report membership, saved hash/revision, publication observations | Core projects / plugin | No omitted results; publication retry |
+| Reports | reporting.py, ReportPublisher | Replay-safe Wiki revisions/readback | Implemented M5 stable report membership, saved hash/revision, publication observations | Core project_reports.py / c0_projects.reports / app / plugin | test_project_reports.py and test_project_reports_http.py; omissions/retry/Italian |
 | Calendar | calendar.py, calendar schema | Typed objects | Project event contract; shared admission for resulting work | Project schemas/policy | Event/publication/retrieval times separate |
 | Weekly structure | maintenance.py | Changes, references, claims, graph APIs | Bounded audit inventory and persistent checkpoints | Client audit / Core state | Incomplete inventory never complete audit |
 | Semantic rotation | Risk plus persistent rotation cursor | Revision-specific verification | Reviewed IDs/cursor/coverage and agent handoff | Project maintenance records | Rotation progresses; no inherited verification |
@@ -54,7 +54,7 @@ All new project selection is explicit, protected and authorization checked. Cros
 | Recovery | SafeWriter intents/readback; provider generation | NS8 DB/files backup, restart, native update and receipts | Include project typed records; run/attempt recovery | Core + existing NS8 suite | DB restart/backup/upgrade; never live destruction |
 | Project UI | Wiki/index driven | Readers, Tools, DOM rendering and race guards | Read-only selected-project overview linked to existing pages | app static/API | Access loss/late replies/Reader controls |
 | Authentication | Host/provider capability gates | OAuth S256, background consent/rotation/revocation | Reuse existing client; no new credentials or permission bypass | c0_ingest auth and existing app | Expired/revoked authority fails closed |
-| Notifications | DeliveryState separates saved/published/notified/read | No external notification observation API | Persist separate observed/unknown states | Report records/runner contract | Saved does not imply received |
+| Notifications | DeliveryState separates saved/published/notified/read | No external notification transport | Implemented M5 separate attributed observed/unknown states; no invented transport | Core report delivery records/runner contract | Saved does not imply received |
 
 ## Sequential implementation and acceptance
 
@@ -119,3 +119,21 @@ Actual PostgreSQL races, source readiness, failed searches, signed fake-agent
 SDK calls and private archive readback pass locally. M4 exact native acceptance
 is pending; real host installation/authentication/scheduled execution remain
 unverified. M5–M8 remain outstanding. No live migration/deployment occurred.
+
+## M4 acceptance and M5 implementation checkpoint
+
+Corrected M4 f2a2a13 full40373013755 completed successfully, with actual
+downloaded Debian genuine-upgrade/Rocky-installation, all eight browser,
+privacy/accessibility/query and five scan/SBOM audits passing. Exact local job
+reports2163 Python/PostgreSQL/packaging,193 Node and21 Robot dry runs.
+Actual external-agent and unattended execution remain unverified.
+
+M5 adds strict individual findings/results/publication proofs and report/member/
+delivery histories, seven REST/MCP operations and an independently reusable
+deterministic client report publisher. See [reporting contracts](REPORTING.md).
+Focused real PostgreSQL/SDK tests verify passage/claim bindings, new revision
+verification, saved merge recovery, contrary checks, omitted/deferred results,
+concurrent ownership, publication retry, Italian byte ranges and protected
+isolation. Native recovery retains actual result/report proofs and a simulated
+failed external publication. Exact full/native acceptance remains pending; M6–M8
+remain outstanding. No live migration, deployment or schedule activation occurred.
