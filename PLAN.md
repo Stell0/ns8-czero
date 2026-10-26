@@ -1168,3 +1168,12 @@ Node195, schema/shell checks,21 Robot dry runs,283 documentation links and the
 exact-source remote full/native/image/artifact acceptance is still required.
 Generated weekly/recovery instructions name actual operations and preserve partial
 coverage. No external provider, host task or production migration was executed.
+
+M6 review follow-up: active-only queue selection must retain historical anchor
+service counts for ordinary tie-breaking. Aggregate counts from all retained
+queue history inside the authorized transaction; do not load completed rows into
+the bounded active inventory or reset their service. A real PostgreSQL regression
+uses two previously served investigations and two active approved anchors, then
+checks the unserved anchor wins after current-scope reassessment. The original
+7109f0d acceptance run is retained; corrected exact-source acceptance is required.
+All22 current PostgreSQL maintenance/workflow cases pass after the correction.

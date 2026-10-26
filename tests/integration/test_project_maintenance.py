@@ -167,3 +167,21 @@ def test_completed_history_bound_preserves_requests_and_allows_existing_active_w
         direct_contribution='One-off fixture only',assessment_ref='synthetic:scope')
     assert service.admit(owner,candidate('automatic-outside',topic_id='outside',origin='discovery',
         root_reason='independent_external_event'),idempotency_key='outside-bound')['outcome']=='reject_scope'
+
+
+def test_active_selection_retains_completed_anchor_service_history(evidence):
+    from test_project_reports import completed
+    service,owner,*_=evidence
+    completed(evidence,'served-anchor-one');completed(evidence,'served-anchor-two')
+    topic(service,owner,'other-anchor')
+    definitions=[('earlier-served-question',{'question':'Which synthetic manufacturing capacity constraint changed?'}),
+        ('later-unserved-question',{'topic_id':'other-anchor','anchor_ids':['other-anchor'],
+            'question':'How did the unrelated software architecture evolve?'})]
+    for identity,values in definitions:admit(service,owner,identity,**values)
+    config=deepcopy(service.get(owner)['data']['manifest']);config['maintenance']['max_inventory']=2
+    service.configure(owner,config,expected_revision=1,authorization_ref='synthetic:bounded-active',idempotency_key='active-bound')
+    for identity,values in definitions:assert admit(service,owner,identity,**values)['outcome']=='merge'
+    run=service.claim_run(owner,'daily','worker-one',2,idempotency_key='fair-run')['records'][0]['data']
+    lease={key:run[key] for key in ('run_id','lease_owner','fencing_generation')}
+    selected=row(reserve(service,owner,lease),'queue_v1')
+    assert selected['data']['stable_id']=='later-unserved-question'

@@ -539,12 +539,20 @@ class ProjectWorkflows:
                     blocked.append(self._save(connection,current,'queue_v1',q['stable_id'],values,previous=row));continue
                 eligible.append(row)
             if not eligible:return receipt('BLOCKED','no_eligible_research',budget,*blocked[:99])
+            service_counts={str(row['id']):row['served'] for row in connection.execute(text('''
+                SELECT candidate.id,COALESCE(sum((history.data->>'attempt_count')::int),0) AS served
+                FROM c0_objects candidate JOIN c0_objects history
+                    ON history.space_id=candidate.space_id AND history.type_name=candidate.type_name
+                    AND history.data->'anchor_ids' ?| ARRAY(SELECT jsonb_array_elements_text(candidate.data->'anchor_ids'))
+                WHERE candidate.space_id=:space AND candidate.type_name=:type
+                    AND candidate.id=ANY(CAST(:ids AS uuid[])) GROUP BY candidate.id'''),
+                {'space':self._space_id,'type':PREFIX+'queue_v1','ids':[str(row['id']) for row in eligible]}).mappings()}
             # Urgency always wins; ageing and per-anchor service break ordinary
             # ties without rewriting stored priority or inherited expansion depth.
             def ranking(row):
                 q=row['data'];age=(now-timestamp(q['created_at'])).days
                 overdue=q['kind'] in ('validation','contradiction') and q['due_at'] and timestamp(q['due_at'])<=now
-                service=sum(other['data']['attempt_count'] for other in rows if set(q['anchor_ids'])&set(other['data']['anchor_ids']))
+                service=service_counts.get(str(row['id']),0)
                 return (q['priority']!=0,not (slot==budget['data']['ordinary_limit'] and overdue),
                     max(1,q['priority']-min(20,age//14)),service,q['created_at'],q['stable_id'])
             previous=min(eligible,key=ranking);queue=data_of(previous)

@@ -40,8 +40,10 @@ Structural completion can retain findings requiring follow-up. It does not prove
 that semantic contradictions have been resolved.
 
 Completed queue history never prevents existing active work or saved merges
-from resuming. When bounded historical near-duplicate coverage is exhausted,
-indexed exact matches retain their original identity and lineage. Unknown new
+from resuming. Historical per-anchor service still breaks ordinary selection ties; completed
+attempts do not disappear from fairness when active selection is bounded.
+When bounded historical near-duplicate coverage is exhausted, indexed exact
+matches retain their original identity and lineage. Unknown new
 questions are saved as visible `defer_capacity` admissions with
 `historical_inventory_requires_review`; they gain no fresh allowance. Review
 the retained candidate and existing history before an authorized bound change
