@@ -13,6 +13,7 @@ dependencies = ["mcp==2.3.0", "httpx2==2.13.1", "anyio==4.15.1"]
 
 [project.scripts]
 c0-ingest = "c0_ingest.cli:main"
+c0-projects = "c0_projects.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest==8.4.2"]

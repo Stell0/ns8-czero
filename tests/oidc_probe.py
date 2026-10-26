@@ -504,10 +504,11 @@ class ScopedBrowser:
                                 'space_id=' + self.space_id, data, method, csrf)
 
 
-def seed_project_state(browser, profile, space_id):
+def seed_project_state(browser, profile, space_id, sources=None):
     status, body, _ = browser.api('/agents/capabilities.json')
     assert status == 200, 'Project capability discovery unavailable'
-    if 'project_initialize' not in {op['name'] for op in json.loads(body)['operations']}:
+    operations={op['name'] for op in json.loads(body)['operations']}
+    if 'project_initialize' not in operations:
         return None # Genuine older predecessor has no project API.
     def request(path, data=None, method=None):
         status, body, _ = browser.api('/api/v1/project' + path, data, method, profile['csrf_token'])
@@ -522,12 +523,43 @@ def seed_project_state(browser, profile, space_id):
     topic = request('/topics', {'topic': {'topic_id':'anchor', 'label':'Retained synthetic anchor',
         'classification':'user', 'authorization_ref':'synthetic-native:track'},
         'idempotency_key':'retained-project-topic'}, 'POST')
+    connector=None
+    if sources and 'project_connector_set' in operations:
+        definition={'id':'retained-source','adapter':'local_files','root':'synthetic-inputs','include':[],'enabled':True,
+            'max_items':100,'max_requests':40,'max_bytes':8388608,'max_pages':5,'max_depth':2,'timeout':15}
+        connector=request('/connectors',{'definition':definition,'authorization_ref':'synthetic-native:source-approval',
+            'idempotency_key':'retained-project-connector'},'PUT')
     updated = {**first['data']['manifest'], 'primary_topic_ids':['anchor'],
+        'connector_ids':['retained-source'] if connector else [],
         'state':{'initialized':True, 'migration_status':'not_started'}}
     current = request('', {'manifest':updated, 'expected_revision':1,
         'authorization_ref':'synthetic-native:activate', 'idempotency_key':'retained-project-config'}, 'PUT')
     history = request('/records?kind=config_v1&limit=100')
-    return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history}
+    retained={}
+    if connector:
+        from datetime import datetime,timezone
+        version=sources[0]['version'];stamp=datetime.now(timezone.utc).isoformat()
+        data={'connector_id':'retained-source','definition_hash':connector['data']['definition_hash'],
+            'external_id':'synthetic-part','parent_external_id':'synthetic-original','parent_content_hash':version['content_hash'],
+            'part_number':1,'start_byte':0,'end_byte':len(sources[0]['document']['body'].encode()),
+            'last_attempt_at':stamp,'last_success_at':'','last_content_hash':version['content_hash'],
+            'source_id':version['source_id'],'version_id':version['id'],'extraction_status':'ready',
+            'sync_status':'verified','last_error':'','retry_after':'','remote_cursor':'',
+            'provenance':{'original_url':'','canonical_url':'','retrieved_at':stamp,'published_at':'','updated_at':'','details':'{}'}}
+        receipt=request('/source-status',{'data':data,'idempotency_key':'retained-source-status'},'PUT')
+        if 'project_source_snapshot_set' in operations:
+            request('/source-snapshot',{'connector_id':'retained-source','external_id':'synthetic-original',
+                'content_hash':version['content_hash'],'part_receipt_ids':[receipt['id']],
+                'idempotency_key':'retained-source-snapshot'},'PUT')
+        coverage={'connector_id':'retained-source','definition_hash':connector['data']['definition_hash'],
+            'last_attempt_at':stamp,'last_success_at':'','status':'complete','last_error':'','retry_after':'',
+            'remote_cursor':'{"page":1}','progress_cursor':'{"page":1}','attempt_count':0,'verified_items':1,'discovered_items':1}
+        request('/connector-status',{'data':coverage,'idempotency_key':'retained-connector-status'},'PUT')
+        kinds=['connector_v1','connector_config_v1','source_sync_v1','source_sync_history_v1','connector_sync_v1']
+        if 'project_source_snapshot_set' in operations:kinds+=['source_snapshot_v1','source_snapshot_history_v1']
+        for kind in kinds:
+            retained[kind]=request('/records?kind='+kind+'&limit=100')
+    return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history,'source_records':retained}
 
 
 def verify_project_state(browser, profile, expected, *, admin=False):
@@ -540,6 +572,8 @@ def verify_project_state(browser, profile, expected, *, admin=False):
     assert request('') == expected['current'], 'Project manifest/revision changed during recovery'
     assert request('/records?kind=config_v1&limit=100') == expected['history'], 'Immutable configuration history changed'
     assert request('/records?kind=topic_v1&limit=100')['objects'] == [expected['topic']], 'Topic identity/provenance changed'
+    for kind,records in expected.get('source_records',{}).items():
+        assert request('/records?kind='+kind+'&limit=100')==records,'Source synchronization state/history changed during recovery'
     if admin:
         status, body, _ = browser.api('/api/v1/project/initialize',expected['setup'],'POST',profile['csrf_token'])
         assert status == 200 and json.loads(body) == expected['initial'], 'Historical initialization receipt changed'
@@ -582,7 +616,7 @@ def seed_protected_space(browser, profile, member_id):
     consolidation = seed_atomic_consolidation(scoped,profile,space['id'],memory,records,record)
     return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':record,
             'annotations':annotations,'consolidation':consolidation,
-            'project':seed_project_state(scoped,profile,space['id'])}
+            'project':seed_project_state(scoped,profile,space['id'],records)}
 
 
 def seed_atomic_consolidation(browser,profile,space_id,memory,records,record):

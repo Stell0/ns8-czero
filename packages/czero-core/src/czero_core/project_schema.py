@@ -54,12 +54,42 @@ TOPIC = record(key=string(128), schema_version={'type': 'integer', 'const': 1}, 
     direct_contribution=string(2048, minimum=0), assessment_ref=string(512, minimum=0),
     authorization_ref=string(512, minimum=0), authorized_by=string(36, minimum=0),
     created_at=string(40), expires_at=string(40, minimum=0))
+CONNECTOR_DEFINITION = record(id=string(64), adapter=string(values=['local_files','http','rss_atom','sitemap','github','c0_space','wikiplant_export']),
+    enabled={'type':'boolean'}, include=array(string(512)), paths=array(string(512)), url=string(4096),
+    repository=string(150), root=string(1024), source_space_id=string(36), authorization_ref=string(512),
+    max_items=integer(1,1000), max_requests=integer(1,500), max_bytes=integer(1,16777216),
+    max_pages=integer(1,20), max_depth=integer(1,4), timeout=integer(1,30))
+CONNECTOR_DEFINITION['required']=['id','adapter','enabled','include','max_items','max_requests','max_bytes','max_pages','max_depth','timeout']
 SCHEMAS = {
     'manifest_v1': record(key=string(128), version=integer(1, 2147483647), manifest=MANIFEST),
     'config_v1': record(key=string(128), version=integer(1, 2147483647), manifest=MANIFEST,
         actor_id=string(36), authorization_ref=string(512), recorded_at=string(40)),
     'topic_v1': TOPIC,
+    'connector_v1': record(key=string(128), connector_id=string(64), definition=CONNECTOR_DEFINITION,
+        definition_hash=string(64), authorization_ref=string(512), approved_by=string(36)),
+    'connector_sync_v1': record(key=string(128), connector_id=string(64), definition_hash=string(64),
+        last_attempt_at=string(40), last_success_at=string(40,minimum=0),
+        status=string(values=['complete','partial','blocked']), last_error=string(128,minimum=0),
+        retry_after=string(40,minimum=0), remote_cursor=string(4096,minimum=0), progress_cursor=string(4096,minimum=0),
+        attempt_count=integer(0,10),
+        verified_items=integer(0,1000), discovered_items=integer(0,1000)),
+    'source_sync_v1': record(key=string(128), connector_id=string(64), definition_hash=string(64), external_id=string(128),
+        parent_external_id=string(4096), parent_content_hash=string(64), part_number=integer(1,256),
+        start_byte=integer(0,16777216), end_byte=integer(0,16777216),
+        last_attempt_at=string(40), last_success_at=string(40,minimum=0), last_content_hash=string(64),
+        source_id=string(36), version_id=string(36), extraction_status=string(values=['queued','ready','failed']),
+        sync_status=string(values=['queued','verified','failed','partial']), last_error=string(128,minimum=0),
+        retry_after=string(40,minimum=0), remote_cursor=string(4096,minimum=0), provenance=record(original_url=string(4096,minimum=0),
+            canonical_url=string(4096,minimum=0), retrieved_at=string(40), published_at=string(40,minimum=0),
+            updated_at=string(40,minimum=0), details=string(8192))),
 }
+SCHEMAS['connector_config_v1'] = {**SCHEMAS['connector_v1'],
+    'properties': {**SCHEMAS['connector_v1']['properties'], 'version':integer(1,2147483647)},
+    'required': [*SCHEMAS['connector_v1']['required'],'version']}
+SCHEMAS['source_sync_history_v1'] = SCHEMAS['source_sync_v1']
+SCHEMAS['source_snapshot_v1'] = record(key=string(128),connector_id=string(64),external_id=string(4096),
+    content_hash=string(64),part_receipt_ids=array(string(36),maximum=100),total_bytes=integer(1,16777216),verified_at=string(40))
+SCHEMAS['source_snapshot_history_v1'] = SCHEMAS['source_snapshot_v1']
 SCHEMAS = {key: schema_validator(value).schema for key, value in SCHEMAS.items()}
 DEFAULTS = {
     'schema_version': 1, 'description': '', 'language': 'en', 'timezone': 'UTC', 'exclusions': [],

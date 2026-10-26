@@ -67,3 +67,15 @@ Every milestone records actual focused tests, commit, push and completed CI befo
 Read C0 AGENTS/README/PLAN, reference/development/CI policy, feature/Core/ingestion skills, schema and service implementations, native lifecycle and plugin/ingestion contracts. Read WikiPlant AGENTS/README/PLAN, architecture/operations/hardening/evidence/storage/runtime documentation, required internal workflows, schemas, cron templates and deterministic helpers. C0 source API limit is 131072 UTF-8 bytes; object payload 64 KiB; immutable schemas; bundle 1–25 operations/262144 bytes; extraction is asynchronous; existing schedule intervals are UTC. Retain all limits.
 
 Baseline full CI: [40289355200](https://github.com/Stell0/ns8-czero/actions/runs/40289355200), dispatched at exact C0 revision above; pending at this audit checkpoint. Existing same-source [40286224042](https://github.com/Stell0/ns8-czero/actions/runs/40286224042) is independently in progress. Neither is claimed successful. Disposable local PostgreSQL baseline setup is in progress.
+
+## M2 implementation checkpoint
+
+The existing `samples/ingestion` OAuth package now contains `c0_projects`
+collectors/publisher/CLI; no second authentication or source store is introduced.
+Seven adapters, strict finite definitions, approved per-space connector history,
+immutable version provenance and revision-safe successful/partial cursors are
+implemented. See [SOURCES.md](SOURCES.md) for exact selections and limitations.
+Synthetic signed HTTP/PostgreSQL tests cover lost responses, queued extraction,
+changed/unchanged text, multipart PDF, immutable citations and cursor conflicts.
+No real source, live project, external scheduled execution or migration is
+claimed. M3–M8 workflow/report/export acceptance remains outstanding.

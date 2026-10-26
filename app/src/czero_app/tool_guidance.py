@@ -7,6 +7,11 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'project_source_snapshot_set': 'Save a complete ordered part set only after all source parts are verified. Core rechecks source identity and combined content hash. The current snapshot changes atomically while immutable previous snapshots/evidence remain available.',
+    'project_connector_status_set': 'Record bounded external connector observations and verified/discovered counts with expected revision and a replay key. Failed/partial coverage never advances the successful cursor. Complete means the configured finite selection, not the whole remote site.',
+    'project_connector_set': 'Admin: approve an explicit bounded connector definition/hash with user authorization and a replay key. Cross-space subscriptions require current source authorization. This stores configuration; it performs no remote fetch, ingestion or schedule installation.',
+    'project_source_status_get': 'Read the exact connector/external-part synchronization receipt in the selected protected project. Inspect immutable source/version/extraction identities; pending work is not verified evidence.',
+    'project_source_status_set': 'Store a revision-safe source synchronization receipt with a replay key. Core checks the approved enabled connector and real same-space source/version/hash/state. queued/failed extraction cannot be marked verified. Reconcile lost publication replies before retrying ingestion.',
     'project_get': 'Read the current manifest/revision of an explicitly selected protected research project. No Shared fallback. Read config history separately; a configured external schedule is not proof of execution.',
     'project_records_list': 'Read one bounded page of typed project topics or immutable configuration history. Select the exact protected space and versioned kind; continue pagination before claiming a complete inventory.',
     'project_initialize': 'Admin: initialize a draft research project in an existing protected space with recorded affirmative setup authorization and a replay key. Does not create spaces, import knowledge or install schedules. Read back saved state.',
@@ -94,7 +99,7 @@ DESCRIPTIONS = {
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
-    'project_initialize', 'project_configure', 'project_topic_set',
+    'project_initialize', 'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set',
     'claims_annotate', 'claims_create', 'claims_retract', 'entities_archive',
     'entities_create', 'entities_update', 'entity_aliases_create',
     'entity_references_create', 'entity_references_remove',
@@ -105,7 +110,7 @@ REPLAY_SAFE = frozenset({
 })
 
 DESTRUCTIVE = frozenset({
-    'project_configure', 'project_topic_set',
+    'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set',
     'claims_annotate', 'claims_retract', 'entities_archive', 'entities_update',
     'entity_references_remove', 'entity_relations_update', 'jobs_enqueue',
     'knowledge_annotations_update', 'knowledge_bundle_apply', 'oauth_clients_configure',

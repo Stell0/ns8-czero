@@ -47,8 +47,9 @@ class ProjectService(SpaceBound):
         # This flag is trusted Python wiring, never a request field.
         return ObjectService(self.database, self.access, managed_projects=True).in_space(self._space_id)
 
-    def _bootstrap(self, connection, actor):
-        for kind, schema in SCHEMAS.items():
+    def _bootstrap(self, connection, actor, kinds=None):
+        for kind in SCHEMAS if kinds is None else kinds:
+            schema = SCHEMAS[kind]
             type_name = PREFIX + kind
             row = connection.execute(text('SELECT schema,unique_fields FROM c0_object_types WHERE name=:name'),
                                      {'name': type_name}).mappings().one_or_none()
@@ -136,6 +137,7 @@ class ProjectService(SpaceBound):
         if not isinstance(authorization_ref, str) or not 1 <= len(authorization_ref) <= 512:
             raise ValueError('project_authorization_reference_required')
         def execute(connection, current):
+            self._bootstrap(connection,current)
             previous = self._manifest(connection)
             if previous['revision'] != expected_revision:
                 raise ProjectConflict()
@@ -160,7 +162,7 @@ class ProjectService(SpaceBound):
         if type(expected_revision) is not int or expected_revision < 0:
             raise ValueError('invalid_revision')
         def execute(connection, current):
-            self._bootstrap(connection, current)
+            self._bootstrap(connection, current, ('manifest_v1', 'config_v1', 'topic_v1'))
             previous = self._find(connection, 'topic_v1', topic['topic_id'], required=False)
             if (previous['revision'] if previous else 0) != expected_revision:
                 raise ProjectConflict()
@@ -221,3 +223,198 @@ class ProjectService(SpaceBound):
                 {'name': PREFIX + 'topic_v1'}).scalar_one_or_none()
         return self._mutate(actor, 'topic', {'topic': topic, 'expected_revision': expected_revision}, idempotency_key,
             execute, admin=not bootstrapped)
+
+    def set_connector(self, actor, definition, *, expected_revision=0, authorization_ref, idempotency_key):
+        definition = validate_record(SCHEMAS['connector_v1']['properties']['definition'], definition)
+        identifier(definition['id'])
+        adapter=definition['adapter']
+        if adapter in ('http','rss_atom','sitemap'):
+            from urllib.parse import urlsplit, parse_qsl
+            import re
+            parsed=urlsplit(definition.get('url',''))
+            if (parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password or parsed.fragment
+                    or parsed.port not in (None,443 if parsed.scheme=='https' else 80)
+                    or any(ord(c)<=32 for c in definition['url'])
+                    or any(re.sub('[^a-z0-9]','',k.lower()).endswith(('token','key','secret','password','signature','credential','assertion','sessionid')) or k.lower() in {'auth','authorization','code','jwt','session','sig'} for k,_ in parse_qsl(parsed.query))):
+                raise ValueError('invalid_source_url')
+        if adapter in ('local_files','wikiplant_export') and not definition.get('root'):
+            raise ValueError('explicit_local_root_required')
+        if adapter=='github':
+            import re
+            if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}',definition.get('repository','')):
+                raise ValueError('invalid_github_repository')
+        from pathlib import PurePosixPath
+        for path in definition.get('paths',[]):
+            if PurePosixPath(path).is_absolute() or '..' in PurePosixPath(path).parts or '\\' in path:
+                raise ValueError('unsafe_local_selection')
+        selections={'github':{'readme','docs','commits','releases','issues','pull_requests','comments'},'c0_space':{'wiki','sources'}}
+        if adapter in selections and set(definition['include'])-selections[adapter]:
+            raise ValueError('invalid_source_selection')
+        if type(expected_revision) is not int or expected_revision<0:
+            raise ValueError('invalid_revision')
+        if type(authorization_ref) is not str or not authorization_ref.strip() or len(authorization_ref)>512:
+            raise ValueError('project_authorization_reference_required')
+        def execute(connection,current):
+            self._bootstrap(connection,current)
+            self._manifest(connection)
+            if definition['adapter']=='c0_space':
+                source = definition.get('source_space_id')
+                if not source or source == str(self._space_id) or not definition.get('authorization_ref'):
+                    raise ValueError('explicit_source_space_authorization_required')
+                from .spaces import SpaceService
+                SpaceService(self.database,self.access).authorize(connection,current,space_id=source)
+            previous=self._find(connection,'connector_v1',definition['id'],required=False)
+            if (previous['revision'] if previous else 0)!=expected_revision:
+                raise ProjectConflict()
+            fingerprint=hashlib.sha256(json.dumps(definition,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+            values = {
+                'connector_id':definition['id'],'definition':definition,'definition_hash':fingerprint,
+                'authorization_ref':authorization_ref,'approved_by':str(current.user_id)}
+            version = previous['revision']+1 if previous else 1
+            self._save(connection,current,'connector_config_v1',definition['id']+':'+str(version),{**values,'version':version})
+            return self._save(connection,current,'connector_v1',definition['id'],values,previous=previous)
+        return self._mutate(actor,'connector',{'definition':definition,'expected_revision':expected_revision,
+            'authorization_ref':authorization_ref},idempotency_key,execute,admin=True)
+
+    def source_status(self, actor, connector_id, external_id):
+        identifier(connector_id);identifier(external_id)
+        with self.database.engine.connect() as connection:
+            self._authorize(connection,actor)
+            return snapshot(self._find(connection,'source_sync_v1',connector_id+':'+external_id))
+
+    def save_source_status(self, actor, data, *, expected_revision=0, idempotency_key):
+        data=bounded_json(data)
+        if 'key' in data:
+            raise ValueError('invalid_source_status')
+        validate_record(SCHEMAS['source_sync_v1'], {'key':'validated', **data})
+        from uuid import UUID
+        from .project_schema import timestamp
+        UUID(data['source_id']); UUID(data['version_id'])
+        if type(expected_revision) is not int or expected_revision<0:
+            raise ValueError('invalid_revision')
+        for field in ('last_content_hash', 'parent_content_hash'):
+            if len(data[field])!=64 or any(ch not in '0123456789abcdef' for ch in data[field]):
+                raise ValueError('invalid_source_hash')
+        for field in ('retrieved_at','published_at','updated_at'):
+            if data['provenance'][field]: timestamp(data['provenance'][field])
+        if data['retry_after']: timestamp(data['retry_after'])
+        bounded_json(json.loads(data['provenance']['details']),maximum=8192)
+        if data['remote_cursor']:
+            bounded_json(json.loads(data['remote_cursor']), maximum=4096)
+        def execute(connection,current):
+            connector=self._find(connection,'connector_v1',data['connector_id'])
+            manifest=self._manifest(connection)['data']['manifest']
+            if data['definition_hash']!=connector['data']['definition_hash']:
+                raise ProjectConflict()
+            if data['connector_id'] not in manifest['connector_ids'] or not connector['data']['definition']['enabled']:
+                raise ValueError('source_connector_not_enabled')
+            values=validate_record(SCHEMAS['source_sync_v1'],{'key':logical_key('source_sync_v1',data['connector_id']+':'+data['external_id']),**data})
+            row=connection.execute(text('''SELECT source_id,content_hash,state FROM c0_source_versions
+                WHERE space_id=:space AND id=CAST(:id AS uuid)'''),{'space':self._space_id,'id':values['version_id']}).mappings().one_or_none()
+            if row is None or str(row['source_id'])!=values['source_id'] or row['content_hash']!=values['last_content_hash']:
+                raise ValueError('source_version_identity_mismatch')
+            if values['sync_status']=='verified' and row['state']!='ready':
+                raise ValueError('source_extraction_not_verified')
+            values['extraction_status']=row['state']
+            if values['end_byte']<values['start_byte']:
+                raise ValueError('invalid_source_part_offsets')
+            previous=self._find(connection,'source_sync_v1',values['connector_id']+':'+values['external_id'],required=False)
+            if (previous['revision'] if previous else 0)!=expected_revision:
+                raise ProjectConflict()
+            values['last_attempt_at']=self.clock().isoformat()
+            values['last_success_at']=(self.clock().isoformat() if values['sync_status']=='verified'
+                else previous['data']['last_success_at'] if previous else '')
+            history_key=values['connector_id']+':'+values['external_id']+':'+values['version_id']
+            if values['sync_status']=='verified' and not self._find(connection,'source_sync_history_v1',history_key,required=False):
+                self._save(connection,current,'source_sync_history_v1',history_key,{k:v for k,v in values.items() if k!='key'})
+            return self._save(connection,current,'source_sync_v1',values['connector_id']+':'+values['external_id'],
+                {k:v for k,v in values.items() if k!='key'},previous=previous)
+        return self._mutate(actor,'source_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute)
+
+    def save_connector_status(self, actor, data, *, expected_revision=0, idempotency_key):
+        data=bounded_json(data)
+        if 'key' in data or type(expected_revision) is not int or expected_revision<0:
+            raise ValueError('invalid_connector_status')
+        values=validate_record(SCHEMAS['connector_sync_v1'],{'key':'validated',**data})
+        if values['remote_cursor']: bounded_json(json.loads(values['remote_cursor']),maximum=4096)
+        if values['progress_cursor']: bounded_json(json.loads(values['progress_cursor']),maximum=4096)
+        if values['verified_items']>values['discovered_items']:
+            raise ValueError('invalid_connector_counters')
+        if values['status']=='complete' and (values['verified_items']!=values['discovered_items'] or values['last_error']):
+            raise ValueError('incomplete_connector_coverage')
+        def execute(connection,current):
+            connector=self._find(connection,'connector_v1',values['connector_id'])['data']
+            if connector['definition_hash']!=values['definition_hash']:
+                raise ProjectConflict()
+            previous=self._find(connection,'connector_sync_v1',values['connector_id'],required=False)
+            if (previous['revision'] if previous else 0)!=expected_revision:
+                raise ProjectConflict()
+            matching=previous if previous and previous['data']['definition_hash']==values['definition_hash'] else None
+            from datetime import timedelta
+            from .project_schema import timestamp
+            failures=0 if values['status']=='complete' else min(10,(matching['data']['attempt_count'] if matching else 0)+1)
+            retry=values['retry_after']
+            if failures:
+                fallback=self.clock()+timedelta(seconds=min(3600,30*2**(failures-1)))
+                requested=timestamp(retry) if retry else fallback
+                retry=min(max(requested,fallback),self.clock()+timedelta(days=1)).isoformat()
+            saved={**values,'last_attempt_at':self.clock().isoformat(),'attempt_count':failures,'retry_after':retry if failures else '',
+                'last_success_at':self.clock().isoformat() if values['status']=='complete' else matching['data']['last_success_at'] if matching else '',
+                'progress_cursor':values['progress_cursor'] if values['verified_items']==values['discovered_items'] else matching['data']['progress_cursor'] if matching else '',
+                'remote_cursor':values['remote_cursor'] if values['status']=='complete' else matching['data']['remote_cursor'] if matching else ''}
+            return self._save(connection,current,'connector_sync_v1',values['connector_id'],{k:v for k,v in saved.items() if k!='key'},previous=previous)
+        return self._mutate(actor,'connector_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute)
+
+    def save_source_snapshot(self, actor, connector_id, external_id, content_hash, part_receipt_ids, *, expected_revision=0, idempotency_key):
+        identifier(connector_id)
+        if type(external_id) is not str or not 1<=len(external_id)<=4096:
+            raise ValueError('invalid_external_identity')
+        from uuid import UUID
+        if type(part_receipt_ids) is not list or not 1<=len(part_receipt_ids)<=100 or len(set(part_receipt_ids))!=len(part_receipt_ids):
+            raise ValueError('invalid_source_parts')
+        for value in part_receipt_ids:UUID(value)
+        if type(expected_revision) is not int or expected_revision<0:raise ValueError('invalid_revision')
+        payload={'connector_id':connector_id,'external_id':external_id,'content_hash':content_hash,
+            'part_receipt_ids':part_receipt_ids,'expected_revision':expected_revision}
+        def execute(connection,current):
+            connector=self._find(connection,'connector_v1',connector_id)
+            if connector_id not in self._manifest(connection)['data']['manifest']['connector_ids'] or not connector['data']['definition']['enabled']:
+                raise ValueError('source_connector_not_enabled')
+            total=0;digest=hashlib.sha256();binary=False;immutable=[]
+            for number,receipt_id in enumerate(part_receipt_ids,1):
+                row=connection.execute(text('''SELECT o.data,v.media_type,d.body FROM c0_objects o
+                    JOIN c0_source_versions v ON v.id=CAST(o.data->>'version_id' AS uuid) AND v.space_id=o.space_id
+                    JOIN c0_documents d ON d.version_id=v.id AND d.space_id=v.space_id
+                    WHERE o.space_id=:space AND o.type_name=:type AND o.id=CAST(:id AS uuid) AND v.state='ready' '''),
+                    {'space':self._space_id,'type':PREFIX+'source_sync_v1','id':receipt_id}).mappings().one_or_none()
+                if row is None:raise ValueError('unverified_source_part')
+                data=row['data']
+                if (data['connector_id']!=connector_id or data['parent_external_id']!=external_id
+                        or data['parent_content_hash']!=content_hash or data['part_number']!=number
+                        or data['start_byte']!=total or data['sync_status']!='verified'
+                        or data['definition_hash']!=connector['data']['definition_hash']):
+                    raise ValueError('source_part_identity_mismatch')
+                if row['media_type'] in ('text/plain','text/markdown'):
+                    content=row['body'].encode()
+                    if hashlib.sha256(content).hexdigest()!=data['last_content_hash'] or len(content)!=data['end_byte']-total:
+                        raise ValueError('source_part_content_mismatch')
+                    digest.update(content)
+                else:
+                    binary=True
+                    if len(part_receipt_ids)!=1 or content_hash!=data['last_content_hash']:
+                        raise ValueError('invalid_binary_source_parts')
+                historical=self._find(connection,'source_sync_history_v1',connector_id+':'+data['external_id']+':'+data['version_id'])
+                immutable.append(str(historical['id']))
+                total=data['end_byte']
+                if total>16777216:raise ValueError('source_snapshot_too_large')
+            if not binary and digest.hexdigest()!=content_hash:raise ValueError('source_snapshot_hash_mismatch')
+            identity=connector_id+':'+external_id
+            previous=self._find(connection,'source_snapshot_v1',identity,required=False)
+            if (previous['revision'] if previous else 0)!=expected_revision:raise ProjectConflict()
+            values={'connector_id':connector_id,'external_id':external_id,'content_hash':content_hash,
+                'part_receipt_ids':immutable,'total_bytes':total,'verified_at':self.clock().isoformat()}
+            historical=identity+':'+content_hash
+            if not self._find(connection,'source_snapshot_history_v1',historical,required=False):
+                self._save(connection,current,'source_snapshot_history_v1',historical,values)
+            return self._save(connection,current,'source_snapshot_v1',identity,values,previous=previous)
+        return self._mutate(actor,'source_snapshot',payload,idempotency_key,execute)

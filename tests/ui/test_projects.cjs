@@ -8,7 +8,7 @@ function setup(selected=id(101)) {
   vm.runInContext(fs.readFileSync('app/static/projects.js','utf8'),h.context);return h;
 }
 function config(space=id(101)) {return {data:{version:1,manifest:{project_id:space,space_id:space,name:'<img src=x> project',description:'Private description',purpose:'Research',scope:'Synthetic only',language:'en',timezone:'Europe/Rome',schedule:{enabled:false},primary_topic_ids:['anchor']}}};}
-async function complete(h) {h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[{data:{label:'<script>topic',classification:'user',lifecycle:'active',topic_id:'anchor'}}]}));await tick();}
+async function complete(h) {h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[{data:{label:'<script>topic',classification:'user',lifecycle:'active',topic_id:'anchor'}}]}));h.requests[2].resolve(reply({objects:[]}));await tick();}
 
 test('project reader renders literal stored data and uses no mutation requests',async()=>{
   const h=setup();await complete(h);assert.equal(h.node('project-content').hidden,false);
@@ -19,15 +19,23 @@ test('project reader renders literal stored data and uses no mutation requests',
 });
 test('no explicit project never fetches Shared',()=>{const h=setup(null);assert.equal(h.requests.length,0);assert(h.node('project-content').hidden);});
 test('revocation clears private content and rejects delayed replies',async()=>{
-  const h=setup();await complete(h);h.node('project-refresh').listeners.click();const requests=h.requests.slice(2);h.clear();
-  requests[0].resolve(reply(config()));requests[1].resolve(reply({objects:[]}));await tick();
+  const h=setup();await complete(h);h.node('project-refresh').listeners.click();const requests=h.requests.slice(3);h.clear();
+  requests[0].resolve(reply(config()));requests[1].resolve(reply({objects:[]}));requests[2].resolve(reply({objects:[]}));await tick();
   assert(h.node('project-content').hidden);assert.equal(h.node('project-description').textContent,'');assert.equal(h.node('project-topics').children.length,0);
 });
 test('wrong project identity cannot populate the view',async()=>{
-  const h=setup();h.requests[0].resolve(reply(config(id(102))));h.requests[1].resolve(reply({objects:[]}));await tick();
+  const h=setup();h.requests[0].resolve(reply(config(id(102))));h.requests[1].resolve(reply({objects:[]}));h.requests[2].resolve(reply({objects:[]}));await tick();
   assert(h.node('project-content').hidden);assert.equal(h.node('project-description').textContent,'');
 });
 test('new refresh rejects an older error',async()=>{
-  const h=setup();h.node('project-refresh').listeners.click();h.requests[2].resolve(reply(config()));h.requests[3].resolve(reply({objects:[]}));await tick();
-  h.requests[0].reject(Error('late'));h.requests[1].resolve(reply({objects:[]}));await tick();assert(!h.node('project-content').hidden);
+  const h=setup();h.node('project-refresh').listeners.click();h.requests[3].resolve(reply(config()));h.requests[4].resolve(reply({objects:[]}));h.requests[5].resolve(reply({objects:[]}));await tick();
+  h.requests[0].reject(Error('late'));h.requests[1].resolve(reply({objects:[]}));h.requests[2].resolve(reply({objects:[]}));await tick();assert(!h.node('project-content').hidden);
+});
+
+test('project source errors render as text and clear on access loss',async()=>{
+  const h=setup();h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[]}));
+  h.requests[2].resolve(reply({objects:[{data:{connector_id:'<img> connector',status:'partial',verified_items:0,discovered_items:1,last_success_at:'',last_error:'<script> private error',retry_after:''}}]}));await tick();
+  assert.match(h.node('project-sources').textContent,/<script> private error/);
+  assert.match(h.node('project-sources').textContent,/0\/1 items verified/);
+  h.clear();assert.equal(h.node('project-sources').children.length,0);assert.equal(h.node('project-sources-status').textContent,'');
 });

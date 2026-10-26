@@ -14,10 +14,11 @@ from c0_ingest.http import open_url
 
 
 class GitHubError(RuntimeError):
-    def __init__(self, message, status=None, retryable=True):
+    def __init__(self, message, status=None, retryable=True, retry_at=None):
         super().__init__(message)
         self.status = status
         self.retryable = retryable
+        self.retry_at = retry_at
 
 
 class BudgetExceeded(GitHubError):
@@ -34,13 +35,16 @@ def token():
 
 
 class GitHub:
-    def __init__(self, cache, config, resume=True, opener=None, sleeper=time.sleep):
+    def __init__(self, cache, config, resume=True, opener=None, sleeper=time.sleep, *, anonymous=False, preserve_bodies=False, max_response_bytes=8*1024*1024, request_timeout=40):
         self.cache = Path(cache)
         self.config = config
         self.resume = resume
         self.opener = opener or open_url
         self.sleep = sleeper
-        self.token = token()
+        self.token = None if anonymous else token()
+        self.preserve_bodies = preserve_bodies
+        self.max_response_bytes = max_response_bytes
+        self.request_timeout = request_timeout
         self.requests = 0
         self.cached = 0
 
@@ -51,7 +55,7 @@ class GitHub:
         parsed = urllib.parse.urlsplit(url)
         if parsed.scheme != "https" or parsed.netloc != "api.github.com" or parsed.username or parsed.fragment:
             raise GitHubError("refusing non-GitHub API URL")
-        target = self.cache / (digest(url) + ".json")
+        target = self.cache / (digest([url, True]) + ".json" if self.preserve_bodies else digest(url) + ".json")
         content_response = "/git/blobs/" in parsed.path or parsed.path.endswith("/readme")
         saved = read(target) if self.resume and parsed.path != "/user" and not content_response else None
         if saved and saved.get("excluded_private"):
@@ -73,8 +77,10 @@ class GitHub:
                 raise BudgetExceeded("configured GitHub request budget reached")
             self.requests += 1
             try:
-                with self.opener(urllib.request.Request(url, headers=headers), timeout=40) as response:
-                    body = json.load(response)
+                with self.opener(urllib.request.Request(url, headers=headers), timeout=self.request_timeout) as response:
+                    raw=response.read(self.max_response_bytes+1)
+                    if len(raw)>self.max_response_bytes:raise GitHubError('GitHub response size limit reached',retryable=False)
+                    body = json.loads(raw)
                     following = None
                     for part in response.headers.get("Link", "").split(","):
                         if 'rel="next"' in part:
@@ -85,7 +91,7 @@ class GitHub:
                     # Strip private commit identity details before persisting public API responses.
                     if parsed.path == "/user":
                         body = {k: body[k] for k in ("login", "id", "html_url", "type") if k in body}
-                    body = public_data(body)
+                    body = public_data(body, preserve_bodies=self.preserve_bodies)
                     if not content_response and (not isinstance(body, dict) or not body.get("incomplete_results")):
                         atomic(target, {"body": body, "next": following, "url": url, "retrieved_at": now()})
                     log("github_page", url=url, requests=self.requests, remaining=response.headers.get("X-RateLimit-Remaining"))
@@ -96,7 +102,7 @@ class GitHub:
                 if exc.headers.get("X-RateLimit-Remaining") == "0":
                     wait = max(wait, float(exc.headers.get("X-RateLimit-Reset", 0)) - time.time() + 1)
                 if not retryable or attempt == self.config["max_retries"] or wait > self.config["max_wait_seconds"]:
-                    raise GitHubError(f"GitHub HTTP {exc.code}: {parsed.path}", status=exc.code, retryable=retryable) from None
+                    raise GitHubError(f"GitHub HTTP {exc.code}: {parsed.path}", status=exc.code, retryable=retryable, retry_at=time.time()+max(0,min(wait,86400))) from None
                 log("github_retry", status=exc.code, wait=wait)
                 self.sleep(max(0, wait))
             except (urllib.error.URLError, TimeoutError):
@@ -140,9 +146,10 @@ class GitHub:
         return result
 
 
-def public_data(value):
+def public_data(value, *, preserve_bodies=False):
     if isinstance(value, list):
-        return [public_data(v) for v in value]
+        return [public_data(v, preserve_bodies=preserve_bodies) for v in value]
     if isinstance(value, dict):
-        return {k: public_data(v) for k, v in value.items() if k not in {"email", "verification", "text_matches", "body"}}
+        return {k: public_data(v, preserve_bodies=preserve_bodies) for k, v in value.items()
+                if k not in ({"email", "verification", "text_matches"} | (set() if preserve_bodies else {"body"}))}
     return value

@@ -796,3 +796,83 @@ the exact navigation count and extends the existing numeric/privacy helper test
 to projects; no runtime code, authority, limit or deployed image changes.
 Fresh complete exact-source CI/native/privacy remains required before M1 acceptance.
 M2 development stays preserved separately and pauses for this correction.
+
+### WikiPlant M2 — common source ingestion checkpoint
+
+The existing external ingestion distribution now provides seven reusable
+collectors and an independently reusable publisher, with strict finite source
+definitions, explicit protected-space/Admin approval, private OAuth/job reuse,
+SHA-256 identities, immutable version provenance, source/cursor receipts and
+readback/citation verification. Collector selection, publication and reasoning
+remain separate. The project reader exposes source status; disposable native
+recovery now compares connector/current/history/cursor state. See
+[source contracts](docs/projects/SOURCES.md) for operations, limits and recovery.
+
+Focused validation passes103 cases: adapters, actual signed HTTP/OAuth/SDK/Core/
+PostgreSQL text and multipart PDF, lost response reconciliation, pending
+extraction, changed/unchanged versions, immutable citations, cursor conflicts and
+wheel/archive standalone installation. All190 Node cases pass. Complete local
+validation is running. Exact-source M2 CI/native evidence remains pending.
+No real sources, production spaces, migrations, schedule activation or live
+instance changes have occurred. Default released-Core feature adoption remains
+gated on final immutable library release/consumer verification.
+
+M3 implementation subplan: retain one managed typed record per logical queue
+item, workflow, daily budget, reservation and checkpoint. Existing unique keys
+and transaction receipts acquire the established object/knowledge/authority
+locks; no new database or orchestration engine is needed. Lease ownership and
+fencing generations protect every workflow mutation; separate reservation and
+external outcome records preserve uncertain calls and saved results. Test real
+PostgreSQL races, five ordinary/ten urgent-only totals, causal child bounds,
+copy/rename deduplication, fixed daily budgets, config changes, crash recovery,
+revocation and independent project state before accepting M3.
+
+M0 exact bed8142 full40289915767 is completed/successful and passes the
+full promotion verifier. Independently downloaded actual native XML/job logs
+and five scan pairs pass: Debian genuine upgrade21, Rocky installation26/three
+expected skips/all8 browsers, eight privacy guards, 30 numeric accessibility
+contexts and three actual OAuth-query artifacts with zero candidates.
+
+M2 follow-up checks pass151 signed HTTP/MCP/space/guidance/ingestion cases and
+99 adapter/client unit cases, plus two standalone wheel/archive installations.
+The parent source snapshot now names the exact current complete part set and
+retains immutable previous version receipts after a document shrinks. A strict
+UUID-array transport mismatch and a client argument spelling error were caught
+and corrected by that actual SDK regression. A denied space selection clears
+the client selector. Private CLI dry-run/resume/status/verify and the exact
+native seed/recovery helper pass through actual local signed HTTP/PostgreSQL.
+All190 Node, Go/schema, five shell parser checks,272 documentation links and
+21 Robot dry runs pass. Broad pre-final-source checks pass2096 cases; a fresh
+complete validation of the final additions is running. No native M2 or actual
+external scheduled execution is claimed.
+
+M2 final broad local checks pass2101 actual cases. Subsequent final focused
+checks pass116 actual signed-HTTP/PostgreSQL publisher and ingestion unit cases,
+including independent same-label/same-content connectors, Atom alternate/inline
+entries and Core-side rejection of credential-bearing URL queries. Final wheel/
+archive checks exercise the installed `c0-projects` executable outside Core/app.
+The original operator checkout remains unchanged except its pre-existing dirty
+documentation; development is isolated in the separate clone. M1 corrected
+Debian native passes; Rocky/final artifact acceptance is still pending.
+
+M1 source2486de4 full40303681995 has successful local, producer, released,
+scans, both-native and actual artifact-audit jobs. Independent downloaded
+inspection passes Debian21 genuine upgrade and Rocky26 installation/three
+expected skips/all8 browsers, eight privacy guards,32 accessibility contexts
+and three query artifacts with zero candidates; five scan pairs pass. The
+merge gate correctly rejects `ready_for_review_required` because PR38 is a
+work-in-progress draft for the complete task. This is not promotion evidence.
+Intermediate branch-only full dispatches preserve that PR review gate; final
+ready-PR/current-source acceptance remains mandatory. A fresh branch-only
+full dispatch of exact2486de4 has been requested. Further implementation is
+pushed on `feat/research-projects-work`; the final complete history will be
+delivered to the draft PR branch before final ready-PR validation. No gate is
+weakened and no merge, release or deployment is authorized by the failed gate.
+
+M2 additionally passes107 ingestion unit cases,43 browser fixture/privacy
+helpers,191 Node cases and275 documentation links. New disposable browser
+assertions cover stored partial connector coverage and post-revocation clearing.
+Two actual PostgreSQL cursor tests verify retry recovery and configuration-hash
+changes without inherited cursors/watermarks. Compatible Admin configuration
+saves install additive managed record kinds without changing immutable schemas;
+22 project/schema cases pass. Final source candidate CI remains pending.

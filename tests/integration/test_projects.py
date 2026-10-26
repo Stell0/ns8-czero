@@ -150,3 +150,20 @@ def test_primary_topic_cannot_be_retired_behind_configuration(project):
     with pytest.raises(ValueError):
         service.set_topic(owner, values, expected_revision=anchor['revision'], idempotency_key='retire')
     assert service.list_records(owner,'topic_v1')[0]['data']['lifecycle'] == 'active'
+
+
+def test_admin_configure_installs_additive_managed_schema_for_existing_project(project,monkeypatch):
+    from czero_core.project_schema import SCHEMAS,record,string
+    service,manifest,owner,_=project
+    initialize(project)
+    kind='fixture_upgrade_v1';name=PREFIX+kind
+    monkeypatch.setitem(SCHEMAS,kind,record(key=string(128)))
+    try:
+        configured=service.configure(owner,manifest,expected_revision=1,authorization_ref='synthetic compatible feature upgrade',idempotency_key='upgrade-types')
+        assert configured['data']['version']==2 and configured['data']['manifest']==manifest
+        with service.database.engine.connect() as connection:
+            schema=connection.execute(text('SELECT schema FROM c0_object_types WHERE name=:name'),{'name':name}).scalar_one()
+            assert schema==SCHEMAS[kind]
+    finally:
+        with service.database.engine.begin() as connection:
+            connection.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':name})

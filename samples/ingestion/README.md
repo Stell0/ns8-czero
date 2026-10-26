@@ -216,3 +216,10 @@ requires the normal disposable database configuration. No model credential,
 GitHub token, live instance or live source dataset is needed by public CI.
 
 This code uses the repository's [GPL-3.0-or-later license](LICENSE).
+
+## Project source collectors
+
+`c0-projects` extends this same distribution with independently reusable public
+HTTP, feed, sitemap, local document, GitHub, authorized C0-space and offline
+WikiPlant adapters. See [project source contracts](../../docs/projects/SOURCES.md)
+for private-job configuration, explicit approval, dry-run/recovery and limits.

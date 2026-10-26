@@ -29,6 +29,7 @@ def artifacts(tmp_path_factory):
     with zipfile.ZipFile(wheel) as zipped:
         names = zipped.namelist()
         assert any(n.endswith('/c0_ingest/client.py') or n == 'c0_ingest/client.py' for n in names)
+        assert 'c0_projects/adapters.py' in names and 'c0_projects/publish.py' in names
         assert 'github_vault/scrape.py' in names and 'github_vault/sync.py' in names
         licenses = [n for n in names if '.dist-info/licenses/' in n]
         assert len(licenses) == 1 and zipped.read(licenses[0]) == (PROJECT / 'LICENSE').read_bytes()
@@ -59,3 +60,12 @@ def test_sample_installs_and_initializes_without_core_or_checkout(artifacts, kin
     assert (work / 'job/.env').stat().st_mode & 0o777 == 0o600
     help_text = command([str(python), str(work / 'job/run.py'), '--help'], cwd=work, env=env)
     assert 'sync' in help_text and 'login' in help_text
+
+    project_help=command([str(venv/'bin/c0-projects'),'--help'],cwd=work,env=env)
+    assert 'resume' in project_help and 'verify' in project_help
+    settings=work/'project.json'
+    settings.write_text(json.dumps({'schema_version':1,'server_url':'https://c0.example.org/mcp',
+        'project_space_id':'00000000-0000-4000-8000-000000000001',
+        'sources':[{'id':'public','adapter':'http','url':'https://example.org/page'}]}))
+    validated=command([str(venv/'bin/c0-projects'),'sources','validate','--config',str(settings)],cwd=work,env=env)
+    assert json.loads(validated)=={'status':'validated','connectors':1,'writes_c0':0}

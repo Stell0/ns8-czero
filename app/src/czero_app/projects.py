@@ -28,6 +28,28 @@ class TopicSet(StrictRequest):
     idempotency_key: str = Field(min_length=1, max_length=128)
 
 
+class ConnectorSet(StrictRequest):
+    definition: dict = Field(description='Validated finite connector definition; no credentials or executable fields. C0 stores its approved hash, never fetches these URLs.')
+    authorization_ref: str = Field(min_length=1, max_length=512)
+    expected_revision: int = Field(default=0, ge=0, le=2147483646)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+class SourceStatusSet(StrictRequest):
+    data: dict = Field(description='Versioned synchronization receipt for one original part. Actual same-space source/version/hash/extraction state is verified by Core before saving.')
+    expected_revision: int = Field(default=0, ge=0, le=2147483646)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+class SourceSnapshotSet(StrictRequest):
+    connector_id: str = Field(min_length=1,max_length=64)
+    external_id: str = Field(min_length=1,max_length=4096)
+    content_hash: str = Field(min_length=64,max_length=64)
+    part_receipt_ids: list[str] = Field(min_length=1,max_length=100)
+    expected_revision: int = Field(default=0,ge=0,le=2147483646)
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
 def install_project_routes(app, database, auth, read_context, write_context):
     # Producer work can precede the immutable Core release. Old consumers stay
     # operational and explicitly reject project work until their pin is adopted.
@@ -41,7 +63,7 @@ def install_project_routes(app, database, auth, read_context, write_context):
     def invoke(space_id, method, actor, **arguments):
         if auth is None:
             raise HTTPException(503, 'authentication_not_configured')
-        if service is None:
+        if service is None or not hasattr(service, method):
             raise HTTPException(503, 'project_core_upgrade_required')
         try:
             return getattr(service.in_space(space_id), method)(actor, **arguments)
@@ -78,4 +100,26 @@ def install_project_routes(app, database, auth, read_context, write_context):
     @operation('project_records_list', 'Read a bounded page of project records by versioned kind, including topic_v1 and immutable config_v1 history. A full page means coverage may be incomplete.', Role.READER, ObjectsView, space_field='space_id')
     def records(kind: str, space_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return {'objects': invoke(space_id, 'list_records', context.actor, kind=kind, limit=limit, offset=offset)}
+    @app.put('/api/v1/project/connectors', response_model=ObjectView)
+    @operation('project_connector_set', 'Admin: approve a finite source connector definition and its hash with actual user authorization. Explicit cross-space subscriptions recheck source-space authority. No fetch or schedule is executed.', Role.ADMIN, ObjectView, read_only=False, space_field='space_id')
+    def connector(data: ConnectorSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'set_connector', context.actor, **data.model_dump())
+
+    @app.get('/api/v1/project/source-status', response_model=ObjectView)
+    @operation('project_source_status_get', 'Read the stored synchronization receipt for an exact connector/external part in this project. Ready extraction and verified publication are distinct.', Role.READER, ObjectView, space_field='space_id')
+    def source_status(connector_id: str, external_id: str, space_id: UUID, context: RequestAccess = Depends(read_context)):
+        return invoke(space_id, 'source_status', context.actor, connector_id=connector_id, external_id=external_id)
+
+    @app.put('/api/v1/project/source-status', response_model=ObjectView)
+    @operation('project_source_status_set', 'Save a revision-safe synchronization receipt. Core checks enabled project connector and actual same-space immutable source/version/hash/extraction status. A queued version cannot be marked verified.', Role.EDITOR, ObjectView, read_only=False, space_field='space_id')
+    def save_source_status(data: SourceStatusSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'save_source_status', context.actor, **data.model_dump())
+    @app.put('/api/v1/project/connector-status', response_model=ObjectView)
+    @operation('project_connector_status_set', 'Record bounded external connector coverage and counters at its current revision. Failed/partial collection preserves the last successful cursor. This is a collector observation, not proof that the whole external site was audited.', Role.EDITOR, ObjectView, read_only=False, space_field='space_id')
+    def connector_status(data: SourceStatusSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'save_connector_status', context.actor, **data.model_dump())
+    @app.put('/api/v1/project/source-snapshot',response_model=ObjectView)
+    @operation('project_source_snapshot_set', 'Save the current complete original source snapshot from verified ordered part receipts. Core checks identities, offsets and combined text hash; historical parts remain immutable.', Role.EDITOR,ObjectView,read_only=False,space_field='space_id')
+    def source_snapshot(data: SourceSnapshotSet,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'save_source_snapshot',context.actor,**data.model_dump(mode='json'))
     return service

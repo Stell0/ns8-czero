@@ -277,3 +277,8 @@ implements reusable research state within existing protected spaces. The initial
 topics, authorization and a read-only project overview. Operational queue,
 ingestion, monitoring, reporting and migration preparation have separate gates.
 This branch does not migrate real projects, deploy an instance or activate schedules.
+
+Project source collection is available in the existing independently installable
+ingestion sample package. [Source contracts](docs/projects/SOURCES.md) describe
+its seven adapters, protected receipts, limits and explicit approval. This
+branch remains an implementation candidate; no live migration is performed.

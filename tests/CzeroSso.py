@@ -779,6 +779,7 @@ class CzeroSso:
             run('Go To',project_url)
             run('Get Text','#project-title','==','<img src=x> Synthetic research')
             run('Get Text','#project-topics','contains','<script> synthetic topic')
+            run('Get Text','#project-sources','contains','browser-source · partial · 0/1 items verified')
             run('Get Element Count','#project-content img, #project-content script','==',0)
             assert_accessibility(browser,'projects','admin')
             stage='reader-role-cap'
@@ -794,6 +795,7 @@ class CzeroSso:
             run('Go To',project_url)
             run('Get Text','#project-title','==','<img src=x> Synthetic research')
             run('Get Text','#project-config','contains','Configuration 2')
+            run('Get Text','#project-sources','contains','coverage_incomplete')
             assert_accessibility(browser,'projects','reader')
             run('Go To',tools)
             # Same user, same UUID, explicit Shared choice: no private fallback.
@@ -843,6 +845,7 @@ class CzeroSso:
             run('Go To',project_url)
             run('Wait For Elements State','#project-content','hidden')
             run('Get Text','#project-description','==','')
+            run('Get Element Count','#project-sources li','==',0)
             assert 'space_id='+identifier in browser.get_url(), 'Revoked project silently fell back'
         except Exception as error:
             raise AssertionError('Disposable spaces browser failed at '+stage+' ('+type(error).__name__+')') from None

@@ -13,6 +13,9 @@ require Manage authority and an affirmative authorization reference.
 and future schema versions reject. Compatible omitted v1 settings receive fixed
 defaults; loading an existing v1 manifest is idempotent. Configuration changes use
 expected revisions and replay keys and retain immutable `config_v1` snapshots.
+An Admin configuration save also installs newly added managed record kinds
+for an existing project, without replacing any immutable type definition.
+A collision fails closed; ordinary agents cannot register trusted types.
 The current pointer is `manifest_v1`; the complete queue and history are never
 stored in that pointer. Type definitions are immutable and instance-wide. Records
 and unique keys are protected-space scoped.
