@@ -734,3 +734,8 @@ Core source `6f1e4703f4d027c82ccb03ef8813efe30c650365` passes [full39760439788](
 Application0.50.0 pins released Core0.31.1 and implements the planned human approval, default Reader/blocked-account UI and generated `.skill`/single-plugin ZIP page. Focused HTTP/download tests pass115 cases; the exact native Core-seeded first-connection/replay helper passes six local HTTP tests. Updated native browser tests download/inspect both archives, and native admission checks require a genuinely new Reader plus persistent blocking. Final full application/consumer/image/native validation, supported dedicated update and actual ChatGPT skill/plugin acceptance remain pending in draft PR32.
 
 </details>
+
+
+## WikiPlant backend track — M0 inspection
+
+The operator requests reusable research projects through M0–M8, without live migration, deployment or schedule activation. See [compatibility audit](docs/projects/WIKIPLANT_COMPATIBILITY.md) for exact original revisions, capability matrix, ownership, sequential implementation and tests. Current status: M0 comparison recorded; baseline validation pending. Existing ingestion and protected spaces are reused. Historical acceptance and deployed images remain frozen.
