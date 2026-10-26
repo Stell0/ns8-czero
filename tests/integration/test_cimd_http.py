@@ -14,6 +14,7 @@ from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 from httpx import ASGITransport, AsyncClient
 import pytest
+from project_contract import TOOL_COUNT
 from sqlalchemy import text
 
 from czero_core.cimd import CimdPolicyService
@@ -236,7 +237,7 @@ def test_real_url_tokens_support_current_legacy_sdk_tools_and_revocation(cimd_ht
                                 headers={'Authorization': 'Bearer ' + tokens['access_token']}) as transport:
                             async with Client(streamable_http_client(RESOURCE, http_client=transport), mode=mode) as sdk:
                                 tools = (await sdk.list_tools()).tools
-                                assert len(tools) == 77
+                                assert len(tools) == TOOL_COUNT
                                 assert not any(tool.name.startswith('cimd') for tool in tools)
                                 profile = await sdk.call_tool('get_profile', {})
                                 assert not profile.is_error and profile.structured_content['name']
@@ -435,7 +436,7 @@ def test_sdk_automatically_selects_cimd_from_empty_storage_and_renews_without_fe
                     async def read(auth):
                         async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN, auth=auth) as http:
                             async with Client(streamable_http_client(RESOURCE, http_client=http)) as sdk:
-                                assert len((await sdk.list_tools()).tools) == 77
+                                assert len((await sdk.list_tools()).tools) == TOOL_COUNT
                                 assert not (await sdk.call_tool('get_profile', {})).is_error
                     auth = provider()
                     await read(auth)

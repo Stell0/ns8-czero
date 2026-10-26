@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 
 import pytest
+from project_contract import TOOL_COUNT
 from sqlalchemy import create_engine,text
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -43,7 +44,7 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                     if case=='reader-denial':
                         assert tools and all(t.annotations.read_only_hint for t in tools)
                         assert 'wiki_pages_create' not in {t.name for t in tools}
-                    else: assert len(tools)==77
+                    else: assert len(tools)==TOOL_COUNT
                     calls=[]
                     async def call(name,args):
                         result=await fixture.intercept(client,fixture_case,name,args)

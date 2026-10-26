@@ -267,3 +267,13 @@ These anchors preserve links to the retained historical record.
 <a id="documentation-and-skills-release-readiness-phase"></a>[Documentation and skills release-readiness phase](docs/history/README.md#documentation-and-skills-release-readiness-phase)
 
 </details>
+
+
+## Research projects in development
+
+The [WikiPlant compatibility track](docs/projects/WIKIPLANT_COMPATIBILITY.md)
+implements reusable research state within existing protected spaces. The initial
+[project contracts](docs/projects/PROJECTS.md) cover versioned configuration,
+topics, authorization and a read-only project overview. Operational queue,
+ingestion, monitoring, reporting and migration preparation have separate gates.
+This branch does not migrate real projects, deploy an instance or activate schedules.

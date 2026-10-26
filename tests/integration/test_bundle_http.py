@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient, ReadError
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
+from project_contract import TOOL_COUNT
 from sqlalchemy import text
 from czero_core.identity import Role
 from czero_core.worker import Worker
@@ -108,7 +109,7 @@ def test_actual_sdk_bundle_matches_rest_and_returns_safe_stale_conflict(bundle_h
                         headers={'Authorization':'Bearer '+pair.access_token},event_hooks={'response':[observe]}) as http:
                     async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
                         tools = (await client.list_tools()).tools
-                        assert len(tools) == 77
+                        assert len(tools) == TOOL_COUNT
                         tool = next(value for value in tools if value.name=='knowledge_bundle_apply')
                         assert not tool.annotations.read_only_hint
                         assert tool.meta['securitySchemes'][0]['scopes'] == ['c0:write']

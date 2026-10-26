@@ -504,6 +504,47 @@ class ScopedBrowser:
                                 'space_id=' + self.space_id, data, method, csrf)
 
 
+def seed_project_state(browser, profile, space_id):
+    status, body, _ = browser.api('/agents/capabilities.json')
+    assert status == 200, 'Project capability discovery unavailable'
+    if 'project_initialize' not in {op['name'] for op in json.loads(body)['operations']}:
+        return None # Genuine older predecessor has no project API.
+    def request(path, data=None, method=None):
+        status, body, _ = browser.api('/api/v1/project' + path, data, method, profile['csrf_token'])
+        assert status == 200, 'Cannot persist protected project recovery state'
+        return json.loads(body)
+    setup = {'manifest': {'space_id':space_id, 'project_id':space_id, 'name':'Retained synthetic project',
+        'purpose':'Verify project recovery', 'scope':'Fabricated recovery evidence only',
+        'timezone':'Europe/Rome', 'language':'en'},
+        'authorization_ref':'synthetic-native:setup', 'idempotency_key':'retained-project-setup'}
+    first = request('/initialize', setup, 'POST')
+    assert request('/initialize', setup, 'POST') == first, 'Project initialization did not replay'
+    topic = request('/topics', {'topic': {'topic_id':'anchor', 'label':'Retained synthetic anchor',
+        'classification':'user', 'authorization_ref':'synthetic-native:track'},
+        'idempotency_key':'retained-project-topic'}, 'POST')
+    updated = {**first['data']['manifest'], 'primary_topic_ids':['anchor'],
+        'state':{'initialized':True, 'migration_status':'not_started'}}
+    current = request('', {'manifest':updated, 'expected_revision':1,
+        'authorization_ref':'synthetic-native:activate', 'idempotency_key':'retained-project-config'}, 'PUT')
+    history = request('/records?kind=config_v1&limit=100')
+    return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history}
+
+
+def verify_project_state(browser, profile, expected, *, admin=False):
+    if expected is None:
+        return # The preserved predecessor did not have project state.
+    def request(path):
+        status, body, _ = browser.api('/api/v1/project' + path)
+        assert status == 200, 'Recovered project state missing or denied'
+        return json.loads(body)
+    assert request('') == expected['current'], 'Project manifest/revision changed during recovery'
+    assert request('/records?kind=config_v1&limit=100') == expected['history'], 'Immutable configuration history changed'
+    assert request('/records?kind=topic_v1&limit=100')['objects'] == [expected['topic']], 'Topic identity/provenance changed'
+    if admin:
+        status, body, _ = browser.api('/api/v1/project/initialize',expected['setup'],'POST',profile['csrf_token'])
+        assert status == 200 and json.loads(body) == expected['initial'], 'Historical initialization receipt changed'
+
+
 def seed_protected_space(browser, profile, member_id):
     def request(path, data=None, method=None, expected=200):
         status, body, _ = browser.api('/api/v1/' + path, data, method, profile['csrf_token'])
@@ -540,7 +581,8 @@ def seed_protected_space(browser, profile, member_id):
     annotations = seed_content_annotations(scoped,profile,memory,records,record)
     consolidation = seed_atomic_consolidation(scoped,profile,space['id'],memory,records,record)
     return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':record,
-            'annotations':annotations,'consolidation':consolidation}
+            'annotations':annotations,'consolidation':consolidation,
+            'project':seed_project_state(scoped,profile,space['id'])}
 
 
 def seed_atomic_consolidation(browser,profile,space_id,memory,records,record):
@@ -688,6 +730,7 @@ def verify_content_annotations(browser, profile, expected, space_id, *, admin=Fa
 def verify_protected_space(browser, profile, expected, *, admin=False):
     identifier = expected['space']['id']
     scoped = ScopedBrowser(browser, identifier)
+    verify_project_state(scoped,profile,expected.get('project'),admin=admin)
     verify_content_annotations(browser,profile,expected['annotations'],identifier,admin=admin)
     verify_atomic_consolidation(browser,profile,expected['consolidation'],identifier,admin=admin)
     status, body, _ = scoped.api('/api/v1/me')

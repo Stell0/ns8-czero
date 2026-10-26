@@ -7,6 +7,11 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'project_get': 'Read the current manifest/revision of an explicitly selected protected research project. No Shared fallback. Read config history separately; a configured external schedule is not proof of execution.',
+    'project_records_list': 'Read one bounded page of typed project topics or immutable configuration history. Select the exact protected space and versioned kind; continue pagination before claiming a complete inventory.',
+    'project_initialize': 'Admin: initialize a draft research project in an existing protected space with recorded affirmative setup authorization and a replay key. Does not create spaces, import knowledge or install schedules. Read back saved state.',
+    'project_configure': 'Admin: replace the project manifest at its current expected revision with a replay key and actual user authorization reference. Retains immutable history; changes do not grant access, authorize new tracking anchors or install tasks.',
+    'project_topic_set': 'Save a classified project topic at its expected revision (zero creates) with a replay key. Record direct active user-anchor contribution and assessment. User anchors additionally require Admin authority and affirmative tracking authorization. Peripheral ancestry is terminal; archives do not silently reactivate.',
     'get_profile': 'Read the account represented by the current authenticated credentials. Its opaque id survives refresh, reconnect and display-name changes. Returns only public profile fields; it does not select or authorize another account.',
     'spaces_list': 'Find spaces this account can access and their effective roles. Resolve the intended space before content calls; omitted content selectors use legacy Shared. Discovery grants no additional access.',
     'spaces_get': 'Read one authorized space and the account’s effective role there. Use its space_id explicitly in later content calls; do not substitute Shared after a denial.',
@@ -89,6 +94,7 @@ DESCRIPTIONS = {
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
+    'project_initialize', 'project_configure', 'project_topic_set',
     'claims_annotate', 'claims_create', 'claims_retract', 'entities_archive',
     'entities_create', 'entities_update', 'entity_aliases_create',
     'entity_references_create', 'entity_references_remove',
@@ -99,6 +105,7 @@ REPLAY_SAFE = frozenset({
 })
 
 DESTRUCTIVE = frozenset({
+    'project_configure', 'project_topic_set',
     'claims_annotate', 'claims_retract', 'entities_archive', 'entities_update',
     'entity_references_remove', 'entity_relations_update', 'jobs_enqueue',
     'knowledge_annotations_update', 'knowledge_bundle_apply', 'oauth_clients_configure',

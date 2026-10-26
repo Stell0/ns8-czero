@@ -294,3 +294,17 @@ These anchors preserve links to the retained historical record.
 </details>
 
 M21 self-service source `fa64f3d` is deployed with verified three-image identities, supported backup/update/restart, original data/settings/schedules and nine unrelated-instance preservation, actual positive-control journal privacy and operator connection/read. PR32/main `d4a9734` completes successful main validation/publication with inspected native artifacts. Preserve its installed candidate images as the genuine persistent-connection upgrade predecessor, independently of main/closeout image tags. Finish outstanding M21 package/model observations honestly; the operator's new background-connection priority does not fabricate that acceptance.
+
+
+## Research-project development track
+
+See [compatibility audit](docs/projects/WIKIPLANT_COMPATIBILITY.md) and
+[project contracts](docs/projects/PROJECTS.md). Reuse protected spaces and typed
+storage. Project selection is mandatory and never falls back to Shared. Trusted
+Core project transitions own managed `c0_project_*_v1` types; generic object/bundle
+writes must not bypass policy. Preserve immutable configuration/evidence history,
+current grants/scopes and existing content/authority lock order. External agents
+supply semantic assessments; validators do not prove their truth. Keep default
+released-Core availability and producer tests distinct until immutable publication,
+pin adoption and consumer acceptance pass. Use only fabricated disposable fixtures;
+this track authorizes no live migration, deployment, real spaces or schedules.

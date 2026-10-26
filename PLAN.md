@@ -739,3 +739,48 @@ Application0.50.0 pins released Core0.31.1 and implements the planned human appr
 ## WikiPlant backend track — M0 inspection
 
 The operator requests reusable research projects through M0–M8, without live migration, deployment or schedule activation. See [compatibility audit](docs/projects/WIKIPLANT_COMPATIBILITY.md) for exact original revisions, capability matrix, ownership, sequential implementation and tests. Current status: M0 comparison recorded; baseline validation pending. Existing ingestion and protected spaces are reused. Historical acceptance and deployed images remain frozen.
+
+
+### WikiPlant M1 — project foundation (implementation checkpoint)
+
+Strict manifest/topic v1 contracts and a protected transactional project service
+reuse existing typed objects, unique keys and knowledge receipts. Configuration
+history is immutable; new managed types reject raw object/bundle writes. User
+anchors require current Admin authority and recorded affirmative authorization;
+adjacent topics need direct active user anchors; peripheral topics are terminal
+with fixed weekly expiry. Parent cycles and silent archive reactivation reject.
+Reference REST/MCP bindings and a read-only `/projects` overview preserve explicit
+space selection, local DOM rendering, late-response and access-loss guards.
+See [project contracts](docs/projects/PROJECTS.md). New default-released-Core
+availability remains gated on immutable library publication and pin adoption.
+
+Executed focused evidence: 15 schema/DST cases; 60 project/object/bundle cases;
+one actual signed-HTTP contract test; 19 project/space controller cases. First
+expiry fixture expected the following week despite a still-future same-day UTC
+checkpoint; corrected the fixture, preserving the strictly-future algorithm.
+The original-main local baseline passes 2045 actual Python/PostgreSQL/packaging,
+185 Node, Go/schema, shell and 21 Robot dry runs. Baseline40286224042 is completed/
+successful with exact-source full promotion proof; independent artifact inspection
+is in progress. M0 bed8142 full40289915767 has successful local/images/scans and
+pending both-native checks. Full M1 local candidate checks are running; no M1
+CI/native, Core release, live instance or external-agent acceptance is claimed.
+
+
+M1 validation follow-up: the initial broad candidate run recorded 28 failures /
+2037 passes, all from frozen catalog-count assertions after adding five tools.
+The original 77 input/output/authority/REST contracts remain checked exactly;
+project operations have a separate explicit additive inventory. Updated counts
+and matching replay/destructive/closed-world hints pass the focused actual SDK
+and guidance checks. The current/legacy project SDK calls pass against signed
+HTTP/PostgreSQL. The exact native project seed/readback/Reader recovery helper
+passes through the actual local HTTP app with explicit test-module path setup.
+All190 Node cases and21 Robot dry runs pass. Corrected full candidate Python
+validation remains running; native project browser/backup checks are implemented
+but have not yet executed. Mark synthetic generated native passwords with a test
+prefix so public privacy review distinguishes the existing random fixture from
+a literal credential. No real credentials or instance state are committed.
+
+Independent downloaded baseline40286224042 inspection passes Debian21 upgrade,
+Rocky26 installation/three expected skips/all8 browsers, 30 accessibility contexts,
+eight privacy guards, three actual query artifacts with zero candidates and five
+SARIF/CycloneDX pairs. Exact full promotion verification also passes.

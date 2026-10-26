@@ -30,6 +30,7 @@ from czero_core.identity import Role
 from czero_app.oauth import install_oauth_routes
 from czero_app.spaces import install_space_routes, ExactSpaceSelector
 from czero_app.profile import install_profile_routes
+from czero_app.projects import install_project_routes
 
 _MODULE_ID = re.compile(r"czero[0-9]+\Z")
 
@@ -110,6 +111,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     instance_app.state.operations = catalog.registry
     instance_app.state.operation_catalog = catalog
     install_profile_routes(instance_app, auth, read_context)
+    install_project_routes(instance_app, database, auth, read_context, write_context)
     install_space_routes(instance_app, database, auth, read_context, write_context)
     originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
     retrieval_settings=load_settings()
@@ -128,6 +130,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
         return FileResponse(home_page, media_type="text/html")
+
+    @instance_app.get('/projects', include_in_schema=False)
+    def project_reader():
+        return FileResponse(static_dir / 'projects.html', media_type='text/html')
+
+    @instance_app.get('/projects.js', include_in_schema=False)
+    def project_script():
+        return FileResponse(static_dir / 'projects.js', media_type='text/javascript')
 
     @instance_app.get('/app.css', include_in_schema=False)
     async def shared_style() -> FileResponse:
