@@ -784,3 +784,15 @@ Independent downloaded baseline40286224042 inspection passes Debian21 upgrade,
 Rocky26 installation/three expected skips/all8 browsers, 30 accessibility contexts,
 eight privacy guards, three actual query artifacts with zero candidates and five
 SARIF/CycloneDX pairs. Exact full promotion verification also passes.
+
+
+M1 native correction: full40294384190 rejects Rocky for two stale acceptance
+assertions: home navigation now contains eleven links, and the numeric
+accessibility context allowlist omitted the new `projects` page. Actual project
+setup/replay, revision2, literal hostile topic/title rendering and zero executable
+HTML pass before that allowlist rejection. Debian native passes. Preserve the
+failed source82ddb34 and private artifacts. A separate source correction updates
+the exact navigation count and extends the existing numeric/privacy helper test
+to projects; no runtime code, authority, limit or deployed image changes.
+Fresh complete exact-source CI/native/privacy remains required before M1 acceptance.
+M2 development stays preserved separately and pauses for this correction.

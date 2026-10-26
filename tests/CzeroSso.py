@@ -23,7 +23,7 @@ def assert_accessibility(browser, page, role):
     fields = {'controls_checked', 'links_checked', 'unnamed_controls', 'unnamed_links',
               'missing_language', 'missing_main', 'missing_h1', 'missing_navigation', 'missing_skip_target'}
     result = browser.evaluate_javascript(None, Path(__file__).with_name('accessibility_probe.js').read_text())
-    if (page not in {'home', 'account', 'records', 'sources', 'wiki', 'search', 'agents', 'admin'}
+    if (page not in {'home', 'account', 'records', 'sources', 'wiki', 'search', 'agents', 'admin', 'projects'}
             or role not in {'admin', 'reader', 'editor'} or not isinstance(result, dict)
             or set(result) != fields or any(type(v) is not int or not 0 <= v <= 10000 for v in result.values())):
         raise AssertionError('Accessibility smoke measurement invalid')
