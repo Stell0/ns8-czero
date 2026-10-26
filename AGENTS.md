@@ -325,3 +325,19 @@ Core must verify ready same-space source versions and complete parent snapshot
 membership before advancing progress/success cursors. Counting HTTP responses
 or partially saved originals is not publication proof. Keep this negative
 control when changing collector, publisher or status contracts.
+
+
+## Research workflow coordination conventions
+
+Use existing typed storage and transaction locks for run/queue/budget transitions.
+Every leased mutation rechecks actor, manifest version, expiry and fencing before
+receipt replay as well as writes. A stale owner cannot reuse an earlier SAVED
+receipt as execution permission. Reserve a slot before external invocation and
+retain uncertain outcomes separately; pending merges never reserve again.
+Source-sync CLI commits carry their run fence. Never confuse an external call
+observation with exactly-once execution or successful knowledge publication.
+Keep five ordinary/ten urgent-only extended slots shared by daily/weekly/manual
+runs, causal +20 depth and maximum three children. Preserve terminal ancestry
+through topic reassessment. See docs/projects/WORKFLOWS.md and actual PostgreSQL
+concurrency/recovery tests. M4–M8 acceptance and default released-Core adoption
+remain pending until their recorded gates pass.

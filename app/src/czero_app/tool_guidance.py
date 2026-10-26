@@ -12,6 +12,14 @@ DESCRIPTIONS = {
     'project_connector_set': 'Admin: approve an explicit bounded connector definition/hash with user authorization and a replay key. Cross-space subscriptions require current source authorization. This stores configuration; it performs no remote fetch, ingestion or schedule installation.',
     'project_source_status_get': 'Read the exact connector/external-part synchronization receipt in the selected protected project. Inspect immutable source/version/extraction identities; pending work is not verified evidence.',
     'project_source_status_set': 'Store a revision-safe source synchronization receipt with a replay key. Core checks the approved enabled connector and real same-space source/version/hash/state. queued/failed extraction cannot be marked verified. Reconcile lost publication replies before retrying ingestion.',
+    'project_record_get': 'Read the exact stored record by kind and stable logical identity in this explicitly selected project.',
+    'project_run_claim': 'Claim or renew a logical project run with a unique worker owner, acknowledged config_version and replay key. Daily/weekly cycles retain their local date; other workflows need a stable cycle_key. Keep the returned actor-bound lease/fence; no external agent executes here.',
+    'project_run_checkpoint': 'Complete only the current ordered phase under its live lease with actual stored same-space references. Save PARTIAL/BLOCKED for incomplete checks; they release the lease for recovery. Queued extraction is not ready evidence. Read back the run and checkpoint.',
+    'project_queue_admit': 'Submit a bounded question/context, current scope assessment, direct user anchors, causal parents and novelty/authorization provenance. All origins share six admission dispositions. Inspect actual stored queue/admission IDs; merged work preserves lineage, depth and attempts. No investigation starts here.',
+    'project_queue_retune': 'Change priority at the queue item’s expected revision with reasons and a replay key. Priority zero requires an urgency reason. This never resets inherited expansion priority, causal lineage, consumed attempts or saved results.',
+    'project_attempt_reserve': 'Reserve before an external investigation under the current run lease. C0 selects eligible work and atomically consumes its project/day slot. Slots beyond the ordinary limit require priority zero. Resume the stored attempt after interruption; never reissue an uncertain external call blindly.',
+    'project_invocation_set': 'Record started before external research, then returned/uncertain/failed under the same current fence. Returned requires an actual stored same-space result UUID and yields ACCEPTED_PENDING_MERGE. Reconcile uncertain outcomes with the external host; database receipts do not prove exactly-once external execution.',
+    'project_research_complete': 'Finish a result awaiting merge under its current lease only after storing and reading back same-space commit references. Preserve actual IDs and the completion receipt. This does not spend another research slot or prove external publication, notification or human reading.',
     'project_get': 'Read the current manifest/revision of an explicitly selected protected research project. No Shared fallback. Read config history separately; a configured external schedule is not proof of execution.',
     'project_records_list': 'Read one bounded page of typed project topics or immutable configuration history. Select the exact protected space and versioned kind; continue pagination before claiming a complete inventory.',
     'project_initialize': 'Admin: initialize a draft research project in an existing protected space with recorded affirmative setup authorization and a replay key. Does not create spaces, import knowledge or install schedules. Read back saved state.',
@@ -99,7 +107,7 @@ DESCRIPTIONS = {
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
-    'project_initialize', 'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set',
+    'project_initialize', 'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set', 'project_run_claim', 'project_run_checkpoint', 'project_queue_admit', 'project_queue_retune', 'project_attempt_reserve', 'project_invocation_set', 'project_research_complete',
     'claims_annotate', 'claims_create', 'claims_retract', 'entities_archive',
     'entities_create', 'entities_update', 'entity_aliases_create',
     'entity_references_create', 'entity_references_remove',
@@ -110,7 +118,7 @@ REPLAY_SAFE = frozenset({
 })
 
 DESTRUCTIVE = frozenset({
-    'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set',
+    'project_configure', 'project_topic_set', 'project_connector_set', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set', 'project_run_claim', 'project_run_checkpoint', 'project_queue_admit', 'project_queue_retune', 'project_attempt_reserve', 'project_invocation_set', 'project_research_complete',
     'claims_annotate', 'claims_retract', 'entities_archive', 'entities_update',
     'entity_references_remove', 'entity_relations_update', 'jobs_enqueue',
     'knowledge_annotations_update', 'knowledge_bundle_apply', 'oauth_clients_configure',

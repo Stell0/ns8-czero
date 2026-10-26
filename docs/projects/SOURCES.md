@@ -137,3 +137,7 @@ Local tests exercise synthetic adapters and actual signed HTTP/OAuth/SDK/Core/
 PostgreSQL text/PDF publication, uncertain-response reconciliation, old-version
 retention, pending extraction and cursor conflicts. No private instance or live
 WikiPlant data has been synchronized by this implementation task.
+
+Publication now uses [fenced source-sync runs](WORKFLOWS.md#source-synchronization)
+while retaining the private job lock and normal source/version APIs. Scan, dry-run,
+status and verification remain read-only with respect to C0 workflow state.

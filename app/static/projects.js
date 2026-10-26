@@ -21,7 +21,7 @@
     if (!space.identifier) { $('project-status').textContent = 'Choose a protected space configured as a research project.'; return; }
     $('project-status').textContent = 'Reading project…';
     try {
-      const [stored, topics, sources] = await Promise.all([read('project'), read('project/records?kind=topic_v1&limit=100'), read('project/records?kind=connector_sync_v1&limit=100')]);
+      const [stored, topics, sources, work, runs] = await Promise.all([read('project'), read('project/records?kind=topic_v1&limit=100'), read('project/records?kind=connector_sync_v1&limit=100'), read('project/records?kind=queue_v1&limit=100'), read('project/records?kind=run_v1&limit=100')]);
       if (current !== sequence || !space.current(generation)) return;
       const config = stored.data.manifest;
       if (config.space_id !== space.identifier || config.project_id !== space.identifier) throw new Error('binding');
@@ -42,6 +42,18 @@
         $('project-sources').append(item);
       }
       $('project-sources-status').textContent = sources.objects.length === 100 ? 'Incomplete connector status. Continue through the project API.' : sources.objects.length ? 'Collector observations cover only the configured bounded source selection.' : 'No source synchronization receipt yet.';
+      for (const entry of work.objects) {
+        const queued = entry.data, item = document.createElement('li');
+        item.textContent = queued.question + ' · ' + queued.status + ' · priority ' + queued.priority + ' · expansion ' + queued.expansion_priority + ' · attempts ' + queued.attempt_count + (queued.defer_reason ? ' · ' + queued.defer_reason : '');
+        $('project-work').append(item);
+      }
+      for (const entry of runs.objects) {
+        const run = entry.data, item = document.createElement('li');
+        item.textContent = run.workflow_type + ' · ' + run.local_cycle_date + ' · ' + run.state + ' · phase ' + run.current_phase + (run.finished_at ? ' · finished ' + run.finished_at : '') + (run.error_code ? ' · ' + run.error_code : '');
+        $('project-work').append(item);
+      }
+      $('project-work-status').textContent = work.objects.length === 100 || runs.objects.length === 100 ? 'Incomplete work inventory. Continue through the project API.' : work.objects.length || runs.objects.length ? 'Stored workflow observations. A reservation or active lease does not prove successful external execution.' : 'No queued research or workflow observation yet.';
+      $('project-report-status').textContent = 'Read saved project reports in Knowledge. Report persistence and external notification are separate observations.';
       $('project-content').hidden = false;
       $('project-status').textContent = 'Saved project configuration. Workflow completion and external scheduling require separate receipts.';
     } catch {

@@ -8,7 +8,7 @@ function setup(selected=id(101)) {
   vm.runInContext(fs.readFileSync('app/static/projects.js','utf8'),h.context);return h;
 }
 function config(space=id(101)) {return {data:{version:1,manifest:{project_id:space,space_id:space,name:'<img src=x> project',description:'Private description',purpose:'Research',scope:'Synthetic only',language:'en',timezone:'Europe/Rome',schedule:{enabled:false},primary_topic_ids:['anchor']}}};}
-async function complete(h) {h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[{data:{label:'<script>topic',classification:'user',lifecycle:'active',topic_id:'anchor'}}]}));h.requests[2].resolve(reply({objects:[]}));await tick();}
+async function complete(h) {h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[{data:{label:'<script>topic',classification:'user',lifecycle:'active',topic_id:'anchor'}}]}));h.requests[2].resolve(reply({objects:[]}));for(const r of h.requests.slice(3,5)) r.resolve(reply({objects:[]}));await tick();}
 
 test('project reader renders literal stored data and uses no mutation requests',async()=>{
   const h=setup();await complete(h);assert.equal(h.node('project-content').hidden,false);
@@ -19,23 +19,34 @@ test('project reader renders literal stored data and uses no mutation requests',
 });
 test('no explicit project never fetches Shared',()=>{const h=setup(null);assert.equal(h.requests.length,0);assert(h.node('project-content').hidden);});
 test('revocation clears private content and rejects delayed replies',async()=>{
-  const h=setup();await complete(h);h.node('project-refresh').listeners.click();const requests=h.requests.slice(3);h.clear();
-  requests[0].resolve(reply(config()));requests[1].resolve(reply({objects:[]}));requests[2].resolve(reply({objects:[]}));await tick();
+  const h=setup();await complete(h);h.node('project-refresh').listeners.click();const requests=h.requests.slice(5);h.clear();
+  requests[0].resolve(reply(config()));requests[1].resolve(reply({objects:[]}));requests[2].resolve(reply({objects:[]}));for(const r of requests.slice(3)) r.resolve(reply({objects:[]}));await tick();
   assert(h.node('project-content').hidden);assert.equal(h.node('project-description').textContent,'');assert.equal(h.node('project-topics').children.length,0);
 });
 test('wrong project identity cannot populate the view',async()=>{
-  const h=setup();h.requests[0].resolve(reply(config(id(102))));h.requests[1].resolve(reply({objects:[]}));h.requests[2].resolve(reply({objects:[]}));await tick();
+  const h=setup();h.requests[0].resolve(reply(config(id(102))));h.requests[1].resolve(reply({objects:[]}));h.requests[2].resolve(reply({objects:[]}));for(const r of h.requests.slice(3,5)) r.resolve(reply({objects:[]}));await tick();
   assert(h.node('project-content').hidden);assert.equal(h.node('project-description').textContent,'');
 });
 test('new refresh rejects an older error',async()=>{
-  const h=setup();h.node('project-refresh').listeners.click();h.requests[3].resolve(reply(config()));h.requests[4].resolve(reply({objects:[]}));h.requests[5].resolve(reply({objects:[]}));await tick();
-  h.requests[0].reject(Error('late'));h.requests[1].resolve(reply({objects:[]}));h.requests[2].resolve(reply({objects:[]}));await tick();assert(!h.node('project-content').hidden);
+  const h=setup();h.node('project-refresh').listeners.click();h.requests[5].resolve(reply(config()));for(const r of h.requests.slice(6,10)) r.resolve(reply({objects:[]}));await tick();
+  h.requests[0].reject(Error('late'));h.requests[1].resolve(reply({objects:[]}));h.requests[2].resolve(reply({objects:[]}));for(const r of h.requests.slice(3,5)) r.resolve(reply({objects:[]}));await tick();assert(!h.node('project-content').hidden);
 });
 
 test('project source errors render as text and clear on access loss',async()=>{
   const h=setup();h.requests[0].resolve(reply(config()));h.requests[1].resolve(reply({objects:[]}));
-  h.requests[2].resolve(reply({objects:[{data:{connector_id:'<img> connector',status:'partial',verified_items:0,discovered_items:1,last_success_at:'',last_error:'<script> private error',retry_after:''}}]}));await tick();
+  h.requests[2].resolve(reply({objects:[{data:{connector_id:'<img> connector',status:'partial',verified_items:0,discovered_items:1,last_success_at:'',last_error:'<script> private error',retry_after:''}}]}));for(const r of h.requests.slice(3,5)) r.resolve(reply({objects:[]}));await tick();
   assert.match(h.node('project-sources').textContent,/<script> private error/);
   assert.match(h.node('project-sources').textContent,/0\/1 items verified/);
   h.clear();assert.equal(h.node('project-sources').children.length,0);assert.equal(h.node('project-sources-status').textContent,'');
+});
+
+
+test('queue and incomplete workflow observations stay literal and private',async()=>{
+  const h=setup();h.requests[0].resolve(reply(config()));
+  for(const r of h.requests.slice(1,3)) r.resolve(reply({objects:[]}));
+  h.requests[3].resolve(reply({objects:[{data:{question:'<script> pending research',status:'deferred',priority:20,expansion_priority:40,attempt_count:1,defer_reason:'daily_budget'}}]}));
+  h.requests[4].resolve(reply({objects:[{data:{workflow_type:'daily',local_cycle_date:'2026-10-25',state:'partial',current_phase:'monitoring',finished_at:'',error_code:'phase_incomplete'}}]}));await tick();
+  assert.match(h.node('project-work').textContent,/<script> pending research/);
+  assert.match(h.node('project-work').textContent,/partial/);assert.match(h.node('project-work-status').textContent,/does not prove/);
+  h.clear();assert.equal(h.node('project-work').children.length,0);assert.equal(h.node('project-work-status').textContent,'');
 });

@@ -263,3 +263,38 @@ def test_connector_cannot_advance_cursor_with_unbacked_verified_counts(sample_co
         with pytest.raises(C0Error):connector_status(client,definition,Batch(cursor={'page':99}),1,1,[str(uuid4())])
         assert client.call('project_records_list',kind='connector_sync_v1')['objects']==[]
     finally:client.close()
+
+
+def test_source_sync_workflow_fences_status_commits_and_reuses_completed_scan(sample_connection,knowledge_http,tmp_path):
+    from c0_projects.workflow import SourceWorkflow
+    from c0_projects.publish import save_snapshot
+    from c0_projects.cli import connector_status
+    from c0_projects.model import Batch
+    config,_=sample_connection;client,definition=setup(config)
+    try:
+        publisher=SourceWorkflow(client,'documents','synthetic-frozen-scan')
+        # Long extraction polling renews ownership even between read calls.
+        previous_expiry=publisher.run['lease_expiry'];publisher.renewed-=61
+        publisher.call('project_get')
+        assert publisher.run['lease_expiry']>previous_expiry
+        assert publisher.run['fencing_generation']==1
+        item=Item('documents','leased.md','Leased original',b'Synthetic fenced publication.')
+        result=sync_part(publisher,next(parts(item)),tmp_path/'leased.json',definition_hash=sha(definition),attempts=4,seconds=0)
+        snapshot=save_snapshot(publisher,item,[result])
+        coverage=connector_status(publisher,definition,Batch(),1,1,[result['receipt_id']])
+        finished=publisher.finish(coverage,True)
+        assert finished['status']=='SAVED' and publisher.completed
+        same=SourceWorkflow(client,'documents','synthetic-frozen-scan')
+        assert same.completed
+        assert len(client.call('project_records_list',kind='run_v1')['objects'])==1
+        assert len(client.call('source_versions_list',source_id=result['source_id'])['versions'])==1
+        # Actual persisted lease, not a mocked guard. An old owner cannot replay
+        # a status receipt or alter its successful cursor after completion.
+        saved=client.call('project_source_status_get',connector_id='documents',external_id=next(parts(item)).external_id)
+        data={k:v for k,v in saved['data'].items() if k!='key'}
+        with pytest.raises(C0Error):client.call('project_source_status_set',data={'lease':publisher.lease,'data':data,
+            'expected_revision':saved['revision'],'idempotency_key':'old-source-owner'})
+        with pytest.raises(C0Error):client.call('project_source_status_set',data={'data':data,
+            'expected_revision':saved['revision'],'idempotency_key':'stale-owner-omits-fence'})
+        assert client.call('project_record_get',kind='source_snapshot_v1',identity='documents:leased.md')['id']==snapshot['id']
+    finally:client.close()

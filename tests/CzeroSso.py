@@ -774,12 +774,14 @@ class CzeroSso:
             page=browser.get_text('#wiki-identity').split(' · ')[0]
             stage='project-configuration'
             probe=Path(__file__).with_name('project_browser_probe.js').read_text()
-            assert browser.evaluate_javascript(None,'('+probe+')') == {'initialized':True,'replay':True,'revision':2}
+            assert browser.evaluate_javascript(None,'('+probe+')') == {'initialized':True,'replay':True,'revision':2,'workflows':True}
             project_url='https://'+host+'/projects?space_id='+identifier
             run('Go To',project_url)
             run('Get Text','#project-title','==','<img src=x> Synthetic research')
             run('Get Text','#project-topics','contains','<script> synthetic topic')
             run('Get Text','#project-sources','contains','browser-source · partial · 0/1 items verified')
+            run('Get Text','#project-work','contains','<script> synthetic queued investigation')
+            run('Get Text','#project-work','contains','phase_incomplete')
             run('Get Element Count','#project-content img, #project-content script','==',0)
             assert_accessibility(browser,'projects','admin')
             stage='reader-role-cap'
@@ -796,6 +798,7 @@ class CzeroSso:
             run('Get Text','#project-title','==','<img src=x> Synthetic research')
             run('Get Text','#project-config','contains','Configuration 2')
             run('Get Text','#project-sources','contains','coverage_incomplete')
+            run('Get Text','#project-work','contains','<script> synthetic queued investigation')
             assert_accessibility(browser,'projects','reader')
             run('Go To',tools)
             # Same user, same UUID, explicit Shared choice: no private fallback.
@@ -828,6 +831,7 @@ class CzeroSso:
             article='https://'+host+'/wiki?space_id='+identifier+'&page='+page
             run('Go To',project_url)
             run('Get Text','#project-config','contains','Configuration 2')
+            run('Get Text','#project-work','contains','phase_incomplete')
             run('Go To',article);run('Get Text','#reader-content h2','==','Independent private update')
             run('Click','#reader-history-panel > summary')
             run('Click','#reader-history a:text-matches("Revision 1")')

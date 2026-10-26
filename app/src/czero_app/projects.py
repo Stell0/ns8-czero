@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException
 from pydantic import Field
+from typing import Literal
 
 from czero_core.identity import PermissionDenied, Role
 from czero_core.objects import ObjectConflict, ObjectNotFound
@@ -36,6 +37,7 @@ class ConnectorSet(StrictRequest):
 
 
 class SourceStatusSet(StrictRequest):
+    lease: dict | None = Field(default=None,description="Optional current source-sync lease; supplied leases are checked before commit and receipt replay.")
     data: dict = Field(description='Versioned synchronization receipt for one original part. Actual same-space source/version/hash/extraction state is verified by Core before saving.')
     expected_revision: int = Field(default=0, ge=0, le=2147483646)
     idempotency_key: str = Field(min_length=1, max_length=128)
@@ -46,12 +48,75 @@ class ConnectorStatusSet(SourceStatusSet):
 
 
 class SourceSnapshotSet(StrictRequest):
+    lease: dict | None = Field(default=None)
     connector_id: str = Field(min_length=1,max_length=64)
     external_id: str = Field(min_length=1,max_length=4096)
     content_hash: str = Field(min_length=64,max_length=64)
     part_receipt_ids: list[str] = Field(min_length=1,max_length=100)
     expected_revision: int = Field(default=0,ge=0,le=2147483646)
     idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+
+class ProjectReceipt(StrictRequest):
+    status: Literal['SAVED','QUEUED','ACCEPTED_PENDING_MERGE','BLOCKED','PARTIAL']
+    outcome: str
+    records: list[ObjectView]
+
+
+class WorkflowClaim(StrictRequest):
+    workflow_type: Literal['initialize','daily','weekly','manual_research','source_sync','maintenance','report_publication']
+    lease_owner: str = Field(min_length=1,max_length=128)
+    config_version: int = Field(ge=1)
+    cycle_key: str = Field(default='',max_length=128)
+    connector_id: str = Field(default='',max_length=64,description='For source_sync publication, bind the connector to this run so omitting the lease cannot bypass fencing.')
+    local_cycle_date: str = Field(default='',max_length=10)
+    scheduled_for: str = Field(default='',max_length=40)
+    lease_seconds: int = Field(default=300,ge=60,le=900)
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+class LeasedRequest(StrictRequest):
+    lease: dict = Field(description='Exact run_id, lease_owner and fencing_generation returned by project_run_claim. Expired or superseded owners cannot replay or commit.')
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+class WorkflowCheckpoint(LeasedRequest):
+    phase: str = Field(min_length=1,max_length=64)
+    status: Literal['SAVED','PARTIAL','BLOCKED']
+    references: list[str] = Field(default_factory=list,max_length=100)
+    summary: str = Field(default='',max_length=4096)
+
+
+class QueueAdmission(StrictRequest):
+    candidate: dict = Field(description='Strict bounded proposal with question/context, scope assessment, anchors, origins, novelty and causal parents. Read the project queue contract; source text never authorizes scope.')
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+class QueueRetune(StrictRequest):
+    stable_id: str = Field(min_length=1,max_length=128)
+    priority: int = Field(ge=0,le=100)
+    priority_reason: str = Field(min_length=1,max_length=512)
+    urgency_reason: str = Field(default='',max_length=512)
+    expected_revision: int = Field(ge=1)
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+class AttemptReserve(LeasedRequest):
+    resume_attempt_id: str = Field(default='',max_length=64)
+
+
+class InvocationSet(LeasedRequest):
+    attempt_id: str = Field(min_length=1,max_length=64)
+    state: Literal['started','returned','uncertain','failed']
+    external_reference: str = Field(default='',max_length=512)
+    result_reference: str = Field(default='',max_length=128)
+    error_code: str = Field(default='',max_length=128)
+
+
+class ResearchComplete(LeasedRequest):
+    attempt_id: str = Field(min_length=1,max_length=64)
+    commit_references: list[str] = Field(min_length=1,max_length=100)
 
 
 def install_project_routes(app, database, auth, read_context, write_context):
@@ -126,4 +191,43 @@ def install_project_routes(app, database, auth, read_context, write_context):
     @operation('project_source_snapshot_set', 'Save the current complete original source snapshot from verified ordered part receipts. Core checks identities, offsets and combined text hash; historical parts remain immutable.', Role.EDITOR,ObjectView,read_only=False,space_field='space_id')
     def source_snapshot(data: SourceSnapshotSet,space_id: UUID,context: RequestAccess=Depends(write_context)):
         return invoke(space_id,'save_source_snapshot',context.actor,**data.model_dump(mode='json'))
+    @app.get('/api/v1/project/record',response_model=ObjectView)
+    @operation('project_record_get','Read one exact versioned project record by logical identity. Explicit protected space and current read authority are required.',Role.READER,ObjectView,space_field='space_id')
+    def record(kind: str,identity: str,space_id: UUID,context: RequestAccess=Depends(read_context)):
+        return invoke(space_id,'get_record',context.actor,kind=kind,identity=identity)
+
+    @app.post('/api/v1/project/runs/claim',response_model=ProjectReceipt)
+    @operation('project_run_claim','Claim or renew a logical project workflow at an acknowledged manifest version. No agent is executed. Persisted actor-bound leases and fencing reject concurrent owners; completed cycles remain complete.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def run_claim(data: WorkflowClaim,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'claim_run',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/runs/checkpoint',response_model=ProjectReceipt)
+    @operation('project_run_checkpoint','Save an ordered phase checkpoint under a current fenced lease. References must exist in this space. PARTIAL/BLOCKED are durable incomplete observations, never successful execution proof.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def run_checkpoint(data: WorkflowCheckpoint,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'checkpoint_run',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/queue',response_model=ProjectReceipt)
+    @operation('project_queue_admit','Apply the same scope, deduplication, lineage and capacity policy to every work origin. Returns admit/merge/defer_capacity/archive_candidate/reject_scope/needs_user_scope_decision with actual stored IDs. Does not execute research.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def queue_admit(data: QueueAdmission,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'admit',context.actor,**data.model_dump())
+
+    @app.put('/api/v1/project/queue/priority',response_model=ProjectReceipt)
+    @operation('project_queue_retune','Change current priority at its expected revision with a recorded reason. Urgency changes never reset causal expansion depth, attempts or lineage.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def queue_retune(data: QueueRetune,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'retune_queue',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/attempts/reserve',response_model=ProjectReceipt)
+    @operation('project_attempt_reserve','Atomically select and reserve one eligible queued attempt before external research. Slots beyond the ordinary limit require priority zero. Resume the stored attempt after interruption; an uncertain invocation must be reconciled before another call.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def attempt_reserve(data: AttemptReserve,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'reserve',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/attempts/invocation',response_model=ProjectReceipt)
+    @operation('project_invocation_set','Persist external invocation start/outcome separately from its consumed reservation. A returned result requires actual stored same-space resource identity and remains ACCEPTED_PENDING_MERGE. C0 cannot prove exactly-once external execution.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def invocation_set(data: InvocationSet,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'invocation',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/attempts/complete',response_model=ProjectReceipt)
+    @operation('project_research_complete','Complete a result awaiting merge only after stored same-space commit references have been verified. Does not reserve another attempt, execute an agent or publish notifications.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def research_complete(data: ResearchComplete,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'complete_research',context.actor,**data.model_dump())
     return service

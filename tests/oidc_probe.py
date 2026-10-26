@@ -559,6 +559,41 @@ def seed_project_state(browser, profile, space_id, sources=None):
         if 'project_source_snapshot_set' in operations:kinds+=['source_snapshot_v1','source_snapshot_history_v1']
         for kind in kinds:
             retained[kind]=request('/records?kind='+kind+'&limit=100')
+    if 'project_run_claim' in operations:
+        claim=request('/runs/claim',{'workflow_type':'daily','lease_owner':'synthetic-native-worker','config_version':2,
+            'idempotency_key':'retained-workflow-claim'},'POST')
+        run=claim['records'][0]['data'];lease={key:run[key] for key in ('run_id','lease_owner','fencing_generation')}
+        candidate={'stable_id':'retained-investigation','topic_id':'anchor','question':'What changed in synthetic manufacturing constraints?',
+            'kind':'investigation','origin':'user','origin_reference':'synthetic-native:user','priority':20,
+            'priority_reason':'Approved scope','urgency_reason':'','parent_ids':[],'related_pages':[],
+            'not_before':'','due_at':'','question_conditions':'','entity_version':'','time_window':'',
+            'assessment_ref':'synthetic-native:assessment','direct_contribution':'Tests the approved anchor',
+            'anchor_ids':['anchor'],'novelty_key':'retained-event','novelty_refs':['synthetic-native:evidence'],
+            'root_reason':'user_request','authorization_ref':'synthetic-native:user','excluded':False,
+            'semantic_matches':[],'independent_parents':[]}
+        request('/queue',{'candidate':candidate,'idempotency_key':'retained-queue-admission'},'POST')
+        reservation=request('/attempts/reserve',{'lease':lease,'idempotency_key':'retained-attempt'},'POST')
+        attempt=next(row['data'] for row in reservation['records'] if row['type_name']=='c0_project_attempt_v1')
+        request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'started',
+            'external_reference':'synthetic-native:fake-call','idempotency_key':'retained-invocation-start'},'POST')
+        request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'uncertain',
+            'error_code':'synthetic_interruption','idempotency_key':'retained-invocation-uncertain'},'POST')
+        request('/runs/checkpoint',{'lease':lease,'phase':'monitoring','status':'PARTIAL',
+            'summary':'Synthetic interrupted external-agent fixture; no real research executed',
+            'idempotency_key':'retained-workflow-checkpoint'},'POST')
+        if connector:
+            source_claim=request('/runs/claim',{'workflow_type':'source_sync','lease_owner':'synthetic-native-source',
+                'config_version':2,'cycle_key':'retained-frozen-scan','connector_id':'retained-source',
+                'idempotency_key':'retained-source-run'},'POST')
+            source_run=source_claim['records'][0]['data']
+            source_lease={key:source_run[key] for key in ('run_id','lease_owner','fencing_generation')}
+            for phase in ('collect','publish','verify'):
+                request('/runs/checkpoint',{'lease':source_lease,'phase':phase,'status':'SAVED',
+                    'references':[receipt['id']],'summary':'Synthetic source readback verified',
+                    'idempotency_key':'retained-source-phase-'+phase},'POST')
+            retained['connector_lease_v1']=request('/records?kind=connector_lease_v1&limit=100')
+        for kind in ('run_v1','checkpoint_v1','queue_v1','admission_v1','budget_v1','budget_pointer_v1','attempt_v1','invocation_v1'):
+            retained[kind]=request('/records?kind='+kind+'&limit=100')
     return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history,'source_records':retained}
 
 
@@ -573,7 +608,7 @@ def verify_project_state(browser, profile, expected, *, admin=False):
     assert request('/records?kind=config_v1&limit=100') == expected['history'], 'Immutable configuration history changed'
     assert request('/records?kind=topic_v1&limit=100')['objects'] == [expected['topic']], 'Topic identity/provenance changed'
     for kind,records in expected.get('source_records',{}).items():
-        assert request('/records?kind='+kind+'&limit=100')==records,'Source synchronization state/history changed during recovery'
+        assert request('/records?kind='+kind+'&limit=100')==records,'Project source/workflow state/history changed during recovery'
     if admin:
         status, body, _ = browser.api('/api/v1/project/initialize',expected['setup'],'POST',profile['csrf_token'])
         assert status == 200 and json.loads(body) == expected['initial'], 'Historical initialization receipt changed'

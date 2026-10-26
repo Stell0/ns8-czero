@@ -274,8 +274,10 @@ These anchors preserve links to the retained historical record.
 The [WikiPlant compatibility track](docs/projects/WIKIPLANT_COMPATIBILITY.md)
 implements reusable research state within existing protected spaces. The initial
 [project contracts](docs/projects/PROJECTS.md) cover versioned configuration,
-topics, authorization and a read-only project overview. Operational queue,
-ingestion, monitoring, reporting and migration preparation have separate gates.
+topics, authorization and a read-only project overview. The
+[workflow contract](docs/projects/WORKFLOWS.md) adds atomic queue admission,
+day budgets, fenced leases and recoverable attempts. Monitoring, reporting
+and migration preparation have separate gates.
 This branch does not migrate real projects, deploy an instance or activate schedules.
 
 Project source collection is available in the existing independently installable

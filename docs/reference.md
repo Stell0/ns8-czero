@@ -73,7 +73,8 @@ only `c0_accounts.access_revision` and a distinct random onboarding request UUID
 
 Projects reuse protected spaces, immutable typed schemas, current grants and
 existing knowledge services. See [project contracts](projects/PROJECTS.md),
-[source adapters/CLI](projects/SOURCES.md) and the explicit
+[source adapters/CLI](projects/SOURCES.md), [workflow/queue contracts](projects/WORKFLOWS.md)
+and the explicit
 [readiness checkpoint](projects/WIKIPLANT_MIGRATION_READINESS.md). The development
 branch does not activate real research schedules or migrate WikiPlant data.
 Producer Core publication/default consumer adoption and final acceptance remain

@@ -21,13 +21,13 @@ class ObjectNotFound(Exception):
 
 
 def _project_type(type_name, spec=None):
-    from .project_schema import PREFIX, SCHEMAS
+    from .project_schema import PREFIX, SCHEMAS, project_unique_fields
     kind = type_name.removeprefix(PREFIX)
     if type_name != PREFIX + kind or kind not in SCHEMAS:
         return False
     # A pre-existing unrelated type may collide with a new reserved name.
     # Project bootstrap rejects that collision; ordinary old records still work.
-    return spec is None or (spec['schema'] == SCHEMAS[kind] and spec['unique_fields'] == ['key'])
+    return spec is None or (spec['schema'] == SCHEMAS[kind] and spec['unique_fields'] == project_unique_fields(kind))
 
 
 def page(limit,offset=0):

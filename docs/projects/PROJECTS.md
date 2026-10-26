@@ -95,3 +95,6 @@ Core0.33.0: it explicitly returns `project_core_upgrade_required` for new projec
 work, preserving existing operations. Final Core publication/pin adoption and
 consumer verification are required before project availability can be claimed for
 the released build. No runtime/library release or live deployment is claimed here.
+
+See [durable workflow contracts](WORKFLOWS.md) for queue admission, leases,
+fencing, day reservations, invocation uncertainty and source-sync recovery.

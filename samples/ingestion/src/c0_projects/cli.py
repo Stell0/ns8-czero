@@ -18,6 +18,7 @@ from c0_ingest.state import atomic, read, safe_path
 from github_vault.github_client import GitHub, GitHubError
 from .adapters import collect, safe_read
 from .model import load_config, Item, Batch, now, sha
+from .workflow import SourceWorkflow
 from .publish import approved, listing, parts, sync_part, verify, prior_receipt, locate, save_snapshot
 
 
@@ -144,12 +145,17 @@ def run(args, *, client_factory=C0):
                         cycle=cursor.get('cache_id') if cursor.get('complete') is False else uuid4().hex
                         import re
                         if not isinstance(cycle,str) or not re.fullmatch('[0-9a-f]{32}',cycle):raise C0Error('invalid_github_cache_binding')
-                        cache=state/'github'/cycle;cache.mkdir(parents=True,exist_ok=True,mode=0o700)
+                        cache=state/'github'/cycle
+                        if cursor.get('complete') is False and not cache.exists():
+                            # Lost frozen pages cannot justify resuming a mutable
+                            # remote page offset. Re-enumerate and deduplicate.
+                            cursor={};kwargs['cursor']=cursor;cycle=uuid4().hex;cache=state/'github'/cycle
+                        cache.mkdir(parents=True,exist_ok=True,mode=0o700)
                         kwargs['github']=GitHub(cache,{'max_requests':definition['max_requests'],'max_retries':2,'max_wait_seconds':30},resume=True,anonymous=True,preserve_bodies=True,max_response_bytes=definition['max_bytes'],request_timeout=definition['timeout'])
-                    if definition['adapter']=='c0_space':
-                        source=client_factory(connection);stack.callback(source.close)
-                        source.select_space(definition['source_space_id'],writable=False);kwargs['source_client']=source
                     try:
+                        if definition['adapter']=='c0_space':
+                            source=client_factory(connection);stack.callback(source.close)
+                            source.select_space(definition['source_space_id'],writable=False);kwargs['source_client']=source
                         batch=collect(definition,root=job,**kwargs)
                         if definition['adapter']=='github':batch.cursor['cache_id']=cycle
                     except (C0Error,GitHubError):batch=Batch(cursor=cursor,status='partial',errors=['source_collection_failed'])
@@ -170,13 +176,17 @@ def run(args, *, client_factory=C0):
                 definition=next((d for d in config['sources'] if d['id']==source['connector_id']),None)
                 if not definition or sha(definition)!=source['definition_hash']:raise C0Error('scan_configuration_changed')
                 approved(client,definition);verified=0;count=0;verified_refs=[]
+                publisher=client
+                if not args.dry_run and args.operation!='verify' and source.get('attempted',True):
+                    publisher=SourceWorkflow(client,definition['id'],sha(manifest))
+                verify_mode=args.operation=='verify' or (isinstance(publisher,SourceWorkflow) and publisher.completed)
                 for entry in source['items']:
                     item=item_from(directory,entry,source['connector_id'])
                     item_results=[]
                     for part in parts(item):
                         count+=1
                         if count>1000:raise C0Error('publication_batch_limit')
-                        if args.operation=='verify':
+                        if verify_mode:
                             previous=prior_receipt(client,part);stored,version=locate(client,part,previous)
                             if not previous or not version:raise C0Error('source_receipt_missing')
                             if previous['data']['sync_status']!='verified':raise C0Error('publication_pending_resume_required')
@@ -184,20 +194,22 @@ def run(args, *, client_factory=C0):
                             results.append({'status':'verified','source_id':version['source_id'],'version_id':version['id'],'receipt_id':previous['id']})
                         else:
                             try:
-                                result=sync_part(client,part,state/'publication.json',definition_hash=sha(definition),dry_run=args.dry_run,
+                                result=sync_part(publisher,part,state/'publication.json',definition_hash=sha(definition),dry_run=args.dry_run,
                                     attempts=connection['poll_attempts'],seconds=connection['poll_seconds'])
                             except C0Error:
                                 result={'status':'BLOCKED','external_id':part.external_id,'error':'publication_pending_resume'}
                             results.append(result);item_results.append(result)
-                    if not args.dry_run and args.operation!='verify' and item_results and all(r['status']=='verified' for r in item_results):
+                    if not args.dry_run and not verify_mode and item_results and all(r['status']=='verified' for r in item_results):
                         try:
-                            save_snapshot(client,item,item_results)
+                            save_snapshot(publisher,item,item_results)
                             verified+=len(item_results);verified_refs.extend(r['receipt_id'] for r in item_results)
                         except C0Error:
                             results.append({'status':'BLOCKED','external_id':item.external_id,'error':'source_snapshot_pending_resume'})
                 batch=Batch(cursor=source['cursor'],status=source['status'],errors=source['errors'],retry_after=source['retry_after'])
                 partial|=batch.status!='complete' or (not args.dry_run and verified!=count)
-                if not args.dry_run and args.operation!='verify' and source.get('attempted',True):connector_status(client,definition,batch,verified,count,verified_refs)
+                if isinstance(publisher,SourceWorkflow) and not verify_mode:
+                    coverage=connector_status(publisher,definition,batch,verified,count,verified_refs)
+                    publisher.finish(coverage,batch.status=='complete' and verified==count)
             return {'status':'dry_run' if args.dry_run else 'PARTIAL' if partial else 'SAVED','items':len(results),'verified':sum(r['status']=='verified' for r in results),'resource_refs':results},2 if partial else 0
 
 

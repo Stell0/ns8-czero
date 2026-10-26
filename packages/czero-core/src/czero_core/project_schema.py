@@ -90,6 +90,67 @@ SCHEMAS['source_sync_history_v1'] = SCHEMAS['source_sync_v1']
 SCHEMAS['source_snapshot_v1'] = record(key=string(128),connector_id=string(64),external_id=string(4096),
     content_hash=string(64),part_receipt_ids=array(string(36),maximum=100),total_bytes=integer(1,16777216),verified_at=string(40))
 SCHEMAS['source_snapshot_history_v1'] = SCHEMAS['source_snapshot_v1']
+# Operational rows are separate bounded records, not a project-sized JSON blob.
+WORKFLOWS = ['initialize','daily','weekly','manual_research','source_sync','maintenance','report_publication']
+LEASE = record(run_id=string(64),lease_owner=string(128),fencing_generation=integer(1,2147483647))
+QUEUE_INPUT = record(stable_id=string(128),topic_id=string(128),question=string(2048),
+    kind=string(values=['investigation','validation','contradiction']),
+    origin=string(values=['user','initialization','monitoring','discovery','research','calendar','maintenance']),
+    origin_reference=string(512),priority=integer(0,100),priority_reason=string(512),urgency_reason=string(512,minimum=0),
+    parent_ids=array(maximum=8),related_pages=array(string(36),maximum=20),not_before=string(40,minimum=0),
+    due_at=string(40,minimum=0),question_conditions=string(1024,minimum=0),entity_version=string(128,minimum=0),
+    time_window=string(128,minimum=0),assessment_ref=string(512),direct_contribution=string(2048),
+    anchor_ids=array(maximum=8),novelty_key=string(128),novelty_refs=array(string(512),maximum=20),
+    root_reason=string(values=['user_request','approved_initialization','independent_external_event','derived']),
+    authorization_ref=string(512,minimum=0),excluded={'type':'boolean'},
+    semantic_matches=array(record(target_id=string(),equivalent={'type':'boolean'},new_evidence={'type':'boolean'},
+        assessment_ref=string(512),reason=string(1024)),maximum=20),
+    independent_parents=array(record(parent_id=string(),reason=string(1024),evidence_refs=array(string(512),maximum=10)),maximum=8))
+SCHEMAS.update({
+    'run_v1': record(key=string(128),run_id=string(64),project_id=string(36),config_version=integer(1,2147483647),workflow_type=string(values=WORKFLOWS),
+        local_cycle_date=string(10),cycle_key=string(128),scheduled_for=string(40),started_at=string(40),finished_at=string(40,minimum=0),
+        state=string(values=['running','complete','partial','blocked']),current_phase=string(64),attempt_count=integer(1,10),
+        lease_owner=string(128),lease_actor_id=string(36),lease_expiry=string(40,minimum=0),fencing_generation=integer(1,2147483647),
+        error_code=string(128,minimum=0),result_refs=array(string(128),maximum=100)),
+    'checkpoint_v1': record(key=string(128),run_id=string(64),config_version=integer(1,2147483647),phase=string(64),
+        status=string(values=['SAVED','PARTIAL','BLOCKED']),payload_hash=string(64),
+        references=array(string(128),maximum=100),summary=string(4096,minimum=0),recorded_at=string(40)),
+    'queue_v1': record(key=string(128),project_id=string(36),stable_id=string(),topic_id=string(),question=string(2048),
+        kind=QUEUE_INPUT['properties']['kind'],origin=QUEUE_INPUT['properties']['origin'],origin_reference=string(512),
+        priority=integer(0,100),expansion_priority=integer(0,100),priority_reason=string(512),urgency_reason=string(512,minimum=0),
+        parent_ids=array(maximum=8),lineage_root_id=string(),root_ids=array(maximum=8),anchor_ids=array(maximum=8),
+        dedup_key=string(64),question_key=string(64),context_key=string(64),root_admitted={'type':'boolean'},novelty_key=string(128),related_pages=array(string(36),maximum=20),
+        created_at=string(40),not_before=string(40,minimum=0),due_at=string(40,minimum=0),
+        status=string(values=['pending','deferred','in_progress','retry_wait','awaiting_merge','complete','blocked','archived']),
+        terminal={'type':'boolean'},defer_reason=string(128,minimum=0),attempt_count=integer(0,10),retry_after=string(40,minimum=0),
+        result_reference=string(128,minimum=0),last_attempt_id=string(64,minimum=0),admission_ref=string(128)),
+    'admission_v1': record(key=string(128),candidate_id=string(),
+        disposition=string(values=['admit','merge','defer_capacity','archive_candidate','reject_scope','needs_user_scope_decision']),
+        reason=string(256),target_id=string(128,minimum=0),candidate=QUEUE_INPUT,
+        config_version=integer(1,2147483647),decided_at=string(40)),
+    'budget_v1': record(key=string(128),project_id=string(36),local_date=string(10),timezone=string(100),
+        window_end=string(40),ordinary_limit=integer(1,50),total_limit=integer(1,100),used=integer(0,100),
+        roots_admitted=integer(0,10000),roots_limit=integer(1,50),config_version=integer(1,2147483647)),
+    'budget_pointer_v1': record(key=string(128),local_date=string(10),window_end=string(40)),
+    'attempt_v1': record(key=string(128),attempt_id=string(64),queue_id=string(),run_id=string(64),
+        project_id=string(36),local_date=string(10),slot=integer(1,100),attempt_number=integer(1,10),
+        priority=integer(0,100),anchor_ids=array(maximum=8),selection_reason=string(512),reserved_at=string(40),
+        state=string(values=['reserved','invoking','uncertain','failed','result_saved','complete']),
+        result_reference=string(128,minimum=0),invocation_ref=string(128,minimum=0),fencing_generation=integer(1,2147483647)),
+    'invocation_v1': record(key=string(128),attempt_id=string(64),
+        state=string(values=['started','returned','uncertain','failed']),result_reference=string(128,minimum=0),external_reference=string(512,minimum=0),
+        error_code=string(128,minimum=0),recorded_at=string(40),run_id=string(64),fencing_generation=integer(1,2147483647)),
+})
+SCHEMAS['connector_lease_v1']=record(key=string(128),connector_id=string(64),run_id=string(64))
+SCHEMAS['completion_v1']=record(key=string(128),attempt_id=string(64),result_reference=string(128),
+    commit_references=array(string(128),maximum=100),recorded_at=string(40))
+PROJECT_UNIQUE_FIELDS = {'queue_v1': ['key','dedup_key']}
+
+
+def project_unique_fields(kind):
+    return list(PROJECT_UNIQUE_FIELDS.get(kind,['key']))
+
+
 SCHEMAS = {key: schema_validator(value).schema for key, value in SCHEMAS.items()}
 DEFAULTS = {
     'schema_version': 1, 'description': '', 'language': 'en', 'timezone': 'UTC', 'exclusions': [],

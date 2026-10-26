@@ -66,7 +66,7 @@ Every milestone records actual focused tests, commit, push and completed CI befo
 
 Read C0 AGENTS/README/PLAN, reference/development/CI policy, feature/Core/ingestion skills, schema and service implementations, native lifecycle and plugin/ingestion contracts. Read WikiPlant AGENTS/README/PLAN, architecture/operations/hardening/evidence/storage/runtime documentation, required internal workflows, schemas, cron templates and deterministic helpers. C0 source API limit is 131072 UTF-8 bytes; object payload 64 KiB; immutable schemas; bundle 1–25 operations/262144 bytes; extraction is asynchronous; existing schedule intervals are UTC. Retain all limits.
 
-Baseline full CI: [40289355200](https://github.com/Stell0/ns8-czero/actions/runs/40289355200), dispatched at exact C0 revision above; pending at this audit checkpoint. Existing same-source [40286224042](https://github.com/Stell0/ns8-czero/actions/runs/40286224042) is independently in progress. Neither is claimed successful. Disposable local PostgreSQL baseline setup is in progress.
+Baseline full CI: [40289355200](https://github.com/Stell0/ns8-czero/actions/runs/40289355200), dispatched at exact C0 revision above; completed/successful with an independent native/artifact audit. Existing same-source [40286224042](https://github.com/Stell0/ns8-czero/actions/runs/40286224042) also completed/successfully audited. Disposable PostgreSQL validation is recorded in PLAN.md.
 
 ## M2 implementation checkpoint
 
@@ -87,3 +87,21 @@ enabled approved connectors and complete immutable parent snapshots. Partial
 items do not count until their complete original snapshot is stored. The CLI
 and exact native seed/recovery helper use that contract. Frozen d2575cc remains
 unchanged; the corrective source receives its own full acceptance run.
+
+
+## M3 implementation checkpoint
+
+[WORKFLOWS.md](WORKFLOWS.md) documents implemented trusted typed transactions
+for queue admission, six dispositions, lineage/terminal guards, budgets, run
+leases/fencing, immutable phase observations, attempt reservations and separate
+invocation outcomes. Source-sync publication carries its lease through cursor
+commits; project readers show queue and run observations. Actual PostgreSQL
+threads, current/legacy SDK transport and native recovery fixtures exercise
+these boundaries. Semantic assessments remain external; M5 adds the stronger
+result/evidence/report contract. M3 exact full CI/native acceptance is pending.
+M4–M8 remain outstanding and no real migration or deployment has occurred.
+
+Accepted M1 branch run 40311946100 and corrected M2 run 40316218857 completed
+successfully with independently downloaded native XML/browser/query/scanner
+artifact audits. The initial M2 count-only coverage weakness has a real negative
+regression and corrected receipt-proof implementation at `28f40f0`.

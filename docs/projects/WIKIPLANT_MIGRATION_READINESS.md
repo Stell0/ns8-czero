@@ -1,7 +1,8 @@
 # WikiPlant migration readiness — implementation checkpoint
 
 **Not ready for migration.** M0/M1 foundations and M2 source collection are
-implemented candidates. M3–M8 are still outstanding. This file is an explicit
+accepted on their exact branch CI/native runs. M3 coordination is implemented
+and under validation; M4–M8 are still outstanding. This file is an explicit
 checkpoint and will be replaced with executed final acceptance evidence.
 No real WikiPlant data, live C0 knowledge, real project spaces or schedules have
 been migrated, modified or activated by this task.
@@ -14,12 +15,12 @@ See the [compatibility matrix](WIKIPLANT_COMPATIBILITY.md),
 
 | Feature | Implemented | Tests | Integration verified | Known limitations | Migration blocker |
 | --- | --- | --- | --- | --- | --- |
-| Protected manifest/config history | yes | passed locally | no | Exact both-native M1 acceptance pending; default released Core adoption pending | yes |
+| Protected manifest/config history | yes | passed locally | no | Disposable native M1 passes; default released Core adoption pending | yes |
 | Topics and structural scope governance | yes | passed locally | no | Semantic assessment remains an external-agent responsibility | yes |
-| Project reader/config/topics/source status | yes | passed locally | no | Full native/browser candidate acceptance pending; workflow/report views await their records | yes |
+| Project reader/config/topics/source status | yes | passed locally | no | M1/M2 native browser passes; M3 queue/run views under validation; reports await M5 | yes |
 | Seven source adapters and private CLI | yes | passed locally | no | Bounded configured selections; no real sources contacted by acceptance fixtures | yes |
 | Immutable source/snapshot/cursor receipts | yes | passed locally | no | One private job per connector; source/run coordination is extended in M3; pending extraction remains incomplete | yes |
-| Durable queue/budget/reservations/fencing | no | not_run | no | M3 outstanding | yes |
+| Durable queue/budget/reservations/fencing | yes | passed locally | no | M3 exact native CI pending; M5 adds evidence-specific completion | yes |
 | Mandatory primary monitoring | no | not_run | no | M4 outstanding; never substitutes for queue work | yes |
 | External-agent skills and scheduling handoff | no | not_run | no | M4 outstanding; no external task installed or execution observed | yes |
 | Results/evidence/report completeness | no | not_run | no | M5 outstanding | yes |
@@ -32,12 +33,14 @@ See the [compatibility matrix](WIKIPLANT_COMPATIBILITY.md),
 
 Evidence levels stay separate:
 
-- Implemented code: M1/M2 candidate on the development branch.
+- Implemented code: M1/M2 accepted on the development branch; M3 under validation.
 - Local validation: actual PostgreSQL, signed HTTP, OAuth, current/legacy MCP,
   CLI and packaging tests; no database skips counted as passes.
 - Disposable native C0: M0 full baseline audited; M1 corrected Debian upgrade
   and Rocky installation/all eight browsers pass with independent privacy audits.
-  Its draft-PR merge gate rejects as intended; branch acceptance is pending.
+  Branch M1 acceptance 40311946100 and corrected M2 40316218857 pass
+  their full gates and independent downloaded artifact audits. The draft PR
+  remains a work-in-progress and is not claimed ready for promotion.
 - Dedicated reference instance: no project implementation deployed or tested.
 - Actual external agent: no project workflow execution observed.
 - Unattended scheduling: no task installation, execution, notification or human

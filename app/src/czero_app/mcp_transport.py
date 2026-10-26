@@ -36,6 +36,7 @@ from czero_app.tool_guidance import annotations_for, presented_operations
 from czero_app.object_errors import mcp_object_error
 from czero_app.knowledge_errors import KNOWLEDGE_OPERATIONS, mcp_knowledge_error
 from czero_app.space_errors import SPACE_OPERATIONS, mcp_space_error
+from czero_app.project_errors import PROJECT_OPERATIONS, mcp_project_error
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 RESOURCES = {
@@ -208,7 +209,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 'error="insufficient_scope", error_description="Additional OAuth scope is required", '
                 f'scope="{error.scope}"')
             metadata = {'mcp/www_authenticate':[challenge]}
-            if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS:
+            if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS:
                 metadata['c0/error'] = {'code':'insufficient_scope', 'status':403}
             return types.CallToolResult(is_error=True,
                 content=[types.TextContent(type='text', text='insufficient_scope')], meta=metadata)
@@ -220,19 +221,21 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 return types.CallToolResult(is_error=True,
                     content=[types.TextContent(type='text', text=code)],
                     meta={'c0/error':{'code':code, 'status':error.status_code}})
-            mapped = (mcp_space_error(params.name, error.status_code, error.detail)
+            mapped = (mcp_project_error(params.name, error.status_code, error.detail)
+                or mcp_space_error(params.name, error.status_code, error.detail)
                 or mcp_knowledge_error(params.name, error.status_code, error.detail))
             message, status = mapped if mapped is not None else ('invalid_operation_request', 422)
         except (OperationRejected, ValueError):
             message = ('invalid_space_request' if params.name in SPACE_OPERATIONS else
-                ('invalid_knowledge_request' if params.name in KNOWLEDGE_OPERATIONS else 'invalid_operation_request'))
+                ('invalid_project_request' if params.name in PROJECT_OPERATIONS else
+                 'invalid_knowledge_request' if params.name in KNOWLEDGE_OPERATIONS else 'invalid_operation_request'))
             status = 422
         except (SQLAlchemyError, TransportUnavailable):
             message, status = 'service_unavailable', 503
         except Exception as error:
             logging.getLogger('czero.mcp').error('Operation failed (%s)', type(error).__name__)
             message, status = 'service_unavailable', 503
-        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS else None
+        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS else None
         return types.CallToolResult(is_error=True, content=[types.TextContent(type='text', text=message)], meta=metadata)
 
     async def resources(ctx, params):

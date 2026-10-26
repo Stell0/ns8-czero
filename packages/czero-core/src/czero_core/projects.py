@@ -9,9 +9,10 @@ from sqlalchemy import text
 from .identity import PermissionDenied, Role
 from .objects import ObjectService, ObjectConflict, ObjectNotFound, page
 from .object_schema import bounded_json, validate_record
-from .project_schema import PREFIX, SCHEMAS, normalize_manifest, identifier, next_occurrence
+from .project_schema import PREFIX, SCHEMAS, normalize_manifest, identifier, next_occurrence, project_unique_fields
 from .receipts import mutate, snapshot
 from .spaces import SpaceBound
+from .project_workflows import ProjectWorkflows
 
 
 class ProjectConflict(ObjectConflict):
@@ -26,7 +27,8 @@ def logical_key(kind, identity):
     return hashlib.sha256((kind + '\n' + identity).encode()).hexdigest()
 
 
-class ProjectService(SpaceBound):
+class ProjectService(ProjectWorkflows, SpaceBound):
+    conflict = ProjectConflict
     def __init__(self, database, access, *, clock=None):
         self.database, self.access = database, access
         self.clock = clock or (lambda: datetime.now(timezone.utc))
@@ -50,17 +52,18 @@ class ProjectService(SpaceBound):
     def _bootstrap(self, connection, actor, kinds=None):
         for kind in SCHEMAS if kinds is None else kinds:
             schema = SCHEMAS[kind]
+            fields=project_unique_fields(kind)
             type_name = PREFIX + kind
             row = connection.execute(text('SELECT schema,unique_fields FROM c0_object_types WHERE name=:name'),
                                      {'name': type_name}).mappings().one_or_none()
             if row is not None:
-                if row['schema'] != schema or row['unique_fields'] != ['key']:
+                if row['schema'] != schema or row['unique_fields'] != fields:
                     raise ProjectConflict()
                 continue
             self._admin(connection, actor)
             connection.execute(text('''INSERT INTO c0_object_types(name,label,schema,unique_fields)
-                VALUES(:name,:label,CAST(:schema AS jsonb),ARRAY['key'])'''),
-                {'name': type_name, 'label': 'Research project ' + kind, 'schema': json.dumps(schema)})
+                VALUES(:name,:label,CAST(:schema AS jsonb),CAST(:fields AS text[]))'''),
+                {'name': type_name, 'label': 'Research project ' + kind, 'schema': json.dumps(schema),'fields':fields})
 
     def _find(self, connection, kind, identity, *, required=True):
         row = connection.execute(text('''SELECT o.* FROM c0_object_keys k JOIN c0_objects o ON o.id=k.object_id AND o.space_id=k.space_id
@@ -79,10 +82,23 @@ class ProjectService(SpaceBound):
                 'expected_revision': previous['revision'], 'data': values}
         return self._objects()._write(connection, actor, operation)
 
-    def _mutate(self, actor, operation, data, key, execute, *, admin=False):
+    def _mutate(self, actor, operation, data, key, execute, *, admin=False, lease=None):
         bounded_json(data, maximum=262144)
-        return mutate(self.database, self._admin if admin else self._authorize, actor,
-            'project.' + operation, data, key, execute, conflict=ProjectConflict, lock_objects=True)
+        def source_binding(connection):
+            if operation not in ('source_status','connector_status','source_snapshot'):return
+            connector_id=data.get('connector_id') or data['data']['connector_id']
+            binding=self._find(connection,'connector_lease_v1',connector_id,required=False)
+            if binding and (lease is None or lease.get('run_id')!=binding['data']['run_id']):raise ProjectConflict()
+        if lease is not None:
+            if admin:raise ValueError('admin_operation_has_no_workflow_lease')
+            return self._workflow_mutate(actor,operation,data,key,lease,
+                lambda connection,current,run:execute(connection,current),guard=source_binding)
+        def authorize(connection,captured,minimum):
+            current=(self._admin if admin else self._authorize)(connection,captured,minimum)
+            source_binding(connection)
+            return current
+        return mutate(self.database,authorize,actor,'project.'+operation,data,key,
+            execute,conflict=ProjectConflict,lock_objects=True)
 
     def _manifest(self, connection):
         return self._find(connection, 'manifest_v1', 'manifest')
@@ -184,7 +200,7 @@ class ProjectService(SpaceBound):
                     values['anchor_ids'] = [values['topic_id']]
             elif previous and previous['data']['authorized_by']:
                 values['authorized_by'] = previous['data']['authorized_by']
-            if previous and previous['data']['lifecycle'] in ('archived', 'retired') and values['lifecycle'] == 'active':
+            if previous and previous['data']['lifecycle'] in ('archived', 'retired') and values['lifecycle'] not in ('archived','retired'):
                 raise ValueError('archived_topic_requires_new_explicit_authorization')
             if len(set(values['parent_ids'])) != len(values['parent_ids']) or values['topic_id'] in values['parent_ids']:
                 raise ValueError('invalid_topic_parents')
@@ -282,7 +298,7 @@ class ProjectService(SpaceBound):
             self._authorize(connection,actor)
             return snapshot(self._find(connection,'source_sync_v1',connector_id+':'+external_id))
 
-    def save_source_status(self, actor, data, *, expected_revision=0, idempotency_key):
+    def save_source_status(self, actor, data, *, expected_revision=0, lease=None, idempotency_key):
         data=bounded_json(data)
         if 'key' in data:
             raise ValueError('invalid_source_status')
@@ -329,9 +345,9 @@ class ProjectService(SpaceBound):
                 self._save(connection,current,'source_sync_history_v1',history_key,{k:v for k,v in values.items() if k!='key'})
             return self._save(connection,current,'source_sync_v1',values['connector_id']+':'+values['external_id'],
                 {k:v for k,v in values.items() if k!='key'},previous=previous)
-        return self._mutate(actor,'source_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute)
+        return self._mutate(actor,'source_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute,lease=lease)
 
-    def save_connector_status(self, actor, data, *, verified_receipt_ids=None, expected_revision=0, idempotency_key):
+    def save_connector_status(self, actor, data, *, verified_receipt_ids=None, expected_revision=0, lease=None, idempotency_key):
         data=bounded_json(data)
         from uuid import UUID
         verified_receipt_ids=[] if verified_receipt_ids is None else verified_receipt_ids
@@ -390,9 +406,9 @@ class ProjectService(SpaceBound):
                 'progress_cursor':values['progress_cursor'] if values['verified_items']==values['discovered_items'] else matching['data']['progress_cursor'] if matching else '',
                 'remote_cursor':values['remote_cursor'] if values['status']=='complete' else matching['data']['remote_cursor'] if matching else ''}
             return self._save(connection,current,'connector_sync_v1',values['connector_id'],{k:v for k,v in saved.items() if k!='key'},previous=previous)
-        return self._mutate(actor,'connector_status',{'data':data,'verified_receipt_ids':verified_receipt_ids,'expected_revision':expected_revision},idempotency_key,execute)
+        return self._mutate(actor,'connector_status',{'data':data,'verified_receipt_ids':verified_receipt_ids,'expected_revision':expected_revision},idempotency_key,execute,lease=lease)
 
-    def save_source_snapshot(self, actor, connector_id, external_id, content_hash, part_receipt_ids, *, expected_revision=0, idempotency_key):
+    def save_source_snapshot(self, actor, connector_id, external_id, content_hash, part_receipt_ids, *, expected_revision=0, lease=None, idempotency_key):
         identifier(connector_id)
         if type(external_id) is not str or not 1<=len(external_id)<=4096:
             raise ValueError('invalid_external_identity')
@@ -444,4 +460,4 @@ class ProjectService(SpaceBound):
             if not self._find(connection,'source_snapshot_history_v1',historical,required=False):
                 self._save(connection,current,'source_snapshot_history_v1',historical,values)
             return self._save(connection,current,'source_snapshot_v1',identity,values,previous=previous)
-        return self._mutate(actor,'source_snapshot',payload,idempotency_key,execute)
+        return self._mutate(actor,'source_snapshot',payload,idempotency_key,execute,lease=lease)

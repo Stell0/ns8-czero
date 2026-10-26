@@ -896,3 +896,47 @@ space/native-helper, guidance and ingestion unit cases. No schema definition,
 OAuth behavior, existing knowledge or deployed image changes. It is committed
 separately; its exact-source full publication/native/artifact gate is required
 before M2 acceptance and M3 implementation.
+
+### WikiPlant M2 accepted source and M3 transaction subplan
+
+Exact correction28f40f0 full40316218857 is completed/successful, with2114
+actual Python/PostgreSQL/packaging and191 Node cases. Producer/released checks,
+both native distributions and all five scans pass. Full acceptance verifier and
+independent downloaded XML/job-log/scan inspection pass: Debian21 genuine
+upgrade, Rocky26 installation/three expected skips/all8 browsers,32 accessibility
+contexts, eight privacy guards and three query artifacts with zero candidates.
+M1 exact2486de4 branch full40311946100 also passes its full verifier and the
+same independent native/privacy audit. These are branch acceptance proofs, not
+ready-PR promotion, Core publication, live deployment or external-agent proof.
+
+M3 now implements bounded managed run/checkpoint, queue/admission, daily-window
+and attempt/invocation records. Queue unique keys bind stable IDs and canonical
+question identity. The existing content transaction locks serialize reservations
+and preserve current-role checks; every workflow commit carries its actual
+lease owner/generation. Daily windows retain consumed allowances and configured
+limits across replay and timezone changes. Saved results awaiting merge cannot
+reserve new attempts. All origins share scope/novelty/lineage/capacity policy;
+terminal ancestry and +20/max-three expansion remain separate from urgency.
+Add real PostgreSQL races, crash/reclaim/revocation, copy/rename, fairness and
+ordinary/urgent budget cases, then exact REST/current/legacy MCP and native
+recovery tests. No generative handler or second database is introduced.
+
+M3 local validation passes the fresh full2132 Python/PostgreSQL/packaging cases,
+plus34 focused final-source cases after the bounded question-comparison and
+polling-renewal refinements. Those focused cases include actual database races,
+current/legacy MCP conflict codes, grant revocation, source fencing including
+omitted-lease rejection, result recovery and the exact native recovery helper.
+Node192, Go schema compilation, five shell parsers,21 Robot dry-run cases and277
+documentation links pass. The earlier reused-database full run has2129 passes
+and two failures caused by one retained scheduled succeeded health job; bounded
+SQL inspection confirms that identity/state. Its failed evidence is retained.
+Fresh full validation passes without changing runtime job policy.
+
+Managed records use existing storage/schema0021; Core/app versions and genuine
+deployed predecessor digests remain unchanged. Source synchronization now binds
+each connector to a run, so omitting a fence cannot bypass transferred ownership.
+The disposable browser covers literal queue/run rendering and inactive-lease
+rejection. Backup/update/restart/restore compare exact saved run, checkpoint,
+queue, reservation, outcome and connector-binding records. Actual native and
+artifact acceptance for this M3 source still requires its forthcoming full run.
+No real C0/WikiPlant project data, schedules or deployed images changed.
