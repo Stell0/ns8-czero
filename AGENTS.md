@@ -359,3 +359,10 @@ unattended execution. Preserve canonical connection/space checks and private
 exclusive archive saves. Explicit runtime asset allowlists must include only
 the six product templates, not repository development instructions. See
 docs/projects/MONITORING.md; M4 full acceptance and M5–M8 remain pending.
+
+Render trusted template links before inserting user metadata so template-looking
+project names remain literal data. If connection/project/checkpoint capabilities
+are unavailable, distinguish an unsaved capability report from an actual durable
+BLOCKED/PARTIAL receipt. Queued extraction can return stored source/version IDs,
+but never an invented ready passage citation. Preserve these independent forward
+evaluation cases when changing project prompts or package generation.

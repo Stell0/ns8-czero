@@ -50,7 +50,7 @@ def test_restored_project_uuid_on_another_instance_has_an_independent_skill_iden
     assert b'one.example.org' not in b''.join(files(b).values())
 
 
-@pytest.mark.parametrize('name',['Quoted "title":\n---\nname: injected','<img src=x> synthetic'])
+@pytest.mark.parametrize('name',['Quoted "title":\n---\nname: injected','<img src=x> synthetic','{{BINDING_LINK}}'])
 def test_project_name_cannot_inject_skill_frontmatter(name):
     stored,topics=fixture(name)
     result=project_package('https://knowledge.example.org/mcp',stored,topics)
@@ -58,6 +58,7 @@ def test_project_name_cannot_inject_skill_frontmatter(name):
     assert len(header)==2 and header[0]=='name: '+result['name']
     assert json.loads(header[1].removeprefix('description: ')).startswith('Research and explicitly requested project work')
     assert '<' not in json.loads(header[1].removeprefix('description: '))
+    if name=='{{BINDING_LINK}}':assert name in json.loads(header[1].removeprefix('description: '))
     binding=json.loads(files(result)['references/project-binding.md'].decode().split('```json\n',1)[1].split('\n```',1)[0])
     assert binding['name']==name
 

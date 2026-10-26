@@ -67,6 +67,15 @@ list. The client checks the archive hash, exact binding, bounded entry allowlist
 and non-executable paths before an exclusive mode-0600 save. Generation does not
 install the package, associate an app ID or authorize a new scope.
 
+The skill verifies the canonical connection through saved host settings or
+trusted server metadata before discovering `get_profile`/`project_get`; display
+names alone cannot establish the connection. Missing project services block the
+workflow. If a checkpoint service is also missing, explain that the capability
+report is unsaved instead of claiming a durable receipt. Intake with queued
+extraction returns actual source/version IDs and a pending citation; it never
+invents a passage. Independent synthetic forward evaluation exercises these
+conditions without contacting a live instance or proving external execution.
+
 ## Calendar and host handoff
 
 `project_schedule_get` returns desired daily/weekly settings, latest due and

@@ -12,7 +12,7 @@ Search the selected space, read matching Wiki revisions and original passages, a
 
 ## User-directed intake
 
-Save only the explicitly selected material. Resolve existing identities before creating records. Use source ingestion for originals; text has a 131072-byte UTF-8 bound and binary ingestion uses REST. Common collectors handle selected large inputs without silent truncation. Wait for successful extraction and inspect actual passages before creating supported claims. Read back content and return stored identities.
+Save only the explicitly selected material. Resolve existing identities before creating records. Use source ingestion for originals; text has a 131072-byte UTF-8 bound and binary ingestion uses REST. Common collectors handle selected large inputs without silent truncation. Poll the actual source/version read operations for extraction readiness; do not repeat ingestion to poll. If extraction is still queued, return QUEUED with the actual stored source/version identities and explain that a passage citation is pending. Wait for successful extraction and inspect actual passages before creating supported claims or returning an evidence citation. Read back content and return stored identities.
 
 ## One-off investigation
 
@@ -34,4 +34,4 @@ Prioritize what was learned, changed assumptions, project implications, evidence
 
 ## Maintenance and recovery
 
-Use the weekly prompt for bounded structural checks and rotating semantic review. Persist actual cursors, inspected revisions, coverage and limitations. Incomplete semantic inspection is partial. Archive summaries retain lineage and immutable evidence. Calendar work uses ordinary admission; dates do not authorize new scope. Check workflow/skill updates as metadata only and never install a runtime upgrade automatically. Use only capabilities actually present; missing required operations produce a durable BLOCKED/PARTIAL checkpoint and a concrete handoff.
+Use the weekly prompt for bounded structural checks and rotating semantic review. Persist actual cursors, inspected revisions, coverage and limitations. Incomplete semantic inspection is partial. Archive summaries retain lineage and immutable evidence. Calendar work uses ordinary admission; dates do not authorize new scope. Check workflow/skill updates as metadata only and never install a runtime upgrade automatically. Use only capabilities actually present. If a required operation is missing, save a BLOCKED/PARTIAL checkpoint only when a supported checkpoint service is available. Otherwise explain that the capability report is unsaved; do not invent a durable receipt. Provide a concrete handoff in either case.

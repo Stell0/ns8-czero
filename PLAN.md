@@ -1001,3 +1001,29 @@ Exact-source full CI, both actual native reports, query/privacy/scanner audits
 and actual candidate-image Dive analysis remain required before M4 acceptance.
 M5–M8 and final released-Core pin adoption remain outstanding. No live C0 or
 WikiPlant data, real spaces/schedules or deployed predecessor images changed.
+
+Independent M4 Skill Creator forward evaluation uses only the generated skill,
+synthetic lookup/intake/recovery scenarios and current tool metadata. It makes
+no production calls or mutations. Explicit project selection, read-only lookup,
+untrusted-source handling and uncertain attempt allowances are preserved. The
+example binding/current project services cannot be verified on the available
+external connection; no external integration is claimed. Review identifies a
+wording ambiguity: unavailable checkpoint services cannot produce durable
+BLOCKED receipts. Prompts now distinguish unsaved capability reports, specify
+connection/manifest discovery and return actual QUEUED source/version identities
+while citations await extraction. Missing services never cause generic-object
+substitutions or invented receipts.
+
+A real formatter negative also shows frozen5e2432f rewriting a literal
+template-looking project name. Substitution now completes trusted static links
+before inserting user metadata; its regression preserves the literal name.
+Thirty current package/documentation/runtime cases pass. The earlier exact
+5e2432f remote full local job passes2162 Python/PostgreSQL/packaging,193 Node
+and21 Robot dry runs; both native jobs remain in progress. Actual downloaded
+five scan/SBOM pairs pass. Verified registry manifest/config and13 compressed
+layer blobs match that source and app digest. Dive0.13.1 analysis/CI passes at
+98.13% efficiency; the product layer contains exactly six byte-identical tracked
+templates under UID/GID10001. A metadata-only Docker29 export fails inspection;
+its evidence remains private, and direct verified registry blobs provide the
+analysis archive without changing the image. The prompt/name correction needs
+its own exact-source full/native/artifact acceptance before M4 completes.
