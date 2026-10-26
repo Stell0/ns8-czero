@@ -563,6 +563,25 @@ def seed_project_state(browser, profile, space_id, sources=None):
         claim=request('/runs/claim',{'workflow_type':'daily','lease_owner':'synthetic-native-worker','config_version':2,
             'idempotency_key':'retained-workflow-claim'},'POST')
         run=claim['records'][0]['data'];lease={key:run[key] for key in ('run_id','lease_owner','fencing_generation')}
+        if 'project_monitor_begin' in operations:
+            cycle=request('/monitoring/begin',{'lease':lease,'topic_id':'anchor',
+                'idempotency_key':'retained-monitor-begin'},'POST')['records'][0]['data']
+            call=request('/monitoring/reserve',{'lease':lease,'cycle_id':cycle['cycle_id'],'kind':'query',
+                'request_id':'retained-query','request_text':'Synthetic bounded primary-topic check',
+                'idempotency_key':'retained-monitor-reserve'},'POST')['records'][0]['data']
+            request('/monitoring/observe',{'lease':lease,'call_id':call['call_id'],'state':'started',
+                'idempotency_key':'retained-monitor-start'},'POST')
+            request('/monitoring/observe',{'lease':lease,'call_id':call['call_id'],'state':'succeeded',
+                'external_reference':'synthetic-native:fake-search-result','summary':'Synthetic response with no selected developments',
+                'idempotency_key':'retained-monitor-observe'},'POST')
+            completed=request('/monitoring/finish',{'lease':lease,'cycle_id':cycle['cycle_id'],'status':'no_material_update',
+                'summary':'Synthetic bounded search completed; no real provider executed',
+                'idempotency_key':'retained-monitor-finish'},'POST')
+            success=next(row for row in completed['records'] if row['type_name']=='c0_project_monitor_success_v1')
+            request('/runs/checkpoint',{'lease':lease,'phase':'monitoring','status':'SAVED','references':[success['id']],
+                'summary':'Synthetic coverage read back','idempotency_key':'retained-monitor-phase'},'POST')
+            for kind in ('monitor_cycle_v1','monitor_call_v1','monitor_call_history_v1','monitor_watermark_v1','monitor_success_v1'):
+                retained[kind]=request('/records?kind='+kind+'&limit=100')
         candidate={'stable_id':'retained-investigation','topic_id':'anchor','question':'What changed in synthetic manufacturing constraints?',
             'kind':'investigation','origin':'user','origin_reference':'synthetic-native:user','priority':20,
             'priority_reason':'Approved scope','urgency_reason':'','parent_ids':[],'related_pages':[],
@@ -578,7 +597,7 @@ def seed_project_state(browser, profile, space_id, sources=None):
             'external_reference':'synthetic-native:fake-call','idempotency_key':'retained-invocation-start'},'POST')
         request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'uncertain',
             'error_code':'synthetic_interruption','idempotency_key':'retained-invocation-uncertain'},'POST')
-        request('/runs/checkpoint',{'lease':lease,'phase':'monitoring','status':'PARTIAL',
+        request('/runs/checkpoint',{'lease':lease,'phase':'research' if 'project_monitor_begin' in operations else 'monitoring','status':'PARTIAL',
             'summary':'Synthetic interrupted external-agent fixture; no real research executed',
             'idempotency_key':'retained-workflow-checkpoint'},'POST')
         if connector:

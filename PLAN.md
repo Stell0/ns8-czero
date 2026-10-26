@@ -940,3 +940,64 @@ rejection. Backup/update/restart/restore compare exact saved run, checkpoint,
 queue, reservation, outcome and connector-binding records. Actual native and
 artifact acceptance for this M3 source still requires its forthcoming full run.
 No real C0/WikiPlant project data, schedules or deployed images changed.
+
+### WikiPlant M3 acceptance and M4 monitoring subplan
+
+Exact M3 fb9c4b7 full40333538357 completed successfully. Actual remote local CI
+passes2133 Python/PostgreSQL/packaging,192 Node and21 Robot dry-run cases.
+Producer/released-image/module/all five scans pass. Full acceptance verification
+and independent downloaded report/job-log/scan audits pass: Debian genuine
+upgrade21/zero skips, Rocky installation26/three expected skips/all8 browsers,
+eight privacy guards,32 numeric accessibility contexts and three OAuth-query
+artifacts with zero candidates. A transient GitHub artifact-storage503 resolved
+on retry; failed private evidence remains outside Git. Original working files,
+deployed predecessor images, live knowledge and all real schedules are untouched.
+
+M4 will persist per-primary-topic/local-day monitoring separately from queue
+budgets. Reserve queries/source inspections before external calls, retain their
+observed outcomes, support fenced recovery and advance watermarks only after
+verified successful coverage. Material results remain pending merge until M5's
+stronger evidence/Wiki contract. Daily execution must complete mandatory primary
+monitoring even with a full/blocked queue. Add actual PostgreSQL caps/concurrency,
+failed/uninspected/old-article controls and fake-agent signed SDK workflows.
+
+Extend existing product plugin/skill packaging with explicit project bindings,
+setup/intake/lookup/research/tracking/daily/weekly/recovery instructions and
+scheduler prompts/handoff. Keep read-only questions mutation-free. Reuse existing
+OAuth and current tool metadata; no generative handler or arbitrary execution.
+Support IANA local occurrence/cycle identity and bounded late scheduled recovery.
+No real task is installed or enabled; external installation, authentication and
+unattended execution remain unverified until observed. Source collection and
+saved-result recovery retain their established receipts and authority checks.
+
+M4 implements separately capped monitoring cycles/call history, successful
+watermarks and current-fence recovery; successful daily queue work cannot skip
+primary-topic coverage. Initialization retains its hard five-seed maximum even
+with a larger configured ordinary budget. Reserved work requires fresh scope
+assessment after configuration changes without replenishing its attempt slot.
+IANA daily/weekly contracts retain logical missed-cycle identity separately from
+actual-day allowances. Attributed runner observations install/enable nothing.
+
+Project-bound private skill/plugin variants reuse existing package machinery,
+canonical OAuth/space binding and a read-only CLI. The six explicit product
+templates contain workflow prompts and complete external scheduler handoff.
+Generated archives retain exact scope/version, reject tampered bindings and
+preserve existing output files/symlinks. No actual external agent, host task or
+unattended execution is claimed. Core/app/schema versions remain unchanged.
+
+Final focused local validation passes30 actual PostgreSQL/SDK/native-helper and
+wheel/archive distribution cases, including independent installations/migrations.
+Twenty-nine current documentation/package/runtime-audit cases,193 Node cases,
+Go schema compilation, five shell parsers,21 Robot dry runs,280 maintained links,
+the generated Skill Creator check and77-file contribution privacy check pass.
+The broad local run initially finds one generated-template documentation-link
+failure; the template substitution correction and affected regressions pass.
+That run continues while exact-source remote acceptance is prepared; it is not
+claimed wholly successful. No runtime behavior was weakened to satisfy a test.
+
+Disposable native fixtures now retain monitoring calls/history/coverage through
+backup/update/restart/restore and exercise literal browser monitoring content.
+Exact-source full CI, both actual native reports, query/privacy/scanner audits
+and actual candidate-image Dive analysis remain required before M4 acceptance.
+M5–M8 and final released-Core pin adoption remain outstanding. No live C0 or
+WikiPlant data, real spaces/schedules or deployed predecessor images changed.

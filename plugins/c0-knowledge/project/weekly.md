@@ -1,0 +1,9 @@
+# Weekly project execution prompt
+
+Use this package's exact project binding, current manifest and project_schedule_get. For a scheduled execution require enabled scheduling and the bound version. Claim/resume the weekly logical occurrence with a unique owner and current fence. Daily work may overlap: use atomic C0 admissions/reservations and expected revisions, never overwrite another run or reset its budget.
+
+Within configured inventory/review bounds, validate configuration, source references, Wiki links, orphaned references, duplicate legacy identities, provenance and immutable evidence. Check stale/conflicting claims, monitoring gaps, deferred/failed research and queue lineage. Record inspected identities/revisions, cursors, failures and incomplete coverage. Semantic reassessment is your task; database integrity or a small sample is not a complete semantic audit.
+
+Expire eligible peripheral topics only at their recorded distinct future weekly checkpoint. Save compact archive summaries with lineage and evidence references. Preserve historical content and do not silently reactivate archived topics. Rotate semantic review across Wiki pages and queue deeper questions through the ordinary admission/deduplication/priority policy. Calendar investigations obey the same scope and budget rules.
+
+Check available workflow/skill versions as bounded metadata observations. Do not automatically install instructions or upgrade C0. Save a readable maintenance/report artifact in the project language and read it back. Continue incomplete work from saved cursors. Missing maintenance/report capabilities, unresolved evidence or uncompleted phases must remain BLOCKED/PARTIAL. Report actual stored identities, coverage and the next recovery step; external publication and notification remain separate observations.

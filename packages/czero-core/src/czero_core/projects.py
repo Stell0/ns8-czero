@@ -13,6 +13,8 @@ from .project_schema import PREFIX, SCHEMAS, normalize_manifest, identifier, nex
 from .receipts import mutate, snapshot
 from .spaces import SpaceBound
 from .project_workflows import ProjectWorkflows
+from .project_monitoring import ProjectMonitoring
+from .project_schedules import ProjectSchedules
 
 
 class ProjectConflict(ObjectConflict):
@@ -27,7 +29,7 @@ def logical_key(kind, identity):
     return hashlib.sha256((kind + '\n' + identity).encode()).hexdigest()
 
 
-class ProjectService(ProjectWorkflows, SpaceBound):
+class ProjectService(ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
     conflict = ProjectConflict
     def __init__(self, database, access, *, clock=None):
         self.database, self.access = database, access
@@ -108,14 +110,16 @@ class ProjectService(ProjectWorkflows, SpaceBound):
             self._authorize(connection, actor)
             return snapshot(self._manifest(connection))
 
-    def list_records(self, actor, kind, *, limit=50, offset=0):
+    def list_records(self, actor, kind, *, limit=50, offset=0, descending=False):
         if kind not in SCHEMAS:
             raise ValueError('invalid_project_record_kind')
         page(limit, offset)
+        if type(descending) is not bool:raise ValueError('invalid_project_record_order')
+        order='DESC' if descending else 'ASC'
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
             rows = connection.execute(text('''SELECT * FROM c0_objects
-                WHERE space_id=:space AND type_name=:type ORDER BY created_at,id LIMIT :limit OFFSET :offset'''),
+                WHERE space_id=:space AND type_name=:type ORDER BY created_at '''+order+',id '+order+' LIMIT :limit OFFSET :offset'),
                 {'space': self._space_id, 'type': PREFIX + kind, 'limit': limit, 'offset': offset}).mappings()
             return snapshot([dict(row) for row in rows])
 

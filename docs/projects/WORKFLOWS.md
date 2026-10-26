@@ -114,7 +114,9 @@ Selection favors urgency, then a reserved final ordinary validation/contradictio
 lane when overdue, bounded ageing and anchor service. These choices retain a
 selection reason and never rewrite stored priorities. Capacity, timing, backoff,
 current scope and manifest acknowledgement are rechecked before reservation.
-Primary monitoring receives its own ledger in M4 and uses no queue slots.
+Primary monitoring has its own [durable ledger](MONITORING.md) and uses no queue
+slots. Daily research requires completed coverage for every configured primary
+topic; a full queue allowance does not block monitoring reservations.
 
 ## Source synchronization
 

@@ -81,7 +81,7 @@ def source_config(value):
     return result
 
 
-def load_config(path):
+def load_config(path,*,allow_empty_sources=False):
     path=Path(path)
     if path.stat().st_size>65536:
         raise C0Error('source_configuration_too_large')
@@ -95,7 +95,7 @@ def load_config(path):
         if parsed.port is not None and not 1<=parsed.port<=65535:raise ValueError()
         if parsed.scheme!='https' or parsed.path!='/mcp' or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError()
-        if not parsed.hostname or type(data.get('sources')) is not list or not 1<=len(data['sources'])<=100:
+        if not parsed.hostname or type(data.get('sources')) is not list or not (0 if allow_empty_sources else 1)<=len(data['sources'])<=100:
             raise ValueError()
         data['sources']=[source_config(v) for v in data['sources']]
         if len({v['id'] for v in data['sources']})!=len(data['sources']):

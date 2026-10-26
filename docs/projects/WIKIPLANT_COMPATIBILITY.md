@@ -36,9 +36,9 @@ All new project selection is explicit, protected and authorization checked. Cros
 | Daily budgets | DailyRunStore, queue attempt journal | Deterministic job attempts only | Atomic project/local-day reservations; urgent slots 6–10 | Core project service | Overlapping daily/weekly workers |
 | Initialization | initialization.py; at most five | Space create and replay-safe Wiki writes | Idempotent project initialize and seed bound | Core projects | Repeated initialization |
 | Durable workflows | orchestrator.py; provider-bound safe writer | PostgreSQL transactions, bundles, unique keys | Logical run claims, lease fencing, phase receipts, uncertain invocation state | Core project service | Stale-owner denial/crash/readback |
-| Primary monitoring | monitoring.py and main-topic-refresh | Sources/claims/Wiki; no monitoring ledger | Per-topic/day cycles, counters, coverage/watermark; no queue slots | Core projects | Full queue/no-news/failed check |
-| Scheduling | cron templates, schedules.py; native Work tasks | UTC interval deterministic handlers; background OAuth | IANA calendar occurrences, DST policy and external-runner handoff | Core calendar / plugin | Rome gap/fold; host execution unverified |
-| Agent integration | One personalized installed skill; skillgen.py | Instance-bound skill/plugin packaging | Project-bound skill and workflow templates | Existing plugin and client generator | No cross-project routing or mutation on read |
+| Primary monitoring | monitoring.py and main-topic-refresh | Sources/claims/Wiki; no monitoring ledger | Implemented M4 cycles/counters/verified watermarks; material merge gate added in M5 | Core project_monitoring.py / app projects.py | test_project_monitoring.py; fake SDK agent; native recovery |
+| Scheduling | cron templates, schedules.py; native Work tasks | UTC interval deterministic handlers; background OAuth | Implemented M4 IANA occurrences/DST and handoff; actual host execution unverified | Core project_schedules.py / plugin project/scheduler.md | test_project_calendar.py / test_project_schedule.py |
+| Agent integration | One personalized installed skill; skillgen.py | Instance-bound skill/plugin packaging | Implemented M4 project-bound variants and private CLI download; actual installation unverified | app project_agent_packages.py / c0_projects.agent_packages / plugin project/ | test_project_agent_packages.py / test_project_agents_http.py |
 | Evidence review | evidence.py, evidence-quality.md, assessment schemas | Immutable passages, claims, exact-revision annotations | Workflow assessment contracts and citation validation | Core/agent references | Queued extraction denial; actual passage IDs |
 | Adversarial review | ChallengeRecord; bounded contrary searches | Claims and annotations retain evidence | Bounded challenge state; semantic judgment external | Project records/plugin | Unsearched != searched; no truth by confidence |
 | Synthesis | synthesize workflow; applicability/corrections | Wiki revisions, graph, claims, bundles, applicability | Result receipts and resume merge workflow | Core project service/plugin | Preserve contradictions/history |
@@ -105,3 +105,17 @@ Accepted M1 branch run 40311946100 and corrected M2 run 40316218857 completed
 successfully with independently downloaded native XML/browser/query/scanner
 artifact audits. The initial M2 count-only coverage weakness has a real negative
 regression and corrected receipt-proof implementation at `28f40f0`.
+
+## M4 implementation checkpoint
+
+M3 exact `fb9c4b7` full40333538357 and its independent downloaded native/privacy
+audit pass. [MONITORING.md](MONITORING.md) documents M4's separately capped
+primary cycles, durable query/inspection reservations, immutable outcome
+history, scope-specific watermarks and daily execution gate. Material evidence
+remains pending M5 verification. Project-bound skill/plugin variants reuse the
+existing package machinery and OAuth client. Calendar contracts handle IANA
+DST and bounded missed occurrences without replenishing actual-day budgets.
+Actual PostgreSQL races, source readiness, failed searches, signed fake-agent
+SDK calls and private archive readback pass locally. M4 exact native acceptance
+is pending; real host installation/authentication/scheduled execution remain
+unverified. M5–M8 remain outstanding. No live migration/deployment occurred.

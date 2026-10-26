@@ -341,3 +341,21 @@ runs, causal +20 depth and maximum three children. Preserve terminal ancestry
 through topic reassessment. See docs/projects/WORKFLOWS.md and actual PostgreSQL
 concurrency/recovery tests. M4–M8 acceptance and default released-Core adoption
 remain pending until their recorded gates pass.
+
+## Primary monitoring and project agent conventions
+
+Monitoring is independent of queue budgets. Reserve bounded query/source calls,
+record starts and actual outcomes separately, and retain uncertain calls on
+fence transfer. Successful coverage requires every selected source's ready
+immutable passages and no unresolved checks; failure never advances watermarks.
+Daily research cannot skip configured primary monitoring. Scope changes require
+fresh assessment without resetting counters, lineage or consumed allowances.
+
+Extend the existing product package machinery with explicit protected project
+bindings; never install or activate a host task as a side effect of generation.
+Keep calendar IANA cycle identity distinct from current-day research allowance.
+Runner observations are attributed reports, not proof of host capability or
+unattended execution. Preserve canonical connection/space checks and private
+exclusive archive saves. Explicit runtime asset allowlists must include only
+the six product templates, not repository development instructions. See
+docs/projects/MONITORING.md; M4 full acceptance and M5–M8 remain pending.

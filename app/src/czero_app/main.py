@@ -264,6 +264,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
                     'scopes': ['c0:read', 'c0:write', 'c0:admin'],
                     'public_clients_only': True, 'dynamic_registration': False} if available else None}
 
+    instance_app.state.connection_metadata = connection_metadata
     from czero_app.agent_downloads import install_agent_downloads
     install_agent_downloads(instance_app, connection_metadata, read_context, write_context)
 

@@ -1,0 +1,11 @@
+# Recovery and troubleshooting
+
+Read current account/access, explicit project binding, manifest version, run, queue item, latest attempt and monitoring calls. Never fall back to Shared or another account/instance after denial. Fresh scopes require explicit OAuth consent; a lease, configuration or refresh cannot grant them. Do not place credentials or private authorization URLs in prompts, logs or reports.
+
+Reclaim the same logical run with a unique worker owner and retain its new fencing generation. Read existing reservations before requesting more work. Resume a reserved research attempt by its actual attempt ID. Persist started before invoking the external agent/tool. A started call interrupted by lease transfer is uncertain: reconcile its external outcome before marking returned/failed or issuing another call. A stored result awaiting merge uses no new research attempt. Scope changes require current admission reassessment before external work or merge.
+
+Monitoring request IDs retain their query/source reservation and fixed counters. Reconcile uncertain calls under the current fence. Explicit replacement retries must cover the failed query/locator and interval. Failed checks cannot become no_material_update. Resume source evidence and Wiki merges from actual saved identities; do not rerun searches just because publication failed.
+
+For source collection, use the existing private OAuth job and c0-projects sources status/verify/resume commands. Scan/dry-run/verify are not publication. Resume the frozen scan, reconcile versions/hashes, wait for extraction and read immutable citations. Source-sync receipt/cursor commits require the connector's current lease. Lost responses require readback before a retry. Authentication expiry or revoked source-space access stops safely.
+
+On repeated failures, retain bounded retry/blocked state and the last successful watermark. Report the actual resource IDs, static error category and required operator action. A local test, saved report or task-installation report does not prove real unattended execution, delivery or human reading.

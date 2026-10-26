@@ -276,8 +276,11 @@ implements reusable research state within existing protected spaces. The initial
 [project contracts](docs/projects/PROJECTS.md) cover versioned configuration,
 topics, authorization and a read-only project overview. The
 [workflow contract](docs/projects/WORKFLOWS.md) adds atomic queue admission,
-day budgets, fenced leases and recoverable attempts. Monitoring, reporting
-and migration preparation have separate gates.
+day budgets, fenced leases and recoverable attempts. The
+[monitoring/agent contract](docs/projects/MONITORING.md) adds separately capped
+primary-topic coverage, project-bound packages and IANA scheduler handoff.
+Reporting and migration preparation have separate gates. Actual external-agent
+and unattended scheduled execution remain unverified.
 This branch does not migrate real projects, deploy an instance or activate schedules.
 
 Project source collection is available in the existing independently installable

@@ -34,6 +34,17 @@ async () => {
     idempotency_key:'browser-source-coverage'},'PUT');
   const claimed=await write('/runs/claim',{workflow_type:'daily',lease_owner:'synthetic-browser-worker',config_version:2,idempotency_key:'browser-run'});
   const run=claimed.records[0].data,lease={run_id:run.run_id,lease_owner:run.lease_owner,fencing_generation:run.fencing_generation};
+  const cycle=(await write('/monitoring/begin',{lease,topic_id:'anchor',idempotency_key:'browser-monitor-begin'})).records[0].data;
+  const call=(await write('/monitoring/reserve',{lease,cycle_id:cycle.cycle_id,kind:'query',request_id:'browser-query',
+    request_text:'Synthetic bounded primary-topic check',idempotency_key:'browser-monitor-reserve'})).records[0].data;
+  await write('/monitoring/observe',{lease,call_id:call.call_id,state:'started',idempotency_key:'browser-monitor-start'});
+  await write('/monitoring/observe',{lease,call_id:call.call_id,state:'succeeded',external_reference:'synthetic-browser:fake-search',
+    summary:'Synthetic response with no selected sources',idempotency_key:'browser-monitor-observe'});
+  const coverage=await write('/monitoring/finish',{lease,cycle_id:cycle.cycle_id,status:'no_material_update',
+    summary:'Synthetic bounded coverage; no real provider executed',idempotency_key:'browser-monitor-finish'});
+  const success=coverage.records.find(row=>row.type_name==='c0_project_monitor_success_v1');
+  await write('/runs/checkpoint',{lease,phase:'monitoring',status:'SAVED',references:[success.id],
+    summary:'Synthetic coverage read back',idempotency_key:'browser-monitor-phase'});
   await write('/queue',{candidate:{stable_id:'browser-investigation',topic_id:'anchor',question:'<script> synthetic queued investigation',
     kind:'investigation',origin:'user',origin_reference:'synthetic-browser:user',priority:20,priority_reason:'Approved scope',
     urgency_reason:'',parent_ids:[],related_pages:[],not_before:'',due_at:'',question_conditions:'',entity_version:'',time_window:'',
@@ -42,9 +53,9 @@ async () => {
     excluded:false,semantic_matches:[],independent_parents:[]},idempotency_key:'browser-admission'});
   const reservation=await write('/attempts/reserve',{lease,idempotency_key:'browser-attempt'});
   if (reservation.status!=='SAVED') throw Error('Synthetic project reservation failed');
-  await write('/runs/checkpoint',{lease,phase:'monitoring',status:'PARTIAL',summary:'Synthetic incomplete coverage',idempotency_key:'browser-partial'});
+  await write('/runs/checkpoint',{lease,phase:'research',status:'PARTIAL',summary:'Synthetic interrupted investigation',idempotency_key:'browser-partial'});
   const stale=await fetch('./api/v1/project/attempts/reserve?space_id='+space,{method:'POST',headers,
     body:JSON.stringify({lease,idempotency_key:'browser-stale'}),cache:'no-store'});
   if(stale.status!==409) throw Error('Inactive project lease was accepted');
-  return {initialized:true, replay:true, revision:saved.revision, workflows:true};
+  return {initialized:true, replay:true, revision:saved.revision, workflows:true,monitoring:true};
 }

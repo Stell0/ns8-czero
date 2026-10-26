@@ -223,3 +223,8 @@ This code uses the repository's [GPL-3.0-or-later license](LICENSE).
 HTTP, feed, sitemap, local document, GitHub, authorized C0-space and offline
 WikiPlant adapters. See [project source contracts](../../docs/projects/SOURCES.md)
 for private-job configuration, explicit approval, dry-run/recovery and limits.
+
+The read-only `c0-projects project skill` and `project schedule` commands reuse
+that authenticated private job to save a project-bound package or inspect IANA
+occurrences. See [monitoring and agent contracts](../../docs/projects/MONITORING.md).
+Package generation does not install a host task or establish unattended access.

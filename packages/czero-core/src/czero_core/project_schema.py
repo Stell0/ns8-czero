@@ -1,7 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Small versioned research-project contracts over C0's existing typed records."""
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import re
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -144,6 +144,28 @@ SCHEMAS.update({
 SCHEMAS['connector_lease_v1']=record(key=string(128),connector_id=string(64),run_id=string(64))
 SCHEMAS['completion_v1']=record(key=string(128),attempt_id=string(64),result_reference=string(128),
     commit_references=array(string(128),maximum=100),recorded_at=string(40))
+SCHEMAS.update({
+    'monitor_cycle_v1': record(key=string(128),cycle_id=string(64),project_id=string(36),topic_id=string(),local_date=string(10),
+        config_version=integer(1,2147483647),scope_hash=string(64),coverage_start=string(40),coverage_end=string(40),
+        max_queries=integer(1,50),max_sources=integer(1,100),queries_used=integer(0,50),sources_used=integer(0,100),
+        status=string(values=['in_progress','complete','no_material_update','partial','blocked','awaiting_merge']),
+        result_reference=string(36,minimum=0),successful_watermark=string(40,minimum=0),summary=string(4096,minimum=0)),
+    'monitor_call_v1': record(key=string(128),call_id=string(64),cycle_id=string(64),kind=string(values=['query','source']),
+        ordinal=integer(1,100),scope_hash=string(64),request_text=string(2048),run_id=string(64),fencing_generation=integer(1,2147483647),
+        state=string(values=['reserved','started','succeeded','failed','uncertain']),external_reference=string(512,minimum=0),
+        selected_sources=array(string(512),maximum=100),version_id=string(36,minimum=0),citation_ids=array(string(36),maximum=100),
+        replaces_call_id=string(64,minimum=0),summary=string(2048,minimum=0),reserved_at=string(40),recorded_at=string(40)),
+    'monitor_watermark_v1': record(key=string(128),topic_id=string(),scope_hash=string(64),cycle_id=string(64),coverage_end=string(40)),
+    'monitor_success_v1': record(key=string(128),cycle_id=string(64),scope_hash=string(64),coverage_start=string(40),coverage_end=string(40),
+        query_ids=array(string(64),maximum=50),source_ids=array(string(64),maximum=100),result_reference=string(36,minimum=0),verified_at=string(40)),
+})
+SCHEMAS['monitor_call_history_v1']=SCHEMAS['monitor_call_v1']
+SCHEMAS['runner_observation_v1']=record(key=string(128),project_id=string(36),config_version=integer(1,2147483647),
+    provider=string(values=['chatgpt_work','external_runner']),workflow_type=string(values=['daily','weekly']),
+    observation_source=string(values=['operator_report','runner_report','sdk_simulation']),
+    status=string(values=['unverified','blocked','reported_installed','reported_execution']),
+    task_reference=string(512,minimum=0),run_id=string(64,minimum=0),evidence_reference=string(512,minimum=0),
+    summary=string(4096),actor_id=string(36),recorded_at=string(40))
 PROJECT_UNIQUE_FIELDS = {'queue_v1': ['key','dedup_key']}
 
 
@@ -237,3 +259,14 @@ def next_occurrence(manifest, workflow, after):
         if candidate > after.astimezone(timezone.utc):
             return candidate
     raise ValueError('invalid_project_schedule')
+
+
+def occurrence_on_day(manifest, workflow, local_day):
+    """Configured occurrence, with the same gap/fold policy as next_occurrence."""
+    if workflow not in ('daily','weekly'):
+        raise ValueError('invalid_project_schedule')
+    day=date.fromisoformat(local_day)
+    if day.isoformat()!=local_day or (workflow=='weekly' and day.weekday()!=DAYS.index(manifest['schedule']['weekly_day'])):
+        raise ValueError('invalid_project_cycle_date')
+    hour,minute=map(int,manifest['schedule'][workflow+'_local_time'].split(':'))
+    return datetime(day.year,day.month,day.day,hour,minute,tzinfo=ZoneInfo(manifest['timezone']),fold=0).astimezone(timezone.utc)

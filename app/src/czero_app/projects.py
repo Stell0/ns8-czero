@@ -119,6 +119,74 @@ class ResearchComplete(LeasedRequest):
     commit_references: list[str] = Field(min_length=1,max_length=100)
 
 
+
+class MonitorBegin(LeasedRequest):
+    topic_id: str = Field(min_length=1,max_length=128)
+
+
+class MonitorReserve(LeasedRequest):
+    cycle_id: str = Field(min_length=1,max_length=64)
+    kind: Literal['query','source']
+    request_id: str = Field(min_length=1,max_length=128)
+    request_text: str = Field(min_length=1,max_length=2048)
+    replaces_call_id: str = Field(default='',max_length=64)
+
+
+class MonitorObserve(LeasedRequest):
+    call_id: str = Field(min_length=1,max_length=64)
+    state: Literal['started','succeeded','failed','uncertain']
+    external_reference: str = Field(default='',max_length=512)
+    selected_sources: list[str] = Field(default_factory=list,max_length=100)
+    version_id: str = Field(default='',max_length=36)
+    citation_ids: list[str] = Field(default_factory=list,max_length=100)
+    summary: str = Field(default='',max_length=2048)
+
+
+class MonitorFinish(LeasedRequest):
+    cycle_id: str = Field(min_length=1,max_length=64)
+    status: Literal['complete','no_material_update','partial','blocked']
+    summary: str = Field(min_length=1,max_length=4096)
+    result_reference: str = Field(default='',max_length=36)
+
+
+class RunnerObservationSet(StrictRequest):
+    data: dict = Field(description='Strict attributed external-runner observation. Reported installation/execution requires task/evidence references; it never installs a task or proves unattended execution.')
+    idempotency_key: str = Field(min_length=1,max_length=128)
+
+
+class ScheduleOccurrence(StrictRequest):
+    latest_due: str
+    local_cycle_date: str
+    next_occurrence: str
+
+
+class ProjectScheduleView(StrictRequest):
+    project_id: str
+    space_id: str
+    manifest_version: int
+    timezone: str
+    server_now: str
+    local_date: str
+    desired: dict
+    occurrences: dict[str,ScheduleOccurrence]
+    execution_provider: Literal['external_agent']
+    installed_by_c0: Literal[False]
+    verification: str
+
+
+class ProjectAgentPackageView(StrictRequest):
+    schema_version: Literal[1]
+    project_id: str
+    space_id: str
+    manifest_version: int
+    mcp_url: str
+    format: Literal['skill','plugin']
+    name: str
+    file_count: int = Field(ge=1,le=16)
+    archive_sha256: str = Field(min_length=64,max_length=64)
+    archive_base64: str = Field(max_length=350000)
+
+
 def install_project_routes(app, database, auth, read_context, write_context):
     # Producer work can precede the immutable Core release. Old consumers stay
     # operational and explicitly reject project work until their pin is adopted.
@@ -167,8 +235,10 @@ def install_project_routes(app, database, auth, read_context, write_context):
 
     @app.get('/api/v1/project/records', response_model=ObjectsView)
     @operation('project_records_list', 'Read a bounded page of project records by versioned kind, including topic_v1 and immutable config_v1 history. A full page means coverage may be incomplete.', Role.READER, ObjectsView, space_field='space_id')
-    def records(kind: str, space_id: UUID, limit: int = 50, offset: int = 0, context: RequestAccess = Depends(read_context)):
-        return {'objects': invoke(space_id, 'list_records', context.actor, kind=kind, limit=limit, offset=offset)}
+    def records(kind: str, space_id: UUID, limit: int = 50, offset: int = 0, descending: bool=False, context: RequestAccess = Depends(read_context)):
+        if descending and (service is None or not hasattr(service,'monitor_begin')):raise HTTPException(503,'project_core_upgrade_required')
+        options={'descending':True} if descending else {}
+        return {'objects': invoke(space_id, 'list_records', context.actor, kind=kind, limit=limit, offset=offset,**options)}
     @app.put('/api/v1/project/connectors', response_model=ObjectView)
     @operation('project_connector_set', 'Admin: approve a finite source connector definition and its hash with actual user authorization. Explicit cross-space subscriptions recheck source-space authority. No fetch or schedule is executed.', Role.ADMIN, ObjectView, read_only=False, space_field='space_id')
     def connector(data: ConnectorSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
@@ -230,4 +300,51 @@ def install_project_routes(app, database, auth, read_context, write_context):
     @operation('project_research_complete','Complete a result awaiting merge only after stored same-space commit references have been verified. Does not reserve another attempt, execute an agent or publish notifications.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
     def research_complete(data: ResearchComplete,space_id: UUID,context: RequestAccess=Depends(write_context)):
         return invoke(space_id,'complete_research',context.actor,**data.model_dump())
+    @app.post('/api/v1/project/monitoring/begin',response_model=ProjectReceipt)
+    @operation('project_monitor_begin','Start/resume this daily primary user-topic monitoring cycle under a current fenced lease. Caps and coverage survive retries. This consumes zero queue slots and performs no search.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def monitor_begin(data: MonitorBegin,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'monitor_begin',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/monitoring/reserve',response_model=ProjectReceipt)
+    @operation('project_monitor_reserve','Reserve a bounded monitoring query or selected-source inspection before an external call. Reuse request_id to resume, retaining consumed counters and uncertain outcomes. Retries must explicitly name the failed request they replace.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def monitor_reserve(data: MonitorReserve,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'monitor_reserve',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/monitoring/observe',response_model=ProjectReceipt)
+    @operation('project_monitor_observe','Record monitoring invocation start and an actual observed outcome separately from reservation. Source success requires matching ready immutable passage/version IDs; query success requires a real external result reference. Uncertain is not no-news.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def monitor_observe(data: MonitorObserve,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'monitor_observe',context.actor,**data.model_dump())
+
+    @app.post('/api/v1/project/monitoring/finish',response_model=ProjectReceipt)
+    @operation('project_monitor_finish','Finalize bounded monitoring coverage. Successful queries and inspection of every selected source are required for no_material_update. Failed/unresolved checks retain the successful watermark. Material results remain pending until evidence and Wiki commits are verified.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def monitor_finish(data: MonitorFinish,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'monitor_finish',context.actor,**data.model_dump())
+
+    @app.get('/api/v1/project/schedule',response_model=ProjectScheduleView)
+    @operation('project_schedule_get','Read desired external-agent daily/weekly IANA calendar occurrences and stable local cycle dates. DST gaps move forward and folds use the first occurrence. This does not install tasks or establish unattended authentication/execution.',Role.READER,ProjectScheduleView,space_field='space_id')
+    def project_schedule(space_id: UUID,context: RequestAccess=Depends(read_context)):
+        return invoke(space_id,'schedule',context.actor)
+
+    @app.post('/api/v1/project/runner-observations',response_model=ProjectReceipt)
+    @operation('project_runner_observe','Store an attributed operator/runner/simulation report with real task/evidence references. Reported execution must name a completed stored same-project run. This does not enable schedules, grant authority or verify the external host.',Role.EDITOR,ProjectReceipt,read_only=False,space_field='space_id')
+    def runner_observation(data: RunnerObservationSet,space_id: UUID,context: RequestAccess=Depends(write_context)):
+        return invoke(space_id,'observe_runner',context.actor,**data.model_dump())
+
+    @app.get('/api/v1/project/agent-package',response_model=ProjectAgentPackageView)
+    @operation('project_agent_package_get','Generate a private project-bound skill or plugin archive from current authorized configuration. Select format plugin only with the actual verified ChatGPT app ID. Generation is read-only and does not install a plugin, grant scopes or schedule tasks.',Role.READER,ProjectAgentPackageView,space_field='space_id')
+    def agent_package(space_id: UUID,format: Literal['skill','plugin']='skill',chatgpt_app_id: str='',context: RequestAccess=Depends(read_context)):
+        from czero_app.project_agent_packages import project_package
+        stored=invoke(space_id,'get',context.actor)
+        if not hasattr(service,'monitor_begin'):raise HTTPException(503,'project_core_upgrade_required')
+        topics=[invoke(space_id,'get_record',context.actor,kind='topic_v1',identity=identity)
+            for identity in stored['data']['manifest']['primary_topic_ids']]
+        metadata=getattr(app.state,'connection_metadata',lambda:{'mcp_url':None})()
+        if not metadata['mcp_url']:raise HTTPException(409,'project_connection_not_configured')
+        try:result=project_package(metadata['mcp_url'],stored,topics,format=format,connection=chatgpt_app_id)
+        except ValueError:raise HTTPException(422,'invalid_project_request') from None
+        if invoke(space_id,'get',context.actor)['revision']!=stored['revision']:raise HTTPException(409,'project_conflict')
+        for topic in topics:
+            if invoke(space_id,'get_record',context.actor,kind='topic_v1',identity=topic['data']['topic_id'])['revision']!=topic['revision']:
+                raise HTTPException(409,'project_conflict')
+        return result
     return service

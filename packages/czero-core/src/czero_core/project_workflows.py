@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import text
 
 from .object_schema import bounded_json, validate_record
-from .project_schema import PREFIX, SCHEMAS, QUEUE_INPUT, WORKFLOWS, identifier, timestamp
+from .project_schema import PREFIX, SCHEMAS, QUEUE_INPUT, WORKFLOWS, identifier, timestamp, occurrence_on_day
 from .receipts import mutate, snapshot
 
 PHASES = {
@@ -120,12 +120,20 @@ class ProjectWorkflows:
             if manifest['data']['version']!=config_version:raise self.conflict()
             today=now.astimezone(ZoneInfo(config['timezone'])).date().isoformat()
             day=local_cycle_date or today
+            if date.fromisoformat(day).isoformat()!=day:raise ValueError('invalid_project_cycle_date')
+            if workflow_type in ('daily','weekly') and scheduled_for:
+                scheduled=timestamp(scheduled_for)
+                if scheduled>now or scheduled.astimezone(ZoneInfo(config['timezone'])).date().isoformat()!=day:
+                    raise ValueError('invalid_project_scheduled_occurrence')
             cycle='once' if workflow_type=='initialize' else day if workflow_type in ('daily','weekly') else cycle_key
             if not cycle:raise ValueError('stable_workflow_cycle_required')
             run_id=digest([str(self._space_id),workflow_type,cycle])
             previous=self._find(connection,'run_v1',run_id,required=False)
             if previous is None:
-                if day!=today:raise ValueError('new_workflow_requires_current_cycle')
+                if day!=today and (workflow_type not in ('daily','weekly') or not scheduled_for
+                        or timestamp(scheduled_for)!=occurrence_on_day(config,workflow_type,day)
+                        or now-timestamp(scheduled_for)>timedelta(days=8)):
+                    raise ValueError('new_workflow_requires_current_or_recent_scheduled_cycle')
                 run={'run_id':run_id,'project_id':str(self._space_id),'config_version':config_version,
                     'workflow_type':workflow_type,'local_cycle_date':day,'cycle_key':cycle,
                     'scheduled_for':scheduled_for or now.isoformat(),'started_at':now.isoformat(),'finished_at':'',
@@ -198,6 +206,7 @@ class ProjectWorkflows:
                 if previous['data']['payload_hash']!=fingerprint:raise self.conflict()
                 return receipt(status,'checkpoint_already_saved',run_row,previous)
             if run['current_phase']!=phase:raise self.conflict()
+            if run['workflow_type']=='daily' and phase=='monitoring' and status=='SAVED':self._monitoring_ready(connection,run)
             saved=self._save(connection,current,'checkpoint_v1',identity,
                 {'run_id':run['run_id'],'config_version':run['config_version'],'phase':phase,'status':status,
                  'payload_hash':fingerprint,'references':references,'summary':summary,'recorded_at':self.clock().isoformat()})
@@ -357,7 +366,7 @@ class ProjectWorkflows:
                     disposition='defer_capacity';reason='active_capacity'
                 elif not parents and candidate['origin']!='user':
                     initialized=sum(q['data']['origin']=='initialization' and q['data']['root_admitted'] for q in rows)
-                    if candidate['origin']=='initialization' and initialized>=config['research']['normal_daily_attempts']:
+                    if candidate['origin']=='initialization' and initialized>=min(5,config['research']['normal_daily_attempts']):
                         disposition='defer_capacity';reason='initialization_seed_limit'
                     elif budget['data']['roots_admitted']>=budget['data']['roots_limit']:
                         disposition='defer_capacity';reason='daily_root_capacity'
@@ -412,6 +421,16 @@ class ProjectWorkflows:
         if previous['data']['run_id']!=run['run_id']:raise self.conflict()
         return previous
 
+    def _queue_current(self,connection,queue):
+        admission=connection.execute(text('''SELECT data FROM c0_objects
+            WHERE space_id=:space AND id=CAST(:id AS uuid) AND type_name=:type'''),
+            {'space':self._space_id,'id':queue['admission_ref'],'type':PREFIX+'admission_v1'}).scalar_one_or_none()
+        if not admission or admission['config_version']!=self._manifest(connection)['data']['version']:
+            return False
+        return (bool(self._topic_scope(connection,queue['topic_id'],one_off=queue['origin']=='user'))
+            and self._lineage_allowed(connection,queue['parent_ids'],
+                {row['data']['stable_id']:row for row in self._queue_rows(connection)}))
+
     def reserve(self,actor,lease,*,resume_attempt_id='',idempotency_key):
         if resume_attempt_id:identifier(resume_attempt_id)
         def execute(connection,current,run_row):
@@ -421,12 +440,15 @@ class ProjectWorkflows:
             if resume_attempt_id:
                 previous=self._attempt(connection,run,resume_attempt_id);attempt=data_of(previous)
                 queue=self._find(connection,'queue_v1',attempt['queue_id'])
+                if attempt['state']=='reserved' and not self._queue_current(connection,queue['data']):
+                    return receipt('BLOCKED','scope_reassessment_required',previous,queue)
                 if attempt['state']=='invoking' and attempt['fencing_generation']!=run['fencing_generation']:
                     attempt['state']='uncertain'
                 attempt['fencing_generation']=run['fencing_generation']
                 previous=self._save(connection,current,'attempt_v1',resume_attempt_id,attempt,previous=previous)
                 status='ACCEPTED_PENDING_MERGE' if attempt['state']=='result_saved' else 'BLOCKED' if attempt['state'] in ('uncertain','failed') else 'SAVED'
                 return receipt(status,'reservation_resumed',previous,queue)
+            if run['workflow_type']=='daily':self._monitoring_ready(connection,run)
             budget=self._budget(connection,current,manifest);slot=budget['data']['used']+1
             if slot>budget['data']['total_limit']:return receipt('BLOCKED','daily_budget_exhausted',budget)
             rows=self._queue_rows(connection);eligible=[];blocked=[]
@@ -444,7 +466,7 @@ class ProjectWorkflows:
                     active=sum(active_work(other['data']) for other in rows)
                     if active>=config['research']['max_active_items']:continue
                     if not q['root_admitted']:
-                        if q['origin']=='initialization' and sum(other['data']['origin']=='initialization' and other['data']['root_admitted'] for other in rows)>=config['research']['normal_daily_attempts']:continue
+                        if q['origin']=='initialization' and sum(other['data']['origin']=='initialization' and other['data']['root_admitted'] for other in rows)>=min(5,config['research']['normal_daily_attempts']):continue
                         if budget['data']['roots_admitted']>=budget['data']['roots_limit']:continue
                 if slot>budget['data']['ordinary_limit'] and q['priority']!=0:
                     values=data_of(row);values.update(status='deferred',defer_reason='daily_budget')
@@ -485,6 +507,7 @@ class ProjectWorkflows:
             run=run_row['data'];previous=self._attempt(connection,run,attempt_id);attempt=data_of(previous)
             queue_row=self._find(connection,'queue_v1',attempt['queue_id']);queue=data_of(queue_row)
             if attempt['fencing_generation']!=run['fencing_generation']:raise self.conflict()
+            if state=='started' and not self._queue_current(connection,queue):raise self.conflict()
             allowed={'started':('reserved',),'returned':('invoking','uncertain'),
                 'uncertain':('invoking','uncertain'),'failed':('reserved','invoking','uncertain')}
             if attempt['state'] not in allowed[state]:raise self.conflict()
@@ -518,6 +541,7 @@ class ProjectWorkflows:
             previous=self._attempt(connection,run_row['data'],attempt_id);attempt=data_of(previous)
             queue_row=self._find(connection,'queue_v1',attempt['queue_id']);queue=data_of(queue_row)
             if attempt['fencing_generation']!=run_row['data']['fencing_generation'] or attempt['state']!='result_saved':raise self.conflict()
+            if not self._queue_current(connection,queue):raise self.conflict()
             if not commit_references:raise ValueError('verified_commit_references_required')
             self._references(connection,commit_references)
             attempt['state']='complete';queue.update(status='complete',retry_after='')

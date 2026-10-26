@@ -7,8 +7,8 @@
   function clear() {
     ++sequence; $('project-content').hidden = true;
     $('project-title').textContent = 'Project unavailable.';
-    for (const id of ['project-description','project-purpose','project-scope','project-config','project-topics-note','project-work-status','project-report-status','project-status','project-sources-status']) $(id).textContent = '';
-    for (const id of ['project-topics','project-work','project-reports','project-sources']) $(id).replaceChildren();
+    for (const id of ['project-description','project-purpose','project-scope','project-config','project-topics-note','project-work-status','project-report-status','project-status','project-sources-status','project-monitoring-status']) $(id).textContent = '';
+    for (const id of ['project-topics','project-work','project-reports','project-sources','project-monitoring']) $(id).replaceChildren();
   }
   space.onClear(clear);
   async function read(path) {
@@ -21,7 +21,7 @@
     if (!space.identifier) { $('project-status').textContent = 'Choose a protected space configured as a research project.'; return; }
     $('project-status').textContent = 'Reading project…';
     try {
-      const [stored, topics, sources, work, runs] = await Promise.all([read('project'), read('project/records?kind=topic_v1&limit=100'), read('project/records?kind=connector_sync_v1&limit=100'), read('project/records?kind=queue_v1&limit=100'), read('project/records?kind=run_v1&limit=100')]);
+      const [stored, topics, sources, work, runs, monitoring] = await Promise.all([read('project'), read('project/records?kind=topic_v1&limit=100'), read('project/records?kind=connector_sync_v1&limit=100'), read('project/records?kind=queue_v1&limit=100'), read('project/records?kind=run_v1&limit=100&descending=true'), read('project/records?kind=monitor_cycle_v1&limit=100&descending=true')]);
       if (current !== sequence || !space.current(generation)) return;
       const config = stored.data.manifest;
       if (config.space_id !== space.identifier || config.project_id !== space.identifier) throw new Error('binding');
@@ -53,6 +53,13 @@
         $('project-work').append(item);
       }
       $('project-work-status').textContent = work.objects.length === 100 || runs.objects.length === 100 ? 'Incomplete work inventory. Continue through the project API.' : work.objects.length || runs.objects.length ? 'Stored workflow observations. A reservation or active lease does not prove successful external execution.' : 'No queued research or workflow observation yet.';
+      const labels = new Map(topics.objects.map(entry => [entry.data.topic_id, entry.data.label]));
+      for (const entry of monitoring.objects) {
+        const cycle = entry.data, item = document.createElement('li');
+        item.textContent = (labels.get(cycle.topic_id) || cycle.topic_id) + ' · ' + cycle.local_date + ' · ' + cycle.status + ' · queries ' + cycle.queries_used + '/' + cycle.max_queries + ' · sources ' + cycle.sources_used + '/' + cycle.max_sources + (cycle.successful_watermark ? ' · covered through ' + cycle.successful_watermark : ' · successful watermark not advanced') + (cycle.summary ? ' · ' + cycle.summary : '');
+        $('project-monitoring').append(item);
+      }
+      $('project-monitoring-status').textContent = monitoring.objects.length === 100 ? 'Incomplete monitoring history. Continue through the project API.' : monitoring.objects.length ? 'Recent stored coverage; monitoring uses no queued research slots.' : config.primary_topic_ids.length ? 'Primary-topic monitoring has no stored coverage yet.' : 'No primary topics configured.';
       $('project-report-status').textContent = 'Read saved project reports in Knowledge. Report persistence and external notification are separate observations.';
       $('project-content').hidden = false;
       $('project-status').textContent = 'Saved project configuration. Workflow completion and external scheduling require separate receipts.';
