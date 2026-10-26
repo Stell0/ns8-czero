@@ -10,6 +10,7 @@ C0 is an NS8 knowledge application with a website and authenticated MCP tools fo
 | Package skills for my own instance | [ChatGPT plugin](plugin.md) |
 | Use REST, MCP or understand limits | [Interface reference](reference.md) |
 | Extend C0 or maintain a fork | [Development](development.md) |
+| Import external data and keep it updated | [Ingestion samples](../samples/ingestion/README.md) |
 | Check documentation/plugin release readiness | [Readiness checklist](release-readiness.md) |
 
 The [roadmap](../PLAN.md) records current work and the [CI policy](ci-policy.md) defines acceptance. [Historical evidence](history/PLAN.md) is retained separately; old milestone statuses are not current setup instructions.

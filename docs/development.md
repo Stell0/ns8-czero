@@ -33,6 +33,13 @@ Do not run tests concurrently against a shared mutable database. Use fresh uniqu
 
 ## Public contracts and safety
 
+For repeatable external-source imports, read the [ingestion samples](../samples/ingestion/README.md)
+and use c0-ingest-sources. Shared client-side helpers and adapters are development
+tools, separate from Core/runtime packages. Save actual instance jobs and `.env`
+under ignored `.local/ingestion`; publish only generic adapters, synthetic tests
+and reusable source lessons after privacy review. The normal unit and integration
+suites include their regressions; the example has its own frozen dependency lock.
+
 Use trusted operation bindings, current-role checks inside Core transactions and existing lock ordering. Preserve original source/version/document/chunk identity, protected-space selection, expected revisions and replay receipts. A discovered tool or provider response does not confer authority. HTTP, ordinary SDK metadata and current/legacy MCP wire contracts all need verification when touched.
 
 Static user pages use local assets, literal DOM rendering and generation/access-loss guards. Raw HTML from knowledge remains inactive. Ordinary readers must not initialize mutation controllers or load Admin membership lists. Copy current canonical instance URLs rather than constructing a deployment-specific hostname.

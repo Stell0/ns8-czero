@@ -22,7 +22,7 @@ DOCS = frozenset({
     'docs/history/README.md', 'docs/history/AGENTS.md', 'docs/history/PLAN.md',
     '.agents/references/development.md',
     *('.agents/skills/'+name+'/SKILL.md' for name in (
-        'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream', 'c0-evaluate-tools')),
+        'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources')),
 })
 SHA = re.compile(r'[0-9a-f]{40}\Z')
 EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
@@ -58,7 +58,7 @@ def area(path):
     if path.startswith('app/src/czero_app/'):
         return 'app' if Path(path).name in APP_TESTS else 'broad'
     if path.startswith(('packages/', 'app/', 'containers/', 'imageroot/', '.github/',
-                        'scripts/', 'tests/', 'examples/', 'plugins/')):
+                        'scripts/', 'tests/', 'examples/', 'samples/', 'plugins/')):
         return 'broad'
     if path in {'build-images.sh', 'renovate.json', 'c0-upstream.json', '.gitignore'}:
         return 'broad'
