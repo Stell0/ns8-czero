@@ -503,3 +503,7 @@ exercised. Live original-file corpus is empty; nonempty recovery is disposable.
 No project initialization, real migration, research schedule activation, existing
 knowledge mutation or static-site publication occurred. Project research,
 project-skill host use and unattended execution remain separate verification.
+
+## Remembered-browser Core candidate
+
+Core 0.35.0/schema 0022 is an additive implementation candidate. Existing app/browser/delegated behavior stays ordinary. The website flow follows in app 0.54 after immutable Core publication; no feature deployment or native acceptance is claimed. Preserve all three deployed c2280f5 image identities in PLAN.

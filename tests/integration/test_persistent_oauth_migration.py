@@ -77,7 +77,7 @@ def test_0019_native_authority_is_preserved_without_persistent_upgrade():
                 assert c.execute(text('SELECT authority_kind FROM c0_native_authority')).scalar_one()=='session'
                 assert c.execute(text('SELECT browser_idle_until,browser_idle_seconds FROM c0_sessions')).one()==(None,None)
                 assert c.execute(text('SELECT persistent,refresh_family,idle_until FROM c0_oauth_grants')).one()==(False,None,None)
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0021_workspace_access'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0022_remembered_browsers'
         sessions=SessionService(access,'native1',authority=authority)
         context=sessions.get(cookie);assert context.csrf_token==csrf
         grants=OAuthGrantService(access,'native1',resource,authority=authority)

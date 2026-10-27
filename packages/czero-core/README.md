@@ -491,3 +491,24 @@ frozen lock select the actual immutable release; local producer builds require
 the explicit development override. Never infer publication, deployment or
 external-agent acceptance from package metadata. See the versioned repository's
 docs/projects contracts for APIs, limits, recovery and migration preparation.
+
+## Remembered website sessions (0.35)
+
+Migration 0022 adds ordinary-by-default browser/login flags and five-minute
+one-use first-party sign-in intents. Trusted applications validate Origin and
+the browser binding before selecting `begin_login(remembered=True)`. The OIDC
+adapter requests explicit offline consent and verifies its issuance and account
+before `SessionService.create(..., remembered=True)` can store encrypted renewal
+authority. Missing offline scope or refresh credentials fails remembered issuance.
+
+A remembered browser has a fixed seven-day inactivity policy, independent of
+ordinary session limits and background-connection consent. Call `get` before
+protected work, then `renew_browser` only after a successful authenticated browser
+response. That final transaction rechecks current membership, native authority
+and the live cookie; it cannot revive expiry or logout. Send only the opaque
+Secure/HttpOnly/SameSite cookie, renewing its seven-day expiry after success.
+Delegated traffic never calls `renew_browser`. Ordinary OAuth grants from a
+remembered browser keep the configured finite session maximum. Persistent grants
+still require separate explicit background consent and retain their independent
+inactivity policy, including when that policy is shorter than seven days.
+Existing browser sessions, grants and login states are never promoted.

@@ -2,6 +2,14 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
+## Remembered-browser Core release bridge — pending acceptance
+
+From original main `f317036`, implement Core 0.35.0/schema 0022: five-minute one-use website sign-in intents, explicit offline remembered sessions, fixed seven-day browser inactivity, final successful-response renewal, finite ordinary delegated grants and independent explicit background-connection inactivity. Existing rows default to ordinary mode. Native upgrade inputs freeze the actual deployed `c2280f5` trio below.
+
+The bridge retains app 0.53.0 and immutable released Core 0.34.0 as the default consumer source. Its explicit producer-development build tests Core 0.35.0; the compatible range includes both during publication. The website form/cookie middleware and app 0.54.0 adoption follow only after exact-source full/native acceptance and immutable Core publication. No live changes or remembered website behavior is claimed by this bridge.
+
+Focused controlled-clock/PostgreSQL remembered service tests pass alongside existing lifecycle cases; repeated real schema0021 migration preserves all predecessor columns and defaults old sessions/login states to ordinary. Full exact-source checks, native artifacts and publication remain pending. Do not substitute this build for the genuine deployed predecessor.
+
 ## Roadmap
 
 ### Active implementation — reusable ingestion samples

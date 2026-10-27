@@ -308,3 +308,5 @@ Actual project research and unattended execution remain unverified. Reload the
 host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
+
+Core 0.35.0/schema 0022 is being prepared for optional seven-day remembered website sessions. This Core release bridge keeps the current website behavior and released consumer pin; website support follows in app 0.54.0 after publication and acceptance. Existing sessions and assistant connections are never automatically promoted.
