@@ -2,6 +2,23 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
+## Seven-day remembered website login — implementation candidate
+
+Base: original main `f317036`. Preserve the deployed `c2280f5` trio below as the genuine predecessor. Core 0.35.0 / app 0.54.0 / additive schema 0022 are the feature targets; no live update is authorized before review and approval.
+
+- First-party GET/POST `/auth/sign-in`, unchecked remember choice, five-minute one-use persisted intent and Secure browser binding; exact Origin, bounded form and duplicate checks precede OIDC. Compatibility `/auth/login` remains ordinary except for an already staged background flow.
+- Provider-attested offline access and matching authenticated identity precede remembered issuance; failure offers ordinary sign-in. Seven-day browser inactivity is fixed, opaque cookies and encrypted credentials remain server-managed. Existing sessions stay ordinary.
+- Successful authenticated website responses slide the browser deadline. Public/failed/MCP requests do not. Transactional current-role/native/session checks prevent logout or revoked authority being revived. Browser and connection inactivity policies remain independent, including explicit background consent from a remembered browser. Ordinary grants remain finite.
+- Verify controlled-clock expiry/rolling/restart, one-use/CSRF/account-switch/provider failures, real PostgreSQL concurrency/revocation, profile isolation, native real offline issuance/cookies/update/restore and artifact privacy. Run the unchanged-main baseline and full candidate suites. Publish Core only after exact-source full/native gates, then adopt its immutable dependency/lock, complete full app CI and a reviewable PR. Deployment and real provider acceptance remain approval gates.
+
+The exact unchanged-main baseline `f317036` passes [full acceptance 40495377796](https://github.com/Stell0/ns8-czero/actions/runs/40495377796), including independently downloaded native/privacy/scan artifacts and promotion verification.
+
+Core source `254fd3fb817a7eb98fa22b10d1e20b33619af344` passes 2,275 local Python/PostgreSQL/packaging cases and [full acceptance 40518599847](https://github.com/Stell0/ns8-czero/actions/runs/40518599847). Actual downloaded reports pass Debian genuine upgrade (21), Rocky installation (26/three expected skips), all eight browser workflows, eight privacy guards, 32 numeric accessibility contexts and three OAuth-query artifacts with zero candidates. Five actual SARIF/SBOM pairs and independent exact-source promotion verification pass. The bridge tests app 0.53 with producer Core 0.35; they do not establish the new website flow.
+
+Immutable [Core 0.35.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.0) points to that source; [publisher 40529304349](https://github.com/Stell0/ns8-czero/actions/runs/40529304349) succeeds. Downloaded wheel SHA-256 `389b3a3f1b781d906e202e26af6f5d7e1cdc34e5764e6265828899167cd3b694` and archive `0d15addec1a9e0c8785342583fe4d3d76e977c13836e2226569064a12c7bf07b` match published checksums. Eight supplied-artifact checks pass independent installations, reproducible rebuilds and fresh/repeated PostgreSQL migration. The app now pins that released tag/commit, `>=0.35.0,<0.36.0`, frozen lock and matching patch-only Renovate bounds.
+
+App producer source `1dc0b0a` passes 2,298 actual Python/PostgreSQL/packaging cases, 197 Node 24 controller cases, immutable administration UI build, schema/shell/docs checks and 21 Robot dry-run cases. Final adoption source `760d543` independently passes the complete 2,298-case suite against a fresh frozen-lock consumer installation of released Core 0.35.0 (no database skips); installed Git provenance resolves to the verified `254fd3f` commit outside the checkout. Original main remains `f317036` after a fresh fetch. Exact app CI/native remembered issuance/recovery gates remain pending. No feature deployment or live acceptance is claimed; review and explicit deployment approval remain required.
+
 ## Roadmap
 
 ### Active implementation — reusable ingestion samples
@@ -1438,3 +1455,9 @@ The M8 readiness report is its earlier implementation-acceptance snapshot; this
 separately authorized installation closes its reference-deployment gate only.
 No real WikiPlant data was migrated, no project space initialized, no research
 schedule activated, no existing knowledge changed and no static site published.
+
+Review correction: isolate ordinary browser inactivity too. Snapshot existing ordinary native-session idle bounds once in migration0022 without extending them, keep new ordinary browser idle windows independent of delegated activity, and retain the original finite ordinary consent/grant maximum. The first frozen074c28c is not published; its run is retained. The corrected Core source needs fresh full/native checks.
+
+Successful-sign-in replacement also retires the prior opaque cookie without revoking separately authorized grants. Old in-flight requests cannot restore browser access; authority cleanup retains unexpired finite grants too. The earlier2fd8631 remains unpublished, with its exact checks retained; the corrected release source must repeat full/native acceptance.
+
+The2fd8631 Debian native run40511353228 exposed a disposable expiry fixture that updated only the absolute timestamp and violated the independent idle-window constraint. Update the exact fixture to expire both timestamps, retaining the runtime constraint. Its new actual renewable signed-HTTP recovery regression passes; new exact-source full/native gates are required.

@@ -205,7 +205,7 @@ class OAuthGrantService:
                 self._grant(connection, row['id'], client['client_id'], resource)
                 native = self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
                 activity = {'id': row['id'], 'now': _date(self._now()),
-                    'idle': _date(self._now() + native['idle_seconds'])}
+                    'idle': _date(self._now() + (native.get('connection_idle_seconds') or native['idle_seconds']))}
                 connection.execute(text('''UPDATE c0_oauth_grants SET last_used_at=:now,idle_until=:idle
                     WHERE id=:id AND persistent'''), activity)
                 # A successful access-token use also counts as activity. Keep
@@ -275,7 +275,8 @@ class OAuthGrantService:
 
     def _issue_code(self, connection, session, client_id, *, callback, scopes, challenge, resource, verification=None, persistent=False):
         """Called only after explicit, CSRF-protected consent by this session."""
-        if not isinstance(session, SessionContext) or session.expires_at.tzinfo is None or type(persistent) is not bool:
+        if (not isinstance(session, SessionContext) or session.expires_at.tzinfo is None or type(persistent) is not bool
+                or session.remembered and session.native_authority_id is None):
             raise GrantRejected()
         if type(scopes) not in (set, frozenset) or not scopes or not scopes <= SCOPES:
             raise GrantRejected()
@@ -302,6 +303,8 @@ class OAuthGrantService:
             except RenewalRejected:
                 raise GrantRejected() from None
             expires = min(session.expires_at.timestamp(), native['expires_at'].timestamp()) if native['expires_at'] is not None else session.expires_at.timestamp()
+        if session.remembered and not persistent:
+            expires = min(expires, current + self.authority.policy.absolute_seconds)
         if session.expires_at.timestamp() <= current or expires <= current:
             raise GrantRejected()
         if persistent:
@@ -340,7 +343,7 @@ class OAuthGrantService:
              'issuer': self.access.issuer, 'native': self.native_client, 'resource': self.resource,
              'scopes': json.dumps(sorted(scopes)), 'expires': _date(expires) if expires is not None else None,
              'authority': session.native_authority_id, 'persistent': persistent,
-             'idle': _date(current + native['idle_seconds']) if persistent else None,
+             'idle': _date(current + (native.get('connection_idle_seconds') or native['idle_seconds'])) if persistent else None,
              'used': _date(current) if persistent else None, 'family': secrets.token_hex(12) if persistent else None})
         connection.execute(text('''INSERT INTO c0_oauth_codes(hash,grant_id,redirect_uri,challenge,expires_at)
             VALUES (:hash,:grant,:redirect,:challenge,:expires)'''),

@@ -70,7 +70,7 @@ def test_idle_deadline_cannot_be_revived(renewable):
     sessions, _, _, current, calls, _ = renewable
     cookie = login(renewable)
     current[0] += 600
-    with pytest.raises(RenewalRejected):
+    with pytest.raises((SessionRejected, RenewalRejected)):
         sessions.get(cookie)
     assert calls == []
 

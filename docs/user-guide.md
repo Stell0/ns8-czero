@@ -59,3 +59,23 @@ Use your owner/Editor account and choose the intended authorized space. This sma
 For a maintenance test, explicitly request one small edit to this owned page after the Admin approves write scope and you consent. Read it back and check its new revision/history. A Reader connection should explain denial and leave content unchanged. Keep the fixture available for repeat/renewal tests; archive the test page through its normal controls when finished rather than deleting retained evidence.
 
 Administrators use [Workspace access](workspace-access.md) for people, application requests and individual connections. Application approval does not give a user extra permissions; they must still consent.
+
+## Remember this device (upcoming candidate)
+
+Website sign-in offers an unchecked **Remember this device** option. Select it
+only on a device you trust. Once your sign-in provider authorizes remembered
+access, you can return after closing the browser. Successful website use renews
+the seven-day window; seven days without use ends it. There is no background
+keepalive. If the provider cannot authorize it, return to sign-in and leave the
+option unchecked for ordinary access.
+
+Ordinary sign-in keeps the administrator's existing session limits (normally one
+hour idle and eight hours maximum). Account shows whether this device is
+remembered. Sign out forgets the current browser. Administrators can block access,
+and provider rejection stops renewal.
+
+Your ChatGPT/Codex connections have separate permissions and explicit consent.
+Their activity does not keep this browser signed in. Remembering a device does
+not enable background AI access or upgrade existing connections; disconnect
+connections separately in Account or Workspace access. This candidate still
+requires publication, native acceptance and deployment review before availability.

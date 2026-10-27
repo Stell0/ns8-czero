@@ -15,6 +15,8 @@ from sqlalchemy import text
 from .access import AccessService
 from .identity import Actor, PermissionDenied, Role, VerifiedIdentity
 
+REMEMBER_SECONDS = 7 * 86400
+
 
 class LoginStateRejected(ValueError):
     def __init__(self):
@@ -34,6 +36,7 @@ class PendingLogin:
     code_verifier: str = field(repr=False)
     background: bool = False
     expected_account_key: str | None = field(default=None, repr=False)
+    remembered: bool = False
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,7 @@ class LoginSecrets:
     code_verifier: str = field(repr=False)
     background: bool = False
     expected_account_key: str | None = field(default=None, repr=False)
+    remembered: bool = False
 
 
 @dataclass(frozen=True)
@@ -50,6 +54,7 @@ class SessionContext:
     expires_at: datetime
     csrf_token: str = field(repr=False)
     native_authority_id: UUID | None = field(default=None, repr=False)
+    remembered: bool = False
 
 
 @dataclass(frozen=True, repr=False)
@@ -93,8 +98,33 @@ class SessionService:
         self.max_session_seconds = authority.policy.absolute_seconds if authority else max_session_seconds
         self._fixed_session_seconds = min(max_session_seconds, self.max_session_seconds)
 
-    def begin_login(self, *, background=False, session=None) -> PendingLogin:
-        if type(background) is not bool:
+    def begin_sign_in(self):
+        intent, browser = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+        with self.access.database.engine.begin() as connection:
+            connection.execute(text('SELECT pg_advisory_xact_lock(49373)'))
+            connection.execute(text('DELETE FROM c0_signin_intents WHERE expires_at<=:now'), {'now': _date(self._now())})
+            if connection.execute(text('SELECT count(*) FROM c0_signin_intents')).scalar_one() >= 1000:
+                raise LoginStateRejected()
+            connection.execute(text('''INSERT INTO c0_signin_intents(hash,browser_hash,issuer,client_id,expires_at)
+                VALUES (:hash,:browser,:issuer,:client,:expires)'''),
+                {'hash': _digest(intent), 'browser': _digest(browser), 'issuer': self.access.issuer,
+                 'client': self.client_id, 'expires': _date(self._now()+300)})
+        return intent, browser
+
+    def consume_sign_in(self, intent, browser):
+        try:
+            parameters = {'hash': _digest(intent), 'browser': _digest(browser), 'issuer': self.access.issuer,
+                          'client': self.client_id, 'now': _date(self._now())}
+        except ValueError:
+            raise LoginStateRejected() from None
+        with self.access.database.engine.begin() as connection:
+            found = connection.execute(text('''DELETE FROM c0_signin_intents WHERE hash=:hash AND browser_hash=:browser
+                AND issuer=:issuer AND client_id=:client AND expires_at>:now RETURNING hash'''), parameters).scalar_one_or_none()
+            if found is None:
+                raise LoginStateRejected()
+
+    def begin_login(self, *, background=False, session=None, remembered=False) -> PendingLogin:
+        if type(background) is not bool or type(remembered) is not bool or remembered and self.authority is None:
             raise LoginStateRejected()
         expected = None
         if background:
@@ -106,7 +136,8 @@ class SessionService:
                 actor = self.access.checked_actor(connection, session.actor)
                 expected = str(connection.execute(text('SELECT account_key FROM c0_accounts WHERE id=:id'),
                     {'id': actor.user_id}).scalar_one())
-        pending = PendingLogin(*(secrets.token_urlsafe(32) for _ in range(4)), background, expected)
+        remembered = remembered or bool(background and session.remembered)
+        pending = PendingLogin(*(secrets.token_urlsafe(32) for _ in range(4)), background, expected, remembered)
         current = self._now()
         with self.access.database.engine.begin() as connection:
             connection.execute(text("SELECT pg_advisory_xact_lock(49373)"))
@@ -118,12 +149,12 @@ class SessionService:
                 raise LoginStateRejected()
             connection.execute(text("""
                 INSERT INTO c0_login_states
-                (state_hash, browser_hash, nonce, code_verifier, issuer, client_id, expires_at,background,expected_account_key)
-                VALUES (:state, :browser, :nonce, :verifier, :issuer, :client, :expires,:background,:expected)
+                (state_hash, browser_hash, nonce, code_verifier, issuer, client_id, expires_at,background,expected_account_key,remembered)
+                VALUES (:state, :browser, :nonce, :verifier, :issuer, :client, :expires,:background,:expected,:remembered)
             """), {"state": _digest(pending.state), "browser": _digest(pending.browser_binding),
                    "nonce": pending.nonce, "verifier": pending.code_verifier,
                    "issuer": self.access.issuer, "client": self.client_id, "expires": _date(current + 300),
-                   'background': background, 'expected': expected})
+                   'background': background, 'expected': expected, 'remembered': remembered})
         return pending
 
     def pending_login(self, state, browser_binding):
@@ -134,12 +165,12 @@ class SessionService:
         except ValueError:
             raise LoginStateRejected() from None
         with self.access.database.engine.connect() as connection:
-            row = connection.execute(text('''SELECT nonce,code_verifier,expected_account_key FROM c0_login_states
+            row = connection.execute(text('''SELECT nonce,code_verifier,expected_account_key,remembered FROM c0_login_states
                 WHERE state_hash=:state AND browser_hash=:browser AND issuer=:issuer AND client_id=:client
                 AND background AND expires_at>:now'''), parameters).mappings().one_or_none()
         if row is None or self.authority is None or self.authority.connection_policy is None:
             raise LoginStateRejected()
-        return PendingLogin(state, browser_binding, row['nonce'], row['code_verifier'], True, row['expected_account_key'])
+        return PendingLogin(state, browser_binding, row['nonce'], row['code_verifier'], True, row['expected_account_key'], row['remembered'])
 
     def consume_login(self, state: str, browser_binding: str) -> LoginSecrets:
         try:
@@ -151,14 +182,16 @@ class SessionService:
             row = connection.execute(text("""
                 DELETE FROM c0_login_states WHERE state_hash = :state AND browser_hash = :browser
                 AND issuer = :issuer AND client_id = :client AND expires_at > :now
-                RETURNING nonce, code_verifier,background,expected_account_key
+                RETURNING nonce, code_verifier,background,expected_account_key,remembered
             """), parameters).mappings().one_or_none()
             if row is None:
                 raise LoginStateRejected()
-        return LoginSecrets(row["nonce"], row["code_verifier"], row['background'], row['expected_account_key'])
+        return LoginSecrets(row["nonce"], row["code_verifier"], row['background'], row['expected_account_key'], row['remembered'])
 
-    def create(self, identity: VerifiedIdentity, *, renewal=None, background=False, expected_account_key=None) -> str:
+    def create(self, identity: VerifiedIdentity, *, renewal=None, background=False, expected_account_key=None, remembered=False) -> str:
         if type(background) is not bool or background and (expected_account_key is None or identity.account_key != expected_account_key):
+            raise SessionRejected()
+        if type(remembered) is not bool:
             raise SessionRejected()
         current = self._now()
         expires = min(identity.expires_at, current + self._fixed_session_seconds)
@@ -172,18 +205,19 @@ class SessionService:
                 from .renewal import RenewalRejected, RenewalResult
                 if self.authority is None or not isinstance(renewal, RenewalResult) or renewal.identity != identity:
                     raise RenewalRejected()
-                native_id, absolute = self.authority.create(connection, actor, renewal, background=background)
-                expires = absolute.timestamp() if absolute is not None else current + self.max_session_seconds
-            elif background:
+                native_id, absolute = self.authority.create(connection, actor, renewal, background=background, remembered=remembered)
+                expires = current + REMEMBER_SECONDS if remembered else (absolute.timestamp() if absolute is not None else current + self.max_session_seconds)
+            elif background or remembered:
                 raise SessionRejected()
             connection.execute(text("""
                 INSERT INTO c0_sessions (token_hash, account_id, csrf_token, issuer, client_id, expires_at, native_authority_id,
-                    browser_idle_until,browser_idle_seconds)
-                VALUES (:token, :account, :csrf, :issuer, :client, :expires, :native,:idle,:seconds)
+                    browser_idle_until,browser_idle_seconds,remembered)
+                VALUES (:token, :account, :csrf, :issuer, :client, :expires, :native,:idle,:seconds,:remembered)
             """), {"token": _digest(cookie), "account": actor.user_id, "csrf": secrets.token_urlsafe(32),
                    "issuer": self.access.issuer, "client": self.client_id, "expires": _date(expires), "native": native_id,
-                   'idle': _date(min(expires,current+self.authority.policy.idle_seconds)) if background else None,
-                   'seconds': self.authority.policy.idle_seconds if background else None})
+                   'idle': _date(expires) if remembered else (_date(min(expires,current+self.authority.policy.idle_seconds)) if native_id is not None else None),
+                   'seconds': REMEMBER_SECONDS if remembered else (self.authority.policy.idle_seconds if native_id is not None else None),
+                   'remembered': remembered})
         return cookie
 
     def get(self, cookie: str) -> SessionContext:
@@ -210,35 +244,60 @@ class SessionService:
             self._context(connection, hashed)
             connection.execute(text('''UPDATE c0_sessions
                 SET browser_idle_until=LEAST(expires_at,:now + browser_idle_seconds * interval '1 second')
-                WHERE token_hash=:token AND browser_idle_until>:now AND expires_at>:now'''),
+                WHERE token_hash=:token AND NOT remembered AND browser_idle_until>:now AND expires_at>:now'''),
                 {'token':hashed,'now':_date(self._now())})
             context = self._context(connection, hashed)
         return replace(context, actor=replace(context.actor, session_binding=SessionBinding(self, hashed)))
 
+    def renew_browser(self, cookie):
+        """Slide only a successful first-party browser request, after its work."""
+        try:
+            hashed = _digest(cookie)
+        except ValueError:
+            raise SessionRejected() from None
+        with self.access.database.engine.begin() as connection:
+            connection.execute(text('SELECT pg_advisory_xact_lock_shared(49372)'))
+            connection.execute(text('SELECT pg_advisory_xact_lock(49382)'))
+            context = self._context(connection, hashed)
+            if context.remembered:
+                connection.execute(text('''UPDATE c0_sessions SET expires_at=:expires,browser_idle_until=:expires
+                    WHERE token_hash=:hash AND remembered'''),
+                    {'hash': hashed, 'expires': _date(self._now()+REMEMBER_SECONDS)})
+            return self._context(connection, hashed)
+
     def _context(self, connection, hashed):
-        row = connection.execute(text("""SELECT account_id,csrf_token,expires_at,native_authority_id,browser_idle_until
+        row = connection.execute(text("""SELECT account_id,csrf_token,expires_at,native_authority_id,browser_idle_until,remembered
             FROM c0_sessions WHERE token_hash=:token AND issuer=:issuer AND client_id=:client
             AND expires_at>:now AND (browser_idle_until IS NULL OR browser_idle_until>:now)"""), {'token': hashed, 'issuer': self.access.issuer,
                 'client': self.client_id, 'now': _date(self._now())}).mappings().one_or_none()
         if row is None:
             raise SessionRejected()
+        native = None
         if row['native_authority_id'] is not None:
             if self.authority is None:
                 raise SessionRejected()
-            self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
+            native = self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
         actor = self.access._actor(connection, row['account_id'])
         actor.require(Role.READER)
-        expires = min(row['expires_at'],row['browser_idle_until']) if row['browser_idle_until'] is not None else row['expires_at']
-        return SessionContext(actor, expires, row['csrf_token'], row['native_authority_id'])
+        # Ordinary consent retains its original finite delegation deadline; the
+        # bound actor still rechecks the independent browser idle window.
+        expires = row['expires_at']
+        if row['browser_idle_until'] is not None and (native is None or native['authority_kind'] != 'session'):
+            expires = min(expires, row['browser_idle_until'])
+        return SessionContext(actor, expires, row['csrf_token'], row['native_authority_id'], row['remembered'])
 
     def destroy(self, cookie: str) -> None:
         self._destroy(cookie)
+
+    def replace_browser(self, cookie: str) -> None:
+        """Retire a prior cookie after verified sign-in, retaining client grants."""
+        self._destroy(cookie, preserve_grants=True)
 
     def logout(self, cookie: str, supplied_csrf: str | None) -> None:
         """Revoke only this cookie's authority without contacting the provider."""
         self._destroy(cookie, supplied_csrf=supplied_csrf, csrf_required=True)
 
-    def _destroy(self, cookie, *, supplied_csrf=None, csrf_required=False):
+    def _destroy(self, cookie, *, supplied_csrf=None, csrf_required=False, preserve_grants=False):
         try:
             hashed = _digest(cookie)
         except ValueError:
@@ -258,12 +317,19 @@ class SessionService:
                 self._check_csrf(row['csrf_token'], supplied_csrf)
             connection.execute(text('DELETE FROM c0_sessions WHERE token_hash=:token'), {'token': hashed})
             if row['native_authority_id'] is not None:
+                if preserve_grants:
+                    connection.execute(text('''UPDATE c0_native_authority n
+                        SET revoked=true,credential=NULL,checking=false WHERE n.id=:id
+                        AND NOT EXISTS(SELECT 1 FROM c0_oauth_grants g WHERE g.native_authority_id=n.id
+                            AND (g.expires_at>:now OR (g.persistent AND g.idle_until>:now)))'''),
+                        {'id': row['native_authority_id'], 'now': _date(self._now())})
+                    return
                 connection.execute(text('''DELETE FROM c0_oauth_grants g USING c0_native_authority n
                     WHERE g.native_authority_id=:id AND n.id=g.native_authority_id
                     AND n.authority_kind='background' AND NOT g.persistent'''), {'id': row['native_authority_id']})
                 connection.execute(text("""UPDATE c0_native_authority
                     SET revoked=true,credential=NULL,checking=false WHERE id=:id
-                    AND (authority_kind='session' OR NOT EXISTS(SELECT 1 FROM c0_oauth_grants
+                    AND (authority_kind IN ('session','remembered') OR NOT EXISTS(SELECT 1 FROM c0_oauth_grants
                         WHERE native_authority_id=:id AND persistent AND idle_until>:now))"""),
                     {'id': row['native_authority_id'], 'now': _date(self._now())})
 

@@ -503,3 +503,13 @@ exercised. Live original-file corpus is empty; nonempty recovery is disposable.
 No project initialization, real migration, research schedule activation, existing
 knowledge mutation or static-site publication occurred. Project research,
 project-skill host use and unattended execution remain separate verification.
+
+## Remembered website candidate (acceptance pending)
+
+Use five-minute server-side one-use sign-in intents and exact Origin/browser binding before requesting offline access. Only verified offline issuance enables remembered mode. The seven-day cookie and browser inactivity window slide after successful authenticated website responses, never public/failed/MCP traffic. Recheck current roles/native/session state before renewal; logout and expiry cannot be revived. Keep browser and connection inactivity independently snapshotted; preserve the remembered choice through explicit background sign-in. Ordinary grants remain finitely bounded and remembered authority alone cannot authorize persistent grants. Existing rows default ordinary. Core0.35/app0.54 use additive schema0022; publish Core before adopting its immutable tag/lock. Preserve all deployed c2280f5 digests for genuine upgrades. Final website native and live acceptance remain pending.
+
+After successful verified sign-in, retire the incoming browser cookie through Core `replace_browser` before returning the new cookie. Preserve existing client grants and their original deadlines; stale old responses must not restore website access.
+
+The first-party sign-in form needs `Referrer-Policy: strict-origin`: Chromium sends `Origin: null` for a navigation form under `no-referrer`. Keep exact Origin validation (including rejection of null), and retain `no-referrer` on the subsequent provider redirect. A real headless Chrome negative/positive control reproduces this distinction; native browser sign-in must pass before acceptance.
+
+Core0.35.0 is now immutably published at `254fd3f` after exact full40518599847/native/artifact/promotion gates and publisher40529304349. Actual downloaded supplied-artifact checks pass. The app adopts that released tag/lock with >=0.35,<0.36 and matching Renovate patch bounds. Producer app1dc0b0a passes2298 actual Python/PostgreSQL/packaging and197 Node24 cases; final adoption760d543 independently passes all2298 against fresh frozen-lock released Core with verified Git provenance and no database skips. Exact app native remembered proofs and review remain pending. These are candidate results, not a live deployment. Preserve the deployed c2280f5 trio.
