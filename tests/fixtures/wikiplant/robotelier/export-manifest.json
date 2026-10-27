@@ -1,0 +1,107 @@
+{
+  "activation_required": true,
+  "created_at": "2026-10-10T10:00:00+00:00",
+  "files": [
+    {
+      "path": "INSTANCE.json",
+      "sha256": "0959020084334ebaf7c3380839f6f56b1fc2b97e2d5d0df3b4846e79efaf1b5e",
+      "size": 322,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "application/json",
+      "source_object_id": "fixture-file-9285aad24d33d3aa"
+    },
+    {
+      "path": "config.yml",
+      "sha256": "14ff5a5b64adedcdc14802f9b0d4726231ec7676ac135568a4c1a356f62b5ffb",
+      "size": 1834,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/plain",
+      "source_object_id": "fixture-file-5a7db8dbadaef1b1"
+    },
+    {
+      "path": "data/SCOPE.md",
+      "sha256": "37e41854a0a1006fde21eaa648e1fc174be5fed14ae12b8e2bc4725ea39e440e",
+      "size": 249,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/markdown",
+      "source_object_id": "fixture-file-d47183e41c59cd23"
+    },
+    {
+      "path": "data/TOPICS.md",
+      "sha256": "03cb2de136dfbab75458174988d793f1a0ea275aba9381644bc77b233e60b329",
+      "size": 5668,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/markdown",
+      "source_object_id": "fixture-file-6f259e9b65f0c6a2"
+    },
+    {
+      "path": "data/calendar.csv",
+      "sha256": "fa181db7b477f72662701ed76d8af0b6f85231bdeb010d6dc0537861130d8cb2",
+      "size": 524,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/plain",
+      "source_object_id": "fixture-file-9abbc54cee4eaf0c"
+    },
+    {
+      "path": "data/monitoring/2026-10-10.json",
+      "sha256": "d90a2876916162c61c3d8138dfa4eaf2894279e88dc3323b6366cc84aacbbd5b",
+      "size": 265,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "application/json",
+      "source_object_id": "fixture-file-c5f8d56a32954ed5"
+    },
+    {
+      "path": "data/reports/2026-10-10.md",
+      "sha256": "fd5a2a72b726ea8e95a47e03c4761b8933397443b7505520d711a6f803f817bf",
+      "size": 134,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/markdown",
+      "source_object_id": "fixture-file-02902d9281a8f460"
+    },
+    {
+      "path": "data/research/research-1.json",
+      "sha256": "8557cf5229435bb60e0e8a4c0df471b3e472127b4e67c99dcdd6c5cba02c80f4",
+      "size": 427,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "application/json",
+      "source_object_id": "fixture-file-12c80783f171c3e7"
+    },
+    {
+      "path": "data/research_queue.csv",
+      "sha256": "56dcdb443ea4be95dfd535a5f1227176e6da223fb1e4ef159a0867a66265abf0",
+      "size": 818,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/plain",
+      "source_object_id": "fixture-file-eef3edf5ea6eb1d8"
+    },
+    {
+      "path": "data/sources/source-1.json",
+      "sha256": "0cb2c1b66024bc9adced5e2c68abfa4e077ebce0ebf70075912c043834ba64af",
+      "size": 596,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "application/json",
+      "source_object_id": "fixture-file-4fcebad3db0390c7"
+    },
+    {
+      "path": "data/state/daily-run.json",
+      "sha256": "c6b96f555bccad976529323d1c9c76f25cde3d925915b9143fa61c5c32f8ded5",
+      "size": 408,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "application/json",
+      "source_object_id": "fixture-file-d4f90475e87d371f"
+    },
+    {
+      "path": "data/wiki/concepts/wiki-1.md",
+      "sha256": "2989417b3dce1845273098f4abd32ee8e088e1fcfa9b5d3b3e106d3393d5fc02",
+      "size": 1463,
+      "source_generation": "fixture-generation-1",
+      "source_mime_type": "text/markdown",
+      "source_object_id": "fixture-file-6f6cee81e817a527"
+    }
+  ],
+  "instance_id": "wp-1111111111111111",
+  "kind": "wikiplant-storage-export",
+  "migration_id": "synthetic-offline-export",
+  "schema_version": 1,
+  "source_retention": "read-only-until-explicit-retirement"
+}

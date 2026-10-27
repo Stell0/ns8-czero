@@ -23,7 +23,7 @@ def assert_accessibility(browser, page, role):
     fields = {'controls_checked', 'links_checked', 'unnamed_controls', 'unnamed_links',
               'missing_language', 'missing_main', 'missing_h1', 'missing_navigation', 'missing_skip_target'}
     result = browser.evaluate_javascript(None, Path(__file__).with_name('accessibility_probe.js').read_text())
-    if (page not in {'home', 'account', 'records', 'sources', 'wiki', 'search', 'agents', 'admin'}
+    if (page not in {'home', 'account', 'records', 'sources', 'wiki', 'search', 'agents', 'admin', 'projects'}
             or role not in {'admin', 'reader', 'editor'} or not isinstance(result, dict)
             or set(result) != fields or any(type(v) is not int or not 0 <= v <= 10000 for v in result.values())):
         raise AssertionError('Accessibility smoke measurement invalid')
@@ -53,7 +53,7 @@ class CzeroSso:
             elif present == 1:
                 with tempfile.TemporaryDirectory(prefix="czero-sso-") as directory:
                     payload = Path(directory) / "payload.json"
-                    payload.write_text(json.dumps({"password": "Sso-" + secrets.token_urlsafe(32) + "9!", "host": host}))
+                    payload.write_text(json.dumps({"password": "Test-Sso-" + secrets.token_urlsafe(32) + "9!", "host": host}))
                     payload.chmod(0o600)
                     ssh.put_file(str(payload), "/tmp/czero-sso-payload.json", mode="0600")
                 output, errors, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py setup /tmp/czero-sso-payload.json",
@@ -772,6 +772,25 @@ class CzeroSso:
             run('Fill Text','#wiki-body','# Private revised');run('Click','#save-page')
             run('Get Text','#wiki-identity','contains','revision 2')
             page=browser.get_text('#wiki-identity').split(' · ')[0]
+            stage='project-configuration'
+            probe=Path(__file__).with_name('project_browser_probe.js').read_text()
+            assert browser.evaluate_javascript(None,'('+probe+')') == {'initialized':True,'replay':True,'revision':2,'workflows':True,'monitoring':True,'reports':True}
+            project_url='https://'+host+'/projects?space_id='+identifier
+            run('Go To',project_url)
+            run('Get Text','#project-title','==','<img src=x> Synthetic research')
+            run('Get Text','#project-topics','contains','<script> synthetic topic')
+            run('Get Text','#project-sources','contains','browser-source · partial · 0/1 items verified')
+            run('Get Text','#project-work','contains','<script> synthetic queued investigation')
+            run('Get Text','#project-work','contains','phase_incomplete')
+            run('Get Text','#project-monitoring','contains','no_material_update')
+            run('Get Text','#project-monitoring','contains','queries 1/5')
+            run('Get Text','#project-work','contains','No successful weekly run recorded.')
+            run('Get Text','#project-reports a','contains','Daily report')
+            report_href=browser.get_attribute('#project-reports a','href')
+            assert 'space_id='+identifier in report_href and 'revision=1' in report_href and 'page_id=' in report_href
+            run('Get Text','#project-report-status','contains','external notification are separate')
+            run('Get Element Count','#project-content img, #project-content script','==',0)
+            assert_accessibility(browser,'projects','admin')
             stage='reader-role-cap'
             member_context=run('New Context','ignoreHTTPSErrors=True');run('New Page');login('c0member')
             run('Go To',tools);run('Wait For Elements State','#wiki-workspace','visible','timeout=30s')
@@ -782,6 +801,13 @@ class CzeroSso:
             run('Click','#wiki-history button:text-is("View revision 1")')
             run('Get Text','#wiki-revision','contains','Private original')
             assert_accessibility(browser,'wiki','reader')
+            run('Go To',project_url)
+            run('Get Text','#project-title','==','<img src=x> Synthetic research')
+            run('Get Text','#project-config','contains','Configuration 2')
+            run('Get Text','#project-sources','contains','coverage_incomplete')
+            run('Get Text','#project-work','contains','<script> synthetic queued investigation')
+            assert_accessibility(browser,'projects','reader')
+            run('Go To',tools)
             # Same user, same UUID, explicit Shared choice: no private fallback.
             stage='shared-selection'
             shared=browser.get_property('#space-selector option:text-matches("shared")','value')
@@ -810,6 +836,10 @@ class CzeroSso:
             assert rc==0, 'Protected browser manager restart failed'
             builtin.run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route')
             article='https://'+host+'/wiki?space_id='+identifier+'&page='+page
+            run('Go To',project_url)
+            run('Get Text','#project-config','contains','Configuration 2')
+            run('Get Text','#project-work','contains','phase_incomplete')
+            run('Get Text','#project-monitoring','contains','no_material_update')
             run('Go To',article);run('Get Text','#reader-content h2','==','Independent private update')
             run('Click','#reader-history-panel > summary')
             run('Click','#reader-history a:text-matches("Revision 1")')
@@ -824,6 +854,11 @@ class CzeroSso:
             run('Get Element Count','#reader-history a','==',0)
             assert 'space_id='+identifier in browser.get_url(), 'Revoked space silently fell back'
             run('Reload');run('Get Element Count','#reader-content h2','==',0)
+            run('Go To',project_url)
+            run('Wait For Elements State','#project-content','hidden')
+            run('Get Text','#project-description','==','')
+            run('Get Element Count','#project-sources li','==',0)
+            assert 'space_id='+identifier in browser.get_url(), 'Revoked project silently fell back'
         except Exception as error:
             raise AssertionError('Disposable spaces browser failed at '+stage+' ('+type(error).__name__+')') from None
         finally:

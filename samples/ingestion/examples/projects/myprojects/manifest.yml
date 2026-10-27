@@ -1,0 +1,50 @@
+schema_version: 1
+project_id: 22222222-2222-4222-8222-222222222222
+space_id: 22222222-2222-4222-8222-222222222222
+name: MyProjects-shaped synthetic
+description: Fabricated reference project; no production records.
+language: it
+timezone: Europe/Rome
+purpose: Confrontare sviluppi tecnici interamente sintetici.
+scope: Repository, sviluppi, issue, pull request, collaboratori e documentazione sintetici.
+exclusions:
+- Real project data and production accounts.
+primary_topic_ids:
+- repositories
+- development
+- pull-requests-issues
+- contributors
+- documentation
+- organizations
+research:
+  normal_daily_attempts: 5
+  urgent_total_daily_attempts: 10
+  urgent_priority: 0
+  child_priority_increment: 20
+  max_children_per_investigation: 3
+  max_attempts: 3
+  max_active_items: 50
+  max_new_roots_per_day: 5
+monitoring:
+  enabled: true
+  mandatory_primary_topic_refresh: true
+  max_queries_per_topic: 5
+  max_sources_per_topic: 10
+  overlap_hours: 12
+schedule:
+  daily_local_time: 07:00
+  weekly_day: sunday
+  weekly_local_time: 07:00
+  execution_provider: external_agent
+  enabled: false
+reporting:
+  upcoming_days: 7
+  quiet_day_report: true
+maintenance:
+  semantic_pages_per_week: 3
+  max_inventory: 1000
+connector_ids:
+- synthetic-github
+state:
+  initialized: false
+  migration_status: not_started

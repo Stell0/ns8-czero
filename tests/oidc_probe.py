@@ -504,6 +504,258 @@ class ScopedBrowser:
                                 'space_id=' + self.space_id, data, method, csrf)
 
 
+def seed_project_state(browser, profile, space_id, sources=None):
+    status, body, _ = browser.api('/agents/capabilities.json')
+    assert status == 200, 'Project capability discovery unavailable'
+    operations={op['name'] for op in json.loads(body)['operations']}
+    if 'project_initialize' not in operations:
+        return None # Genuine older predecessor has no project API.
+    def request(path, data=None, method=None):
+        status, body, _ = browser.api('/api/v1/project' + path, data, method, profile['csrf_token'])
+        assert status == 200, 'Cannot persist protected project recovery state'
+        return json.loads(body)
+    setup = {'manifest': {'space_id':space_id, 'project_id':space_id, 'name':'Retained synthetic project',
+        'purpose':'Verify project recovery', 'scope':'Fabricated recovery evidence only',
+        'timezone':'Europe/Rome', 'language':'en'},
+        'authorization_ref':'synthetic-native:setup', 'idempotency_key':'retained-project-setup'}
+    first = request('/initialize', setup, 'POST')
+    assert request('/initialize', setup, 'POST') == first, 'Project initialization did not replay'
+    topic = request('/topics', {'topic': {'topic_id':'anchor', 'label':'Retained synthetic anchor',
+        'classification':'user', 'authorization_ref':'synthetic-native:track'},
+        'idempotency_key':'retained-project-topic'}, 'POST')
+    connector=None
+    if sources and 'project_connector_set' in operations:
+        definition={'id':'retained-source','adapter':'local_files','root':'synthetic-inputs','include':[],'enabled':True,
+            'max_items':100,'max_requests':40,'max_bytes':8388608,'max_pages':5,'max_depth':2,'timeout':15}
+        connector=request('/connectors',{'definition':definition,'authorization_ref':'synthetic-native:source-approval',
+            'idempotency_key':'retained-project-connector'},'PUT')
+    updated = {**first['data']['manifest'], 'primary_topic_ids':['anchor'],
+        'connector_ids':['retained-source'] if connector else [],
+        'state':{'initialized':True, 'migration_status':'not_started'}}
+    current = request('', {'manifest':updated, 'expected_revision':1,
+        'authorization_ref':'synthetic-native:activate', 'idempotency_key':'retained-project-config'}, 'PUT')
+    history = request('/records?kind=config_v1&limit=100')
+    retained={}
+    if connector:
+        from datetime import datetime,timezone
+        version=sources[0]['version'];stamp=datetime.now(timezone.utc).isoformat()
+        data={'connector_id':'retained-source','definition_hash':connector['data']['definition_hash'],
+            'external_id':'synthetic-part','parent_external_id':'synthetic-original','parent_content_hash':version['content_hash'],
+            'part_number':1,'start_byte':0,'end_byte':len(sources[0]['document']['body'].encode()),
+            'last_attempt_at':stamp,'last_success_at':'','last_content_hash':version['content_hash'],
+            'source_id':version['source_id'],'version_id':version['id'],'extraction_status':'ready',
+            'sync_status':'verified','last_error':'','retry_after':'','remote_cursor':'',
+            'provenance':{'original_url':'','canonical_url':'','retrieved_at':stamp,'published_at':'','updated_at':'','details':'{}'}}
+        receipt=request('/source-status',{'data':data,'idempotency_key':'retained-source-status'},'PUT')
+        if 'project_source_snapshot_set' in operations:
+            request('/source-snapshot',{'connector_id':'retained-source','external_id':'synthetic-original',
+                'content_hash':version['content_hash'],'part_receipt_ids':[receipt['id']],
+                'idempotency_key':'retained-source-snapshot'},'PUT')
+        coverage={'connector_id':'retained-source','definition_hash':connector['data']['definition_hash'],
+            'last_attempt_at':stamp,'last_success_at':'','status':'complete','last_error':'','retry_after':'',
+            'remote_cursor':'{"page":1}','progress_cursor':'{"page":1}','attempt_count':0,'verified_items':1,'discovered_items':1}
+        request('/connector-status',{'data':coverage,'verified_receipt_ids':[receipt['id']],'idempotency_key':'retained-connector-status'},'PUT')
+        kinds=['connector_v1','connector_config_v1','source_sync_v1','source_sync_history_v1','connector_sync_v1']
+        if 'project_source_snapshot_set' in operations:kinds+=['source_snapshot_v1','source_snapshot_history_v1']
+        for kind in kinds:
+            retained[kind]=request('/records?kind='+kind+'&limit=100')
+    if 'project_run_claim' in operations:
+        claim=request('/runs/claim',{'workflow_type':'daily','lease_owner':'synthetic-native-worker','config_version':2,
+            'idempotency_key':'retained-workflow-claim'},'POST')
+        run=claim['records'][0]['data'];lease={key:run[key] for key in ('run_id','lease_owner','fencing_generation')}
+        if 'project_monitor_begin' in operations:
+            cycle=request('/monitoring/begin',{'lease':lease,'topic_id':'anchor',
+                'idempotency_key':'retained-monitor-begin'},'POST')['records'][0]['data']
+            call=request('/monitoring/reserve',{'lease':lease,'cycle_id':cycle['cycle_id'],'kind':'query',
+                'request_id':'retained-query','request_text':'Synthetic bounded primary-topic check',
+                'idempotency_key':'retained-monitor-reserve'},'POST')['records'][0]['data']
+            request('/monitoring/observe',{'lease':lease,'call_id':call['call_id'],'state':'started',
+                'idempotency_key':'retained-monitor-start'},'POST')
+            request('/monitoring/observe',{'lease':lease,'call_id':call['call_id'],'state':'succeeded',
+                'external_reference':'synthetic-native:fake-search-result','summary':'Synthetic response with no selected developments',
+                'idempotency_key':'retained-monitor-observe'},'POST')
+            completed=request('/monitoring/finish',{'lease':lease,'cycle_id':cycle['cycle_id'],'status':'no_material_update',
+                'summary':'Synthetic bounded search completed; no real provider executed',
+                'idempotency_key':'retained-monitor-finish'},'POST')
+            success=next(row for row in completed['records'] if row['type_name']=='c0_project_monitor_success_v1')
+            request('/runs/checkpoint',{'lease':lease,'phase':'monitoring','status':'SAVED','references':[success['id']],
+                'summary':'Synthetic coverage read back','idempotency_key':'retained-monitor-phase'},'POST')
+            for kind in ('monitor_cycle_v1','monitor_call_v1','monitor_call_history_v1','monitor_watermark_v1','monitor_success_v1'):
+                retained[kind]=request('/records?kind='+kind+'&limit=100')
+        candidate={'stable_id':'retained-investigation','topic_id':'anchor','question':'What changed in synthetic manufacturing constraints?',
+            'kind':'investigation','origin':'user','origin_reference':'synthetic-native:user','priority':20,
+            'priority_reason':'Approved scope','urgency_reason':'','parent_ids':[],'related_pages':[],
+            'not_before':'','due_at':'','question_conditions':'','entity_version':'','time_window':'',
+            'assessment_ref':'synthetic-native:assessment','direct_contribution':'Tests the approved anchor',
+            'anchor_ids':['anchor'],'novelty_key':'retained-event','novelty_refs':['synthetic-native:evidence'],
+            'root_reason':'user_request','authorization_ref':'synthetic-native:user','excluded':False,
+            'semantic_matches':[],'independent_parents':[]}
+        request('/queue',{'candidate':candidate,'idempotency_key':'retained-queue-admission'},'POST')
+        reservation=request('/attempts/reserve',{'lease':lease,'idempotency_key':'retained-attempt'},'POST')
+        attempt=next(row['data'] for row in reservation['records'] if row['type_name']=='c0_project_attempt_v1')
+        request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'started',
+            'external_reference':'synthetic-native:fake-call','idempotency_key':'retained-invocation-start'},'POST')
+        if sources and 'project_result_save' in operations:
+            finding={'statement':'The fabricated original supplies retained synthetic evidence.','classification':'observed_fact','confidence':70,
+                'rationale':'Actual extracted immutable fixture passage.','citation_ids':[sources[0]['chunks'][0]['id']],
+                'claim_id':'','claim_revision':0,'consequential':False,'applicability_limits':['Synthetic fixture only'],
+                'challenge':{'state':'not_required','reason':'Nonconsequential fixture','strongest_alternative':'',
+                    'falsification_conditions':[],'queries':[],'counter_citation_ids':[],'coverage':'','conclusion_change':''}}
+            saved=request('/results',{'lease':lease,'attempt_id':attempt['attempt_id'],'data':{
+                'summary':'Retained synthetic evidence was inspected.','changes':'An unknown fixture fact is now observed.',
+                'importance':'Tests durable project knowledge.','assumptions':[],'uncertainties':['No real provider executed.'],
+                'assessment_ref':'synthetic-native:assessment','findings':[finding]},'idempotency_key':'retained-result'},'POST')
+            result=next(row for row in saved['records'] if row['type_name']=='c0_project_result_v1')
+            request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'returned',
+                'result_reference':result['id'],'idempotency_key':'retained-returned'},'POST')
+            wiki=knowledge_request(browser,profile,'wiki/pages',{'slug':'retained-project-learning','title':'Retained project learning',
+                'body':'# Learning\n\nA fabricated original supplies durable synthetic evidence.',
+                'metadata':{'c0_project':{'project_id':space_id,'result_references':[result['id']]}}},'POST',201)
+            publication=request('/results/publish',{'lease':lease,'result_reference':result['id'],
+                'wiki_revision_ids':[wiki['content']['id']],'idempotency_key':'retained-result-published'},'POST')
+            proof=next(row for row in publication['records'] if row['type_name']=='c0_project_result_publication_v1')
+            request('/attempts/complete',{'lease':lease,'attempt_id':attempt['attempt_id'],'commit_references':[proof['id']],
+                'idempotency_key':'retained-result-completed'},'POST')
+            publisher=request('/runs/claim',{'workflow_type':'report_publication','lease_owner':'synthetic-native-reporter',
+                'config_version':2,'cycle_key':'retained-report','idempotency_key':'retained-report-run'},'POST')['records'][0]['data']
+            report_lease={key:publisher[key] for key in ('run_id','lease_owner','fencing_generation')}
+            header=request('/reports/prepare',{'lease':report_lease,'report_type':'daily',
+                'idempotency_key':'retained-report-prepare'},'POST')['records'][0]
+            body='# Daily research\n\nWe learned that original fixture evidence persists with project lineage.\n\nNo actual external agent or unattended schedule executed.'
+            report=knowledge_request(browser,profile,'wiki/pages',{'slug':'retained-project-report','title':'Retained daily report','body':body,
+                'metadata':{'c0_project':{'project_id':space_id,'report_reference':header['id'],'language':'en'}}},'POST',201)
+            request('/reports/members',{'lease':report_lease,'report_reference':header['id'],'data':{
+                'result_reference':result['id'],'disposition':'included','location':'main','wiki_revision_id':report['content']['id'],
+                'start_byte':0,'end_byte':len(body.encode()),'reason':'','assessment_ref':'synthetic-native:report-entry'},
+                'idempotency_key':'retained-report-member'},'POST')
+            request('/reports/finalize',{'lease':report_lease,'report_reference':header['id'],'wiki_revision_id':report['content']['id'],
+                'idempotency_key':'retained-report-finalize'},'POST')
+            request('/reports/delivery',{'lease':report_lease,'report_reference':header['id'],'channel':'external_result','state':'started',
+                'idempotency_key':'retained-publication-start'},'POST')
+            request('/reports/delivery',{'lease':report_lease,'report_reference':header['id'],'channel':'external_result','state':'failed',
+                'external_reference':'synthetic-native:fake-host-failure','evidence_reference':'synthetic-native:observed-failure',
+                'observation_source':'sdk_simulation','idempotency_key':'retained-publication-failed'},'POST')
+            for kind in ('result_v1','result_history_v1','finding_v1','result_publication_v1','report_v1','report_history_v1',
+                    'report_member_v1','report_delivery_v1','report_delivery_history_v1'):
+                retained[kind]=request('/records?kind='+kind+'&limit=100')
+            # A separate interrupted call retains the original recovery coverage.
+            request('/queue',{'candidate':{**candidate,'stable_id':'retained-second-investigation',
+                'question':'Which separate synthetic development activity changed?','novelty_key':'retained-second-event'},
+                'idempotency_key':'retained-second-admission'},'POST')
+            reserved=request('/attempts/reserve',{'lease':lease,'idempotency_key':'retained-second-attempt'},'POST')
+            attempt=next(row['data'] for row in reserved['records'] if row['type_name']=='c0_project_attempt_v1')
+            request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'started',
+                'idempotency_key':'retained-second-start'},'POST')
+        request('/attempts/invocation',{'lease':lease,'attempt_id':attempt['attempt_id'],'state':'uncertain',
+            'error_code':'synthetic_interruption','idempotency_key':'retained-invocation-uncertain'},'POST')
+        request('/runs/checkpoint',{'lease':lease,'phase':'research' if 'project_monitor_begin' in operations else 'monitoring','status':'PARTIAL',
+            'summary':'Synthetic interrupted external-agent fixture; no real research executed',
+            'idempotency_key':'retained-workflow-checkpoint'},'POST')
+        if connector:
+            source_claim=request('/runs/claim',{'workflow_type':'source_sync','lease_owner':'synthetic-native-source',
+                'config_version':2,'cycle_key':'retained-frozen-scan','connector_id':'retained-source',
+                'idempotency_key':'retained-source-run'},'POST')
+            source_run=source_claim['records'][0]['data']
+            source_lease={key:source_run[key] for key in ('run_id','lease_owner','fencing_generation')}
+            for phase in ('collect','publish','verify'):
+                request('/runs/checkpoint',{'lease':source_lease,'phase':phase,'status':'SAVED',
+                    'references':[receipt['id']],'summary':'Synthetic source readback verified',
+                    'idempotency_key':'retained-source-phase-'+phase},'POST')
+            retained['connector_lease_v1']=request('/records?kind=connector_lease_v1&limit=100')
+        if 'project_audit_step' in operations:
+            weekly=request('/runs/claim',{'workflow_type':'weekly','lease_owner':'synthetic-native-weekly',
+                'config_version':2,'idempotency_key':'retained-weekly-run'},'POST')['records'][0]['data']
+            weekly_lease={key:weekly[key] for key in ('run_id','lease_owner','fencing_generation')}
+            for kind in ('configuration','wiki','claims','documents','chunks','queue','topics','sources'):
+                audit=request('/maintenance/audit',{'lease':weekly_lease,'kind':kind,'limit':10,
+                    'idempotency_key':'retained-audit-'+kind},'POST')
+                assert audit['status']=='SAVED','Synthetic maintenance inventory unexpectedly incomplete'
+            selected=request('/maintenance/semantic/select',{'lease':weekly_lease,
+                'idempotency_key':'retained-semantic-select'},'POST')
+            header=next(row for row in selected['records'] if row['type_name']=='c0_project_semantic_round_v1')
+            for reference in header['data']['selected_ids']:
+                request('/maintenance/semantic/review',{'lease':weekly_lease,'selection_reference':reference,'data':{
+                    'status':'reviewed','assessment':'Actual synthetic fixture revision inspected for recovery.',
+                    'assessment_ref':'synthetic-native:fake-semantic-review','limitations':['No real agent executed.'],
+                    'citation_ids':[],'proposed_question':''},'idempotency_key':'retained-semantic-'+reference},'POST')
+            request('/events',{'data':{'event_id':'retained-event','topic_id':'anchor','title':'Synthetic future conference',
+                'start_time':'2099-06-01','timezone':'Europe/Rome','source_reference':'synthetic-native:calendar'},
+                'idempotency_key':'retained-event'},'PUT')
+            for kind in ('topic_history_v1','event_v1','event_history_v1','audit_v1','audit_finding_v1','audit_cursor_v1',
+                    'audit_observation_v1','semantic_round_v1','semantic_cursor_v1','semantic_selection_v1','semantic_review_v1'):
+                retained[kind]=request('/records?kind='+kind+'&limit=100')
+        for kind in ('run_v1','checkpoint_v1','queue_v1','admission_v1','budget_v1','budget_pointer_v1','attempt_v1','invocation_v1'):
+            retained[kind]=request('/records?kind='+kind+'&limit=100')
+    exported=project_export_probe(browser) if 'project_export_get' in operations else None
+    return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history,'source_records':retained,'exported':exported}
+
+
+def project_export_probe(browser):
+    """Actual scoped HTTP export readback, including immutable Markdown bytes."""
+    def get(kind,**values):
+        status,body,_=browser.api('/api/v1/project/export?'+urlencode({'kind':kind,**values}))
+        assert status==200,'Project export missing or denied'
+        return json.loads(body)
+    catalog=get('catalog');kinds={row['kind'] for row in catalog['rows']}
+    assert {'objects','object_types','wiki_revisions','source_versions','claims','annotations'}<=kinds,'Incomplete project export catalog'
+    assert not kinds.intersection({'oauth_grants','oauth_tokens','accounts','sessions'}),'Authentication exported'
+    result={}
+    for kind in ('objects','object_types','wiki_revisions','source_versions','claims','annotations'):
+        rows=[];cursor=''
+        for _ in range(100):
+            response=get(kind,after=cursor,limit=100);rows.extend(response['rows']);cursor=response['next_cursor']
+            if not cursor:break
+        assert not cursor,'Native project export did not finish bounded pagination'
+        result[kind]=rows
+    for revision in result['wiki_revisions']:
+        body='';cursor=''
+        for _ in range(100):
+            fragment=get('wiki_text',resource_id=revision['id'],after=cursor);part=fragment['rows'][0]
+            assert part['start_char']==len(body) and part['id']==revision['id'],'Export fragment identity changed'
+            body+=part['body'];cursor=fragment['next_cursor']
+            if not cursor:break
+        assert not cursor and hashlib.sha256(body.encode()).hexdigest()==revision['content_hash'],'Export Markdown changed'
+    return result
+
+
+def verify_project_state(browser, profile, expected, *, admin=False):
+    if expected is None:
+        return # The preserved predecessor did not have project state.
+    def request(path):
+        status, body, _ = browser.api('/api/v1/project' + path)
+        assert status == 200, 'Recovered project state missing or denied'
+        return json.loads(body)
+    assert request('') == expected['current'], 'Project manifest/revision changed during recovery'
+    assert request('/records?kind=config_v1&limit=100') == expected['history'], 'Immutable configuration history changed'
+    assert request('/records?kind=topic_v1&limit=100')['objects'] == [expected['topic']], 'Topic identity/provenance changed'
+    for kind,records in expected.get('source_records',{}).items():
+        assert request('/records?kind='+kind+'&limit=100')==records,'Project source/workflow state/history changed during recovery'
+    if expected.get('exported') is not None:
+        assert project_export_probe(browser)==expected['exported'],'Project interchange identities/history changed during recovery'
+    if 'report_v1' in expected.get('source_records',{}):
+        view=request('/reports')
+        assert view['report']==expected['source_records']['report_v1']['objects'][0], 'Saved project report readback changed'
+        assert view['members']==expected['source_records']['report_member_v1']['objects'], 'Report membership changed'
+        assert view['deliveries']==expected['source_records']['report_delivery_v1']['objects'], 'Independent publication receipt changed'
+        for publication in expected['source_records']['result_publication_v1']['objects']:
+            for revision,content_hash in zip(publication['data']['wiki_revision_ids'],publication['data']['wiki_hashes']):
+                # The public Wiki read route uses page identity and revision number.
+                status,body,_=browser.api('/api/v1/wiki/pages?limit=100')
+                assert status==200,'Cannot enumerate retained project Wiki'
+                found=False
+                for page in json.loads(body)['pages']:
+                    status,body,_=browser.api('/api/v1/wiki/pages/'+page['id'])
+                    assert status==200,'Cannot read retained project Wiki'
+                    saved=json.loads(body)
+                    if saved['content']['id']==revision:
+                        assert hashlib.sha256(saved['content']['body'].encode()).hexdigest()==content_hash,'Project Wiki proof content changed'
+                        found=True;break
+                assert found,'Project Wiki publication revision missing'
+    if admin:
+        status, body, _ = browser.api('/api/v1/project/initialize',expected['setup'],'POST',profile['csrf_token'])
+        assert status == 200 and json.loads(body) == expected['initial'], 'Historical initialization receipt changed'
+
+
 def seed_protected_space(browser, profile, member_id):
     def request(path, data=None, method=None, expected=200):
         status, body, _ = browser.api('/api/v1/' + path, data, method, profile['csrf_token'])
@@ -540,7 +792,8 @@ def seed_protected_space(browser, profile, member_id):
     annotations = seed_content_annotations(scoped,profile,memory,records,record)
     consolidation = seed_atomic_consolidation(scoped,profile,space['id'],memory,records,record)
     return {'space':space,'grant':grant,'memory':memory,'sources':records,'object':record,
-            'annotations':annotations,'consolidation':consolidation}
+            'annotations':annotations,'consolidation':consolidation,
+            'project':seed_project_state(scoped,profile,space['id'],records)}
 
 
 def seed_atomic_consolidation(browser,profile,space_id,memory,records,record):
@@ -688,6 +941,7 @@ def verify_content_annotations(browser, profile, expected, space_id, *, admin=Fa
 def verify_protected_space(browser, profile, expected, *, admin=False):
     identifier = expected['space']['id']
     scoped = ScopedBrowser(browser, identifier)
+    verify_project_state(scoped,profile,expected.get('project'),admin=admin)
     verify_content_annotations(browser,profile,expected['annotations'],identifier,admin=admin)
     verify_atomic_consolidation(browser,profile,expected['consolidation'],identifier,admin=admin)
     status, body, _ = scoped.api('/api/v1/me')

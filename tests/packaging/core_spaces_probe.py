@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 import secrets
+import subprocess
+import sys
 import tempfile
 import time
 from uuid import UUID, uuid4
@@ -19,6 +21,7 @@ from czero_core.identity import PermissionDenied, Role, VerifiedIdentity
 from czero_core.jobs import default_registry
 from czero_core.knowledge import KnowledgeService
 from czero_core.objects import ObjectService, ObjectNotFound
+from czero_core.projects import ProjectService
 from czero_core.oauth_clients import OAuthClientService
 from czero_core.oauth_grants import OAuthGrantService, GrantRejected, pkce_challenge
 from czero_core.sessions import SessionContext
@@ -68,6 +71,21 @@ try:
         objects.register_type(owner,type_name,'Fixture',{'type':'object','properties':{'name':{'type':'string','maxLength':64}},'required':['name']},['name'])
         record = objects.in_space(private['id']).create(owner,type_name,{'name':'Same unique value'})
         objects.in_space(other['id']).create(owner,type_name,{'name':'Same unique value'})
+        project=ProjectService(database,access).in_space(private['id'])
+        manifest={'project_id':private['id'],'space_id':private['id'],'name':'Packaged synthetic project',
+            'purpose':'Verify independent project persistence','scope':'Fabricated package evidence only'}
+        initialized=project.initialize(owner,manifest,authorization_ref='synthetic:package-setup',idempotency_key='project')
+        assert project.initialize(owner,manifest,authorization_ref='synthetic:package-setup',idempotency_key='project')==initialized
+        project.set_topic(owner,{'topic_id':'package-anchor','label':'Synthetic package anchor','classification':'user',
+            'authorization_ref':'synthetic:user-track'},idempotency_key='package-topic')
+        stored=project.get(owner)
+        assert stored['id']==initialized['id'] and stored['data']==initialized['data']
+        before=project.export_page(owner,'objects')['rows']
+        subprocess.run([sys.executable,'-I','-m','czero_core.migrate'],check=True,capture_output=True,timeout=60)
+        assert project.get(owner)==stored and project.export_page(owner,'objects')['rows']==before
+        assert project.export_page(owner,'wiki_text',resource_id=first['content']['id'])['rows'][0]['body']==first['content']['body']
+        assert str(chunk['id']) in {row['id'] for row in project.export_page(owner,'chunks')['rows']}
+        assert claim['id'] in {row['id'] for row in project.export_page(owner,'claims')['rows']}
         annotations = AnnotationService(database,access).in_space(private['id'])
         targets = [ContentTarget('source_version',receipt['id'],receipt['number']),
                    ContentTarget('wiki_revision',first['content']['id'],first['revision']),
@@ -145,6 +163,7 @@ try:
         pair = tokens.exchange_code(code,client['client_id'],callback=callback,verifier=verifier,resource=resource)
         delegated = tokens.verify(pair.access_token,resource=resource).actor
         assert selected.get_page(delegated,first['id']) == first
+        assert project.export_page(delegated,'objects')['rows']==project.export_page(owner,'objects')['rows']
         assert annotations.get(delegated,target,'verification')['status']=='verified'
         assert structured.search(delegated,'Unverified',filters=StructuredFilters(version_tags=['0.28']))['hits']
         delegated_operations=[{'operation':'wiki.upsert','arguments':{'slug':'delegated-consolidation','title':'Delegated','body':'Delegated'}}]
@@ -155,6 +174,9 @@ try:
         try:selected.get_page(delegated,first['id'])
         except PermissionDenied:pass
         else:raise AssertionError('Captured authority survived revocation/regrant')
+        try:project.export_page(delegated,'objects')
+        except PermissionDenied:pass
+        else:raise AssertionError('Captured project export authority revived')
         try:annotations.get(delegated,target,'verification')
         except PermissionDenied:pass
         else:raise AssertionError('Captured annotation authority revived')
@@ -181,4 +203,4 @@ finally:
         c.execute(text('DELETE FROM c0_object_types WHERE name=:name'),{'name':type_name})
         c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'),{'issuer':issuer})
     database.close()
-print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True,'structured_retrieval':True,'atomic_consolidation':True,'maintenance_annotations':True}))
+print(json.dumps({'spaces':True,'scoped_names':True,'immutable_evidence':True,'typed_references':True,'grant_revocation':True,'annotations':True,'structured_retrieval':True,'atomic_consolidation':True,'maintenance_annotations':True,'research_projects':True}))

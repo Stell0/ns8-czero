@@ -734,3 +734,633 @@ Core source `6f1e4703f4d027c82ccb03ef8813efe30c650365` passes [full39760439788](
 Application0.50.0 pins released Core0.31.1 and implements the planned human approval, default Reader/blocked-account UI and generated `.skill`/single-plugin ZIP page. Focused HTTP/download tests pass115 cases; the exact native Core-seeded first-connection/replay helper passes six local HTTP tests. Updated native browser tests download/inspect both archives, and native admission checks require a genuinely new Reader plus persistent blocking. Final full application/consumer/image/native validation, supported dedicated update and actual ChatGPT skill/plugin acceptance remain pending in draft PR32.
 
 </details>
+
+
+## WikiPlant backend track — M0 inspection
+
+The operator requests reusable research projects through M0–M8, without live migration, deployment or schedule activation. See [compatibility audit](docs/projects/WIKIPLANT_COMPATIBILITY.md) for exact original revisions, capability matrix, ownership, sequential implementation and tests. Current status: M0 comparison recorded; baseline validation pending. Existing ingestion and protected spaces are reused. Historical acceptance and deployed images remain frozen.
+
+
+### WikiPlant M1 — project foundation (implementation checkpoint)
+
+Strict manifest/topic v1 contracts and a protected transactional project service
+reuse existing typed objects, unique keys and knowledge receipts. Configuration
+history is immutable; new managed types reject raw object/bundle writes. User
+anchors require current Admin authority and recorded affirmative authorization;
+adjacent topics need direct active user anchors; peripheral topics are terminal
+with fixed weekly expiry. Parent cycles and silent archive reactivation reject.
+Reference REST/MCP bindings and a read-only `/projects` overview preserve explicit
+space selection, local DOM rendering, late-response and access-loss guards.
+See [project contracts](docs/projects/PROJECTS.md). New default-released-Core
+availability remains gated on immutable library publication and pin adoption.
+
+Executed focused evidence: 15 schema/DST cases; 60 project/object/bundle cases;
+one actual signed-HTTP contract test; 19 project/space controller cases. First
+expiry fixture expected the following week despite a still-future same-day UTC
+checkpoint; corrected the fixture, preserving the strictly-future algorithm.
+The original-main local baseline passes 2045 actual Python/PostgreSQL/packaging,
+185 Node, Go/schema, shell and 21 Robot dry runs. Baseline40286224042 is completed/
+successful with exact-source full promotion proof; independent artifact inspection
+is in progress. M0 bed8142 full40289915767 has successful local/images/scans and
+pending both-native checks. Full M1 local candidate checks are running; no M1
+CI/native, Core release, live instance or external-agent acceptance is claimed.
+
+
+M1 validation follow-up: the initial broad candidate run recorded 28 failures /
+2037 passes, all from frozen catalog-count assertions after adding five tools.
+The original 77 input/output/authority/REST contracts remain checked exactly;
+project operations have a separate explicit additive inventory. Updated counts
+and matching replay/destructive/closed-world hints pass the focused actual SDK
+and guidance checks. The current/legacy project SDK calls pass against signed
+HTTP/PostgreSQL. The exact native project seed/readback/Reader recovery helper
+passes through the actual local HTTP app with explicit test-module path setup.
+All190 Node cases and21 Robot dry runs pass. Corrected full candidate Python
+validation remains running; native project browser/backup checks are implemented
+but have not yet executed. Mark synthetic generated native passwords with a test
+prefix so public privacy review distinguishes the existing random fixture from
+a literal credential. No real credentials or instance state are committed.
+
+Independent downloaded baseline40286224042 inspection passes Debian21 upgrade,
+Rocky26 installation/three expected skips/all8 browsers, 30 accessibility contexts,
+eight privacy guards, three actual query artifacts with zero candidates and five
+SARIF/CycloneDX pairs. Exact full promotion verification also passes.
+
+
+M1 native correction: full40294384190 rejects Rocky for two stale acceptance
+assertions: home navigation now contains eleven links, and the numeric
+accessibility context allowlist omitted the new `projects` page. Actual project
+setup/replay, revision2, literal hostile topic/title rendering and zero executable
+HTML pass before that allowlist rejection. Debian native passes. Preserve the
+failed source82ddb34 and private artifacts. A separate source correction updates
+the exact navigation count and extends the existing numeric/privacy helper test
+to projects; no runtime code, authority, limit or deployed image changes.
+Fresh complete exact-source CI/native/privacy remains required before M1 acceptance.
+M2 development stays preserved separately and pauses for this correction.
+
+### WikiPlant M2 — common source ingestion checkpoint
+
+The existing external ingestion distribution now provides seven reusable
+collectors and an independently reusable publisher, with strict finite source
+definitions, explicit protected-space/Admin approval, private OAuth/job reuse,
+SHA-256 identities, immutable version provenance, source/cursor receipts and
+readback/citation verification. Collector selection, publication and reasoning
+remain separate. The project reader exposes source status; disposable native
+recovery now compares connector/current/history/cursor state. See
+[source contracts](docs/projects/SOURCES.md) for operations, limits and recovery.
+
+Focused validation passes103 cases: adapters, actual signed HTTP/OAuth/SDK/Core/
+PostgreSQL text and multipart PDF, lost response reconciliation, pending
+extraction, changed/unchanged versions, immutable citations, cursor conflicts and
+wheel/archive standalone installation. All190 Node cases pass. Complete local
+validation is running. Exact-source M2 CI/native evidence remains pending.
+No real sources, production spaces, migrations, schedule activation or live
+instance changes have occurred. Default released-Core feature adoption remains
+gated on final immutable library release/consumer verification.
+
+M3 implementation subplan: retain one managed typed record per logical queue
+item, workflow, daily budget, reservation and checkpoint. Existing unique keys
+and transaction receipts acquire the established object/knowledge/authority
+locks; no new database or orchestration engine is needed. Lease ownership and
+fencing generations protect every workflow mutation; separate reservation and
+external outcome records preserve uncertain calls and saved results. Test real
+PostgreSQL races, five ordinary/ten urgent-only totals, causal child bounds,
+copy/rename deduplication, fixed daily budgets, config changes, crash recovery,
+revocation and independent project state before accepting M3.
+
+M0 exact bed8142 full40289915767 is completed/successful and passes the
+full promotion verifier. Independently downloaded actual native XML/job logs
+and five scan pairs pass: Debian genuine upgrade21, Rocky installation26/three
+expected skips/all8 browsers, eight privacy guards, 30 numeric accessibility
+contexts and three actual OAuth-query artifacts with zero candidates.
+
+M2 follow-up checks pass151 signed HTTP/MCP/space/guidance/ingestion cases and
+99 adapter/client unit cases, plus two standalone wheel/archive installations.
+The parent source snapshot now names the exact current complete part set and
+retains immutable previous version receipts after a document shrinks. A strict
+UUID-array transport mismatch and a client argument spelling error were caught
+and corrected by that actual SDK regression. A denied space selection clears
+the client selector. Private CLI dry-run/resume/status/verify and the exact
+native seed/recovery helper pass through actual local signed HTTP/PostgreSQL.
+All190 Node, Go/schema, five shell parser checks,272 documentation links and
+21 Robot dry runs pass. Broad pre-final-source checks pass2096 cases; a fresh
+complete validation of the final additions is running. No native M2 or actual
+external scheduled execution is claimed.
+
+M2 final broad local checks pass2101 actual cases. Subsequent final focused
+checks pass116 actual signed-HTTP/PostgreSQL publisher and ingestion unit cases,
+including independent same-label/same-content connectors, Atom alternate/inline
+entries and Core-side rejection of credential-bearing URL queries. Final wheel/
+archive checks exercise the installed `c0-projects` executable outside Core/app.
+The original operator checkout remains unchanged except its pre-existing dirty
+documentation; development is isolated in the separate clone. M1 corrected
+Debian native passes; Rocky/final artifact acceptance is still pending.
+
+M1 source2486de4 full40303681995 has successful local, producer, released,
+scans, both-native and actual artifact-audit jobs. Independent downloaded
+inspection passes Debian21 genuine upgrade and Rocky26 installation/three
+expected skips/all8 browsers, eight privacy guards,32 accessibility contexts
+and three query artifacts with zero candidates; five scan pairs pass. The
+merge gate correctly rejects `ready_for_review_required` because PR38 is a
+work-in-progress draft for the complete task. This is not promotion evidence.
+Intermediate branch-only full dispatches preserve that PR review gate; final
+ready-PR/current-source acceptance remains mandatory. A fresh branch-only
+full dispatch of exact2486de4 has been requested. Further implementation is
+pushed on `feat/research-projects-work`; the final complete history will be
+delivered to the draft PR branch before final ready-PR validation. No gate is
+weakened and no merge, release or deployment is authorized by the failed gate.
+
+M2 additionally passes107 ingestion unit cases,43 browser fixture/privacy
+helpers,191 Node cases and275 documentation links. New disposable browser
+assertions cover stored partial connector coverage and post-revocation clearing.
+Two actual PostgreSQL cursor tests verify retry recovery and configuration-hash
+changes without inherited cursors/watermarks. Compatible Admin configuration
+saves install additive managed record kinds without changing immutable schemas;
+22 project/schema cases pass. Final source candidate CI remains pending.
+
+M2 d2575cc branch run40312131525 local CI passes2113 actual Python/PostgreSQL/
+packaging and191 Node cases; producer, released-Core compatibility and all five
+scans pass. Both native jobs remain running. M1 branch run40311946100 local and
+images/scans pass with both native jobs running. Neither full gate is inferred.
+
+A new actual negative PostgreSQL/SDK regression against d2575cc proves reported
+counts alone could advance a connector cursor. The follow-up requires explicit
+verified part receipt IDs and joins actual ready, non-archived same-space source
+versions with complete parent snapshot membership inside Core. It rejects
+unknown/wrong receipts and unbacked counts. CLI coverage counts only complete
+originals; the native recovery seed submits exact receipt IDs. Eleven signed
+publisher cases and the exact native seed/recovery helper pass locally. Preserve
+the negative evidence and frozen candidate; the correction needs fresh full CI.
+
+The M2 receipt-proof correction passes130 actual signed HTTP/PostgreSQL,
+space/native-helper, guidance and ingestion unit cases. No schema definition,
+OAuth behavior, existing knowledge or deployed image changes. It is committed
+separately; its exact-source full publication/native/artifact gate is required
+before M2 acceptance and M3 implementation.
+
+### WikiPlant M2 accepted source and M3 transaction subplan
+
+Exact correction28f40f0 full40316218857 is completed/successful, with2114
+actual Python/PostgreSQL/packaging and191 Node cases. Producer/released checks,
+both native distributions and all five scans pass. Full acceptance verifier and
+independent downloaded XML/job-log/scan inspection pass: Debian21 genuine
+upgrade, Rocky26 installation/three expected skips/all8 browsers,32 accessibility
+contexts, eight privacy guards and three query artifacts with zero candidates.
+M1 exact2486de4 branch full40311946100 also passes its full verifier and the
+same independent native/privacy audit. These are branch acceptance proofs, not
+ready-PR promotion, Core publication, live deployment or external-agent proof.
+
+M3 now implements bounded managed run/checkpoint, queue/admission, daily-window
+and attempt/invocation records. Queue unique keys bind stable IDs and canonical
+question identity. The existing content transaction locks serialize reservations
+and preserve current-role checks; every workflow commit carries its actual
+lease owner/generation. Daily windows retain consumed allowances and configured
+limits across replay and timezone changes. Saved results awaiting merge cannot
+reserve new attempts. All origins share scope/novelty/lineage/capacity policy;
+terminal ancestry and +20/max-three expansion remain separate from urgency.
+Add real PostgreSQL races, crash/reclaim/revocation, copy/rename, fairness and
+ordinary/urgent budget cases, then exact REST/current/legacy MCP and native
+recovery tests. No generative handler or second database is introduced.
+
+M3 local validation passes the fresh full2132 Python/PostgreSQL/packaging cases,
+plus34 focused final-source cases after the bounded question-comparison and
+polling-renewal refinements. Those focused cases include actual database races,
+current/legacy MCP conflict codes, grant revocation, source fencing including
+omitted-lease rejection, result recovery and the exact native recovery helper.
+Node192, Go schema compilation, five shell parsers,21 Robot dry-run cases and277
+documentation links pass. The earlier reused-database full run has2129 passes
+and two failures caused by one retained scheduled succeeded health job; bounded
+SQL inspection confirms that identity/state. Its failed evidence is retained.
+Fresh full validation passes without changing runtime job policy.
+
+Managed records use existing storage/schema0021; Core/app versions and genuine
+deployed predecessor digests remain unchanged. Source synchronization now binds
+each connector to a run, so omitting a fence cannot bypass transferred ownership.
+The disposable browser covers literal queue/run rendering and inactive-lease
+rejection. Backup/update/restart/restore compare exact saved run, checkpoint,
+queue, reservation, outcome and connector-binding records. Actual native and
+artifact acceptance for this M3 source still requires its forthcoming full run.
+No real C0/WikiPlant project data, schedules or deployed images changed.
+
+### WikiPlant M3 acceptance and M4 monitoring subplan
+
+Exact M3 fb9c4b7 full40333538357 completed successfully. Actual remote local CI
+passes2133 Python/PostgreSQL/packaging,192 Node and21 Robot dry-run cases.
+Producer/released-image/module/all five scans pass. Full acceptance verification
+and independent downloaded report/job-log/scan audits pass: Debian genuine
+upgrade21/zero skips, Rocky installation26/three expected skips/all8 browsers,
+eight privacy guards,32 numeric accessibility contexts and three OAuth-query
+artifacts with zero candidates. A transient GitHub artifact-storage503 resolved
+on retry; failed private evidence remains outside Git. Original working files,
+deployed predecessor images, live knowledge and all real schedules are untouched.
+
+M4 will persist per-primary-topic/local-day monitoring separately from queue
+budgets. Reserve queries/source inspections before external calls, retain their
+observed outcomes, support fenced recovery and advance watermarks only after
+verified successful coverage. Material results remain pending merge until M5's
+stronger evidence/Wiki contract. Daily execution must complete mandatory primary
+monitoring even with a full/blocked queue. Add actual PostgreSQL caps/concurrency,
+failed/uninspected/old-article controls and fake-agent signed SDK workflows.
+
+Extend existing product plugin/skill packaging with explicit project bindings,
+setup/intake/lookup/research/tracking/daily/weekly/recovery instructions and
+scheduler prompts/handoff. Keep read-only questions mutation-free. Reuse existing
+OAuth and current tool metadata; no generative handler or arbitrary execution.
+Support IANA local occurrence/cycle identity and bounded late scheduled recovery.
+No real task is installed or enabled; external installation, authentication and
+unattended execution remain unverified until observed. Source collection and
+saved-result recovery retain their established receipts and authority checks.
+
+M4 implements separately capped monitoring cycles/call history, successful
+watermarks and current-fence recovery; successful daily queue work cannot skip
+primary-topic coverage. Initialization retains its hard five-seed maximum even
+with a larger configured ordinary budget. Reserved work requires fresh scope
+assessment after configuration changes without replenishing its attempt slot.
+IANA daily/weekly contracts retain logical missed-cycle identity separately from
+actual-day allowances. Attributed runner observations install/enable nothing.
+
+Project-bound private skill/plugin variants reuse existing package machinery,
+canonical OAuth/space binding and a read-only CLI. The six explicit product
+templates contain workflow prompts and complete external scheduler handoff.
+Generated archives retain exact scope/version, reject tampered bindings and
+preserve existing output files/symlinks. No actual external agent, host task or
+unattended execution is claimed. Core/app/schema versions remain unchanged.
+
+Final focused local validation passes30 actual PostgreSQL/SDK/native-helper and
+wheel/archive distribution cases, including independent installations/migrations.
+Twenty-nine current documentation/package/runtime-audit cases,193 Node cases,
+Go schema compilation, five shell parsers,21 Robot dry runs,280 maintained links,
+the generated Skill Creator check and77-file contribution privacy check pass.
+The broad local run initially finds one generated-template documentation-link
+failure; the template substitution correction and affected regressions pass.
+That run continues while exact-source remote acceptance is prepared; it is not
+claimed wholly successful. No runtime behavior was weakened to satisfy a test.
+
+Disposable native fixtures now retain monitoring calls/history/coverage through
+backup/update/restart/restore and exercise literal browser monitoring content.
+Exact-source full CI, both actual native reports, query/privacy/scanner audits
+and actual candidate-image Dive analysis remain required before M4 acceptance.
+M5–M8 and final released-Core pin adoption remain outstanding. No live C0 or
+WikiPlant data, real spaces/schedules or deployed predecessor images changed.
+
+Independent M4 Skill Creator forward evaluation uses only the generated skill,
+synthetic lookup/intake/recovery scenarios and current tool metadata. It makes
+no production calls or mutations. Explicit project selection, read-only lookup,
+untrusted-source handling and uncertain attempt allowances are preserved. The
+example binding/current project services cannot be verified on the available
+external connection; no external integration is claimed. Review identifies a
+wording ambiguity: unavailable checkpoint services cannot produce durable
+BLOCKED receipts. Prompts now distinguish unsaved capability reports, specify
+connection/manifest discovery and return actual QUEUED source/version identities
+while citations await extraction. Missing services never cause generic-object
+substitutions or invented receipts.
+
+A real formatter negative also shows frozen5e2432f rewriting a literal
+template-looking project name. Substitution now completes trusted static links
+before inserting user metadata; its regression preserves the literal name.
+Thirty current package/documentation/runtime cases pass. The earlier exact
+5e2432f remote full local job passes2162 Python/PostgreSQL/packaging,193 Node
+and21 Robot dry runs; both native jobs remain in progress. Actual downloaded
+five scan/SBOM pairs pass. Verified registry manifest/config and13 compressed
+layer blobs match that source and app digest. Dive0.13.1 analysis/CI passes at
+98.13% efficiency; the product layer contains exactly six byte-identical tracked
+templates under UID/GID10001. A metadata-only Docker29 export fails inspection;
+its evidence remains private, and direct verified registry blobs provide the
+analysis archive without changing the image. The prompt/name correction needs
+its own exact-source full/native/artifact acceptance before M4 completes.
+
+### WikiPlant M5 evidence and reporting subplan (gated)
+
+Corrected M4 f2a2a13 full40373013755 is completed/successful. Exact-source
+full acceptance verification and independent downloaded XML/job-log/scan audits
+pass:2163 Python/PostgreSQL/packaging,193 Node,21 Robot dry runs; Debian genuine
+upgrade21/no skips, Rocky installation26/three expected skips/all8 browsers,
+privacy8, numeric accessibility32, three query artifacts/zero candidates and
+all five scan/SBOM pairs. Corrected app registry digest c5639e9c558d4216 matches
+its manifest/config/all13 compressed blobs; exact six product files and actual
+Dive analysis/CI pass at98.13% efficiency. Original5e2432f acceptance/evidence
+is retained unchanged. M4 is accepted on the branch; no ready-PR promotion,
+Core release, deployment, actual external-agent execution or scheduling is
+claimed. M5 now proceeds under the following subplan.
+
+M5 implementation starts only after corrected M4 f2a2a13 full40373013755 and
+its downloaded native/privacy/scanner audits pass. This subplan records design
+preparation while that acceptance is running; it claims no M5 implementation.
+
+Reuse current source/passages, claims, immutable Wiki revisions and exact-target
+annotations. Add strict individual result/finding/publication/report/membership
+and delivery records in existing managed typed storage. Stable result identity
+comes from the actual research attempt or monitoring cycle/scope, retaining
+lost-response recovery without another investigation. Replace M3's deliberately
+generic stored-result reference with actual same-project result/evidence/commit
+verification. Replace M4's conservative pending-material gate with verified
+result/cycle/passage/Wiki publication checks before watermarks advance.
+
+Findings distinguish observed facts, supported inferences, hypotheses,
+contradictions, outdated assertions and unknowns. Validate actual ready immutable
+passages and claim links/revisions. Record bounded contrary checks with their
+observed provenance, alternatives, coverage and limitations; unsearched/failed
+checks cannot support consequential conclusions. Semantic judgments remain
+external. Preserve historical contradictions and exact revision applicability;
+new Wiki revisions receive no automatic predecessor verification.
+
+Keep Markdown separate from page DTOs/metadata and reject serialized page
+envelopes in project publication. Preserve valid fenced JSON examples and the
+future offline legacy frontmatter contract. Reuse existing knowledge operations
+and validate their actual stored revisions/hashes instead of another knowledge
+engine. Any trusted composition uses the existing transaction/connection and
+lock order, never nested public mutations or arbitrary execution.
+
+Reports have stable project/type/local-date identity and individual substantive
+result membership or saved appendix references. Validate completed-but-unreported
+coverage at final save, exposing deferrals and concurrent changes. Preserve all
+existing payload, operation and reference limits. Save/read back actual Markdown
+and immutable Wiki revision before reporting persistence complete. Reports about
+blocked daily runs must remain saveable without declaring failed monitoring
+successful. Report publication can use its independent logical run and retries
+must reuse the saved report without repeating research. External publication,
+notification and human reading remain separate attributed observations.
+
+Test real PostgreSQL evidence/claim/Wiki bindings, queued extraction rejection,
+foreign-space and stale-revision denial, JSON-body regression, result recovery,
+report omission/concurrent membership controls, publication failure recovery and
+English/Italian readable output. Extend actual REST/current/legacy SDK and
+disposable native recovery/browser evidence. Keep actual external agents and
+unattended execution unverified unless independently observed. M6–M8 remain
+outstanding; this task still authorizes no live deployment or migration.
+
+### WikiPlant M5 implemented; exact acceptance pending
+
+Core now persists individual findings/results/versions/publication proofs,
+stable daily/weekly reports, substantive entry/appendix membership and independent
+delivery observations. Seven additive REST/MCP operations preserve the frozen77
+original contracts. Existing source/claim/Wiki/annotation services remain the
+knowledge owners. Ready immutable passage hashes, actual claim revisions and
+bounded contrary observations gate publication. Pending published results may be
+explicitly re-reviewed at their current revision after claim changes/retraction
+without another attempt; completed results remain immutable. Old findings,
+publications and evidence remain available. New Wiki revisions need verification.
+
+Report finalization rejects omitted completed evidence, abandoned draft membership
+and stale scope coverage. Explicit deferrals remain due. Saved appendices require
+an exact revision link. External result publication, notification and reading
+have separate attributed observations; uncertain calls require reconciliation and
+failed publication retries reuse saved research/report state. The deterministic
+client publisher renders externally authored English/Italian or explicitly
+localized prose, verifies saved identities and resumes lost responses. It never
+generates conclusions, sends notifications or truncates oversized content.
+
+Actual local verification:54 focused PostgreSQL/SDK/project/contract cases pass,
+then23 current evidence/report invariants pass, including claim-change recovery,
+scope changes and abandoned drafts. Two client validation cases,48 package/
+documentation/native-fixture cases,193 Node cases, schema/shell checks and21
+Robot dry runs pass. Exact native protected seed/readback passes through signed
+local HTTP for Owner and Reader, retaining actual result/Wiki/report hashes and
+a simulated failed publication. Generated documentation passes281 local links;
+the complete84-file contribution privacy scan passes. The broader early run
+passed2147 cases and failed28 stale109-vs102 tool inventory assertions; after
+updating the additive contract inventory all28 affected cases pass. Exact-source
+remote full/native/image/privacy acceptance remains pending and is required
+before M6. No local skips or fake host outcomes are counted as real external-agent
+or unattended execution. No live data, spaces, schedules or deployment changed.
+
+M6 next, only after M5 acceptance: bounded weekly structural audits and durable
+review cursors, exact-revision semantic rotation, peripheral expiry at a distinct
+future weekly checkpoint, compact historical capsules, project events using
+ordinary admission, bounded metadata-only release checks, and reader diagnostics
+for last successful runs, latest report, current connector definitions and gaps.
+Preserve existing limits, evidence, authorization and immutable historical state;
+semantic judgments stay external and no runtime update is installed automatically.
+
+### WikiPlant M5 accepted; M6 implementation
+
+Exact bf13979 full40395011881 is completed/successful. The full acceptance
+verifier and independent downloaded artifact audits pass:2189 Python/PostgreSQL/
+packaging,193 Node,21 Robot dry runs; genuine Debian upgrade21/no skips, Rocky
+installation26/three expected skips/all8 browsers; privacy8, accessibility32,
+three query artifacts/zero candidates and five scan/SBOM pairs. Actual registry
+manifest/config/all13 compressed layers match the source and app digest02a21bad.
+All six product templates and both new Core modules match tracked bytes under
+UID/GID10001; Dive enabled rules pass at98.13% efficiency. No ready-PR promotion,
+Core release, dedicated deployment or actual external-agent execution is claimed.
+
+M6 implements bounded durable structural audit steps, exact-revision semantic
+rotation, immutable topic lifecycle history and compact peripheral archives only
+at a distinct future weekly checkpoint. Calendar events retain date precision,
+bounded daily/weekly/monthly recurrence and missed-refresh coalescing; generated
+work uses ordinary admission and preserves lineage/depth. Release checks use
+bounded external metadata and distinguish failed/incomplete retrieval from
+up-to-date; they never install code. Reader diagnostics show pinned latest report,
+actual successful daily/weekly runs, current connector definitions and gaps.
+Expose trusted Core input schemas in tool metadata where dict fields previously
+hid mandatory nested fields, retaining old-Core upgrade guards and all original
+contracts. Test PostgreSQL recovery/concurrency, scope/fencing, partial audits,
+calendar precision/recurrence, archive history, client metadata and UI access-loss
+guards, then exact full/native/artifact gates before M7. No live migration or
+schedule activation.
+
+M6 implementation checkpoint:20 current focused PostgreSQL/SDK/collector/input
+contract cases pass, including persistent release identity alerts, overlapping
+maintenance cursors, bounded historical admission, exact-revision rotation and
+distinct future archive checkpoints. The signed native protected seed/recovery
+and related maintenance cases pass9, retaining actual audit/semantic/event rows.
+Node195, schema/shell checks,21 Robot dry runs,283 documentation links and the
+93-file contribution privacy scan pass. The broad fresh-database suite is running;
+exact-source remote full/native/image/artifact acceptance is still required.
+Generated weekly/recovery instructions name actual operations and preserve partial
+coverage. No external provider, host task or production migration was executed.
+
+M6 review follow-up: active-only queue selection must retain historical anchor
+service counts for ordinary tie-breaking. Aggregate counts from all retained
+queue history inside the authorized transaction; do not load completed rows into
+the bounded active inventory or reset their service. A real PostgreSQL regression
+uses two previously served investigations and two active approved anchors, then
+checks the unserved anchor wins after current-scope reassessment. The original
+7109f0d acceptance run is retained; corrected exact-source acceptance is required.
+All22 current PostgreSQL maintenance/workflow cases pass after the correction.
+
+### WikiPlant M6 accepted; M7 implementation
+
+Corrected1000839 full40414161692 completed/successful. Exact remote verification
+passes2205 Python/PostgreSQL/packaging,195 Node and21 Robot dry runs. The full
+acceptance verifier and independent actual downloaded artifacts pass: Debian
+genuine upgrade21/no skips, Rocky installation26/three expected skips/all8
+browsers, privacy8, accessibility32, three query artifacts/zero candidates and
+five scan/SBOM pairs. Actual registry manifest/config/all13 compressed layers
+match app digest4539b905; four Core modules and six product templates match
+tracked bytes and UID/GID10001/mode0644. Dive enabled rules pass at98.13%; vendor
+findings remain app171/database414/UI11. No dedicated deployment, real external
+agent or unattended execution is claimed. Frozen7109f0d evidence is retained.
+
+M7 implements deterministic private project export with stable identities and
+integrity checks, preserving actual source/Wiki revisions and available typed
+history. Use existing APIs where complete; add only a fixed bounded Core export
+reader for missing knowledge/alias/annotation shapes, with current space
+authorization and no authentication/storage-path export. Detect concurrent or
+partial collection; do not claim a multi-request transaction snapshot.
+
+Implement safe bounded YAML for client configuration and raw WikiPlant snapshots,
+an offline parser/dry-run mapping contract, explicit public-only static selection
+and complete fabricated English/Italian reference projects. Extend authorized
+C0-space sourcing to selected typed GitHub knowledge and test a third source
+space without implicit graph access. Optional private GitHub collection requires
+explicit worker authorization bound to repository/destination; preserve the
+existing public-only default and keep credentials outside C0. Immutable connector
+schemas must not be changed silently.
+
+Test deterministic/tampered/partial exports, Markdown/metadata separation, legacy
+IDs/provenance/lineage/receipts, cross-project budgets/cursors/reports/recovery and
+revoked source access with real PostgreSQL and signed SDK requests. Extend native
+readback and read-only diagnostics for unresolved scope decisions. Update the
+matrix/readiness/docs, commit/push and require full exact CI/native/artifact
+acceptance before M8. No live data, spaces, schedules, migration or publishing.
+
+M7 implementation checkpoint: fixed read-only Core catalog/text fragments and
+private two-pass export, offline raw-layout/parser/mapping validation, explicit
+public static selection, bounded YAML, typed source subscriptions and optional
+private GitHub replay consent are implemented. Both fabricated English/Italian
+SDK/PostgreSQL daily+weekly+report+export cases pass; source instructions leave
+configuration and one-attempt allowance unchanged. Actual third-space typed
+knowledge updates retain old evidence; current source grants remain required.
+Native seed/recovery now checks exact interchange identities and Markdown hashes.
+Latest focused native/source/static cases pass37, bounded format/security cases
+pass33, and completed raw Drive/GitHub fixtures pass13 after structural config
+validation. Node196,21 Robot dry runs, schema/shell checks,286 documentation links
+and152-file contribution privacy checks pass. A fresh broad PostgreSQL run is in
+progress; exact committed full/native/image/artifact acceptance is still required.
+M8 has not started. No real sources, migration, schedules or deployment executed.
+
+M7 local broad run completed2239 passed in1096.81 seconds with a fresh isolated
+PostgreSQL database and no failures. Collection preceded the final parser/static
+negative cases and configuration hardening; the affected latest unit/native/SDK
+checks above pass separately. Exact committed remote full acceptance will run
+the complete final collection. Primary-agent review covered the fixed export
+catalog/space filters, private replay consent before mutation, no-follow artifact
+paths, canonical checksums, Markdown boundaries and diagnostics feed ordering.
+
+M7 review follow-up: absolute URLs to the bound C0 host must use the same private
+Wiki selection, cross-space denial and protected-source destination removal as
+relative links. Resolve them against the snapshot's actual instance binding;
+retain ordinary authored external public links. Unit and actual signed-SDK static
+export regressions cover absolute private/foreign Wiki targets, selected-page
+mapping and citation destination removal. Original3762652 full40430534952 remains
+retained and is not final acceptance; the correction requires its own exact full
+CI/native/artifact gate. No static output was deployed or published.
+
+M7 final static review extends the same boundary to unsupported nested/multiline
+brackets and all leading-frontmatter newline conventions. Reject ambiguous
+constructs instead of preserving unchecked link/image syntax; omission labels
+are plain text. The6030cb8 absolute-link run40432402922 is retained as intermediate
+evidence. Final corrected source receives another full exact-source gate; no
+started or intermediate run is acceptance of a later commit.
+
+Final static follow-up passes20 current unit/actual signed-SDK cases. Code examples
+receive the same link checks; a partial fence parser cannot exempt later real
+links. Bare bound-instance URLs require explicit mapping/review, and linear
+bracket patterns reject a131072-character malformed input within the bounded
+regression deadline. This deliberately conservative subset is documented. No
+new parser framework/dependency or server/runtime behavior is introduced.
+
+### WikiPlant M7 accepted; M8 final acceptance
+
+Final corrected b5e84bb full40433543339 completed/successful. The full verifier
+and independent downloaded artifact audit pass:2262 Python/PostgreSQL/packaging,
+196 Node,21 Robot; Debian genuine upgrade21/no skips, Rocky installation26/three
+expected skips/all8 browsers, privacy8/accessibility32, three query artifacts with
+zero candidates and five actual scan/SBOM pairs. Final app a1a675f8 source/config
+and all13 registry layers verify; three Core modules, project controller and six
+templates match tracked bytes/ownership. External worker/YAML packages are absent
+from the server image. Dive enabled rules pass at98.13%; vendor findings remain
+app171/database414/UI11. Earlier3762652/6030cb8 runs remain historical evidence.
+Final static export deliberately rejects unsupported syntax and unchecked bound-
+instance destinations. No live migration, deployment or external task occurred.
+
+Frozen M7 candidate identities (disposable acceptance, not live deployment):
+- Module sha256:603645ba7f441b270ea451c97e79312b5e09f1cdc95d146efc8377759acf5783
+- App sha256:a1a675f8b712f6f853c1dcd0b0fea1b60a9fa91b23e74dea8c4d00b399ca795b
+- Database sha256:4e047edfc3225fc7b60da96cdfb152117d1ea3a93d12ba038a5eda89e9406849
+
+M8 subplan: finalize independent Core/worker distribution probes and contracts,
+bump additive Core0.34/app0.53 and worker0.2 without a database-schema change.
+Temporarily accept released0.33 plus local producer0.34 for exact prepublication
+validation; keep the actual immutable released default visible. After complete
+same-source local/full/both-native/artifact gates, publish immutable core-v0.34.0
+through the existing verified library workflow, download/check its actual assets,
+then adopt its exact tag/frozen app lock and compatible patch-only updater range.
+Never clobber tags/assets or change frozen deployed predecessor images. This is
+not an NS8 stable module release or production deployment.
+
+Finish README/AGENTS/matrix/readiness with executed evidence and explicit limits;
+prove wheel/archive project state survives repeated migration, source/claim/Wiki
+export works without app/NS8, and installed worker CLI validates both YAML/raw
+fixtures without server packages or C0 writes. Open the completed ready PR using
+repository policy and require its exact full acceptance. Keep real external-agent,
+unattended execution, dedicated reference deployment and migration unverified;
+the complete installation/verification handoff is the authorized deliverable.
+
+M8 focused validation passes69 actual packaging/version/SSO-wrapper cases. Both
+Core distributions preserve project records through repeated migration and expose
+actual immutable Wiki/source/claim exports with revoked-token denial. Both worker
+distributions validate the two YAML/raw fixtures without server packages/writes.
+Only current native health expectations move to0.53/0.34; all predecessor source,
+versions and digests stay frozen. Node196,21 Robot dry runs, schema/shell,287 local
+documentation links and156-file contribution privacy checks pass. Fresh broad
+PostgreSQL validation is running; no prepublication CI or release is claimed yet.
+
+M8 prepublication local broad validation completed2262 passed in1111.69 seconds
+on a fresh isolated PostgreSQL database, with no failures/skips. Primary-agent
+review verifies the additive version/range transition, unchanged schema/auth and
+frozen predecessor digests, independent project export/grant/migration probes,
+worker installation and explicit readiness limits. The consumer lock still binds
+released0.33; this candidate is not a library publication or default adoption.
+Commit/push and exact full/native/artifact verification precede the new Core tag.
+
+### WikiPlant M8 prepublication accepted; released Core adoption
+
+Exact `cd8e7a8ec1649c5ce8c02a1fc2a264f06d4df9a7`
+[full40443878849](https://github.com/Stell0/ns8-czero/actions/runs/40443878849)
+completed/successful. Actual remote local log records2262 Python/PostgreSQL/
+packaging cases in1190.04 seconds,196 Node and21 Robot checks; schema/shell pass.
+Downloaded native reports pass Debian genuine predecessor upgrade21/no skips and
+Rocky installation26/three expected skips/all8 browser workflows. Full promotion
+verification and independent artifact audit pass8 privacy guards,32 numeric
+accessibility contexts, three OAuth-query artifacts/zero candidates and five
+actual scan/SBOM pairs. Registry configuration/source/all13 layers and installed
+Core/app/project modules/controller/six templates match exact bytes/ownership.
+Worker/YAML packages are absent from runtime. Dive enabled rules pass98.1338%
+efficiency at204561819 bytes; vendor findings remain app171/database414/UI11,
+module/imageroot0. Historical failed/intermediate evidence remains outside Git.
+
+Frozen M8 prepublication candidates (disposable acceptance, not live deployment):
+
+- Module sha256:6273015e198ad854d6fda9d3c0fed9553452d4217d6d0de7a887ceda72d21798
+- App sha256:1a41c422a9c1c634f18013df4e90924c2515fcfc231d74128e0287fcc3cec472
+- Database sha256:8b0e8d3e540aef0e82cea3f5472184a853f4d0833718af514729ce8a481d2c8d
+
+Immutable [core-v0.34.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.34.0)
+points to that accepted source. [Publication40449147120](https://github.com/Stell0/ns8-czero/actions/runs/40449147120)
+completed/successful with8 exact-artifact packaging cases. Actual downloaded
+release assets equal verified distributions and SHA256SUMS. Wheel checksum
+`adbfc9e0422935dcd470b258a633633320b577b1b88faffe0290397fc2f34de8`;
+source archive `4dc21c553974c8ab4431b72982b5c1ed7628aafe0f07a528eaa98b0e2d234bd6`.
+Six additional local actual-asset cases pass58.62 seconds, including reproducible
+rebuild/clean installation and real PostgreSQL migration/state/grant probes.
+
+Default app0.53 now pins this exact released tag/commit in its frozen lock, with
+>=0.34,<0.35 and matching patch-only Renovate bounds. The independent original
+fork example remains0.24. Clean frozen noneditable default installation proves
+Core0.34/app0.53/project services outside the checkout, without worker/YAML/NS8
+packages. Packaged Core bytes and genuine deployed predecessor are unchanged.
+Final ready-PR exact-head full acceptance must pass independently; record its
+actual proof on the PR, avoiding any inference from the earlier green source.
+Adoption-focused source/release checks pass31 cases, maintained documentation
+checks pass287 local links and public-contribution checks pass158 changed files.
+Primary-agent review confirms only the exact released pin/lock, reviewed updater
+bounds/test and acceptance documentation changed after publication; no packaged
+Core bytes, schema, authority or frozen predecessor changed. This is an author
+review, not an independent human review.
+
+The compatibility/readiness reports distinguish implemented/local/disposable
+C0/reference/external-agent/unattended states. Reference deployment, real agent
+research, scheduled execution/notifications/reading and actual migration remain
+separate operational gates. No live project data, spaces, schedules, knowledge,
+Github projects, deployed images or website publishing changed.

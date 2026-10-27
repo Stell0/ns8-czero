@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "id": "monitoring-1",
+  "local_date": "2026-10-10",
+  "topic_id": "repositories",
+  "status": "partial",
+  "queries_used": 1,
+  "sources_used": 0,
+  "last_success_at": "2026-10-09T06:00:00+00:00",
+  "error_code": "synthetic_timeout"
+}

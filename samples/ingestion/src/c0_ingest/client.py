@@ -120,7 +120,7 @@ class C0:
             known = {'insufficient_scope', 'permission_denied', 'object_conflict', 'object_not_found',
                      'knowledge_conflict', 'knowledge_not_found', 'evidence_not_ready', 'space_conflict',
                      'invalid_space_request', 'invalid_knowledge_request', 'invalid_operation_request',
-                     'service_unavailable'}
+                     'service_unavailable', 'project_conflict', 'project_not_found', 'invalid_project_request', 'project_core_upgrade_required', 'project_connection_not_configured'}
             code = next((item.get('text') for item in raw.get('content', [])
                          if item.get('type') == 'text' and item.get('text') in known), 'operation_rejected')
             raise C0Error(code + ': ' + name + '; inspect authority/current state before retrying')
@@ -146,12 +146,16 @@ class C0:
                 return rows
             offset += len(page)
 
-    def select_space(self, space_id):
+    def select_space(self, space_id, *, writable=True):
         if not space_id:
             raise C0Error('Configure an explicit target space ID before syncing')
         self.space_id = space_id
-        space = self.call('spaces_get', space_id=space_id)
-        if space['shared'] or space['role'] not in ('editor', 'admin'):
+        try:
+            space = self.call('spaces_get', space_id=space_id)
+        except C0Error:
+            self.space_id = None
+            raise
+        if (writable and space['shared']) or space['role'] not in (('editor', 'admin') if writable else ('reader','editor','admin')):
             self.space_id = None
             raise C0Error('Target must be an accessible protected Editor/Admin space')
         return space

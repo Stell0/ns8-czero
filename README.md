@@ -267,3 +267,40 @@ These anchors preserve links to the retained historical record.
 <a id="documentation-and-skills-release-readiness-phase"></a>[Documentation and skills release-readiness phase](docs/history/README.md#documentation-and-skills-release-readiness-phase)
 
 </details>
+
+
+## Research projects
+
+The [WikiPlant compatibility track](docs/projects/WIKIPLANT_COMPATIBILITY.md)
+implements reusable research state within existing protected spaces. The initial
+[project contracts](docs/projects/PROJECTS.md) cover versioned configuration,
+topics, authorization and a read-only project overview. The
+[workflow contract](docs/projects/WORKFLOWS.md) adds atomic queue admission,
+day budgets, fenced leases and recoverable attempts. The
+[monitoring/agent contract](docs/projects/MONITORING.md) adds separately capped
+primary-topic coverage, project-bound packages and IANA scheduler handoff.
+The [evidence/report contract](docs/projects/REPORTING.md) adds result proofs,
+report membership/readback and independent publication observations.
+The [maintenance contract](docs/projects/MAINTENANCE.md) adds bounded structural
+audits, revision-specific semantic rotation, archive history, calendar admission
+and metadata-only workflow update checks.
+The [export/preparation contract](docs/projects/EXPORTS.md) adds private,
+integrity-checked project snapshots, offline WikiPlant mapping validation and
+explicitly selected public static files. Fabricated English/Italian reference
+projects exercise daily/weekly workflows without production data.
+Migration preparation has separate gates. Actual external-agent
+and unattended scheduled execution remain unverified.
+This branch does not migrate real projects, deploy an instance or activate schedules.
+
+Project source collection is available in the existing independently installable
+ingestion sample package. [Source contracts](docs/projects/SOURCES.md) describe
+its seven adapters, protected receipts, limits and explicit approval. This
+branch remains an implementation candidate; no live migration is performed.
+
+The project backend is implemented in Core0.34/app0.53 and the external worker0.2.
+The default build pins the verified immutable `core-v0.34.0` release. M0–M8
+prepublication implementation, distribution and disposable native acceptance pass;
+the ready PR requires its own exact-head full gate. See the
+[readiness report](docs/projects/WIKIPLANT_MIGRATION_READINESS.md) for current
+evidence and remaining gates. This does not establish availability on the
+dedicated reference instance or verify an actual external scheduled agent.

@@ -263,12 +263,13 @@ def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatc
         assert all(name not in ('Click','Fill Text') for name,_ in denied)
 
 
-def test_accessibility_diagnostics_contain_only_counts_and_fixed_context(monkeypatch, accessibility_measurement):
+@pytest.mark.parametrize('page', ['home', 'projects'])
+def test_accessibility_diagnostics_contain_only_counts_and_fixed_context(monkeypatch, accessibility_measurement, page):
     messages = []
     monkeypatch.setattr(BuiltIn, 'log_to_console', lambda self, value: messages.append(value))
     check = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['assert_accessibility']
-    check(SimpleNamespace(evaluate_javascript=accessibility_measurement), 'home', 'admin')
-    assert len(messages) == 1 and '"page": "home"' in messages[0]
+    check(SimpleNamespace(evaluate_javascript=accessibility_measurement), page, 'admin')
+    assert len(messages) == 1 and json.loads(messages[0].split('C0 accessibility: ',1)[1])['page'] == page
     assert '"controls_checked": 4' in messages[0]
 
 
@@ -308,7 +309,7 @@ def test_existing_sso_fixture_requires_exact_host_provider_and_valid_tls(tmp_pat
 
 
 @pytest.mark.parametrize('stage,expected_app,expected_core',[
-    ('seed','0.51.0','0.32.0'),('verify','0.52.0','0.33.0')])
+    ('seed','0.51.0','0.32.0'),('verify','0.53.0','0.34.0')])
 def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,stage,expected_app,expected_core):
     calls,levels,network = [],[],[]
     def execute(command,**options):

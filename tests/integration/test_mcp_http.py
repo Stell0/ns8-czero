@@ -13,6 +13,7 @@ from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.exceptions import MCPError
 import pytest
+from project_contract import TOOL_COUNT
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -95,7 +96,7 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                 for mode in ('auto', 'legacy'):
                     async with Client(streamable_http_client(RESOURCE, http_client=http), mode=mode) as client:
                         tools = (await client.list_tools()).tools
-                        assert len(tools) == 77 and any(t.name == 'wiki_pages_create' for t in tools)
+                        assert len(tools) == TOOL_COUNT and any(t.name == 'wiki_pages_create' for t in tools)
                         assert next(t for t in tools if t.name == 'objects_list').annotations.read_only_hint
                         result = await client.call_tool('object_types_list', {})
                         assert not result.is_error and result.structured_content == expected_types
@@ -107,7 +108,7 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                         resource = await client.read_resource('c0://wiki/pages/' + expected_page['id'])
                         assert json.loads(resource.contents[0].text) == expected_page
                         descriptions = json.loads((await client.read_resource('c0://capabilities')).contents[0].text)
-                        assert len(descriptions['operations']) == 77
+                        assert len(descriptions['operations']) == TOOL_COUNT
                         assert (await client.call_tool('unregistered_operation', {})).is_error
                         assert (await client.call_tool('object_types_list', {'unknown':1})).is_error
                         with pytest.raises(MCPError, match='invalid_resource_request'):

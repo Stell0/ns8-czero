@@ -1,0 +1,17 @@
+schema_version: 1
+server_url: https://knowledge.example.org/mcp
+project_space_id: 22222222-2222-4222-8222-222222222222
+sources:
+- id: synthetic-github
+  adapter: github
+  repository: fixture-c0-lab/synthetic-project
+  include:
+  - readme
+  - docs
+  - commits
+  - releases
+  - issues
+  - pull_requests
+  - comments
+  enabled: true
+  max_pages: 2

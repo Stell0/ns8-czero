@@ -20,15 +20,26 @@ class ObjectNotFound(Exception):
     """An admitted caller requested a nonexistent object or type."""
 
 
+def _project_type(type_name, spec=None):
+    from .project_schema import PREFIX, SCHEMAS, project_unique_fields
+    kind = type_name.removeprefix(PREFIX)
+    if type_name != PREFIX + kind or kind not in SCHEMAS:
+        return False
+    # A pre-existing unrelated type may collide with a new reserved name.
+    # Project bootstrap rejects that collision; ordinary old records still work.
+    return spec is None or (spec['schema'] == SCHEMAS[kind] and spec['unique_fields'] == project_unique_fields(kind))
+
+
 def page(limit,offset=0):
     if type(limit) is not int or not 1<=limit<=100 or type(offset) is not int or not 0<=offset<=100000:
         raise ValueError('invalid_paging')
 
 
 class ObjectService(SpaceBound):
-    def __init__(self,database,access,*,reference_resolvers=None):
+    def __init__(self,database,access,*,reference_resolvers=None,managed_projects=False):
         self.database=database
         self.access=access
+        self._managed_projects=managed_projects
         # Only trusted application code supplies these callbacks. Requests can
         # select a registered kind, never an import path, table or SQL.
         self.reference_resolvers={} if reference_resolvers is None else dict(reference_resolvers)
@@ -48,6 +59,8 @@ class ObjectService(SpaceBound):
 
     def register_type(self,actor,type_name,label,schema,unique_fields=None):
         type_name=name(type_name)
+        if _project_type(type_name):
+            raise PermissionDenied()
         if type(label) is not str or not 1<=len(label.strip())<=128:
             raise ValueError('invalid_label')
         bounded_json({'label':label},maximum=1024)
@@ -139,12 +152,16 @@ class ObjectService(SpaceBound):
         if action not in allowed or set(operation)-allowed[action]: raise ValueError('invalid_operation')
         if action=='create':
             spec=self._type(c,operation.get('type_name'))
+            if _project_type(spec['name'], spec) and not self._managed_projects:
+                raise PermissionDenied()
             data=validate_record(spec['schema'],operation.get('data'))
             row=c.execute(text('''INSERT INTO c0_objects(space_id,id,type_name,data,tags)
                 VALUES(:space,:id,:type,CAST(:data AS jsonb),:tags) RETURNING *'''),
                 {'space':self._space(c),'id':uuid4(),'type':spec['name'],'data':json.dumps(data),'tags':tags(operation.get('tags',[]))}).mappings().one()
         else:
             row=self._get(c,operation.get('id'),lock=True)
+            if _project_type(row['type_name'], self._type(c, row['type_name'])) and not self._managed_projects:
+                raise PermissionDenied()
             revision=operation.get('expected_revision')
             if type(revision) is not int or revision<1: raise ValueError('invalid_revision')
             if row['revision']!=revision: raise ObjectConflict()

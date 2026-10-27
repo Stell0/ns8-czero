@@ -13,6 +13,7 @@ Use the installed `/openapi.json` and authenticated `/agents/capabilities.json` 
 | `/oauth/authorize`, `/oauth/consent`, `/oauth/token`, `/oauth/revoke` | Explicit SSO consent, S256, short tokens, rotating refresh and revocation |
 | `/api/v1/profile`, MCP `get_profile` | Stable opaque account identity and supported profile labels |
 | `/api/v1/health` | App/Core versions and database/schema/vector readiness |
+| `/projects`, `/api/v1/project` | Protected project reader and explicit project state; candidate features require matching Core |
 | `/api/v1/spaces` | Authorized space discovery; explicit selection for content |
 | `/api/v1/oauth/clients`, `/api/v1/oauth/cimd` | Admin-approved manual clients and optional metadata discovery |
 | `/docs`, `/openapi.json` | Interactive REST documentation and machine-readable schemas |
@@ -67,3 +68,15 @@ revision returns409; unchanged revision-bound saves do not invalidate authority.
 Real role changes and persistent blocks retain existing invalidation semantics.
 Legacy account-list shape and legacy callers remain unchanged. Schema0021 adds
 only `c0_accounts.access_revision` and a distinct random onboarding request UUID.
+
+## Research project candidate
+
+Projects reuse protected spaces, immutable typed schemas, current grants and
+existing knowledge services. See [project contracts](projects/PROJECTS.md),
+[source adapters/CLI](projects/SOURCES.md), [workflow/queue contracts](projects/WORKFLOWS.md),
+[primary monitoring and agents](projects/MONITORING.md)
+and the explicit
+[readiness checkpoint](projects/WIKIPLANT_MIGRATION_READINESS.md). The development
+branch does not activate real research schedules or migrate WikiPlant data.
+Producer Core publication/default consumer adoption and final acceptance remain
+required before claiming released project availability.

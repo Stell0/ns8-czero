@@ -216,3 +216,32 @@ requires the normal disposable database configuration. No model credential,
 GitHub token, live instance or live source dataset is needed by public CI.
 
 This code uses the repository's [GPL-3.0-or-later license](LICENSE).
+
+## Project source collectors
+
+`c0-projects` extends this same distribution with independently reusable public
+HTTP, feed, sitemap, local document, GitHub, authorized C0-space and offline
+WikiPlant adapters. See [project source contracts](../../docs/projects/SOURCES.md)
+for private-job configuration, explicit approval, dry-run/recovery and limits.
+
+The read-only `c0-projects project skill` and `project schedule` commands reuse
+that authenticated private job to save a project-bound package or inspect IANA
+occurrences. See [monitoring and agent contracts](../../docs/projects/MONITORING.md).
+Package generation does not install a host task or establish unattended access.
+
+`c0-projects project release-check --config project.json --input release-plan.json
+--dry-run` collects bounded public workflow release metadata. Explicit `--apply`
+saves and verifies source evidence before a fenced observation. It never installs
+code or instructions. See [maintenance contracts](../../docs/projects/MAINTENANCE.md)
+for plans, trust restrictions, retry limits and incomplete coverage.
+
+Project source definitions also accept bounded safe YAML. Optional private
+GitHub collection requires exact repository/destination consent using the
+existing worker credentials; the original public GitHub pipeline stays public.
+Typed C0 subscriptions require independent current source-space authorization.
+
+Read-only `project export`, offline `export verify`, `wikiplant validate` and
+`export static` create new private local artifacts with checksums. See
+[export/preparation contracts](../../docs/projects/EXPORTS.md) and
+[fabricated examples](examples/projects/README.md). They do not import live data,
+create projects, activate schedules or publish a website.

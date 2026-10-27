@@ -1,0 +1,72 @@
+schema_version: 2
+instance:
+  id: wp-1111111111111111
+  name: Robotelier-shaped synthetic
+  language: en
+  timezone: Europe/Rome
+storage:
+  provider: google-drive
+  root_folder_id: fixture-root-robotelier
+  consistency_mode: strict
+runtime:
+  release_id: synthetic-fixture-v1
+  source_commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  upgrades: explicit-user-request
+  manifest_sha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+primary_topic_ids:
+- humanoid-robots
+- manufacturers
+- capacity
+- technical-progress
+- constraints
+schedules:
+  daily:
+    local_time: 06:00
+  weekly:
+    weekday: sunday
+    local_time: 08:00
+queue:
+  normal_daily_attempts: 5
+  urgent_daily_attempts_total: 10
+  urgent_priority: 0
+  max_attempts_per_item: 3
+expansion:
+  child_priority_increment: 20
+  max_children_per_research: 3
+  preserve_expansion_priority: true
+main_topic_refresh:
+  enabled: true
+  outside_queue_budget: true
+  max_search_queries_per_topic: 4
+  max_source_fetches_per_topic: 8
+  lookback_overlap_hours: 12
+skill:
+  per_instance: true
+  installed_reference: synthetic:fixture-skill
+  routing_profile_revision: 1
+initialization:
+  max_research_attempts: 5
+topic_governance:
+  max_active_adjacent_topics: 30
+  max_active_peripheral_topics: 15
+  peripheral_expiry: next_weekly_maintenance
+  archive_summary_target_words:
+  - 100
+  - 200
+  archive_recovery_retention_days: 7
+queue_admission:
+  max_active_automatic_items: 50
+  max_new_automatic_roots_per_day: 5
+  revalidate_pending_after_days: 14
+  automatic_candidate_deferral_days: 30
+  max_semantic_comparisons: 20
+maintenance:
+  max_semantic_pages_per_week: 3
+  validation_lane_slot: 5
+reports:
+  delivery: native-task-result
+  upcoming_days: 7
+  include_quiet_day_report: true
+sources:
+  retention: metadata-and-permitted-extracts
+  retain_full_text: false

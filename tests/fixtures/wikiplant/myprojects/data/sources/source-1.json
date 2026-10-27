@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "id": "source-1",
+  "canonical_ref": "https://example.org/synthetic/old-note",
+  "title": "Fabricated archived observation",
+  "source_type": "synthetic_fixture",
+  "published_at": "2024-01-01T00:00:00+00:00",
+  "updated_at": "2024-01-01T00:00:00+00:00",
+  "retrieved_at": "2026-10-10T10:00:00+00:00",
+  "event_at": null,
+  "permitted_extracts": [
+    "Fabricated archived observation, not a current development."
+  ],
+  "limitations": [
+    "Synthetic fixture, no real original source."
+  ],
+  "full_text_retained": false,
+  "topic_ids": [
+    "repositories"
+  ]
+}

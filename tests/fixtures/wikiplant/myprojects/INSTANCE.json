@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "instance_id": "wp-2222222222222222",
+  "runtime_release_id": "synthetic-fixture-v1",
+  "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "root_folder_id": "fixture-root-myprojects",
+  "config_file_id": "fixture-config-myprojects",
+  "drive_map_file_id": "fixture-map-myprojects"
+}

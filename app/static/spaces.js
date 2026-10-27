@@ -20,14 +20,14 @@
     if(!supplied)return value;
     const url=new URL(value,document.baseURI || window.location.href), base=new URL('./api/v1/',document.baseURI || window.location.href);
     const local=url.pathname.slice(base.pathname.length);
-    if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:me|wiki|sources|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
+    if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:project|me|wiki|sources|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
     return url.pathname+url.search+url.hash;
   }
   function pageURL(value) {
     if(!supplied)return value;
     const url=new URL(value,document.baseURI || window.location.href), base=new URL('./',document.baseURI || window.location.href);
     if(url.origin!==base.origin || !url.pathname.startsWith(base.pathname) ||
-       !['','wiki','sources','objects','search','agents','admin'].includes(url.pathname.slice(base.pathname.length)) || url.searchParams.has('space_id'))return value;
+       !['','wiki','sources','objects','search','agents','admin','projects'].includes(url.pathname.slice(base.pathname.length)) || url.searchParams.has('space_id'))return value;
     url.searchParams.set('space_id',identifier);return url.pathname+url.search+url.hash;
   }
   async function request(path,options={}) {

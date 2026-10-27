@@ -42,6 +42,7 @@ def test_product_workflows_are_a_closed_runtime_allowlist(tmp_path, monkeypatch,
              'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
              'skills/c0-maintain-knowledge/SKILL.md',
              'references/connection.md', 'references/maintenance.md']
+    paths += ['project/'+name+'.md' for name in ('skill','workflows','daily','weekly','recovery','scheduler')]
     for name in paths:
         target = product / name
         target.parent.mkdir(parents=True, exist_ok=True)
