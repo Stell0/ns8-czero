@@ -7,6 +7,7 @@ import logging
 import os
 import re
 from uuid import UUID
+from urllib.parse import parse_qsl
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -17,8 +18,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from czero_core.access import AccessService
 from czero_core.database import Database
 from czero_core.identity import Actor, PermissionDenied, Role, TokenRejected
-from czero_core.oidc import OidcClient, OidcConfig, OidcUnavailable
-from czero_core.sessions import LoginStateRejected, SessionRejected, SessionService
+from czero_core.oidc import OidcClient, OidcConfig, OidcUnavailable, OfflineUnavailable
+from czero_core.sessions import LoginStateRejected, SessionRejected, SessionService, REMEMBER_SECONDS
 from czero_core.oauth_grants import GrantRejected
 from czero_core.renewal import ConnectionPolicy, NativeAuthorityService, RenewalRejected, RenewalUnavailable, SessionPolicy
 
@@ -73,6 +74,7 @@ class RequestAccess:
     # None is reserved for verified first-party tokens/browser sessions.
     # Delegated clients receive an explicit verified scope set.
     scopes: frozenset[str] | None = None
+    remembered: bool | None = None
 
 
 class RoleUpdate(BaseModel):
@@ -107,6 +109,17 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     @app.middleware("http")
     async def private_responses(request: Request, call_next):
         response = await call_next(request)
+        cookie = getattr(request.state, 'remembered_cookie', None)
+        if cookie and response.status_code < 400 and request.url.path != '/auth/logout':
+            try:
+                # Final current-role/session check: late replies cannot revive logout.
+                from anyio import to_thread
+                context = await to_thread.run_sync(auth.sessions.renew_browser, cookie)
+                if context.remembered:
+                    response.set_cookie('c0_session', cookie, max_age=REMEMBER_SECONDS,
+                        secure=True, httponly=True, samesite='lax', path=cookie_path)
+            except (SessionRejected, RenewalRejected, PermissionDenied):
+                pass
         if "/api/v1/" in request.url.path or "/auth/" in request.url.path:
             response.headers["Cache-Control"] = "no-store"
         return response
@@ -140,7 +153,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             if request.headers.get("origin") != active.oidc.config.public_origin.rstrip("/"):
                 raise PermissionDenied()
             active.sessions.check_csrf(context, request.headers.get("x-c0-csrf"))
-        return RequestAccess(context.actor, context.csrf_token)
+        if context.remembered:
+            request.state.remembered_cookie = cookie
+        return RequestAccess(context.actor, context.csrf_token, remembered=context.remembered)
 
     def read_context(request: Request, bearer=Security(bearer_scheme), cookie=Security(cookie_scheme)):
         return authenticate(request)
@@ -167,6 +182,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             result['space_id'] = str(current.space_id)
         if context.csrf_token is not None:
             result["csrf_token"] = context.csrf_token
+            result['browser_session'] = {'remembered': context.remembered}
+            if context.remembered:
+                result['browser_session']['idle_seconds'] = REMEMBER_SECONDS
         return result
 
     @app.get("/api/v1/access/accounts")
@@ -195,6 +213,94 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             raise HTTPException(404, "account_not_found") from None
         return Response(status_code=204)
 
+    def remembered_unavailable(request):
+        configured().sessions.destroy(request.cookies.get('c0_session'))
+        response = HTMLResponse('<!doctype html><html lang="en"><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            '<title>Remembered sign-in unavailable</title><main><h1>Remembered sign-in unavailable</h1>'
+            '<p>Your sign-in provider could not authorize remembered access. Try ordinary sign-in with the option unchecked.</p>'
+            f'<a href="{escape(base_path, quote=True)}/auth/sign-in">Return to sign-in</a></main></html>',
+            status_code=403, headers={'Referrer-Policy':'no-referrer'})
+        for name in ('c0_login', 'c0_session', 'c0_login_return'):
+            response.delete_cookie(name, path=cookie_path, secure=True, httponly=True, samesite='lax')
+        return response
+
+    def start_login(request, pending):
+        active = configured()
+        switch = request.query_params.get('switch_account') == 'true'
+        destination = active.oidc.authorization_url(pending, reauthenticate=True) if switch or pending.background else active.oidc.authorization_url(pending)
+        response = RedirectResponse(destination, status_code=302, headers={'Referrer-Policy':'no-referrer'})
+        response.set_cookie('c0_login', pending.browser_binding, max_age=300,
+            secure=True, httponly=True, samesite='lax', path=cookie_path)
+        return response
+
+    @app.get('/auth/sign-in', include_in_schema=False)
+    def sign_in(request: Request):
+        active = configured()
+        intent, browser = active.sessions.begin_sign_in()
+        action = escape(base_path+'/auth/sign-in', quote=True)
+        target = request.query_params.get('return_to', '')
+        target = target if target in ('agents', 'admin') else ''
+        response = HTMLResponse(
+            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            '<title>Sign in to C0</title>'
+            f'<link rel="stylesheet" href="{escape(base_path, quote=True)}/app.css"></head>'
+            '<body><main><h1>Sign in to C0</h1>'
+            f'<form id="website-sign-in" method="post" action="{action}">'
+            f'<input type="hidden" name="intent" value="{intent}">'
+            f'<input type="hidden" name="return_to" value="{target}">'
+            '<label><input type="checkbox" name="remember" value="yes"> Remember this device</label>'
+            '<p>Stay signed in until you have not used this website for seven days. '
+            'Use this only on a device you trust. Otherwise, sign-in uses the normal session limits.</p>'
+            '<p>AI assistant connections have their own permission and sign-in choices.</p>'
+            '<button type="submit">Continue with NethServer</button></form></main></body></html>',
+            headers={'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; style-src 'self'; frame-ancestors 'none'"})
+        response.set_cookie('c0_signin', browser, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
+        return response
+
+    @app.post('/auth/sign-in', include_in_schema=False)
+    async def submit_sign_in(request: Request):
+        active = configured()
+        if (request.headers.get('origin') != active.oidc.config.public_origin.rstrip('/')
+                or request.headers.get('authorization') is not None):
+            raise PermissionDenied()
+        if request.headers.get('content-type', '').split(';')[0] != 'application/x-www-form-urlencoded':
+            raise LoginStateRejected()
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > 16384:
+                raise LoginStateRejected()
+        try:
+            pairs = parse_qsl(body.decode('utf-8'), keep_blank_values=True, strict_parsing=True, max_num_fields=4)
+        except (ValueError, UnicodeError):
+            raise LoginStateRejected() from None
+        form = dict(pairs)
+        if (len(pairs) != len(form) or set(form)-{'intent', 'remember', 'return_to'}
+                or form.get('remember') not in (None, 'yes')):
+            raise LoginStateRejected()
+        from anyio import to_thread
+        await to_thread.run_sync(active.sessions.consume_sign_in, form.get('intent'), request.cookies.get('c0_signin'))
+        from functools import partial
+        remembered = form.get('remember') == 'yes'
+        if remembered and active.sessions.authority is None:
+            return await to_thread.run_sync(remembered_unavailable, request)
+        pending = await to_thread.run_sync(partial(active.sessions.begin_login, remembered=remembered))
+        try:
+            response = await to_thread.run_sync(start_login, request, pending)
+        except OidcUnavailable:
+            if not remembered:
+                raise
+            return await to_thread.run_sync(remembered_unavailable, request)
+        response.delete_cookie('c0_signin', path=cookie_path, secure=True, httponly=True, samesite='lax')
+        target = form.get('return_to')
+        if target in ('agents', 'admin'):
+            response.set_cookie('c0_login_return', target, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
+        else:
+            response.delete_cookie('c0_login_return', path=cookie_path, secure=True, httponly=True, samesite='lax')
+        return response
+
     @app.get("/auth/login", include_in_schema=False)
     def login(request: Request):
         active = configured()
@@ -206,15 +312,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             pending = active.sessions.pending_login(*match.groups())
         else:
             pending = active.sessions.begin_login()
-        if background is not None or request.query_params.get("switch_account") == "true":
-            destination = active.oidc.authorization_url(pending, reauthenticate=True)
-        else:
-            destination = active.oidc.authorization_url(pending)
-        response = RedirectResponse(destination, status_code=302)
+        response = start_login(request, pending)
         response.delete_cookie('c0_background_login', path=cookie_path,
             secure=True, httponly=True, samesite='lax')
-        response.set_cookie("c0_login", pending.browser_binding, max_age=300,
-                            secure=True, httponly=True, samesite="lax", path=cookie_path)
         target = request.query_params.get('return_to')
         if target in ('agents', 'admin'):
             response.set_cookie('c0_login_return', target, max_age=300,
@@ -229,13 +329,18 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         active = configured()
         login = active.sessions.consume_login(request.query_params.get("state"), request.cookies.get("c0_login"))
         renewal = None
-        if active.sessions.authority is not None:
-            identity, renewal = active.oidc.exchange_renewable(request.query_params.get("code"), login)
-        else:
-            identity = active.oidc.exchange(request.query_params.get("code"), login)
+        try:
+            if active.sessions.authority is not None:
+                identity, renewal = active.oidc.exchange_renewable(request.query_params.get("code"), login)
+            else:
+                identity = active.oidc.exchange(request.query_params.get("code"), login)
+        except (OfflineUnavailable, OidcUnavailable, TokenRejected):
+            if not login.remembered:
+                raise
+            return remembered_unavailable(request)
         try:
             extra = {'background': True, 'expected_account_key': login.expected_account_key} if login.background else {}
-            cookie = active.sessions.create(identity, renewal=renewal, **extra)
+            cookie = active.sessions.create(identity, renewal=renewal, remembered=login.remembered, **extra)
         except PermissionDenied:
             active.sessions.destroy(request.cookies.get("c0_session"))
             # Admission failure does not clear the provider's SSO session.
@@ -277,7 +382,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             except ConsentRejected:
                 pass
         response = RedirectResponse(destination, status_code=302)
-        response.set_cookie("c0_session", cookie, max_age=active.sessions.max_session_seconds,
+        response.set_cookie("c0_session", cookie, max_age=REMEMBER_SECONDS if login.remembered else active.sessions.max_session_seconds,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
         response.delete_cookie("c0_login", path=cookie_path, secure=True, httponly=True, samesite="lax")
         response.delete_cookie('c0_login_return', path=cookie_path,

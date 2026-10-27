@@ -309,4 +309,11 @@ host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
 
-Core 0.35.0/schema 0022 is being prepared for optional seven-day remembered website sessions. This Core release bridge keeps the current website behavior and released consumer pin; website support follows in app 0.54.0 after publication and acceptance. Existing sessions and assistant connections are never automatically promoted.
+The remembered website-login candidate adds an unchecked **Remember this device**
+choice at sign-in. It requires provider-authorized offline renewal and expires
+after seven days without successful website use; use renews that window across
+browser restarts. Ordinary sessions keep the configured idle/maximum limits
+(default one hour/eight hours). Existing sessions and AI connections are not
+upgraded. Sign out forgets this browser; AI connections keep their separate
+explicit consent and disconnect controls. Candidate implementation and gates are
+recorded in PLAN; this feature is not yet deployed.

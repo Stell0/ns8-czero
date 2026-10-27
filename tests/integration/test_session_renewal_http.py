@@ -81,6 +81,8 @@ def renewing_app(monkeypatch, request):
         result={'token_type':'Bearer','expires_in':state.get('access_seconds',300),
             'access_token':signed('Bearer',context), 'refresh_token':refresh,
             'id_token':signed('ID',context,nonce=context['nonce'],auth_time=context['auth_time'])}
+        if state.get('omit_refresh'):
+            result.pop('refresh_token')
         if context['offline']:
             result['scope'] = state.get('offline_scope','openid profile offline_access')
         if state.get('refresh_seconds') is not None:

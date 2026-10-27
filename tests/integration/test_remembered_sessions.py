@@ -28,9 +28,9 @@ def test_seven_day_rolling_browser_restart_and_exact_boundary(persistent):
         f['current'][0]=start+elapsed
         assert sessions.get(cookie).remembered
     # Authentication alone (including a failed HTTP operation) never slides it.
-    assert sessions.get(cookie).expires_at.timestamp()==pytest.approx(start+REMEMBER_SECONDS,abs=0.00001)
+    assert sessions.get(cookie).expires_at.timestamp()==pytest.approx(start+REMEMBER_SECONDS,abs=0.00001,rel=0)
     context=sessions.renew_browser(cookie)
-    assert context.expires_at.timestamp()==pytest.approx(f['current'][0]+REMEMBER_SECONDS,abs=0.00001)
+    assert context.expires_at.timestamp()==pytest.approx(f['current'][0]+REMEMBER_SECONDS,abs=0.00001,rel=0)
     restarted=SessionService(f['access'],'native1',authority=f['authority'],now=lambda:f['current'][0])
     f['current'][0]+=REMEMBER_SECONDS-1
     assert restarted.get(cookie).remembered
@@ -49,7 +49,7 @@ def test_offline_authority_required_without_enabling_background_consent(persiste
     pair=f['issue'](session=context,persistent=False)
     with f['database'].engine.connect() as c:
         expiry=c.execute(text('SELECT expires_at FROM c0_oauth_grants WHERE native_authority_id=:id'),{'id':context.native_authority_id}).scalar_one()
-    assert expiry.timestamp()==pytest.approx(f['current'][0]+f['authority'].policy.absolute_seconds,abs=0.00001)
+    assert expiry.timestamp()==pytest.approx(f['current'][0]+f['authority'].policy.absolute_seconds,abs=0.00001,rel=0)
 
 
 def test_connection_activity_cannot_slide_browser_deadline(persistent):
@@ -77,7 +77,7 @@ def test_background_flow_preserves_browser_choice_with_short_connection_policy(p
     pair=f['issue'](session=context)
     with f['database'].engine.connect() as c:
         grant=c.execute(text('SELECT idle_until FROM c0_oauth_grants WHERE native_authority_id=:id'),{'id':context.native_authority_id}).scalar_one()
-    assert grant.timestamp()==pytest.approx(f['current'][0]+60,abs=0.00001)
+    assert grant.timestamp()==pytest.approx(f['current'][0]+60,abs=0.00001,rel=0)
     f['current'][0]+=61
     assert f['sessions'].get(background).remembered
     with pytest.raises(GrantRejected):f['grants'].verify(pair.access_token,resource=RESOURCE)
@@ -113,7 +113,7 @@ def test_parallel_browser_renewal_is_persistent_and_logout_cannot_revive(persist
     f['sessions'].get(cookie)
     with ThreadPoolExecutor(4) as executor:
         contexts=list(executor.map(lambda _:f['sessions'].renew_browser(cookie),range(4)))
-    assert all(c.expires_at.timestamp()==pytest.approx(f['current'][0]+REMEMBER_SECONDS,abs=0.00001) for c in contexts)
+    assert all(c.expires_at.timestamp()==pytest.approx(f['current'][0]+REMEMBER_SECONDS,abs=0.00001,rel=0) for c in contexts)
     f['sessions'].logout(cookie,context.csrf_token)
     with pytest.raises(SessionRejected):f['sessions'].renew_browser(cookie)
 
@@ -136,3 +136,22 @@ def test_membership_block_and_provider_rejection_stop_remembered_access(persiste
     with pytest.raises(RenewalRejected):f['sessions'].get(cookie)
     f['failure'][0]=None
     with pytest.raises(RenewalRejected):f['sessions'].get(cookie)
+
+
+def test_membership_revocation_wins_over_inflight_remembered_renewal(persistent):
+    f=persistent;key=uuid4()
+    identity=replace(f['identity'],account_key=str(key),subject='concurrent-member')
+    admission=AccessService(f['database'],f['access'].issuer,f['access'].owner_account_key,admit_readers=True)
+    member=admission.resolve(identity)
+    cookie=f['sessions'].create(identity,renewal=RenewalResult(identity,'offline-member',offline=True),remembered=True)
+    entered,release=Event(),Event()
+    def check(credential):
+        entered.set();assert release.wait(10)
+        return RenewalResult(replace(identity,expires_at=f['current'][0]+300),'offline-rotated',offline=True)
+    f['authority'].check=check
+    with ThreadPoolExecutor(1) as executor:
+        future=executor.submit(f['sessions'].get,cookie)
+        assert entered.wait(10)
+        f['access'].set_role(f['context'].actor,member.user_id,None);release.set()
+        with pytest.raises((PermissionDenied,RenewalRejected)):future.result(10)
+    with pytest.raises((PermissionDenied,RenewalRejected)):f['sessions'].renew_browser(cookie)

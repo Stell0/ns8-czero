@@ -504,6 +504,6 @@ No project initialization, real migration, research schedule activation, existin
 knowledge mutation or static-site publication occurred. Project research,
 project-skill host use and unattended execution remain separate verification.
 
-## Remembered-browser Core candidate
+## Remembered website candidate (acceptance pending)
 
-Core 0.35.0/schema 0022 is an additive implementation candidate. Existing app/browser/delegated behavior stays ordinary. The website flow follows in app 0.54 after immutable Core publication; no feature deployment or native acceptance is claimed. Preserve all three deployed c2280f5 image identities in PLAN.
+Use five-minute server-side one-use sign-in intents and exact Origin/browser binding before requesting offline access. Only verified offline issuance enables remembered mode. The seven-day cookie and browser inactivity window slide after successful authenticated website responses, never public/failed/MCP traffic. Recheck current roles/native/session state before renewal; logout and expiry cannot be revived. Keep browser and connection inactivity independently snapshotted; preserve the remembered choice through explicit background sign-in. Ordinary grants remain finitely bounded and remembered authority alone cannot authorize persistent grants. Existing rows default ordinary. Target Core0.35/app0.54/schema0022; release Core then pin/adopt its immutable tag/lock. Preserve all deployed c2280f5 digests for genuine upgrades. No candidate native/publication/live acceptance is claimed yet.
