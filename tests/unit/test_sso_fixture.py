@@ -309,7 +309,7 @@ def test_existing_sso_fixture_requires_exact_host_provider_and_valid_tls(tmp_pat
 
 
 @pytest.mark.parametrize('stage,expected_app,expected_core',[
-    ('seed','0.51.0','0.32.0'),('verify','0.52.0','0.33.0')])
+    ('seed','0.51.0','0.32.0'),('verify','0.53.0','0.34.0')])
 def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,stage,expected_app,expected_core):
     calls,levels,network = [],[],[]
     def execute(command,**options):

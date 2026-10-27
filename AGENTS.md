@@ -442,3 +442,31 @@ select registered types and independently authorized source space; no implicit
 cross-space graph authority. Keep source text untrusted and independent English/
 Italian synthetic fixtures. See docs/projects/EXPORTS.md. M8 release/default
 adoption and actual external-agent/unattended verification remain outstanding.
+
+## WikiPlant M8 distribution/final acceptance
+
+M0–M7 are accepted. Corrected M7 b5e84bb full40433543339 and independent actual
+native/artifact audits pass2262 Python/PostgreSQL/packaging,196 Node,21 Robot,
+Debian upgrade21 and Rocky installation26/three expected skips/all8 browsers,
+privacy8/accessibility32 and three zero-candidate OAuth-query artifacts. Preserve
+all prior/frozen source/image evidence and the original deployed predecessor
+digests; M7 candidates are not a live deployment.
+
+Core0.34/app0.53/worker0.2 are under final acceptance with schema0021 unchanged.
+The prepublication consumer still pins immutable Core0.33 while explicitly
+supporting local producer0.34. Publish the new immutable library only after its
+exact full/local/both-native/artifact gates; then adopt the verified tag/lock and
+patch-only updater range. Never edit packaged Core bytes after tagging without
+a new version. Keep namespace, auth and schema compatibility checks intact.
+
+Independent wheel/archive probes must exercise actual protected project state,
+repeat migration/readback, immutable Wiki/source export and current delegated
+grant revocation without app/NS8. Installed worker CLI tests use both synthetic
+YAML projects and offline raw layouts, with no server packages or writes. Runtime
+health expectations follow producer versions while predecessor identities stay
+frozen. Record final ready-PR proof; do not infer main promotion or deployment.
+
+The authorized scope ends at implementation/acceptance and the complete external
+scheduler handoff. Real project names/data, reference-instance deployment,
+external-agent execution, unattended scheduling, migration and website publication
+remain separate/unverified. No live project spaces or schedules are created.

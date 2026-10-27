@@ -69,3 +69,11 @@ def test_sample_installs_and_initializes_without_core_or_checkout(artifacts, kin
         'sources':[{'id':'public','adapter':'http','url':'https://example.org/page'}]}))
     validated=command([str(venv/'bin/c0-projects'),'sources','validate','--config',str(settings)],cwd=work,env=env)
     assert json.loads(validated)=={'status':'validated','connectors':1,'writes_c0':0}
+    for shape in ('robotelier','myprojects'):
+        config=PROJECT/'examples/projects'/shape/'sources.yml'
+        result=command([str(venv/'bin/c0-projects'),'sources','validate','--config',str(config)],cwd=work,env=env)
+        assert json.loads(result)['writes_c0']==0
+        output=work/('prepared-'+shape)
+        result=command([str(venv/'bin/c0-projects'),'wikiplant','validate','--input',str(ROOT/'tests/fixtures/wikiplant'/shape),
+            '--output',str(output)],cwd=work,env=env)
+        value=json.loads(result);assert value['status']=='VALIDATED' and value['writes_c0']==0 and not value['migration_performed']

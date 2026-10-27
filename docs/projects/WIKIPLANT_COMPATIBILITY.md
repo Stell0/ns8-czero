@@ -17,6 +17,11 @@ All new project selection is explicit, protected and authorization checked. Cros
 
 ## Capability matrix
 
+The missing-functionality column records the inspected M0 delta; M1–M7 code and
+synthetic/disposable C0 acceptance now close those implementation rows. Current
+M8/release status is below and in the readiness report. External host
+installation/authentication/execution remains explicitly unverified.
+
 | Feature | WikiPlant implementation | C0 existing support | Missing functionality | Implementation location | Test |
 | --- | --- | --- | --- | --- | --- |
 | Isolation | Instance/provider binding | Protected spaces and current grants | Require explicit protected selector; no fallback | Core projects / app | DB denial and revoked grants |
@@ -162,7 +167,7 @@ PostgreSQL and signed fake-agent SDK tests exercise stored state; native recover
 fixtures now retain audit/semantic/event records and browser report links.
 M6 exact full/native acceptance remains pending; M7–M8 remain outstanding.
 
-## Current M7 checkpoint
+## Historical M7 implementation checkpoint
 
 M6 corrected1000839 full40414161692 and independent native/artifact audits pass.
 M7 implements [private export, legacy preparation and static selection](EXPORTS.md),
@@ -179,3 +184,23 @@ complete fabricated daily/weekly projects. Exact M7 full/native acceptance is
 pending. Earlier checkpoint paragraphs are historical; M8 Core release/default
 adoption and final readiness are outstanding. Actual external-agent research,
 unattended execution, dedicated deployment and live migration remain unverified.
+
+## Current M8 acceptance
+
+Final M7 b5e84bb full40433543339 and the independent downloaded native/artifact
+audit pass2262 Python/PostgreSQL/packaging,196 Node,21 Robot, Debian upgrade21,
+Rocky installation26/three expected skips/all8 browsers, privacy8,
+accessibility32 and three zero-candidate OAuth-query artifacts. Actual image
+source/config/layers and packaged project bytes verify; no worker/YAML package
+enters the server image. Static export uses the documented conservative subset
+and snapshot-time explicit public selection. No output is deployed or published.
+
+M8 verifies additive Core0.34/app0.53 and worker0.2 distributions, with schema0021
+unchanged and the original predecessor frozen. Actual installed wheel/archive
+project writes survive repeated migration; exact Wiki/source/claim exports and
+revoked delegated access are checked without app/NS8. Installed worker CLI
+validates both reference YAML projects and raw layouts without server packages or
+C0 writes. Focused69 packaging/version/SSO-wrapper cases pass. The new library
+publication/default pin adoption and completed ready-PR full gate remain pending.
+See [readiness](WIKIPLANT_MIGRATION_READINESS.md) for the feature/status matrix and
+independent code/local/disposable/reference/external-agent/unattended states.

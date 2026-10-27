@@ -1259,3 +1259,57 @@ links. Bare bound-instance URLs require explicit mapping/review, and linear
 bracket patterns reject a131072-character malformed input within the bounded
 regression deadline. This deliberately conservative subset is documented. No
 new parser framework/dependency or server/runtime behavior is introduced.
+
+### WikiPlant M7 accepted; M8 final acceptance
+
+Final corrected b5e84bb full40433543339 completed/successful. The full verifier
+and independent downloaded artifact audit pass:2262 Python/PostgreSQL/packaging,
+196 Node,21 Robot; Debian genuine upgrade21/no skips, Rocky installation26/three
+expected skips/all8 browsers, privacy8/accessibility32, three query artifacts with
+zero candidates and five actual scan/SBOM pairs. Final app a1a675f8 source/config
+and all13 registry layers verify; three Core modules, project controller and six
+templates match tracked bytes/ownership. External worker/YAML packages are absent
+from the server image. Dive enabled rules pass at98.13%; vendor findings remain
+app171/database414/UI11. Earlier3762652/6030cb8 runs remain historical evidence.
+Final static export deliberately rejects unsupported syntax and unchecked bound-
+instance destinations. No live migration, deployment or external task occurred.
+
+Frozen M7 candidate identities (disposable acceptance, not live deployment):
+- Module sha256:603645ba7f441b270ea451c97e79312b5e09f1cdc95d146efc8377759acf5783
+- App sha256:a1a675f8b712f6f853c1dcd0b0fea1b60a9fa91b23e74dea8c4d00b399ca795b
+- Database sha256:4e047edfc3225fc7b60da96cdfb152117d1ea3a93d12ba038a5eda89e9406849
+
+M8 subplan: finalize independent Core/worker distribution probes and contracts,
+bump additive Core0.34/app0.53 and worker0.2 without a database-schema change.
+Temporarily accept released0.33 plus local producer0.34 for exact prepublication
+validation; keep the actual immutable released default visible. After complete
+same-source local/full/both-native/artifact gates, publish immutable core-v0.34.0
+through the existing verified library workflow, download/check its actual assets,
+then adopt its exact tag/frozen app lock and compatible patch-only updater range.
+Never clobber tags/assets or change frozen deployed predecessor images. This is
+not an NS8 stable module release or production deployment.
+
+Finish README/AGENTS/matrix/readiness with executed evidence and explicit limits;
+prove wheel/archive project state survives repeated migration, source/claim/Wiki
+export works without app/NS8, and installed worker CLI validates both YAML/raw
+fixtures without server packages or C0 writes. Open the completed ready PR using
+repository policy and require its exact full acceptance. Keep real external-agent,
+unattended execution, dedicated reference deployment and migration unverified;
+the complete installation/verification handoff is the authorized deliverable.
+
+M8 focused validation passes69 actual packaging/version/SSO-wrapper cases. Both
+Core distributions preserve project records through repeated migration and expose
+actual immutable Wiki/source/claim exports with revoked-token denial. Both worker
+distributions validate the two YAML/raw fixtures without server packages/writes.
+Only current native health expectations move to0.53/0.34; all predecessor source,
+versions and digests stay frozen. Node196,21 Robot dry runs, schema/shell,287 local
+documentation links and156-file contribution privacy checks pass. Fresh broad
+PostgreSQL validation is running; no prepublication CI or release is claimed yet.
+
+M8 prepublication local broad validation completed2262 passed in1111.69 seconds
+on a fresh isolated PostgreSQL database, with no failures/skips. Primary-agent
+review verifies the additive version/range transition, unchanged schema/auth and
+frozen predecessor digests, independent project export/grant/migration probes,
+worker installation and explicit readiness limits. The consumer lock still binds
+released0.33; this candidate is not a library publication or default adoption.
+Commit/push and exact full/native/artifact verification precede the new Core tag.

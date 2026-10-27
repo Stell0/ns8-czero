@@ -456,7 +456,7 @@ connections. Blocking remains explicit and persistent; the owner cannot be
 blocked. Schema0021 adds only an account access revision and a separate random
 request UUID; browser request secrets and all original authority remain intact.
 
-## Protected research projects (producer candidate)
+## Protected research projects (0.34.0)
 
 `ProjectService(database, access).in_space(space_id)` composes validated manifest,
 topic governance, atomic queue/budget/run leasing, monitoring, evidence/results,
@@ -473,5 +473,21 @@ It includes actual project/knowledge identities and available histories, not
 authority tables, server paths or unavailable historical payloads. Multi-request
 export is change-detected, not a transaction snapshot or native backup. Client
 collectors, YAML and legacy/static preparation are external integration code,
-not Core dependencies. Final released-version/default consumer adoption is a
-separate gate in PLAN.md; old released Core rejects new project operations.
+not Core dependencies. This additive version keeps database schema0021 and
+existing knowledge, grant, OAuth, job and schedule contracts. Managed project
+types are installed only through authorized project setup/configuration, with
+immutable schemas and explicit history for compatible additions.
+
+Project identity is the existing protected space UUID; Shared is never a project
+fallback. Defaults are five ordinary/ten total daily attempts, urgent-only extra
+slots, +20 causal expansion and three children. Primary monitoring has separate
+positive finite caps and consumes no queue slots. Core verifies actual immutable
+passages, exact claim/Wiki revisions and saved report membership; semantic truth
+and all generative research remain external. IANA occurrence calculation and
+runner observations do not install or verify an external scheduled task.
+
+Release/default-consumer evidence lives in PLAN.md. The consumer manifest and
+frozen lock select the actual immutable release; local producer builds require
+the explicit development override. Never infer publication, deployment or
+external-agent acceptance from package metadata. See the versioned repository's
+docs/projects contracts for APIs, limits, recovery and migration preparation.

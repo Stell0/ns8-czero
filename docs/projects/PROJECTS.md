@@ -87,16 +87,17 @@ No C0 deterministic handler executes an agent prompt. Requested schedule setting
 actual host installation, unattended authentication and execution are separate
 observations. External host verification remains pending.
 
-## Current implementation checkpoint
+## Distribution and acceptance
 
-M1 adds Core contracts/service, REST/MCP bindings and the read-only `/projects`
-reader with literal rendering and access-loss/response-generation guards. It shows
-configuration and tracked topics; operational observations are added by subsequent
-milestones. During producer development the default consumer still pins released
-Core0.33.0: it explicitly returns `project_core_upgrade_required` for new project
-work, preserving existing operations. Final Core publication/pin adoption and
-consumer verification are required before project availability can be claimed for
-the released build. No runtime/library release or live deployment is claimed here.
+The read-only `/projects` reader exposes configuration/topics, queue, monitoring,
+current connector coverage, pinned reports and bounded errors, with literal
+rendering and access-loss/generation guards. M0–M7 exact full/native acceptance
+passes; [readiness](WIKIPLANT_MIGRATION_READINESS.md) records actual evidence.
+Core0.34/app0.53 distribution is under M8 verification. During prepublication the
+default still pins released Core0.33 and explicitly returns
+`project_core_upgrade_required` for project work. Final immutable release/adoption
+and exact consumer acceptance are required before the default build has project
+availability. No reference-instance deployment or real migration is performed.
 
 See [durable workflow contracts](WORKFLOWS.md) for queue admission, leases,
 fencing, day reservations, invocation uncertainty and source-sync recovery.

@@ -33,6 +33,13 @@ c0-projects sources resume --config /private/path/project-job/config/project.tom
 ```
 
 Bootstrap requires Admin and records the exact definition hash/config history.
+The routine job's read/write connection cannot approve its own sources. Use the
+existing authorized setup interfaces or a separately approved setup connection
+whose allowed/consented scopes explicitly include `c0:admin` and whose current
+account has Admin authority. If using that connection in a private setup job,
+set `C0_SCOPES="c0:read c0:write c0:admin"` before explicit login/consent. This
+configuration grants no authority itself. Keep routine workers on read/write;
+the client's bootstrap flag never adds roles, grants or scopes.
 Ordinary synchronization needs existing read/write consent and current Editor
 space membership. Login is explicit; expiry, revocation, wrong identity or space
 fail without falling back to Shared. Tokens use the existing private OAuth

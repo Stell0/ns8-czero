@@ -269,7 +269,7 @@ These anchors preserve links to the retained historical record.
 </details>
 
 
-## Research projects in development
+## Research projects
 
 The [WikiPlant compatibility track](docs/projects/WIKIPLANT_COMPATIBILITY.md)
 implements reusable research state within existing protected spaces. The initial
@@ -296,3 +296,9 @@ Project source collection is available in the existing independently installable
 ingestion sample package. [Source contracts](docs/projects/SOURCES.md) describe
 its seven adapters, protected receipts, limits and explicit approval. This
 branch remains an implementation candidate; no live migration is performed.
+
+M0–M7 implementation and exact disposable native acceptance pass. M8 is verifying
+Core0.34/app0.53 distribution and default release adoption; see the
+[readiness report](docs/projects/WIKIPLANT_MIGRATION_READINESS.md) for current
+evidence and remaining gates. This does not establish availability on the
+dedicated reference instance or verify an actual external scheduled agent.

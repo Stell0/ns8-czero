@@ -63,6 +63,9 @@ target C0 ID/space is null and activation is required. Invalid authorization,
 lineage, dates, checksums or canonical readable metadata block preparation.
 Broken local links are visible review notices. Structural validation does not
 prove semantic validity or complete the future legacy-to-C0 policy mapping.
+Retain the verified original raw snapshot: its inventory paths/checksums preserve
+SCOPE/free prose and unsupported binary bytes that preparation does not duplicate.
+Preparation output is neither a self-contained backup nor an applied importer.
 
 Serialized page JSON inside Markdown produces a blocked repair proposal with
 Markdown separated from metadata; original bytes stay unchanged. Canonical
@@ -72,6 +75,9 @@ document content.
 ## Static selection
 
 Supply actual immutable Wiki revision UUIDs and/or saved report object UUIDs:
+Report selection resolves its saved pinned revision. To change its publication
+metadata, use the existing report amendment/readback flow; changing only a later
+unrelated Wiki revision does not authorize publication of the old saved report.
 
 ```json
 {"schema_version":1,"project_id":"11111111-1111-4111-8111-111111111111","wiki_revisions":[],"report_references":[]}
@@ -79,6 +85,10 @@ Supply actual immutable Wiki revision UUIDs and/or saved report object UUIDs:
 
 Both selected and current page revisions must have
 `metadata.static_publish.public: true`. No dependencies are implicitly added.
+“Current” here means the verified snapshot's current revision. Later live
+visibility changes do not revoke a local snapshot; obtain a fresh export and
+review the selection before future publication. Checksums establish byte
+integrity, not a signature or semantic disclosure approval.
 Private/cross-project internal targets reject export. Selected Wiki links map to
 stable filenames; protected evidence links become plain labels identifying
 evidence retained in C0. Source evidence is not published.
