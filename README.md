@@ -298,7 +298,7 @@ its seven adapters, protected receipts, limits and explicit approval. This
 branch remains an implementation candidate; no live migration is performed.
 
 The project backend is implemented in Core0.34/app0.53 and the external worker0.2.
-The default build pins the verified immutable `core-v0.34.0` release. M0–M8,
+That accepted runtime pins the verified immutable `core-v0.34.0` release. M0–M8,
 the final PR and merged-main full/native acceptance pass. The dedicated reference
 installation also passes read-only client, preservation and restart checks; see
 [deployed runtime evidence](PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor).
@@ -309,7 +309,8 @@ host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
 
-The remembered website-login candidate adds an unchecked **Remember this device**
+The default build now pins released Core 0.35.0 for the app 0.54.0 / schema 0022
+remembered website-login candidate. It adds an unchecked **Remember this device**
 choice at sign-in. It requires provider-authorized offline renewal and expires
 after seven days without successful website use; use renews that window across
 browser restarts. Ordinary sessions keep the configured idle/maximum limits
