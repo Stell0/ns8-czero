@@ -1245,3 +1245,17 @@ export regressions cover absolute private/foreign Wiki targets, selected-page
 mapping and citation destination removal. Original3762652 full40430534952 remains
 retained and is not final acceptance; the correction requires its own exact full
 CI/native/artifact gate. No static output was deployed or published.
+
+M7 final static review extends the same boundary to unsupported nested/multiline
+brackets and all leading-frontmatter newline conventions. Reject ambiguous
+constructs instead of preserving unchecked link/image syntax; omission labels
+are plain text. The6030cb8 absolute-link run40432402922 is retained as intermediate
+evidence. Final corrected source receives another full exact-source gate; no
+started or intermediate run is acceptance of a later commit.
+
+Final static follow-up passes20 current unit/actual signed-SDK cases. Code examples
+receive the same link checks; a partial fence parser cannot exempt later real
+links. Bare bound-instance URLs require explicit mapping/review, and linear
+bracket patterns reject a131072-character malformed input within the bounded
+regression deadline. This deliberately conservative subset is documented. No
+new parser framework/dependency or server/runtime behavior is introduced.

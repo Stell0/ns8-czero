@@ -91,6 +91,13 @@ rejects ambiguous reference definitions and unsafe destinations, and records
 transformations separately. Review output before handing it to Quartz or another
 publisher. The command creates local files only and does not establish that the
 content is suitable for public disclosure.
+Multiline/nested or unmatched bracket constructs require explicit review;
+unsupported Markdown is rejected rather than passed through as an unchecked
+link or image. Leading frontmatter is disarmed across newline conventions.
+Examples receive the same checks; code fences never exempt destinations from
+validation. Code containing unsupported bracket syntax also requires review.
+Bare URLs to the bound instance require review rather than becoming unchecked
+automatic links in a future publisher. Use explicit mapped Wiki/citation links.
 
 ## Synthetic acceptance
 

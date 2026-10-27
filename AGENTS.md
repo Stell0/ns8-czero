@@ -430,6 +430,9 @@ export requires both explicit immutable selection and saved public metadata;
 never add private dependencies or deploy output automatically. Absolute URLs to
 the bound C0 host must pass the same private-page, cross-space and citation
 destination checks as relative links.
+Unsupported nested/multiline/unmatched brackets require review; never pass them
+through as unchecked Markdown links/images. Disarm leading frontmatter across
+newline conventions and keep image-omission labels free of link syntax.
 
 Client YAML uses bounded SafeLoader with duplicate/alias/tag denial; no Core or
 runtime YAML dependency. Private GitHub collection is explicit destination/repo

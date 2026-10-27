@@ -54,7 +54,7 @@ def export_static(snapshot,selection,output):
             if not entry:raise C0Error('static_body_missing')
             body=safe_read(root,entry['path'],2*1024*1024).decode()
             if sha(body.encode())!=row['content_hash'] or envelope(body):raise C0Error('static_body_integrity_or_envelope_error')
-            current_path=paths[page_id];fence='';lines=[];omitted=0
+            current_path=paths[page_id];lines=[];omitted=0
             def target(identifier,number=None):
                 if identifier not in selected_pages or number is not None and selected_pages[identifier]['number']!=number:
                     raise C0Error('static_link_target_not_selected_public')
@@ -77,29 +77,25 @@ def export_static(snapshot,selection,output):
                     return '['+label+']('+target(identifier,revision)+('#'+parsed.fragment if parsed.fragment else '')+')'
                 raise C0Error('static_local_link_requires_explicit_mapping')
             for line in body.splitlines(keepends=True):
-                marker=re.match(r'^ {0,3}(`{3,}|~{3,})',line)
-                if marker:
-                    mark=marker[1]
-                    suffix=line[marker.end():].strip()
-                    if not fence:
-                        if mark[0]=='`' and '`' in suffix:raise C0Error('static_ambiguous_code_fence')
-                        fence=mark
-                    elif mark[0]==fence[0] and len(mark)>=len(fence) and not suffix:fence=''
-                    lines.append(line.replace('<','&lt;').replace('>','&gt;'));continue
-                if fence:lines.append(line.replace('<','&lt;').replace('>','&gt;'));continue
+                # Validate examples too: partial fence parsing can mistake a
+                # nested closing fence for an opener and skip unsafe real links.
                 if re.match(r'^ {0,3}\[[^\]]+\]:',line):raise C0Error('static_reference_links_require_review')
-                line=re.sub(r'!\[\[[^\]]+\]\]','[Image omitted]',line)
-                line=re.sub(r'!\[([^\]]*)\]\([^\n)]*\)',lambda match:'[Image omitted: '+match[1]+']',line)
-                if re.search(r'!\[[^\]\n]*\]\(',line):raise C0Error('static_ambiguous_image_requires_review')
-                openings=len(re.findall(r'\[[^\]\n]+\]\(',line))
-                if openings!=len(re.findall(r'\[([^\]\n]+)\]\(([^\s)]+)\)',line)):
+                line=re.sub(r'!\[\[[^\[\]]+\]\]','(Image omitted)',line)
+                line=re.sub(r'!\[([^\[\]]*)\]\([^\n)]*\)',lambda match:'(Image omitted: '+match[1]+')',line)
+                if re.search(r'!\[[^\[\]\n]*\]\(',line):raise C0Error('static_ambiguous_image_requires_review')
+                openings=len(re.findall(r'\[[^\[\]\n]+\]\(',line))
+                if openings!=len(re.findall(r'\[([^\[\]\n]+)\]\(([^\s)]+)\)',line)):
                     raise C0Error('static_ambiguous_link_requires_review')
-                line=re.sub(r'\[([^\]\n]+)\]\(([^\s)]+)\)',link,line)
-                line=re.sub(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]',lambda match:'['+(match[2] or match[1])+']('+target(slugs.get(match[1],match[1]))+')',line)
+                unmatched=re.sub(r'\[([^\[\]\n]+)\]\(([^\s)]+)\)|\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]','',line)
+                if '[' in unmatched or ']' in unmatched:raise C0Error('static_complex_brackets_require_review')
+                line=re.sub(r'\[([^\[\]\n]+)\]\(([^\s)]+)\)',link,line)
+                line=re.sub(r'\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]',lambda match:'['+(match[2] or match[1])+']('+target(slugs.get(match[1],match[1]))+')',line)
+                if any(urlsplit(url).hostname==instance.hostname for url in re.findall(r'https?://[^\s<>]+',line)):
+                    raise C0Error('static_bare_instance_url_requires_review')
                 lines.append(line.replace('<','&lt;').replace('>','&gt;'))
             rendered=''.join(lines)
             rendered=rendered.lstrip('\ufeff')
-            rendered=re.sub(r'^---[ \t]*\r?\n',lambda _:'\\-\\-\\-\n',rendered,count=1)
+            rendered=re.sub(r'^(\s*)---',lambda match:match[1]+'\\-\\-\\-',rendered,count=1)
             artifact=archive.add(current_path,rendered.encode(),kind='public_markdown',resource_id=row['id'])
             metadata={'page_id':page_id,'wiki_revision_id':row['id'],'revision':row['number'],'title':row['title'],
                 'slug':pages[page_id]['slug'],'source_content_hash':row['content_hash'],'exported_content_hash':artifact['sha256']}

@@ -27,6 +27,11 @@ def snapshot(tmp_path,body):
     '[Private](./wiki?page_id='+str(uuid4())+')\n','[Other space](./wiki?space_id='+str(uuid4())+')\n',
     '[Absolute private](https://knowledge.example.org/wiki?page_id='+str(uuid4())+')\n',
     '[Absolute other space](https://knowledge.example.org/wiki?space_id='+str(uuid4())+')\n',
+    '[Multiline\nlabel](javascript:alert(1))\n','![Multiline\nimage](https://example.org/tracker)\n',
+    '[Nested [label]](javascript:alert(1))\n',
+    '[Image omitted]\n(javascript:alert(1))\n',
+    '- ```text\n  example\n  ```\n\n[Outside code](javascript:alert(1))\n',
+    'https://knowledge.example.org/sources?source_id='+str(uuid4())+'\n',
 ])
 def test_ambiguous_or_private_markdown_never_becomes_validated_public_output(tmp_path,body):
     root,selection,_=snapshot(tmp_path,body)
@@ -34,11 +39,12 @@ def test_ambiguous_or_private_markdown_never_becomes_validated_public_output(tmp
     assert not (tmp_path/'static/static-manifest.json').exists()
 
 
-def test_crlf_frontmatter_and_html_stay_inactive(tmp_path):
-    root,selection,page=snapshot(tmp_path,'\ufeff---  \r\nunsafe: metadata\r\n---\r\n\n<script>example()</script>\n')
+@pytest.mark.parametrize('newline',['\n','\r\n','\r'])
+def test_frontmatter_and_html_stay_inactive(tmp_path,newline):
+    root,selection,page=snapshot(tmp_path,'\ufeff\n  ---  '+newline+'unsafe: metadata'+newline+'---'+newline+'\n<script>example()</script>\n')
     assert export_static(root,selection,tmp_path/'static')['status']=='VALIDATED'
     body=(tmp_path/'static/content'/(page+'.md')).read_text()
-    assert body.startswith('\\-\\-\\-\n') and '<script>' not in body
+    assert body.lstrip().startswith('\\-\\-\\-') and '<script>' not in body
 
 
 def test_absolute_protected_evidence_loses_destination_and_selected_page_links_map(tmp_path):
@@ -48,3 +54,11 @@ def test_absolute_protected_evidence_loses_destination_and_selected_page_links_m
     body=(tmp_path/'static/content'/(page+'.md')).read_text()
     assert 'evidence retained in C0' in body and 'knowledge.example.org' not in body and 'source_id' not in body
     assert '[Self]('+page+'.md)' in body
+
+
+def test_large_unmatched_bracket_input_has_bounded_rejection(tmp_path):
+    from time import perf_counter
+    root,selection,_=snapshot(tmp_path,'['*131072)
+    started=perf_counter()
+    with pytest.raises(C0Error):export_static(root,selection,tmp_path/'static')
+    assert perf_counter()-started<2
