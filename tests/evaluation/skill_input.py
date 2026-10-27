@@ -5,8 +5,9 @@ import json
 from pathlib import Path
 
 FILES = ('skills/c0-setup/SKILL.md','skills/c0-research/SKILL.md',
-         'skills/c0-maintain-knowledge/SKILL.md','references/instance.md',
-         'references/connection.md','references/maintenance.md')
+         'skills/c0-maintain-knowledge/SKILL.md','skills/c0-projects/SKILL.md',
+         'references/instance.md','references/connection.md',
+         'references/maintenance.md','references/projects.md')
 
 
 def load_plugin(directory):

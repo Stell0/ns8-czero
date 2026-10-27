@@ -2,7 +2,9 @@
 
 ## What this adds
 
-The end-user package supplies three workflows: `c0-setup`, `c0-research` and `c0-maintain-knowledge`. They complement the existing MCP tools; they grant no membership, space access or OAuth scope. The five repository development skills are separate and are not included.
+The generic end-user package supplies four workflows: `c0-setup`, `c0-research`, `c0-maintain-knowledge` and `c0-projects`. They complement the existing MCP tools; they grant no membership, space access or OAuth scope. Repository development skills are separate and are not included.
+
+`c0-projects` discovers an already authorized protected research project and its current capabilities. For repeated daily/weekly work, generate a separate project-bound skill through `project_agent_package_get` after configuring that project's manifest. A package never creates the project or installs a scheduled task. If `project_*` tools are not available, refresh the existing ChatGPT C0 connection's tool catalog and start a new conversation; do not substitute generic object writes or create a new connection just to work around missing discovery.
 
 Each operator generates a package for their own registered C0 app. No package defaults to the project's test installation. The source package version is independent of the application version. Current package and real-web acceptance status are in the [readiness checklist](release-readiness.md).
 
@@ -16,7 +18,7 @@ For web-capable GitHub imports, the package references that existing app through
 
 Open **Use with AI** (`/agents`). **Download .skill** generates a ZIP-based skill archive containing `SKILL.md`, `agents/openai.yaml` and the GPL license. Its name and instructions include the configured hostname and canonical MCP URL. Upload it at [ChatGPT Skills](https://chatgpt.com/skill) where that control is available. It uses the connection you created; it does not install or authorize an MCP server by itself.
 
-For the three-workflow plugin, sign in, paste the ordinary ChatGPT connection management-page address or technical app ID, and choose **Download plugin .zip**. Check the instance URL in ChatGPT before downloading. The page accepts a connection-page address, never a full OAuth authorization URL. The generated ZIP contains one plugin at its root, the existing app reference, personalized instance guidance, three skills and their references/license. No password, session or access token is included. Generation cannot prove the app ID belongs to this server; verify it in ChatGPT.
+For the four-workflow plugin, sign in, paste the ordinary ChatGPT connection management-page address or technical app ID, and choose **Download plugin .zip**. Check the instance URL in ChatGPT before downloading. The page accepts a connection-page address, never a full OAuth authorization URL. The generated ZIP contains one plugin at its root, the existing app reference, personalized instance guidance, four skills and their references/license. No password, session or access token is included. Generation cannot prove the app ID belongs to this server; verify it in ChatGPT.
 
 Upload only the generated single-plugin ZIP where ChatGPT offers plugin archive upload. Other installation routes below remain available when your account provides them. Start a new conversation and test an actual read after installing either artifact. Upload acceptance and automatic skill use must be checked on your account.
 
@@ -38,7 +40,7 @@ Output contains the portable plugin, its skills/references/license, a marketplac
 
 ## Single-plugin archive upload where available
 
-If ChatGPT offers a plugin archive upload, choose the generated `plugin.zip`. Do not ZIP/upload the whole marketplace directory: that layout can fail with `Expected a single plugin archive`. After import, inspect the saved app binding, all three skills and their reference links. An accepted archive is not proof of a connected account or working workflow; run the tests below. Availability and behavior must be checked on the actual account. Keep private Creator and managed import evidence separate.
+If ChatGPT offers a plugin archive upload, choose the generated `plugin.zip`. Do not ZIP/upload the whole marketplace directory: that layout can fail with `Expected a single plugin archive`. After import, inspect the saved app binding, all four skills and their reference links. An accepted archive is not proof of a connected account or working workflow; run the tests below. Availability and behavior must be checked on the actual account. Keep private Creator and managed import evidence separate.
 
 ## Individual/private setup in ChatGPT web
 
@@ -47,7 +49,7 @@ Prerequisites: permission to use plugins, Plugin Creator available, permission t
 1. Invoke **Plugin Creator** in a ChatGPT web conversation.
 2. Provide the generated skill/reference files and the exact registered C0 app identity. If the Creator can inspect the source archive, it can be supplied as reference material; attaching a ZIP alone is not a native installation operation.
 3. Ask it to create a private plugin using those workflows and that existing app. Preserve the explicit-space, evidence/citation, authorization, retry and revision rules.
-4. Review that all three distinct named skills survived, including the correct instance binding and all linked reference material. If attachments are flattened or renamed, ask Creator to resolve those references; do not leave three indistinguishable `SKILL.md` files. Review the app binding, finish creation and install it if prompted. Keep it private for testing.
+4. Review that all four distinct named skills survived, including the correct instance binding and all linked reference material. If attachments are flattened or renamed, ask Creator to resolve those references; do not leave three indistinguishable `SKILL.md` files. Review the app binding, finish creation and install it if prompted. Keep it private for testing.
 5. In a new web conversation, select the plugin, invoke setup, then test the known read-only and permitted maintenance cases below.
 
 OpenAI documents private creation and app inclusion through Plugin Creator, with prerequisite permissions. This repository's real-web test must verify that the generated content is actually present and used; schema validation or desktop execution is insufficient. [Official web plugin creation](https://learn.chatgpt.com/docs/build-plugins).
@@ -65,6 +67,7 @@ Do not import a template with an example app ID. Do not replace or delete an exi
 - **Setup:** correct associated C0 app, account label and authorized spaces; no writes.
 - **Research:** a known question answered from actual original passages with immutable citations, with no content changes.
 - **Maintenance:** an explicitly requested edit in an owned test space; preserved provenance, fresh read-back and correct revision/conflict/retry handling.
+- **Projects:** with a project-enabled MCP catalog, read `project_get` and `project_diagnostics_get` in an explicitly authorized protected space. Confirm that a missing project tool or denied space fails closed, without generic-object fallback or writes. Project package generation does not install a host task.
 - **Denial:** Reader/space/scope denial produces no write and no fallback to Shared or another instance.
 - **Continuity:** repeat a read beyond five minutes, reconnect after expected expiry and verify targeted client revocation.
 
