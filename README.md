@@ -298,9 +298,13 @@ its seven adapters, protected receipts, limits and explicit approval. This
 branch remains an implementation candidate; no live migration is performed.
 
 The project backend is implemented in Core0.34/app0.53 and the external worker0.2.
-The default build pins the verified immutable `core-v0.34.0` release. M0–M8
-prepublication implementation, distribution and disposable native acceptance pass;
-the ready PR requires its own exact-head full gate. See the
-[readiness report](docs/projects/WIKIPLANT_MIGRATION_READINESS.md) for current
-evidence and remaining gates. This does not establish availability on the
-dedicated reference instance or verify an actual external scheduled agent.
+The default build pins the verified immutable `core-v0.34.0` release. M0–M8,
+the final PR and merged-main full/native acceptance pass. The dedicated reference
+installation also passes read-only client, preservation and restart checks; see
+[deployed runtime evidence](PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor).
+The [M8 readiness report](docs/projects/WIKIPLANT_MIGRATION_READINESS.md) records
+implementation acceptance before this separately authorized installation.
+Actual project research and unattended execution remain unverified. Reload the
+host's cached C0 tool catalog to expose the new project operations. No real
+WikiPlant migration, project-space initialization or research-schedule activation
+has occurred.

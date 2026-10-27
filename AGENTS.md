@@ -114,9 +114,9 @@ The operator's **interactive Playwright** and **container CPU-quota** waivers re
 
 ## Accepted baseline and preserved evidence
 
-The accepted runtime is app **0.52.0**, Core **0.33.0**, schema **0021**, source `e384bed641ac0bdc97212def22db521c0ab2e4c7`. Its exact installed image identities and genuine predecessor policy are recorded in [PLAN](PLAN.md#dedicated-instance-acceptance-and-frozen-predecessor). Keep those tags/digests available; documentation changes do not replace the runtime.
+The accepted dedicated runtime is app **0.53.0**, Core **0.34.0**, schema **0021**, source `c2280f576ba71dda723bc1afa11577f2fd251edd`. Its exact installed identities and next genuine predecessor policy are recorded in [PLAN](PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor). Keep those immutable candidate tags/digests available; documentation changes do not replace the runtime. Earlier accepted installations remain historical evidence.
 
-Reviewed closeout PR35 merged as `f735004`; actual main documentation check [40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source promotion verification pass. The full runtime/main publication evidence remains in PLAN. Broader M21 packaged-skill/client/scheduled acceptance and release obligations remain open; no stable module release is claimed.
+Prior reviewed closeout PR35 merged as `f735004`; actual main documentation check [40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source promotion verification pass. The full runtime/main publication evidence remains in PLAN. Broader M21 packaged-skill/client/scheduled acceptance and release obligations remain open; no stable module release is claimed.
 
 <details>
 <summary>Operational conventions and acceptance checkpoints retained from earlier work</summary>
@@ -474,3 +474,32 @@ The authorized scope ends at implementation/acceptance and the complete external
 scheduler handoff. Real project names/data, reference-instance deployment,
 external-agent execution, unattended scheduling, migration and website publication
 remain separate/unverified. No live project spaces or schedules are created.
+
+
+## WikiPlant backend deployed acceptance — 27 October 2026
+
+PR39 is regularly merged at c2280f5. Actual main40466342634 full/native/canonical
+publication and independent artifact audits pass 2,262 Python/PostgreSQL/packaging,
+196 controllers, 21 Robot, Debian upgrade: 21 passes and Rocky installation: 26 passes/three expected
+skips/all eight browsers, privacy8/accessibility32/three zero-query artifacts. Six fresh
+canonical alias reads verify. The separately authorized dedicated installation
+accepts app 0.53/Core 0.34/schema 0021 at that source; freeze its three actual installed
+digests/tag in PLAN as the next genuine upgrade predecessor. Do not substitute a
+documentation-marker build or overwrite the prior e384bed evidence.
+
+C0-only backup/full data-integrity read, targeted update, exact installed identities,
+trusted HTTPS, original 28,077 stable rows/40 domain tables, three background grants,
+configuration/auth/retrieval/mounts/schedules/terminal jobs and ten unrelated
+instances pass before/after a supported dedicated-manager restart. Signed-in
+owner-session preservation, separate fresh native SSO, five protected Wiki reads
+and the existing connected MCP profile pass. Server advertises 117 operations;
+the current host caches old tools and needs catalog reload. Do not revoke or
+reconfigure the working connection to manufacture that observation.
+
+Root-journal windows each contain 28 actual app entries with health/profile/native
+callback/token/MCP positive controls and zero query/credential/JWT/traceback
+candidates. Fresh delegated consent/scope upgrades and other live roles were not
+exercised. Live original-file corpus is empty; nonempty recovery is disposable.
+No project initialization, real migration, research schedule activation, existing
+knowledge mutation or static-site publication occurred. Project research,
+project-skill host use and unattended execution remain separate verification.

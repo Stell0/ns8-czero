@@ -89,9 +89,9 @@ Use [release-readiness requirements](docs/release-readiness.md) for the remainin
 
 ## Current baseline
 
-Accepted runtime: app **0.52.0**, released Core **0.33.0**, schema **0021**, source `e384bed641ac0bdc97212def22db521c0ab2e4c7`. Freeze its three [installed image digests](#dedicated-instance-acceptance-and-frozen-predecessor) as the next genuine upgrade predecessor. Documentation/main-marker images do not replace it.
+Accepted dedicated runtime: app **0.53.0**, released Core **0.34.0**, schema **0021**, source `c2280f576ba71dda723bc1afa11577f2fd251edd`. Freeze its three [installed image digests](#wikiplant-deployed-backend-and-frozen-predecessor) as the next genuine upgrade predecessor. Documentation/main-marker images do not replace it; prior installation records remain preserved below.
 
-Runtime main `05ce22c` passed full [40106287084](https://github.com/Stell0/ns8-czero/actions/runs/40106287084), canonical publication and independent actual native/privacy/scan audits. Reviewed documentation closeout PR35 merged as `f735004`; its [main40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source documentation promotion verifier pass. Original dirty checkouts, recovered M20 worktrees, drafts and immutable artifacts remain preserved.
+Prior runtime main `05ce22c` passed full [40106287084](https://github.com/Stell0/ns8-czero/actions/runs/40106287084), canonical publication and independent actual native/privacy/scan audits. Reviewed documentation closeout PR35 merged as `f735004`; its [main40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source documentation promotion verifier pass. Original dirty checkouts, recovered M20 worktrees, drafts and immutable artifacts remain preserved.
 
 ## How development proceeds
 
@@ -1364,3 +1364,77 @@ C0/reference/external-agent/unattended states. Reference deployment, real agent
 research, scheduled execution/notifications/reading and actual migration remain
 separate operational gates. No live project data, spaces, schedules, knowledge,
 Github projects, deployed images or website publishing changed.
+
+
+## WikiPlant deployed backend and frozen predecessor
+
+The operator approved PR39 and separately authorized its merge and dedicated C0
+installation on 27 October 2026. [PR39](https://github.com/Stell0/ns8-czero/pull/39)
+merged regularly as `c2280f576ba71dda723bc1afa11577f2fd251edd`, retaining the
+accepted source commits. Its tracked tree equals the tested `50f4f41` candidate.
+[Main40466342634](https://github.com/Stell0/ns8-czero/actions/runs/40466342634)
+completed/successful, including canonical publication. Actual main logs record
+2,262 Python/PostgreSQL/packaging passes in 977.60 seconds, 196 controllers and 21
+Robot checks. Independently downloaded native reports pass Debian genuine
+upgrade: 21 passes/no skips and Rocky installation: 26 passes/three expected skips/all eight browsers.
+Full exact-source promotion and independent artifact audits pass eight privacy guards,
+32 numeric accessibility contexts, three query artifacts/zero candidates and five
+actual scan/SBOM pairs. All 13 app registry layers, installed project bytes/owners
+and Core 0.34/app 0.53 metadata verify; enabled Dive rules pass at 98.1338%. Six fresh
+registry reads verify all three main/latest aliases against the accepted source.
+
+The supported targeted native update of only the dedicated C0 instance completed
+in 27.37 seconds after a C0-only backup and actual full backup-data integrity read.
+The existing owned backup plan was returned to its exact disabled configuration;
+all other backup plans remain unchanged. Actual installed module/app/database
+revisions and digests match the accepted immutable candidate before and after a
+supported dedicated-manager restart (10.75 seconds). Trusted HTTPS readiness,
+DB schema 0021, route, certificate validation, services and timer health pass.
+The normal idle one-shot worker is enabled and not failed. No CPU-quota or interactive Playwright waiver was changed.
+
+Both post-update and post-restart preservation checks retain all 28,077 original
+stable rows across 40 domain tables, original columns/schema, configuration,
+auth/retrieval hashes, mounts, schedules, original terminal jobs/attempts and ten
+unrelated module identities. The live original-file corpus is empty; nonempty
+file recovery remains covered by disposable native tests. Three original
+background grants preserve fixed authority fields within the known-valid
+observation window, allowing only normal activity/inactivity/refresh counters.
+The observer never consumes a user's refresh credential. Five explicitly
+selected authorized protected-space Wiki pages retain exact readback hashes.
+
+Existing signed-in owner sessions work after both changes without masking a loss
+through reauthentication. Separate fresh native sign-ins and authorized REST
+profile/knowledge reads pass. The existing connected MCP client reads the same
+account after update and restart. Server capability readback advertises 117
+operations, including 40 project operations, and serves the project reader.
+This host session still caches the older tool catalog: reload it before using
+the new project tools. No registered connection settings, client permissions or
+OAuth scopes were broadened. Other roles retain disposable-native evidence;
+actual project research, packaged-project-skill use and unattended execution are
+not established by these read-only live checks.
+
+Actual bounded root app-journal audits use the verified module UID/container,
+not empty Podman logs. Each change window contains 28 entries and successful
+health, signed-in profile, native callback, token and MCP positive controls.
+Both audits find zero OAuth queries, issued/generic credentials, JWTs or
+tracebacks. Fresh delegated consent/scope upgrade was not exercised here; its
+counter is zero. No new C0 delegated client or grant was created for acceptance.
+Raw journals, credentials, cookies, account IDs and failed/private evidence remain
+outside Git.
+
+Freeze this genuine accepted installation as the next upgrade predecessor:
+
+| Image | Frozen installed digest |
+| --- | --- |
+| Module | `sha256:f7c9e08849ad63d6f0bcddea5916d1bb2609116fb0d963d7392b1a7458a75cc1` |
+| Application | `sha256:2f5756f52dbacb487dec16c29a9cf48f3dded50b7b2c97428fe6d7fa4e87feca` |
+| PostgreSQL | `sha256:ec9e7bb8f6c39b81946cfe3775effe224e6d887d0fd3c9ecab4703a360a468a5` |
+
+All three revisions are `c2280f576ba71dda723bc1afa11577f2fd251edd`;
+canonical installed tag `ci-c2280f576ba71dda723bc1afa11577f2fd251edd-40466342634-1`.
+Preserve the earlier e384bed predecessor, immutable Core 0.34 tag and all historical
+acceptance. Documentation closeout images are not replacement runtime evidence.
+The M8 readiness report is its earlier implementation-acceptance snapshot; this
+separately authorized installation closes its reference-deployment gate only.
+No real WikiPlant data was migrated, no project space initialized, no research
+schedule activated, no existing knowledge changed and no static site published.
