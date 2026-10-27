@@ -1448,3 +1448,5 @@ No real WikiPlant data was migrated, no project space initialized, no research
 schedule activated, no existing knowledge changed and no static site published.
 
 Review correction: isolate ordinary browser inactivity too. Snapshot existing ordinary native-session idle bounds once in migration0022 without extending them, keep new ordinary browser idle windows independent of delegated activity, and retain the original finite ordinary consent/grant maximum. The first frozen074c28c is not published; its run is retained. The corrected Core source needs fresh full/native checks.
+
+Successful-sign-in replacement also retires the prior opaque cookie without revoking separately authorized grants. Old in-flight requests cannot restore browser access; authority cleanup retains unexpired finite grants too. The earlier2fd8631 remains unpublished, with its exact checks retained; the corrected release source must repeat full/native acceptance.

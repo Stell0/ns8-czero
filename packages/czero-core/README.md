@@ -514,3 +514,8 @@ remembered browser keep the configured finite session maximum. Persistent grants
 still require separate explicit background consent and retain their independent
 inactivity policy, including when that policy is shorter than seven days.
 Existing browser sessions, grants and login states are never promoted.
+
+After a successful authenticated sign-in, call `replace_browser` for the prior
+cookie before issuing its replacement. This retires stale browser requests while
+preserving already authorized client grants and their original finite/inactivity
+bounds. Explicit logout retains its existing revocation behavior.

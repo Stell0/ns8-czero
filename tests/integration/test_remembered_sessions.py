@@ -152,3 +152,32 @@ def test_ordinary_browser_idle_is_independent_of_valid_mcp_refresh(persistent):
     with pytest.raises(SessionRejected):sessions.renew_browser(cookie)
     # Browser expiry cannot revoke separately valid finite delegated authority.
     assert f['grants'].verify(pair.access_token,resource=RESOURCE).actor.is_owner
+
+
+def test_reauthentication_retires_browser_without_revoking_finite_connections(persistent):
+    f=persistent;old=remembered(f);context=f['sessions'].get(old)
+    pair=f['issue'](session=context,persistent=False)
+    fresh=remembered(f)
+    f['sessions'].replace_browser(old)
+    with pytest.raises(SessionRejected):f['sessions'].get(old)
+    with pytest.raises(SessionRejected):f['sessions'].renew_browser(old)
+    assert f['sessions'].get(fresh).remembered
+    # Another sign-in's authority cleanup cannot revoke the retained grant.
+    remembered(f)
+    assert f['grants'].verify(pair.access_token,resource=RESOURCE).actor.is_owner
+    assert f['grants'].refresh(pair.refresh_token,f['client']['client_id'],resource=RESOURCE).expires_in>0
+
+
+def test_reauthentication_wins_over_inflight_old_browser_read(persistent):
+    f=persistent;old=remembered(f);entered,release=Event(),Event();original=f['authority'].check
+    def check(credential):
+        entered.set();assert release.wait(10);return original(credential)
+    f['authority'].check=check
+    with ThreadPoolExecutor(1) as executor:
+        future=executor.submit(f['sessions'].get,old)
+        assert entered.wait(10)
+        fresh=remembered(f);f['sessions'].replace_browser(old);release.set()
+        with pytest.raises((SessionRejected,RenewalRejected)):future.result(10)
+    f['authority'].check=original
+    assert f['sessions'].get(fresh).remembered
+    with pytest.raises(SessionRejected):f['sessions'].renew_browser(old)
