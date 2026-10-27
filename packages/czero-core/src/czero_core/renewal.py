@@ -143,7 +143,7 @@ class NativeAuthorityService:
             WHERE authority_kind IN ('background','remembered') AND issuer=:issuer AND native_client=:client
             AND NOT EXISTS(SELECT 1 FROM c0_sessions s WHERE s.native_authority_id=n.id AND s.expires_at>:now)
             AND NOT EXISTS(SELECT 1 FROM c0_oauth_grants g WHERE g.native_authority_id=n.id
-                AND g.persistent AND g.idle_until>:now)'''),
+                AND (g.expires_at>:now OR (g.persistent AND g.idle_until>:now)))'''),
             {'issuer':self.access.issuer,'client':self.client_id,'now':_date(current)})
         for table in ('c0_sessions', 'c0_oauth_grants'):
             connection.execute(text(f"""DELETE FROM {table} s USING c0_native_authority n

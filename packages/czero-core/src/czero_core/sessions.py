@@ -289,11 +289,15 @@ class SessionService:
     def destroy(self, cookie: str) -> None:
         self._destroy(cookie)
 
+    def replace_browser(self, cookie: str) -> None:
+        """Retire a prior cookie after verified sign-in, retaining client grants."""
+        self._destroy(cookie, preserve_grants=True)
+
     def logout(self, cookie: str, supplied_csrf: str | None) -> None:
         """Revoke only this cookie's authority without contacting the provider."""
         self._destroy(cookie, supplied_csrf=supplied_csrf, csrf_required=True)
 
-    def _destroy(self, cookie, *, supplied_csrf=None, csrf_required=False):
+    def _destroy(self, cookie, *, supplied_csrf=None, csrf_required=False, preserve_grants=False):
         try:
             hashed = _digest(cookie)
         except ValueError:
@@ -313,6 +317,13 @@ class SessionService:
                 self._check_csrf(row['csrf_token'], supplied_csrf)
             connection.execute(text('DELETE FROM c0_sessions WHERE token_hash=:token'), {'token': hashed})
             if row['native_authority_id'] is not None:
+                if preserve_grants:
+                    connection.execute(text('''UPDATE c0_native_authority n
+                        SET revoked=true,credential=NULL,checking=false WHERE n.id=:id
+                        AND NOT EXISTS(SELECT 1 FROM c0_oauth_grants g WHERE g.native_authority_id=n.id
+                            AND (g.expires_at>:now OR (g.persistent AND g.idle_until>:now)))'''),
+                        {'id': row['native_authority_id'], 'now': _date(self._now())})
+                    return
                 connection.execute(text('''DELETE FROM c0_oauth_grants g USING c0_native_authority n
                     WHERE g.native_authority_id=:id AND n.id=g.native_authority_id
                     AND n.authority_kind='background' AND NOT g.persistent'''), {'id': row['native_authority_id']})

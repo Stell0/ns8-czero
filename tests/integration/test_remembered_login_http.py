@@ -9,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 import pytest
 from sqlalchemy import text
 
-from test_session_renewal_http import renewing_app
+from test_session_renewal_http import renewing_app, login, refresh
 from test_auth_http import ORIGIN, application
 from czero_core.sessions import REMEMBER_SECONDS
 
@@ -178,4 +178,30 @@ def test_unavailable_offline_support_offers_ordinary_signin(application):
             response=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':ORIGIN})
             assert response.status_code==403 and 'ordinary sign-in' in response.text
             assert 'Max-Age=604800' not in response.headers.get('set-cookie','')
+    asyncio.run(check())
+
+
+def test_reauthentication_retires_old_cookie_and_retains_existing_connection(renewing_app):
+    async def check():
+        from test_oauth_server_http import authorize,CALLBACK,RESOURCE
+        app,saved,clock,state=renewing_app
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+            profile=await remembered_login(client,state)
+            old=next(c.value for c in client.cookies.jar if c.name=='c0_session')
+            verifier,_=await authorize(client,saved,scope='c0:read')
+            accepted=await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},
+                headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
+            assert accepted.status_code==200
+            code=parse_qs(urlsplit(accepted.json()['redirect_uri']).query)['code'][0]
+            pair=(await client.post('/oauth/token',data={'grant_type':'authorization_code','client_id':saved['client_id'],
+                'code':code,'redirect_uri':CALLBACK,'code_verifier':verifier,'resource':RESOURCE})).json()
+            state['offline']=False
+            ordinary=await login(client,state)
+            assert ordinary['browser_session']['remembered'] is False
+            assert (await client.get('/api/v1/me',headers={'Cookie':'c0_session='+old})).status_code==401
+            assert (await client.get('/api/v1/me')).json()['id']==profile['id']
+            delegated=await client.get('/api/v1/me',headers={'Authorization':'Bearer '+pair['access_token']})
+            assert delegated.status_code==200 and 'set-cookie' not in delegated.headers
+            rotated=await refresh(client,saved,pair)
+            assert rotated.status_code==200 and rotated.json()['scope']=='c0:read'
     asyncio.run(check())

@@ -269,9 +269,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             raise LoginStateRejected()
         body = bytearray()
         async for chunk in request.stream():
-            body.extend(chunk)
-            if len(body) > 16384:
+            if len(body) + len(chunk) > 16384:
                 raise LoginStateRejected()
+            body.extend(chunk)
         try:
             pairs = parse_qsl(body.decode('utf-8'), keep_blank_values=True, strict_parsing=True, max_num_fields=4)
         except (ValueError, UnicodeError):
@@ -364,6 +364,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             response.delete_cookie('c0_login_return', path=cookie_path,
                 secure=True, httponly=True, samesite='lax')
             return response
+        active.sessions.replace_browser(request.cookies.get('c0_session'))
         destination = cookie_path
         if request.cookies.get('c0_login_return') in ('agents', 'admin'):
             destination += request.cookies['c0_login_return']
