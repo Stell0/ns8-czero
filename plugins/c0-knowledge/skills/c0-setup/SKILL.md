@@ -9,4 +9,4 @@ Follow [connection setup](../../references/connection.md) when sign-in or client
 
 Once connected, call `get_profile` and `spaces_list`. Show the returned account label and ask the user to select the intended authorized space if ambiguous. A returned profile proves the connected account, not membership in an unlisted space. Do not save or alter content during setup.
 
-For a first read, use `c0-research` with a topic the user chooses. Report the instance, account and selected space, what was actually checked, and any remaining administrator action. Explain that plugin installation and C0 membership are separate.
+For a first read, use `c0-research` with a topic the user chooses. For research projects, use `c0-projects` only after discovering live `project_*` operations. Report the instance, account and selected space, what was actually checked, and any remaining administrator action. Explain that plugin installation and C0 membership are separate.

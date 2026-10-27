@@ -25,7 +25,7 @@ Read README, the roadmap and the relevant skill before editing. Use active manif
 | `packages/czero-core` | Reusable knowledge/data services, persisted-role authorization, transactions, migrations and stable contracts |
 | `app` | Reference/fork UI and HTTP/MCP transport composed from trusted Core operations |
 | `imageroot` and `ui` | Numbered NS8 lifecycle/configuration/backup operations and native settings |
-| `plugins/c0-knowledge` | Instance-bound end-user setup, research and knowledge-maintenance instructions |
+| `plugins/c0-knowledge` | Instance-bound end-user setup, research, knowledge maintenance and protected-project discovery instructions |
 | `.agents/skills` and `docs` | Development routing, contributor/operator workflows and public guidance |
 
 Fork-specific screens, branding and workflows belong in the application. Change Core when behavior is reusable, and preserve its independent distribution. Existing typed records and schemas may already express the domain; do not add a parallel database or a custom operation engine without a concrete need.
@@ -42,6 +42,7 @@ Forks use the released Core dependency and frozen lock by default. `CZERO_CORE_S
 | Review Core or managed-infrastructure upgrades | [c0-upgrade-from-upstream](.agents/skills/c0-upgrade-from-upstream/SKILL.md) |
 | Measure model-driven tool use | [c0-evaluate-tools](.agents/skills/c0-evaluate-tools/SKILL.md) |
 | Ingest or update an external data source | [c0-ingest-sources](.agents/skills/c0-ingest-sources/SKILL.md) |
+| Develop or verify protected project workflows and agent handoff | [c0-project-workflows](.agents/skills/c0-project-workflows/SKILL.md) |
 
 Use the installed [NethServer skills](https://github.com/NethServer/agents) for module/container work, native administration, commits, PRs and releases. Do not duplicate their manuals here. End-user skills guide connected assistants; repository skills guide developers. Neither grants authority, and development skills never ship in runtime images.
 

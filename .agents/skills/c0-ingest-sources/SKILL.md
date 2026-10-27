@@ -37,3 +37,9 @@ lessons in sample documentation and tests. Run the required full base/candidate
 checks and open a focused original C0 PR through c0-contribute-upstream and the
 installed nethserver-pr skill. Preserve customer work and follow AGENTS.md's
 review, provenance and frozen-candidate rules.
+
+## Protected research-project connectors
+
+When an ingestion belongs to a research project, first read [project source contracts](../../../docs/projects/SOURCES.md) and [durable workflow contracts](../../../docs/projects/WORKFLOWS.md). Discover the exact project with `project_get` in its protected space and use the reviewed connector ID, frozen scan identity and project source synchronization receipts. Reuse `samples/ingestion` and the project CLI; do not create managed project records directly with generic object APIs or invent a parallel cursor/lease format. Distinguish immutable source ingestion, extraction readiness, verified passage publication and committed connector coverage.
+
+Before any project source mutation, confirm the current lease/fencing generation and authoritative source-space subscription where relevant. Dry-run/scan/status/verify must not claim a run. Resume uncertain remote publication using saved receipts, never by blindly repeating a collector call. Missing `project_*` capabilities are a version or tool-catalog block, not permission to use a bypass. Scheduling an external agent and importing legacy WikiPlant data are separate actions requiring their own authorization.

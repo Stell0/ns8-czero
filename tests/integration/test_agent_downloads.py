@@ -65,8 +65,9 @@ def test_browser_plugin_is_instance_bound_and_identical_to_offline_archive(appli
             response = await http.post('/agents/plugin.zip', json={'chatgpt_app_id': 'https://chatgpt.com/plugins/plugin_asdk_app_fixture'}, headers=headers(profile))
             payload = unpack(response, '.zip')
             assert set(payload) == {'plugin.json', '.app.json', 'LICENSE', 'references/instance.md',
-                'references/connection.md', 'references/maintenance.md', 'skills/c0-setup/SKILL.md',
-                'skills/c0-research/SKILL.md', 'skills/c0-maintain-knowledge/SKILL.md'}
+                'references/connection.md', 'references/maintenance.md', 'references/projects.md',
+                'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
+                'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md'}
             assert json.loads(payload['.app.json']) == {'apps': {'c0': {'id': 'asdk_app_fixture', 'required': True}}}
             assert b'c0.example.test' in payload['references/instance.md']
             assert profile['csrf_token'].encode() not in response.content and profile['id'].encode() not in response.content
