@@ -49,7 +49,7 @@ Prerequisites: permission to use plugins, Plugin Creator available, permission t
 1. Invoke **Plugin Creator** in a ChatGPT web conversation.
 2. Provide the generated skill/reference files and the exact registered C0 app identity. If the Creator can inspect the source archive, it can be supplied as reference material; attaching a ZIP alone is not a native installation operation.
 3. Ask it to create a private plugin using those workflows and that existing app. Preserve the explicit-space, evidence/citation, authorization, retry and revision rules.
-4. Review that all four distinct named skills survived, including the correct instance binding and all linked reference material. If attachments are flattened or renamed, ask Creator to resolve those references; do not leave three indistinguishable `SKILL.md` files. Review the app binding, finish creation and install it if prompted. Keep it private for testing.
+4. Review that all four distinct named skills survived, including the correct instance binding and all linked reference material. If attachments are flattened or renamed, ask Creator to resolve those references; do not leave four indistinguishable `SKILL.md` files. Review the app binding, finish creation and install it if prompted. Keep it private for testing.
 5. In a new web conversation, select the plugin, invoke setup, then test the known read-only and permitted maintenance cases below.
 
 OpenAI documents private creation and app inclusion through Plugin Creator, with prerequisite permissions. This repository's real-web test must verify that the generated content is actually present and used; schema validation or desktop execution is insufficient. [Official web plugin creation](https://learn.chatgpt.com/docs/build-plugins).
