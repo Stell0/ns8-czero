@@ -26,7 +26,7 @@ class SignInForm(HTMLParser):
 async def form(client):
     page=await client.get('/auth/sign-in?remember=yes')
     assert page.status_code==200 and page.headers['cache-control']=='no-store'
-    assert page.headers['referrer-policy']=='no-referrer'
+    assert page.headers['referrer-policy']=='strict-origin'
     parsed=SignInForm();parsed.feed(page.text)
     assert parsed.intent and parsed.remember is not None and 'checked' not in parsed.remember
     assert all(flag in page.headers['set-cookie'] for flag in ('Secure','HttpOnly','SameSite=lax','Max-Age=300'))
@@ -37,6 +37,7 @@ async def remembered_login(client,state):
     data=await form(client)
     started=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':ORIGIN})
     assert started.status_code==302
+    assert started.headers['referrer-policy']=='no-referrer'
     fields=parse_qs(urlsplit(started.headers['location']).query)
     assert fields['scope']==['openid profile offline_access'] and 'consent' in fields['prompt'][0]
     state['nonce']=fields['nonce'][0];state['offline']=True
@@ -90,7 +91,7 @@ def test_intent_origin_binding_replay_duplicates_size_and_expiry(renewing_app):
         app,saved,clock,state=renewing_app
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             data=await form(client)
-            for origin in (None,'https://attacker.example.test'):
+            for origin in (None,'null','https://attacker.example.test'):
                 result=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':origin} if origin else {})
                 assert result.status_code==403
             async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as other:

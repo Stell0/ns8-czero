@@ -255,7 +255,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             'Use this only on a device you trust. Otherwise, sign-in uses the normal session limits.</p>'
             '<p>AI assistant connections have their own permission and sign-in choices.</p>'
             '<button type="submit">Continue with NethServer</button></form></main></body></html>',
-            headers={'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; style-src 'self'; frame-ancestors 'none'"})
+            # A no-referrer navigation form sends Origin:null in Chromium.
+            # Send only the origin so the same-origin POST remains verifiable.
+            headers={'Referrer-Policy': 'strict-origin', 'Content-Security-Policy': "default-src 'none'; style-src 'self'; frame-ancestors 'none'"})
         response.set_cookie('c0_signin', browser, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
         return response
 
