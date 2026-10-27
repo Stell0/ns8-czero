@@ -1236,3 +1236,12 @@ checks above pass separately. Exact committed remote full acceptance will run
 the complete final collection. Primary-agent review covered the fixed export
 catalog/space filters, private replay consent before mutation, no-follow artifact
 paths, canonical checksums, Markdown boundaries and diagnostics feed ordering.
+
+M7 review follow-up: absolute URLs to the bound C0 host must use the same private
+Wiki selection, cross-space denial and protected-source destination removal as
+relative links. Resolve them against the snapshot's actual instance binding;
+retain ordinary authored external public links. Unit and actual signed-SDK static
+export regressions cover absolute private/foreign Wiki targets, selected-page
+mapping and citation destination removal. Original3762652 full40430534952 remains
+retained and is not final acceptance; the correction requires its own exact full
+CI/native/artifact gate. No static output was deployed or published.

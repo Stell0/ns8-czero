@@ -28,8 +28,8 @@ def test_static_pages_and_saved_report_require_explicit_public_selection(sample_
         lease={key:claimed[key] for key in ('run_id','lease_owner','fencing_generation')}
         header=call('project_report_prepare',lease=lease,report_type='daily')['records'][0]
         report=call('wiki_pages_create',slug='public/report',title='Public synthetic report',
-            body='# Synthetic report\n\n[Learning](./wiki?page_id='+page['id']+'&revision=1&space_id='+client.space_id+
-                ')\n\n[Evidence](./sources?source_id='+str(uuid4())+')',metadata={'static_publish':{'public':True},
+            body='# Synthetic report\n\n[Learning]('+config['url'].removesuffix('/mcp')+'/wiki?page_id='+page['id']+'&revision=1&space_id='+client.space_id+
+                ')\n\n[Evidence]('+config['url'].removesuffix('/mcp')+'/sources?source_id='+str(uuid4())+')',metadata={'static_publish':{'public':True},
                     'c0_project':{'project_id':client.space_id,'report_reference':header['id'],'language':'en'}})
         call('project_report_finalize',lease=lease,report_reference=header['id'],wiki_revision_id=report['content']['id'])
         snapshot=tmp_path/'snapshot';assert export_project(client,snapshot)['status']=='VALIDATED'
@@ -40,6 +40,7 @@ def test_static_pages_and_saved_report_require_explicit_public_selection(sample_
         assert '<script>' not in output and '&lt;script&gt;' in output and 'tracker.png' not in output
         report_body=(tmp_path/'static/content'/(report['id']+'.md')).read_text()
         assert page['id']+'.md' in report_body and './sources?' not in report_body and 'evidence retained in C0' in report_body
+        assert config['url'].removesuffix('/mcp') not in report_body
         assert not (tmp_path/'static/content'/(private['id']+'.md')).exists()
         assert json.loads((tmp_path/'static/static-manifest.json').read_text())['reports']=={header['id']:report['content']['id']}
         with pytest.raises(C0Error):export_static(snapshot,{**selection,'wiki_revisions':[private['content']['id']]},tmp_path/'denied')

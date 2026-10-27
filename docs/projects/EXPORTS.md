@@ -82,6 +82,9 @@ Both selected and current page revisions must have
 Private/cross-project internal targets reject export. Selected Wiki links map to
 stable filenames; protected evidence links become plain labels identifying
 evidence retained in C0. Source evidence is not published.
+These checks apply to relative links and absolute links to the bound C0 host;
+an absolute URL cannot bypass private-page selection or leak a protected citation
+destination. Other public HTTP(S) links remain explicitly authored references.
 
 The conservative Markdown exporter escapes HTML, disables images/frontmatter,
 rejects ambiguous reference definitions and unsafe destinations, and records

@@ -21,6 +21,7 @@ def export_static(snapshot,selection,output):
         raise C0Error('explicit_static_selection_required')
     manifest=load_data(safe_read(root,'manifest.json',16*1024*1024).decode(),'json',maximum=16*1024*1024,max_nodes=2000000)
     if selection['project_id']!=manifest['project_id']:raise C0Error('static_project_binding_mismatch')
+    instance=urlsplit(public_url(manifest['instance_url']));prefix=instance.path.rsplit('/',1)[0]
     pages={};revisions={};reports={};bodies={}
     for entry in manifest['files']:
         if entry['kind'] in ('wiki_pages','wiki_revisions','objects'):
@@ -60,12 +61,14 @@ def export_static(snapshot,selection,output):
                 return posixpath.relpath(paths[identifier],posixpath.dirname(current_path))
             def link(match):
                 nonlocal omitted
-                label,url=match[1],match[2];parsed=urlsplit(url)
+                label,url=match[1],match[2];parsed=urlsplit(url);path=parsed.path
                 if parsed.scheme:
-                    public_url(url);return '['+label+']('+url+')'
-                if parsed.netloc:raise C0Error('static_protocol_relative_link_denied')
-                if not parsed.path:return '['+label+']('+url+')'
-                route=parsed.path.strip('./');query=parse_qs(parsed.query)
+                    public_url(url)
+                    if parsed.hostname!=instance.hostname:return '['+label+']('+url+')'
+                    if prefix and path.startswith(prefix+'/'):path=path[len(prefix):]
+                elif parsed.netloc:raise C0Error('static_protocol_relative_link_denied')
+                if not path:return '['+label+']('+url+')'
+                route=path.strip('./');query=parse_qs(parsed.query)
                 if query.get('space_id',[selection['project_id']])!=[selection['project_id']]:raise C0Error('static_cross_space_link_denied')
                 if route=='sources':omitted+=1;return label+' (evidence retained in C0)'
                 if route=='wiki':

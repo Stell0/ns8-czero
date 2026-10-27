@@ -427,7 +427,9 @@ reject symlinks/traversal/partial inventories. Offline WikiPlant preparation
 never executes upstream code or binds target IDs. Serialized page envelopes
 produce blocking repair proposals, keeping original bytes unchanged. Static
 export requires both explicit immutable selection and saved public metadata;
-never add private dependencies or deploy output automatically.
+never add private dependencies or deploy output automatically. Absolute URLs to
+the bound C0 host must pass the same private-page, cross-space and citation
+destination checks as relative links.
 
 Client YAML uses bounded SafeLoader with duplicate/alias/tag denial; no Core or
 runtime YAML dependency. Private GitHub collection is explicit destination/repo
