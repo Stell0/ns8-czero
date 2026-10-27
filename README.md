@@ -284,6 +284,10 @@ report membership/readback and independent publication observations.
 The [maintenance contract](docs/projects/MAINTENANCE.md) adds bounded structural
 audits, revision-specific semantic rotation, archive history, calendar admission
 and metadata-only workflow update checks.
+The [export/preparation contract](docs/projects/EXPORTS.md) adds private,
+integrity-checked project snapshots, offline WikiPlant mapping validation and
+explicitly selected public static files. Fabricated English/Italian reference
+projects exercise daily/weekly workflows without production data.
 Migration preparation has separate gates. Actual external-agent
 and unattended scheduled execution remain unverified.
 This branch does not migrate real projects, deploy an instance or activate schedules.

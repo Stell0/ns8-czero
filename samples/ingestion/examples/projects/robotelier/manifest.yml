@@ -1,0 +1,49 @@
+schema_version: 1
+project_id: 11111111-1111-4111-8111-111111111111
+space_id: 11111111-1111-4111-8111-111111111111
+name: Robotelier-shaped synthetic
+description: Fabricated reference project; no production records.
+language: en
+timezone: Europe/Rome
+purpose: Compare fabricated research developments.
+scope: Synthetic humanoid robotics, manufacturers, capacity and constraints.
+exclusions:
+- Real project data and production accounts.
+primary_topic_ids:
+- humanoid-robots
+- manufacturers
+- capacity
+- technical-progress
+- constraints
+research:
+  normal_daily_attempts: 5
+  urgent_total_daily_attempts: 10
+  urgent_priority: 0
+  child_priority_increment: 20
+  max_children_per_investigation: 3
+  max_attempts: 3
+  max_active_items: 50
+  max_new_roots_per_day: 5
+monitoring:
+  enabled: true
+  mandatory_primary_topic_refresh: true
+  max_queries_per_topic: 5
+  max_sources_per_topic: 10
+  overlap_hours: 12
+schedule:
+  daily_local_time: 06:00
+  weekly_day: sunday
+  weekly_local_time: 08:00
+  execution_provider: external_agent
+  enabled: false
+reporting:
+  upcoming_days: 7
+  quiet_day_report: true
+maintenance:
+  semantic_pages_per_week: 3
+  max_inventory: 1000
+connector_ids:
+- synthetic-files
+state:
+  initialized: false
+  migration_status: not_started

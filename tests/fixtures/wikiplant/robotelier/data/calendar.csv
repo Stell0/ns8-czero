@@ -1,0 +1,2 @@
+id,kind,title,start_date,start_at,end_at,timezone,date_precision,status,related_page_ids,source_refs,refresh_question,priority,expansion_priority,recurrence,lead_days,origin_ref,updated_at,schema_version,topic_id,parent_ids,lineage_root_id,root_reason
+event-1,event,Synthetic future conference,2027-02-01,,,Europe/Rome,date,tentative,"[""wiki-1""]","[""source-1""]",,20,20,"{""frequency"":""none"",""interval"":1,""until"":""""}",7,synthetic:source,2026-10-10T10:00:00+00:00,2,humanoid-robots,[],,independent_external_event

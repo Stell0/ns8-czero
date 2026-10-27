@@ -1,56 +1,63 @@
-# WikiPlant migration readiness — implementation checkpoint
+# WikiPlant migration readiness — M7 checkpoint
 
-**Not ready for migration.** M0/M1 foundations and M2 source collection are
-accepted on their exact branch CI/native runs, along with M3 coordination.
-M4 monitoring/agents and M5 evidence/reporting are accepted; M6 maintenance is
-implemented and under validation. M7–M8 remain outstanding. This file is an explicit
-checkpoint and will be replaced with executed final acceptance evidence.
-No real WikiPlant data, live C0 knowledge, real project spaces or schedules have
-been migrated, modified or activated by this task.
+**Migration is not yet accepted.** M0–M6 have completed their exact full/native
+acceptance. M7 code and focused tests are implemented; its full gate is running.
+M8 Core release/default adoption and final PR acceptance remain outstanding.
+No real WikiPlant data, live knowledge, project spaces, schedules or deployments
+have been changed. The existing Github projects space is untouched.
 
-Inspection inputs: C0 `631293d50de6f0faa914554455dbfe61ce623764`, WikiPlant
-`e8dd9e7ae9b48d028cf9a735b30490749c3d8d6c`. Public scaffold inspection does not
-verify canonical production instance names. Reference projects remain synthetic.
-See the [compatibility matrix](WIKIPLANT_COMPATIBILITY.md),
-[project contracts](PROJECTS.md), [source contracts](SOURCES.md) and PLAN.md.
+Inspected C0 main: `631293d50de6f0faa914554455dbfe61ce623764`.
+Inspected WikiPlant main: `e8dd9e7ae9b48d028cf9a735b30490749c3d8d6c`.
+Public scaffold inspection does not verify production canonical names.
+See [compatibility](WIKIPLANT_COMPATIBILITY.md), [projects](PROJECTS.md),
+[sources](SOURCES.md), [workflows](WORKFLOWS.md), [monitoring](MONITORING.md),
+[reporting](REPORTING.md), [maintenance](MAINTENANCE.md) and [export](EXPORTS.md).
 
 | Feature | Implemented | Tests | Integration verified | Known limitations | Migration blocker |
 | --- | --- | --- | --- | --- | --- |
-| Protected manifest/config history | yes | passed locally | no | Disposable native M1 passes; default released Core adoption pending | yes |
-| Topics and structural scope governance | yes | passed locally | no | Semantic assessment remains an external-agent responsibility | yes |
-| Project reader/config/topics/source status | yes | passed locally | no | M1–M3 native browser passes; M4 monitoring view under validation; reports await M5 | yes |
-| Seven source adapters and private CLI | yes | passed locally | no | Bounded configured selections; no real sources contacted by acceptance fixtures | yes |
-| Immutable source/snapshot/cursor receipts | yes | passed locally | no | One private job per connector; source/run coordination is extended in M3; pending extraction remains incomplete | yes |
-| Durable queue/budget/reservations/fencing | yes | passed locally | no | M3 exact branch/native gate passed; M5 adds evidence-specific completion | yes |
-| Mandatory primary monitoring | yes | passed locally | no | M4 exact full/native acceptance passes; M5 material evidence gate under validation | yes |
-| External-agent skills and scheduling handoff | yes | passed locally | no | M4 exact full/native acceptance passes; no external task installed or execution observed | yes |
-| Results/evidence/report completeness | yes | passed | no | M5 exact full/native acceptance passes; real agent execution unverified | yes |
-| Maintenance/calendar/archive/rotation | yes | passed locally | no | M6 focused PostgreSQL/SDK passes; exact full/native acceptance pending | yes |
-| Project/static export and offline migration preparation | no | not_run | no | M7 outstanding; no production export/import authorized | yes |
-| Complete synthetic end-to-end acceptance | no | not_run | no | M7/M8 outstanding | yes |
-| Core release/default consumer adoption | no | not_run | no | Producer implementation only; new operations explicitly reject unavailable old Core | yes |
-| Actual external-agent research execution | no | not_run | no | Separate authenticated observed execution required | yes |
-| Unattended scheduled execution/readback | no | not_run | no | Configuration or prompt generation cannot prove host installation/authentication/execution | yes |
+| Protected manifest/configuration/history | yes | passed | yes, disposable C0 | Default released Core adoption pending | yes |
+| Topics/scope/classification/lifecycle | yes | passed | yes, disposable C0 | Semantic assessments stay external | no |
+| Project read-only overview/diagnostics | yes | passed | yes, disposable browsers | M7 scope/release diagnostics full gate pending | yes |
+| Seven reusable source adapters/CLI | yes | passed | yes, disposable C0 | Real source/provider quality not evaluated | no |
+| Source versions/readiness/cursors/provenance | yes | passed | yes, disposable C0 | Binary originals require existing upload/backup paths | no |
+| Typed C0 subscriptions/private GitHub consent | yes | passed | yes, local signed SDK | Remote GitHub responses mocked; M7 full gate pending | yes |
+| Queue/admission/budgets/reservations/fencing | yes | passed | yes, disposable C0 | External calls can remain uncertain | no |
+| Primary monitoring independent of queue | yes | passed | yes, fake agent/disposable C0 | No actual external search host observed | no |
+| IANA scheduling/skills/prompts/handoff | yes | passed | no, external host | No task installation/unattended authority observed | yes |
+| Evidence/results/Wiki/revision validation | yes | passed | yes, disposable C0 | Semantic truth is not deterministic validation | no |
+| Daily/weekly saved reports/readback/delivery state | yes | passed | yes, disposable C0 | Actual publication/notification/reading unobserved | no |
+| Weekly audits/semantic rotation/archives/calendar | yes | passed | yes, disposable C0 | Bounded semantic batch is not complete semantic audit | no |
+| Private project export/integrity | yes | passed | yes, local signed SDK | M7 full gate pending; change detection is not a snapshot | yes |
+| Offline WikiPlant parser/migration manifest | yes | passed | no, production data | Synthetic raw fixtures only; no target binding/import | yes |
+| Explicit public static export | yes | passed | yes, local signed SDK snapshot | Conservative Markdown subset; no publishing | no |
+| Complete English/Italian synthetic daily/weekly/export | yes | passed | yes, local signed SDK | Fake agents, mocked remote inputs; M7 full gate pending | yes |
+| NS8 restart/backup/restore/upgrade preservation | yes | passed | yes, disposable native | M7 export readback native gate pending | yes |
+| Core release/default consumer adoption | no | not_run | no | Producer candidate only | yes |
+| Ready PR/current full acceptance | no | not_run | no | M8 outstanding | yes |
+| Actual external-agent research | no | not_run | no | Separate observed authenticated execution required | yes |
+| Unattended scheduled execution/readback | no | not_run | no | Complete handoff exists; host capability unverified | yes |
 
-Evidence levels stay separate:
+Evidence levels remain separate:
 
-- Implemented code: M1–M5 accepted on the development branch; M6 under validation.
-- Local validation: actual PostgreSQL, signed HTTP, OAuth, current/legacy MCP,
-  CLI and packaging tests; no database skips counted as passes.
-- Disposable native C0: M0 full baseline audited; M1 corrected Debian upgrade
-  and Rocky installation/all eight browsers pass with independent privacy audits.
-  Branch M1 acceptance 40311946100 and corrected M2 40316218857 pass
-  their full gates and independent downloaded artifact audits. The draft PR
-  remains a work-in-progress and is not claimed ready for promotion.
-- M3 exact `fb9c4b7` full40333538357 passed2133 Python/PostgreSQL/packaging,
-  192 Node and both native distributions with actual downloaded privacy,
-  accessibility, query and scan audits. M4 local monitoring/agent tests exercise
-  actual SDK/OAuth/PostgreSQL; fake provider outcomes do not verify a real agent.
-- Dedicated reference instance: no project implementation deployed or tested.
-- Actual external agent: no project workflow execution observed.
-- Unattended scheduling: no task installation, execution, notification or human
-  reading observed. These are independent observations.
+- **Code:** M1–M7 implemented in the development branch; M7 not yet accepted.
+- **Local tests:** actual PostgreSQL transactions/authorization/concurrency,
+  signed OAuth/SDK/REST/MCP, CLI, parsers, packaging and Node controllers.
+  The two synthetic end-to-end cases pass with real persisted evidence and
+  English/Italian reports; fake provider results prove no actual external agent.
+- **Disposable native C0:** M6 corrected `1000839` full run
+  [40414161692](https://github.com/Stell0/ns8-czero/actions/runs/40414161692)
+  completed successfully:2205 Python/PostgreSQL/packaging,195 Node,21 Robot;
+  Debian genuine upgrade21/no skips, Rocky installation26/three expected skips,
+  all8 browsers/privacy guards,32 accessibility contexts and three actual
+  zero-candidate OAuth-query artifacts. Independent image/scan audits pass;
+  known vendor findings remain app171/database414/UI11. See PLAN.md for all
+  earlier milestone sources, CI and frozen candidate evidence.
+- **Dedicated reference instance:** no project implementation deployment/test.
+- **Actual external agent:** no project execution observed.
+- **Unattended scheduler:** no installation, execution, notification or human
+  reading observed. Configuration and saved reports cannot prove these states.
 
-Existing CPU-quota and interactive Playwright waivers remain unchanged. Failed
-private evidence is retained outside Git. Historical deployed image digests and
-accepted source evidence remain untouched.
+Existing CPU-quota and interactive Playwright waivers remain unchanged. Private
+failed evidence stays outside Git. Historical deployed digests/acceptance records
+are preserved. M8 will replace this checkpoint with final executed evidence and
+remaining external-platform blockers. Real migration remains a separate task.

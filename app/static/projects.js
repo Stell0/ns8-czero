@@ -61,9 +61,9 @@
         item.textContent = completed ? 'Last successful ' + kind + ' run: ' + completed.data.local_cycle_date + ' · ' + completed.data.finished_at : 'No successful ' + kind + ' run recorded.';
         $('project-work').append(item);
       }
-      for (const entry of diagnostics.errors) if (entry.type_name === 'c0_project_admission_v1' && entry.data.candidate) {
+      for (const entry of diagnostics.errors) if (entry.data && (entry.type_name === 'c0_project_admission_v1' && entry.data.candidate || entry.type_name === 'c0_project_release_check_v1')) {
         const item = document.createElement('li');
-        item.textContent = entry.data.candidate.question + ' · deferred for bounded history review';
+        item.textContent = entry.type_name === 'c0_project_release_check_v1' ? entry.data.repository + ' · ' + entry.data.status + ' · ' + entry.data.summary : entry.data.candidate.question + (entry.data.disposition === 'needs_user_scope_decision' ? ' · user scope decision required' : ' · deferred for bounded history review');
         $('project-work').append(item);
       }
       if (diagnostics.structural_findings || diagnostics.errors.length) $('project-work-status').textContent += ' · ' + diagnostics.structural_findings + ' structural findings; ' + diagnostics.errors.length + (diagnostics.errors_may_be_incomplete ? '+' : '') + ' incomplete work observations.';

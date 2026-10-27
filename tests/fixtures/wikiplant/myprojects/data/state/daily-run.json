@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "run_id": "daily-1",
+  "local_date": "2026-10-10",
+  "timezone": "Europe/Rome",
+  "state": "partial",
+  "current_phase": "synthesis",
+  "attempts_used": 1,
+  "result_references": [
+    "synthetic:result-1"
+  ],
+  "operation_receipts": [
+    {
+      "operation_id": "operation-1",
+      "status": "ACCEPTED_PENDING_MERGE",
+      "result_reference": "synthetic:result-1"
+    }
+  ]
+}

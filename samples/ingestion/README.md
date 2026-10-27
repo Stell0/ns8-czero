@@ -234,3 +234,14 @@ Package generation does not install a host task or establish unattended access.
 saves and verifies source evidence before a fenced observation. It never installs
 code or instructions. See [maintenance contracts](../../docs/projects/MAINTENANCE.md)
 for plans, trust restrictions, retry limits and incomplete coverage.
+
+Project source definitions also accept bounded safe YAML. Optional private
+GitHub collection requires exact repository/destination consent using the
+existing worker credentials; the original public GitHub pipeline stays public.
+Typed C0 subscriptions require independent current source-space authorization.
+
+Read-only `project export`, offline `export verify`, `wikiplant validate` and
+`export static` create new private local artifacts with checksums. See
+[export/preparation contracts](../../docs/projects/EXPORTS.md) and
+[fabricated examples](examples/projects/README.md). They do not import live data,
+create projects, activate schedules or publish a website.

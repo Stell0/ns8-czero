@@ -185,3 +185,14 @@ def test_active_selection_retains_completed_anchor_service_history(evidence):
     lease={key:run[key] for key in ('run_id','lease_owner','fencing_generation')}
     selected=row(reserve(service,owner,lease),'queue_v1')
     assert selected['data']['stable_id']=='later-unserved-question'
+
+
+def test_unqueued_scope_decisions_and_release_failures_are_visible_until_resolved(project):
+    service,owner=setup(project)
+    blocked=service.admit(owner,candidate('needs-scope',anchor_ids=[]),idempotency_key='scope-question')
+    assert blocked['outcome']=='needs_user_scope_decision' and service.list_records(owner,'queue_v1')==[]
+    assert any(row['data'].get('candidate_id')=='needs-scope' for row in service.diagnostics(owner)['errors'])
+    service.admit(owner,candidate('needs-scope'),idempotency_key='scope-settled')
+    assert not any(row['data'].get('candidate_id')=='needs-scope' for row in service.diagnostics(owner)['errors'])
+    service.observe_release(owner,weekly(service,owner),'Kabutojira/WikiPlant','1.0.0',error_code='synthetic_timeout',idempotency_key='release-failure')
+    assert any(row['type_name']=='c0_project_release_check_v1' and row['data']['status']=='failed' for row in service.diagnostics(owner)['errors'])

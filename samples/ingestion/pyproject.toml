@@ -9,7 +9,7 @@ description = "Reusable C0 ingestion helpers and a public GitHub example"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 license = "GPL-3.0-or-later"
-dependencies = ["mcp==2.3.0", "httpx2==2.13.1", "anyio==4.15.1"]
+dependencies = ["mcp==2.3.0", "httpx2==2.13.1", "anyio==4.15.1", "PyYAML==6.0.3"]
 
 [project.scripts]
 c0-ingest = "c0_ingest.cli:main"

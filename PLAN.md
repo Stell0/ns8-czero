@@ -1177,3 +1177,62 @@ uses two previously served investigations and two active approved anchors, then
 checks the unserved anchor wins after current-scope reassessment. The original
 7109f0d acceptance run is retained; corrected exact-source acceptance is required.
 All22 current PostgreSQL maintenance/workflow cases pass after the correction.
+
+### WikiPlant M6 accepted; M7 implementation
+
+Corrected1000839 full40414161692 completed/successful. Exact remote verification
+passes2205 Python/PostgreSQL/packaging,195 Node and21 Robot dry runs. The full
+acceptance verifier and independent actual downloaded artifacts pass: Debian
+genuine upgrade21/no skips, Rocky installation26/three expected skips/all8
+browsers, privacy8, accessibility32, three query artifacts/zero candidates and
+five scan/SBOM pairs. Actual registry manifest/config/all13 compressed layers
+match app digest4539b905; four Core modules and six product templates match
+tracked bytes and UID/GID10001/mode0644. Dive enabled rules pass at98.13%; vendor
+findings remain app171/database414/UI11. No dedicated deployment, real external
+agent or unattended execution is claimed. Frozen7109f0d evidence is retained.
+
+M7 implements deterministic private project export with stable identities and
+integrity checks, preserving actual source/Wiki revisions and available typed
+history. Use existing APIs where complete; add only a fixed bounded Core export
+reader for missing knowledge/alias/annotation shapes, with current space
+authorization and no authentication/storage-path export. Detect concurrent or
+partial collection; do not claim a multi-request transaction snapshot.
+
+Implement safe bounded YAML for client configuration and raw WikiPlant snapshots,
+an offline parser/dry-run mapping contract, explicit public-only static selection
+and complete fabricated English/Italian reference projects. Extend authorized
+C0-space sourcing to selected typed GitHub knowledge and test a third source
+space without implicit graph access. Optional private GitHub collection requires
+explicit worker authorization bound to repository/destination; preserve the
+existing public-only default and keep credentials outside C0. Immutable connector
+schemas must not be changed silently.
+
+Test deterministic/tampered/partial exports, Markdown/metadata separation, legacy
+IDs/provenance/lineage/receipts, cross-project budgets/cursors/reports/recovery and
+revoked source access with real PostgreSQL and signed SDK requests. Extend native
+readback and read-only diagnostics for unresolved scope decisions. Update the
+matrix/readiness/docs, commit/push and require full exact CI/native/artifact
+acceptance before M8. No live data, spaces, schedules, migration or publishing.
+
+M7 implementation checkpoint: fixed read-only Core catalog/text fragments and
+private two-pass export, offline raw-layout/parser/mapping validation, explicit
+public static selection, bounded YAML, typed source subscriptions and optional
+private GitHub replay consent are implemented. Both fabricated English/Italian
+SDK/PostgreSQL daily+weekly+report+export cases pass; source instructions leave
+configuration and one-attempt allowance unchanged. Actual third-space typed
+knowledge updates retain old evidence; current source grants remain required.
+Native seed/recovery now checks exact interchange identities and Markdown hashes.
+Latest focused native/source/static cases pass37, bounded format/security cases
+pass33, and completed raw Drive/GitHub fixtures pass13 after structural config
+validation. Node196,21 Robot dry runs, schema/shell checks,286 documentation links
+and152-file contribution privacy checks pass. A fresh broad PostgreSQL run is in
+progress; exact committed full/native/image/artifact acceptance is still required.
+M8 has not started. No real sources, migration, schedules or deployment executed.
+
+M7 local broad run completed2239 passed in1096.81 seconds with a fresh isolated
+PostgreSQL database and no failures. Collection preceded the final parser/static
+negative cases and configuration hardening; the affected latest unit/native/SDK
+checks above pass separately. Exact committed remote full acceptance will run
+the complete final collection. Primary-agent review covered the fixed export
+catalog/space filters, private replay consent before mutation, no-follow artifact
+paths, canonical checksums, Markdown boundaries and diagnostics feed ordering.

@@ -86,3 +86,14 @@ test('late diagnostics cannot restore private report links after access loss',as
     latest_daily_report:{data:{wiki_page_id:id(201),wiki_revision:1}},errors:[],structural_findings:0}));await tick();
   assert(h.node('project-content').hidden);assert.equal(h.node('project-reports').children.length,0);
 });
+
+test('unqueued scope decisions and workflow release alerts remain literal and clear on access loss',async()=>{
+  const diagnostics={project_id:id(101),manifest_version:1,connectors:[],last_successful_runs:{daily:null,weekly:null},
+    latest_daily_report:null,structural_findings:0,errors_may_be_incomplete:false,errors:[
+      {type_name:'c0_project_admission_v1',data:{disposition:'needs_user_scope_decision',candidate:{question:'<script> scope decision'}}},
+      {type_name:'c0_project_release_check_v1',data:{repository:'<img> synthetic repository',status:'security_alert',summary:'Published identity changed'}}]};
+  const h=setup(id(101),diagnostics);await complete(h);
+  assert.match(h.node('project-work').textContent,/<script> scope decision · user scope decision required/);
+  assert.match(h.node('project-work').textContent,/<img> synthetic repository · security_alert/);
+  h.clear();assert.equal(h.node('project-work').children.length,0);
+});

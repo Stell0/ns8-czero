@@ -58,6 +58,11 @@ All new project selection is explicit, protected and authorization checked. Cros
 | Project UI | Wiki/index driven | Readers, Tools, DOM rendering and race guards | Read-only selected-project overview linked to existing pages | app static/API | Access loss/late replies/Reader controls |
 | Authentication | Host/provider capability gates | OAuth S256, background consent/rotation/revocation | Reuse existing client; no new credentials or permission bypass | c0_ingest auth and existing app | Expired/revoked authority fails closed |
 | Notifications | DeliveryState separates saved/published/notified/read | No external notification transport | Implemented M5 separate attributed observed/unknown states; no invented transport | Core report delivery records/runner contract | Saved does not imply received |
+| Typed repository knowledge subscription | External provider files | Protected typed objects/schema and object change feed | Implemented M7 explicit objects:type source selection with independent source authorization/cursor | Client adapters + Core connector validation | Third-space actual SDK incremental copy; revoked grant PostgreSQL denial |
+| Private GitHub source consent | Provider-specific storage credentials | Existing external GitHub worker credentials; public default | Implemented M7 optional destination/repository-bound consent and current-access frozen replay | Client private_sources.py / github_client.py / CLI | Real SDK publication with mocked remote authorization; removed consent/revocation fails before write |
+| Safe YAML configuration | Strict config schema | TOML/JSON client definitions | Implemented M7 bounded nonexecutable YAML parser | Client formats.py | Alias/duplicate/tag/depth/type rejection |
+| Export catalog and text limits | Storage manifests/raw revisions | Existing selected-resource APIs | Implemented M7 fixed scoped metadata catalog/text fragments/two-pass change detection | Core project_exports.py / client exporting.py | Real PostgreSQL permissions; SDK deterministic/tamper/concurrent-write tests |
+| Complete reference workflow | Internal workflows and provider journals | Reusable project/knowledge services | Implemented M7 fabricated English/Italian daily/weekly/export integration | Synthetic configurations / test_project_synthetic_e2e.py | Real OAuth/SDK/PostgreSQL; fake provider outcomes only |
 
 ## Sequential implementation and acceptance
 
@@ -156,3 +161,21 @@ and reader diagnostics. See [maintenance contracts](MAINTENANCE.md). Real
 PostgreSQL and signed fake-agent SDK tests exercise stored state; native recovery
 fixtures now retain audit/semantic/event records and browser report links.
 M6 exact full/native acceptance remains pending; M7–M8 remain outstanding.
+
+## Current M7 checkpoint
+
+M6 corrected1000839 full40414161692 and independent native/artifact audits pass.
+M7 implements [private export, legacy preparation and static selection](EXPORTS.md),
+seven-adapter safe YAML examples, authorized typed source subscriptions and
+optional private GitHub consent. Offline fixtures preserve legacy IDs, provider
+generations, pending lineage, receipts and actual Markdown; malformed evidence
+blocks preparation without modifying source bytes. Export excludes authority and
+unavailable history, explicitly reports partial/concurrent collection and does
+not replace native backup. All target migration IDs remain null.
+
+Focused actual PostgreSQL/SDK tests pass for source authorization, incremental
+third-space knowledge, private frozen replay, reports/static output and both
+complete fabricated daily/weekly projects. Exact M7 full/native acceptance is
+pending. Earlier checkpoint paragraphs are historical; M8 Core release/default
+adoption and final readiness are outstanding. Actual external-agent research,
+unattended execution, dedicated deployment and live migration remain unverified.

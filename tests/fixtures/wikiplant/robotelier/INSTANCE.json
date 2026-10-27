@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "instance_id": "wp-1111111111111111",
+  "runtime_release_id": "synthetic-fixture-v1",
+  "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "root_folder_id": "fixture-root-robotelier",
+  "config_file_id": "fixture-config-robotelier",
+  "drive_map_file_id": "fixture-map-robotelier"
+}

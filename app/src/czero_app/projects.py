@@ -263,6 +263,16 @@ class ProjectDiagnostics(StrictRequest):
     external_execution_verified: Literal[False]
 
 
+class ProjectExportPage(StrictRequest):
+    schema_version: Literal[1]
+    project_id: str
+    kind: str
+    rows: list[dict]
+    next_cursor: str
+    watermarks: dict[str,int]
+    limitations: list[str]
+
+
 class ScheduleOccurrence(StrictRequest):
     latest_due: str
     local_cycle_date: str
@@ -524,4 +534,9 @@ def install_project_routes(app, database, auth, read_context, write_context):
     @operation('project_diagnostics_get','Read current project status: actual successful daily/weekly runs, latest saved report, current connector-definition coverage, bounded incomplete work and structural finding counts. Stored observations do not verify an external agent or unattended execution.',Role.READER,ProjectDiagnostics,space_field='space_id')
     def diagnostics(space_id: UUID,context: RequestAccess=Depends(read_context)):
         return invoke(space_id,'diagnostics',context.actor)
+
+    @app.get('/api/v1/project/export',response_model=ProjectExportPage)
+    @operation('project_export_get','Read one bounded page from the fixed project interchange catalog, including immutable revisions and explicit text fragments. Select the exact protected space and follow returned cursors. Read-only export excludes permissions, credentials, jobs and server file paths; verify all hashes and change watermarks before accepting a local export.',Role.READER,ProjectExportPage,space_field='space_id')
+    def export_get(space_id: UUID,kind: str,after: str='',limit: int=50,resource_id: str='',context: RequestAccess=Depends(read_context)):
+        return invoke(space_id,'export_page',context.actor,kind=kind,after=after,limit=limit,resource_id=resource_id)
     return service

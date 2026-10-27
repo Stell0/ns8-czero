@@ -1,0 +1,39 @@
+[
+  {
+    "topic_id": "humanoid-robots",
+    "label": "Humanoid robots",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:humanoid-robots",
+    "aliases": [
+      "Shared synthetic label"
+    ]
+  },
+  {
+    "topic_id": "manufacturers",
+    "label": "Robotics manufacturers",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:manufacturers",
+    "aliases": []
+  },
+  {
+    "topic_id": "capacity",
+    "label": "Production capacity",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:capacity",
+    "aliases": []
+  },
+  {
+    "topic_id": "technical-progress",
+    "label": "Technical progress",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:technical-progress",
+    "aliases": []
+  },
+  {
+    "topic_id": "constraints",
+    "label": "Manufacturing constraints",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:constraints",
+    "aliases": []
+  }
+]

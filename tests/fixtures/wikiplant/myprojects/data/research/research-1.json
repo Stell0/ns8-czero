@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "id": "research-1",
+  "queue_item_id": "queue-root",
+  "topic_id": "repositories",
+  "status": "stored_pending_wiki_merge",
+  "result_reference": "synthetic:result-1",
+  "lineage_root_id": "queue-root",
+  "source_ids": [
+    "source-1"
+  ],
+  "summary": "Fabricated result is saved and awaits merge.",
+  "receipt": {
+    "status": "ACCEPTED_PENDING_MERGE",
+    "operation_id": "operation-1"
+  }
+}

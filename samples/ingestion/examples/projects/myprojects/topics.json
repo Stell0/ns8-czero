@@ -1,0 +1,46 @@
+[
+  {
+    "topic_id": "repositories",
+    "label": "Repository software",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:repositories",
+    "aliases": [
+      "Shared synthetic label"
+    ]
+  },
+  {
+    "topic_id": "development",
+    "label": "Attività di sviluppo",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:development",
+    "aliases": []
+  },
+  {
+    "topic_id": "pull-requests-issues",
+    "label": "Pull request e issue",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:pull-requests-issues",
+    "aliases": []
+  },
+  {
+    "topic_id": "contributors",
+    "label": "Collaboratori",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:contributors",
+    "aliases": []
+  },
+  {
+    "topic_id": "documentation",
+    "label": "Documentazione",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:documentation",
+    "aliases": []
+  },
+  {
+    "topic_id": "organizations",
+    "label": "Attività delle organizzazioni GitHub",
+    "classification": "user",
+    "authorization_ref": "synthetic:user-track:organizations",
+    "aliases": []
+  }
+]

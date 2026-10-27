@@ -20,6 +20,7 @@ from .project_reports import ProjectReports
 from .project_events import ProjectEvents
 from .project_maintenance import ProjectMaintenance
 from .project_releases import ProjectReleases
+from .project_exports import ProjectExports
 
 
 class ProjectConflict(ObjectConflict):
@@ -34,7 +35,7 @@ def logical_key(kind, identity):
     return hashlib.sha256((kind + '\n' + identity).encode()).hexdigest()
 
 
-class ProjectService(ProjectReleases, ProjectMaintenance, ProjectEvents, ProjectReports, ProjectEvidence, ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
+class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, ProjectEvents, ProjectReports, ProjectEvidence, ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
     conflict = ProjectConflict
     def __init__(self, database, access, *, clock=None):
         self.database, self.access = database, access
@@ -280,9 +281,14 @@ class ProjectService(ProjectReleases, ProjectMaintenance, ProjectEvents, Project
         for path in definition.get('paths',[]):
             if PurePosixPath(path).is_absolute() or '..' in PurePosixPath(path).parts or '\\' in path:
                 raise ValueError('unsafe_local_selection')
-        selections={'github':{'readme','docs','commits','releases','issues','pull_requests','comments'},'c0_space':{'wiki','sources'}}
+        selections={'github':{'readme','docs','commits','releases','issues','pull_requests','comments'}}
         if adapter in selections and set(definition['include'])-selections[adapter]:
             raise ValueError('invalid_source_selection')
+        if adapter=='c0_space':
+            import re
+            if (len(definition['include'])!=len(set(definition['include'])) or any(value not in ('wiki','sources')
+                    and not re.fullmatch(r'objects:[a-z][a-z0-9_-]{0,63}',value) for value in definition['include'])):
+                raise ValueError('invalid_source_selection')
         if type(expected_revision) is not int or expected_revision<0:
             raise ValueError('invalid_revision')
         if type(authorization_ref) is not str or not authorization_ref.strip() or len(authorization_ref)>512:

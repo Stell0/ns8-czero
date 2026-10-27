@@ -455,3 +455,23 @@ their existing invalidation behavior. Real changes invalidate the target's
 connections. Blocking remains explicit and persistent; the owner cannot be
 blocked. Schema0021 adds only an account access revision and a separate random
 request UUID; browser request secrets and all original authority remain intact.
+
+## Protected research projects (producer candidate)
+
+`ProjectService(database, access).in_space(space_id)` composes validated manifest,
+topic governance, atomic queue/budget/run leasing, monitoring, evidence/results,
+reporting, calendar and maintenance over existing protected typed/knowledge
+storage. Managed immutable object schemas require trusted operations; ordinary
+object writes cannot bypass policy. Current roles/scopes are checked inside the
+transaction. Logical receipts and fenced state are separate from uncertain
+external calls. Sources, Wiki revisions, claims and annotations reuse their
+existing services. There is no generative runtime or arbitrary job handler.
+
+`export_page(actor, kind, ...)` uses an explicit read-only catalog, current Reader
+authority, scoped cursors, finite aggregate pages and immutable text fragments.
+It includes actual project/knowledge identities and available histories, not
+authority tables, server paths or unavailable historical payloads. Multi-request
+export is change-detected, not a transaction snapshot or native backup. Client
+collectors, YAML and legacy/static preparation are external integration code,
+not Core dependencies. Final released-version/default consumer adoption is a
+separate gate in PLAN.md; old released Core rejects new project operations.

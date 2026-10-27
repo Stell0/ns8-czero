@@ -686,7 +686,36 @@ def seed_project_state(browser, profile, space_id, sources=None):
                 retained[kind]=request('/records?kind='+kind+'&limit=100')
         for kind in ('run_v1','checkpoint_v1','queue_v1','admission_v1','budget_v1','budget_pointer_v1','attempt_v1','invocation_v1'):
             retained[kind]=request('/records?kind='+kind+'&limit=100')
-    return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history,'source_records':retained}
+    exported=project_export_probe(browser) if 'project_export_get' in operations else None
+    return {'setup':setup, 'initial':first, 'current':current, 'topic':topic, 'history':history,'source_records':retained,'exported':exported}
+
+
+def project_export_probe(browser):
+    """Actual scoped HTTP export readback, including immutable Markdown bytes."""
+    def get(kind,**values):
+        status,body,_=browser.api('/api/v1/project/export?'+urlencode({'kind':kind,**values}))
+        assert status==200,'Project export missing or denied'
+        return json.loads(body)
+    catalog=get('catalog');kinds={row['kind'] for row in catalog['rows']}
+    assert {'objects','object_types','wiki_revisions','source_versions','claims','annotations'}<=kinds,'Incomplete project export catalog'
+    assert not kinds.intersection({'oauth_grants','oauth_tokens','accounts','sessions'}),'Authentication exported'
+    result={}
+    for kind in ('objects','object_types','wiki_revisions','source_versions','claims','annotations'):
+        rows=[];cursor=''
+        for _ in range(100):
+            response=get(kind,after=cursor,limit=100);rows.extend(response['rows']);cursor=response['next_cursor']
+            if not cursor:break
+        assert not cursor,'Native project export did not finish bounded pagination'
+        result[kind]=rows
+    for revision in result['wiki_revisions']:
+        body='';cursor=''
+        for _ in range(100):
+            fragment=get('wiki_text',resource_id=revision['id'],after=cursor);part=fragment['rows'][0]
+            assert part['start_char']==len(body) and part['id']==revision['id'],'Export fragment identity changed'
+            body+=part['body'];cursor=fragment['next_cursor']
+            if not cursor:break
+        assert not cursor and hashlib.sha256(body.encode()).hexdigest()==revision['content_hash'],'Export Markdown changed'
+    return result
 
 
 def verify_project_state(browser, profile, expected, *, admin=False):
@@ -701,6 +730,8 @@ def verify_project_state(browser, profile, expected, *, admin=False):
     assert request('/records?kind=topic_v1&limit=100')['objects'] == [expected['topic']], 'Topic identity/provenance changed'
     for kind,records in expected.get('source_records',{}).items():
         assert request('/records?kind='+kind+'&limit=100')==records,'Project source/workflow state/history changed during recovery'
+    if expected.get('exported') is not None:
+        assert project_export_probe(browser)==expected['exported'],'Project interchange identities/history changed during recovery'
     if 'report_v1' in expected.get('source_records',{}):
         view=request('/reports')
         assert view['report']==expected['source_records']['report_v1']['objects'][0], 'Saved project report readback changed'

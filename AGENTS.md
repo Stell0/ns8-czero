@@ -411,3 +411,29 @@ up-to-date or trigger installation. Reuse trusted Core input schemas in tool
 metadata, keeping Core validation and old released-Core upgrade guards. See
 docs/projects/MAINTENANCE.md. M5 exact full/native acceptance passes; M6 acceptance
 and M7–M8 remain outstanding. No live migration, deployment or schedule activation.
+
+## Project export/preparation conventions
+
+M6 corrected1000839 full40414161692 and independent actual native/artifact audits
+pass; M7 export/preparation is under validation. The Core export reader uses a
+fixed table/column catalog, current space Reader authority, bounded pages and
+immutable text fragments. Never export authentication/session tables, server
+paths or invent historical object/claim payloads. Two-pass metadata/cursor
+comparison detects concurrent changes; it is not a transaction snapshot. Native
+DB/files backup remains the complete original-binary recovery path.
+
+External tools write new private0700/0600 destinations, read back SHA-256 and
+reject symlinks/traversal/partial inventories. Offline WikiPlant preparation
+never executes upstream code or binds target IDs. Serialized page envelopes
+produce blocking repair proposals, keeping original bytes unchanged. Static
+export requires both explicit immutable selection and saved public metadata;
+never add private dependencies or deploy output automatically.
+
+Client YAML uses bounded SafeLoader with duplicate/alias/tag denial; no Core or
+runtime YAML dependency. Private GitHub collection is explicit destination/repo
+consent using existing worker credentials, exact namespace and fresh access/ID
+checks before frozen replay. Public-only defaults remain. Typed C0 subscriptions
+select registered types and independently authorized source space; no implicit
+cross-space graph authority. Keep source text untrusted and independent English/
+Italian synthetic fixtures. See docs/projects/EXPORTS.md. M8 release/default
+adoption and actual external-agent/unattended verification remain outstanding.

@@ -246,10 +246,23 @@ def sitemap(config, *, fetcher, cursor=None, **_):
     return batch
 
 
-def github(config, *, github, cursor=None, **_):
+def github(config, *, github, cursor=None, private_authorization_ref='', **_):
     batch=Batch(); repo=config['repository'];base='/repos/'+repo
-    metadata,_=github.get(base)
-    if metadata.get('private') is not False: raise C0Error('public_github_repository_required')
+    try:metadata,_=github.get(base)
+    except GitHubError as error:
+        if error.retry_at:
+            from datetime import datetime,timezone
+            batch.retry_after=datetime.fromtimestamp(error.retry_at,timezone.utc).isoformat()
+        return batch.partial('github_repository_unavailable')
+    if type(metadata) is not dict or type(metadata.get('id')) is not int or metadata['id']<=0:
+        return batch.partial('github_repository_metadata_invalid')
+    private=metadata.get('private') is True
+    if private:
+        if (not private_authorization_ref or getattr(github,'authorized_private_repository','')!=repo
+                or metadata.get('full_name','').casefold()!=repo.casefold()):raise C0Error('explicit_private_repository_authorization_required')
+    elif metadata.get('private') is not False:raise C0Error('public_github_repository_required')
+    visibility={'repository':repo,'source_visibility':'private' if private else 'public'}
+    if private:visibility['private_authorization_ref']=private_authorization_ref
     repository_id=str(metadata['id']);
     resumed=cursor if cursor and cursor.get('complete') is False else {}
     if resumed and resumed.get('repository_id')!=repository_id:raise C0Error('github_cursor_repository_mismatch')
@@ -288,7 +301,7 @@ def github(config, *, github, cursor=None, **_):
                     if len(content)>config['max_bytes']:return batch.partial('source_content_too_large')
                     batch.add(Item(config['id'],repository_id+':document:'+document['path'],document['path'],content,
                         'text/markdown',document.get('html_url',''),document.get('html_url',''),
-                        provenance={'source_type':'github_document','repository_id':repository_id,'blob_sha':document['sha']}))
+                        provenance={'source_type':'github_document','repository_id':repository_id,'blob_sha':document['sha'],**visibility}))
                     progress[kind]={'index':number+1}
                 progress[kind]=None
                 continue
@@ -305,7 +318,6 @@ def github(config, *, github, cursor=None, **_):
                 progress[kind]={'url':path,'index':start}
                 try:rows,following=github.get(path)
                 except Exception as error:
-                    from github_vault.github_client import GitHubError
                     if not isinstance(error,GitHubError):raise
                     if error.retry_at:
                         from datetime import datetime,timezone
@@ -323,7 +335,7 @@ def github(config, *, github, cursor=None, **_):
                     published=row.get('published_at') or row.get('created_at') or row.get('commit',{}).get('author',{}).get('date','')
                     batch.add(Item(config['id'],external,str(row.get('title') or row.get('name') or row.get('sha') or external),body,
                         'text/plain',row.get('html_url',''),row.get('html_url',''),source_date(published),source_date(row.get('updated_at','')),
-                        provenance={'source_type':'github_'+kind,'repository_id':repository_id}))
+                        provenance={'source_type':'github_'+kind,'repository_id':repository_id,**visibility}))
                     progress[kind]={'url':path,'index':index+1}
                 path=following;start=0
                 progress[kind]={'url':path,'index':0} if path else None
@@ -347,27 +359,43 @@ def c0_space(config, *, source_client, cursor=None, **_):
         return source_client.call(name,**arguments)
     # Capture a feed boundary before the snapshot. Later changes remain uncovered
     # until a future verified snapshot; reads never advance a target cursor.
-    progress=dict(cursor) if cursor and cursor.get('complete') is False else {'phase':'wiki','offset':0,'after':(cursor or {}).get('after',0),'complete':False}
-    if (set(progress)-{'phase','offset','after','boundary','complete','feed_incomplete'} or progress.get('phase') not in ('wiki','sources')
+    phases=config['include'] or ['wiki','sources'];typed=any(value.startswith('objects:') for value in phases)
+    progress=dict(cursor) if cursor and cursor.get('complete') is False else {'phase':phases[0],'offset':0,'after':(cursor or {}).get('after',0),'complete':False}
+    if typed:progress.setdefault('object_after',(cursor or {}).get('object_after',0))
+    if (set(progress)-{'phase','offset','after','boundary','complete','feed_incomplete','object_after','object_boundary','object_feed_incomplete'} or progress.get('phase') not in phases
             or type(progress.get('offset')) is not int or not 0<=progress['offset']<=10000
-            or type(progress.get('after')) is not int or progress['after']<0):raise C0Error('invalid_c0_source_cursor')
+            or type(progress.get('after')) is not int or progress['after']<0
+            or typed and (type(progress['object_after']) is not int or progress['object_after']<0)):raise C0Error('invalid_c0_source_cursor')
     batch.cursor=progress
     try:
-        if 'boundary' not in progress:
+        if any(value in ('wiki','sources') for value in phases) and 'boundary' not in progress:
             changes=call('knowledge_changes',after=progress['after'],limit=100)['changes']
             progress['boundary']=max([row['id'] for row in changes]+[progress['after']])
             progress['feed_incomplete']=len(changes)==100
-        include=config['include'] or ['wiki','sources']
-        for phase in ('wiki','sources'):
-            if phase=='wiki' and progress['phase']=='sources':continue
-            if phase not in include:continue
+        if typed and 'object_boundary' not in progress:
+            changes=call('objects_changes',after=progress['object_after'],limit=100)['events']
+            progress['object_boundary']=max([row['id'] for row in changes]+[progress['object_after']])
+            progress['object_feed_incomplete']=len(changes)==100
+        for phase in phases[phases.index(progress['phase']):]:
             progress['phase']=phase
+            spec=call('object_types_get',type_name=phase.split(':',1)[1]) if phase.startswith('objects:') else None
+            if spec and spec['name']!=phase.split(':',1)[1]:raise C0Error('source_object_type_mismatch')
             while True:
                 offset=progress['offset'];size=min(100,config['max_items'])
-                response=call('wiki_pages_list' if phase=='wiki' else 'sources_list',limit=size,offset=offset)[ 'pages' if phase=='wiki' else 'sources']
+                response=(call('objects_list',type_name=spec['name'],limit=size,offset=offset)['objects'] if spec else
+                    call('wiki_pages_list' if phase=='wiki' else 'sources_list',limit=size,offset=offset)['pages' if phase=='wiki' else 'sources'])
                 for page in response:
                     if len(batch.items)>=config['max_items']:return batch.partial('source_item_limit')
-                    if phase=='wiki':
+                    if spec:
+                        saved=call('objects_get',object_id=page['id'])
+                        if saved['type_name']!=spec['name']:raise C0Error('source_object_type_mismatch')
+                        content=json.dumps({'object':saved,'type':spec},sort_keys=True,ensure_ascii=False,indent=2).encode()
+                        if len(content)>config['max_bytes']:return batch.partial('source_content_too_large')
+                        batch.add(Item(config['id'],'object:'+saved['id'],spec['label']+' · '+saved['id'],content,
+                            provenance={'source_type':'c0_typed_object','space_id':source_client.space_id,
+                                'object_id':saved['id'],'type_name':spec['name'],'schema_hash':sha(spec['schema']),
+                                'revision':saved['revision'],'c0_created_at':saved['created_at'],'c0_updated_at':saved['updated_at']}))
+                    elif phase=='wiki':
                         saved=call('wiki_pages_get',page_id=page['id'],revision=page['revision'])['content']
                         batch.add(Item(config['id'],'wiki:'+page['id'],saved['title'],saved['body'].encode(),'text/markdown',
                             provenance={'source_type':'c0_space','space_id':source_client.space_id,'page_id':page['id'],
@@ -384,10 +412,12 @@ def c0_space(config, *, source_client, cursor=None, **_):
                     progress['offset']+=1
                 if len(response)<size:break
             progress['offset']=0
-        progress.update(complete=batch.status=='complete',after=progress['boundary'])
+        progress.update(complete=batch.status=='complete',after=progress.get('boundary',progress['after']))
         progress.pop('boundary',None)
-        if progress.pop('feed_incomplete',False):
-            batch.partial('source_change_feed_incomplete');progress.update(complete=False,phase='wiki',offset=0)
+        if typed:progress['object_after']=progress.pop('object_boundary',progress['object_after'])
+        incomplete=progress.pop('feed_incomplete',False)|progress.pop('object_feed_incomplete',False)
+        if incomplete:
+            batch.partial('source_change_feed_incomplete');progress.update(complete=False,phase=phases[0],offset=0)
     except C0Error:return batch.partial('source_read_or_authority_failed')
     return batch
 

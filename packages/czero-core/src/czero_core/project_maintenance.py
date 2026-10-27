@@ -353,12 +353,16 @@ class ProjectMaintenance:
                     OR r.data->>'status' IN ('blocked','deferred','retry_wait','awaiting_merge')
                     OR (r.type_name=:run AND r.data->>'state'='running' AND r.data->>'lease_expiry'<>''
                         AND (r.data->>'lease_expiry')::timestamptz<:now)))
-                    OR (r.type_name=:admission AND r.data->>'reason'='historical_inventory_requires_review'
-                        AND NOT EXISTS(SELECT 1 FROM c0_objects a WHERE a.space_id=r.space_id AND a.type_name=:admission
-                            AND a.data->>'candidate_id'=r.data->>'candidate_id' AND a.created_at>r.created_at
-                            AND a.data->>'target_id'<>''))) ORDER BY r.updated_at DESC,r.id DESC LIMIT 20'''),
+                    OR (r.type_name=:release AND r.data->>'status' IN ('failed','partial','security_alert'))
+                    OR (r.type_name=:admission AND (r.data->>'reason'='historical_inventory_requires_review'
+                        OR r.data->>'disposition'='needs_user_scope_decision')
+                        AND NOT EXISTS(SELECT 1 FROM c0_objects a JOIN c0_object_events ae
+                            ON ae.space_id=a.space_id AND ae.object_id=a.id JOIN c0_object_events re
+                            ON re.space_id=r.space_id AND re.object_id=r.id WHERE a.space_id=r.space_id AND a.type_name=:admission
+                            AND a.data->>'candidate_id'=r.data->>'candidate_id' AND ae.feed_cursor>re.feed_cursor
+                            AND (a.data->>'target_id'<>'' OR a.data->>'disposition' IN ('reject_scope','archive_candidate'))))) ORDER BY r.updated_at DESC,r.id DESC LIMIT 20'''),
                 {'space':self._space_id,'run':PREFIX+'run_v1','queue':PREFIX+'queue_v1',
-                    'audit':PREFIX+'audit_v1','admission':PREFIX+'admission_v1','now':self.clock()}).mappings()]
+                    'audit':PREFIX+'audit_v1','admission':PREFIX+'admission_v1','release':PREFIX+'release_check_v1','now':self.clock()}).mappings()]
             findings=connection.execute(text("SELECT COALESCE(sum((data->>'issue_count')::int),0) FROM c0_objects WHERE space_id=:space AND type_name=:type"),
                 {'space':self._space_id,'type':PREFIX+'audit_observation_v1'}).scalar_one()
         report=self.get_report(actor)

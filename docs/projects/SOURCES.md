@@ -8,7 +8,10 @@ Neither fetches URLs in the C0 server nor executes document instructions.
 
 ## Configuration and authorization
 
-Use strict TOML or JSON (not YAML). All definitions validate before network I/O.
+Use strict TOML, JSON or YAML. All definitions validate before network I/O.
+YAML uses a bounded SafeLoader without aliases, duplicate/non-string keys,
+custom tags or non-JSON values. Dates remain strings. Configuration is bounded
+at64 KiB/10000 nodes/depth20; no executable constructors are accepted.
 An existing protected project space must be initialized separately. The existing
 private-job initializer creates only local files:
 
@@ -39,7 +42,8 @@ Revoking source-space access blocks future refreshes; already authorized copies
 retain their immutable evidence inside the separately protected target space.
 Scan fetches and saves a private local snapshot, without C0 writes. Dry-run may
 fetch/read but writes no C0 state. Resume publishes the exact saved scan without
-fetching again; verify only checks an already verified receipt and evidence.
+fetching content again; private GitHub replay also rechecks current consent and
+access. Verify only checks an already saved receipt and evidence.
 
 ```toml
 schema_version = 1
@@ -95,8 +99,8 @@ Public fetches reject non-global DNS answers, pin the verified public peer,
 verify TLS/SNI, ignore proxy credentials, restrict ports and disallow cross-host
 redirects or HTTPS downgrade. Credentials/query secrets are forbidden. Local
 reads use no-follow directory/file descriptors; symlinks/traversal, credential
-filenames and unsupported files reject. GitHub collection is anonymous/public
-only and preserves original bodies while removing credential-like API fields.
+filenames and unsupported files reject. GitHub collection defaults to anonymous
+public repositories and preserves original bodies while removing credential-like API fields.
 A new adapter can return Item/Batch without changing the publisher.
 
 ## Persistence and recovery
@@ -141,3 +145,37 @@ WikiPlant data has been synchronized by this implementation task.
 Publication now uses [fenced source-sync runs](WORKFLOWS.md#source-synchronization)
 while retaining the private job lock and normal source/version APIs. Scan, dry-run,
 status and verification remain read-only with respect to C0 workflow state.
+
+## Explicit private GitHub collection
+
+Private repositories require a separate local0600 JSON/YAML authorization file
+and `--private-github-authorization FILE` on each collection/replay. It contains
+schema_version1, project_space_id, an exact repositories list and an attributed
+authorization_ref. It contains no credentials. The selected repository must also
+be explicitly approved in the destination project connector definition.
+
+The worker reuses GITHUB_TOKEN/GH_TOKEN or the existing gh authentication helper;
+there is no new C0 authentication mechanism. Requests bind the exact repository
+namespace on api.github.com, deny redirects/cross-repository paths and require
+fresh repository metadata authorization before cached content. Private logs
+omit repository paths and tokens; provenance retains actual repository identity,
+visibility and authorization reference. Frozen replay requires current local
+consent and a fresh matching numeric repository ID/access check before any C0
+publication/run mutation. Removed consent, expired authentication or revoked
+access blocks replay. Previously authorized immutable evidence stays protected
+in its destination. Public-only behavior remains the default.
+
+## Typed C0-space subscriptions
+
+`c0_space.include` accepts `wiki`, `sources` and explicitly selected
+`objects:<registered-type-name>`. Schema and record revisions are preserved as
+source content/provenance. Knowledge and object change cursors remain separate;
+bounded partial inventories resume without treating an incomplete scan as a
+successful cursor. The worker selects the source with its own current Read
+authorization on every refresh. Destination approval does not grant source
+access. No graph traversal or implicit cross-space permission is introduced.
+Tests include a third protected space containing synthetic GitHub knowledge,
+incremental object revisions and revoked source grants.
+
+See [export/preparation contracts](EXPORTS.md) and the fabricated reference
+configurations for offline fixtures. No production source was imported.

@@ -22,6 +22,7 @@ from .workflow import SourceWorkflow
 from .agent_packages import save_package
 from .reports import save_report,validate_plan
 from .maintenance import check_release,validate_release_plan
+from .private_sources import load_authorization,require_snapshot_permission
 from .publish import approved, listing, parts, sync_part, verify, prior_receipt, locate, save_snapshot
 
 
@@ -98,7 +99,29 @@ def bootstrap(client,config,authorization_ref):
 
 
 def run(args, *, client_factory=C0):
+    if args.group=='wikiplant':
+        from .legacy import validate_snapshot
+        if args.operation!='validate' or not args.input or not args.output or args.apply:raise C0Error('offline_legacy_validation_requires_input_output')
+        result=validate_snapshot(args.input,args.output,max_files=args.max_records,max_bytes=args.max_bytes)
+        return result,0 if result['status']=='VALIDATED' else 2
+    if args.group=='export' and args.operation=='static':
+        from .static_export import export_static
+        from .formats import load_data
+        if not args.input or not args.output or not args.selection or args.apply:raise C0Error('explicit_offline_static_selection_required')
+        selection=load_data(safe_read(args.selection.parent,args.selection.name,65536).decode(),args.selection.suffix.lstrip('.'))
+        return export_static(args.input,selection,args.output),0
+    if args.group=='export' and args.operation=='verify':
+        from .exporting import verify_export
+        if not args.input or args.apply:raise C0Error('offline_export_validation_requires_input')
+        return verify_export(args.input),0
+    if not args.config:raise C0Error('explicit_project_configuration_required')
     config=load_config(args.config,allow_empty_sources=args.group=='project') # Validate before network.
+    private_authorizations=load_authorization(getattr(args,'private_github_authorization',None),config)
+    if args.group=='project' and args.operation=='export':
+        from .exporting import validate_export_limits
+        validate_export_limits(args.max_records,args.max_bytes)
+        if not args.output or args.apply or args.output.exists() or any(path.is_symlink() for path in (args.output,*args.output.absolute().parents)):
+            raise C0Error('exclusive_private_export_output_required')
     report_plan=None
     if args.group=='project' and args.operation=='report':
         if args.dry_run or not args.apply or not args.input:raise C0Error('explicit_report_plan_and_apply_required')
@@ -136,6 +159,10 @@ def run(args, *, client_factory=C0):
                 selected=client.select_space(connection['space_id'],writable=(args.group!='project' or args.operation in ('report','release-check')) and not args.dry_run and args.operation!='verify')
                 if selected['name']!=connection['space_name']:raise C0Error('target_space_name_changed')
             if args.group=='project':
+                if args.operation=='export':
+                    from .exporting import export_project
+                    result=export_project(client,args.output,max_records=args.max_records,max_bytes=args.max_bytes)
+                    return result,0 if result['status']=='VALIDATED' else 2
                 if args.operation=='release-check':
                     observation=check_release(client,release_plan,dry_run=args.dry_run)
                     return observation,2 if observation['status'] in ('BLOCKED','PARTIAL') else 0
@@ -150,6 +177,7 @@ def run(args, *, client_factory=C0):
                 return bootstrap(client,config,args.authorization_ref),0
             if (state/'latest.json').is_symlink() or (state/'publication.json').is_symlink() or (state/'scans').is_symlink():raise C0Error('unsafe_private_state_path')
             latest=read(state/'latest.json',{})
+            private_verified=set()
             if args.operation in ('scan','sync'):
                 batches=[];total=0
                 for definition in config['sources']:
@@ -174,12 +202,21 @@ def run(args, *, client_factory=C0):
                             # remote page offset. Re-enumerate and deduplicate.
                             cursor={};kwargs['cursor']=cursor;cycle=uuid4().hex;cache=state/'github'/cycle
                         cache.mkdir(parents=True,exist_ok=True,mode=0o700)
-                        kwargs['github']=GitHub(cache,{'max_requests':definition['max_requests'],'max_retries':2,'max_wait_seconds':30},resume=True,anonymous=True,preserve_bodies=True,max_response_bytes=definition['max_bytes'],request_timeout=definition['timeout'])
+                        private_ref=private_authorizations.get(definition['repository'].casefold(),'')
+                        try:
+                            kwargs['github']=GitHub(cache,{'max_requests':definition['max_requests'],'max_retries':2,'max_wait_seconds':30},
+                                resume=True,anonymous=not bool(private_ref),preserve_bodies=True,max_response_bytes=definition['max_bytes'],
+                                request_timeout=definition['timeout'],authorized_private_repository=definition['repository'] if private_ref else None)
+                            kwargs['private_authorization_ref']=private_ref
+                        except GitHubError:
+                            batches.append((definition,Batch(cursor=cursor,status='partial',errors=['private_source_authentication_required'])));continue
                     try:
                         if definition['adapter']=='c0_space':
                             source=client_factory(connection);stack.callback(source.close)
                             source.select_space(definition['source_space_id'],writable=False);kwargs['source_client']=source
                         batch=collect(definition,root=job,**kwargs)
+                        if definition['adapter']=='github' and any(item.provenance.get('source_visibility')=='private' for item in batch.items):
+                            private_verified.add(definition['repository'].casefold())
                         if definition['adapter']=='github':batch.cursor['cache_id']=cycle
                     except (C0Error,GitHubError):batch=Batch(cursor=cursor,status='partial',errors=['source_collection_failed'])
                     total+=sum(len(item.content) for item in batch.items)
@@ -198,6 +235,16 @@ def run(args, *, client_factory=C0):
             for source in manifest['sources']:
                 definition=next((d for d in config['sources'] if d['id']==source['connector_id']),None)
                 if not definition or sha(definition)!=source['definition_hash']:raise C0Error('scan_configuration_changed')
+                if args.operation!='verify':
+                    def private_preflight():
+                        cache=state/'private-preflight'/definition['id'];cache.mkdir(parents=True,exist_ok=True,mode=0o700)
+                        try:
+                            api=GitHub(cache,{'max_requests':definition['max_requests'],'max_retries':2,'max_wait_seconds':30},
+                                anonymous=False,authorized_private_repository=definition['repository'],max_response_bytes=definition['max_bytes'],request_timeout=definition['timeout'])
+                            return api.get('/repos/'+definition['repository'])[0]
+                        except GitHubError:raise C0Error('private_source_access_not_current') from None
+                    require_snapshot_permission(definition,source['items'],private_authorizations,
+                        preflight=None if definition.get('repository','').casefold() in private_verified else private_preflight)
                 approved(client,definition);verified=0;count=0;verified_refs=[]
                 publisher=client
                 if not args.dry_run and args.operation!='verify' and source.get('attempted',True):
@@ -238,26 +285,32 @@ def run(args, *, client_factory=C0):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('group',choices=['sources','auth','project'])
-    parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule','report','release-check'])
-    parser.add_argument('--config',type=Path,required=True)
+    parser.add_argument('group',choices=['sources','auth','project','export','wikiplant'])
+    parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule','report','release-check','export','static'])
+    parser.add_argument('--config',type=Path)
     parser.add_argument('--job',type=Path)
     parser.add_argument('--dry-run',action='store_true')
     parser.add_argument('--apply',action='store_true')
     parser.add_argument('--authorization-ref')
     parser.add_argument('--output',type=Path)
     parser.add_argument('--input',type=Path)
+    parser.add_argument('--selection',type=Path)
+    parser.add_argument('--private-github-authorization',type=Path)
+    parser.add_argument('--max-records',type=int,default=10000)
+    parser.add_argument('--max-bytes',type=int,default=100*1024*1024)
     parser.add_argument('--format',choices=['skill','plugin'],default='skill')
     parser.add_argument('--chatgpt-app-id',default='')
     args=parser.parse_args(argv)
     if args.group=='auth' and args.operation not in ('login','bind-account','disconnect'):parser.error('Choose an auth operation')
     if args.group=='sources' and args.operation in ('login','bind-account','disconnect'):parser.error('Choose a source operation')
-    if args.group=='sources' and args.operation in ('skill','schedule','report','release-check'):parser.error('Choose a source operation')
-    if args.group=='project' and args.operation not in ('validate','skill','schedule','report','release-check'):parser.error('Choose a project operation')
+    if args.group=='sources' and args.operation in ('skill','schedule','report','release-check','export','static'):parser.error('Choose a source operation')
+    if args.group=='project' and args.operation not in ('validate','skill','schedule','report','release-check','export'):parser.error('Choose a project operation')
+    if args.group=='export' and args.operation not in ('verify','static'):parser.error('Choose export verify/static')
+    if args.group=='wikiplant' and args.operation!='validate':parser.error('Choose wikiplant validate')
     if args.operation in ('sync','resume') and not args.dry_run and not args.apply:parser.error('Choose --dry-run or --apply explicitly')
     try:
         result,code=run(args);print(json.dumps(result,ensure_ascii=False,sort_keys=True));return code
-    except (C0Error,OSError,ValueError,KeyError):
+    except (C0Error,OSError,ValueError,KeyError,TypeError):
         print(json.dumps({'status':'BLOCKED','error':'operation_failed_inspect_private_state_and_authority'}));return 1
 
 

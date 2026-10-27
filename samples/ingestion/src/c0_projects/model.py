@@ -5,11 +5,11 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import tomllib
 from urllib.parse import urlsplit, parse_qsl
 from uuid import UUID
 
 from c0_ingest.errors import C0Error
+from .formats import load_data
 
 ADAPTERS = {'local_files', 'http', 'rss_atom', 'sitemap', 'github', 'c0_space', 'wikiplant_export'}
 DEFAULTS = {'enabled': True, 'include': [], 'max_items': 100, 'max_requests': 40,
@@ -70,7 +70,9 @@ def source_config(value):
             if Path(path).is_absolute() or any(part in ('.','..') for part in Path(path).parts) or '\\' in path:
                 raise C0Error('unsafe_local_selection')
     if adapter=='c0_space':
-        if set(result['include'])-{'wiki','sources'}:raise C0Error('invalid_c0_source_selection')
+        if (len(result['include'])!=len(set(result['include'])) or any(value not in ('wiki','sources')
+                and not re.fullmatch(r'objects:[a-z][a-z0-9_-]{0,63}',value) for value in result['include'])):
+            raise C0Error('invalid_c0_source_selection')
         if type(result.get('source_space_id')) is not str:raise C0Error('explicit_source_space_required')
         try: UUID(result['source_space_id'])
         except (ValueError,KeyError,TypeError): raise C0Error('explicit_source_space_required') from None
@@ -86,7 +88,7 @@ def load_config(path,*,allow_empty_sources=False):
     if path.stat().st_size>65536:
         raise C0Error('source_configuration_too_large')
     try:
-        data=json.loads(path.read_text()) if path.suffix=='.json' else tomllib.loads(path.read_text())
+        data=load_data(path.read_text(),path.suffix.lstrip('.'))
         if set(data)-{'schema_version','server_url','project_space_id','sources'} or type(data.get('schema_version')) is not int or data['schema_version']!=1:
             raise ValueError()
         if type(data.get('project_space_id')) is not str or type(data.get('server_url')) is not str or any(ord(c)<=32 for c in data['server_url']):raise ValueError()
