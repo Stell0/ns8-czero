@@ -507,7 +507,9 @@ protected work, then `renew_browser` only after a successful authenticated brows
 response. That final transaction rechecks current membership, native authority
 and the live cookie; it cannot revive expiry or logout. Send only the opaque
 Secure/HttpOnly/SameSite cookie, renewing its seven-day expiry after success.
-Delegated traffic never calls `renew_browser`. Ordinary OAuth grants from a
+Ordinary browsers also retain their own idle deadline; migration snapshots the
+existing deadline without extending it. Delegated traffic never renews browser
+inactivity or calls `renew_browser`. Ordinary OAuth grants from a
 remembered browser keep the configured finite session maximum. Persistent grants
 still require separate explicit background consent and retain their independent
 inactivity policy, including when that policy is shorter than seven days.

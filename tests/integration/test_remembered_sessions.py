@@ -155,3 +155,19 @@ def test_membership_revocation_wins_over_inflight_remembered_renewal(persistent)
         f['access'].set_role(f['context'].actor,member.user_id,None);release.set()
         with pytest.raises((PermissionDenied,RenewalRejected)):future.result(10)
     with pytest.raises((PermissionDenied,RenewalRejected)):f['sessions'].renew_browser(cookie)
+
+
+def test_ordinary_browser_idle_is_independent_of_valid_mcp_refresh(persistent):
+    f=persistent;sessions=f['sessions'];start=f['current'][0]
+    cookie=sessions.create(f['identity'],renewal=RenewalResult(f['identity'],'online-initial'))
+    context=sessions.get(cookie)
+    assert context.expires_at.timestamp()==pytest.approx(start+3600,abs=0.00001,rel=0)
+    pair=f['issue'](session=context,persistent=False)
+    for elapsed in (300,600):
+        f['current'][0]=start+elapsed
+        pair=f['grants'].refresh(pair.refresh_token,f['client']['client_id'],resource=RESOURCE)
+        assert f['grants'].verify(pair.access_token,resource=RESOURCE).actor.is_owner
+    with pytest.raises(SessionRejected):sessions.get(cookie)
+    with pytest.raises(SessionRejected):sessions.renew_browser(cookie)
+    # Browser expiry cannot revoke separately valid finite delegated authority.
+    assert f['grants'].verify(pair.access_token,resource=RESOURCE).actor.is_owner

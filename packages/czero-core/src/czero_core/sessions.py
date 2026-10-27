@@ -215,8 +215,8 @@ class SessionService:
                 VALUES (:token, :account, :csrf, :issuer, :client, :expires, :native,:idle,:seconds,:remembered)
             """), {"token": _digest(cookie), "account": actor.user_id, "csrf": secrets.token_urlsafe(32),
                    "issuer": self.access.issuer, "client": self.client_id, "expires": _date(expires), "native": native_id,
-                   'idle': _date(expires) if remembered else (_date(min(expires,current+self.authority.policy.idle_seconds)) if background else None),
-                   'seconds': REMEMBER_SECONDS if remembered else (self.authority.policy.idle_seconds if background else None),
+                   'idle': _date(expires) if remembered else (_date(min(expires,current+self.authority.policy.idle_seconds)) if native_id is not None else None),
+                   'seconds': REMEMBER_SECONDS if remembered else (self.authority.policy.idle_seconds if native_id is not None else None),
                    'remembered': remembered})
         return cookie
 
@@ -272,13 +272,18 @@ class SessionService:
                 'client': self.client_id, 'now': _date(self._now())}).mappings().one_or_none()
         if row is None:
             raise SessionRejected()
+        native = None
         if row['native_authority_id'] is not None:
             if self.authority is None:
                 raise SessionRejected()
-            self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
+            native = self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
         actor = self.access._actor(connection, row['account_id'])
         actor.require(Role.READER)
-        expires = min(row['expires_at'],row['browser_idle_until']) if row['browser_idle_until'] is not None else row['expires_at']
+        # Ordinary consent retains its original finite delegation deadline; the
+        # bound actor still rechecks the independent browser idle window.
+        expires = row['expires_at']
+        if row['browser_idle_until'] is not None and (native is None or native['authority_kind'] != 'session'):
+            expires = min(expires, row['browser_idle_until'])
         return SessionContext(actor, expires, row['csrf_token'], row['native_authority_id'], row['remembered'])
 
     def destroy(self, cookie: str) -> None:
