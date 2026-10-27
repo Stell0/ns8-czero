@@ -452,12 +452,16 @@ privacy8/accessibility32 and three zero-candidate OAuth-query artifacts. Preserv
 all prior/frozen source/image evidence and the original deployed predecessor
 digests; M7 candidates are not a live deployment.
 
-Core0.34/app0.53/worker0.2 are under final acceptance with schema0021 unchanged.
-The prepublication consumer still pins immutable Core0.33 while explicitly
-supporting local producer0.34. Publish the new immutable library only after its
-exact full/local/both-native/artifact gates; then adopt the verified tag/lock and
-patch-only updater range. Never edit packaged Core bytes after tagging without
-a new version. Keep namespace, auth and schema compatibility checks intact.
+Core0.34/app0.53/worker0.2 use schema0021 unchanged. Exact prepublication cd8e7a8
+full40443878849 and independent actual native/artifact audits pass2262 Python,
+196 Node,21 Robot, Debian upgrade21 and Rocky installation26/three expected skips,
+all8 browsers/privacy8/accessibility32/three zero-query artifacts. Immutable
+core-v0.34.0 points to that source; publication40449147120 and downloaded asset
+checksums pass. Default app/lock now adopt that exact tag with >=0.34,<0.35 and
+matching patch-only Renovate bounds. Never edit packaged Core bytes after tagging
+without a new version. The original fork example retains its independent0.24
+contract. Final ready-PR exact-head proof is recorded on the PR; prepublication
+proof alone cannot authorize its merge. Keep namespace/auth/schema checks intact.
 
 Independent wheel/archive probes must exercise actual protected project state,
 repeat migration/readback, immutable Wiki/source export and current delegated

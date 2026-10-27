@@ -1313,3 +1313,54 @@ frozen predecessor digests, independent project export/grant/migration probes,
 worker installation and explicit readiness limits. The consumer lock still binds
 released0.33; this candidate is not a library publication or default adoption.
 Commit/push and exact full/native/artifact verification precede the new Core tag.
+
+### WikiPlant M8 prepublication accepted; released Core adoption
+
+Exact `cd8e7a8ec1649c5ce8c02a1fc2a264f06d4df9a7`
+[full40443878849](https://github.com/Stell0/ns8-czero/actions/runs/40443878849)
+completed/successful. Actual remote local log records2262 Python/PostgreSQL/
+packaging cases in1190.04 seconds,196 Node and21 Robot checks; schema/shell pass.
+Downloaded native reports pass Debian genuine predecessor upgrade21/no skips and
+Rocky installation26/three expected skips/all8 browser workflows. Full promotion
+verification and independent artifact audit pass8 privacy guards,32 numeric
+accessibility contexts, three OAuth-query artifacts/zero candidates and five
+actual scan/SBOM pairs. Registry configuration/source/all13 layers and installed
+Core/app/project modules/controller/six templates match exact bytes/ownership.
+Worker/YAML packages are absent from runtime. Dive enabled rules pass98.1338%
+efficiency at204561819 bytes; vendor findings remain app171/database414/UI11,
+module/imageroot0. Historical failed/intermediate evidence remains outside Git.
+
+Frozen M8 prepublication candidates (disposable acceptance, not live deployment):
+
+- Module sha256:6273015e198ad854d6fda9d3c0fed9553452d4217d6d0de7a887ceda72d21798
+- App sha256:1a41c422a9c1c634f18013df4e90924c2515fcfc231d74128e0287fcc3cec472
+- Database sha256:8b0e8d3e540aef0e82cea3f5472184a853f4d0833718af514729ce8a481d2c8d
+
+Immutable [core-v0.34.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.34.0)
+points to that accepted source. [Publication40449147120](https://github.com/Stell0/ns8-czero/actions/runs/40449147120)
+completed/successful with8 exact-artifact packaging cases. Actual downloaded
+release assets equal verified distributions and SHA256SUMS. Wheel checksum
+`adbfc9e0422935dcd470b258a633633320b577b1b88faffe0290397fc2f34de8`;
+source archive `4dc21c553974c8ab4431b72982b5c1ed7628aafe0f07a528eaa98b0e2d234bd6`.
+Six additional local actual-asset cases pass58.62 seconds, including reproducible
+rebuild/clean installation and real PostgreSQL migration/state/grant probes.
+
+Default app0.53 now pins this exact released tag/commit in its frozen lock, with
+>=0.34,<0.35 and matching patch-only Renovate bounds. The independent original
+fork example remains0.24. Clean frozen noneditable default installation proves
+Core0.34/app0.53/project services outside the checkout, without worker/YAML/NS8
+packages. Packaged Core bytes and genuine deployed predecessor are unchanged.
+Final ready-PR exact-head full acceptance must pass independently; record its
+actual proof on the PR, avoiding any inference from the earlier green source.
+Adoption-focused source/release checks pass31 cases, maintained documentation
+checks pass287 local links and public-contribution checks pass158 changed files.
+Primary-agent review confirms only the exact released pin/lock, reviewed updater
+bounds/test and acceptance documentation changed after publication; no packaged
+Core bytes, schema, authority or frozen predecessor changed. This is an author
+review, not an independent human review.
+
+The compatibility/readiness reports distinguish implemented/local/disposable
+C0/reference/external-agent/unattended states. Reference deployment, real agent
+research, scheduled execution/notifications/reading and actual migration remain
+separate operational gates. No live project data, spaces, schedules, knowledge,
+Github projects, deployed images or website publishing changed.

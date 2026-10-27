@@ -93,11 +93,13 @@ The read-only `/projects` reader exposes configuration/topics, queue, monitoring
 current connector coverage, pinned reports and bounded errors, with literal
 rendering and access-loss/generation guards. M0–M7 exact full/native acceptance
 passes; [readiness](WIKIPLANT_MIGRATION_READINESS.md) records actual evidence.
-Core0.34/app0.53 distribution is under M8 verification. During prepublication the
-default still pins released Core0.33 and explicitly returns
-`project_core_upgrade_required` for project work. Final immutable release/adoption
-and exact consumer acceptance are required before the default build has project
-availability. No reference-instance deployment or real migration is performed.
+The default Core0.34/app0.53 build pins immutable `core-v0.34.0` with its exact
+source revision in `app/uv.lock`; compatible updates stay within0.34.x and require
+review. Explicit producer development remains available through the established
+local override. Installed wheel/archive and disposable native acceptance pass;
+the final ready PR requires its own complete consumer/full gate. Older Core
+installations fail project operations with `project_core_upgrade_required`.
+No reference-instance deployment or real migration is performed.
 
 See [durable workflow contracts](WORKFLOWS.md) for queue admission, leases,
 fencing, day reservations, invocation uncertainty and source-sync recovery.

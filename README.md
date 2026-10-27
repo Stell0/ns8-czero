@@ -297,8 +297,10 @@ ingestion sample package. [Source contracts](docs/projects/SOURCES.md) describe
 its seven adapters, protected receipts, limits and explicit approval. This
 branch remains an implementation candidate; no live migration is performed.
 
-M0–M7 implementation and exact disposable native acceptance pass. M8 is verifying
-Core0.34/app0.53 distribution and default release adoption; see the
+The project backend is implemented in Core0.34/app0.53 and the external worker0.2.
+The default build pins the verified immutable `core-v0.34.0` release. M0–M8
+prepublication implementation, distribution and disposable native acceptance pass;
+the ready PR requires its own exact-head full gate. See the
 [readiness report](docs/projects/WIKIPLANT_MIGRATION_READINESS.md) for current
 evidence and remaining gates. This does not establish availability on the
 dedicated reference instance or verify an actual external scheduled agent.

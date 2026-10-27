@@ -195,12 +195,19 @@ source/config/layers and packaged project bytes verify; no worker/YAML package
 enters the server image. Static export uses the documented conservative subset
 and snapshot-time explicit public selection. No output is deployed or published.
 
-M8 verifies additive Core0.34/app0.53 and worker0.2 distributions, with schema0021
-unchanged and the original predecessor frozen. Actual installed wheel/archive
+M8 additive Core0.34/app0.53 and worker0.2 distributions retain schema0021 and the
+original frozen predecessor. Exact cd8e7a8 [full40443878849](https://github.com/Stell0/ns8-czero/actions/runs/40443878849)
+and independent actual native/artifact audits pass2262 Python,196 Node,21 Robot,
+Debian upgrade21 and Rocky installation26/three expected skips/all8 browsers,
+privacy8/accessibility32 and three zero-query artifacts. Actual installed wheel/archive
 project writes survive repeated migration; exact Wiki/source/claim exports and
 revoked delegated access are checked without app/NS8. Installed worker CLI
 validates both reference YAML projects and raw layouts without server packages or
-C0 writes. Focused69 packaging/version/SSO-wrapper cases pass. The new library
-publication/default pin adoption and completed ready-PR full gate remain pending.
+C0 writes. Focused69 packaging/version/SSO-wrapper cases pass. Immutable
+[Core0.34.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.34.0)
+publication40449147120 succeeds; actual assets match verified distributions and
+checksums. The default tag/lock and reviewed0.34.x updater bounds adopt this source.
+Final ready-PR exact-head acceptance is recorded on that PR; it must pass the full
+consumer/native/artifact gate independently of the prepublication proof.
 See [readiness](WIKIPLANT_MIGRATION_READINESS.md) for the feature/status matrix and
 independent code/local/disposable/reference/external-agent/unattended states.
