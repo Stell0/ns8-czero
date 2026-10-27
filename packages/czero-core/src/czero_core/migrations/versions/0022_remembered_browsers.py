@@ -26,6 +26,11 @@ def upgrade():
         '(browser_idle_until IS NOT NULL AND browser_idle_seconds IS NOT NULL AND browser_idle_seconds BETWEEN 60 AND 86400 AND browser_idle_until<=expires_at))) OR '
         '(remembered AND native_authority_id IS NOT NULL AND browser_idle_seconds IS NOT NULL AND browser_idle_seconds=604800 '
         'AND browser_idle_until IS NOT NULL AND browser_idle_until=expires_at)')
+    # Preserve the current bound once, then isolate browser activity from MCP.
+    op.execute('''UPDATE c0_sessions s SET browser_idle_until=LEAST(s.expires_at,n.idle_until),
+        browser_idle_seconds=n.idle_seconds FROM c0_native_authority n
+        WHERE s.native_authority_id=n.id AND n.authority_kind='session'
+        AND s.browser_idle_until IS NULL''')
     op.create_table('c0_signin_intents',
         sa.Column('hash', sa.String(64), primary_key=True),
         sa.Column('browser_hash', sa.String(64), nullable=False),
