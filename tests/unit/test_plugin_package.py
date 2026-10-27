@@ -54,7 +54,7 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
         'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md'}
     assert b'project_get' in payload['skills/c0-projects/SKILL.md']
     assert b'project_run_claim' in payload['references/projects.md']
-    assert b'c0.makako.sf.nethserver.net' not in payload['references/projects.md']
+    assert b'{{' not in payload['references/projects.md']
     market = json.loads((a/'.agents/plugins/marketplace.json').read_text())
     assert a.joinpath(market['plugins'][0]['source']['path']).resolve() == base
     assert DOCS['check']([str(p.relative_to(a)) for p in a.rglob('*.md')], root=a) > 0
