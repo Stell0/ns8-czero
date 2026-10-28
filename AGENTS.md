@@ -74,8 +74,10 @@ contracts use explicit upstream links when absent locally. Never initialize a
 project or install an external schedule merely to verify discovery. PR41 repair
 acceptance is tracked in PLAN; no new dedicated deployment is part of this work.
 Its inherited Authlib1.8.0 pin is now rejected by the critical security gate.
-Core0.35.1 prepares Authlib1.9.1 with schema0022 unchanged; require exact producer/
-native/artifact publication before immutable consumer adoption and final PR gates.
+Core0.35.1 is immutably published at6a11469 with Authlib1.9.1 and schema0022
+unchanged after exact full40673116010/native/artifact proof and publisher40680486868.
+The app adopts its tag/lock with >=0.35.1,<0.36 and matching patch-only updater
+bounds. Final consumer/full/native/main gates remain required; see PR41 and PLAN.
 Never waive this finding or override the published Core dependency metadata.
 
 ## Reuse ingestion scripts and preserve private jobs

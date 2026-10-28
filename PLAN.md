@@ -44,15 +44,32 @@ includes the inherited Authlib1.8.0 pin. An actual signed positive/empty-signatu
 negative regression reproduces acceptance of an unsigned JSON payload on1.8.0.
 Do not suppress the finding or override immutable Core dependency metadata.
 
-Prepare Core0.35.1 with Authlib1.9.1, preserving joserfc1.7.5, all other pins,
-schema0022 and authority semantics. Verify the corrected dependency, OIDC/renewal/
-OAuth tests, full producer/native/security/artifact gates and independent package
-installs/migrations. Publish only the exact accepted Core source without replacing
-0.35.0. Then adopt the new immutable tag/lock and compatible patch range, rerun
-final released-consumer/full/native acceptance, review, verify promotion and merge.
-The temporary bridge retains the existing released default until publication;
-only explicit producer development uses the new local Core. No deployment is
-part of this prerequisite. Freeze the installed31b0c85 trio throughout.
+Core0.35.1 pins Authlib1.9.1, preserving joserfc1.7.5, all other pins, schema0022
+and authority semantics. Exact6a11469794d5070af469343aa63715fd0e727d98 passes
+[full40673116010](https://github.com/Stell0/ns8-czero/actions/runs/40673116010):2303
+Python/PostgreSQL/packaging,197 Node24 and21 Robot cases. Local complete producer
+validation independently passes2303 cases in1140.44s without skips. Independent
+developer security/identity/OIDC/renewal/source review passes142 focused cases.
+Actual downloaded native/scan audit passes Debian genuine31b0c85 upgrade21 and
+Rocky installation26/three expected skips, all8 browsers/privacy guards,32 numeric
+accessibility contexts,3 zero-query artifacts and5 scan/SBOM pairs. The app-image
+SBOM confirms Authlib1.9.1. Exact-source full promotion verification passes.
+
+Immutable [Core0.35.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.1)
+points to that source; [publisher40680486868](https://github.com/Stell0/ns8-czero/actions/runs/40680486868)
+passes verify/publish. Actual downloaded wheel SHA256
+`9977a43a5b469089e889b769e92496a40f735c834d0b367d13a8d4456c5939f8` and source
+`70832d916b2c83110ac6406e8f5e641d125a7a84cedaf1a3895bcafe99f20f15` match
+published checksums. Eight actual supplied-artifact checks independently pass
+installations, reproducible rebuild and fresh/repeated PostgreSQL migration in94.56s.
+The bridge retained the existing released default until verified publication;
+packaged Core bytes remain frozen afterward.
+
+The app now adopts the immutable0.35.1 tag/lock with >=0.35.1,<0.36.0 and matching
+patch-only updater bounds. Final released-consumer/full/native acceptance, review,
+promotion verification and actual main publication remain mandatory, with executed
+results recorded on PR41. No deployment is part of this prerequisite. Freeze the
+installed31b0c85 trio throughout;0.35.0 artifacts and historical evidence remain.
 
 ## Seven-day remembered website login — deployed acceptance
 
