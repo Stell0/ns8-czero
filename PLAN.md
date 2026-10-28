@@ -25,6 +25,15 @@ recovery without a blocking finding. These checks are not live model or native
 acceptance. Final exact-source full/native/main results are recorded on
 [PR41](https://github.com/Stell0/ns8-czero/pull/41) after execution.
 
+An actual local default released-Core image passes runtime/legal-content audits
+and generates the1.2.0 plugin with all11 expected files; the native archive guard
+accepts that output. The existing connected host exposes the project catalog;
+profile/authorized-space discovery and the operator-selected protected project's
+manifest/diagnostics reads succeed, with no project writes. Scheduling/monitoring
+remain disabled and no successful external daily/weekly run is reported. This
+proves current-host read-only discovery, not automatic skill activation or
+unattended execution. No connection replacement or scope change was performed.
+
 ## Seven-day remembered website login — deployed acceptance
 
 Base: original main `f317036`. Reviewed/approved [PR42](https://github.com/Stell0/ns8-czero/pull/42) is regularly merged at `31b0c85a71743ab6dcdb04c12ac18dd4c1500722` and the dedicated instance accepts Core 0.35.0 / app 0.54.0 / additive schema 0022. Preserve the historical `c2280f5` trio used for this genuine upgrade; the next genuine predecessor is the [installed `31b0c85` trio](#remembered-login-deployed-runtime-and-frozen-predecessor).
