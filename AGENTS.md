@@ -73,6 +73,10 @@ forks receive the registered developer workflow skill; application-specific proj
 contracts use explicit upstream links when absent locally. Never initialize a
 project or install an external schedule merely to verify discovery. PR41 repair
 acceptance is tracked in PLAN; no new dedicated deployment is part of this work.
+Its inherited Authlib1.8.0 pin is now rejected by the critical security gate.
+Core0.35.1 prepares Authlib1.9.1 with schema0022 unchanged; require exact producer/
+native/artifact publication before immutable consumer adoption and final PR gates.
+Never waive this finding or override the published Core dependency metadata.
 
 ## Reuse ingestion scripts and preserve private jobs
 

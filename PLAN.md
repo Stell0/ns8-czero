@@ -8,7 +8,8 @@ PR41 adds protected-project discovery to the existing instance-bound plugin. Rep
 the skill inventory, standalone-fork references, runtime asset copies/allowlist and
 native downloaded-archive contract together. Preserve the original failed source
 and its evidence; rebase a separate candidate on reviewed main64b183e and retain
-both histories when updating the PR. No Core, schema or dependency change is needed.
+both histories when updating the PR. Schema0022 and the installed runtime remain
+the predecessor; the security prerequisite below adds a compatible Core patch.
 
 Acceptance requires the complete unchanged-main baseline, focused package/fork/
 browser-helper regressions, the complete candidate suite, exact ready-PR full
@@ -33,6 +34,25 @@ manifest/diagnostics reads succeed, with no project writes. Scheduling/monitorin
 remain disabled and no successful external daily/weekly run is reported. This
 proves current-host read-only discovery, not automatic skill activation or
 unattended execution. No connection replacement or scope change was performed.
+
+### Inherited Authlib security prerequisite
+
+Exact repair8a628a9 is blocked by the mandatory app-image critical-vulnerability
+gate in [40672102241](https://github.com/Stell0/ns8-czero/actions/runs/40672102241).
+The newly reviewed [upstream advisory](https://github.com/authlib/authlib/security/advisories/GHSA-6v38-4h7w-rj9h)
+includes the inherited Authlib1.8.0 pin. An actual signed positive/empty-signature
+negative regression reproduces acceptance of an unsigned JSON payload on1.8.0.
+Do not suppress the finding or override immutable Core dependency metadata.
+
+Prepare Core0.35.1 with Authlib1.9.1, preserving joserfc1.7.5, all other pins,
+schema0022 and authority semantics. Verify the corrected dependency, OIDC/renewal/
+OAuth tests, full producer/native/security/artifact gates and independent package
+installs/migrations. Publish only the exact accepted Core source without replacing
+0.35.0. Then adopt the new immutable tag/lock and compatible patch range, rerun
+final released-consumer/full/native acceptance, review, verify promotion and merge.
+The temporary bridge retains the existing released default until publication;
+only explicit producer development uses the new local Core. No deployment is
+part of this prerequisite. Freeze the installed31b0c85 trio throughout.
 
 ## Seven-day remembered website login — deployed acceptance
 

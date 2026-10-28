@@ -309,7 +309,9 @@ host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
 
-The default build pins released Core 0.35.0 for app 0.54.0 / schema 0022.
+The default build currently pins released Core 0.35.0 for app 0.54.0 / schema 0022.
+PR41's security prerequisite prepares Core0.35.1 with Authlib1.9.1; adoption follows
+its immutable publication and full consumer acceptance. See PLAN for exact gates.
 The accepted remembered website login adds an unchecked **Remember this device**
 choice at sign-in. It requires provider-authorized offline renewal and expires
 after seven days without successful website use; use renews that window across
