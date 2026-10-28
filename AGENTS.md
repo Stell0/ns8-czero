@@ -533,11 +533,28 @@ The approved dedicated update and manager restart accept that exact 31b0c85 trio
 
 ## Full-document Explorer candidate
 
-The full-document task uses an isolated feature branch and authorizes no live
-access, deployment or merge. `DocumentService` composes complete immutable
-documents and verified parent snapshots within current Reader/space authority;
-never concatenate retrieval chunks. Part history identity now includes the parent
-hash to preserve unchanged-part reuse across updates. Core0.35.2/schema0022 is a
-publication candidate; keep the released0.35.1 app default until exact Core
-publication and explicit lock adoption. New genuine Playwright acceptance is
-mandatory for this task; the older interactive waiver cannot satisfy it.
+The feature authorizes no live access, deployment or merge. Released Core 0.35.2
+at 3fb900e/schema0022 passes full 40774328932, both native distributions, downloaded
+artifact/privacy/scan audits and exact promotion verification. Publisher 40782732045
+and downloaded checksums pass. Preserve this immutable release; the app 0.55
+candidate pins its exact tag/lock with >=0.35.2,<0.36. No migration is introduced.
+
+DocumentService reads immutable source bodies and verified parent snapshots under
+current Reader/space authority. Never concatenate retrieval chunks. Part history
+identity includes the parent hash; legacy receipt reuse still requires exact full
+hash verification. Keep UUID lookups indexable and the part-exclusion equality
+join: the 10,000-parent regression must pass the unchanged five-second SQL bound.
+
+Ordinary navigation lists bounded summaries. Legacy source/version/chunk links
+resolve containing documents through the authoritative full-document endpoint,
+independently of optional metadata hints. Reuse the allowlisted Markdown renderer,
+worker parsing and yielded DOM construction; access/selection loss invalidates
+all late work. Selected snapshot provenance overrides original source fields;
+malformed optional URLs/dates/paths must not prevent reading. Technical evidence
+retains exact citation IDs, offsets and hashes. No automatic Wiki duplication.
+
+All six genuine disposable Playwright cases are mandatory in runtime CI; the
+older interactive waiver cannot satisfy them. Keep signed test SSO, actual HTTP,
+PostgreSQL and the standalone extraction worker, with sanitized failures and
+owned-fixture cleanup. Final app consumer/native evidence belongs in its PR;
+this is neither a production update nor a stable NS8 module release.

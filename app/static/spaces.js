@@ -20,7 +20,7 @@
     if(!supplied)return value;
     const url=new URL(value,document.baseURI || window.location.href), base=new URL('./api/v1/',document.baseURI || window.location.href);
     const local=url.pathname.slice(base.pathname.length);
-    if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:project|me|wiki|sources|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
+    if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:project|me|wiki|sources|source-documents|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
     return url.pathname+url.search+url.hash;
   }
   function pageURL(value) {
@@ -86,7 +86,7 @@
   if(select)select.addEventListener('change',()=>{
     const chosen=entries.find(s=>s.id===select.value);if(!chosen)return;
     const target=new URL(window.location.href);
-    for(const key of ['page','revision','source','version','chunk','section','query'])target.searchParams.delete(key);
+    for(const key of ['page','revision','source','version','document','snapshot','chunk','section','query'])target.searchParams.delete(key);
     if(chosen.shared)target.searchParams.delete('space_id');else target.searchParams.set('space_id',chosen.id);
     clear('Changing space…');window.location.assign(target.href);
   });

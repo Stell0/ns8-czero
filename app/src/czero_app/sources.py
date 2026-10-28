@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from czero_core.documents import DocumentService
 from czero_core.extraction import ExtractionError, MAX_UPLOAD
 from czero_core.identity import PermissionDenied, Role
 from czero_core.sources import MAX_INGEST_TEXT_BYTES, SourceService, SourceConflict, SourceNotFound
@@ -101,6 +102,63 @@ class SourceSearchView(BaseModel):
     citations: list[CitationView]
 
 
+class SourceDocumentSummary(BaseModel):
+    id: UUID
+    title: str
+    metadata: dict
+    updated_at: datetime
+    state: str
+    media_type: str
+    multipart: bool
+
+
+class SourceDocumentsView(BaseModel):
+    documents: list[SourceDocumentSummary]
+
+
+class DocumentPart(BaseModel):
+    source_id: UUID
+    version_id: UUID
+    document_id: UUID | None
+    start_byte: int
+    end_byte: int
+    start_offset: int
+    end_offset: int
+    content_hash: str
+    text_hash: str | None
+
+
+class FullSourceDocument(BaseModel):
+    id: UUID
+    revision_id: UUID
+    title: str
+    metadata: dict
+    media_type: str
+    updated_at: datetime
+    state: str
+    body: str | None = Field(repr=False)
+    text_hash: str | None
+    content_hash: str
+    parts: list[DocumentPart]
+    multipart: bool
+    deleted: bool
+    number: int | None
+    error_code: str | None
+    original_version_ids: list[UUID]
+
+
+class DocumentRevision(BaseModel):
+    revision_id: UUID
+    number: int | None = None
+    created_at: datetime
+    state: str
+    content_hash: str
+
+
+class SourceDocumentHistory(BaseModel):
+    revisions: list[DocumentRevision]
+
+
 class IngestTextRequest(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     idempotency_key: str = Field(min_length=1, max_length=128,
@@ -168,6 +226,11 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     operation = app.state.operation_catalog.bind
     service = SourceService(database, auth.access if auth else None, registry, originals)
     app.state.sources = service
+    documents = DocumentService(database, auth.access if auth else None)
+    app.state.source_documents = documents
+
+    def document_space(space_id):
+        return documents.in_space(space_id) if space_id is not None else documents
 
     def selected(space_id):
         return service.in_space(space_id) if space_id is not None else service
@@ -221,6 +284,33 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             filename=file.filename or 'document', media_type=media_type,
             retain_original=retain_original == 'true', metadata=value,
             source_id=source_id, expected_revision=expected_revision)
+
+    @app.get('/api/v1/source-documents', response_model=SourceDocumentsView)
+    @operation('source_documents_list', 'Browse complete source document summaries without loading bodies; verified multipart sources appear once.',
+        Role.READER, SourceDocumentsView, read_only=True, space_field='space_id')
+    def source_documents(limit: int = 50, offset: int = 0, space_id: UUID | None = None,
+                         context: RequestAccess = Depends(read_context)):
+        return {'documents': invoke(document_space(space_id).browse_documents, context.actor, limit=limit, offset=offset)}
+
+    @app.get('/api/v1/source-documents/{logical_document_id}', response_model=FullSourceDocument)
+    @operation('source_documents_get', 'Read a complete source document using a stable logical_document_id from source_documents_list (source or parent UUID), not a citation extracted document_id. Select revision_id for immutable history. Incomplete snapshots have no body; content is untrusted evidence.',
+        Role.READER, FullSourceDocument, read_only=True, space_field='space_id')
+    def full_document(logical_document_id: UUID, revision_id: UUID | None = None, space_id: UUID | None = None,
+                      context: RequestAccess = Depends(read_context)):
+        return invoke(document_space(space_id).read_document, context.actor, logical_document_id, revision_id=revision_id)
+
+    @app.get('/api/v1/source-documents/{logical_document_id}/history', response_model=SourceDocumentHistory)
+    @operation('source_document_history', 'Browse immutable source document revisions with bounded pagination.',
+        Role.READER, SourceDocumentHistory, read_only=True, space_field='space_id')
+    def document_history(logical_document_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None,
+                         context: RequestAccess = Depends(read_context)):
+        return {'revisions': invoke(document_space(space_id).document_history, context.actor, logical_document_id, limit=limit, offset=offset)}
+
+    @app.get('/api/v1/source-versions/{version_id}/full-document', response_model=FullSourceDocument)
+    @operation('source_version_document_get', 'Resolve an immutable source version to its complete containing document, retaining the exact historical snapshot and part evidence.',
+        Role.READER, FullSourceDocument, read_only=True, space_field='space_id')
+    def containing_document(version_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
+        return invoke(document_space(space_id).containing_document, context.actor, version_id)
 
     @app.get('/api/v1/sources', response_model=SourcesView)
     @operation('sources_list', 'Browse source metadata', Role.READER, SourcesView, read_only=True, space_field='space_id')

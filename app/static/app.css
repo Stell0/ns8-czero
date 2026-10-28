@@ -40,3 +40,15 @@ section,details{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--li
 
 .pending-notice { background:var(--tint); border-left:.25rem solid var(--accent); padding:.8rem 1rem; font-weight:600; }
 #people-table .access-pending { background:var(--wash); }
+
+.knowledge-categories { display:flex; gap:1rem; flex-wrap:wrap; margin:1rem 0 1.5rem; }
+.source-library ul { list-style:none; padding-left:1rem; }
+.source-library details { border:0; padding:.2rem 0; margin:.25rem 0; }
+.source-library li { margin:.35rem 0; }
+.source-document p, .source-document blockquote { white-space:pre-line; }
+.source-document > * { content-visibility:auto; contain-intrinsic-size:auto 3rem; }
+#reader-provenance a { display:inline-block; margin:0 1rem .5rem 0; }
+#reader-document-toc-panel { margin:1rem 0; }
+#reader-document-toc-panel h3 { font-size:1rem; }
+.source-document pre { white-space:pre; overflow-x:auto; }
+.source-document :not(pre) > code { white-space:break-spaces; }

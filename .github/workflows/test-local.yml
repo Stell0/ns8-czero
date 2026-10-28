@@ -50,6 +50,7 @@ jobs:
           cache-dependency-path: |
             app/pyproject.toml
             packages/czero-core/pyproject.toml
+            tests/e2e/requirements.txt
       - run: pip install uv==0.12.20 pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
       - uses: actions/setup-node@v6
         with:
@@ -58,6 +59,21 @@ jobs:
         run: python scripts/run-ci-feedback.py ci-selection.json
       - if: ${{ !inputs.feedback }}
         run: python -m pytest -q app/tests packages/czero-core/tests tests/unit tests/integration tests/packaging
+      - name: Install pinned disposable browser
+        run: |
+          pip install -r tests/e2e/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Full document browser acceptance
+        env:
+          CZERO_BROWSER_ARTIFACTS: /tmp/c0-document-browser-failures
+        run: python -m pytest -q --tb=short -rA tests/e2e
+      - name: Retain sanitized browser failures
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: document-browser-failures
+          path: /tmp/c0-document-browser-failures/
+          if-no-files-found: ignore
       - run: node --test tests/ui/*.cjs
         if: ${{ !inputs.feedback }}
       - run: go run tests/check_schemas.go

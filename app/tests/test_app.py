@@ -193,7 +193,7 @@ def test_wiki_graph_offers_readable_nodes_edges_and_references(client):
     assert '<summary>Graph JSON</summary>' in page.text
 
 
-@pytest.mark.parametrize('asset', ['site.js', 'reader.js', 'spaces.js', 'space-admin.js', 'vendor/markdown-it-15.0.2.min.js'])
+@pytest.mark.parametrize('asset', ['site.js', 'reader.js', 'markdown-worker.js', 'spaces.js', 'space-admin.js', 'vendor/markdown-it-15.0.2.min.js'])
 def test_reader_assets_are_local_and_work_under_the_instance_prefix(client, asset):
     response = client('/czero/czero17/' + asset)
     assert response.status_code == 200

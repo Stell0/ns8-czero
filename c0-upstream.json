@@ -792,6 +792,21 @@
       "path": "tests/unit/ingestion/test_ingestion_crawl.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "tests/e2e/requirements.txt",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/e2e/conftest.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/e2e/test_document_explorer.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

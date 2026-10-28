@@ -245,3 +245,16 @@ Read-only `project export`, offline `export verify`, `wikiplant validate` and
 [export/preparation contracts](../../docs/projects/EXPORTS.md) and
 [fabricated examples](examples/projects/README.md). They do not import live data,
 create projects, activate schedules or publish a website.
+
+## Full original document publication
+
+Project publication prefers one REST upload for text/Markdown above128 KiB when
+it fits the existing2 MiB/one-million-character extractor bounds.
+`publication_parts` preserves an existing legacy multipart layout on unchanged
+retries; `parts(item, limit=131072)` explicitly exercises that storage format.
+The publisher reconciles uncertain uploads by stable source identity/content hash,
+verifies extraction and immutable citations, then commits a complete parent
+snapshot. Unchanged originals retain their logical revision; shrinking imports
+exclude stale parts while preserving old evidence. Read the full original using
+`source_documents_get` or resolve its cited version with
+`source_version_document_get`; never join overlapping search chunks.

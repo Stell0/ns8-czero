@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
-from project_contract import PROJECT_OPERATIONS, TOOL_COUNT
+from project_contract import PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT
 
 from czero_app.tool_guidance import DESCRIPTIONS
 from test_auth_http import application, ORIGIN
@@ -32,13 +32,13 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
     frozen = json.loads((Path(__file__).parents[1] / 'fixtures/tool_guidance/m17_contract.json').read_text())
     actual = [app.state.operations.definition(name) for name in sorted(app.state.operations._operations)]
     assert len(actual) == TOOL_COUNT
-    assert {item['name'] for item in actual} - {item['name'] for item in frozen['operations']} == PROJECT_OPERATIONS
-    original = [item for item in actual if item['name'] not in PROJECT_OPERATIONS]
+    assert {item['name'] for item in actual} - {item['name'] for item in frozen['operations']} == PROJECT_OPERATIONS | DOCUMENT_OPERATIONS
+    original = [item for item in actual if item['name'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS]
     assert len(original) == len(frozen['operations']) == 77
     assert [contract.operation_contract(item) for item in original] == frozen['operations']
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()
-    assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS] == frozen['rest_bindings']
+    assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS] == frozen['rest_bindings']
     for methods in schema['paths'].values():
         for route in methods.values():
             if isinstance(route, dict) and 'x-c0-operation' in route:

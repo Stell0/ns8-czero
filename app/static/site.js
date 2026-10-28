@@ -16,14 +16,37 @@
   const pageURL = (id, revision) => scopedLink('./wiki?' + new URLSearchParams({page: id, ...(revision ? {revision: String(revision)} : {})}));
   const sourceURL = citation => scopedLink('./sources?' + new URLSearchParams({source: citation.source_id,
     ...(citation.version_id ? {version: citation.version_id} : {}), ...(citation.chunk_id ? {chunk: citation.chunk_id} : {})}));
-  function safeURL(value) {
-    if (!value || /[\x00-\x20\x7f]/.test(value)) return null;
+  const documentURL=(id,revision)=>scopedLink('./sources?'+new URLSearchParams({document:id,...(revision?{snapshot:revision}:{})}));
+  function sourceTree(container,items) {
+    const root={children:new Map(),items:[]};
+    for(const item of items){
+      const m=item.metadata || {},p=m.provenance || {};
+      const product=p.product || m.product,rawVersion=p.product_version || p.version || m.product_version || m.version;
+      const version=typeof rawVersion==='string' || (typeof rawVersion==='number' && Number.isFinite(rawVersion))?String(rawVersion):'';
+      const raw=p.path || p.relative_path || m.path || m.relative_path;
+      const path=Array.isArray(raw)?raw.slice():typeof raw==='string'?raw.split('/'):[];
+      if(typeof raw==='string' && (raw===p.relative_path || raw===m.relative_path || /\.[a-z0-9]{1,8}$/i.test(path.at(-1) || '')))path.pop();
+      const groups=[product,...(version?['Version '+version]:[]),...path].filter(value=>typeof value==='string' && value.trim()).slice(0,8);
+      if(!groups.length)groups.push('Other sources');
+      let group=root;for(const label of groups){const title=label.slice(0,256);if(!group.children.has(title))group.children.set(title,{children:new Map(),items:[]});group=group.children.get(title);}
+      group.items.push(item);
+    }
+    function branch(group){const list=node('ul');
+      for(const [label,child] of [...group.children].sort((a,b)=>a[0].localeCompare(b[0]))){const entry=node('li'),panel=node('details');panel.open=true;panel.append(node('summary',label),branch(child));entry.append(panel);list.append(entry);}
+      for(const item of group.items){const entry=node('li');entry.append(link(item.title,documentURL(item.id)),node('span','Source · '+item.state+' · Updated '+date(item.updated_at),'byline'));list.append(entry);}
+      return list;
+    }
+    container.replaceChildren(branch(root));
+  }
+  function safeURL(value,base=window.location.href) {
+    if (typeof value!=='string' || !value || /[\x00-\x20\x7f]/.test(value)) return null;
     try {
-      const url = new URL(value, window.location.href);
+      const url = new URL(value, base || window.location.href);
       return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
     } catch { return null; }
   }
   function date(value) {
+    if(!['string','number'].includes(typeof value))return '';
     const time = new Date(value);
     return Number.isNaN(time.getTime()) ? '' : time.toLocaleDateString(undefined, {year:'numeric',month:'short',day:'numeric'});
   }
@@ -66,16 +89,23 @@
     return connection + space + context + (guided || ({read, update, create, ingest}[kind] || read)) + rules;
   }
   // Only allowlisted Markdown tokens become DOM elements. HTML and media never become executable markup.
-  function markdown(container, body, toc) {
+  function markdown(container, body, toc,base) {
     container.replaceChildren(); if (toc) toc.replaceChildren();
     if (typeof window.markdownit !== 'function') {container.append(node('p', body)); return;}
     const parser = window.markdownit({html:false,linkify:false,typographer:false,maxNesting:32});
-    const tokens = parser.parse(body || '', {}), stack = [container]; let headings = 0;
+    const tokens = parser.parse(body || '', {});
+    for(const ignored of renderMarkdown(container,tokens,toc,base)) {}
+  }
+  function* renderMarkdown(container,tokens,toc,base) {
+    container.replaceChildren();if(toc)toc.replaceChildren();
+    const stack=[container];let headings=0;
+    const attribute=(token,name)=>token.attrGet?token.attrGet(name):(token.attrs || []).find(pair=>pair[0]===name)?.[1];
     const allowed = new Set(['p','h1','h2','h3','h4','h5','h6','blockquote','ul','ol','li','strong','em','s','table','thead','tbody','tr','th','td']);
-    function render(items) {
+    function* render(items) {
       for (const [index, token] of items.entries()) {
+        yield;
         const parent = stack[stack.length - 1];
-        if (token.type === 'inline') {render(token.children || []); continue;}
+        if (token.type === 'inline') {yield* render(token.children || []); continue;}
         if (token.type === 'text' || token.type === 'html_inline' || token.type === 'html_block') {parent.append(document.createTextNode(token.content)); continue;}
         if (token.type === 'softbreak') {parent.append(document.createTextNode('\n')); continue;}
         if (token.type === 'hardbreak') {parent.append(node('br')); continue;}
@@ -85,7 +115,7 @@
         if (token.type === 'hr') {parent.append(node('hr'));continue;}
         if (token.nesting === -1) {if (stack.length > 1) stack.pop();continue;}
         if (token.type === 'link_open') {
-          const href = safeURL(token.attrGet('href')), a = node(href ? 'a' : 'span');
+          const href = safeURL(attribute(token,'href'),base), a = node(href ? 'a' : 'span');
           if (href) {a.href=href;a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';}
           parent.append(a);stack.push(a);continue;
         }
@@ -101,12 +131,39 @@
               const li=node('li');li.append(link(label || 'Section', '#'+child.id));toc.append(li);
             }
           }
-          if(token.tag==='ol' && token.attrGet('start'))child.start=Number(token.attrGet('start'));
+          if(token.tag==='ol' && attribute(token,'start'))child.start=Number(attribute(token,'start'));
           parent.append(child);stack.push(child);
         }
       }
     }
-    render(tokens);
+    yield* render(tokens);
+  }
+  let markdownWorker=null, cancelMarkdown=null;
+  function stopMarkdown() {
+    if(markdownWorker)markdownWorker.terminate();markdownWorker=null;
+    if(cancelMarkdown)cancelMarkdown(null);cancelMarkdown=null;
+  }
+  async function fullMarkdown(container,body,toc,current=()=>true,base) {
+    stopMarkdown();
+    const started=window.performance?.now();
+    const measured=()=>{if(started!==undefined){window.performance.clearMeasures('c0-document-render');window.performance.measure('c0-document-render',{start:started,end:window.performance.now()});}};
+    if(!current())return false;
+    if(body.length<65536 || typeof Worker!=='function'){markdown(container,body,toc,base);measured();return current();}
+    const tokens=await new Promise((resolve,reject)=>{
+      cancelMarkdown=resolve;
+      const worker=new Worker(new URL('./markdown-worker.js',window.location.href));markdownWorker=worker;
+      worker.onmessage=event=>{worker.terminate();if(markdownWorker===worker){markdownWorker=null;cancelMarkdown=null;}resolve(event.data.tokens);};
+      worker.onerror=()=>{worker.terminate();if(markdownWorker===worker){markdownWorker=null;cancelMarkdown=null;}reject(new Error('Document rendering failed. Try again.'));};
+      worker.postMessage(body);
+    });
+    if(!tokens || !current())return false;
+    let batch=0;
+    for(const ignored of renderMarkdown(container,tokens,toc,base)){
+      if(!current())return false;
+      if(++batch%256===0){await new Promise(resolve=>setTimeout(resolve,0));if(!current())return false;}
+    }
+    if(current())measured();
+    return current();
   }
   function values(container, value, depth = 0) {
     if (value === null || typeof value !== 'object') {container.append(node('span', String(value)));return;}
@@ -149,7 +206,7 @@
   if(toolsMode && document.getElementById('tools-root') && document.getElementById('page-title')) {
     const heading=document.getElementById('page-title');heading.textContent=({wiki:'Knowledge tools',sources:'Source tools',agents:'Developer reference'})[document.body.dataset.page] || 'Tools';document.getElementById('tools-root').prepend(heading);
   }
-  window.C0={params,toolsMode,uuid,node,link,button,pageURL,sourceURL,safeURL,date,copyPanel,task,markdown,values,tree};
+  window.C0={params,toolsMode,uuid,node,link,button,pageURL,sourceURL,documentURL,sourceTree,safeURL,date,copyPanel,task,markdown,fullMarkdown,stopMarkdown,values,tree};
   document.documentElement.dataset.view=toolsMode ? 'tools' : 'read';
   if(window.matchMedia){const compact=window.matchMedia('(max-width:48rem)');for(const toggle of document.querySelectorAll('.navigation-toggle, .source-library-toggle')){const browsingSources=toggle.classList.contains('source-library-toggle') && !params.has('source');toggle.open=!compact.matches || browsingSources;compact.addEventListener('change',event=>{toggle.open=!event.matches || browsingSources;});}}
   for(const element of document.querySelectorAll('[data-tools-only]'))element.hidden=!toolsMode;

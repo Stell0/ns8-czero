@@ -114,6 +114,49 @@ passes 2,321, pinned Node passes 204 and all six actual document browsers pass i
 82.33 seconds, including independently consuming the genuinely delayed response
 before checking revoked document/provenance/technical content remains empty.
 
+
+### Published Core and application adoption
+
+Core3fb900e25cced88c25ca8b8dd2148ae911a31f00 passes the isolated complete2,320-case
+suite and exact full[40774328932](https://github.com/Stell0/ns8-czero/actions/runs/40774328932).
+Independent downloaded reports verify Debian upgrade21, Rocky installation26/
+three expected skips/all eight browsers, eight privacy guards,32 accessibility
+contexts, three zero-query artifacts and five actual SARIF/SBOM pairs. The full
+promotion verifier passes. No deployed predecessor or production setting changes.
+
+Immutable[core-v0.35.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.2)
+is published by[40782732045](https://github.com/Stell0/ns8-czero/actions/runs/40782732045),
+including actual supplied-distribution installation/migration/rebuild checks.
+Downloaded assets match SHA256SUMS:
+
+- wheel: `1c6c5ff4250e2df4dca2064c2e61983f993cbd49059256237b3235ef588ab6f9`
+- archive: `7699c0acbb52aa3e3b0b8a4892e4337024c09b8809548790935cc3fa7c2f6a1a`
+
+Reproduction requires the commit SOURCE_DATE_EPOCH1793223806. An initial local
+supplied-artifact run omitted it and reports seven passes/one rebuild mismatch;
+that incorrect invocation is retained. The corrected exact-epoch run passes all
+eight supplied wheel/archive tests, including identical rebuild hashes.
+The publication workflow uses the correct epoch and passes. No asset is replaced.
+
+App0.55 adopts released Core0.35.2/tag3fb900e, >=0.35.2,<0.36 and a regenerated
+frozen lock; no unrelated dependencies change. Native candidate expectations
+advance to0.55 while all three actually deployed31b0c85 predecessors remain
+frozen at app0.54/Core0.35.0. All207 pinned-Node controllers and six genuine
+Playwright scenarios pass, including malformed optional metadata, snapshot
+provenance, visible citation evidence and metadata-independent legacy source links.
+Latest535KB sample: directory266ms, initial document2080ms, rendering944ms,
+57 browser timer ticks and56.5ms maximum tick gap during rendering.
+
+The independent frozen-lock consumer uses non-editable released Core0.35.2 from
+Git3fb900e outside the checkout and passes all2,322 Python/PostgreSQL/packaging
+cases in1,293.21s, with zero failures/skips and the existing Authlib warning.
+Node207, genuine browser6, Robot dry-run21, schema, shell, actual Renovate API,
+295 documentation links and the public contribution scan pass. The primary-agent
+full staged diff review is complete; it is not an independent human review.
+Exact application PR CI/native/browser/privacy/scan acceptance remains required;
+record its actual result in the PR after execution. No merge,
+production operation or additional real-data ingestion is authorized by this task.
+
 ## Project plugin 1.2 acceptance repair
 
 PR41 adds protected-project discovery to the existing instance-bound plugin. Repair

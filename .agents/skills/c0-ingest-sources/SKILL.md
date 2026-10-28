@@ -43,3 +43,15 @@ review, provenance and frozen-candidate rules.
 When an ingestion belongs to a research project, first read the upstream [project source contracts](https://github.com/Stell0/ns8-czero/blob/main/docs/projects/SOURCES.md) and [durable workflow contracts](https://github.com/Stell0/ns8-czero/blob/main/docs/projects/WORKFLOWS.md), or their matching local versions when present. Standalone consumers do not bundle these application-specific documents. Discover the exact project with `project_get` in its protected space and use the reviewed connector ID, frozen scan identity and project source synchronization receipts. Reuse `samples/ingestion` and the project CLI; do not create managed project records directly with generic object APIs or invent a parallel cursor/lease format. Distinguish immutable source ingestion, extraction readiness, verified passage publication and committed connector coverage.
 
 Before any project source mutation, confirm the current lease/fencing generation and authoritative source-space subscription where relevant. Dry-run/scan/status/verify must not claim a run. Resume uncertain remote publication using saved receipts, never by blindly repeating a collector call. Missing `project_*` capabilities are a version or tool-catalog block, not permission to use a bypass. Scheduling an external agent and importing legacy WikiPlant data are separate actions requiring their own authorization.
+
+## Full original documents
+
+Prefer one REST file upload for text/Markdown above the128 KiB MCP bound when it
+fits the existing2 MiB/one-million-character extraction bounds. Reuse
+`publication_parts` and publisher reconciliation; preserve established multipart
+layouts on unchanged retries. Larger originals and legacy imports use verified
+parent snapshots with immutable part receipts, exact order/offset/hash checks and
+whole-document readback through `source_documents_get`/`source_version_document_get`.
+Never concatenate retrieval chunks or create duplicate Wiki pages for browsing.
+Queued/failed parts do not prove complete publication; retain the last complete
+snapshot and all immutable historical citations.
