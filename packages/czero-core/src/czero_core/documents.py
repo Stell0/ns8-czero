@@ -41,6 +41,7 @@ class DocumentService(SpaceBound):
 
     def browse_documents(self, actor, *, limit=50, offset=0):
         """Summaries only; source parts appear once under their verified parent."""
+        # Keep UUID columns indexable; managed receipt IDs are validated UUIDs.
         SourceService._page(limit, offset)
         with self.database.engine.begin() as connection:
             self._authorize(connection, actor)
@@ -55,21 +56,21 @@ class DocumentService(SpaceBound):
                 ) v ON true WHERE s.space_id=:space AND NOT s.deleted AND NOT EXISTS (
                     SELECT 1 FROM c0_objects receipt WHERE receipt.space_id=s.space_id
                     AND receipt.type_name IN (:receipt,:current_receipt)
-                    AND receipt.data @> jsonb_build_object('source_id',s.id::text)
+                    AND receipt.data->>'source_id'=s.id::text
                 )
                 UNION ALL
                 SELECT p.id,COALESCE(s.title,p.data->>'external_id'),COALESCE(s.metadata,'{}'::jsonb),p.updated_at,
                     CASE WHEN v.state='ready' THEN 'ready' ELSE 'incomplete' END,
                     COALESCE(v.media_type,'text/plain'),true,p.created_at
                 FROM parents p LEFT JOIN c0_objects r ON r.space_id=p.space_id AND r.type_name=:receipt
-                    AND r.id::text=p.data->'part_receipt_ids'->>0
-                LEFT JOIN c0_source_versions v ON v.space_id=p.space_id AND v.id::text=r.data->>'version_id'
-                    AND v.source_id::text=r.data->>'source_id'
+                    AND r.id=CAST(p.data->'part_receipt_ids'->>0 AS uuid)
+                LEFT JOIN c0_source_versions v ON v.space_id=p.space_id AND v.id=CAST(r.data->>'version_id' AS uuid)
+                    AND v.source_id=CAST(r.data->>'source_id' AS uuid)
                 LEFT JOIN c0_sources s ON s.space_id=p.space_id AND s.id=v.source_id
                 WHERE NOT EXISTS (
                     SELECT 1 FROM jsonb_array_elements_text(p.data->'part_receipt_ids') part(id)
-                    JOIN c0_objects receipt ON receipt.id::text=part.id AND receipt.space_id=p.space_id AND receipt.type_name=:receipt
-                    JOIN c0_sources original ON original.id::text=receipt.data->>'source_id' AND original.space_id=p.space_id
+                    JOIN c0_objects receipt ON receipt.id=CAST(part.id AS uuid) AND receipt.space_id=p.space_id AND receipt.type_name=:receipt
+                    JOIN c0_sources original ON original.id=CAST(receipt.data->>'source_id' AS uuid) AND original.space_id=p.space_id
                     WHERE original.deleted
                 )
             ) SELECT id,title,metadata,updated_at,state,media_type,multipart FROM summaries ORDER BY sort_at DESC,id LIMIT :limit OFFSET :offset'''),

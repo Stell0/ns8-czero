@@ -248,3 +248,48 @@ def test_thousands_of_document_summaries_remain_bounded_without_bodies(sources,c
     finally:
         with source.database.engine.begin() as connection:
             connection.execute(text("DELETE FROM c0_sources WHERE space_id=:space AND metadata @> jsonb_build_object('fixture',CAST(:marker AS text))"),{'space':space,'marker':marker})
+
+
+def test_ten_thousand_logical_parents_use_bounded_summary_pages(logical):
+    import json
+    import time
+    _,_,service,actor,_=logical
+    sources=[];versions=[];documents=[];objects=[]
+    content_hash=digest('fixture')
+    with service.database.engine.begin() as connection:space=service._space(connection)
+    for i in range(10000):
+        source,version,document,receipt,parent,history=[uuid4() for _ in range(6)]
+        sources.append({'id':source,'space':space,'key':digest(str(source)),'title':'Synthetic directory '+str(i)})
+        versions.append({'id':version,'space':space,'source':source,'hash':content_hash})
+        documents.append({'id':document,'space':space,'version':version,'hash':content_hash})
+        part={'key':str(receipt),'connector_id':'documents','external_id':str(i),'parent_external_id':str(i),
+            'parent_content_hash':content_hash,'part_number':1,'start_byte':0,'end_byte':7,
+            'source_id':str(source),'version_id':str(version),'last_content_hash':content_hash,
+            'sync_status':'verified','extraction_status':'ready'}
+        snapshot={'key':str(parent),'connector_id':'documents','external_id':str(i),
+            'content_hash':content_hash,'part_receipt_ids':[str(receipt)],'total_bytes':7}
+        for identifier,kind,data in ((receipt,'source_sync_history_v1',part),(parent,'source_snapshot_v1',snapshot),(history,'source_snapshot_history_v1',snapshot)):
+            objects.append({'id':identifier,'space':space,'type':'c0_project_'+kind,'data':json.dumps(data)})
+    try:
+        with service.database.engine.begin() as connection:
+            connection.execute(text("INSERT INTO c0_sources(id,space_id,ingest_key,title,metadata) VALUES(:id,:space,:key,:title,'{}')"),sources)
+            connection.execute(text("INSERT INTO c0_source_versions(id,space_id,source_id,number,filename,media_type,content_hash,size_bytes,state,retain_original,original_present) VALUES(:id,:space,:source,1,'fixture.md','text/markdown',:hash,7,'ready',false,false)"),versions)
+            connection.execute(text("INSERT INTO c0_documents(id,space_id,version_id,body,text_hash,locations) VALUES(:id,:space,:version,'fixture',:hash,'[]')"),documents)
+            connection.execute(text("INSERT INTO c0_objects(id,space_id,type_name,data,tags) VALUES(:id,:space,:type,CAST(:data AS jsonb),'{}')"),objects)
+            for table in ('c0_objects','c0_sources','c0_source_versions'):connection.execute(text('ANALYZE '+table))
+        for offset in (0,9950):
+            started=time.perf_counter();rows=service.browse_documents(actor,limit=50,offset=offset)
+            assert len(rows)==50 and all(row['multipart'] for row in rows)
+            assert all('body' not in row and 'parts' not in row for row in rows)
+            print(json.dumps({'logical_parents':10000,'offset':offset,'summaries':len(rows),
+                'elapsed_ms':round((time.perf_counter()-started)*1000,2)}))
+    finally:
+        # Each statement stays bounded even when the assertion fails. Deleting
+        # all versions at once can spend the SQL deadline checking foreign keys.
+        for table,rows in (('c0_documents',documents),('c0_source_versions',versions),('c0_sources',sources),('c0_objects',objects)):
+            for start in range(0,len(rows),200):
+                with service.database.engine.begin() as connection:
+                    connection.execute(text('DELETE FROM '+table+' WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'),
+                        {'space':space,'ids':[row['id'] for row in rows[start:start+200]]})
+        with service.database.engine.begin() as connection:
+            for table in ('c0_objects','c0_sources','c0_source_versions'):connection.execute(text('ANALYZE '+table))

@@ -5,10 +5,10 @@ C0 has two uses: a shared second brain for people and assistants, and a reusable
 ## Full documents in Knowledge Explorer — implementation in progress
 
 Original-main base: `e30bb449b165cac4a0c4b8cafaf950f64ed0675c`, isolated
-`feat/full-document-explorer`. Full baseline run40723318218 is in progress;
-local baseline passes2303 Python/PostgreSQL/packaging,197 Node (also pinned24),
+`feat/full-document-explorer`. Full baseline run 40723318218 passes;
+local baseline passes 2303 Python/PostgreSQL/packaging, 197 Node (also pinned 24),
 21 Robot dry runs and schema/shell/docs. Initial feature regressions fail before
-implementation. Focused Core/ingestion now passes24 and reader controllers25.
+implementation. Focused Core/ingestion now passes 24 and reader controllers 25.
 The parent-aware unchanged-part history regression failed before its writer fix.
 This task authorizes no production access, deployment or merge.
 
@@ -81,6 +81,39 @@ be published. All six genuine document browsers also pass the534750-byte fixture
 with a code fence crossing actual storage parts; a timer probe observes56 ticks
 and59.9ms maximum tick gap during954.9ms rendering on this local sample.
 
+The independent downloaded exact-main audit now passes: Debian upgrade 21,
+Rocky installation 26/three expected skips, all eight native browsers, eight
+privacy guards, 32 accessibility contexts, three OAuth-query artifacts with zero
+candidates and five actual SARIF/SBOM pairs. The full promotion verifier passes
+for the exact e30bb449 source. Fresh Core candidate 0e35adda full run 40742034125
+is pending. A separate 5,000-logical-parent disposable PostgreSQL benchmark
+returns 50 metadata summaries in 2,942 ms at offset 0 and 2,903 ms at offset 4,950;
+no document bodies are read for directory construction.
+
+
+### Directory scale regression before Core publication
+
+Exact Core candidate 0e35adda full [40742034125](https://github.com/Stell0/ns8-czero/actions/runs/40742034125)
+now passes all required jobs and the independent downloaded artifact audit:
+Debian upgrade 21, Rocky installation 26/three expected skips/all eight browsers,
+eight privacy guards, 32 accessibility contexts, three zero-query artifacts and
+five actual SARIF/SBOM pairs.
+It is not published: a new 10,000-parent regression reproduces the existing
+five-second SQL timeout in directory discovery. The first failed fixture also
+exposes an oversized foreign-key cleanup statement; bounded cleanup now succeeds.
+No database deadline, extraction bound or deployed artifact is changed.
+
+Keep UUID join columns indexable and use an equality anti-join for importer part
+exclusion. Actual PostgreSQL EXPLAIN shows primary-key lookups and a hash
+anti-join. The 10,000-parent fixture returns 50 summaries/no bodies in 562 ms at
+offset 0 and 505 ms at offset 9,950; the single-case regression passes. All 17 full-document cases now pass together, including repeated-import
+fixture state: 10,000 parents return 50 summaries in 808 ms at offset 0 and
+523 ms at offset 9,950, and bounded cleanup succeeds. Fresh full exact-source
+Core acceptance remains required before publishing 0.35.2. The last complete application producer suite
+passes 2,321, pinned Node passes 204 and all six actual document browsers pass in
+82.33 seconds, including independently consuming the genuinely delayed response
+before checking revoked document/provenance/technical content remains empty.
+
 ## Project plugin 1.2 acceptance repair
 
 PR41 adds protected-project discovery to the existing instance-bound plugin. Repair
@@ -126,7 +159,7 @@ Do not suppress the finding or override immutable Core dependency metadata.
 Core0.35.1 pins Authlib1.9.1, preserving joserfc1.7.5, all other pins, schema0022
 and authority semantics. Exact6a11469794d5070af469343aa63715fd0e727d98 passes
 [full40673116010](https://github.com/Stell0/ns8-czero/actions/runs/40673116010):2303
-Python/PostgreSQL/packaging,197 Node24 and21 Robot cases. Local complete producer
+Python/PostgreSQL/packaging, 197 Node24 and21 Robot cases. Local complete producer
 validation independently passes2303 cases in1140.44s without skips. Independent
 developer security/identity/OIDC/renewal/source review passes142 focused cases.
 Actual downloaded native/scan audit passes Debian genuine31b0c85 upgrade21 and
