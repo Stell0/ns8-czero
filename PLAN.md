@@ -63,6 +63,24 @@ Markdown rendering1213.40ms. These measurements are single local samples, not an
 SLA or final frozen-source acceptance. Core publication, pin/lock adoption,
 final full/native/browser/privacy/scan gates and an unmerged PR remain mandatory.
 
+### Corrected Core native synchronization
+
+Core7a6a601 passes the complete2319-case local suite and CI local/released-Core/
+producer/scans. Debian upgrade passes21. Rocky reports25 passes/one failure/three
+expected skips: the existing OAuth Administration browser reads the transient
+"Loading people and application requests…" before "Application approved.".
+The server mutation performs its refresh before that terminal feedback. The same
+Administration source passes both native jobs at7247ead; this failure is retained,
+not waived. Failed downloaded XML/Pino artifacts have zero OAuth-query candidates.
+
+A test-only correction now waits for terminal approval/permission feedback before
+retaining the existing assertions and actual server readback phases. Focused
+native-helper/privacy tests pass68. Core package bytes and runtime Administration
+code are unchanged; a fresh full exact-source run is required before0.35.2 can
+be published. All six genuine document browsers also pass the534750-byte fixture
+with a code fence crossing actual storage parts; a timer probe observes56 ticks
+and59.9ms maximum tick gap during954.9ms rendering on this local sample.
+
 ## Project plugin 1.2 acceptance repair
 
 PR41 adds protected-project discovery to the existing instance-bound plugin. Repair
