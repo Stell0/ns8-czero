@@ -41,7 +41,8 @@ def test_product_workflows_are_a_closed_runtime_allowlist(tmp_path, monkeypatch,
     paths = ['plugin.json', 'memory-skill.md', 'LICENSE',
              'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
              'skills/c0-maintain-knowledge/SKILL.md',
-             'references/connection.md', 'references/maintenance.md']
+             'skills/c0-projects/SKILL.md',
+             'references/connection.md', 'references/maintenance.md', 'references/projects.md']
     paths += ['project/'+name+'.md' for name in ('skill','workflows','daily','weekly','recovery','scheduler')]
     for name in paths:
         target = product / name

@@ -2,6 +2,29 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
+## Project plugin 1.2 acceptance repair
+
+PR41 adds protected-project discovery to the existing instance-bound plugin. Repair
+the skill inventory, standalone-fork references, runtime asset copies/allowlist and
+native downloaded-archive contract together. Preserve the original failed source
+and its evidence; rebase a separate candidate on reviewed main64b183e and retain
+both histories when updating the PR. No Core, schema or dependency change is needed.
+
+Acceptance requires the complete unchanged-main baseline, focused package/fork/
+browser-helper regressions, the complete candidate suite, exact ready-PR full
+CI/native/privacy/scan proof, review and promotion verification, then successful
+main validation/publication. Verify connected project discovery read-only; do not
+initialize a project, install schedules or deploy merely to test the package.
+Private ChatGPT installation and external-agent execution remain distinct from
+generated-archive and native-browser acceptance. Keep the installed31b0c85 trio
+and existing waivers unchanged. Focused repair validation passes161 cases and292
+local documentation links; both changed/new skill frontmatters validate. An
+independent developer review passes98 non-database cases and forward-checks
+missing tools, missing projects, separate scheduling authority and uncertain-call
+recovery without a blocking finding. These checks are not live model or native
+acceptance. Final exact-source full/native/main results are recorded on
+[PR41](https://github.com/Stell0/ns8-czero/pull/41) after execution.
+
 ## Seven-day remembered website login — deployed acceptance
 
 Base: original main `f317036`. Reviewed/approved [PR42](https://github.com/Stell0/ns8-czero/pull/42) is regularly merged at `31b0c85a71743ab6dcdb04c12ac18dd4c1500722` and the dedicated instance accepts Core 0.35.0 / app 0.54.0 / additive schema 0022. Preserve the historical `c2280f5` trio used for this genuine upgrade; the next genuine predecessor is the [installed `31b0c85` trio](#remembered-login-deployed-runtime-and-frozen-predecessor).

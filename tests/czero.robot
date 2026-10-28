@@ -83,7 +83,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:f7c9e08849ad63d6f0bcddea5916d1bb2609116fb0d963d7392b1a7458a75cc1
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:d364bd089a5b21540a7a387f08f70f55a16a8ccaf437c6e52275cf694ffb1ecc
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -93,9 +93,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed c2280f5 predecessor images.
+        # Freeze all three actually deployed 31b0c85 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:2f5756f52dbacb487dec16c29a9cf48f3dded50b7b2c97428fe6d7fa4e87feca','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:ec9e7bb8f6c39b81946cfe3775effe224e6d887d0fd3c9ecab4703a360a468a5'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:c4d4abfa87eaa2c6dfaee7ac374f602ca9369b0e638cb3dc4fdc78d2ed6ce09c','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:8f6cad78954186603bbf824f01bdbe77ae75122167cd1f32c5a393839c7c04c7'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -109,7 +109,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.53.0    0.34.0
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.54.0    0.35.0
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
         ...    return_rc=True    return_stdout=False

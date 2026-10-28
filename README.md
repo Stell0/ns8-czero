@@ -60,7 +60,7 @@ C0 exposes **Model Context Protocol (MCP)** at your instance's `/mcp` URL. It le
 Open `https://c0.example.org/agents` on your own instance. It provides the connection details and generated downloads bound to that hostname:
 
 - **A `.skill` archive** for the instance's knowledge workflow.
-- **A plugin `.zip`** that references your registered ChatGPT C0 app and includes setup, research and maintenance skills.
+- **A plugin `.zip`** that references your registered ChatGPT C0 app and includes setup, research, knowledge maintenance and protected-project discovery skills. Repeated daily/weekly project work uses a separate project-bound package; downloading either package does not install a scheduled task.
 - **The MCP URL** for clients with their own connector configuration.
 
 Installing instructions does not connect an account or grant access. Sign in through OAuth, review the requested permissions and complete any C0 application approval. Read, Write and Manage scopes remain independent. Short access tokens renew through refresh; explicitly consented background connections use an inactivity deadline and can be disconnected or revoked.

@@ -25,7 +25,7 @@ def test_all_maintained_navigation_and_skill_references():
         assert metadata['name']==p.parent.name
         assert metadata['description'] and len(metadata['description']) <= 1024
         names.append(metadata['name'])
-    assert len(names)==len(set(names))==9
+    assert len(names)==len(set(names))==11
 
 
 def test_fences_and_duplicate_heading_anchors_match_navigation(tmp_path):
@@ -56,5 +56,6 @@ def test_standalone_fork_includes_all_developer_reference_dependencies(tmp_path)
     paths=[str(p.relative_to(destination)) for p in (destination/'.agents').rglob('*.md')]
     assert DOCS['check'](paths,root=destination)>0
     assert not (destination/'plugins').exists()
+    assert (destination/'.agents/skills/c0-project-workflows/SKILL.md').is_file()
     manifest=json.loads((destination/'c0-upstream.json').read_text())
     assert all('private' not in f['path'] for f in manifest['files'])

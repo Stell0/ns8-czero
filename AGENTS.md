@@ -66,6 +66,14 @@ Check Codex-facing MCP tools, descriptions, schemas, safety annotations, plugin/
 
 Preserve the registered connection identity and unrelated settings on content-only updates. New scopes need appropriate client approval and fresh explicit OAuth consent; do not silently broaden permissions. Keep end-user plugin/skill content separate from development skills. Documentation-only changes that do not affect a connector contract do not require manufacturing a new plugin version.
 
+Plugin1.2 adds the fourth end-user workflow, protected-project discovery. Keep its
+runtime COPY inputs, closed runtime audit allowlist, offline/HTTP package inventory,
+native downloaded-archive checks and evaluation inputs synchronized. Standalone
+forks receive the registered developer workflow skill; application-specific project
+contracts use explicit upstream links when absent locally. Never initialize a
+project or install an external schedule merely to verify discovery. PR41 repair
+acceptance is tracked in PLAN; no new dedicated deployment is part of this work.
+
 ## Reuse ingestion scripts and preserve private jobs
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)
