@@ -309,12 +309,15 @@ host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
 
-The default build now pins released Core 0.35.0 for the app 0.54.0 / schema 0022
-remembered website-login candidate. It adds an unchecked **Remember this device**
+The default build pins released Core 0.35.0 for app 0.54.0 / schema 0022.
+The accepted remembered website login adds an unchecked **Remember this device**
 choice at sign-in. It requires provider-authorized offline renewal and expires
 after seven days without successful website use; use renews that window across
 browser restarts. Ordinary sessions keep the configured idle/maximum limits
 (default one hour/eight hours). Existing sessions and AI connections are not
 upgraded. Sign out forgets this browser; AI connections keep their separate
-explicit consent and disconnect controls. Candidate implementation and gates are
-recorded in PLAN; this feature is not yet deployed.
+explicit consent and disconnect controls. [Acceptance and the installed image
+identities](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor)
+record the approved dedicated-instance update, retained sessions/data/connections,
+real-provider remembered sign-in and successful manager restart. Existing logins
+remain ordinary; choose the option at your next sign-in to remember that device.

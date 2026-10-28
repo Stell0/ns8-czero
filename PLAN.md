@@ -2,14 +2,14 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
-## Seven-day remembered website login — implementation candidate
+## Seven-day remembered website login — deployed acceptance
 
-Base: original main `f317036`. Preserve the deployed `c2280f5` trio below as the genuine predecessor. Core 0.35.0 / app 0.54.0 / additive schema 0022 are the feature targets; no live update is authorized before review and approval.
+Base: original main `f317036`. Reviewed/approved [PR42](https://github.com/Stell0/ns8-czero/pull/42) is regularly merged at `31b0c85a71743ab6dcdb04c12ac18dd4c1500722` and the dedicated instance accepts Core 0.35.0 / app 0.54.0 / additive schema 0022. Preserve the historical `c2280f5` trio used for this genuine upgrade; the next genuine predecessor is the [installed `31b0c85` trio](#remembered-login-deployed-runtime-and-frozen-predecessor).
 
 - First-party GET/POST `/auth/sign-in`, unchecked remember choice, five-minute one-use persisted intent and Secure browser binding; exact Origin, bounded form and duplicate checks precede OIDC. Compatibility `/auth/login` remains ordinary except for an already staged background flow.
 - Provider-attested offline access and matching authenticated identity precede remembered issuance; failure offers ordinary sign-in. Seven-day browser inactivity is fixed, opaque cookies and encrypted credentials remain server-managed. Existing sessions stay ordinary.
 - Successful authenticated website responses slide the browser deadline. Public/failed/MCP requests do not. Transactional current-role/native/session checks prevent logout or revoked authority being revived. Browser and connection inactivity policies remain independent, including explicit background consent from a remembered browser. Ordinary grants remain finite.
-- Verify controlled-clock expiry/rolling/restart, one-use/CSRF/account-switch/provider failures, real PostgreSQL concurrency/revocation, profile isolation, native real offline issuance/cookies/update/restore and artifact privacy. Run the unchanged-main baseline and full candidate suites. Publish Core only after exact-source full/native gates, then adopt its immutable dependency/lock, complete full app CI and a reviewable PR. Deployment and real provider acceptance remain approval gates.
+- Controlled-clock expiry/rolling/restart, one-use/CSRF/account-switch/provider failures, real PostgreSQL concurrency/revocation, profile isolation, native real offline issuance/cookies/update/restore and artifact privacy pass. The unchanged-main baseline, Core publication, immutable dependency adoption, exact ready-PR/main acceptance and operator-approved dedicated update are complete.
 
 The exact unchanged-main baseline `f317036` passes [full acceptance 40495377796](https://github.com/Stell0/ns8-czero/actions/runs/40495377796), including independently downloaded native/privacy/scan artifacts and promotion verification.
 
@@ -17,7 +17,27 @@ Core source `254fd3fb817a7eb98fa22b10d1e20b33619af344` passes 2,275 local Python
 
 Immutable [Core 0.35.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.0) points to that source; [publisher 40529304349](https://github.com/Stell0/ns8-czero/actions/runs/40529304349) succeeds. Downloaded wheel SHA-256 `389b3a3f1b781d906e202e26af6f5d7e1cdc34e5764e6265828899167cd3b694` and archive `0d15addec1a9e0c8785342583fe4d3d76e977c13836e2226569064a12c7bf07b` match published checksums. Eight supplied-artifact checks pass independent installations, reproducible rebuilds and fresh/repeated PostgreSQL migration. The app now pins that released tag/commit, `>=0.35.0,<0.36.0`, frozen lock and matching patch-only Renovate bounds.
 
-App producer source `1dc0b0a` passes 2,298 actual Python/PostgreSQL/packaging cases, 197 Node 24 controller cases, immutable administration UI build, schema/shell/docs checks and 21 Robot dry-run cases. Final adoption source `760d543` independently passes the complete 2,298-case suite against a fresh frozen-lock consumer installation of released Core 0.35.0 (no database skips); installed Git provenance resolves to the verified `254fd3f` commit outside the checkout. Original main remains `f317036` after a fresh fetch. Exact app CI/native remembered issuance/recovery gates remain pending. No feature deployment or live acceptance is claimed; review and explicit deployment approval remain required.
+App producer source `1dc0b0a` passes 2,298 actual Python/PostgreSQL/packaging cases, 197 Node 24 controller cases, immutable administration UI build, schema/shell/docs checks and 21 Robot dry-run cases. Final adoption `760d543` and repaired feature source `aa9bfd0452ff9bf704a287c6db0ca460453c6deb` independently pass the complete 2,298-case suite against fresh frozen-lock installations of released Core 0.35.0, with no database skips and verified installed Git provenance outside the checkout.
+
+Exact ready-PR [full40541383069](https://github.com/Stell0/ns8-czero/actions/runs/40541383069) and merged-main [full40581381116](https://github.com/Stell0/ns8-czero/actions/runs/40581381116) are completed/successful, including canonical main publication. Main's tracked tree equals the accepted PR tree. Actual main CI passes 2,298 Python/PostgreSQL/packaging cases, 197 Node24 cases and 21 Robot dry runs. Downloaded reports pass Debian genuine upgrade (21), Rocky installation (26/three expected skips), all eight browser workflows, all six remembered-browser recovery stages, eight privacy guards, 32 numeric accessibility contexts and three OAuth-query artifacts with zero candidates. Five actual SARIF/SBOM pairs, three installed image identities, independent artifact audits and exact-source promotion verification pass. Preserve failed earlier candidates and their evidence; `88fa9bc`/`4d64102` are not accepted sources. The browser correction keeps `strict-origin` on the navigation form, exact Origin checks and `no-referrer` on the provider redirect.
+
+## Remembered login deployed runtime and frozen predecessor
+
+The operator approved PR42 and the supported C0-only update. Actual installed source `31b0c85a71743ab6dcdb04c12ac18dd4c1500722` runs app **0.54.0**, released Core **0.35.0**, schema **0022_remembered_browsers** and pgvector **0.8.7**. All three images retain the immutable tag `ci-31b0c85a71743ab6dcdb04c12ac18dd4c1500722-40581381116-1`:
+
+| Image | Verified installed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:d364bd089a5b21540a7a387f08f70f55a16a8ccaf437c6e52275cf694ffb1ecc` |
+| `ghcr.io/stell0/czero-app` | `sha256:c4d4abfa87eaa2c6dfaee7ac374f602ca9369b0e638cb3dc4fdc78d2ed6ce09c` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:8f6cad78954186603bbf824f01bdbe77ae75122167cd1f32c5a393839c7c04c7` |
+
+Freeze this trio for the next genuine upgrade. Documentation-marker sources do not replace installed identities. Keep the [previous `c2280f5` trio](#wikiplant-deployed-backend-and-frozen-predecessor) and earlier historical evidence available.
+
+Fresh registry reads verify all six main/latest aliases and all three immutable candidate identities. A scoped C0-only backup and actual full backup-data integrity read pass; all backup-plan settings are restored. The targeted update and supported dedicated-manager restart both pass exact installed image/revision checks, trusted HTTPS readiness, schema checks and timer health. Before/after observers preserve all **32,795 original stable rows across 40 domain tables**, settings, authentication/retrieval hashes, schedules, mounts and ten unrelated module identities. The live original-file corpus is empty; nonempty original recovery remains covered by disposable acceptance. Migration 0022 adds one authentication table and three columns, with original columns retained.
+
+The retained ordinary session stays ordinary, and fresh compatibility sign-in stays ordinary. Read-only owner REST/profile and five protected Wiki reads pass before/after update and restart. Real-provider remembered sign-in verifies the unchecked form, null-Origin rejection, explicit offline issuance, matching account, encrypted server authority, a Secure/HttpOnly/Lax persistent seven-day cookie, rolling renewal and cookie-jar reload. That remembered session survives the dedicated-manager restart. Signing out only the new test browser rejects its old cookie; the existing connected MCP profile still works afterward. Three original background grants retain their fixed fields, including scopes, allowing only normal activity/refresh-generation changes. The connected account/profile contract and four authorized-space discoveries remain unchanged. No knowledge, project or research-schedule writes are part of this acceptance.
+
+Each bounded root app-journal window contains **38 actual entries**, with successful health/profile/guide/native-callback/token/MCP controls and zero OAuth-query, issued-secret, generic-credential, JWT or traceback candidates. Route and domain configuration remain unchanged. Empty log-collector responses are not privacy evidence; these root-journal windows supply the actual request controls. Controlled-clock tests establish the seven-day inactivity boundary; live checks establish offline issuance, renewal and retained sessions through restart. Other live roles, provider/client revocation and destructive recovery retain their disposable evidence. Existing CPU-quota and interactive Playwright waivers remain unchanged. No stable NS8 module release is claimed; broader client/scheduled/research acceptance remains separate.
 
 ## Roadmap
 
@@ -106,7 +126,7 @@ Use [release-readiness requirements](docs/release-readiness.md) for the remainin
 
 ## Current baseline
 
-Accepted dedicated runtime: app **0.53.0**, released Core **0.34.0**, schema **0021**, source `c2280f576ba71dda723bc1afa11577f2fd251edd`. Freeze its three [installed image digests](#wikiplant-deployed-backend-and-frozen-predecessor) as the next genuine upgrade predecessor. Documentation/main-marker images do not replace it; prior installation records remain preserved below.
+Accepted dedicated runtime: app **0.54.0**, released Core **0.35.0**, schema **0022**, source `31b0c85a71743ab6dcdb04c12ac18dd4c1500722`. Freeze its three [installed image digests](#remembered-login-deployed-runtime-and-frozen-predecessor) as the next genuine upgrade predecessor. Documentation/main-marker images do not replace it; prior installation records remain preserved below.
 
 Prior runtime main `05ce22c` passed full [40106287084](https://github.com/Stell0/ns8-czero/actions/runs/40106287084), canonical publication and independent actual native/privacy/scan audits. Reviewed documentation closeout PR35 merged as `f735004`; its [main40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source documentation promotion verifier pass. Original dirty checkouts, recovered M20 worktrees, drafts and immutable artifacts remain preserved.
 
