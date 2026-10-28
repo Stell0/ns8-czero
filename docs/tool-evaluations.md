@@ -91,6 +91,6 @@ and actual runtime package versions for replay.
 
 ## Evaluate packaged task instructions
 
-Pass `--plugin /path/to/generated/plugins/your-plugin` to `scripts/evaluate-tools.py` to inject the package's three skills and their reference files into each fresh model session. The runner records exact file hashes, plugin version and app binding in `suite.json`; the independent trace/database grader and expected answers remain outside the model input. Generate the synthetic package for `https://c0.example.test/mcp` and a synthetic app ID when using the disposable fixture. No installed or live instance is contacted.
+Pass `--plugin /path/to/generated/plugins/your-plugin` to `scripts/evaluate-tools.py` to inject the package's four skills and their reference files into each fresh model session. The runner records exact file hashes, plugin version and app binding in `suite.json`; the independent trace/database grader and expected answers remain outside the model input. Generate the synthetic package for `https://c0.example.test/mcp` and a synthetic app ID when using the disposable fixture. No installed or live instance is contacted.
 
 This mode measures execution of the supplied instructions using actual disposable MCP calls. It does not prove automatic skill discovery, ChatGPT installation, app-ID ownership or either web distribution route. Keep those acceptance observations separate. Use the same committed source, corpus, driver, model and fixture for a comparison without `--plugin`; retain every failed run privately.

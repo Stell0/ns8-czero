@@ -25,7 +25,7 @@ Read README, the roadmap and the relevant skill before editing. Use active manif
 | `packages/czero-core` | Reusable knowledge/data services, persisted-role authorization, transactions, migrations and stable contracts |
 | `app` | Reference/fork UI and HTTP/MCP transport composed from trusted Core operations |
 | `imageroot` and `ui` | Numbered NS8 lifecycle/configuration/backup operations and native settings |
-| `plugins/c0-knowledge` | Instance-bound end-user setup, research and knowledge-maintenance instructions |
+| `plugins/c0-knowledge` | Instance-bound end-user setup, research, knowledge maintenance and protected-project discovery instructions |
 | `.agents/skills` and `docs` | Development routing, contributor/operator workflows and public guidance |
 
 Fork-specific screens, branding and workflows belong in the application. Change Core when behavior is reusable, and preserve its independent distribution. Existing typed records and schemas may already express the domain; do not add a parallel database or a custom operation engine without a concrete need.
@@ -42,6 +42,7 @@ Forks use the released Core dependency and frozen lock by default. `CZERO_CORE_S
 | Review Core or managed-infrastructure upgrades | [c0-upgrade-from-upstream](.agents/skills/c0-upgrade-from-upstream/SKILL.md) |
 | Measure model-driven tool use | [c0-evaluate-tools](.agents/skills/c0-evaluate-tools/SKILL.md) |
 | Ingest or update an external data source | [c0-ingest-sources](.agents/skills/c0-ingest-sources/SKILL.md) |
+| Develop or verify protected project workflows and agent handoff | [c0-project-workflows](.agents/skills/c0-project-workflows/SKILL.md) |
 
 Use the installed [NethServer skills](https://github.com/NethServer/agents) for module/container work, native administration, commits, PRs and releases. Do not duplicate their manuals here. End-user skills guide connected assistants; repository skills guide developers. Neither grants authority, and development skills never ship in runtime images.
 
@@ -64,6 +65,20 @@ Feature tests must exercise its observable behavior and the contracts it relies 
 Check Codex-facing MCP tools, descriptions, schemas, safety annotations, plugin/skill instructions and setup guidance against the actual C0 instance after feature, Core or base upgrades. Update the affected artifacts together; refresh/reload Codex's tool catalog and verify the intended account and a real authorized operation. Include a regression check for changed tool contracts and skill workflows. A matching version string or a successful package build alone is insufficient.
 
 Preserve the registered connection identity and unrelated settings on content-only updates. New scopes need appropriate client approval and fresh explicit OAuth consent; do not silently broaden permissions. Keep end-user plugin/skill content separate from development skills. Documentation-only changes that do not affect a connector contract do not require manufacturing a new plugin version.
+
+Plugin1.2 adds the fourth end-user workflow, protected-project discovery. Keep its
+runtime COPY inputs, closed runtime audit allowlist, offline/HTTP package inventory,
+native downloaded-archive checks and evaluation inputs synchronized. Standalone
+forks receive the registered developer workflow skill; application-specific project
+contracts use explicit upstream links when absent locally. Never initialize a
+project or install an external schedule merely to verify discovery. PR41 repair
+acceptance is tracked in PLAN; no new dedicated deployment is part of this work.
+Its inherited Authlib1.8.0 pin is now rejected by the critical security gate.
+Core0.35.1 is immutably published at6a11469 with Authlib1.9.1 and schema0022
+unchanged after exact full40673116010/native/artifact proof and publisher40680486868.
+The app adopts its tag/lock with >=0.35.1,<0.36 and matching patch-only updater
+bounds. Final consumer/full/native/main gates remain required; see PR41 and PLAN.
+Never waive this finding or override the published Core dependency metadata.
 
 ## Reuse ingestion scripts and preserve private jobs
 

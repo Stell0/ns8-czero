@@ -49,6 +49,12 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
     assert not any(Path(n).name in ('mcp.json','.mcp.json') for n in payload)
     assert not any('mcpServers' in v.decode() for n,v in payload.items() if n.endswith('.json'))
     assert payload['LICENSE'] == (ROOT/'LICENSE').read_bytes()
+    assert {name for name in payload if name.startswith('skills/') and name.endswith('/SKILL.md')} == {
+        'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
+        'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md'}
+    assert b'project_get' in payload['skills/c0-projects/SKILL.md']
+    assert b'project_run_claim' in payload['references/projects.md']
+    assert b'{{' not in payload['references/projects.md']
     market = json.loads((a/'.agents/plugins/marketplace.json').read_text())
     assert a.joinpath(market['plugins'][0]['source']['path']).resolve() == base
     assert DOCS['check']([str(p.relative_to(a)) for p in a.rglob('*.md')], root=a) > 0

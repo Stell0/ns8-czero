@@ -12,6 +12,24 @@ from robot.libraries.BuiltIn import BuiltIn
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.parametrize('change', ['valid', 'missing_project', 'extra', 'replacement'])
+def test_native_download_guard_checks_the_actual_four_skill_package(tmp_path, change):
+    from czero_app.agent_packages import plugin_payload, zip_bytes
+    payload = plugin_payload('https://c0.example.test/mcp', 'asdk_app_disposable', 'c0-fixture')
+    if change in {'missing_project', 'replacement'}:
+        payload.pop('skills/c0-projects/SKILL.md')
+    if change in {'extra', 'replacement'}:
+        payload['skills/developer/SKILL.md'] = b'Unexpected developer instructions'
+    path = tmp_path / 'plugin.zip'
+    path.write_bytes(zip_bytes(payload))
+    library = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['CzeroSso']()
+    if change == 'valid':
+        library._verify_agent_archive(path, 'c0.example.test', plugin=True)
+    else:
+        with pytest.raises(AssertionError, match='Unexpected generated archive contents'):
+            library._verify_agent_archive(path, 'c0.example.test', plugin=True)
+
+
 @pytest.fixture
 def accessibility_measurement(monkeypatch):
     monkeypatch.setattr(BuiltIn, 'log_to_console', lambda self, *args: None)

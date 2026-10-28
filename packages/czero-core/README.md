@@ -62,6 +62,12 @@ evidence; the library contract alone does not establish application readiness.
 
 ## Building and verifying
 
+Core0.35.1 pins Authlib1.9.1 to remove CVE-2026-96760's empty-signature
+acceptance and include the subsequent upstream security corrections. C0 retains
+its separate joserfc token verification, exact nonce/callback/resource validation
+and explicit consent. The schema remains0022; no grants or sessions are upgraded.
+Publication and reference-app adoption require the ordinary exact-source gates.
+
 From the repository root:
 
 ```sh

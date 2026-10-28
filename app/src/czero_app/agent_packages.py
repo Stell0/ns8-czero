@@ -14,7 +14,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = Path(os.getenv('CZERO_AGENT_PACKAGE_DIR', ROOT / 'plugins/c0-knowledge'))
 ASSETS = ('plugin.json', 'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
-          'skills/c0-maintain-knowledge/SKILL.md', 'references/connection.md', 'references/maintenance.md')
+          'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
+          'references/connection.md', 'references/maintenance.md', 'references/projects.md')
 
 def mcp_url(value):
     try:

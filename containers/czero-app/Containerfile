@@ -52,7 +52,8 @@ COPY --chown=10001:10001 plugins/c0-knowledge/plugin.json plugins/c0-knowledge/m
 COPY --chown=10001:10001 plugins/c0-knowledge/skills/c0-setup/SKILL.md /opt/czero/agent-packages/skills/c0-setup/SKILL.md
 COPY --chown=10001:10001 plugins/c0-knowledge/skills/c0-research/SKILL.md /opt/czero/agent-packages/skills/c0-research/SKILL.md
 COPY --chown=10001:10001 plugins/c0-knowledge/skills/c0-maintain-knowledge/SKILL.md /opt/czero/agent-packages/skills/c0-maintain-knowledge/SKILL.md
-COPY --chown=10001:10001 plugins/c0-knowledge/references/connection.md plugins/c0-knowledge/references/maintenance.md /opt/czero/agent-packages/references/
+COPY --chown=10001:10001 plugins/c0-knowledge/skills/c0-projects/SKILL.md /opt/czero/agent-packages/skills/c0-projects/SKILL.md
+COPY --chown=10001:10001 plugins/c0-knowledge/references/connection.md plugins/c0-knowledge/references/maintenance.md plugins/c0-knowledge/references/projects.md /opt/czero/agent-packages/references/
 COPY --chown=10001:10001 plugins/c0-knowledge/project /opt/czero/agent-packages/project
 
 USER 10001:10001

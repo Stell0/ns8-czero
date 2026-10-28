@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "c0-knowledge",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Research and maintain your C0 knowledge with original evidence and revision history.",
   "license": "GPL-3.0-or-later",
   "extensions": {

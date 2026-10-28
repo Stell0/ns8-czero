@@ -2,6 +2,75 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
+## Project plugin 1.2 acceptance repair
+
+PR41 adds protected-project discovery to the existing instance-bound plugin. Repair
+the skill inventory, standalone-fork references, runtime asset copies/allowlist and
+native downloaded-archive contract together. Preserve the original failed source
+and its evidence; rebase a separate candidate on reviewed main64b183e and retain
+both histories when updating the PR. Schema0022 and the installed runtime remain
+the predecessor; the security prerequisite below adds a compatible Core patch.
+
+Acceptance requires the complete unchanged-main baseline, focused package/fork/
+browser-helper regressions, the complete candidate suite, exact ready-PR full
+CI/native/privacy/scan proof, review and promotion verification, then successful
+main validation/publication. Verify connected project discovery read-only; do not
+initialize a project, install schedules or deploy merely to test the package.
+Private ChatGPT installation and external-agent execution remain distinct from
+generated-archive and native-browser acceptance. Keep the installed31b0c85 trio
+and existing waivers unchanged. Focused repair validation passes161 cases and292
+local documentation links; both changed/new skill frontmatters validate. An
+independent developer review passes98 non-database cases and forward-checks
+missing tools, missing projects, separate scheduling authority and uncertain-call
+recovery without a blocking finding. These checks are not live model or native
+acceptance. Final exact-source full/native/main results are recorded on
+[PR41](https://github.com/Stell0/ns8-czero/pull/41) after execution.
+
+An actual local default released-Core image passes runtime/legal-content audits
+and generates the1.2.0 plugin with all11 expected files; the native archive guard
+accepts that output. The existing connected host exposes the project catalog;
+profile/authorized-space discovery and the operator-selected protected project's
+manifest/diagnostics reads succeed, with no project writes. Scheduling/monitoring
+remain disabled and no successful external daily/weekly run is reported. This
+proves current-host read-only discovery, not automatic skill activation or
+unattended execution. No connection replacement or scope change was performed.
+
+### Inherited Authlib security prerequisite
+
+Exact repair8a628a9 is blocked by the mandatory app-image critical-vulnerability
+gate in [40672102241](https://github.com/Stell0/ns8-czero/actions/runs/40672102241).
+The newly reviewed [upstream advisory](https://github.com/authlib/authlib/security/advisories/GHSA-6v38-4h7w-rj9h)
+includes the inherited Authlib1.8.0 pin. An actual signed positive/empty-signature
+negative regression reproduces acceptance of an unsigned JSON payload on1.8.0.
+Do not suppress the finding or override immutable Core dependency metadata.
+
+Core0.35.1 pins Authlib1.9.1, preserving joserfc1.7.5, all other pins, schema0022
+and authority semantics. Exact6a11469794d5070af469343aa63715fd0e727d98 passes
+[full40673116010](https://github.com/Stell0/ns8-czero/actions/runs/40673116010):2303
+Python/PostgreSQL/packaging,197 Node24 and21 Robot cases. Local complete producer
+validation independently passes2303 cases in1140.44s without skips. Independent
+developer security/identity/OIDC/renewal/source review passes142 focused cases.
+Actual downloaded native/scan audit passes Debian genuine31b0c85 upgrade21 and
+Rocky installation26/three expected skips, all8 browsers/privacy guards,32 numeric
+accessibility contexts,3 zero-query artifacts and5 scan/SBOM pairs. The app-image
+SBOM confirms Authlib1.9.1. Exact-source full promotion verification passes.
+
+Immutable [Core0.35.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.1)
+points to that source; [publisher40680486868](https://github.com/Stell0/ns8-czero/actions/runs/40680486868)
+passes verify/publish. Actual downloaded wheel SHA256
+`9977a43a5b469089e889b769e92496a40f735c834d0b367d13a8d4456c5939f8` and source
+`70832d916b2c83110ac6406e8f5e641d125a7a84cedaf1a3895bcafe99f20f15` match
+published checksums. Eight actual supplied-artifact checks independently pass
+installations, reproducible rebuild and fresh/repeated PostgreSQL migration in94.56s.
+The bridge retained the existing released default until verified publication;
+packaged Core bytes remain frozen afterward.
+
+The app now adopts the immutable0.35.1 tag/lock with >=0.35.1,<0.36.0 and matching
+patch-only updater bounds. Final released-consumer/full/native acceptance, review,
+promotion verification and actual main publication remain mandatory, with executed
+results recorded on PR41. No deployment is part of this prerequisite. Freeze the
+installed31b0c85 trio throughout;0.35.0 artifacts and historical evidence remain.
+
 ## Seven-day remembered website login — deployed acceptance
 
 Base: original main `f317036`. Reviewed/approved [PR42](https://github.com/Stell0/ns8-czero/pull/42) is regularly merged at `31b0c85a71743ab6dcdb04c12ac18dd4c1500722` and the dedicated instance accepts Core 0.35.0 / app 0.54.0 / additive schema 0022. Preserve the historical `c2280f5` trio used for this genuine upgrade; the next genuine predecessor is the [installed `31b0c85` trio](#remembered-login-deployed-runtime-and-frozen-predecessor).
