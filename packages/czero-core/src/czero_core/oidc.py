@@ -20,6 +20,11 @@ from .sessions import LoginSecrets, PendingLogin
 from .renewal import RenewalRejected, RenewalResult, RenewalUnavailable
 
 
+class OfflineUnavailable(ValueError):
+    def __init__(self):
+        super().__init__('remembered_sign_in_unavailable')
+
+
 class OidcUnavailable(ValueError):
     def __init__(self):
         super().__init__("authentication_unavailable")
@@ -163,10 +168,10 @@ class OidcClient:
 
     def authorization_url(self, pending: PendingLogin, *, reauthenticate: bool = False) -> str:
         metadata = self._discovery()
-        with self._oauth_client(background=pending.background) as client:
+        with self._oauth_client(background=pending.background or pending.remembered) as client:
             url, _ = client.create_authorization_url(metadata["authorization_endpoint"],
                 state=pending.state, nonce=pending.nonce, code_verifier=pending.code_verifier,
-                **({"prompt": "login"} if reauthenticate else {}))
+                **({"prompt": "login consent" if pending.remembered else "login"} if reauthenticate else ({"prompt": "consent"} if pending.remembered else {})))
         return url
 
     def exchange(self, code: str, login: LoginSecrets) -> VerifiedIdentity:
@@ -177,7 +182,7 @@ class OidcClient:
             raise TokenRejected()
         metadata = self._discovery()
         try:
-            with self._oauth_client(background=login.background) as client:
+            with self._oauth_client(background=login.background or login.remembered) as client:
                 result = client.fetch_token(metadata["token_endpoint"], grant_type="authorization_code",
                     code=code, code_verifier=login.code_verifier)
         except (httpx2.HTTPError, OAuth2Error, ValueError):
@@ -188,6 +193,8 @@ class OidcClient:
             access = verifier.verify_access_token(result["access_token"])
             if access.account_key != identity.account_key or access.subject != identity.subject:
                 raise TokenRejected()
+            if login.remembered and 'offline_access' not in str(result.get('scope', '')).split():
+                raise OfflineUnavailable()
             if login.background and (identity.account_key != login.expected_account_key
                     or 'offline_access' not in str(result.get('scope', '')).split()):
                 raise TokenRejected()
@@ -215,6 +222,8 @@ class OidcClient:
         identity, result = self._exchange(code, login)
         refresh = result.get('refresh_token')
         if not isinstance(refresh, str) or not 1 <= len(refresh) <= 16384:
+            if login.remembered:
+                raise OfflineUnavailable()
             # A provider that doesn't issue refresh authority remains bounded
             # by its original token expiry; never fabricate renewal authority.
             return identity, None
@@ -226,8 +235,8 @@ class OidcClient:
             raise TokenRejected() from None
         credential = json.dumps({'access': result['access_token'], 'refresh': refresh,
                                  'nonce': login.nonce, 'id_context': original,
-                                 'refresh_after': refresh_after, 'offline': login.background})
-        return identity, RenewalResult(identity, credential, offline=login.background)
+                                 'refresh_after': refresh_after, 'offline': login.background or login.remembered})
+        return identity, RenewalResult(identity, credential, offline=login.background or login.remembered)
 
     def _private_post(self, url, data, *, reject=False, rotating=False):
         try:

@@ -14,6 +14,7 @@ from renewal_evidence import validate_measurement
 from offline_provider_probe import validate as validate_offline_provider
 from persistent_fixture import validate as validate_persistent_connection
 from persistent_fixture import validate_recovery as validate_persistent_recovery
+from remembered_fixture import validate as validate_remembered_browser
 from cimd_recovery_evidence import validate_measurement as validate_cimd_recovery
 from workspace_access_evidence import validate_measurement as validate_workspace_access
 from workspace_access_evidence import require_stages as require_workspace_access
@@ -41,7 +42,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py", "access_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py", "remembered_fixture.py", "access_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -241,6 +242,7 @@ class CzeroSso:
             self._persistence("verify")
             self._retrieval(module_id, "verify")
             self._oauth_persistence(module_id, "verify")
+            self._remembered_persistence(module_id, "verify")
             ssh = builtin.get_library_instance("SSHLibrary")
             _, rc = ssh.execute_command("python3 /tmp/oidc_fixture.py check-logs " + shlex.quote(module_id),
                                        return_rc=True, timeout="180 seconds")
@@ -269,6 +271,7 @@ class CzeroSso:
         self._retrieval(module_id, "seed")
         self._cimd_persistence(module_id, "seed")
         self._oauth_persistence(module_id, "seed")
+        self._remembered_persistence(module_id, "seed")
 
     @staticmethod
     def _cimd_persistence(module_id, operation):
@@ -336,6 +339,24 @@ class CzeroSso:
             finally:builtin.set_log_level('NONE')
         finally:
             builtin.set_log_level(previous)
+
+    @staticmethod
+    def _remembered_persistence(module_id, operation):
+        builtin=BuiltIn();previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary')
+            output,_,rc=ssh.execute_command('python3 /tmp/remembered_fixture.py '+shlex.quote(module_id)+' '+shlex.quote(operation),
+                return_stderr=True,return_rc=True,timeout='180 seconds')
+            if rc:raise AssertionError('Disposable remembered browser recovery failed')
+            prefix='C0 remembered browser: ';lines=output.splitlines()
+            if len(lines)!=1 or not lines[0].startswith(prefix):raise AssertionError('Remembered browser evidence missing')
+            proof=validate_remembered_browser(json.loads(lines[0][len(prefix):]))
+            builtin.set_log_level('INFO')
+            try:
+                sanitized=prefix+json.dumps(proof,sort_keys=True)
+                builtin.log(sanitized);builtin.log_to_console(sanitized)
+            finally:builtin.set_log_level('NONE')
+        finally:builtin.set_log_level(previous)
 
     @staticmethod
     def _retrieval(module_id, operation):
@@ -412,11 +433,17 @@ class CzeroSso:
                 run('Go To','https://'+host+'/objects')
                 run('Wait For Elements State','#records-signin','visible','timeout=30s')
                 run('Click','#records-signin')
+                run('Get Property','input[name="remember"]','checked','==',False)
+                if username == 'c0owner':run('Check Checkbox','input[name="remember"]')
+                run('Click','#website-sign-in button[type="submit"]')
                 browser.fill_text('input[name="username"]',username)
                 browser.fill_text('input[name="password"]',self._browser_password)
                 run('Click','#kc-login')
+                run('Wait For Elements State','#sign-out, [name="accept"]','visible','timeout=30s')
+                if browser.get_element_count('[name="accept"]'):run('Click','[name="accept"]')
                 # OIDC callback returns to the home page.
                 run('Wait For Elements State','#sign-out','visible','timeout=30s')
+                if username == 'c0owner':run('Get Text','#account-status','contains','Remembered on this device')
                 run('Go To','https://'+host+'/objects')
                 run('Wait For Elements State','#records-workspace','visible','timeout=30s')
                 assert_accessibility(browser, 'records', 'admin' if username == 'c0owner' else 'reader')
@@ -517,6 +544,7 @@ class CzeroSso:
                 run('Go To', 'https://' + host + '/sources?view=tools')
                 run('Wait For Elements State', '#sources-signin', 'visible', 'timeout=30s')
                 run('Click', '#sources-signin')
+                run('Click', '#website-sign-in button[type="submit"]')
                 browser.fill_text('input[name="username"]', username)
                 browser.fill_text('input[name="password"]', self._browser_password)
                 run('Click', '#kc-login')
@@ -642,6 +670,7 @@ class CzeroSso:
                 run('Go To', 'https://' + host + '/wiki?view=tools')
                 run('Wait For Elements State', '#wiki-signin', 'visible', 'timeout=30s')
                 run('Click', '#wiki-signin')
+                run('Click', '#website-sign-in button[type="submit"]')
                 browser.fill_text('input[name="username"]', username)
                 browser.fill_text('input[name="password"]', self._browser_password)
                 run('Click', '#kc-login')
@@ -879,6 +908,7 @@ class CzeroSso:
                 run('Go To', 'https://' + host + '/search')
                 run('Wait For Elements State', '#search-signin', 'visible', 'timeout=30s')
                 run('Click', '#search-signin')
+                run('Click', '#website-sign-in button[type="submit"]')
                 browser.fill_text('input[name="username"]', username)
                 browser.fill_text('input[name="password"]', self._browser_password)
                 run('Click', '#kc-login')
@@ -926,12 +956,27 @@ class CzeroSso:
                 if rc: raise AssertionError('Cannot prepare OAuth browser request')
                 value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/browser-oauth.json'))
                 run('New Context','ignoreHTTPSErrors=True','acceptDownloads=True');run('New Page')
+                # Admin begins with a remembered website session, then consents
+                # separately to background access. Other roles stay ordinary.
+                if role == 'admin':
+                    run('Go To','https://'+host+'/auth/sign-in')
+                    run('Get Property','input[name="remember"]','checked','==',False)
+                    run('Check Checkbox','input[name="remember"]')
+                    run('Click','#website-sign-in button[type="submit"]')
+                    run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
+                    browser.fill_text('input[name="username"]','c0owner')
+                    browser.fill_text('input[name="password"]',self._browser_password)
+                    run('Click','#kc-login')
+                    run('Wait For Elements State','#sign-out, [name="accept"]','visible','timeout=30s')
+                    if browser.get_element_count('[name="accept"]'):run('Click','[name="accept"]')
+                    run('Wait For Elements State','#sign-out','visible','timeout=30s')
                 # Private URLs/passwords never enter Robot keyword arguments.
                 browser.go_to(value['authorization_url'])
-                run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
-                browser.fill_text('input[name="username"]','c0owner' if role=='admin' else 'c0member')
-                browser.fill_text('input[name="password"]',self._browser_password)
-                run('Click','#kc-login')
+                if role != 'admin':
+                    run('Wait For Elements State','input[name="username"]','visible','timeout=30s')
+                    browser.fill_text('input[name="username"]','c0member')
+                    browser.fill_text('input[name="password"]',self._browser_password)
+                    run('Click','#kc-login')
                 run('Wait For Elements State','#approve','enabled','timeout=30s')
                 run('Get Text','#client','==',value['client']['client_name'])
                 run('Get Element Count','#client img','==',0)
@@ -991,6 +1036,7 @@ class CzeroSso:
                     ' browser-complete',return_stderr=True,return_rc=True,timeout='300 seconds')
                 if rc: raise AssertionError('Real OAuth browser/token assertions failed')
                 run('Go To','https://'+host+'/?view=account')
+                if role == 'admin':run('Get Text','#account-status','contains','Remembered on this device')
                 target = 'button[aria-label=' + json.dumps('Disconnect ' + value['client']['client_name']) + ']'
                 run('Wait For Elements State',target,'visible','timeout=30s')
                 run('Get Element Count','#connections-list img','==',0)
@@ -1032,7 +1078,13 @@ class CzeroSso:
         from zipfile import ZipFile
         with ZipFile(path) as archive:
             names = set(archive.namelist())
-            assert len(names) == (9 if plugin else 3), 'Unexpected generated archive contents'
+            expected = {'SKILL.md', 'agents/openai.yaml', 'LICENSE'}
+            if plugin:
+                expected = {'plugin.json', '.app.json', 'LICENSE', 'references/instance.md',
+                    'references/connection.md', 'references/maintenance.md', 'references/projects.md',
+                    'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
+                    'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md'}
+            assert names == expected and len(archive.namelist()) == len(names), 'Unexpected generated archive contents'
             assert 'LICENSE' in names and not names.intersection({'AGENTS.md', 'PLAN.md', 'mcp.json', '.mcp.json'})
             binding = archive.read('references/instance.md' if plugin else 'SKILL.md').decode()
             assert host in binding and 'https://' + host + '/mcp' in binding, 'Archive is not bound to this instance'

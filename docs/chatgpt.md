@@ -45,7 +45,7 @@ Background authorization lets a compatible client renew access unattended. Wheth
 
 ## 5. Add reusable workflow skills
 
-On **Use with AI**, download the generated **.skill** and upload it at [ChatGPT Skills](https://chatgpt.com/skill), where your account supports skill upload. It contains this instance’s hostname and MCP URL. Alternatively, paste your ChatGPT connection page address or technical app ID and download the generated **plugin .zip** for the three setup/research/maintenance workflows. See [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
+On **Use with AI**, download the generated **.skill** and upload it at [ChatGPT Skills](https://chatgpt.com/skill), where your account supports skill upload. It contains this instance’s hostname and MCP URL. Alternatively, paste your ChatGPT connection page address or technical app ID and download the generated **plugin .zip** for the four setup/research/maintenance/project-discovery workflows. See [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
 
 ## Enable editing deliberately
 

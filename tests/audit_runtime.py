@@ -18,7 +18,8 @@ def audit(root: Path) -> None:
     product = root / 'agent-packages'
     product_files = {'plugin.json', 'memory-skill.md', 'LICENSE',
         'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
-        'skills/c0-maintain-knowledge/SKILL.md', 'references/connection.md', 'references/maintenance.md'}
+        'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
+        'references/connection.md', 'references/maintenance.md', 'references/projects.md'}
     product_files |= {'project/'+name+'.md' for name in ('skill','workflows','daily','weekly','recovery','scheduler')}
     allowed_skills = {product / path for path in product_files if path.endswith('/SKILL.md')}
     if product.exists():

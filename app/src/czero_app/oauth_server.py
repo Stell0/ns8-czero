@@ -178,7 +178,11 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
     def browser_session(request):
         if request.headers.get('authorization') is not None:
             raise PermissionDenied()
-        return auth.sessions.get(request.cookies.get('c0_session'))
+        cookie = request.cookies.get('c0_session')
+        session = auth.sessions.get(cookie)
+        if session.remembered:
+            request.state.remembered_cookie = cookie
+        return session
 
     def background_ready(session):
         # The NS8 setting applies to new connections. Reuse an offline sign-in
@@ -190,7 +194,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
         with auth.access.database.engine.connect() as connection:
             native = authority.peek(connection, session.native_authority_id, account_id=session.actor.user_id)
         return (native['authority_kind'] == 'background'
-            and native['idle_seconds'] == authority.connection_policy.idle_seconds)
+            and (native.get('connection_idle_seconds') or native['idle_seconds']) == authority.connection_policy.idle_seconds)
 
     @app.get('/api/v1/oauth/connections')
     def account_connections(request: Request, context=Depends(read_context)):

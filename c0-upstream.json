@@ -564,6 +564,11 @@
       "sha256": null
     },
     {
+      "path": "tests/remembered_fixture.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
       "path": "tests/workspace_access_evidence.py",
       "mode": null,
       "sha256": null
@@ -575,6 +580,11 @@
     },
     {
       "path": ".agents/skills/c0-ingest-sources/SKILL.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": ".agents/skills/c0-project-workflows/SKILL.md",
       "mode": null,
       "sha256": null
     },

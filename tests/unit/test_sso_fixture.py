@@ -12,6 +12,24 @@ from robot.libraries.BuiltIn import BuiltIn
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.parametrize('change', ['valid', 'missing_project', 'extra', 'replacement'])
+def test_native_download_guard_checks_the_actual_four_skill_package(tmp_path, change):
+    from czero_app.agent_packages import plugin_payload, zip_bytes
+    payload = plugin_payload('https://c0.example.test/mcp', 'asdk_app_disposable', 'c0-fixture')
+    if change in {'missing_project', 'replacement'}:
+        payload.pop('skills/c0-projects/SKILL.md')
+    if change in {'extra', 'replacement'}:
+        payload['skills/developer/SKILL.md'] = b'Unexpected developer instructions'
+    path = tmp_path / 'plugin.zip'
+    path.write_bytes(zip_bytes(payload))
+    library = runpy.run_path(str(ROOT / 'tests/CzeroSso.py'))['CzeroSso']()
+    if change == 'valid':
+        library._verify_agent_archive(path, 'c0.example.test', plugin=True)
+    else:
+        with pytest.raises(AssertionError, match='Unexpected generated archive contents'):
+            library._verify_agent_archive(path, 'c0.example.test', plugin=True)
+
+
 @pytest.fixture
 def accessibility_measurement(monkeypatch):
     monkeypatch.setattr(BuiltIn, 'log_to_console', lambda self, *args: None)
@@ -134,6 +152,7 @@ def test_identity_probe_waits_for_health_after_native_restart(monkeypatch, ready
     library._persistence=lambda *args: calls.append('probe')
     library._retrieval=lambda *args: calls.append('retrieval')
     library._oauth_persistence=lambda *args: calls.append('oauth')
+    library._remembered_persistence=lambda *args: calls.append('remembered')
     library._cimd_persistence=lambda *args: calls.append('cimd')
     def wait(self, name, *args):
         assert name == 'Wait Until Keyword Succeeds'
@@ -143,7 +162,7 @@ def test_identity_probe_waits_for_health_after_native_restart(monkeypatch, ready
     monkeypatch.setattr(BuiltIn, 'run_keyword', wait)
     if ready:
         library.verify_disposable_identity_persistence('czero7')
-        assert calls == ['network','health','cimd','probe','retrieval','oauth']
+        assert calls == ['network','health','cimd','probe','retrieval','oauth','remembered']
     else:
         with pytest.raises(AssertionError, match='application not ready'):
             library.verify_disposable_identity_persistence('czero7')
@@ -181,7 +200,7 @@ def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monke
         return '', '', 0
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
-        get_text=lambda selector:next(identities),
+        get_text=lambda selector:next(identities),get_element_count=lambda selector:0,
         evaluate_javascript=accessibility_measurement)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')

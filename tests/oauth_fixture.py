@@ -40,7 +40,9 @@ def recover_consent_session(module_id, browser, client, *, expire_session=None):
         # Expire only this fixture-owned session. Private SQL travels on stdin,
         # and no raw cookie, token or query enters arguments or Robot output.
         hashed = hashlib.sha256(old_cookie.encode()).hexdigest()
-        sql = "UPDATE c0_sessions SET expires_at=now()-interval '1 second' WHERE token_hash='"+hashed+"';"
+        sql = ("UPDATE c0_sessions SET expires_at=now()-interval '1 second', "
+               "browser_idle_until=CASE WHEN browser_idle_until IS NULL THEN NULL "
+               "ELSE now()-interval '1 second' END WHERE token_hash='"+hashed+"';")
         result = subprocess.run(['runagent','-m',module_id,'podman','exec','-i','czero-postgres',
             'psql','-U','czero','-d','czero','-v','ON_ERROR_STOP=1'],
             input=sql.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)

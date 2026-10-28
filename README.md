@@ -60,7 +60,7 @@ C0 exposes **Model Context Protocol (MCP)** at your instance's `/mcp` URL. It le
 Open `https://c0.example.org/agents` on your own instance. It provides the connection details and generated downloads bound to that hostname:
 
 - **A `.skill` archive** for the instance's knowledge workflow.
-- **A plugin `.zip`** that references your registered ChatGPT C0 app and includes setup, research and maintenance skills.
+- **A plugin `.zip`** that references your registered ChatGPT C0 app and includes setup, research, knowledge maintenance and protected-project discovery skills. Repeated daily/weekly project work uses a separate project-bound package; downloading either package does not install a scheduled task.
 - **The MCP URL** for clients with their own connector configuration.
 
 Installing instructions does not connect an account or grant access. Sign in through OAuth, review the requested permissions and complete any C0 application approval. Read, Write and Manage scopes remain independent. Short access tokens renew through refresh; explicitly consented background connections use an inactivity deadline and can be disconnected or revoked.
@@ -298,7 +298,7 @@ its seven adapters, protected receipts, limits and explicit approval. This
 branch remains an implementation candidate; no live migration is performed.
 
 The project backend is implemented in Core0.34/app0.53 and the external worker0.2.
-The default build pins the verified immutable `core-v0.34.0` release. M0–M8,
+That accepted runtime pins the verified immutable `core-v0.34.0` release. M0–M8,
 the final PR and merged-main full/native acceptance pass. The dedicated reference
 installation also passes read-only client, preservation and restart checks; see
 [deployed runtime evidence](PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor).
@@ -308,3 +308,16 @@ Actual project research and unattended execution remain unverified. Reload the
 host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
+
+The default build pins released Core 0.35.0 for app 0.54.0 / schema 0022.
+The accepted remembered website login adds an unchecked **Remember this device**
+choice at sign-in. It requires provider-authorized offline renewal and expires
+after seven days without successful website use; use renews that window across
+browser restarts. Ordinary sessions keep the configured idle/maximum limits
+(default one hour/eight hours). Existing sessions and AI connections are not
+upgraded. Sign out forgets this browser; AI connections keep their separate
+explicit consent and disconnect controls. [Acceptance and the installed image
+identities](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor)
+record the approved dedicated-instance update, retained sessions/data/connections,
+real-provider remembered sign-in and successful manager restart. Existing logins
+remain ordinary; choose the option at your next sign-in to remember that device.

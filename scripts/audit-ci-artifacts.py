@@ -17,6 +17,7 @@ from offline_provider_probe import validate as validate_offline_provider
 from persistent_fixture import validate as validate_persistent_connection
 from persistent_fixture import require_recovery as require_persistent_recovery
 from workspace_access_evidence import require_stages as require_workspace_access
+from remembered_fixture import require_recovery as require_remembered_recovery
 
 
 REQUIRED_UI = {
@@ -59,7 +60,7 @@ def marker_values(logs, marker):
 def audit_reports(directory, source, images, logs):
     reports = sorted(directory.rglob('output.xml'))
     assert len(reports) == 2, 'Both native reports are required'
-    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []; persistent = []; background_recovery = []
+    actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []; persistent = []; background_recovery = []; remembered = []
     for report in reports:
         raw = report.read_text()
         measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
@@ -73,6 +74,7 @@ def audit_reports(directory, source, images, logs):
         assert len(background) == 1, 'One measured persistent connection proof per native distribution required'
         persistent.append(validate_persistent_connection(background[0]))
         background_recovery.append(require_persistent_recovery(marker_values(html.unescape(raw),'C0 persistent recovery: ')))
+        remembered.append(require_remembered_recovery(marker_values(html.unescape(raw), 'C0 remembered browser: ')))
         admission = marker_values(html.unescape(raw), 'C0 admission: ')
         assert len(admission) == 2 and any(p['fresh_readers'] >= 1 for p in admission), 'Native fresh Reader admission missing'
         assert all(p['blocked_signins'] == 3 and p['shared_only'] is True for p in admission), 'Native persistent blocking missing'
@@ -134,7 +136,7 @@ def audit_reports(directory, source, images, logs):
             'privacy_guards': privacy, 'query_artifacts': audited, 'oauth_query_candidates': 0,
             'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
             'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery,
-            'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery,
+            'remembered_browser_recovery': remembered, 'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery,
             'workspace_access_measurements':access,'predecessor_background':predecessor_background}
 
 

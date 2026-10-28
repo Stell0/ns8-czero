@@ -66,6 +66,14 @@ Check Codex-facing MCP tools, descriptions, schemas, safety annotations, plugin/
 
 Preserve the registered connection identity and unrelated settings on content-only updates. New scopes need appropriate client approval and fresh explicit OAuth consent; do not silently broaden permissions. Keep end-user plugin/skill content separate from development skills. Documentation-only changes that do not affect a connector contract do not require manufacturing a new plugin version.
 
+Plugin1.2 adds the fourth end-user workflow, protected-project discovery. Keep its
+runtime COPY inputs, closed runtime audit allowlist, offline/HTTP package inventory,
+native downloaded-archive checks and evaluation inputs synchronized. Standalone
+forks receive the registered developer workflow skill; application-specific project
+contracts use explicit upstream links when absent locally. Never initialize a
+project or install an external schedule merely to verify discovery. PR41 repair
+acceptance is tracked in PLAN; no new dedicated deployment is part of this work.
+
 ## Reuse ingestion scripts and preserve private jobs
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)
@@ -115,7 +123,7 @@ The operator's **interactive Playwright** and **container CPU-quota** waivers re
 
 ## Accepted baseline and preserved evidence
 
-The accepted dedicated runtime is app **0.53.0**, Core **0.34.0**, schema **0021**, source `c2280f576ba71dda723bc1afa11577f2fd251edd`. Its exact installed identities and next genuine predecessor policy are recorded in [PLAN](PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor). Keep those immutable candidate tags/digests available; documentation changes do not replace the runtime. Earlier accepted installations remain historical evidence.
+The accepted dedicated runtime is app **0.54.0**, Core **0.35.0**, schema **0022**, source `31b0c85a71743ab6dcdb04c12ac18dd4c1500722`. Its exact installed identities and next genuine predecessor policy are recorded in [PLAN](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor). Keep those immutable candidate tags/digests available; documentation changes do not replace the runtime. The previous `c2280f5` installation remains the historical genuine predecessor used to accept this upgrade.
 
 Prior reviewed closeout PR35 merged as `f735004`; actual main documentation check [40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source promotion verification pass. The full runtime/main publication evidence remains in PLAN. Broader M21 packaged-skill/client/scheduled acceptance and release obligations remain open; no stable module release is claimed.
 
@@ -504,3 +512,15 @@ exercised. Live original-file corpus is empty; nonempty recovery is disposable.
 No project initialization, real migration, research schedule activation, existing
 knowledge mutation or static-site publication occurred. Project research,
 project-skill host use and unattended execution remain separate verification.
+
+## Remembered website acceptance — 27 October 2026
+
+Use five-minute server-side one-use sign-in intents and exact Origin/browser binding before requesting offline access. Only verified offline issuance enables remembered mode. The seven-day cookie and browser inactivity window slide after successful authenticated website responses, never public/failed/MCP traffic. Recheck current roles/native/session state before renewal; logout and expiry cannot be revived. Keep browser and connection inactivity independently snapshotted; preserve the remembered choice through explicit background sign-in. Ordinary grants remain finitely bounded and remembered authority alone cannot authorize persistent grants. Existing rows default ordinary. Core0.35/app0.54 use additive schema0022; publish Core before adopting its immutable tag/lock. Preserve historical c2280f5 evidence and freeze all three actually installed 31b0c85 digests in PLAN for future genuine upgrades.
+
+After successful verified sign-in, retire the incoming browser cookie through Core `replace_browser` before returning the new cookie. Preserve existing client grants and their original deadlines; stale old responses must not restore website access.
+
+The first-party sign-in form needs `Referrer-Policy: strict-origin`: Chromium sends `Origin: null` for a navigation form under `no-referrer`. Keep exact Origin validation (including rejection of null), and retain `no-referrer` on the subsequent provider redirect. A real headless Chrome negative/positive control reproduces this distinction; native browser sign-in must pass before acceptance.
+
+Core0.35.0 is immutably published at `254fd3f` after exact full40518599847/native/artifact/promotion gates and publisher40529304349; downloaded checksums and eight supplied-artifact checks pass. The app adopts that released tag/lock with >=0.35,<0.36 and matching Renovate patch bounds. Repaired aa9bfd0 passes full40541383069 and independent 2298-case frozen-lock consumer validation. Approved PR42 regularly merges at31b0c85; actual main full40581381116, canonical publication, independent downloaded native/privacy/scan audits and exact-source promotion verification pass. Main passes2298 Python/PostgreSQL/packaging,197 Node24 and21 Robot cases, Debian upgrade21, Rocky installation26/three expected skips/all8 browsers,6 remembered recovery stages,8 privacy guards,32 accessibility contexts and3 zero-query artifacts.
+
+The approved dedicated update and manager restart accept that exact 31b0c85 trio. C0-only backup/full data read, trusted HTTPS, schema0022/timer readiness,32795 original stable rows/40 domain tables,settings/auth/retrieval/mounts/schedules,3 original background grants and10 unrelated instances pass. Ordinary sessions remain ordinary. Live owner REST/five protected Wiki reads, real-provider remembered offline issuance,seven-day cookie attributes/rolling/jar reload,restart retention and own-browser logout/replay rejection pass. The existing MCP profile and4 authorized-space discoveries work after update/restart and after test-browser logout, without reconnect or client changes. Both bounded root app journal windows have38 actual entries with successful request controls andzero credential/query/JWT/traceback candidates. Original-file corpus is empty live; nonempty recovery,other roles and provider/client revocation remain disposable evidence. Broader scheduled/research acceptance and the CPU/interactive Playwright waivers remain unchanged; no stable module release is claimed. See PLAN for precise boundaries and immutable identities.

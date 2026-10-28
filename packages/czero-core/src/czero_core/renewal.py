@@ -16,6 +16,7 @@ from joserfc.jwk import OctKey
 from sqlalchemy import text
 
 from .identity import PermissionDenied, Role, VerifiedIdentity
+from .sessions import REMEMBER_SECONDS
 
 
 class RenewalRejected(ValueError):
@@ -104,7 +105,7 @@ class NativeAuthorityService:
     @staticmethod
     def _binding(row):
         value = [str(row['id']), str(row['account_id']), row['issuer'], row['native_client'], row['subject']]
-        return value + ['background'] if row.get('authority_kind') == 'background' else value
+        return value + [row['authority_kind']] if row.get('authority_kind') in ('background','remembered') else value
 
     def _open(self, row):
         try:
@@ -119,10 +120,11 @@ class NativeAuthorityService:
         except (JoseError, ValueError, KeyError, TypeError, UnicodeError):
             raise RenewalRejected() from None
 
-    def create(self, connection, actor, result, *, background=False):
+    def create(self, connection, actor, result, *, background=False, remembered=False):
         if not isinstance(result, RenewalResult):
             raise RenewalRejected()
-        if type(background) is not bool or background and (self.connection_policy is None or not result.offline):
+        if (type(background) is not bool or type(remembered) is not bool
+                or background and self.connection_policy is None or (background or remembered) and not result.offline):
             raise RenewalRejected()
         current = self._now()
         identity = result.identity
@@ -138,10 +140,10 @@ class NativeAuthorityService:
         self.access._actor(connection, actor.user_id).require(Role.READER)
         connection.execute(text('SELECT pg_advisory_xact_lock(49374)'))
         connection.execute(text('''UPDATE c0_native_authority n SET revoked=true,credential=NULL,checking=false
-            WHERE authority_kind='background' AND issuer=:issuer AND native_client=:client
+            WHERE authority_kind IN ('background','remembered') AND issuer=:issuer AND native_client=:client
             AND NOT EXISTS(SELECT 1 FROM c0_sessions s WHERE s.native_authority_id=n.id AND s.expires_at>:now)
             AND NOT EXISTS(SELECT 1 FROM c0_oauth_grants g WHERE g.native_authority_id=n.id
-                AND g.persistent AND g.idle_until>:now)'''),
+                AND (g.expires_at>:now OR (g.persistent AND g.idle_until>:now)))'''),
             {'issuer':self.access.issuer,'client':self.client_id,'now':_date(current)})
         for table in ('c0_sessions', 'c0_oauth_grants'):
             connection.execute(text(f"""DELETE FROM {table} s USING c0_native_authority n
@@ -161,22 +163,23 @@ class NativeAuthorityService:
             raise RenewalRejected()
         row = {'id': uuid4(), 'account_id': actor.user_id, 'issuer': identity.issuer,
                'native_client': self.client_id, 'subject': identity.subject,
-               'authority_kind': 'background' if background else 'session'}
-        absolute = None if background else current + self.policy.absolute_seconds
-        idle_seconds = self.connection_policy.idle_seconds if background else self.policy.idle_seconds
+               'authority_kind': 'background' if background else ('remembered' if remembered else 'session')}
+        absolute = None if background or remembered else current + self.policy.absolute_seconds
+        connection_seconds = self.connection_policy.idle_seconds if background else None
+        idle_seconds = max(connection_seconds or 0, REMEMBER_SECONDS) if remembered else (connection_seconds or self.policy.idle_seconds)
         connection.execute(text('''INSERT INTO c0_native_authority
-            (id,account_id,issuer,native_client,subject,credential,verified_until,expires_at,idle_until,idle_seconds,authority_kind)
-            VALUES (:id,:account_id,:issuer,:native_client,:subject,:credential,:verified,:expires,:idle,:seconds,:kind)'''),
+            (id,account_id,issuer,native_client,subject,credential,verified_until,expires_at,idle_until,idle_seconds,authority_kind,connection_idle_seconds)
+            VALUES (:id,:account_id,:issuer,:native_client,:subject,:credential,:verified,:expires,:idle,:seconds,:kind,:connection_seconds)'''),
             {**row, 'credential': self._seal(row, result.credential), 'verified': _date(identity.expires_at),
              'expires': _date(absolute) if absolute is not None else None,
-             'idle': _date(current + idle_seconds if background else min(absolute, current + idle_seconds)),
-             'seconds': idle_seconds, 'kind': 'background' if background else 'session'})
+             'idle': _date(current + idle_seconds if absolute is None else min(absolute, current + idle_seconds)),
+             'seconds': idle_seconds, 'kind': row['authority_kind'], 'connection_seconds': connection_seconds})
         return row['id'], _date(absolute) if absolute is not None else None
 
     def peek(self, connection, identifier, *, account_id=None):
         row = connection.execute(text('''SELECT * FROM c0_native_authority WHERE id=:id
             AND issuer=:issuer AND native_client=:client AND NOT revoked
-            AND (expires_at>:now OR (authority_kind='background' AND expires_at IS NULL))
+            AND (expires_at>:now OR (authority_kind IN ('background','remembered') AND expires_at IS NULL))
             AND idle_until>:now AND verified_until>:now'''),
             {'id': identifier, 'issuer': self.access.issuer, 'client': self.client_id,
              'now': _date(self._now())}).mappings().one_or_none()
@@ -271,7 +274,7 @@ class NativeAuthorityService:
                         or identity.account_key != str(account) or not math.isfinite(identity.expires_at)
                         or identity.expires_at <= current):
                     raise RenewalRejected()
-                if row['authority_kind'] == 'background' and not proof.offline:
+                if row['authority_kind'] in ('background','remembered') and not proof.offline:
                     raise RenewalRejected()
                 self.access._actor(connection, row['account_id']).require(Role.READER)
                 connection.execute(text("""UPDATE c0_native_authority SET credential=:credential,

@@ -34,6 +34,7 @@
       if (!current(generation)) return;
       csrfToken = user.csrf_token; role = user.role;
       accountStatus.textContent = `Signed in as ${user.username} · ${user.is_owner ? 'Owner (Admin)' : user.role}`;
+      if (user.browser_session && user.browser_session.remembered) accountStatus.textContent += ' · Remembered on this device (seven-day inactivity)';
       signIn.hidden = true; signOut.hidden = false;
       if (role === 'admin' && (!window.C0 || window.C0.params.get('view') === 'account' || document.body.dataset.page === 'admin')) { sharing.hidden = false; }
     } catch (_) {
