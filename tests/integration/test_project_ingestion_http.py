@@ -137,7 +137,7 @@ def test_large_source_shrink_has_exact_current_snapshot_and_retained_old_parts(s
     config,_=sample_connection;client,definition=setup(config)
     try:
         large=Item('documents','large.md','Large original',('A bounded original paragraph.\n\n'*6000).encode(),'text/markdown')
-        initial=[sync_part(client,part,tmp_path/'large.json',definition_hash=sha(definition),attempts=4,seconds=0) for part in parts(large)]
+        initial=[sync_part(client,part,tmp_path/'large.json',definition_hash=sha(definition),attempts=4,seconds=0) for part in parts(large,limit=131072)]
         assert len(initial)==2
         first=save_snapshot(client,large,initial)
         assert len(first['data']['part_receipt_ids'])==2

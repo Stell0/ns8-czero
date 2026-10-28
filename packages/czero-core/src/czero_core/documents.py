@@ -6,12 +6,11 @@ Every lookup is restricted to the selected space and current Reader authority.
 """
 import hashlib
 import json
-from uuid import UUID
 
 from sqlalchemy import text
 
 from .sources import SourceConflict, SourceNotFound, SourceService, _uuid
-from .spaces import SpaceBound, content_row, hold_authority
+from .spaces import SpaceBound, hold_authority
 
 SNAPSHOT = 'c0_project_source_snapshot_v1'
 HISTORY = 'c0_project_source_snapshot_history_v1'
@@ -46,21 +45,22 @@ class DocumentService(SpaceBound):
         with self.database.engine.begin() as connection:
             self._authorize(connection, actor)
             rows = connection.execute(text('''WITH parents AS MATERIALIZED (
-                SELECT id,data,space_id,updated_at FROM c0_objects WHERE space_id=:space AND type_name=:snapshot
+                SELECT id,data,space_id,updated_at,created_at FROM c0_objects WHERE space_id=:space AND type_name=:snapshot
             ), summaries AS (
                 SELECT s.id,s.title,s.metadata,s.updated_at,COALESCE(v.state,'queued') AS state,
-                    COALESCE(v.media_type,'text/plain') AS media_type,false AS multipart
+                    COALESCE(v.media_type,'text/plain') AS media_type,false AS multipart,s.created_at AS sort_at
                 FROM c0_sources s LEFT JOIN LATERAL (
                     SELECT state,media_type FROM c0_source_versions WHERE space_id=s.space_id AND source_id=s.id
                     ORDER BY number DESC LIMIT 1
                 ) v ON true WHERE s.space_id=:space AND NOT s.deleted AND NOT EXISTS (
-                    SELECT 1 FROM parents p WHERE p.data->>'connector_id'=s.metadata->>'connector_id'
-                    AND p.data->>'external_id'=s.metadata->>'parent_external_id'
+                    SELECT 1 FROM c0_objects receipt WHERE receipt.space_id=s.space_id
+                    AND receipt.type_name IN (:receipt,:current_receipt)
+                    AND receipt.data @> jsonb_build_object('source_id',s.id::text)
                 )
                 UNION ALL
                 SELECT p.id,COALESCE(s.title,p.data->>'external_id'),COALESCE(s.metadata,'{}'::jsonb),p.updated_at,
                     CASE WHEN v.state='ready' THEN 'ready' ELSE 'incomplete' END,
-                    COALESCE(v.media_type,'text/plain'),true
+                    COALESCE(v.media_type,'text/plain'),true,p.created_at
                 FROM parents p LEFT JOIN c0_objects r ON r.space_id=p.space_id AND r.type_name=:receipt
                     AND r.id::text=p.data->'part_receipt_ids'->>0
                 LEFT JOIN c0_source_versions v ON v.space_id=p.space_id AND v.id::text=r.data->>'version_id'
@@ -72,8 +72,8 @@ class DocumentService(SpaceBound):
                     JOIN c0_sources original ON original.id::text=receipt.data->>'source_id' AND original.space_id=p.space_id
                     WHERE original.deleted
                 )
-            ) SELECT * FROM summaries ORDER BY updated_at DESC,id LIMIT :limit OFFSET :offset'''),
-                {'space':self._space(connection),'snapshot':SNAPSHOT,'receipt':RECEIPT,'limit':limit,'offset':offset}).mappings()
+            ) SELECT id,title,metadata,updated_at,state,media_type,multipart FROM summaries ORDER BY sort_at DESC,id LIMIT :limit OFFSET :offset'''),
+                {'space':self._space(connection),'snapshot':SNAPSHOT,'receipt':RECEIPT,'current_receipt':'c0_project_source_sync_v1','limit':limit,'offset':offset}).mappings()
             return [dict(row) for row in rows]
 
     def document_history(self, actor, identifier, *, limit=50, offset=0):
@@ -105,7 +105,8 @@ class DocumentService(SpaceBound):
     def _read(self, connection, identifier, *, revision_id=None):
         source = self._source(connection, identifier)
         if source:
-            return self._single(connection, source, revision_id)
+            single=self._single(connection,source,revision_id)
+            return self._containing(connection,single['revision_id'],single=single)
         parent = self._object(connection, identifier, SNAPSHOT)
         if not parent:raise SourceNotFound()
         selected = self._object(connection, revision_id, HISTORY) if revision_id else parent
@@ -169,14 +170,24 @@ class DocumentService(SpaceBound):
         bodies=[];parts=[];byte_offset=0;offset=0;media=rows[0]['media_type']
         for number,row in enumerate(rows,1):
             receipt=row['data'];body=row['body']
+            legacy=False
+            if receipt.get('parent_content_hash')!=data['content_hash']:
+                from .projects import logical_key
+                identity=receipt.get('connector_id','')+':'+receipt.get('external_id','')+':'+str(row['version_id'])
+                legacy=receipt.get('key')==logical_key('source_sync_history_v1',identity)
             if (receipt.get('connector_id')!=data['connector_id'] or receipt.get('parent_external_id')!=data['external_id']
-                    or receipt.get('parent_content_hash')!=data['content_hash'] or receipt.get('sync_status')!='verified'
+                    or (receipt.get('parent_content_hash')!=data['content_hash'] and not legacy) or receipt.get('sync_status')!='verified'
                     or receipt.get('extraction_status')!='ready' or receipt.get('part_number')!=number
-                    or receipt.get('start_byte')!=byte_offset or row['media_type']!=media
+                    or (not legacy and receipt.get('start_byte')!=byte_offset) or row['media_type']!=media
                     or receipt.get('last_content_hash')!=row['content_hash'] or body is None or _hash(body)!=row['text_hash']):
                 raise SourceConflict()
             raw_size=len(body.encode()) if media in ('text/plain','text/markdown') else row['size_bytes']
-            if receipt.get('end_byte')!=byte_offset+raw_size:raise SourceConflict()
+            if receipt.get('end_byte')!=receipt.get('start_byte',0)+raw_size:raise SourceConflict()
+            if legacy:
+                # Old writers reused immutable receipt versions across parents.
+                # Explicit snapshot membership plus the full hash verifies the
+                # reconstructed offsets, without borrowing mutable current rows.
+                result['metadata']['legacy_receipt_reconstruction']=True
             if media in ('text/plain','text/markdown'):
                 if _hash(body)!=row['content_hash']:raise SourceConflict()
             elif len(rows)!=1 or row['content_hash']!=data['content_hash']:raise SourceConflict()
@@ -188,7 +199,7 @@ class DocumentService(SpaceBound):
         body=''.join(bodies)
         if byte_offset!=data['total_bytes'] or (media in ('text/plain','text/markdown') and _hash(body)!=data['content_hash']):
             raise SourceConflict()
-        result.update(title=rows[0]['title'],metadata=rows[0]['metadata'],media_type=media,state='ready',
+        result.update(title=rows[0]['title'],metadata={**rows[0]['metadata'],**result['metadata']},media_type=media,state='ready',
             body=body,text_hash=_hash(body),parts=parts,deleted=any(row['deleted'] for row in rows),error_code=None)
         # Current source metadata is immutable; immutable receipt provenance describes this snapshot.
         provenance=rows[0]['data'].get('provenance',{})
@@ -199,19 +210,28 @@ class DocumentService(SpaceBound):
         """Resolve an old part link to a snapshot containing that exact version."""
         with self.database.engine.begin() as connection:
             self._authorize(connection, actor)
-            version=connection.execute(text('SELECT source_id FROM c0_source_versions WHERE space_id=:space AND id=:id'),
-                {'space':self._space(connection),'id':_uuid(version_id)}).mappings().one_or_none()
-            if not version:raise SourceNotFound()
-            rows=connection.execute(text('''SELECT p.id,h.id AS revision_id FROM c0_objects r
-                JOIN c0_objects h ON h.space_id=r.space_id AND h.type_name=:history
-                    AND h.data->'part_receipt_ids' @> jsonb_build_array(r.id::text)
-                    AND h.data->>'connector_id'=r.data->>'connector_id'
-                    AND h.data->>'external_id'=r.data->>'parent_external_id'
-                JOIN c0_objects p ON p.space_id=h.space_id AND p.type_name=:snapshot
-                    AND p.data->>'connector_id'=h.data->>'connector_id' AND p.data->>'external_id'=h.data->>'external_id'
-                WHERE r.space_id=:space AND r.type_name=:receipt AND r.data @> CAST(:identity AS jsonb)
-                ORDER BY h.created_at DESC,h.id DESC LIMIT 2'''),
-                {'space':self._space(connection),'history':HISTORY,'snapshot':SNAPSHOT,'receipt':RECEIPT,
-                 'identity':json.dumps({'version_id':str(version_id),'source_id':str(version['source_id'])})}).mappings().all()
-            if rows:return self._read(connection, rows[0]['id'], revision_id=rows[0]['revision_id'])
-            return self._single(connection, self._source(connection, version['source_id']), version_id)
+            return self._containing(connection,version_id)
+
+    def _containing(self, connection, version_id, *, single=None):
+        version=connection.execute(text('SELECT source_id FROM c0_source_versions WHERE space_id=:space AND id=:id'),
+            {'space':self._space(connection),'id':_uuid(version_id)}).mappings().one_or_none()
+        if not version:raise SourceNotFound()
+        identity=json.dumps({'version_id':str(version_id),'source_id':str(version['source_id'])})
+        rows=connection.execute(text('''SELECT p.id,h.id AS revision_id FROM c0_objects r
+            JOIN c0_objects h ON h.space_id=r.space_id AND h.type_name=:history
+                AND h.data->'part_receipt_ids' @> jsonb_build_array(r.id::text)
+                AND h.data->>'connector_id'=r.data->>'connector_id'
+                AND h.data->>'external_id'=r.data->>'parent_external_id'
+            JOIN c0_objects p ON p.space_id=h.space_id AND p.type_name=:snapshot
+                AND p.data->>'connector_id'=h.data->>'connector_id' AND p.data->>'external_id'=h.data->>'external_id'
+            WHERE r.space_id=:space AND r.type_name=:receipt AND r.data @> CAST(:identity AS jsonb)
+            ORDER BY h.created_at DESC,h.id DESC LIMIT 2'''),
+            {'space':self._space(connection),'history':HISTORY,'snapshot':SNAPSHOT,'receipt':RECEIPT,'identity':identity}).mappings().all()
+        if rows:return self._read(connection,rows[0]['id'],revision_id=rows[0]['revision_id'])
+        result=single or self._single(connection,self._source(connection,version['source_id']),version_id)
+        part=connection.execute(text('''SELECT id FROM c0_objects WHERE space_id=:space
+            AND type_name IN (:current,:history) AND data @> CAST(:identity AS jsonb) LIMIT 1'''),
+            {'space':self._space(connection),'current':'c0_project_source_sync_v1','history':RECEIPT,'identity':identity}).scalar_one_or_none()
+        if part is not None:
+            result.update(state='incomplete',body=None,parts=[],text_hash=None,error_code='unverified_parent_snapshot')
+        return result

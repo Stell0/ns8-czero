@@ -105,7 +105,7 @@ def test_multipart_exact_order_shrink_repeat_history_and_old_citation(logical):
     assert len(service.browse_documents(actor)) == 1
 
 
-@pytest.mark.parametrize('fault', ['missing', 'queued', 'hash', 'order', 'parent', 'space'])
+@pytest.mark.parametrize('fault', ['missing', 'queued', 'hash', 'order', 'parent', 'space', 'offset'])
 def test_snapshot_fail_closed_without_partial_body(logical, fault):
     client, definition, service, actor, path = logical
     body = '# Complete\n\n' + 'Fabricated original paragraph.\n\n' * 9500
@@ -120,6 +120,8 @@ def test_snapshot_fail_closed_without_partial_body(logical, fault):
             connection.execute(text("UPDATE c0_source_versions SET state='queued' WHERE id=CAST(:id AS uuid)"), {'id':receipts[1]['version_id']})
         elif fault == 'hash':
             connection.execute(text("UPDATE c0_documents SET body='Corrupt synthetic original' WHERE version_id=CAST(:id AS uuid)"), {'id':receipts[1]['version_id']})
+        elif fault == 'offset':
+            connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{start_byte}','999') WHERE id=CAST(:id AS uuid)"),{'id':saved['data']['part_receipt_ids'][1]})
         elif fault == 'order':
             connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids}', CAST(:ids AS jsonb)) WHERE id=CAST(:id AS uuid)"),
                 {'ids':__import__('json').dumps(list(reversed(saved['data']['part_receipt_ids']))), 'id':saved['id']})
@@ -189,3 +191,60 @@ def test_reader_editor_admin_and_existing_space_boundaries(sources):
         with source.database.engine.begin() as connection:
             connection.execute(text('DELETE FROM c0_space_grants WHERE space_id=CAST(:id AS uuid)'),{'id':other['id']})
             connection.execute(text('DELETE FROM c0_spaces WHERE id=CAST(:id AS uuid)'),{'id':other['id']})
+
+
+def test_part_identity_resolves_whole_parent_and_pending_parent_has_no_body(logical):
+    client, definition, service, actor, path = logical
+    body='# Whole parent\n\n'+'Retained original paragraph.\n\n'*10000
+    snapshot,receipts=publish(client,definition,path,body)
+    assert service.read_document(actor,receipts[-1]['source_id'])['body']==body
+    pending=Item('documents','pending-parent.md','Pending parent',b'A ready part is not a verified whole parent.','text/markdown')
+    part=sync_part(client,next(parts(pending)),path/'pending-parent.json',definition_hash=sha(definition),attempts=4,seconds=0)
+    unresolved=service.containing_document(actor,part['version_id'])
+    assert unresolved['state']=='incomplete' and unresolved['body'] is None
+    assert UUID(part['source_id']) not in {row['id'] for row in service.browse_documents(actor)}
+
+
+def test_legacy_snapshot_reuses_its_explicit_old_immutable_receipt(logical):
+    import json
+    from czero_core.projects import logical_key
+    client,definition,service,actor,path=logical
+    original='# Legacy beginning\n\n'+'Unchanged legacy paragraph.\n\n'*10000
+    first,_=publish(client,definition,path,original)
+    changed=original+'\nUpdated legacy ending.\n'
+    second,_=publish(client,definition,path,changed)
+    full=service.read_document(actor,second['id'])
+    old_id=first['data']['part_receipt_ids'][0]
+    with service.database.engine.begin() as connection:
+        row=connection.execute(text('SELECT data FROM c0_objects WHERE id=CAST(:id AS uuid)'),{'id':old_id}).scalar_one()
+        legacy_key=logical_key('source_sync_history_v1',row['connector_id']+':'+row['external_id']+':'+row['version_id'])
+        connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{key}',to_jsonb(CAST(:key AS text))) WHERE id=CAST(:id AS uuid)"),{'id':old_id,'key':legacy_key})
+        ids=[old_id,*second['data']['part_receipt_ids'][1:]]
+        for identifier in (second['id'],str(full['revision_id'])):
+            connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids}',CAST(:ids AS jsonb)) WHERE id=CAST(:id AS uuid)"),{'id':identifier,'ids':json.dumps(ids)})
+    assert service.read_document(actor,second['id'])['body']==changed
+    assert service.read_document(actor,second['id'],revision_id=full['revision_id'])['body']==changed
+
+
+def test_thousands_of_document_summaries_remain_bounded_without_bodies(sources,capsys):
+    import json
+    import time
+    source,owner,_,_=sources
+    reader=DocumentService(source.database,source.access)
+    marker=uuid4().hex
+    with source.database.engine.begin() as connection:
+        space=reader._space(connection)
+        connection.execute(text("""INSERT INTO c0_sources(id,space_id,ingest_key,title,metadata)
+            SELECT gen_random_uuid(),:space,md5(:marker||i::text)||md5(i::text||:marker),
+                'Synthetic directory '||i::text,jsonb_build_object('fixture',CAST(:marker AS text))
+            FROM generate_series(1,5000) i"""),{'space':space,'marker':marker})
+    try:
+        started=time.perf_counter();first=reader.browse_documents(owner,limit=50);elapsed=(time.perf_counter()-started)*1000
+        last=reader.browse_documents(owner,limit=50,offset=4950)
+        assert len(first)==len(last)==50 and not {r['id'] for r in first}&{r['id'] for r in last}
+        assert all('body' not in row and 'parts' not in row for row in first+last)
+        with pytest.raises(ValueError):reader.browse_documents(owner,limit=101)
+        print(json.dumps({'source_summaries':5000,'page_size':50,'initial_list_ms':round(elapsed,2)}))
+    finally:
+        with source.database.engine.begin() as connection:
+            connection.execute(text("DELETE FROM c0_sources WHERE space_id=:space AND metadata @> jsonb_build_object('fixture',CAST(:marker AS text))"),{'space':space,'marker':marker})

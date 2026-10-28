@@ -23,7 +23,7 @@ from .agent_packages import save_package
 from .reports import save_report,validate_plan
 from .maintenance import check_release,validate_release_plan
 from .private_sources import load_authorization,require_snapshot_permission
-from .publish import approved, listing, parts, sync_part, verify, prior_receipt, locate, save_snapshot
+from .publish import approved, listing, publication_parts, sync_part, verify, prior_receipt, locate, save_snapshot
 
 
 def save_scan(directory,batches):
@@ -253,7 +253,7 @@ def run(args, *, client_factory=C0):
                 for entry in source['items']:
                     item=item_from(directory,entry,source['connector_id'])
                     item_results=[]
-                    for part in parts(item):
+                    for part in publication_parts(client,item):
                         count+=1
                         if count>1000:raise C0Error('publication_batch_limit')
                         if verify_mode:

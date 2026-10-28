@@ -41,6 +41,28 @@ rebase and final validation; reviewed unmerged PR. Synthetic data only. New
 Playwright coverage is mandatory and does not use the older interactive waiver.
 Record actual counts, timings, SHAs and limitations after execution.
 
+### Full-document development checkpoint
+
+Exact base e30bb449b165cac4a0c4b8cafaf950f64ed0675c full40723318218 now
+passes both native jobs and merge gate; independent downloaded proof/audit follows.
+Local base passes2303 Python/PostgreSQL/packaging,197 pinned-Node24 controllers,
+21 Robot checks and schema/shell/docs. Production remains untouched.
+
+Initial Core7247ead full40727801573 local reports2313 passes/two installed-probe
+failures: the added assertion compared a UUID to the ingestion receipt string.
+The isolated local run reproduces the same two failures; no release is published.
+Corrected probes plus full-document/ingestion regressions and actual wheel/archive
+installation pass68. They cover pending-parent denial, part-to-parent resolution,
+legacy immutable receipt reuse, exact hashes/offsets, current grants and history.
+A5000-source actual summary page returns50 items/no bodies in22.46ms locally.
+
+Development UI passes202 controller cases and six genuine Playwright scenarios
+using loopback HTTPS, signed test SSO, actual REST/MCP/PostgreSQL and a standalone
+worker.377950-byte/three-part fixture: directory282.41ms, initial document2095.02ms,
+Markdown rendering1213.40ms. These measurements are single local samples, not an
+SLA or final frozen-source acceptance. Core publication, pin/lock adoption,
+final full/native/browser/privacy/scan gates and an unmerged PR remain mandatory.
+
 ## Project plugin 1.2 acceptance repair
 
 PR41 adds protected-project discovery to the existing instance-bound plugin. Repair

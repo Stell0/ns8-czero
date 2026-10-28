@@ -548,3 +548,12 @@ New immutable part receipts include their parent content hash in their identity,
 so an unchanged part version can be reused in a later snapshot without borrowing
 its earlier offsets/provenance. Existing correctly bound legacy receipts remain
 readable. No migration or extraction-limit increase is needed.
+
+Part IDs passed to the logical reader resolve their complete containing parent.
+A part receipt without a verified parent returns `incomplete`, even when that
+part's extraction is ready. Original `SourceService.document` remains an exact
+immutable part read for evidence compatibility. Legacy writers sometimes reused
+a part receipt from an earlier parent revision: the adapter recognizes that exact
+legacy receipt identity and reconstructs its effective contiguous offsets only
+when explicit immutable snapshot membership, every part hash, total size and full
+parent hash all validate. It never joins mutable current receipts or chunks.
