@@ -525,3 +525,26 @@ After a successful authenticated sign-in, call `replace_browser` for the prior
 cookie before issuing its replacement. This retires stale browser requests while
 preserving already authorized client grants and their original finite/inactivity
 bounds. Explicit logout retains its existing revocation behavior.
+
+## Complete source documents (0.35.2)
+
+`czero_core.documents.DocumentService(database, access).in_space(space_id)`
+provides `browse_documents`, `read_document`, `document_history` and
+`containing_document`. Reads require current Reader authority and `c0:read` for
+delegated actors. Discovery/history use the existing 1–100 item/100000 offset
+bounds; discovery never reads document bodies. Sources keep their stable UUID;
+a verified multipart parent uses its existing typed snapshot UUID, with immutable
+history UUIDs as revisions. These APIs do not create Wiki pages or change chunks.
+
+The existing project source snapshot format is a storage adapter. Reads validate
+its immutable receipt set, parent/connector/space, ready versions, part order,
+contiguous byte ranges, original and extracted hashes, full parent hash and the
+existing sixteen-MiB parent bound. Missing/unready parts return `incomplete` with
+no body. Integrity failures raise `SourceConflict`. Historical source links resolve
+only through a snapshot explicitly containing the cited immutable part version.
+Queued updates leave the last ready source version or verified parent readable.
+
+New immutable part receipts include their parent content hash in their identity,
+so an unchanged part version can be reused in a later snapshot without borrowing
+its earlier offsets/provenance. Existing correctly bound legacy receipts remain
+readable. No migration or extraction-limit increase is needed.

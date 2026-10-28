@@ -2,6 +2,45 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
+## Full documents in Knowledge Explorer — implementation in progress
+
+Original-main base: `e30bb449b165cac4a0c4b8cafaf950f64ed0675c`, isolated
+`feat/full-document-explorer`. Full baseline run40723318218 is in progress;
+local baseline passes2303 Python/PostgreSQL/packaging,197 Node (also pinned24),
+21 Robot dry runs and schema/shell/docs. Initial feature regressions fail before
+implementation. Focused Core/ingestion now passes24 and reader controllers25.
+The parent-aware unchanged-part history regression failed before its writer fix.
+This task authorizes no production access, deployment or merge.
+
+Reuse immutable source/version/document bodies and existing verified
+`c0_project_source_snapshot_v1`/history plus immutable part receipts. Add reusable
+Core reading/listing/history/resolution with current Reader authority, explicit
+space selection, bounded metadata pagination, exact parent/version/order/offset/
+hash validation and no chunk concatenation. A pending snapshot never replaces
+the last complete snapshot. No new database model or widened extraction limits.
+Core changes require a fresh immutable patch release and subsequent app pin/lock
+adoption; preserve all prior releases and deployed predecessor identities.
+
+Use the existing allowlisted Markdown renderer for source Markdown, plain text
+for other extracted formats, headings/TOC, provenance/history and immutable
+citation links. Unified All knowledge/Articles/Sources navigation groups explicit
+provenance paths without fetching bodies or inferring product versions. Parse
+large Markdown away from the UI thread and yield during DOM construction;
+selection/access generations must invalidate all late work.
+
+Prefer one existing REST upload for text within extraction limits, preserving
+external identity, retry reconciliation and exact readback. Explicit legacy
+multipart tests still exercise three or more real source parts and snapshots.
+
+Acceptance order: green exact-main baseline; failing feature regressions;
+Core/API/security/history/integrity implementation; formatted source reader;
+unified bounded navigation and deep links; genuine unattended Playwright with
+HTTP/PostgreSQL/worker/existing signed identity fixtures; full local candidate,
+Core publication/adoption, exact image/both-native/privacy/scan gates; latest-main
+rebase and final validation; reviewed unmerged PR. Synthetic data only. New
+Playwright coverage is mandatory and does not use the older interactive waiver.
+Record actual counts, timings, SHAs and limitations after execution.
+
 ## Project plugin 1.2 acceptance repair
 
 PR41 adds protected-project discovery to the existing instance-bound plugin. Repair

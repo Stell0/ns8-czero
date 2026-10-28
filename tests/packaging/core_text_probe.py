@@ -10,6 +10,7 @@ import time
 from uuid import uuid4
 
 from czero_core import Database
+from czero_core.documents import DocumentService
 from czero_core.access import AccessService
 from czero_core.identity import VerifiedIdentity
 from czero_core.jobs import default_registry
@@ -63,6 +64,11 @@ with tempfile.TemporaryDirectory(prefix='core-text-') as directory:
         assert service.versions(actor,receipt['source_id'])[0]['state']=='ready'
         document=service.document(actor,receipt['id'])
         assert document['body']==body
+        reader=DocumentService(later,acl)
+        full=reader.read_document(actor,receipt['source_id'])
+        assert full['body']==body and full['parts'][0]['document_id']==document['id']
+        assert reader.containing_document(actor,receipt['id'])==full
+        assert reader.document_history(actor,receipt['source_id'])[0]['revision_id']==receipt['id']
         citation=service.citation(actor,service.chunks(actor,document['id'])[0]['id'])
         assert citation['source_hash']==hashlib.sha256(body.encode()).hexdigest()
         private_source=service.in_space(space['id'])

@@ -363,7 +363,7 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
             values['last_attempt_at']=self.clock().isoformat()
             values['last_success_at']=(self.clock().isoformat() if values['sync_status']=='verified'
                 else previous['data']['last_success_at'] if previous else '')
-            history_key=values['connector_id']+':'+values['external_id']+':'+values['version_id']
+            history_key=values['connector_id']+':'+values['external_id']+':'+values['version_id']+':'+values['parent_content_hash']
             if values['sync_status']=='verified' and not self._find(connection,'source_sync_history_v1',history_key,required=False):
                 self._save(connection,current,'source_sync_history_v1',history_key,{k:v for k,v in values.items() if k!='key'})
             return self._save(connection,current,'source_sync_v1',values['connector_id']+':'+values['external_id'],
@@ -469,7 +469,12 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                     binary=True
                     if len(part_receipt_ids)!=1 or content_hash!=data['last_content_hash']:
                         raise ValueError('invalid_binary_source_parts')
-                historical=self._find(connection,'source_sync_history_v1',connector_id+':'+data['external_id']+':'+data['version_id'])
+                identity=connector_id+':'+data['external_id']+':'+data['version_id']
+                historical=self._find(connection,'source_sync_history_v1',identity+':'+content_hash,required=False)
+                if historical is None:
+                    historical=self._find(connection,'source_sync_history_v1',identity)
+                if any(historical['data'].get(key)!=data[key] for key in ('parent_content_hash','part_number','start_byte','end_byte','source_id','version_id','last_content_hash')):
+                    raise ValueError('source_part_history_mismatch')
                 immutable.append(str(historical['id']))
                 total=data['end_byte']
                 if total>16777216:raise ValueError('source_snapshot_too_large')

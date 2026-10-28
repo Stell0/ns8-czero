@@ -323,3 +323,10 @@ identities](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor)
 record the approved dedicated-instance update, retained sessions/data/connections,
 real-provider remembered sign-in and successful manager restart. Existing logins
 remain ordinary; choose the option at your next sign-in to remember that device.
+
+The full-document Knowledge Explorer improvement is under development on
+`feat/full-document-explorer`. Its reusable Core0.35.2 reader candidate reuses
+existing immutable source bodies and verified multipart snapshots, keeping source
+evidence separate from authored Wiki pages. Publication, application adoption,
+Playwright and final native acceptance remain required; no deployment is part
+of this task.

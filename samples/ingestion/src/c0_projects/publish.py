@@ -174,7 +174,9 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     versions=listing(client,'source_versions_list','versions',source_id=version['source_id'])
     current=next(v for v in versions if v['id']==version['id'])
     if (previous['data']['sync_status']=='verified' and previous['data']['last_content_hash']==sha(part.content)
-            and previous['data']['provenance']['retrieved_at']==part.item.retrieved_at):
+            and previous['data']['provenance']['retrieved_at']==part.item.retrieved_at
+            and previous['data']['parent_content_hash']==part.item.content_hash
+            and previous['data']['start_byte']==part.start_byte and previous['data']['end_byte']==part.end_byte):
         result=previous
     else:
         data.update(extraction_status=current['state'],sync_status='verified')
