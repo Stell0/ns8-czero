@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import text
 
 from czero_core.identity import Actor, PermissionDenied, Role
+from czero_core.current_content import ContentSuperseded
 from czero_core.wiki import WikiService, KnowledgeConflict, KnowledgeNotFound
 from czero_core.migrate import migrate_database
 from test_access import access, owner_actor, identity, record_unadmitted, account_named
@@ -60,14 +61,14 @@ def test_page_history_exact_markdown_hash_export_and_archive(wiki):
     updated = service.update_page(owner, row['id'], 'Revised inventory', '## Revised\n\nNew claims', expected_revision=1,
         metadata={'review': 'pending'}, idempotency_key='revision-2')
     assert updated['revision'] == 2 and updated['id'] == row['id']
-    assert service.get_page(owner, row['id'], revision=1)['content']['body'] == original['body']
-    assert [r['number'] for r in service.page_history(owner, row['id'])] == [2, 1]
+    with pytest.raises(ContentSuperseded):service.get_page(owner,row['id'],revision=1)
+    assert [r['number'] for r in service.page_history(owner, row['id'])] == [2]
     assert service.export_page(owner, row['id'], format='markdown') == updated['content']['body']
-    assert service.export_page(owner, row['id'], revision=1)['content'] == original
+    with pytest.raises(ContentSuperseded):service.export_page(owner,row['id'],revision=1)
     deleted = service.delete_page(owner, row['id'], expected_revision=2, idempotency_key='archive')
     assert deleted['revision'] == 3 and deleted['deleted']
     assert service.list_pages(owner) == []
-    assert service.get_page(owner, row['id'], revision=1)['content']['id'] == original['id']
+    with pytest.raises(ContentSuperseded):service.get_page(owner,row['id'],revision=1)
     assert [e['operation'] for e in service.changes(owner)] == ['create', 'update', 'delete']
 
 
@@ -78,7 +79,7 @@ def test_idempotent_replays_return_exact_snapshot_and_conflicting_keys_are_atomi
     with pytest.raises(KnowledgeConflict): service.create_page(owner, 'other-slug', 'Other', '', idempotency_key='create')
     updated = service.update_page(owner, row['id'], 'Changed', 'Changed', expected_revision=1, idempotency_key='update')
     service.update_page(owner, row['id'], 'Later', 'Later', expected_revision=2, idempotency_key='later')
-    assert service.update_page(owner, row['id'], 'Changed', 'Changed', expected_revision=1, idempotency_key='update') == updated
+    with pytest.raises(ContentSuperseded):service.update_page(owner,row['id'],'Changed','Changed',expected_revision=1,idempotency_key='update')
     assert service.get_page(owner, row['id'])['revision'] == 3
     assert len(service.list_pages(owner)) == 1
 
@@ -94,7 +95,7 @@ def test_concurrent_expected_revision_allows_only_one_edit(wiki):
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(edit, range(2)))
     assert sum(row is not None for row in results) == 1
-    assert len(service.page_history(owner, row['id'])) == 2
+    assert len(service.page_history(owner,row['id']))==1
     assert len(service.changes(owner)) == 2
 
 

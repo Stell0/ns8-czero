@@ -114,8 +114,10 @@ class KnowledgeService(WikiService):
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
             row = self._claim(connection, claim_id)
-            keys = connection.execute(text('SELECT chunk_id FROM c0_evidence_links WHERE space_id=:space AND claim_id=:id ORDER BY chunk_id'), {'space': self._space(connection), 'id': row['id']}).scalars().all()
-            return _view({**row, 'evidence': [SourceService._citation(connection, key, space_id=self._space(connection)) for key in keys]})
+            links = connection.execute(text('SELECT chunk_id,unavailable FROM c0_evidence_links WHERE space_id=:space AND claim_id=:id ORDER BY chunk_id'), {'space': self._space(connection), 'id': row['id']}).mappings().all()
+            evidence=[{'chunk_id':link['chunk_id'],'status':'superseded','body':None} if link['unavailable'] else
+                SourceService._citation(connection,link['chunk_id'],space_id=self._space(connection)) for link in links]
+            return _view({**row,'evidence':evidence})
 
     def list_claims(self, actor, *, entity_id=None, page_id=None, predicate=None, limit=50, offset=0, include_deleted=False):
         page(limit, offset)

@@ -1,0 +1,17 @@
+[Unit]
+Description=Synchronize approved documentation into the selected C0 space
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=c0-crawler
+WorkingDirectory=/srv/c0-jobs/documentation
+ExecStart=/srv/c0-venv/bin/python /srv/c0-jobs/documentation/run.py sync --apply
+TimeoutStartSec=30min
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/c0-jobs/documentation
+
+# Exit 2 is partial coverage and deliberately remains visible as a failed run.

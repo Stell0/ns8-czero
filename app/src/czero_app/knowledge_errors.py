@@ -15,6 +15,7 @@ KNOWLEDGE_OPERATIONS = frozenset({
     'knowledge_graph', 'knowledge_changes', 'knowledge_search', 'knowledge_index_status',
 })
 _PUBLIC_HTTP_ERRORS = frozenset({
+    (410, 'content_superseded'),
     (404, 'knowledge_not_found'), (409, 'knowledge_conflict'),
     (409, 'evidence_not_ready'), (422, 'invalid_knowledge_request'),
     (503, 'service_unavailable'),

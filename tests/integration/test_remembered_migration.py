@@ -43,7 +43,7 @@ def test_0021_repeated_upgrade_never_promotes_sessions_or_login_states():
                 assert c.execute(text('SELECT remembered FROM c0_sessions')).scalar_one() is False
                 assert c.execute(text('SELECT remembered FROM c0_login_states')).scalar_one() is False
                 assert c.execute(text('SELECT count(*) FROM c0_signin_intents')).scalar_one()==0
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0022_remembered_browsers'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0023_current_content'
     finally:
         if database:database.close()
         with admin.connect().execution_options(isolation_level='AUTOCOMMIT') as c:c.execute(text('DROP DATABASE IF EXISTS '+name+' WITH (FORCE)'))

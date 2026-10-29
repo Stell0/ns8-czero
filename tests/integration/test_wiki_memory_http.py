@@ -16,7 +16,7 @@ from httpx import ASGITransport, AsyncClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
-from project_contract import TOOL_COUNT
+from project_contract import TOOL_COUNT, REMOVED_HISTORY_OPERATIONS
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -36,7 +36,7 @@ spec = importlib.util.spec_from_file_location('tool_contract', Path(__file__).pa
 contract = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(contract)
 M17_CONTRACT = {item['name']:item for item in json.loads(
-    (Path(__file__).parents[1]/'fixtures/tool_guidance/m17_contract.json').read_text())['operations']}
+    (Path(__file__).parents[1]/'fixtures/tool_guidance/latest_only_contract.json').read_text())['operations']}
 
 UPSERT='/api/v1/wiki/pages/upsert'
 RESOLVE='/api/v1/wiki/pages/resolve'
@@ -69,6 +69,9 @@ def test_accepted_contracts_only_add_optional_space_selectors(application):
     registry=app.state.operations
     baseline=json.loads((Path(__file__).parents[1]/'fixtures/agent_memory/am1_contract.json').read_text())
     for expected in baseline['operations']:
+        if expected['name'] in REMOVED_HISTORY_OPERATIONS:
+            assert expected['name'] not in app.state.operations._operations
+            continue
         actual=registry.definition(expected['name'])
         for key,value in expected.items():
             if key=='description':
@@ -137,10 +140,11 @@ def test_two_editor_sdk_sessions_race_reload_replay_and_keep_history(transport,k
                     final=(await clients[loser].call_tool('wiki_pages_upsert',{'data':retry})).structured_content
                     assert final['revision']==3 and second['content']['body'] in final['content']['body']
                     assert final['content']['content_hash']==hashlib.sha256(retry['body'].encode()).hexdigest()
-                    history=(await a.call_tool('wiki_revisions_list',{'page_id':first['id']})).structured_content
-                    assert [v['number'] for v in history['revisions']]==[3,2,1]
-                    assert (await b.call_tool('wiki_pages_get',{'page_id':first['id'],'revision':1})).structured_content['content']==first['content']
-                    assert (await b.call_tool('wiki_pages_get',{'page_id':first['id'],'revision':2})).structured_content['content']==second['content']
+                    assert 'wiki_revisions_list' not in {tool.name for tool in (await a.list_tools()).tools}
+                    history=(await h0.get('/api/v1/wiki/pages/'+first['id']+'/revisions')).json()
+                    assert [v['number'] for v in history['revisions']]==[3]
+                    error(await b.call_tool('wiki_pages_get',{'page_id':first['id'],'revision':1}),'content_superseded',410)
+                    error(await b.call_tool('wiki_pages_get',{'page_id':first['id'],'revision':2}),'content_superseded',410)
                     # Existing tools preserve their behavior and immutable IDs.
                     old=await a.call_tool('wiki_pages_update',{'page_id':first['id'],'data':{
                         'title':'Old client','body':final['content']['body'],'expected_revision':3,'idempotency_key':uuid4().hex}})
@@ -149,8 +153,8 @@ def test_two_editor_sdk_sessions_race_reload_replay_and_keep_history(transport,k
                     error(await a.call_tool('wiki_pages_resolve',{'slug':slug}),'knowledge_not_found',404)
                     archived=(await b.call_tool('wiki_pages_resolve',{'slug':slug,'include_deleted':True})).structured_content
                     assert archived['deleted'] and archived['revision']==5
-                    assert (await clients[winner].call_tool('wiki_pages_upsert',{'data':requests[winner]})).structured_content==first
-                    assert (await clients[winner2].call_tool('wiki_pages_upsert',{'data':updates[winner2]})).structured_content==second
+                    error(await clients[winner].call_tool('wiki_pages_upsert',{'data':requests[winner]}),'content_superseded',410)
+                    error(await clients[winner2].call_tool('wiki_pages_upsert',{'data':updates[winner2]}),'content_superseded',410)
                     error(await a.call_tool('wiki_pages_upsert',{'data':payload(slug=slug,expected_revision=5)}),'knowledge_conflict',409)
     asyncio.run(check())
 
@@ -307,16 +311,18 @@ def test_real_unready_chunks_report_structured_error_then_same_key_succeeds(tran
                     assert retained==saved and retained['page_id']==page['id']
                     references=(await client.call_tool('entity_references_list',{'entity_id':entity['id']})).structured_content['references']
                     assert references==[reference] and not references[0]['missing']
-                    assert (await client.call_tool('wiki_pages_get',{'page_id':page['id'],'revision':1})).structured_content['content']==page['content']
+                    error(await client.call_tool('wiki_pages_get',{'page_id':page['id'],'revision':1}),'content_superseded',410)
     asyncio.run(check())
 
 
-def test_exact_native_wiki_receipts_helper_survives_app_reconstruction(knowledge_http):
+def test_exact_native_wiki_receipts_helper_survives_app_reconstruction(knowledge_http,monkeypatch):
     import importlib.util
     from types import SimpleNamespace
     from czero_app.main import create_app
     path=Path(__file__).parents[1]/'oidc_probe.py'
     spec=importlib.util.spec_from_file_location('native_memory_receipts',path)
+    import sys
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1]))
     probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
     async def check():
         app,owner_token,*_=knowledge_http

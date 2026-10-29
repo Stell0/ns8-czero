@@ -32,6 +32,8 @@ def spaces(access):
         for identifier in owned:
             c.execute(text('DELETE FROM c0_space_receipts WHERE result->>\'id\'=:id'), {'id': identifier})
             c.execute(text('DELETE FROM c0_space_grants WHERE space_id=:id'), {'id': UUID(identifier)})
+            c.execute(text('DELETE FROM c0_content_tombstones WHERE space_id=:id'), {'id': UUID(identifier)})
+            c.execute(text('DELETE FROM c0_original_cleanup WHERE space_id=:id'), {'id': UUID(identifier)})
             c.execute(text('DELETE FROM c0_spaces WHERE id=:id'), {'id': UUID(identifier)})
         c.execute(text('''DELETE FROM c0_space_receipts WHERE actor_id IN
             (SELECT id FROM c0_accounts WHERE issuer=:issuer)'''), {'issuer': accounts.issuer})

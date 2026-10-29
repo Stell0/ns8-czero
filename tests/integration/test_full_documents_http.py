@@ -25,7 +25,7 @@ def test_whole_document_rest_discovery_history_original_and_archive(source_http)
             assert response.status_code==202
             version=response.json();created.append(version['source_id'])
             path='/api/v1/source-documents/'+version['source_id']
-            pending=(await client.get(path)).json();assert pending['state']=='queued' and pending['body'] is None
+            pending=(await client.get(path)).json();assert pending['state']=='incomplete' and pending['body'] is None
             Worker(database,app.state.jobs.registry).tick()
             summary=(await client.get('/api/v1/source-documents')).json()['documents']
             assert any(row['id']==version['source_id'] for row in summary) and all('body' not in row for row in summary)

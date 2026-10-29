@@ -42,7 +42,7 @@ class CzeroSso:
         ssh = builtin.get_library_instance("SSHLibrary")
         previous = builtin.set_log_level("NONE")
         try:
-            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py", "remembered_fixture.py", "access_fixture.py"):
+            for name in ("oidc_fixture.py", "oidc_probe.py", "retrieval_fixture.py", "oauth_fixture.py", "mcp_tls_probe.py", "performance_probe.py", "renewal_fixture.py", "profile_fixture.py", "current_content_fixture.py", "cimd_recovery_fixture.py", "offline_provider_probe.py", "persistent_fixture.py", "remembered_fixture.py", "access_fixture.py"):
                 ssh.put_file(str(Path(__file__).with_name(name)), "/tmp/" + name)
             fixture_root = Path(__file__).parent / 'fixtures/evidence'
             for name in ('manifest.json', 'sample.txt', 'sample.md', 'sample.pdf', 'sample.docx'):
@@ -131,6 +131,21 @@ class CzeroSso:
                                     return_rc=True, timeout="180 seconds")
         if rc:
             raise AssertionError("Disposable Czero SSO network fixture failed")
+
+    @keyword
+    def predecessor_content(self,stage):
+        assert stage in ('seed','verify'),'Invalid disposable content stage'
+        builtin=BuiltIn();previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary')
+            _,_,rc=ssh.execute_command('python3 /tmp/current_content_fixture.py '+stage,
+                return_stderr=True,return_rc=True,timeout='360 seconds')
+            assert rc==0,'Disposable predecessor content '+stage+' failed'
+            proof='C0 predecessor content: '+json.dumps({'stage':stage,'verified':True},sort_keys=True)
+            hidden=builtin.set_log_level('INFO')
+            try:builtin.log(proof);builtin.log_to_console(proof)
+            finally:builtin.set_log_level(hidden)
+        finally:builtin.set_log_level(previous)
 
     @keyword
     def verify_disposable_sso(self, module_id):
@@ -579,6 +594,7 @@ class CzeroSso:
             source_id = browser.get_text('#source-identity').split(' · ')[0]
             run('Click', '#source-chunks button')
             run('Get Text', '#source-citation', 'contains', '"source_hash"')
+            retired=json.loads(browser.get_text('#source-citation'))
             run('Reload')
             run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
             view(1, expected_text)
@@ -597,8 +613,13 @@ class CzeroSso:
                 run('Get Text', '#upload-status', 'contains', 'Upload accepted.')
                 view(2, 'Browser revised evidence')
                 run('Get Text', '#source-identity', 'contains', 'revision 2')
-                run('Get Element Count', '#source-versions li', '==', 2)
-                view(1, expected_text)
+                run('Get Element Count', '#source-versions li', '==', 1)
+                run('Get Element Count', '#source-versions button:text-is("View version 1")', '==', 0)
+                for path in ('source-versions/'+retired['version_id']+'/document',
+                             'source-versions/'+retired['version_id']+'/original',
+                             'chunks/'+retired['chunk_id']+'/citation'):
+                    status=browser.evaluate_javascript(None,'async () => (await fetch('+json.dumps('/api/v1/'+path)+')).status')
+                    assert status==410,'Retired source content remained available to the browser'
                 run('Fill Text', '#source-query', 'inventory')
                 run('Click', '#source-search-form button')
                 run('Wait For Elements State', '#source-results button:text-is(' + json.dumps(title + ' · version 2') + ')', 'visible')
@@ -637,7 +658,8 @@ class CzeroSso:
             run('Click', '#source-list button:text-is("Browser quarantined evidence")')
             run('Wait For Elements State', '#source-detail', 'visible')
             run('Get Element Count', '#source-versions button', '==', 0)
-            run('Get Element Count', '#source-versions a', '==', 1)
+            run('Get Element Count', '#source-versions a', '==', 0)
+            run('Get Text','#source-status','==','No current published content.')
             run('New Context', 'ignoreHTTPSErrors=True'); run('New Page'); login('c0owner')
             run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
             view(2, 'Browser revised evidence')
@@ -697,8 +719,7 @@ class CzeroSso:
             run('Fill Text', '#wiki-body', '# Revised browser content')
             run('Click', '#save-page')
             run('Get Text', '#wiki-identity', 'contains', 'revision 2')
-            run('Click', '#wiki-history button:text-is("View revision 1")')
-            run('Get Text', '#wiki-revision', 'contains', '# Authored browser content')
+            run('Get Element Count', '#wiki-history', '==', 0)
             run('Get Property', '#wiki-body', 'value', '==', '# Revised browser content')
             run('Reload')
             run('Click', '#wiki-pages button:text-is(' + json.dumps(title) + ')')
@@ -723,8 +744,7 @@ class CzeroSso:
             run('Get Property', '#wiki-body', 'readOnly', '==', True)
             run('Wait For Elements State', '#save-page', 'hidden')
             run('Wait For Elements State', '#claim-form', 'hidden')
-            run('Click', '#wiki-history button:text-is("View revision 1")')
-            run('Get Text', '#wiki-revision', 'contains', '# Authored browser content')
+            run('Get Element Count', '#wiki-history', '==', 0)
             page_id = browser.get_text('#wiki-identity').split(' · ')[0]
             run('Go To', 'https://' + host + '/wiki?page=' + page_id)
             run('Get Text', '#page-title', '==', title)
@@ -736,10 +756,9 @@ class CzeroSso:
             run('Wait For Elements State', '#article-update-task', 'hidden')
             run('Click', '#article-read-task')
             run('Get Property', '#article-task textarea', 'value', 'contains', page_id)
-            run('Click', '#reader-history-panel > summary')
-            run('Click', '#reader-history a:text-matches("Revision 1")')
-            run('Get Text', '#reader-content h2', '==', 'Authored browser content')
-            run('Get Text', '#reader-notice', 'contains', 'revision 1')
+            run('Get Element Count', '#reader-history-panel', '==', 0)
+            assert browser.evaluate_javascript(None, 'async () => (await fetch("/api/v1/wiki/pages/"+'+json.dumps(page_id)+'+"?revision=1")).status') == 410, 'Retired Wiki body remained readable'
+            run('Get Text', '#reader-content h2', '==', 'Revised browser content')
             assert_accessibility(browser, 'wiki', 'reader')
         except Exception as error:
             raise AssertionError('Disposable Wiki browser failed (' + type(error).__name__ + ')') from None
@@ -827,8 +846,7 @@ class CzeroSso:
             run('Get Property','#wiki-body','readOnly','==',True)
             run('Wait For Elements State','#save-page','hidden')
             run('Get Property','#wiki-body','value','contains','Private revised')
-            run('Click','#wiki-history button:text-is("View revision 1")')
-            run('Get Text','#wiki-revision','contains','Private original')
+            run('Get Element Count','#wiki-history','==',0)
             assert_accessibility(browser,'wiki','reader')
             run('Go To',project_url)
             run('Get Text','#project-title','==','<img src=x> Synthetic research')
@@ -870,9 +888,9 @@ class CzeroSso:
             run('Get Text','#project-work','contains','phase_incomplete')
             run('Get Text','#project-monitoring','contains','no_material_update')
             run('Go To',article);run('Get Text','#reader-content h2','==','Independent private update')
-            run('Click','#reader-history-panel > summary')
-            run('Click','#reader-history a:text-matches("Revision 1")')
-            run('Get Text','#reader-content h2','==','Private original')
+            run('Get Element Count','#reader-history-panel','==',0)
+            expired='/api/v1/wiki/pages/'+page+'?space_id='+identifier+'&revision=1'
+            assert browser.evaluate_javascript(None,'async () => (await fetch('+json.dumps(expired)+')).status')==410, 'Protected retired body remained readable'
             stage='revoked-view-clearing'
             run('Switch Context',owner_context);run('Reload');grant('')
             run('Switch Context',member_context);run('Click','#refresh-space')
@@ -1058,7 +1076,7 @@ class CzeroSso:
                 run('Get Text', '#guide-rules', 'contains', 'untrusted evidence')
                 if role != 'reader':
                     run('Click', '#guide-workflows > details:nth-child(6) > summary')
-                    run('Get Text', '#guide-workflows', 'contains', 'whole receipt')
+                    run('Get Text', '#guide-workflows', 'contains', 'superseded result returns content_superseded (410)')
                 assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host, module_id)
                 _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+

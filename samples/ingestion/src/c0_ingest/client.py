@@ -117,7 +117,7 @@ class C0:
     def decode(name, raw):
         if raw.get('isError'):
             # Retain value-free API codes, never arbitrary server text or challenges.
-            known = {'insufficient_scope', 'permission_denied', 'object_conflict', 'object_not_found',
+            known = {'content_superseded', 'insufficient_scope', 'permission_denied', 'object_conflict', 'object_not_found',
                      'knowledge_conflict', 'knowledge_not_found', 'evidence_not_ready', 'space_conflict',
                      'invalid_space_request', 'invalid_knowledge_request', 'invalid_operation_request',
                      'service_unavailable', 'project_conflict', 'project_not_found', 'invalid_project_request', 'project_core_upgrade_required', 'project_connection_not_configured'}

@@ -27,13 +27,16 @@ from czero_core.objects import ObjectService
 from czero_core.oauth_clients import OAuthClientService
 from czero_core.oauth_grants import OAuthGrantService, pkce_challenge
 from legacy_oauth import legacy_pair
+from test_current_content_migration import predecessor_python
+from previous_content_services import services as predecessor_services
+from czero_core.current_content import ContentSuperseded
 from czero_core.sources import OriginalStore, SourceService, register_source_handlers
 from czero_core.spaces import SpaceService
 
 pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason='isolated PostgreSQL required')
 
 
-def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(tmp_path):
+def test_schema_0015_upgrade_preserves_current_content_and_protected_authority(tmp_path,predecessor_python):
     parsed = make_url(os.environ['CZERO_TEST_DATABASE_URL'])
     admin = create_engine(parsed, hide_parameters=True)
     name = 'czero_annotation_upgrade_' + uuid4().hex
@@ -63,16 +66,17 @@ def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(
         private = spaces.create(owner, 'Retained protected space', idempotency_key='space')
         grant = spaces.set_grant(owner, private['id'], editor_id, Role.READER,
             expected_revision=0, idempotency_key='grant')
-        knowledge = KnowledgeService(database, access).in_space(private['id'])
+        PreviousKnowledge,PreviousSources,previous_registry,previous_handlers=predecessor_services(predecessor_python)
+        knowledge = PreviousKnowledge(database, access).in_space(private['id'])
         request = {'slug': 'retained-procedure', 'title': 'Retained', 'body': 'Original café 東京',
                    'metadata': {'retained': True}, 'idempotency_key': 'first-page'}
         first = knowledge.upsert_page(owner, **request)
         current = knowledge.upsert_page(owner, **{**request, 'body': 'Later retained body',
             'expected_revision': 1, 'idempotency_key': 'later-page'})
         entity = knowledge.create_entity(owner, 'procedure', 'Retained aliases', aliases=['Retained alternate'], idempotency_key='entity')
-        registry = default_registry(); originals = OriginalStore(tmp_path / 'originals')
-        register_source_handlers(registry, database, originals)
-        sources = SourceService(database, access, registry, originals).in_space(private['id'])
+        registry = previous_registry(); originals = OriginalStore(tmp_path / 'originals')
+        previous_handlers(registry, database, originals)
+        sources = PreviousSources(database, access, registry, originals).in_space(private['id'])
         source = sources.ingest(owner, BytesIO('Exact original evidence café 東京'.encode()),
             title='Retained evidence', filename='retained.txt', media_type='text/plain', retain_original=True)
         with database.engine.begin() as connection:
@@ -106,12 +110,18 @@ def test_schema_0015_upgrade_preserves_every_old_column_and_protected_authority(
         for _ in range(2):
             migrate_database(database)
             with database.engine.connect() as connection:
-                assert snapshot(connection) == before
-                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0022_remembered_browsers'
+                after=snapshot(connection)
+                for table in tables:
+                    if table not in ('c0_wiki_revisions','c0_knowledge_receipts'):assert after[table]==before[table],table
+                assert len(after['c0_wiki_revisions'])==1
+                assert 'Original caf' not in ''.join(after['c0_knowledge_receipts'])
+                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0023_current_content'
                 assert connection.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one() == shared
+            knowledge=KnowledgeService(database,access).in_space(private['id'])
+            sources=SourceService(database,access,default_registry(),originals).in_space(private['id'])
             delegated = tokens.verify(pair.access_token, resource=resource).actor
             assert knowledge.get_page(delegated, first['id']) == current
-            assert knowledge.upsert_page(owner, **request) == first
+            with pytest.raises(ContentSuperseded):knowledge.upsert_page(owner,**request)
             assert sources.document(delegated, source['id']) == document
             assert knowledge.get_claim(delegated, assertion['id'])['evidence'][0]['chunk_id'] == str(chunk['id'])
             assert spaces.list_grants(owner, private['id'])['grants'][0]['revision'] == grant['revision']

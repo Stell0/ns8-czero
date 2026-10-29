@@ -151,13 +151,18 @@ def seed_text_sources(owner, profile, *, title='Disposable text evidence'):
         request = {**request, 'idempotency_key':'native-text-'+uuid4().hex,
             'source_id':receipt['source_id'], 'expected_revision':1,
             'body':request['body']+'\nAdditional observation retained as a new version.'}
-    return records
+    records[-1]['superseded_request'] = records[0]['text_request']
+    records[-1]['superseded_version'] = records[0]['version']
+    return records[-1:]
 
 
 def verify_text_receipts(browser, profile, records):
     for record in records:
         if 'text_request' not in record:
             continue
+        if 'superseded_request' in record:
+            status, _, _ = browser.api('/api/v1/sources/ingest-text', record['superseded_request'], 'POST', profile['csrf_token'])
+            assert status == 410, 'Retired source request restored old content'
         request = record['text_request']
         status, body, _ = browser.api('/api/v1/sources/ingest-text', request, 'POST', profile['csrf_token'])
         assert status == 202 and json.loads(body) == record['version'], 'Recovered text receipt/revision changed'
@@ -184,7 +189,7 @@ def seed_sources(owner, profile):
     status, body, _ = owner.upload(profile, revised.encode(), filename='revised.txt', title='Disposable sample.txt',
         media_type='text/plain', source_id=first['source_id'], expected_revision=1)
     assert status == 202 and json.loads(body)['number'] == 2, 'Changed source did not create a version'
-    uploaded.append({'version': json.loads(body), 'text': revised})
+    uploaded[0] = {'version': json.loads(body), 'text': revised, 'superseded_version':first}
     for title, content, retained, expected in [('Retained evidence', b'Retained inventory evidence', True, 'ready'),
                                                ('Quarantined evidence', b'\xff', False, 'failed')]:
         status, body, _ = owner.upload(profile, content, filename='original.txt', title=title, media_type='text/plain', retain_original=retained)
@@ -214,6 +219,8 @@ def seed_sources(owner, profile):
 def verify_sources(browser, records):
     for record in records:
         row = record['version']; expected = record.get('expected_state', 'ready')
+        if 'superseded_version' in record:
+            assert browser.api('/api/v1/source-versions/' + record['superseded_version']['id'] + '/document')[0] == 410, 'Retired source body survived'
         actual = source_state(browser, row, expected, seconds=15)
         assert all(actual[key] == row[key] for key in ('id','source_id','number','content_hash','media_type','retain_original')), 'Recovered source version changed'
         status, body, _ = browser.api('/api/v1/sources/' + row['source_id'])
@@ -420,9 +427,12 @@ def seed_wiki_memory(browser, profile):
 
 
 def verify_wiki_memory_receipts(browser, profile, expected):
-    for data,receipt in zip(expected['requests'],expected['receipts']):
+    for index,(data,receipt) in enumerate(zip(expected['requests'],expected['receipts'])):
         status,body,_=browser.api('/api/v1/wiki/pages/upsert',data,'POST',profile['csrf_token'])
-        assert status==200 and json.loads(body)==receipt, 'Recovered Wiki retry receipt changed'
+        if index == 0:
+            assert status==410, 'Retired Wiki retry restored old content'
+        else:
+            assert status==200 and json.loads(body)==receipt, 'Current Wiki retry changed'
     status,_,_=browser.api('/api/v1/wiki/pages/upsert',{**expected['requests'][1],
         'idempotency_key':'persistent-stale-'+uuid4().hex},'POST',profile['csrf_token'])
     assert status==409, 'Recovered Wiki accepted stale overwrite'
@@ -430,7 +440,10 @@ def verify_wiki_memory_receipts(browser, profile, expected):
     assert status==200 and json.loads(body)==expected['receipts'][1], 'Recovered Wiki slug/revision changed'
     for receipt in expected['receipts']:
         status,body,_=browser.api('/api/v1/wiki/pages/'+receipt['id']+'?revision='+str(receipt['revision']))
-        assert status==200 and json.loads(body)['content']==receipt['content'], 'Recovered immutable memory revision changed'
+        if receipt['revision'] == expected['receipts'][-1]['revision']:
+            assert status==200 and json.loads(body)['content']==receipt['content'], 'Current memory changed'
+        else:
+            assert status==410, 'Retired Wiki body survived'
 
 
 def seed_knowledge(browser, profile, sources, objects):
@@ -469,10 +482,10 @@ def verify_knowledge(browser, profile, expected):
     get = lambda path: knowledge_request(browser, profile, path)
     page = expected['page']; key = page['id']
     assert get('wiki/pages/' + key) == page, 'Recovered Wiki page changed'
-    assert get('wiki/pages/' + key + '?revision=1')['content'] == expected['original'], 'Immutable Wiki revision changed'
-    assert len(get('wiki/pages/' + key + '/revisions')['revisions']) == 2, 'Wiki revision history missing'
+    assert browser.api('/api/v1/wiki/pages/' + key + '?revision=1')[0] == 410, 'Retired Wiki body survived'
+    assert len(get('wiki/pages/' + key + '/revisions')['revisions']) == 1, 'Current-only Wiki listing changed'
     status, body, _ = browser.api('/api/v1/wiki/pages/' + key + '/export?format=markdown&revision=1')
-    assert status == 200 and body.decode() == expected['original']['body'], 'Markdown export changed'
+    assert status == 410, 'Retired Wiki Markdown was exported'
     assert get('wiki/pages/' + key + '/export') == page, 'JSON export changed'
     searched = get('knowledge/search?query=independent+authored&kind=wiki&mode=text&rerank=off')
     assert searched['retrieval_method'] == 'text' and searched['fallback_reason'] is None, 'Provider-free text changed'
@@ -555,8 +568,8 @@ def seed_project_state(browser, profile, space_id, sources=None):
             'last_attempt_at':stamp,'last_success_at':'','status':'complete','last_error':'','retry_after':'',
             'remote_cursor':'{"page":1}','progress_cursor':'{"page":1}','attempt_count':0,'verified_items':1,'discovered_items':1}
         request('/connector-status',{'data':coverage,'verified_receipt_ids':[receipt['id']],'idempotency_key':'retained-connector-status'},'PUT')
-        kinds=['connector_v1','connector_config_v1','source_sync_v1','source_sync_history_v1','connector_sync_v1']
-        if 'project_source_snapshot_set' in operations:kinds+=['source_snapshot_v1','source_snapshot_history_v1']
+        kinds=['connector_v1','connector_config_v1','source_sync_v1','connector_sync_v1']
+        if 'project_source_snapshot_set' in operations:kinds+=['source_snapshot_v1','source_part_v1']
         for kind in kinds:
             retained[kind]=request('/records?kind='+kind+'&limit=100')
     if 'project_run_claim' in operations:
@@ -833,13 +846,13 @@ def verify_atomic_consolidation(browser,profile,expected,space_id,*,admin=False)
     rows=expected['receipt']['results']
     status,body,_=browser.api('/api/v1/knowledge/bundles/apply',expected['request'],'POST',profile['csrf_token'])
     if admin:
-        assert status==200 and json.loads(body)==expected['receipt'],'Whole atomic retry receipt changed during recovery'
+        assert status==410,'Superseded atomic retry restored old content'
     else:
         assert status==403,'Reader space grant admitted atomic publication'
     status,body,_=scoped.api('/api/v1/wiki/pages/resolve?slug=native-atomic-memory')
     assert status==200 and json.loads(body)==expected['current'],'Atomic current Wiki revision changed during recovery'
     status,body,_=scoped.api('/api/v1/wiki/pages/'+rows[1]['id']+'?revision=1')
-    assert status==200 and json.loads(body)['content']==rows[1]['content'],'Atomic original authored content changed'
+    assert status==410,'Atomic retired Wiki content survived'
     assert browser.api('/api/v1/wiki/pages/'+rows[1]['id'])[0]==404,'Atomic private UUID leaked into Shared'
     status,body,_=scoped.api('/api/v1/wiki/pages/'+expected['prior']['id']+'?revision='+str(expected['prior']['revision']))
     assert status==200 and json.loads(body)['content']==expected['prior']['content'],'Superseded prior content changed'
@@ -913,16 +926,14 @@ def verify_content_annotations(browser, profile, expected, space_id, *, admin=Fa
             assert status==200 and json.loads(body)==entry['receipt'],'Annotation identity/revision changed during recovery'
             status,body,_=scoped.api(path+'/history')
             history=json.loads(body) if status==200 else {}
-            assert status==200 and [row['number'] for row in history['revisions']]==list(range(entry['receipt']['revision'],0,-1)),'Annotation history changed during recovery'
-            if 'original_receipt' in entry:
-                assert history['revisions'][-1]['value']==entry['original_receipt']['value'],'Old annotation observation changed during recovery'
+            assert status==200 and [row['number'] for row in history['revisions']]==[entry['receipt']['revision']],'Current annotation listing changed'
             assert browser.api(path)[0]==404,'Protected annotation UUID leaked into Shared'
             status,body,_=scoped.api(path,entry['request'],'PUT',profile['csrf_token'])
             if admin:
                 assert status==200 and json.loads(body)==entry['receipt'],'Annotation retry changed its original snapshot'
                 if 'original_request' in entry:
                     status,body,_=scoped.api(path,entry['original_request'],'PUT',profile['csrf_token'])
-                    assert status==200 and json.loads(body)==entry['original_receipt'],'Old annotation retry was replaced by current state'
+                    assert status==410,'Retired annotation retry returned old payload'
             else:
                 assert status==403,'Reader grant admitted an annotation write'
         request={'query':item['query'],'space_id':space_id,'mode':'text','rerank':'off','filters':{
@@ -960,7 +971,10 @@ def verify_protected_space(browser, profile, expected, *, admin=False):
     for page in expected['memory']['receipts']:
         path = '/api/v1/wiki/pages/' + page['id'] + '?revision=' + str(page['revision'])
         status, body, _ = scoped.api(path)
-        assert status == 200 and json.loads(body)['content'] == page['content'], 'Protected authored history changed'
+        if page['revision'] == expected['memory']['receipts'][-1]['revision']:
+            assert status == 200 and json.loads(body)['content'] == page['content'], 'Protected current content changed'
+        else:
+            assert status == 410, 'Protected retired content survived'
         assert browser.api(path)[0] == 404, 'Private UUID leaked into Shared'
     for record in expected['sources']:
         source_state(scoped, record['version'], 'ready', seconds=15)
