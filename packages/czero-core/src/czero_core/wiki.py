@@ -1,6 +1,6 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Versioned authored knowledge, separate from immutable extracted evidence."""
+"""Current authored knowledge with monotonic counters and exact evidence identities."""
 import hashlib
 import json
 import re
@@ -49,7 +49,7 @@ def markdown(value):
             raise ValueError('invalid_wiki_body')
     except UnicodeError:
         raise ValueError('invalid_wiki_body') from None
-    return value
+    return value.lstrip('\ufeff').replace('\r\n','\n').replace('\r','\n')
 
 
 class WikiService(SpaceBound):
@@ -77,14 +77,27 @@ class WikiService(SpaceBound):
     def _revision(self, connection, page_id, number):
         row = connection.execute(text('SELECT * FROM c0_wiki_revisions WHERE space_id=:space AND page_id=:id AND number=:number'),
             {'space': self._space(connection), 'id': _uuid(page_id), 'number': number}).mappings().one_or_none()
-        if row is None: raise KnowledgeNotFound()
+        if row is None:
+            from .current_content import ContentSuperseded
+            if number < self._page(connection, page_id)['revision']:raise ContentSuperseded()
+            raise KnowledgeNotFound()
         return content_row(row)
 
     def _write_revision(self, connection, actor, row, title, body, metadata):
+        from .current_content import retire_wiki
+        previous=connection.execute(text('SELECT id,body FROM c0_wiki_revisions WHERE page_id=:page ORDER BY number DESC LIMIT 1'),{'page':row['id']}).mappings().one_or_none()
+        if previous and previous['body']==body:
+            # Metadata/archive CAS counters may advance without manufacturing a
+            # new body/chunk/vector generation for identical normalized bytes.
+            connection.execute(text('''UPDATE c0_wiki_revisions SET number=:number,title=:title,
+                metadata=CAST(:metadata AS jsonb),actor_id=:actor WHERE id=:id'''),
+                {'id':previous['id'],'number':row['revision'],'title':title,'metadata':metadata,'actor':actor.user_id})
+            return {**row,'content':self._revision(connection,row['id'],row['revision'])}
         connection.execute(text('''INSERT INTO c0_wiki_revisions(space_id,id,page_id,number,title,body,content_hash,metadata,actor_id)
             VALUES (:space,:id,:page,:number,:title,:body,:hash,CAST(:metadata AS jsonb),:actor)'''),
             {'space': self._space(connection), 'id': uuid4(), 'page': row['id'], 'number': row['revision'], 'title': title, 'body': body,
              'hash': hashlib.sha256(body.encode()).hexdigest(), 'metadata': metadata, 'actor': actor.user_id})
+        retire_wiki(connection, row['id'], row['revision'])
         return {**row, 'content': self._revision(connection, row['id'], row['revision'])}
 
     def _create_page(self, connection, actor, slug, title, body, encoded):
@@ -96,6 +109,9 @@ class WikiService(SpaceBound):
 
     def _update_page(self, connection, actor, row, title, body, encoded, expected_revision):
         if row['deleted'] or row['revision'] != expected_revision: raise KnowledgeConflict()
+        previous=self._revision(connection,row['id'],row['revision'])
+        if previous['body']==body and row['title']==title and previous['metadata']==json.loads(encoded):
+            return {**row,'content':previous}
         row = content_row(connection.execute(text('''UPDATE c0_wiki_pages SET title=:title,revision=revision+1,
             updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'''), {'space': self._space(connection), 'id': row['id'], 'title': title}).mappings().one())
         result = self._write_revision(connection, actor, row, title, body, encoded)
@@ -177,7 +193,7 @@ class WikiService(SpaceBound):
             row = self._page(connection, page_id, lock=True)
             if row['revision'] != expected_revision: raise KnowledgeConflict()
             if not row['deleted']:
-                # Archive is a new immutable revision, preserving citation targets.
+                # Archive advances its CAS counter while retaining current authored bytes.
                 previous = self._revision(connection, page_id, row['revision'])
                 row = content_row(connection.execute(text('''UPDATE c0_wiki_pages SET deleted=true,
                     revision=revision+1,updated_at=now() WHERE space_id=:space AND id=:id RETURNING *'''), {'space': self._space(connection), 'id': page_id}).mappings().one())

@@ -1,5 +1,7 @@
 # C0 Core
 
+> Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](../../docs/latest-only-migration.md).
+
 Reusable Python services for C0 applications, independent of the NethServer
 agent SDK and the FastAPI transport. This package owns the PostgreSQL schema,
 shared application operations and trusted deterministic worker.
@@ -245,9 +247,9 @@ reference with its parent resource, content hash and space.
 `value=None` and status `unknown`; it does not create a row. `update(actor,
 target, namespace, value, expected_revision=..., idempotency_key=...)` requires
 an explicit annotation revision, with zero for create-only. Each successful
-update creates an immutable history entry and commit-ordered metadata event in
-the existing receipt transaction. Independent writers have one winner; retry
-returns the original successful snapshot after fresh authorization.
+update retains one current annotation value and a payload-free commit-ordered event.
+Independent writers have one winner; a current retry reconciles after fresh
+authorization, while a superseded annotation request returns ContentSuperseded.
 
 Applicability values support literal `products`, `components`, `version_tags`,
 `status`, `observed_at`, `confidence` and bounded `extensions`. Verification has
@@ -260,9 +262,9 @@ marking a source version verified.
 
 Changing a mutable entity/object/claim makes an old observed revision stale for
 new writes. Existing annotations remain readable at their exact old target;
-new content has no inherited verification. Historical immutable source/Wiki
-targets remain explicit. Object removal retains its annotation anchor and
-history through the established same-space retained-reference pattern. Reads
+new content has no inherited verification. Removed source/Wiki
+targets are explicitly stale. Object removal retains its current annotation anchor
+and value through the established same-space retained-reference pattern. Reads
 report whether the target is still current or archived. Annotation writes never
 change strict object data or retained evidence/Wiki provenance. This API is released in Core 0.28.0; application deployment acceptance remains
 a separate AM4 gate in PLAN.
@@ -526,34 +528,25 @@ cookie before issuing its replacement. This retires stale browser requests while
 preserving already authorized client grants and their original finite/inactivity
 bounds. Explicit logout retains its existing revocation behavior.
 
-## Complete source documents (0.35.2)
+## Complete current documents and destructive migration
 
-`czero_core.documents.DocumentService(database, access).in_space(space_id)`
-provides `browse_documents`, `read_document`, `document_history` and
-`containing_document`. Reads require current Reader authority and `c0:read` for
-delegated actors. Discovery/history use the existing 1–100 item/100000 offset
-bounds; discovery never reads document bodies. Sources keep their stable UUID;
-a verified multipart parent uses its existing typed snapshot UUID, with immutable
-history UUIDs as revisions. These APIs do not create Wiki pages or change chunks.
+`DocumentService(database, access).in_space(space_id)` provides bounded discovery,
+complete current reads and exact-version containing-document resolution under
+current Reader authority and delegated `c0:read`. Source UUIDs and multipart
+parent UUIDs remain stable. Verified current `c0_project_source_part_v1` membership
+replaces historical snapshot/sync dependencies. Assembly validates retained full
+bodies, byte ranges, order and hashes; queued or corrupt replacements cannot
+replace the complete current publication. Limits remain unchanged.
 
-The existing project source snapshot format is a storage adapter. Reads validate
-its immutable receipt set, parent/connector/space, ready versions, part order,
-contiguous byte ranges, original and extracted hashes, full parent hash and the
-existing sixteen-MiB parent bound. Missing/unready parts return `incomplete` with
-no body. Integrity failures raise `SourceConflict`. Historical source links resolve
-only through a snapshot explicitly containing the cited immutable part version.
-Queued updates leave the last ready source version or verified parent readable.
+Source/Wiki storage is latest-only. Migration 0023 verifies current multipart
+parents, prunes superseded bodies and derivatives, thins receipts, invalidates
+evidence and queues original-file deletion. Old writers are rejected by the
+protocol fence. Run the read-only preflight and back up before upgrade; data
+rollback needs an external pre-upgrade backup. See
+[full-document contracts](../../docs/full-documents.md) and
+[migration instructions](../../docs/latest-only-migration.md).
 
-New immutable part receipts include their parent content hash in their identity,
-so an unchanged part version can be reused in a later snapshot without borrowing
-its earlier offsets/provenance. Existing correctly bound legacy receipts remain
-readable. No migration or extraction-limit increase is needed.
-
-Part IDs passed to the logical reader resolve their complete containing parent.
-A part receipt without a verified parent returns `incomplete`, even when that
-part's extraction is ready. Original `SourceService.document` remains an exact
-immutable part read for evidence compatibility. Legacy writers sometimes reused
-a part receipt from an earlier parent revision: the adapter recognizes that exact
-legacy receipt identity and reconstructs its effective contiguous offsets only
-when explicit immutable snapshot membership, every part hash, total size and full
-parent hash all validate. It never joins mutable current receipts or chunks.
+Expired exact evidence and stale replay requests raise `ContentSuperseded`
+(`content_superseded`, mapped by the app to 410). Stable links read current content.
+Compatibility history methods list current content only. Unchanged bytes retain
+body/chunk/vector IDs; metadata/archive counters may advance independently.

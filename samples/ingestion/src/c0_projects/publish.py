@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from time import sleep
+from time import sleep,perf_counter
 
 import httpx2
 from c0_ingest.auth import credentials
@@ -87,7 +87,7 @@ def locate(client,part,prior):
     external_key=sha([part.item.connector_id,part.external_id])
     source_id=prior['data']['source_id'] if prior else None
     if source_id is None:
-        matches=[row for row in listing(client,'sources_list','sources') if row['metadata'].get('external_key')==external_key and not row['deleted']]
+        matches=client.call('sources_list',external_key=external_key,limit=2,offset=0)['sources']
         if len(matches)>1: raise C0Error('ambiguous_external_source_identity')
         if matches:source_id=matches[0]['id']
     if source_id:
@@ -107,8 +107,8 @@ def upload_binary(client,part,source):
         'external_id':part.external_id,'parent_external_id':part.item.external_id,
         'original_url':part.item.original_url,'canonical_url':part.item.canonical_url,'provenance':part.item.provenance}
     form={'title':part.item.title[:240],'media_type':part.item.media_type,'retain_original':'false' if part.item.media_type in ('text/plain','text/markdown') else 'true',
-          'metadata':json.dumps(source['metadata'] if source else metadata)}
-    if source:form.update(source_id=source['id'],expected_revision=str(source['revision']),title=source['title'])
+          'metadata':json.dumps(metadata)}
+    if source:form.update(source_id=source['id'],expected_revision=str(source['revision']))
     try:
         with httpx2.Client(follow_redirects=False,timeout=45) as http:
             response=http.post(client.config['url'].removesuffix('/mcp')+'/api/v1/sources/upload',
@@ -120,9 +120,9 @@ def upload_binary(client,part,source):
         raise C0Error('binary_publication_uncertain_reconcile_before_retry') from None
 
 
-def verify(client,part,version,*,attempts=20,seconds=3):
+def verify(client,part,version,*,attempts=20,seconds=3,timings=None):
     if part.item.media_type in ('text/plain','text/markdown'):
-        document=verify_document(client,version,part.content.decode(),attempts=attempts,seconds=seconds)
+        document=verify_document(client,version,part.content.decode(),attempts=attempts,seconds=seconds,timings=timings)
     else:
         for attempt in range(attempts):
             versions=listing(client,'source_versions_list','versions',source_id=version['source_id'])
@@ -135,18 +135,13 @@ def verify(client,part,version,*,attempts=20,seconds=3):
         document=client.call('documents_get',version_id=version['id'])
     if document['version_id']!=version['id'] or sha(document['body'].encode())!=document['text_hash']:
         raise C0Error('document_readback_mismatch')
-    chunks=client.call('document_chunks_list',document_id=document['id'],limit=100,offset=0)['chunks']
-    if not chunks:raise C0Error('source_passages_missing')
-    for chunk in [chunks[0],chunks[-1]]:
-        citation=client.call('citations_get',chunk_id=chunk['id'])
-        if (citation['source_id']!=version['source_id'] or citation['version_id']!=version['id']
-                or citation['document_id']!=document['id'] or citation['source_hash']!=sha(part.content)
-                or citation['content_hash']!=sha(chunk['body'].encode())):
-            raise C0Error('immutable_citation_mismatch')
+    # Staged part bytes are Editor-only. Exact citations become available after
+    # the complete parent is atomically published, never during verification.
     return document
 
 
-def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publisher=upload_binary,attempts=20,seconds=3):
+def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publisher=upload_binary,attempts=20,seconds=3,timings=None):
+    started=perf_counter();observed={}
     previous=prior_receipt(client,part)
     source,version=locate(client,part,previous)
     if dry_run:return {'status':'unchanged' if version else 'would_update' if source else 'would_create','external_id':part.external_id}
@@ -154,11 +149,22 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
             'source_id':source['id'] if source else None}
     pending=read(journal,{})
     key=sha([client.space_id,part.item.connector_id,part.external_id,sha(part.content)])
-    if key in pending and pending[key]['intent']!=intent and not version:
+    prior=pending.get(key,{})
+    observations=prior.get('observations',{})
+    observation=sha(part.item.metadata())
+    applied=observations.get(observation)
+    if applied and (not source or not version or applied['version_id']!=version['id'] or applied['source_revision']!=source['revision']):
+        raise C0Error('source_observation_superseded_scan_and_reconcile_current')
+    completed=prior.get('state')=='verified'
+    if key in pending and prior['intent']!=intent and not version and not completed:
         raise C0Error('uncertain_source_intent_requires_reconciliation')
-    original_intent=pending.get(key,{}).get('intent',intent)
-    pending[key]={'intent':original_intent,'state':'prepared'};atomic(journal,pending)
-    if version is None:
+    original_intent=intent if completed else prior.get('intent',intent)
+    pending[key]={'intent':original_intent,'state':'prepared','observations':observations};atomic(journal,pending)
+    desired={'external_key':sha([part.item.connector_id,part.external_id]),'connector_id':part.item.connector_id,
+        'external_id':part.external_id,'parent_external_id':part.item.external_id,
+        'original_url':part.item.original_url,'canonical_url':part.item.canonical_url,'provenance':part.item.provenance}
+    metadata_changed=source is not None and (source['title']!=part.item.title[:240] or source['metadata']!=desired)
+    if version is None or metadata_changed:
         if part.item.media_type in ('text/plain','text/markdown') and len(part.content)<=131072:
             metadata={'external_key':sha([part.item.connector_id,part.external_id]),'connector_id':part.item.connector_id,
                 'external_id':part.external_id,'parent_external_id':part.item.external_id,
@@ -166,7 +172,7 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
             version=submit_text(client,body=part.content.decode(),title=part.item.title[:240],metadata=metadata,
                 external_key=sha([part.item.connector_id,part.external_id]),media_type=part.item.media_type,source=source)
         else:version=binary_publisher(client,part,source)
-    pending[key]={'intent':original_intent,'state':'submitted','version':version};atomic(journal,pending)
+    pending[key]={'intent':original_intent,'state':'submitted','version':version,'observations':observations};atomic(journal,pending)
     data={'connector_id':part.item.connector_id,'definition_hash':definition_hash,'external_id':part.external_id,'parent_external_id':part.item.external_id,
         'parent_content_hash':part.item.content_hash,'part_number':part.number,'start_byte':part.start_byte,'end_byte':part.end_byte,
         'last_attempt_at':now(),'last_success_at':'','last_content_hash':sha(part.content),
@@ -180,7 +186,7 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
         previous=client.call('project_source_status_set',data={'data':data,'expected_revision':previous['revision'] if previous else 0,
             'idempotency_key':sha(['source-submitted',key,sha(data)])})
     try:
-        verify(client,part,version,attempts=attempts,seconds=seconds)
+        verify(client,part,version,attempts=attempts,seconds=seconds,timings=observed)
     except C0Error:
         failed={**data,'sync_status':'partial','last_error':'extraction_or_readback_pending_resume'}
         client.call('project_source_status_set',data={'data':failed,'expected_revision':previous['revision'],
@@ -200,20 +206,44 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     readback=client.call('project_source_status_get',connector_id=part.item.connector_id,external_id=part.external_id)
     if readback['id']!=result['id'] or readback['data']['version_id']!=version['id'] or readback['data']['sync_status']!='verified':
         raise C0Error('source_receipt_readback_mismatch')
-    pending[key]={'intent':original_intent,'state':'verified','receipt':result};atomic(journal,pending)
+    observed_source=client.call('sources_get',source_id=version['source_id'])
+    observations[observation]={'version_id':version['id'],'source_revision':observed_source['revision']}
+    pending[key]={'intent':original_intent,'state':'verified','receipt':{'id':result['id'],'revision':result['revision']},'observations':observations};atomic(journal,pending)
+    if timings is not None:
+        observed['publication_seconds']=max(0.,perf_counter()-started-sum(observed.values()))
+        for key,value in observed.items():timings[key]=timings.get(key,0.)+value
     return {'status':'verified','source_id':version['source_id'],'version_id':version['id'],'receipt_id':result['id']}
 
 
-def save_snapshot(client,item,results):
+def save_snapshot(client,item,results,*,timings=None):
+    started=perf_counter()
     if not results or any(row['status']!='verified' for row in results):raise C0Error('source_snapshot_not_verified')
     previous=client.call('objects_list',type_name='c0_project_source_snapshot_v1',
         where=json.dumps({'connector_id':item.connector_id,'external_id':item.external_id}),limit=2,offset=0)['objects']
     if len(previous)>1:raise C0Error('ambiguous_source_snapshot')
-    if previous and previous[0]['data']['content_hash']==item.content_hash:return previous[0]
+    if previous and previous[0]['data']['content_hash']==item.content_hash:
+        verify_snapshot(client,item,previous[0],timings=timings)
+        return previous[0]
     saved=client.call('project_source_snapshot_set',data={'connector_id':item.connector_id,'external_id':item.external_id,
         'content_hash':item.content_hash,'part_receipt_ids':[row['receipt_id'] for row in results],
         'expected_revision':previous[0]['revision'] if previous else 0,
         'idempotency_key':sha(['source-snapshot',item.key,item.content_hash,previous[0]['revision'] if previous else 0])})
     current=client.call('objects_get',object_id=saved['id'])
     if current!=saved:raise C0Error('source_snapshot_readback_mismatch')
+    if timings is not None:timings['publication_seconds']=timings.get('publication_seconds',0.)+perf_counter()-started
+    verify_snapshot(client,item,saved,timings=timings)
     return saved
+
+
+def verify_snapshot(client,item,saved=None,*,timings=None):
+    started=perf_counter()
+    if saved is None:
+        rows=client.call('objects_list',type_name='c0_project_source_snapshot_v1',
+            where=json.dumps({'connector_id':item.connector_id,'external_id':item.external_id}),limit=2,offset=0)['objects']
+        if len(rows)!=1:raise C0Error('current_snapshot_missing_or_ambiguous')
+        saved=rows[0]
+    full=client.call('source_documents_get',logical_document_id=saved['id'])
+    if full['state']!='ready' or (item.media_type in ('text/plain','text/markdown') and (full['body'].encode()!=item.content or full['text_hash']!=item.content_hash)):
+        raise C0Error('current_document_readback_mismatch')
+    if timings is not None:timings['readback_seconds']=timings.get('readback_seconds',0.)+perf_counter()-started
+    return full

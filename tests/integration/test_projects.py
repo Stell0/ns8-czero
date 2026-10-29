@@ -36,7 +36,7 @@ def project(access):
     yield service, manifest, owner, create
     with database.engine.begin() as connection:
         for space in owned:
-            for table in ('c0_object_keys', 'c0_object_events', 'c0_objects', 'c0_knowledge_receipts', 'c0_space_grants', 'c0_space_cursors'):
+            for table in ('c0_content_tombstones','c0_original_cleanup','c0_object_keys', 'c0_object_events', 'c0_objects', 'c0_knowledge_receipts', 'c0_space_grants', 'c0_space_cursors'):
                 connection.execute(text('DELETE FROM ' + table + ' WHERE space_id=:space'), {'space': space})
             connection.execute(text("DELETE FROM c0_space_receipts WHERE result->>'id'=:id"), {'id': str(space)})
             connection.execute(text('DELETE FROM c0_spaces WHERE id=:id'), {'id': space})

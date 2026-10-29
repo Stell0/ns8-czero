@@ -79,7 +79,7 @@ class EmbeddingStore(SpaceBound):
         parameters={'profile':self.profile_id,'generation':profile['generation']}
         sources=connection.execute(text('''SELECT c.id,c.body,c.space_id FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            WHERE NOT s.deleted AND NOT EXISTS(SELECT 1 FROM c0_embeddings e WHERE e.profile_id=:profile
+            WHERE s.current_version_id=v.id AND v.state='ready' AND NOT s.deleted AND NOT EXISTS(SELECT 1 FROM c0_embeddings e WHERE e.profile_id=:profile
                 AND e.generation=:generation AND e.source_chunk_id=c.id) ORDER BY c.id LIMIT 8'''),parameters).mappings().all()
         wiki=connection.execute(text('''SELECT w.id,w.body,w.space_id,r.title FROM c0_wiki_chunks w JOIN c0_wiki_revisions r ON r.id=w.revision_id
             JOIN c0_wiki_pages p ON p.id=r.page_id WHERE NOT p.deleted AND p.revision=r.number
@@ -131,7 +131,7 @@ class EmbeddingStore(SpaceBound):
             WHERE e.space_id=:space AND e.profile_id=:profile AND e.generation=:generation AND (
                 (:sources AND e.source_chunk_id IS NOT NULL AND EXISTS(SELECT 1 FROM c0_chunks c
                     JOIN c0_documents d ON d.id=c.document_id JOIN c0_source_versions v ON v.id=d.version_id
-                    JOIN c0_sources s ON s.id=v.source_id WHERE c.id=e.source_chunk_id AND NOT s.deleted))
+                    JOIN c0_sources s ON s.id=v.source_id WHERE c.id=e.source_chunk_id AND s.current_version_id=v.id AND v.state='ready' AND NOT s.deleted))
                 OR (:wiki AND e.wiki_chunk_id IS NOT NULL AND EXISTS(SELECT 1 FROM c0_wiki_chunks w
                     JOIN c0_wiki_revisions r ON r.id=w.revision_id JOIN c0_wiki_pages p ON p.id=r.page_id
                     WHERE w.id=e.wiki_chunk_id AND NOT p.deleted AND p.revision=r.number)))'''
