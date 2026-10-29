@@ -49,7 +49,12 @@ restoration; initial ordering/DNS failures remain failed evidence, not acceptanc
 All full/native/final consumer gates remain required. Initial multipart imports now
 have one visible body-free pending entry; the real Reader automatically opens the
 complete parent after publication. The 18-case document suite, including the
-10,000-parent bounded directory, and the real pending-to-current browser flow pass.
+10,000-parent bounded directory, and the real pending-to-current browser flow pass. The
+initial Rocky browser diagnostics exposed obsolete history-count/old-body and
+whole-receipt text assertions. Native checks now require current-only listings
+and authorized 410 responses. Reader/read-only-token version lists exclude staging;
+Editors/Admins with write scope retain bounded verification access. All exact-source
+full/native gates must pass before Core publication and consumer adoption.
 
 The completed PR44 section below records its historical guarantees. Latest-only
 semantics explicitly supersede its content-history promises.

@@ -594,6 +594,7 @@ class CzeroSso:
             source_id = browser.get_text('#source-identity').split(' · ')[0]
             run('Click', '#source-chunks button')
             run('Get Text', '#source-citation', 'contains', '"source_hash"')
+            retired=json.loads(browser.get_text('#source-citation'))
             run('Reload')
             run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
             view(1, expected_text)
@@ -612,8 +613,13 @@ class CzeroSso:
                 run('Get Text', '#upload-status', 'contains', 'Upload accepted.')
                 view(2, 'Browser revised evidence')
                 run('Get Text', '#source-identity', 'contains', 'revision 2')
-                run('Get Element Count', '#source-versions li', '==', 2)
-                view(1, expected_text)
+                run('Get Element Count', '#source-versions li', '==', 1)
+                run('Get Element Count', '#source-versions button:text-is("View version 1")', '==', 0)
+                for path in ('source-versions/'+retired['version_id']+'/document',
+                             'source-versions/'+retired['version_id']+'/original',
+                             'chunks/'+retired['chunk_id']+'/citation'):
+                    status=browser.evaluate_javascript(None,'async () => (await fetch('+json.dumps('/api/v1/'+path)+')).status')
+                    assert status==410,'Retired source content remained available to the browser'
                 run('Fill Text', '#source-query', 'inventory')
                 run('Click', '#source-search-form button')
                 run('Wait For Elements State', '#source-results button:text-is(' + json.dumps(title + ' · version 2') + ')', 'visible')
@@ -652,7 +658,8 @@ class CzeroSso:
             run('Click', '#source-list button:text-is("Browser quarantined evidence")')
             run('Wait For Elements State', '#source-detail', 'visible')
             run('Get Element Count', '#source-versions button', '==', 0)
-            run('Get Element Count', '#source-versions a', '==', 1)
+            run('Get Element Count', '#source-versions a', '==', 0)
+            run('Get Text','#source-status','==','No current published content.')
             run('New Context', 'ignoreHTTPSErrors=True'); run('New Page'); login('c0owner')
             run('Click', '#source-list button:text-is(' + json.dumps(title) + ')')
             view(2, 'Browser revised evidence')
@@ -1069,7 +1076,7 @@ class CzeroSso:
                 run('Get Text', '#guide-rules', 'contains', 'untrusted evidence')
                 if role != 'reader':
                     run('Click', '#guide-workflows > details:nth-child(6) > summary')
-                    run('Get Text', '#guide-workflows', 'contains', 'whole receipt')
+                    run('Get Text', '#guide-workflows', 'contains', 'superseded result returns content_superseded (410)')
                 assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host, module_id)
                 _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+

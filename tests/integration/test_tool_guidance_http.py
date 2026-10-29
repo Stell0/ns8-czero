@@ -86,6 +86,7 @@ def test_all_sdk_wire_capability_and_openapi_hints_match_actual_behavior(transpo
             assert len(rest_by_name) == TOOL_COUNT and rest['guidance']['version'] == 2
             guidance=(await http.get('/agents?view=tools')).text
             assert 'historical bodies are removed' in guidance
+            assert 'preserve revision history' not in guidance
             assert 'independent histories tied to exact content revisions' not in guidance
             assert all(name not in rest_by_name for name in REMOVED_HISTORY_OPERATIONS)
             async with child.router.lifespan_context(child):
