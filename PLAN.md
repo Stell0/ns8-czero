@@ -1,5 +1,96 @@
 # C0 roadmap
 
+> Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](docs/latest-only-migration.md).
+
+## Active: latest-only storage and reusable website crawler
+
+Authorized scope: disposable storage/migration/browser validation and bounded
+public documentation reads only. No production migration, import, schedule or
+merge is authorized. Preserve frozen deployed images and historical evidence below.
+
+Implementation uses schema 0023, explicit current source pointers, verified current
+multipart membership, payload-free receipts/tombstones, transactional retirement
+and durable original-file cleanup. The reusable website adapter uses the existing
+private-job OAuth/client/publisher, approved boundaries, robots/sitemaps, resumable
+frontier and pinned structured Markdown conversion. See the
+[migration note](docs/latest-only-migration.md) and
+[recipe/catalog](samples/ingestion/examples/website/README.md).
+
+Baseline original main: `d98d5b498bcbf70d04015b3d8c9e2afdf3bb80c8`.
+Actual baseline: 2322 Python/PostgreSQL/packaging, 207 Node, six real HTTPS browser
+cases, schema/shell/docs and 21 Robot dry runs pass. Full CI
+[40823668206](https://github.com/Stell0/ns8-czero/actions/runs/40823668206) and its
+downloaded native/privacy/five scan-SBOM pairs pass independent artifact audit.
+Frozen Core source `cf9c0fa38183e940877c13228a8ce753dfd07412` passes
+2352 Python/PostgreSQL/packaging cases, 207 Node controllers, ten real HTTPS
+browser cases, schema/shell/docs and 21 Robot dry runs. Full CI
+[40954071273](https://github.com/Stell0/ns8-czero/actions/runs/40954071273) passes;
+independently downloaded artifacts verify Debian update 21, Rocky installation
+26/three expected skips, eight browser workflows/privacy guards, 32 accessibility
+contexts, three OAuth-query artifacts with zero candidates and five scan/SBOM pairs.
+Actual independently installed predecessor 0.35.2 content survives the destructive
+upgrade with current identities intact; failed/corrupt preflights block removal.
+
+Immutable [Core 0.36.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.36.0)
+is published at that source by
+[40964016296](https://github.com/Stell0/ns8-czero/actions/runs/40964016296).
+Downloaded wheel SHA-256 `e765f790fa979c38b598fdcaa0bf41936ba29523fca2fa31bb9191a30cb2bda9`
+and archive `24f9b04cc5fba68428693b78d0a112cd21dc1597dc996613bbceb760ee19e8ef`
+match published checksums. The application adopts its immutable tag/Git lock,
+`>=0.36.0,<0.37.0` and matching patch-only updater bounds. Default-image acceptance
+checks the actual installed source and latest-only schema/contracts. Final
+consumer full/native gates and PR review remain required; no merge or deployment
+is authorized.
+
+Bounded public smoke uses 20 pages each from NethVoice, NethSecurity and NethServer.
+After correcting article-header extraction, all 60 whole Markdown bodies and
+headings pass actual C0 interface/hash readback in fresh disposable spaces; a
+Reader opens one from each site. All 60 unchanged readbacks preserve generation
+identity and perform zero C0 writes. Each selection is page-budget partial
+coverage. Current cached HTML receives 20 conditional 304 responses per site and
+is reconverted with the new extractor fingerprint. No production data or instance
+is used. A transient NethSecurity DNS failure remains failed evidence; its bounded
+retry passes without weakening network restrictions.
+
+| Site | Verified pages | Requests / 304 | Crawl / conversion seconds | Publication / extraction / readback seconds |
+| --- | ---: | ---: | ---: | ---: |
+| nethvoice | 20 | 22 / 20 | 20.153 / 0.360 | 29.984 / 7.885 / 4.764 |
+| nethsecurity | 20 | 22 / 20 | 19.997 / 0.385 | 28.601 / 8.628 / 4.827 |
+| nethserver | 20 | 22 / 20 | 19.852 / 0.433 | 29.288 / 8.084 / 4.581 |
+
+Fetched corpora stay private. The crawler keeps current representations and a
+bounded resumable pending scan, then retires only its owned obsolete payloads.
+Interrupted frontier progress is replayed until the batch is durably saved;
+robots-denied discovery stays partial. Dedicated website private jobs may target
+the same project as other adapters, but mixed-adapter private jobs are rejected.
+App original-file delivery pins and hashes the authorized generation before
+streaming; an in-flight retired generation remains explicitly identified while
+new exact requests return authorized 410. No external timer is installed.
+
+Initial feature CI [40945036958](https://github.com/Stell0/ns8-czero/actions/runs/40945036958)
+exposed a clean-environment producer override error before tests. Its produced
+images, scans and native runs are preserved diagnostic evidence. The next
+candidate pins the explicit local producer path without modifying consumer pins.
+The initial 2350-case local run retained six failures (2344 passes): stale replay
+assertions in bundle/package probes and a synthetic source left in Shared. The
+current-only probes and explicitly scoped fixture fix those causes; all eight
+actual independent wheel/archive package cases and 40 sequential storage cases
+pass. The native upgrade verifier now follows established disposable TLS trust
+restoration; initial ordering/DNS failures remain failed evidence, not acceptance.
+All full/native/final consumer gates remain required. Initial multipart imports now
+have one visible body-free pending entry; the real Reader automatically opens the
+complete parent after publication. The 18-case document suite, including the
+10,000-parent bounded directory, and the real pending-to-current browser flow pass. The
+initial Rocky browser diagnostics exposed obsolete history-count/old-body and
+whole-receipt text assertions. Native checks now require current-only listings
+and authorized 410 responses. Reader/read-only-token version lists exclude staging;
+Editors/Admins with write scope retain bounded verification access. All exact-source
+full/native gates must pass before Core publication and consumer adoption.
+
+The completed PR44 section below records its historical guarantees. Latest-only
+semantics explicitly supersede its content-history promises.
+
+
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
 ## Full documents in Knowledge Explorer — implementation in progress

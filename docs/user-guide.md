@@ -16,9 +16,9 @@ OAuth consent adds another bound: Editor membership alone does not authorize a C
 
 ## Read articles and original evidence
 
-Knowledge pages are readers. Search for a topic or browse the article tree. Open article history for an earlier revision. Follow source citations to the exact version, document and passage; historical content need not describe the current state.
+Knowledge pages are readers. Search for a topic or browse the article tree. Stable article/document links open current content. Exact citations bind to a specific generation and passage; after replacement they explicitly report unavailable/superseded evidence. A separately labelled current-document link may help, but does not recover the original evidence. There is no content history or rollback selector.
 
-Sources shows retained document versions and extracted text. A pending extraction is not yet usable evidence. Missing applicability or verification means unknown. A saved article, a confident answer or a successful write does not establish that a procedure was independently verified.
+Sources shows complete current documents and extracted text. Superseded automatic bodies, originals and derivatives are removed; authored quotations remain and expired evidence is marked stale. A pending extraction is not yet usable evidence. Missing applicability or verification means unknown. A saved article, a confident answer or a successful write does not establish that a procedure was independently verified.
 
 ## Use ChatGPT
 
@@ -51,15 +51,15 @@ Plain text stays literal. PDF/DOCX display extracted text, with no promise to
 reproduce their original layout. Remote images and active HTML remain disabled.
 
 The reader shows provenance, canonical/original links, extraction state and a
-version selector. Retained originals have a download link. Expand technical
+current generation identity. Retained current originals have a download link. Expand technical
 details for hashes and evidence identities. Large imports stored in parts still
 open as one document. An incomplete import cannot replace the last verified
 snapshot. Search opens the containing full document and identifies its exact
-cited passage; historical links keep their original immutable version.
+cited passage; expired exact links report unavailable evidence without rebinding it.
 
 ## Edit and upload
 
-Authorized edits publish immediately and retain history. There is no separate approval queue. Open Tools on the relevant page for manual editing. New article slugs such as `product/install` form the navigation tree; existing slugs are fixed.
+Authorized edits publish immediately and retain only current content. There is no separate approval queue. Open Tools on the relevant page for manual editing. New article slugs such as `product/install` form the navigation tree; existing slugs are fixed.
 
 Before changing a page, read its current revision. A conflict means another change occurred: reload, reconcile both observations and retry with the new revision. An unchanged request with an idempotency key keeps that key after an uncertain reply. Not every mutation has replay protection; inspect saved results before repeating an ordinary create.
 

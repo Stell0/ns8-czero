@@ -91,7 +91,6 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                             'body':body+'\nInspect the exhaust.','expected_revision':2,'idempotency_key':'reconciled'}})
                         assert not result.is_error and content(calls[-1]['result'])['revision']==3
                         await call('wiki_pages_resolve',{'slug':fixture.ground['page']['slug'],'space_id':fixture.space})
-                        await call('wiki_revisions_list',{'page_id':fixture.ground['page']['id'],'space_id':fixture.space})
                         readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
                         result=grade(case,{'valid':True,'final':{'answer':'Updated with concurrent note.',
                             'outcome':'completed','citations':[]}},calls,fixture.before,fixture.snapshot(),fixture.ground,readonly)
@@ -108,7 +107,6 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         assert len([r for r in fixture.snapshot()['c0_wiki_pages'] if r not in fixture.before['c0_wiki_pages']])==1
                         saved=content(calls[-1]['result'])
                         await call('wiki_pages_resolve',{'space_id':fixture.space,'slug':saved['slug']})
-                        await call('wiki_revisions_list',{'space_id':fixture.space,'page_id':saved['id']})
                         readonly={t.name:fixture.app.state.operations.definition(t.name)['read_only'] for t in tools}
                         final={'answer':'Saved exactly one revision.','outcome':'completed','citations':[]}
                         evaluated=grade('uncertain-replay',{'valid':True,'final':final},calls,fixture.before,

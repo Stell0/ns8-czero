@@ -1,5 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 from uuid import uuid4
+import pytest
+from c0_ingest.errors import C0Error
 from c0_ingest.client import C0
 from c0_projects.adapters import collect
 from c0_projects.model import source_config,sha
@@ -38,6 +40,6 @@ def test_separate_github_knowledge_space_is_a_scoped_incremental_source(sample_c
         updated=sync_part(target,next(parts(second.items[0])),tmp_path/'changed.json',definition_hash=sha(definition),attempts=4,seconds=0)
         assert updated['source_id']==stored['source_id'] and updated['version_id']!=stored['version_id']
         assert second.items[0].provenance['revision']==2 and second.cursor['object_after']>first.cursor['object_after']
-        assert target.call('documents_get',version_id=stored['version_id'])['body']==old
-        assert len(target.call('source_versions_list',source_id=stored['source_id'])['versions'])==2
+        with pytest.raises(C0Error,match='content_superseded'):target.call('documents_get',version_id=stored['version_id'])
+        assert len(target.call('source_versions_list',source_id=stored['source_id'])['versions'])==1
     finally:source.close();target.close()

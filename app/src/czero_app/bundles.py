@@ -332,7 +332,8 @@ def install_bundle_routes(app, database, auth, write_context):
             raise HTTPException(409,'knowledge_conflict') from None
         except KnowledgeNotFound:
             raise HTTPException(404,'knowledge_not_found') from None
-        except ValueError:
+        except ValueError as error:
+            if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
             raise HTTPException(422,'invalid_knowledge_request') from None
         if len(result['results'])!=len(data.operations):
             raise RuntimeError('invalid_bundle_result')

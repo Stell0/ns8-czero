@@ -1,3 +1,4 @@
+from czero_core.current_content import ContentSuperseded
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Independent spaces must not share content, cursors or receipt namespaces."""
@@ -52,7 +53,7 @@ def test_private_wiki_names_replays_histories_and_feeds_are_independent(spaces, 
     last_shared = service.changes(owner)[-1]['id']
     changed = selected.update_page(owner, hidden['id'], 'Private later', 'Later', expected_revision=1, idempotency_key='later')
     assert selected.page_history(owner, hidden['id'])[0]['number'] == 2
-    assert selected.get_page(owner, hidden['id'], revision=1)['content'] == hidden['content']
+    with pytest.raises(ContentSuperseded):selected.get_page(owner, hidden['id'], revision=1)
     assert service.changes(owner, after=last_shared) == []
     another = service.update_page(owner, shared['id'], 'Shared later', 'Later', expected_revision=1, idempotency_key='later')
     assert service.changes(owner)[-1]['id'] == last_shared + 1

@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0022_remembered_browsers"
+SCHEMA_REVISION = "0023_current_content"
 
 
 class Database:
@@ -21,7 +21,7 @@ class Database:
             raise ValueError("C0 requires PostgreSQL with the psycopg driver")
         self.engine = create_engine(parsed, pool_pre_ping=True, pool_size=5,
             max_overflow=2, pool_timeout=2, hide_parameters=True,
-            connect_args={"connect_timeout": 2, "options": "-c statement_timeout=5000"})
+            connect_args={"connect_timeout": 2, "options": "-c statement_timeout=5000 -c c0.content_protocol=1"})
 
     def health(self) -> dict[str, str]:
         try:

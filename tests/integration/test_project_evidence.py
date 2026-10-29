@@ -161,7 +161,7 @@ def test_actual_claim_and_revision_annotations_preserve_history(evidence):
     changed=knowledge.update_page(owner,wiki['id'],'Revised interpretation','# Revised learning\n\nThe synthetic capacity assumption needs a contrary check.',
         metadata=wiki['content']['metadata'],expected_revision=1,idempotency_key='new-revision')
     assert annotations.get(owner,ContentTarget('wiki_revision',changed['content']['id'],2),'verification')['status']=='unknown'
-    assert annotations.get(owner,target,'verification')['status']=='verified'
+    assert annotations.get(owner,target,'verification')['status']=='stale'
     assert knowledge.get_claim(owner,claim['id'])['value']=={'units':100}
 
 

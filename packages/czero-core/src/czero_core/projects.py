@@ -262,6 +262,23 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
         definition = validate_record(SCHEMAS['connector_v1']['properties']['definition'], definition)
         identifier(definition['id'])
         adapter=definition['adapter']
+        if adapter=='website':
+            website=definition.get('website')
+            if not website or not website['seeds'] or not website['allowed_roots']:raise ValueError('explicit_documentation_roots_required')
+            from urllib.parse import urlsplit
+            def origin_path(url):
+                parsed=urlsplit(url)
+                if (parsed.scheme not in ('https','http') or not parsed.hostname or parsed.username or parsed.password or parsed.fragment
+                        or parsed.port not in (None,443 if parsed.scheme=='https' else 80)):
+                    raise ValueError('invalid_website_url')
+                return parsed
+            roots=[origin_path(url) for url in website['allowed_roots']]
+            for seed in website['seeds']:
+                parsed=origin_path(seed)
+                if not any((parsed.scheme,parsed.netloc)==(root.scheme,root.netloc) and
+                    (parsed.path==root.path.rstrip('/') or parsed.path.startswith(root.path.rstrip('/')+'/')) for root in roots):
+                    raise ValueError('website_seed_outside_approved_roots')
+        elif 'website' in definition:raise ValueError('website_configuration_requires_website_adapter')
         if adapter in ('http','rss_atom','sitemap'):
             from urllib.parse import urlsplit, parse_qsl
             import re
@@ -363,9 +380,6 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
             values['last_attempt_at']=self.clock().isoformat()
             values['last_success_at']=(self.clock().isoformat() if values['sync_status']=='verified'
                 else previous['data']['last_success_at'] if previous else '')
-            history_key=values['connector_id']+':'+values['external_id']+':'+values['version_id']+':'+values['parent_content_hash']
-            if values['sync_status']=='verified' and not self._find(connection,'source_sync_history_v1',history_key,required=False):
-                self._save(connection,current,'source_sync_history_v1',history_key,{k:v for k,v in values.items() if k!='key'})
             return self._save(connection,current,'source_sync_v1',values['connector_id']+':'+values['external_id'],
                 {k:v for k,v in values.items() if k!='key'},previous=previous)
         return self._mutate(actor,'source_status',{'data':data,'expected_revision':expected_revision},idempotency_key,execute,lease=lease)
@@ -409,7 +423,7 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                       AND o.data->>'sync_status'='verified' AND v.state='ready'
                       AND v.content_hash=o.data->>'last_content_hash' AND CAST(v.source_id AS text)=o.data->>'source_id'
                     '''),{'space':self._space_id,'type':PREFIX+'source_sync_v1','ids':verified_receipt_ids,
-                        'history':PREFIX+'source_sync_history_v1','snapshot':PREFIX+'source_snapshot_v1',
+                        'history':PREFIX+'source_part_v1','snapshot':PREFIX+'source_snapshot_v1',
                         'connector':values['connector_id'],'hash':values['definition_hash']}).scalar_one()
                 if verified!=len(verified_receipt_ids):raise ValueError('unverified_connector_publication')
             previous=self._find(connection,'connector_sync_v1',values['connector_id'],required=False)
@@ -443,18 +457,31 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
         payload={'connector_id':connector_id,'external_id':external_id,'content_hash':content_hash,
             'part_receipt_ids':part_receipt_ids,'expected_revision':expected_revision}
         def execute(connection,current):
+            from .current_content import content_lock,publish_versions,retire_versions
+            content_lock(connection)
             connector=self._find(connection,'connector_v1',connector_id)
             if connector_id not in self._manifest(connection)['data']['manifest']['connector_ids'] or not connector['data']['definition']['enabled']:
                 raise ValueError('source_connector_not_enabled')
-            total=0;digest=hashlib.sha256();binary=False;immutable=[]
+            identity=connector_id+':'+external_id
+            previous=self._find(connection,'source_snapshot_v1',identity,required=False)
+            if (previous['revision'] if previous else 0)!=expected_revision:raise ProjectConflict()
+            generation=(previous['revision'] if previous else 0)+1
+            total=0;digest=hashlib.sha256();binary=False;immutable=[];versions=[];validated=[];part_sources=set()
             for number,receipt_id in enumerate(part_receipt_ids,1):
-                row=connection.execute(text('''SELECT o.data,v.media_type,d.body FROM c0_objects o
+                row=connection.execute(text('''SELECT o.data,v.media_type,d.body,d.text_hash,v.source_id AS actual_source_id,v.content_hash AS actual_source_hash FROM c0_objects o
                     JOIN c0_source_versions v ON v.id=CAST(o.data->>'version_id' AS uuid) AND v.space_id=o.space_id
                     JOIN c0_documents d ON d.version_id=v.id AND d.space_id=v.space_id
                     WHERE o.space_id=:space AND o.type_name=:type AND o.id=CAST(:id AS uuid) AND v.state='ready' '''),
                     {'space':self._space_id,'type':PREFIX+'source_sync_v1','id':receipt_id}).mappings().one_or_none()
                 if row is None:raise ValueError('unverified_source_part')
                 data=row['data']
+                if row['actual_source_id'] in part_sources:raise ValueError('ambiguous_source_part_identity')
+                part_sources.add(row['actual_source_id'])
+                bound=connection.execute(text("SELECT 1 FROM c0_objects WHERE space_id=:space AND type_name=:type AND data->>'source_id'=:source AND (data->>'connector_id'<>:connector OR data->>'parent_external_id'<>:parent) LIMIT 1"),{'space':self._space_id,'type':PREFIX+'source_part_v1','source':str(row['actual_source_id']),'connector':connector_id,'parent':external_id}).scalar_one_or_none()
+                if bound:raise ValueError('source_part_belongs_to_another_document')
+                if (str(row['actual_source_id'])!=data['source_id'] or row['actual_source_hash']!=data['last_content_hash']
+                        or hashlib.sha256(row['body'].encode()).hexdigest()!=row['text_hash']):
+                    raise ValueError('source_part_retained_integrity_mismatch')
                 if (data['connector_id']!=connector_id or data['parent_external_id']!=external_id
                         or data['parent_content_hash']!=content_hash or data['part_number']!=number
                         or data['start_byte']!=total or data['sync_status']!='verified'
@@ -469,23 +496,32 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                     binary=True
                     if len(part_receipt_ids)!=1 or content_hash!=data['last_content_hash']:
                         raise ValueError('invalid_binary_source_parts')
-                identity=connector_id+':'+data['external_id']+':'+data['version_id']
-                historical=self._find(connection,'source_sync_history_v1',identity+':'+content_hash,required=False)
-                if historical is None:
-                    historical=self._find(connection,'source_sync_history_v1',identity)
-                if any(historical['data'].get(key)!=data[key] for key in ('parent_content_hash','part_number','start_byte','end_byte','source_id','version_id','last_content_hash')):
-                    raise ValueError('source_part_history_mismatch')
-                immutable.append(str(historical['id']))
+                validated.append(data);versions.append(UUID(data['version_id']))
                 total=data['end_byte']
                 if total>16777216:raise ValueError('source_snapshot_too_large')
             if not binary and digest.hexdigest()!=content_hash:raise ValueError('source_snapshot_hash_mismatch')
-            identity=connector_id+':'+external_id
-            previous=self._find(connection,'source_snapshot_v1',identity,required=False)
-            if (previous['revision'] if previous else 0)!=expected_revision:raise ProjectConflict()
+            if previous and previous['data']['content_hash']==content_hash:
+                # Observation/provenance changes do not create a content generation.
+                from .documents import DocumentService
+                checked=DocumentService(self.database,self.access).in_space(self._space_id)._composite(connection,previous,previous,previous['id'])
+                if checked['state']!='ready':raise ValueError('current_source_snapshot_incomplete')
+                return previous
+            for number,data in enumerate(validated,1):
+                membership=self._save(connection,current,'source_part_v1',identity+':'+str(generation)+':'+str(number),
+                    {key:value for key,value in data.items() if key!='key'})
+                immutable.append(str(membership['id']))
             values={'connector_id':connector_id,'external_id':external_id,'content_hash':content_hash,
                 'part_receipt_ids':immutable,'total_bytes':total,'verified_at':self.clock().isoformat()}
-            historical=identity+':'+content_hash
-            if not self._find(connection,'source_snapshot_history_v1',historical,required=False):
-                self._save(connection,current,'source_snapshot_history_v1',historical,values)
-            return self._save(connection,current,'source_snapshot_v1',identity,values,previous=previous)
+            result=self._save(connection,current,'source_snapshot_v1',identity,values,previous=previous)
+            old_versions=[]
+            if previous:
+                old_ids=previous['data']['part_receipt_ids']
+                old_versions=connection.execute(text("SELECT CAST(data->>'version_id' AS uuid) FROM c0_objects WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))"),{'space':self._space_id,'ids':old_ids}).scalars().all()
+                connection.execute(text('DELETE FROM c0_objects WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'),{'space':self._space_id,'ids':old_ids})
+                obsolete=[identifier for identifier in old_versions if identifier not in versions]
+                # Clear current pointers of parts removed by a shrinking parent.
+                connection.execute(text('UPDATE c0_sources SET current_version_id=NULL WHERE current_version_id=ANY(CAST(:old AS uuid[]))'),{'old':obsolete})
+            publish_versions(connection,versions)
+            retire_versions(connection,old_versions)
+            return result
         return self._mutate(actor,'source_snapshot',payload,idempotency_key,execute,lease=lease)

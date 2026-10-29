@@ -83,7 +83,7 @@ def test_0017_upgrade_preserves_all_old_rows_and_new_policy_defaults_off():
             migrate_database(database)
             with database.engine.connect() as c:
                 assert snapshot(c) == before
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0022_remembered_browsers'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0023_current_content'
                 assert c.execute(text('SELECT count(*) FROM c0_cimd_clients')).scalar_one() == 0
                 assert tuple(c.execute(text('SELECT id,enabled,revision FROM c0_cimd_policy')).one()) == (1, False, 1)
             registry.sync_policy(False)

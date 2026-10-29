@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 
+from czero_core.current_content import ContentSuperseded
 from czero_core.knowledge import KnowledgeService
 from czero_core.retrieval import SearchService
 from czero_core.wiki import KnowledgeConflict
@@ -17,6 +18,7 @@ from test_knowledge import knowledge
 from test_sources import sources, upload, execute
 from test_wiki import wiki, create_entity, create_page
 from test_auth_http import application
+from project_contract import REMOVED_HISTORY_OPERATIONS
 
 pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason='isolated PostgreSQL required')
 FIXTURES = Path(__file__).parents[1] / 'fixtures' / 'agent_memory'
@@ -27,11 +29,17 @@ def test_legacy_operation_names_roles_scopes_and_rest_bindings(application):
     baseline = json.loads((FIXTURES / 'legacy_contract.json').read_text())
     registry = app.state.operations
     for expected in baseline['operations']:
+        if expected['name'] in REMOVED_HISTORY_OPERATIONS:
+            assert expected['name'] not in registry._operations
+            continue
         actual = registry.definition(expected['name'])
         for key in ('name', 'minimum_role', 'required_scope', 'read_only'):
             assert actual[key] == expected[key]
     schema = app.openapi()
     for binding in baseline['rest_bindings']:
+        if binding['operation'] in REMOVED_HISTORY_OPERATIONS:
+            assert binding['path'] not in schema['paths']
+            continue
         assert schema['paths'][binding['path']][binding['method']]['x-c0-operation']['name'] == binding['operation']
 
 
@@ -77,9 +85,9 @@ def test_synthetic_agent_memory_preserves_evidence_conflicts_and_history(knowled
         page_id=procedure['id'], evidence_chunk_ids=[str(chunk['id'])], idempotency_key=namespace + ':claim-b')
     assert conflicting['id'] != claim['id']
     assert {item['value']['state'] for item in later.list_claims(actor, entity_id=entity['id'])} == {'healthy', 'unavailable'}
-    assert later.get_page(actor, stored['id'], revision=1)['content'] == stored['content']
+    with pytest.raises(ContentSuperseded):later.get_page(actor, stored['id'], revision=1)
     assert later.get_page(actor, stored['id'])['content']['metadata']['status'] == 'unverified'
-    assert [row['number'] for row in later.page_history(actor, stored['id'])] == [2, 1]
+    assert [row['number'] for row in later.page_history(actor, stored['id'])] == [2]
     for row in (claim, conflicting):
         citation = later.get_claim(actor, row['id'])['evidence'][0]
         assert citation['chunk_id'] == str(chunk['id'])

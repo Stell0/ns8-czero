@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "server_url": "https://c0.example.org/mcp",
+  "project_space_id": "00000000-0000-4000-8000-000000000001",
+  "sources": [
+    {
+      "enabled": true,
+      "include": [],
+      "max_items": 20,
+      "max_requests": 100,
+      "max_bytes": 4194304,
+      "max_pages": 20,
+      "max_depth": 2,
+      "timeout": 20,
+      "id": "nethvoice",
+      "adapter": "website",
+      "website": {
+        "seeds": [
+          "https://docs.nethvoice.com/it/docs/administrator-manual",
+          "https://docs.nethvoice.com/it/docs/user-manual"
+        ],
+        "allowed_roots": [
+          "https://docs.nethvoice.com/it/docs/"
+        ],
+        "sitemaps": [],
+        "exclude": [
+          "*/search*",
+          "*/tags/*",
+          "*/login*",
+          "*/download*",
+          "*.pdf",
+          "*.zip"
+        ],
+        "profile": "docusaurus",
+        "selectors": [],
+        "remove_selectors": [],
+        "language": "it",
+        "product": "NethVoice",
+        "product_version": "8",
+        "manual": "",
+        "interval_ms": 1000,
+        "max_total_bytes": 33554432,
+        "max_cache_pages": 1000,
+        "configuration_version": "1"
+      }
+    },
+    {
+      "enabled": true,
+      "include": [],
+      "max_items": 20,
+      "max_requests": 100,
+      "max_bytes": 4194304,
+      "max_pages": 20,
+      "max_depth": 2,
+      "timeout": 20,
+      "id": "nethsecurity",
+      "adapter": "website",
+      "website": {
+        "seeds": [
+          "https://docs.nethsecurity.org/it/docs/administrator-manual"
+        ],
+        "allowed_roots": [
+          "https://docs.nethsecurity.org/it/docs/"
+        ],
+        "sitemaps": [],
+        "exclude": [
+          "*/search*",
+          "*/tags/*",
+          "*/login*",
+          "*/download*",
+          "*.pdf",
+          "*.zip"
+        ],
+        "profile": "docusaurus",
+        "selectors": [],
+        "remove_selectors": [],
+        "language": "it",
+        "product": "NethSecurity",
+        "product_version": "",
+        "manual": "",
+        "interval_ms": 1000,
+        "max_total_bytes": 33554432,
+        "max_cache_pages": 1000,
+        "configuration_version": "1"
+      }
+    },
+    {
+      "enabled": true,
+      "include": [],
+      "max_items": 20,
+      "max_requests": 100,
+      "max_bytes": 4194304,
+      "max_pages": 20,
+      "max_depth": 2,
+      "timeout": 20,
+      "id": "nethserver",
+      "adapter": "website",
+      "website": {
+        "seeds": [
+          "https://docs.nethserver.org/docs/administrator-manual",
+          "https://docs.nethserver.org/docs/administrator-manual/applications/webtop"
+        ],
+        "allowed_roots": [
+          "https://docs.nethserver.org/docs/"
+        ],
+        "sitemaps": [],
+        "exclude": [
+          "*/search*",
+          "*/tags/*",
+          "*/login*",
+          "*/download*",
+          "*.pdf",
+          "*.zip"
+        ],
+        "profile": "docusaurus",
+        "selectors": [],
+        "remove_selectors": [],
+        "language": "en",
+        "product": "NethServer",
+        "product_version": "8",
+        "manual": "",
+        "interval_ms": 1000,
+        "max_total_bytes": 33554432,
+        "max_cache_pages": 1000,
+        "configuration_version": "1"
+      }
+    }
+  ]
+}

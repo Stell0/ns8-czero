@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from czero_core.current_content import ContentSuperseded
 from czero_core.annotations import AnnotationService, ContentTarget
 from czero_core.identity import Actor, PermissionDenied, Role
 from czero_core.operations import ScopeDenied
@@ -59,8 +60,8 @@ def test_namespaces_have_separate_history_and_never_rewrite_evidence(annotations
     assert second['revision'] == 2
     assert annotations.get(wiki[1], target, 'applicability') == applicability
     history = annotations.history(wiki[1], target, 'verification')['revisions']
-    assert [value['number'] for value in history] == [2, 1]
-    assert history[1]['value'] == verification['value']
+    assert [value['number'] for value in history] == [2]
+    assert history[0]['value'] == second['value']
     assert wiki[0].get_page(wiki[1], row['id']) == row
     assert annotations.get(wiki[1], target, 'applicability')['value']['version_tags'] == ['8.4', '8.40']
 
@@ -76,12 +77,13 @@ def test_replay_is_original_snapshot_and_independent_writers_have_one_winner(ann
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(edit, range(2)))
     assert sum(value is not None for value in results) == 1
-    assert write(annotations, wiki[1], target, 'verification', {'status': 'unverified'}, key='first') == first
+    with pytest.raises(ContentSuperseded):
+        write(annotations, wiki[1], target, 'verification', {'status': 'unverified'}, key='first')
     with pytest.raises(KnowledgeConflict):
         write(annotations, wiki[1], target, 'verification', {'status': 'changed'}, key='first')
     with pytest.raises(KnowledgeConflict):
         write(annotations, wiki[1], target, 'verification', {'status': 'stale'}, 0)
-    assert len(annotations.history(wiki[1], target, 'verification')['revisions']) == 2
+    assert len(annotations.history(wiki[1], target, 'verification')['revisions']) == 1
 
 
 def test_verification_never_transfers_to_changed_content(annotations, wiki):
@@ -109,7 +111,7 @@ def test_object_annotations_preserve_strict_payload_and_survive_object_removal(a
     assert service.get(owner, row['id']) == row
     service.delete(owner, row['id'], expected_revision=1)
     retained = annotations.get(owner, target, 'applicability')
-    assert retained['value'] == stored['value'] and retained['status'] == 'vendor-new-state'
+    assert retained['value'] == stored['value'] and retained['status'] == 'stale'
     assert retained['target_archived']
     assert len(annotations.history(owner, target, 'applicability')['revisions']) == 1
 
@@ -188,7 +190,8 @@ def test_claim_annotation_targets_do_not_change_assertions_or_transfer_after_rev
     assert annotations.get(wiki[1], ContentTarget('claim', assertion['id'], 2), 'verification')['status'] == 'unknown'
     old = annotations.get(wiki[1], target, 'verification')
     assert not old['target_current'] and old['current_content_revision'] == 2
-    assert write(annotations, wiki[1], target, 'verification', {'status': 'verified'}, key='claim-verification') == result
+    reconciled=write(annotations, wiki[1], target, 'verification', {'status': 'verified'}, key='claim-verification')
+    assert reconciled==old and reconciled['value']==result['value'] and reconciled['status']=='stale'
     with pytest.raises(KnowledgeConflict):
         write(annotations, wiki[1], target, 'verification', {'status': 'stale'}, 1)
     assert knowledge[0].get_claim(wiki[1], assertion['id'])['evidence'] == before['evidence']

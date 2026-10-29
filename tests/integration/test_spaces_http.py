@@ -25,7 +25,7 @@ def space_http(application):
 def dispose_spaces(db, created, types=()):
     with db.engine.begin() as c:
         for identifier in created:
-            for table in ('c0_annotation_targets','c0_evidence_links','c0_entity_links','c0_relations','c0_claims','c0_knowledge_receipts',
+            for table in ('c0_content_tombstones','c0_original_cleanup','c0_annotation_targets','c0_evidence_links','c0_entity_links','c0_relations','c0_claims','c0_knowledge_receipts',
                           'c0_knowledge_events','c0_entity_aliases','c0_entities','c0_wiki_revisions','c0_wiki_pages',
                           'c0_chunks','c0_documents','c0_source_versions','c0_sources','c0_jobs','c0_object_relations',
                           'c0_object_keys','c0_objects','c0_object_events','c0_space_grants'):
