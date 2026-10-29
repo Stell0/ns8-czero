@@ -318,7 +318,7 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
                       context: RequestAccess = Depends(read_context)):
         return invoke(document_space(space_id).read_document, context.actor, logical_document_id, revision_id=revision_id)
 
-    @app.get('/api/v1/source-documents/{logical_document_id}/history', response_model=SourceDocumentHistory)
+    @app.get('/api/v1/source-documents/{logical_document_id}/history', response_model=SourceDocumentHistory, include_in_schema=False)
     def document_history(logical_document_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None,
                          context: RequestAccess = Depends(read_context)):
         return {'revisions': invoke(document_space(space_id).document_history, context.actor, logical_document_id, limit=limit, offset=offset)}

@@ -47,6 +47,7 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
     assert [contract.operation_contract(item) for item in original]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()
+    assert not any(path.endswith('/history') or path.endswith('/revisions') for path in schema['paths'])
     assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS] == [row for row in frozen['rest_bindings'] if row['operation'] not in REMOVED_HISTORY_OPERATIONS]
     for methods in schema['paths'].values():
         for route in methods.values():

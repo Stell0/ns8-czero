@@ -84,4 +84,4 @@ required before claiming released project availability.
 See [complete source documents](full-documents.md) for logical identities, bounded
 summary/history APIs, safe rendering and exact historical part resolution.
 
-Source and Wiki content uses [latest-only storage](latest-only-migration.md). Historical source/Wiki body reads, rollback and content-history export are removed. History compatibility routes list current content only; MCP no longer advertises `source_document_history`, `wiki_revisions_list` or `knowledge_annotations_history`. Expired exact content and superseded replay requests return HTTP 410 / MCP `content_superseded`, after current space authorization.
+Source and Wiki content uses [latest-only storage](latest-only-migration.md). Historical source/Wiki body reads, rollback and content-history export are removed. History compatibility routes list current content only and are omitted from OpenAPI discovery; MCP no longer advertises `source_document_history`, `wiki_revisions_list` or `knowledge_annotations_history`. Expired exact content and superseded replay requests return HTTP 410 / MCP `content_superseded`, after current space authorization.

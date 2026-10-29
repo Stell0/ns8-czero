@@ -251,7 +251,7 @@ def install_annotation_routes(app, database, auth, read_context, write_context):
             space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         return invoke(selected(annotations,space_id).get,context.actor,ContentTarget(kind,target_id,content_revision),namespace)
 
-    @app.get(_TARGET+'/history', response_model=AnnotationHistory)
+    @app.get(_TARGET+'/history', response_model=AnnotationHistory, include_in_schema=False)
     def history(kind: Kind, target_id: UUID, content_revision: ObservedRevision, namespace: Namespace,
             limit: int = 50, offset: int = 0, space_id: UUID | None = None,
             context: RequestAccess = Depends(read_context)):

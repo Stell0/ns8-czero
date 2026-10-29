@@ -312,7 +312,7 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
     def archive(page_id: UUID, data: ArchiveRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         return invoke(selected(space_id).delete_page, context.actor, page_id, **data.model_dump())
 
-    @app.get('/api/v1/wiki/pages/{page_id}/revisions', response_model=HistoryView)
+    @app.get('/api/v1/wiki/pages/{page_id}/revisions', response_model=HistoryView, include_in_schema=False)
     def history(page_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         return {'revisions': invoke(selected(space_id).page_history, context.actor, page_id, limit=limit, offset=offset)}
 
