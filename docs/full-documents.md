@@ -101,3 +101,11 @@ the current complete parent. Other unpublished parts are not listed separately.
 Technical version listings expose staged replacements only to current Editors/Admins
 with write scope. Readers and read-only delegated clients receive the current
 version only; incomplete document summaries remain visible without staged bodies.
+
+Original downloads pin a verified open file before delivery. The
+`X-C0-Source-Version` and `X-C0-Content-SHA256` headers identify the exact original,
+including byte-range responses. An already opened request may finish delivering
+that identified generation after replacement; its stable current link is separate.
+Retirement before opening rechecks current authority and reports superseded
+content explicitly. A changed/corrupt original returns 409 without serving bytes.
+The existing original byte limit is unchanged; no extra file archive is created.
