@@ -1,5 +1,39 @@
 # C0 roadmap
 
+> Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](docs/latest-only-migration.md).
+
+## Active: latest-only storage and reusable website crawler
+
+Authorized scope: disposable storage/migration/browser validation and bounded
+public documentation reads only. No production migration, import, schedule or
+merge is authorized. Preserve frozen deployed images and historical evidence below.
+
+Implementation uses schema 0023, explicit current source pointers, verified current
+multipart membership, payload-free receipts/tombstones, transactional retirement
+and durable original-file cleanup. The reusable website adapter uses the existing
+private-job OAuth/client/publisher, approved boundaries, robots/sitemaps, resumable
+frontier and pinned structured Markdown conversion. See the
+[migration note](docs/latest-only-migration.md) and
+[recipe/catalog](samples/ingestion/examples/website/README.md).
+
+Baseline original main: `d98d5b498bcbf70d04015b3d8c9e2afdf3bb80c8`.
+Actual baseline: 2322 Python/PostgreSQL/packaging, 207 Node, six real HTTPS browser
+cases, schema/shell/docs and 21 Robot dry runs pass. Full CI
+[40823668206](https://github.com/Stell0/ns8-czero/actions/runs/40823668206) and its
+downloaded native/privacy/five scan-SBOM pairs pass independent artifact audit.
+The feature's current seven real-browser cases pass; full candidate, Core
+publication, consumer-pin adoption and final native CI remain open.
+
+Bounded public smoke: NethVoice 20, NethSecurity 20, NethServer 20 pages; each
+22 requests and page-budget partial coverage. All 60 pages were published through
+the actual interfaces to disposable C0 and verified by full Markdown hash readback;
+a Reader opened one from each site. Private corpora remain outside Git. These
+results do not establish full corpus coverage or production deployment.
+
+The completed PR44 section below records its historical guarantees. Latest-only
+semantics explicitly supersede its content-history promises.
+
+
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
 ## Full documents in Knowledge Explorer — implementation in progress

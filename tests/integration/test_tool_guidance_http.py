@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
-from project_contract import PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT
+from project_contract import PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT, REMOVED_HISTORY_OPERATIONS, CHANGED_VALIDATION_CONTRACTS
 
 from czero_app.tool_guidance import DESCRIPTIONS
 from test_auth_http import application, ORIGIN
@@ -34,11 +34,20 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
     assert len(actual) == TOOL_COUNT
     assert {item['name'] for item in actual} - {item['name'] for item in frozen['operations']} == PROJECT_OPERATIONS | DOCUMENT_OPERATIONS
     original = [item for item in actual if item['name'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS]
-    assert len(original) == len(frozen['operations']) == 77
-    assert [contract.operation_contract(item) for item in original] == frozen['operations']
+    assert len(original)==75 and len(frozen['operations'])==77
+    current=json.loads((Path(__file__).parents[1]/'fixtures/tool_guidance/latest_only_contract.json').read_text())
+    latest={row['name']:row for row in current['operations']}
+    expected=[]
+    for row in frozen['operations']:
+        if row['name'] in REMOVED_HISTORY_OPERATIONS:continue
+        if row['name'] in CHANGED_VALIDATION_CONTRACTS:
+            assert all(latest[row['name']][key]==row[key] for key in ('name','minimum_role','required_scope','read_only'))
+            expected.append(latest[row['name']])
+        else:expected.append(row)
+    assert [contract.operation_contract(item) for item in original]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()
-    assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS] == frozen['rest_bindings']
+    assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS] == [row for row in frozen['rest_bindings'] if row['operation'] not in REMOVED_HISTORY_OPERATIONS]
     for methods in schema['paths'].values():
         for route in methods.values():
             if isinstance(route, dict) and 'x-c0-operation' in route:

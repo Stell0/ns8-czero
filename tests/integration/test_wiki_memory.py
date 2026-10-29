@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from czero_core.identity import Actor, PermissionDenied, Role
 from czero_core.knowledge import EvidenceNotReady
+from czero_core.current_content import ContentSuperseded
 from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound, WikiService
 from test_access import access, account_named, identity, record_unadmitted
 from test_sources import sources
@@ -49,17 +50,19 @@ def test_exact_resolution_old_create_and_immutable_history(wiki):
     changed = upsert(wiki, slug=first['slug'], expected_revision=1, body='Revised 🔧')
     assert changed['id'] == first['id'] and changed['revision'] == 2
     assert changed['content']['content_hash'] == hashlib.sha256('Revised 🔧'.encode()).hexdigest()
-    assert service.get_page(owner, first['id'], revision=1) == {**changed, 'content':first['content']}
+    with pytest.raises(ContentSuperseded):
+        service.get_page(owner, first['id'], revision=1)
     old = service.update_page(owner, first['id'], 'Old client', 'Still works', expected_revision=2, idempotency_key='old-update')
     assert service.resolve_page(owner, first['slug']) == old
     service.delete_page(owner, first['id'], expected_revision=3, idempotency_key='archive')
     with pytest.raises(KnowledgeNotFound): service.resolve_page(owner, first['slug'])
     archived = service.resolve_page(owner, first['slug'], include_deleted=True)
     assert archived['deleted'] and archived['revision'] == 4
-    assert [r['number'] for r in service.page_history(owner, first['id'])] == [4,3,2,1]
+    assert [r['number'] for r in service.page_history(owner, first['id'])] == [4]
     for revision in (None,4):
         with pytest.raises(KnowledgeConflict): upsert(wiki, slug=first['slug'], expected_revision=revision)
-    assert service.get_page(owner, first['id'], revision=1)['content'] == first['content']
+    with pytest.raises(ContentSuperseded):
+        service.get_page(owner, first['id'], revision=1)['content']
 
 
 def test_create_only_missing_update_and_original_replay_after_archive(wiki):
@@ -74,8 +77,8 @@ def test_create_only_missing_update_and_original_replay_after_archive(wiki):
     update = dict(slug='retry', body='Second', expected_revision=1, idempotency_key='update')
     second = upsert(wiki, **update)
     service.delete_page(owner, first['id'], expected_revision=2, idempotency_key='archive')
-    assert upsert(wiki, **request) == first
-    assert upsert(wiki, **update) == second
+    with pytest.raises(ContentSuperseded):upsert(wiki, **request)
+    with pytest.raises(ContentSuperseded):upsert(wiki, **update)
     with pytest.raises(KnowledgeConflict): upsert(wiki, **{**update,'idempotency_key':'stale'})
 
 
@@ -85,7 +88,7 @@ def test_two_editors_race_create_update_then_reload_without_lost_work(wiki):
     slug = 'race-'+uuid4().hex
     def write(index, revision=None):
         try:
-            return upsert(wiki, actor=actors[index], slug=slug, body='Observation '+str(index),
+            return upsert(wiki, actor=actors[index], slug=slug, body=('Observation ' if revision is None else 'Revision ')+str(index),
                           expected_revision=revision, idempotency_key=f'write-{revision}-{index}')
         except KnowledgeConflict: return None
     with ThreadPoolExecutor(max_workers=2) as pool: created = list(pool.map(write, range(2)))
@@ -100,9 +103,11 @@ def test_two_editors_race_create_update_then_reload_without_lost_work(wiki):
     final = upsert(wiki, actor=actors[loser], slug=slug, body=latest['content']['body']+'\nAdditional observation '+str(loser),
                    expected_revision=latest['revision'], idempotency_key='reload-retry')
     assert winner['content']['body'] in final['content']['body'] and final['revision'] == 3
-    assert service.get_page(owner, first['id'], revision=1)['content'] == first['content']
-    assert service.get_page(owner, first['id'], revision=2)['content'] == winner['content']
-    assert len(service.page_history(owner, first['id'])) == 3
+    with pytest.raises(ContentSuperseded):
+        service.get_page(owner, first['id'], revision=1)['content']
+    with pytest.raises(ContentSuperseded):
+        service.get_page(owner, first['id'], revision=2)['content']
+    assert len(service.page_history(owner, first['id'])) == 1
     # Identical keys for different persisted actors occupy distinct namespaces.
     one = upsert(wiki, actor=actors[0], idempotency_key='same')
     two = upsert(wiki, actor=actors[1], idempotency_key='same')

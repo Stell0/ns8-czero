@@ -133,9 +133,11 @@ def test_concurrent_replay_and_revision_writers_have_one_result(text_sources):
     index=versions.index(winner)
     assert update(index)==winner  # replay must precede the stale expected revision check
     with pytest.raises(SourceConflict): submit(text_sources,source_id=row['source_id'],expected_revision=1,body='stale')
-    with pytest.raises(SourceConflict): submit(text_sources,source_id=row['source_id'],expected_revision=2,title='Changed provenance')
-    service.delete(owner,row['source_id'],expected_revision=2)
-    with pytest.raises(SourceConflict): submit(text_sources,source_id=row['source_id'],expected_revision=3,body='archived')
+    observed=submit(text_sources,source_id=row['source_id'],expected_revision=2,title='Changed provenance',body='Changed observation '+str(index))
+    assert observed['id']==winner['id']
+    assert service.get(owner,row['source_id'])['revision']==3
+    service.delete(owner,row['source_id'],expected_revision=3)
+    with pytest.raises(SourceConflict): submit(text_sources,source_id=row['source_id'],expected_revision=4,body='archived')
 
 
 @pytest.mark.parametrize('role', list(Role))

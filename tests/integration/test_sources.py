@@ -34,11 +34,13 @@ def sources(access, tmp_path):
     yield service, owner_actor(access), registry, created
     with database.engine.begin() as c:
         for source_id in created:
-            ids = c.execute(text('SELECT id FROM c0_source_versions WHERE source_id=:id'), {'id': source_id}).scalars().all()
+            ids = c.execute(text("SELECT id FROM c0_source_versions WHERE source_id=:id UNION SELECT id FROM c0_content_tombstones WHERE kind='source_version' AND resource_id=:id"), {'id': source_id}).scalars().all()
             c.execute(text('DELETE FROM c0_chunks WHERE document_id IN (SELECT id FROM c0_documents WHERE version_id IN (SELECT id FROM c0_source_versions WHERE source_id=:id))'), {'id': source_id})
             c.execute(text('DELETE FROM c0_documents WHERE version_id IN (SELECT id FROM c0_source_versions WHERE source_id=:id)'), {'id': source_id})
             c.execute(text('DELETE FROM c0_source_versions WHERE source_id=:id'), {'id': source_id})
             c.execute(text('DELETE FROM c0_sources WHERE id=:id'), {'id': source_id})
+            c.execute(text('DELETE FROM c0_content_tombstones WHERE resource_id=:id'),{'id':source_id})
+            c.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=ANY(CAST(:ids AS uuid[]))'),{'ids':ids})
             for key in ids:
                 c.execute(text('DELETE FROM c0_jobs WHERE payload->>\'version_id\'=:id'), {'id': str(key)})
         for row in schedules:
@@ -153,7 +155,7 @@ def test_duplicate_and_concurrent_version_revision_contract(sources):
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(add, range(2)))
     assert sum(item is not None for item in results) == 1
-    assert [v['number'] for v in service.versions(owner, first['source_id'])] == [2, 1]
+    assert [v['number'] for v in service.versions(owner,first['source_id'])]==[2]
     assert service.get(owner, first['source_id'])['revision'] == 2
 
 

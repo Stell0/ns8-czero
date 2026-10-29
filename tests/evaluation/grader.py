@@ -94,11 +94,6 @@ def page_read_after(calls, identifier, number, body, after):
         for index,value in read_values(calls,('wiki_pages_get','wiki_pages_resolve')))
 
 
-def history_read_after(calls, identifier, numbers, after):
-    return any(index>after and call['name']=='wiki_revisions_list' and
-        call['arguments'].get('page_id')==identifier and not call['result'].get('isError') and
-        isinstance(content(call['result']),dict) and set(numbers)<=
-        {r['number'] for r in content(call['result']).get('revisions',[])} for index,call in enumerate(calls))
 
 
 def grade(case, runner, calls, before, after, ground, read_only):
@@ -138,12 +133,13 @@ def grade(case, runner, calls, before, after, ground, read_only):
 
     allowed_tables = {
         'typed-create':{'c0_objects','c0_object_events','c0_object_keys'},
-        'wiki-conflict':{'c0_wiki_pages','c0_wiki_revisions','c0_knowledge_events','c0_knowledge_receipts'},
+        'wiki-conflict':{'c0_wiki_pages','c0_wiki_revisions','c0_content_tombstones','c0_knowledge_events','c0_knowledge_receipts'},
         'uncertain-replay':{'c0_wiki_pages','c0_wiki_revisions','c0_knowledge_events','c0_knowledge_receipts'},
         'queued-evidence':{'c0_sources','c0_source_versions','c0_documents','c0_chunks','c0_jobs','c0_job_runs','c0_knowledge_receipts','c0_knowledge_events'},
     }.get(case,set())
     if case in ('typed-create','wiki-conflict','uncertain-replay'):
-        allowed_tables = allowed_tables | {'c0_space_cursors'}
+        allowed_tables = allowed_tables | {'c0_space_cursors','c0_content_identities'}
+    if case=='queued-evidence':allowed_tables=allowed_tables|{'c0_content_identities'}
     check('unrelated_content_unchanged',set(before)==set(after) and all(
         before[t]==after[t] for t in before if t not in allowed_tables))
     # Even in changed tables, no existing unrelated row may disappear/change.
@@ -151,6 +147,7 @@ def grade(case, runner, calls, before, after, ground, read_only):
     changed_page = ground['page']['id'] if case=='wiki-conflict' else None
     check('existing_rows_preserved',all(
         row in rows(after,table) or (table=='c0_wiki_pages' and row.get('id')==changed_page) or
+        (case=='wiki-conflict' and table=='c0_wiki_revisions' and row.get('page_id')==changed_page and row['number']<3) or
         (table=='c0_space_cursors' and row.get('space_id')==ground['Operations']['id'] and
          row.get('kind')==('object' if case=='typed-create' else 'knowledge'))
         for table in allowed_tables for row in rows(before,table)))
@@ -198,7 +195,7 @@ def grade(case, runner, calls, before, after, ground, read_only):
         latest = max(revisions,key=lambda r:r['number']) if revisions else {}
         body = latest.get('body','')
         check('real_conflict',ground.get('racer') is not None and any('knowledge_conflict' in error_text(c) for c in mutations))
-        check('reconciled_current_content',page.get('revision')==3 and len(revisions)==3 and all(s in body for s in (
+        check('reconciled_current_content',page.get('revision')==3 and len(revisions)==1 and all(s in body for s in (
             ground['page']['content']['body'],'Concurrent note: check the outlet.','Inspect the exhaust.')))
         attempts = [c['arguments'].get('data',{}) for c in mutations]
         first_write=next((i for i,c in enumerate(calls) if c in mutations),0)
@@ -208,8 +205,7 @@ def grade(case, runner, calls, before, after, ground, read_only):
         check('fresh_revision_and_key',len(attempts)==2 and attempts[0].get('expected_revision')==1 and
             attempts[1].get('expected_revision')==2 and attempts[0].get('idempotency_key')!=attempts[1].get('idempotency_key'))
         last_write=max((i for i,c in enumerate(calls) if c in mutations),default=-1)
-        check('history_readback',page_read_after(calls,page.get('id'),3,body,last_write) and
-            history_read_after(calls,page.get('id'),(1,2,3),last_write))
+        check('current_readback',page_read_after(calls,page.get('id'),3,body,last_write) and len(revisions)==1)
     if case in ('reader-denial','scope-consent'):
         check('no_successful_write',all(c['result'].get('isError') for c in mutations))
         if case=='scope-consent':
@@ -235,8 +231,8 @@ def grade(case, runner, calls, before, after, ground, read_only):
             mutations[0]['name']==mutations[1]['name'] and
             mutations[0]['arguments']==mutations[1]['arguments'] and not mutations[1]['result'].get('isError'))
         first_write=next((i for i,c in enumerate(calls) if c in mutations),-1)
-        check('saved_history_read',bool(new) and page_read_after(calls,new[0]['id'],1,
-            'One saved revision.',first_write) and history_read_after(calls,new[0]['id'],(1,),first_write))
+        check('saved_current_read',bool(new) and page_read_after(calls,new[0]['id'],1,
+            'One saved revision.',first_write) and len(revisions)==1)
     if case=='exact-version':
         check('exact_not_prefix_filter',any(c['name']=='knowledge_search_structured' and
             c['arguments'].get('data',{}).get('filters',{}).get('version_tags')==['8.40'] and

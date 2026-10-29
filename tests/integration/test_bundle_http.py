@@ -77,7 +77,7 @@ def test_signed_rest_bundle_typed_references_whole_replay_and_rollback(bundle_ht
             updated = await http.post('/api/v1/wiki/pages/upsert',params={'space_id':private['id']},json={
                 'slug':page['slug'],'title':'Later','body':'Later content','expected_revision':1,'idempotency_key':uuid4().hex})
             assert updated.status_code == 200
-            assert (await http.post(ENDPOINT,json=data)).json() == original
+            assert (await http.post(ENDPOINT,json=data)).status_code == 410
             failed = request(private['id'])
             failed['operations'].append(step('wiki.upsert',slug=page['slug'],title='Stale',body='Stale',expected_revision=1))
             result = await http.post(ENDPOINT,json=failed)
@@ -317,8 +317,8 @@ def test_sourced_consolidation_supersession_and_unknown_new_content_through_sdk(
                         assert not unknown.is_error
                         assert json.loads(unknown.content[0].text)['status']=='unknown'
                         assert json.loads(unknown.content[0].text)['revision']==0
-                        assert json.loads((await client.call_tool('knowledge_bundle_apply',{'data':data})).content[0].text)==original
-                        assert (await rest.post(ENDPOINT,json=data)).json()==original
+                        error(await client.call_tool('knowledge_bundle_apply',{'data':data}),'content_superseded',410)
+                        assert (await rest.post(ENDPOINT,json=data)).status_code==410
     asyncio.run(check())
 
 
@@ -371,7 +371,9 @@ def test_lost_response_after_commit_is_recovered_by_an_independent_delegated_cli
                         recovered=await second.call_tool('knowledge_bundle_apply',{'data':data})
                         assert not recovered.is_error
                         result=json.loads(recovered.content[0].text)
-                        assert [row['id'] for row in result['results']]==[row['id'] for row in stored['results']]
+                        assert 'body' not in json.dumps(stored)
+                        assert result['results'][0]['id']==stored['results'][0]['$current_wiki']
+                        assert [row['id'] for row in result['results'][1:]]==[row['id'] for row in stored['results'][1:]]
                         assert (await rest.post(ENDPOINT,json=data)).json()==result
             with fixture[4].engine.connect() as connection:
                 for table,count in (('c0_wiki_pages',1),('c0_entities',1),('c0_knowledge_events',3),('c0_knowledge_receipts',1)):
@@ -427,9 +429,8 @@ def test_all_seventeen_typed_operations_retain_history_and_original_response_vie
             assert rows[15]['deleted'] and 'content' not in rows[15]
             assert rows[16]['deleted'] and rows[17]=={'id':rows[0]['id'],'revision':2,'deleted':True}
             assert rows[8]['valid_from']=='2026-10-18T09:00:00Z'
-            assert (await http.post(ENDPOINT,json=data)).json()==original
-            retained=(await http.get('/api/v1/wiki/pages/'+rows[7]['id'],params={**params,'revision':1})).json()
-            assert retained['content']==rows[7]['content']
+            assert (await http.post(ENDPOINT,json=data)).status_code==410
+            assert (await http.get('/api/v1/wiki/pages/'+rows[7]['id'],params={**params,'revision':1})).status_code==410
             assertion=(await http.get('/api/v1/claims/'+rows[8]['id'],params=params)).json()
             assert assertion['deleted'] and assertion['value']=={'state':'unknown'}
             assert assertion['evidence'][0]['source_hash']==version['content_hash']

@@ -15,7 +15,9 @@ Use Python 3.12–3.14 and a fresh virtual environment. The following installs p
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install uv==0.12.20 pytest robotframework robotframework-sshlibrary
-.venv/bin/python -m pip install -e packages/czero-core -e 'app[test]'
+# Explicit producer override; the shipped consumer tag/lock remain unchanged.
+.venv/bin/python -c "import tomllib; print('czero-core=='+tomllib.load(open('packages/czero-core/pyproject.toml','rb'))['project']['version'])" > /tmp/c0-producer-requirement.txt
+.venv/bin/uv pip install --python .venv/bin/python --override /tmp/c0-producer-requirement.txt -e packages/czero-core -e 'app[test]' -e samples/ingestion
 ```
 
 Provide `CZERO_TEST_DATABASE_URL` privately for a **disposable** PostgreSQL/pgvector database. The test account must create/drop owned test databases for packaging and forced-index isolation. Do not use production data. Without that setting, database skips are not a pass.
@@ -60,7 +62,7 @@ Runtime builds use the released Core tag/subdirectory and frozen app lock by def
 
 Follow [CI policy](ci-policy.md): scoped feedback for draft runtime work, full exact-source acceptance for ready runtime PRs, actual native/privacy/scan artifacts and the named merge gate. Use `scripts/verify-promotion.py` with full immutable SHAs; passing a short hash or an old successful head is insufficient.
 
-No unsolicited reviewer assignment. Another developer reviews before merge; regular merges preserve tested source commits. Runtime milestones require the supported dedicated-instance backup/update/readiness/preservation/client/restart/journal checks before merge, then actual main validation/publication and separate documentation closeout. Documentation-only images do not replace accepted runtime images.
+No unsolicited reviewer assignment. Another developer reviews before merge; regular merges preserve tested source commits. Runtime milestones normally require the supported dedicated-instance checks. The latest-only crawler task explicitly authorizes disposable acceptance only; production upgrade and import require separate operator authorization. Preserve native CI installation/upgrade and privacy checks. Documentation-only images do not replace accepted runtime images.
 
 The existing interactive Playwright and container CPU-quota waivers remain in force; all automated native browsers and other security/resource bounds remain required. Public docs/artifacts use example identities, and raw credentials, failed traces and private fixtures stay outside Git. See [release readiness](release-readiness.md) for the distinction between documentation/plugin acceptance and a stable software release.
 
