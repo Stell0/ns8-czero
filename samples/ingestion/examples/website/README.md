@@ -24,6 +24,8 @@ authorized protected project and explicitly approve each connector using the
 existing `c0-projects sources bootstrap --apply --authorization-ref ...` workflow.
 Creating a project or granting space access is a separate administrator action.
 Ordinary scan/sync never creates spaces, approvals, grants or schedules.
+Use a dedicated website job; mixing website and other adapters in one private
+job is rejected. Separate jobs can still target the same protected project.
 
 Choose exact seed URLs and allowed origin/path roots. Cross-origin roots require
 explicit configuration and approval. Configure selectors using `docusaurus`,
@@ -73,6 +75,11 @@ URL and a pending publication scan. Only crawler-owned older verified scans are
 removed after readback; payload-free summaries remain. Pre-existing private jobs
 and unrelated datasets are never swept. Do not manually edit saved scan hashes
 or reset receipt state to force an uncertain write.
+Frontier progress is acknowledged only after the pending scan is durably saved.
+An interrupted collection replays its bounded uncheckpointed batch using the
+current HTML cache; a saved scan with a lost pointer is recovered automatically.
+Direct Python adapter callers must durably save the returned batch before calling
+`c0_projects.website_state.commit_frontier(root, connector_id, batch.cursor)`.
 
 C0 publishes complete generations atomically. Pending/failed parts leave the
 previous current document intact. Changed content removes superseded bodies,

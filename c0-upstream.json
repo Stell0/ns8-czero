@@ -821,12 +821,12 @@
     {
       "path": "samples/ingestion/src/c0_projects/website.py",
       "mode": "100644",
-      "sha256": "81f2787572c9d4c1d8349ceb43943d208bc9041b55117cb8cfd7b6458606b6a4"
+      "sha256": "2b3ce9b1841dda30819685adb202d317dc0b7ac7b86d2cfad8047d9ed0e3db4b"
     },
     {
       "path": "samples/ingestion/src/c0_projects/website_state.py",
       "mode": "100644",
-      "sha256": "0c328b054bbb64342d116dcea97db630906ac50a5ea75fc6ac87d2522859b0c7"
+      "sha256": "c5cca04172ab2db8a0847c4b52cd736199731be2c2b77061b01c9d1502b0149d"
     },
     {
       "path": "samples/ingestion/src/c0_projects/recipe.py",
@@ -836,7 +836,7 @@
     {
       "path": "tests/unit/ingestion/test_website.py",
       "mode": "100644",
-      "sha256": "5ee9b99ff1677d849cce751c6ba117a19df1d1a9aed66a272c832fdc521c577f"
+      "sha256": "db1cef786f1cb41b756a1e638b9a3a6d265705d8f8cb478ee6ab691fa51f58bd"
     },
     {
       "path": "samples/ingestion/examples/website/generic.json",
@@ -866,7 +866,7 @@
     {
       "path": "samples/ingestion/examples/website/README.md",
       "mode": "100644",
-      "sha256": "c49a80446c9ed4e6464535bbab3b12cca1cf90d22c28602755ee60ba6c907210"
+      "sha256": "3f96b7caaf890403058353dfd004d9a665a88e7b1e88b055913ef8262cb126a5"
     },
     {
       "path": "tests/current_content_fixture.py",

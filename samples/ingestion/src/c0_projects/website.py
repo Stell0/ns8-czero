@@ -141,11 +141,18 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
     cache=Path(root)/'data/c0-projects/website'/definition['id']
     if any(p.is_symlink() for p in (cache,*cache.absolute().parents)):raise C0Error('unsafe_website_cache')
     cache.mkdir(parents=True,exist_ok=True,mode=0o700)
-    fingerprint=sha([EXTRACTOR,config]);state_path=cache/'frontier.json'
+    fingerprint=sha([EXTRACTOR,config,definition.get('include',[]),definition['max_depth']]);state_path=cache/'frontier.json'
     state=read(state_path,{})
+    before_path=cache/'frontier-before-batch.json'
+    before=read(before_path,None)
+    if before is not None:
+        if type(before) is not dict:raise C0Error('website_frontier_checkpoint_invalid')
+        state={**before,'retry_after':state.get('retry_after') or before.get('retry_after','')}
     if state.get('configuration')!=fingerprint or state.get('complete'):
         state={'configuration':fingerprint,'pending':config['seeds'][:],'seen':[],'aliases':{},'complete':False,
             'retry_after':state.get('retry_after','')}
+    # Commit progress only after the caller durably saves its pending batch.
+    atomic(before_path,state)
     identities=read(cache/'identities.json',{})
     if type(identities) is not dict or len(identities)>MAX_FRONTIER:raise C0Error('website_identity_limit')
     robots={};metrics={'crawl_seconds':0.,'conversion_seconds':0.,'requests':0,'downloaded_bytes':0,'excluded':0,'not_modified':0}
@@ -187,7 +194,8 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
         raw,_,_,headers=fetch(origin+'/robots.txt',inventory=True,allow_status=(200,404,410,401,403))
         rule=RobotFileParser()
         if headers['status'] in (401,403):
-            rule.disallow_all=True;batch.partial('website_robots_access_denied')
+            metrics['excluded']+=1
+            raise FetchError('website_robots_access_denied',headers.get('retry_after',''))
         elif headers['status'] in (404,410):rule.allow_all=True
         else:rule.parse(raw.decode('utf-8-sig').splitlines())
         robots[origin]=rule

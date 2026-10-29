@@ -253,3 +253,99 @@ def test_article_header_is_content_and_cache_reprocesses_converter_upgrade(tmp_p
     conditional=Header();again=website(selected,root=tmp_path,fetcher=conditional)
     assert conditional.conditional==1 and again.items[0].content==first.items[0].content
     assert again.items[0].provenance['extractor'].endswith('/upgrade-regression')
+
+
+def test_denied_robots_remains_partial_on_repeated_runs(tmp_path):
+    from c0_projects.website_state import commit_frontier
+    class Denied(Site):
+        def response(self,url,**kwargs):
+            self.requests+=1
+            return b'',url,'text/plain',{'status':403}
+    for _ in range(2):
+        denied=Denied();batch=website(definition(),root=tmp_path,fetcher=denied)
+        assert batch.status=='partial' and batch.errors==['website_robots_access_denied']
+        assert batch.items==[] and batch.cursor['pending']>0 and denied.requests==1
+        commit_frontier(tmp_path,'manuals',batch.cursor)
+
+
+def test_raising_sitemap_depth_restarts_incomplete_inventory(tmp_path):
+    from c0_projects.website_state import commit_frontier
+    class Deep(Site):
+        def response(self,url,**kwargs):
+            if url.endswith('/sitemap.xml') or url.endswith('/nested-index.xml'):
+                self.requests+=1
+                body=(b'<sitemapindex><sitemap><loc>https://docs.example.org/nested-index.xml</loc></sitemap></sitemapindex>'
+                    if url.endswith('/sitemap.xml') else b'<urlset><url><loc>https://docs.example.org/it/docs/manual</loc></url></urlset>')
+                return body,url,'application/xml',{'status':200}
+            return super().response(url,**kwargs)
+    selected=definition(exclude=['*/it/docs/next']);selected['max_depth']=0
+    first=website(selected,root=tmp_path,fetcher=Deep())
+    assert first.status=='partial' and 'website_sitemap_depth_limit' in first.errors
+    commit_frontier(tmp_path,'manuals',first.cursor)
+    selected['max_depth']=1
+    recovered=website(selected,root=tmp_path,fetcher=Deep())
+    assert recovered.status=='complete' and len(recovered.items)==1
+
+
+def test_changed_include_rules_restart_partial_frontier(tmp_path):
+    from c0_projects.website_state import commit_frontier
+    class Inventory(Site):
+        def response(self,url,**kwargs):
+            if url.endswith('/sitemap.xml'):
+                self.requests+=1
+                return b'<urlset><url><loc>https://docs.example.org/it/docs/manual</loc></url><url><loc>https://docs.example.org/it/docs/next</loc></url><url><loc>https://docs.example.org/it/docs/other</loc></url></urlset>',url,'application/xml',{'status':200}
+            return super().response(url,**kwargs)
+    selected=definition();selected.update(include=['*/next','*/other'],max_items=1)
+    first=website(selected,root=tmp_path,fetcher=Inventory())
+    assert first.status=='partial' and first.items[0].original_url.endswith('/next')
+    commit_frontier(tmp_path,'manuals',first.cursor)
+    selected['include']=['*/manual','*/next','*/other']
+    again=website(selected,root=tmp_path,fetcher=Inventory())
+    assert again.items[0].original_url.endswith('/manual')
+
+
+def test_interrupted_collection_replays_uncheckpointed_pages_then_advances(tmp_path):
+    from c0_projects.website_state import commit_frontier
+    class TwoPages(Site):
+        def __init__(self,interrupt=False):super().__init__();self.interrupt=interrupt
+        def response(self,url,**kwargs):
+            if url.endswith('/next') and self.interrupt:raise KeyboardInterrupt()
+            raw,final,media,head=super().response(url,**kwargs)
+            if url.endswith('/next') and head['status']==200:
+                raw=raw.replace(b'href="/it/docs/manual"',b'href="/it/docs/next"',1)
+            return raw,final,media,head
+    selected=definition()
+    with pytest.raises(KeyboardInterrupt):website(selected,root=tmp_path,fetcher=TwoPages(True))
+    resumed=TwoPages();batch=website(selected,root=tmp_path,fetcher=resumed)
+    assert batch.status=='complete' and len(batch.items)==2 and resumed.conditional==1
+    selected['max_items']=1
+    first=website(selected,root=tmp_path,fetcher=TwoPages())
+    assert first.status=='partial' and first.items[0].original_url.endswith('/manual')
+    commit_frontier(tmp_path,'manuals',first.cursor)
+    second=website(selected,root=tmp_path,fetcher=TwoPages())
+    assert second.status=='complete' and second.items[0].original_url.endswith('/next')
+
+
+def test_scan_recovery_rebinds_saved_payload_and_removes_only_owned_incomplete(tmp_path):
+    from c0_ingest.state import read,atomic
+    from c0_projects.cli import save_scan,load_scan
+    from c0_projects.website_state import prepare_scan,recover_scan,verified_scan
+    state=tmp_path/'state';unrelated=state/'scans/operator-data'
+    unrelated.mkdir(parents=True);(unrelated/'body.md').write_text('Keep operator data')
+    selected=definition(exclude=['*/it/docs/next'])
+    batch=website(selected,root=tmp_path,fetcher=Site())
+    first=prepare_scan(state)
+    manifest=save_scan(first,[(selected,batch)],prepared=True)
+    recover_scan(state)
+    assert read(state/'latest.json')['directory']==str(first)
+    assert load_scan(first)==manifest
+    verified_scan(state,first,manifest)
+    interrupted=prepare_scan(state);(interrupted/'partial.bin').write_bytes(b'incomplete replacement')
+    recover_scan(state)
+    assert not interrupted.exists() and first.exists() and unrelated.exists()
+    assert read(state/'website-owned-scans.json')==[first.relative_to(state).as_posix()]
+    # A crash after removing an owned directory but before its ledger write is safe.
+    atomic(state/'website-owned-scans.json',[first.relative_to(state).as_posix(),'scans/ab12'])
+    recover_scan(state)
+    assert read(state/'website-owned-scans.json')==[first.relative_to(state).as_posix()]
+    assert (unrelated/'body.md').read_text()=='Keep operator data'
