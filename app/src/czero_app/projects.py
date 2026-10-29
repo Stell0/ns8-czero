@@ -378,7 +378,7 @@ def install_project_routes(app, database, auth, read_context, write_context):
     def connector_status(data: ConnectorStatusSet, space_id: UUID, context: RequestAccess = Depends(write_context)):
         return invoke(space_id, 'save_connector_status', context.actor, **data.model_dump())
     @app.put('/api/v1/project/source-snapshot',response_model=ObjectView)
-    @operation('project_source_snapshot_set', 'Save the current complete original source snapshot from verified ordered part receipts. Core checks identities, offsets and combined text hash; historical parts remain immutable.', Role.EDITOR,ObjectView,read_only=False,space_field='space_id')
+    @operation('project_source_snapshot_set', 'Save the current complete original source snapshot from verified ordered part receipts. Core checks identities, offsets and combined text hash, atomically publishes current membership and removes superseded parts.', Role.EDITOR,ObjectView,read_only=False,space_field='space_id')
     def source_snapshot(data: SourceSnapshotSet,space_id: UUID,context: RequestAccess=Depends(write_context)):
         return invoke(space_id,'save_source_snapshot',context.actor,**data.model_dump(mode='json'))
     @app.get('/api/v1/project/record',response_model=ObjectView)

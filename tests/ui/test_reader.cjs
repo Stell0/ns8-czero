@@ -44,7 +44,7 @@ test('copy instructions captures the task and offers manual selection after clip
   assert.equal(label.htmlFor,field.id);await control.listeners.click();assert(field.focused && field.selected);assert.match(status.textContent,/Select and copy/);
 });
 test('AI recipes target the article, preserve revision authority and distinguish REST ingestion',()=>{
-  const h=fixture();const update=h.C.task('update',page());assert.match(update,new RegExp(id(1)));assert.match(update,/fetch its current revision/);assert.match(update,/unchanged uncertain retry/);
+  const h=fixture();const update=h.C.task('update',page());assert.match(update,new RegExp(id(1)));assert.match(update,/fetch its current revision/);assert.match(update,/unchanged uncertain retry/);assert.match(update,/only the current complete content is retained/);assert.doesNotMatch(update,/retain history/);
   assert.match(h.C.task('create'),/Slugs are fixed/);assert.match(h.C.task('ingest'),/Binary upload is not an MCP tool/);assert.match(h.C.task('read'),/Do not change any content/);
 });
 test('progressive index uses metadata batches, deduplicates IDs and exposes incomplete navigation',async()=>{
