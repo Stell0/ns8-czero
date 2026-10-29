@@ -6,16 +6,17 @@
   if (!C || C.toolsMode || !['index','wiki','sources','agents'].includes(kind)) return;
   const {node,link,button} = C;
   let profile=null, epoch=0, selection=0, article=null, capabilities={}, pages=new Map(), pageOffset=0, indexFlight=false;
-  let factsOffset=0, factFlight=false, historyOffset=0, historyFlight=false, source=null, versions=[], versionOffset=0, versionSequence=0, sourceOffset=0, librarySequence=0, pollTimer;
+  let factsOffset=0, factFlight=false, historyOffset=0, historyFlight=false, source=null, versions=[], versionOffset=0, versionSequence=0, sourceOffset=0, librarySequence=0, pollTimer, logical=null;
   const openPaths=new Set(), evidence=new Map(), sectionPath=C.params.get('section') || '';
   if(/^[a-z0-9][a-z0-9/-]{0,127}$/.test(sectionPath)){let path='';for(const part of sectionPath.split('/')){path+=(path?'/':'')+part;openPaths.add(path);}}
   const writable=()=>profile && ['editor','admin'].includes(profile.role);
   function status(message) {if($('reader-status'))$('reader-status').textContent=message;}
   function revoke() {
-    document.title='C0 — Knowledge';
+    document.title='C0 — Knowledge';status('Sign-in or permitted access is required.');
+    C.stopMarkdown();logical=null;
     ++epoch;++selection;++versionSequence;profile=null;article=null;source=null;pages.clear();versions=[];evidence.clear();clearTimeout(pollTimer);
     if($('reader-root'))$('reader-root').hidden=true;
-    for(const id of ['tree-status','history-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','guide-rules','guide-workflows','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-version-label','reader-version','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
+    for(const id of ['tree-status','history-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','reader-history','article-task','reader-document','reader-document-toc','reader-provenance','reader-document-version','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','guide-rules','guide-workflows','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-version-label','reader-version','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
     if($('page-title'))$('page-title').textContent={index:'A place to find what we know.',wiki:'Knowledge',sources:'Sources',agents:'Use C0 with ChatGPT'}[kind];
     for(const id of ['reader-export','reader-json'])if($(id)){$(id).removeAttribute('href');$(id).hidden=true;}
     if($('article-update-task'))$('article-update-task').hidden=true;
@@ -148,18 +149,19 @@
     const request=++librarySequence,start=sourceOffset;
     $('reader-sources-previous').disabled=true;$('reader-sources-next').disabled=true;
     try {
-      const result=await read('sources?limit=50&offset='+start);if(request!==librarySequence)return;
-      $('reader-sources').replaceChildren();for(const item of result.sources){const li=node('li');li.append(link(item.title,C.sourceURL({source_id:item.id})),node('span','Updated '+C.date(item.updated_at),'byline'));$('reader-sources').append(li);}
-      $('reader-sources-previous').disabled=!start;$('reader-sources-next').disabled=result.sources.length<50;
-      $('library-status').textContent=result.sources.length?'Sources '+(start+1)+'–'+(start+result.sources.length):'No sources on this page.';
+      const result=await read('source-documents?limit=50&offset='+start);if(request!==librarySequence)return;
+      C.sourceTree($('reader-sources'),result.documents);
+      $('reader-sources-previous').disabled=!start;$('reader-sources-next').disabled=result.documents.length<50;
+      $('library-status').textContent=result.documents.length?'Sources '+(start+1)+'–'+(start+result.documents.length)+'. Navigation shows this page only; use Next for more sources.':'No sources on this page.';
     }catch(error){if(request===librarySequence)$('library-status').textContent=error.message;}
   }
   function versionOptions(chosen) {
-    $('reader-version').replaceChildren();for(const item of versions){const option=node('option','Version '+item.number+' · '+C.date(item.created_at)+' · '+item.state);option.value=item.id;$('reader-version').append(option);}
+    $('reader-version').replaceChildren();for(const item of versions){const option=node('option',(item.number?'Version '+item.number:'Snapshot '+(item.content_hash || '').slice(0,12))+' · '+C.date(item.created_at)+' · '+item.state);option.value=item.id;$('reader-version').append(option);}
     $('reader-version').value=chosen || '';$('reader-version').hidden=!versions.length;$('reader-version-label').hidden=!versions.length;
     $('reader-versions-more').hidden=versionOffset%100!==0 || !versionOffset;
   }
   async function loadVersions() {
+    if(logical){const captured=selection,request=versionSequence;try{await logicalHistory(logical,$('reader-version').value,versionOffset);}catch(error){if(captured===selection && request===versionSequence)status(error.message);}return;}
     if(!source)return;const captured=selection,id=source.id,start=versionOffset;
     $('reader-versions-more').disabled=true;
     try {
@@ -174,8 +176,8 @@
   }
   async function loadSource(id,requested,chunk) {
     if(!C.uuid(id) || (requested && !C.uuid(requested)) || (chunk && !C.uuid(chunk))){status('This source link is invalid.');return;}
-    const captured=++selection;++versionSequence;clearTimeout(pollTimer);source=null;versions=[];versionOffset=0;
-    $('reader-document').replaceChildren();$('reader-excerpt').hidden=true;$('reader-download').replaceChildren();$('reader-source-details').hidden=true;
+    const captured=++selection;++versionSequence;C.stopMarkdown();logical=null;clearTimeout(pollTimer);source=null;versions=[];versionOffset=0;
+    $('reader-document').replaceChildren();$('reader-document-toc').replaceChildren();$('reader-document-toc-panel').hidden=true;$('reader-excerpt').hidden=true;$('reader-download').replaceChildren();$('reader-source-details').hidden=true;
     $('reader-source-title').textContent='Loading source…';$('reader-source-notice').hidden=true;status('Loading source…');
     try {
       const [item,history]=await Promise.all([read('sources/'+id),read('sources/'+id+'/versions?limit=100')]);if(captured!==selection)return;
@@ -189,10 +191,17 @@
   }
   async function loadVersion(id,chunk) {
     if(!source)return;const captured=selection,request=++versionSequence,item=source;clearTimeout(pollTimer);
-    $('reader-document').replaceChildren();$('reader-excerpt').replaceChildren();$('reader-excerpt').hidden=true;$('reader-download').replaceChildren();status('Loading document…');
+    $('reader-provenance').replaceChildren();$('reader-document-version').replaceChildren();$('reader-source-metadata').replaceChildren();
+    $('reader-document').replaceChildren();$('reader-document-toc').replaceChildren();$('reader-document-toc-panel').hidden=true;$('reader-excerpt').replaceChildren();$('reader-excerpt').hidden=true;$('reader-download').replaceChildren();status('Loading document…');
     let version=versions.find(v=>v.id===id);
     // A deep link may target an immutable version outside the initial history window.
-    if(!version){status('This version is outside the loaded history. Load more versions to select it.');$('reader-versions-more').hidden=false;return;}
+    if(!version){
+      try{const doc=await read('source-versions/'+id+'/full-document');if(captured!==selection || request!==versionSequence)return;
+        if(doc.state!=='ready'){status('Complete document unavailable: '+doc.state+'.');return;}
+        if(!doc.parts.some(part=>part.source_id===item.id && part.version_id===id)){status('The document does not contain this source version.');return;}
+        await displayLogical(doc,chunk,captured,request);
+      }catch(error){if(captured===selection && request===versionSequence)status(error.message);}return;
+    }
     $('reader-source-notice').hidden=false;
     $('reader-source-notice').textContent=(version.id!==versions[0]?.id?'Reading an earlier version. ':'')+(version.state==='queued'?'This version is being processed.':version.state==='failed'?'Extraction failed. The original may be available below.':'');
     $('reader-source-notice').hidden=!$('reader-source-notice').textContent;
@@ -203,14 +212,94 @@
       return;
     }
     try {
-      const doc=await read('source-versions/'+id+'/document');if(captured!==selection || request!==versionSequence)return;
-      $('reader-document').textContent=doc.body;status('');
+      const full=await read('source-versions/'+id+'/full-document');if(captured!==selection || request!==versionSequence)return;
+      if(full.state!=='ready'){status('Complete document unavailable: '+full.state+'.');return;}
+      const part=full.parts.find(part=>part.source_id===item.id && part.version_id===id);
+      if(!part){status('The document does not contain this source version.');return;}
+      if(full.multipart){await displayLogical(full,chunk,captured,request);return;}
+      const doc={id:part.document_id,body:full.body,text_hash:full.text_hash};
+      if(version.media_type==='text/markdown'){if(!await C.fullMarkdown($('reader-document'),doc.body,$('reader-document-toc'),()=>captured===selection && request===versionSequence,sourceBase(item.metadata)))return;}
+      else $('reader-document').textContent=doc.body;
+      $('reader-document').className=version.media_type==='text/markdown'?'article-body source-document':'document-body';
+      $('reader-document-toc-panel').hidden=!$('reader-document-toc').children.length;status('');
+      provenance(item.metadata,version.media_type,version.number,version.created_at,'ready');
       $('reader-source-metadata').textContent=JSON.stringify({provenance:item.metadata,version:version.number,filename:version.filename,media_type:version.media_type,text_hash:doc.text_hash,source_hash:version.content_hash,document_id:doc.id},null,2);
       if(chunk){const citation=await read('chunks/'+chunk+'/citation');if(captured!==selection || request!==versionSequence)return;
         if(citation.document_id!==doc.id || citation.source_id!==item.id || citation.version_id!==id){status('The citation does not belong to this document version.');return;}
+        citationDetails(citation);
         $('reader-excerpt').replaceChildren(node('strong','Cited passage · version '+citation.version),node('p',citation.body));$('reader-excerpt').hidden=false;
       }
     }catch(error){if(captured===selection && request===versionSequence)status(error.message);}
+  }
+  function citationDetails(citation) {
+    const target=$('reader-source-metadata'),details=JSON.parse(target.textContent);
+    details.citation=citation;target.textContent=JSON.stringify(details,null,2);
+  }
+  function sourceBase(metadata) {const saved=metadata.snapshot_provenance || metadata;return C.safeURL(saved.canonical_url || metadata.canonical_url || saved.original_url || metadata.original_url);}
+  function provenance(metadata,media,number,updated,state) {
+    const target=$('reader-provenance');target.replaceChildren();
+    const format=({'text/markdown':'Markdown','text/plain':'Plain text','application/pdf':'PDF'})[media] || 'DOCX';
+    target.append(node('p','Imported source · '+format+' · '+state));
+    const saved=metadata.snapshot_provenance || metadata;let p=metadata.provenance || {};
+    try{const details=JSON.parse(saved.details || 'null');if(details && typeof details==='object' && !Array.isArray(details))p=details;}
+    catch{/* Older sources can have no structured snapshot details. */}
+    const fields=[['Product',p.product || metadata.product],['Product version',p.product_version || p.version || metadata.product_version || metadata.version],['Path',Array.isArray(p.path)?p.path.filter(value=>typeof value==='string').join(' / '):p.path || p.relative_path || metadata.path]];
+    for(const [label,value] of fields)if(typeof value==='string' || typeof value==='number')target.append(node('p',label+': '+String(value).slice(0,2048)));
+    for(const [label,key] of [['Retrieved','retrieved_at'],['Published','published_at']])if(saved[key] && C.date(saved[key]))target.append(node('p',label+' '+C.date(saved[key]),'byline'));
+    for(const key of ['canonical_url','original_url']){const href=C.safeURL(saved[key] || metadata[key]);if(href){const a=link(key==='canonical_url'?'Canonical document':'Original source',href);a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';target.append(a);}}
+    $('reader-document-version').textContent=(number?'Version '+number:'Document snapshot')+' · Updated '+C.date(updated)+' · '+state;
+    if(!['text/plain','text/markdown'].includes(media))target.append(node('p','Extracted text; the original page layout is not reproduced.','muted'));
+  }
+  async function logicalHistory(id,chosen,start=0) {
+    const captured=selection,request=versionSequence;
+    const result=await read('source-documents/'+id+'/history?limit=100&offset='+start);
+    if(captured!==selection || request!==versionSequence)return;
+    if(!start)versions=[];
+    for(const row of result.revisions)if(!versions.some(v=>v.id===row.revision_id))versions.push({...row,id:row.revision_id});
+    versionOffset=start+result.revisions.length;
+    if(chosen && !versions.some(v=>v.id===chosen))versions.unshift({id:chosen,state:'ready',content_hash:chosen});
+    versionOptions(chosen);$('reader-versions-more').hidden=result.revisions.length<100;
+  }
+  async function displayLogical(doc,chunk,captured,request) {
+    if(captured!==selection || request!==versionSequence)return;
+    logical=doc.id;
+    $('reader-source-title').textContent=doc.title;document.title=doc.title+' · Source · C0';
+    $('reader-source-description').textContent='Imported source'+(doc.deleted?' · Archived':'');
+    $('reader-source-details').hidden=false;
+    provenance(doc.metadata,doc.media_type,doc.number,doc.updated_at,doc.state);
+    $('reader-source-metadata').textContent=JSON.stringify({logical_document_id:doc.id,revision_id:doc.revision_id,content_hash:doc.content_hash,text_hash:doc.text_hash,provenance:doc.metadata,parts:doc.parts},null,2);
+    $('reader-source-notice').hidden=false;
+    $('reader-source-notice').textContent=doc.state==='ready'?'Rendering the complete source document…':'This document is '+doc.state+'. A complete verified body is not available.';
+    $('reader-download').replaceChildren();
+    for(const id of doc.original_version_ids || [])if(C.uuid(id))$('reader-download').append(link('Download retained original','./api/v1/source-versions/'+id+'/original'));
+    await logicalHistory(doc.id,doc.revision_id);
+    if(captured!==selection || request!==versionSequence)return;
+    if(doc.state!=='ready' || typeof doc.body!=='string'){status('Complete document unavailable: '+doc.state+'.');
+      if(doc.state==='queued')pollTimer=setTimeout(()=>{if(captured===selection && request===versionSequence)loadLogical(doc.id,doc.revision_id,chunk);},4000);return;}
+    const current=()=>captured===selection && request===versionSequence;
+    $('reader-document').className=doc.media_type==='text/markdown'?'article-body source-document':'document-body';
+    if(doc.media_type==='text/markdown'){if(!await C.fullMarkdown($('reader-document'),doc.body,$('reader-document-toc'),current,sourceBase(doc.metadata)))return;}
+    else $('reader-document').textContent=doc.body;
+    $('reader-document-toc-panel').hidden=!$('reader-document-toc').children.length;
+    $('reader-source-notice').textContent=doc.deleted?'Archived source evidence. This complete immutable document remains readable.':'Complete source evidence for the selected immutable version.';
+    status('Complete document loaded.');
+    if(chunk){
+      const citation=await read('chunks/'+chunk+'/citation');if(!current())return;
+      const part=doc.parts.find(part=>part.source_id===citation.source_id && part.version_id===citation.version_id && part.document_id===citation.document_id);
+      if(!part){status('The citation does not belong to this document snapshot.');return;}
+      citationDetails(citation);
+      $('reader-excerpt').replaceChildren(node('strong','Cited passage · version '+citation.version),node('p',citation.body));
+      $('reader-excerpt').hidden=false;$('reader-excerpt').setAttribute('tabindex','-1');
+      $('reader-excerpt').focus();$('reader-excerpt').scrollIntoView?.({block:'start'});
+    }
+  }
+  async function loadLogical(id,revision,chunk) {
+    if(!C.uuid(id) || (revision && !C.uuid(revision)) || (chunk && !C.uuid(chunk))){status('This document link is invalid.');return;}
+    const captured=++selection,request=++versionSequence;C.stopMarkdown();clearTimeout(pollTimer);logical=null;source=null;versions=[];
+    for(const key of ['reader-document','reader-document-toc','reader-excerpt','reader-download','reader-provenance','reader-source-metadata','reader-version','reader-document-version','reader-source-notice','reader-source-description'])$(key).replaceChildren();
+    $('reader-document-toc-panel').hidden=true;$('reader-excerpt').hidden=true;$('reader-source-details').hidden=true;$('reader-source-title').textContent='Loading source…';status('Loading document…');
+    try{const doc=await read('source-documents/'+id+(revision?'?revision_id='+revision:''));if(captured!==selection || request!==versionSequence)return;await displayLogical(doc,chunk,captured,request);}
+    catch(error){if(captured===selection && request===versionSequence){$('reader-document').replaceChildren();$('reader-document-toc').replaceChildren();$('reader-document-toc-panel').hidden=true;$('reader-source-title').textContent='Source unavailable';$('reader-source-notice').textContent='The complete document could not be displayed. Try again.';status(error.message);}}
   }
   async function guide() {
     const captured=epoch;
@@ -243,18 +332,24 @@
         $('tree-more').addEventListener('click',loadIndex);$('facts-more').addEventListener('click',loadFacts);$('history-more').addEventListener('click',loadHistory);
         $('reader-history-panel').addEventListener('toggle',()=>{if($('reader-history-panel').open && historyOffset===0)loadHistory();});
         for(const [id,kind] of [['article-read-task','read'],['article-update-task','update']])$(id).addEventListener('click',()=>{if(article && (kind==='read'||writable()))C.copyPanel($('article-task'),C.task(kind,article,capabilities));});
-        const jobs=[loadIndex()];if(C.params.has('page'))jobs.push(loadArticle(C.params.get('page'),C.params.get('revision')));
+        const jobs=[loadIndex()];
+        if(!C.params.has('page') && C.params.get('category')!=='articles'){
+          $('knowledge-sources').hidden=false;
+          for(const [id,delta]of [['reader-sources-previous',-50],['reader-sources-next',50]])$(id).addEventListener('click',()=>{sourceOffset=Math.max(0,sourceOffset+delta);library();});
+          jobs.push(library());
+        }
+        if(C.params.has('page'))jobs.push(loadArticle(C.params.get('page'),C.params.get('revision')));
         await Promise.all(jobs);return;
       }
       if(kind==='sources') {
-        $('reader-version').addEventListener('change',()=>{const id=$('reader-version').value;window.history.replaceState(null,'',C.sourceURL({source_id:source.id,version_id:id}));loadVersion(id);});
+        $('reader-version').addEventListener('change',()=>{const id=$('reader-version').value;if(!C.uuid(id))return;if(logical){const current=logical;window.history.replaceState(null,'',C.documentURL(current,id));loadLogical(current,id);return;}if(!source)return;window.history.replaceState(null,'',C.sourceURL({source_id:source.id,version_id:id}));loadVersion(id);});
         $('reader-versions-more').addEventListener('click',loadVersions);
         for(const [id,delta]of [['reader-sources-previous',-50],['reader-sources-next',50]])$(id).addEventListener('click',()=>{sourceOffset=Math.max(0,sourceOffset+delta);library();});
-        const jobs=[library()];if(C.params.has('source'))jobs.push(loadSource(C.params.get('source'),C.params.get('version'),C.params.get('chunk')));await Promise.all(jobs);
+        const jobs=[library()];if(C.params.has('document'))jobs.push(loadLogical(C.params.get('document'),C.params.get('snapshot'),C.params.get('chunk')));else if(C.params.has('source'))jobs.push(loadSource(C.params.get('source'),C.params.get('version'),C.params.get('chunk')));await Promise.all(jobs);
       }
     }catch(error){status(error.message);if(kind==='agents')$('guide-status').textContent=error.message;}
   }
-  window.addEventListener('pagehide',()=>{++epoch;++selection;clearTimeout(pollTimer);});
+  window.addEventListener('pagehide',()=>{C.stopMarkdown();++epoch;++selection;clearTimeout(pollTimer);});
   window.addEventListener('pageshow',event=>{if(event.persisted)window.location.reload();});
   initialize();
 })();

@@ -1,6 +1,7 @@
 // Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {fixture,tick,reply,id,page,descendants}=require('./reader_dom.js');
+const original=(document,body,version=id(2))=>({id:id(1),revision_id:version,state:'ready',multipart:false,body,parts:[{source_id:id(1),version_id:version,document_id:document}]});
 test('signed-out access preserves the public ChatGPT setup heading and connection',()=>{
   const h=fixture('agents');let clear;
   h.window.C0Space={onClear(fn){clear=fn;}};
@@ -22,7 +23,7 @@ test('real Markdown tokens render headings, lists, tables and code without HTML 
   assert.equal(toc.children[0].children[0].href,'#article-heading-1');
 });
 test('article links reject executable, credentialed and control-character URLs',()=>{
-  const h=fixture();for(const url of ['javascript:alert(1)','data:text/html,bad','https://user:secret@host.test/','https://host.test/\nsecret'])assert.equal(h.C.safeURL(url),null);
+  const h=fixture();for(const url of ['javascript:alert(1)','data:text/html,bad','https:'+'//user:unit-only-fixture@host.test/','https://host.test/\nsecret'])assert.equal(h.C.safeURL(url),null);
   assert.equal(h.C.safeURL('./wiki?page='+id(1)),'https://c0.test/czero/czero17/wiki?page='+id(1));
 });
 test('a thousand path-based pages retain literal labels, virtual groups and the selected branch',()=>{
@@ -89,14 +90,14 @@ test('article history is fetched lazily and links to pinned revisions',async()=>
 test('source version races preserve the newest document and citation document identity',async()=>{
   const h=fixture('sources'),r=h.reader(),loading=r.loadSource(id(1),id(2),id(4));
   h.requests[0].resolve(reply({id:id(1),title:'Source',metadata:{}}));h.requests[1].resolve(reply({versions:[{id:id(2),number:2,state:'ready'},{id:id(3),number:1,state:'ready'}]}));await tick();
-  const newer=r.loadVersion(id(3));h.requests[3].resolve(reply({id:id(10),body:'Newest selected text'}));await newer;
-  h.requests[2].resolve(reply({id:id(11),body:'Late old text'}));await loading;
+  const newer=r.loadVersion(id(3));h.requests[3].resolve(reply(original(id(10),'Newest selected text',id(3))));await newer;
+  h.requests[2].resolve(reply(original(id(11),'Late old text')));await loading;
   assert.equal(h.node('reader-document').textContent,'Newest selected text');assert.equal(h.requests.length,4);
 });
 test('a citation from another document cannot appear beside the selected version',async()=>{
   const h=fixture('sources'),r=h.reader(),loading=r.loadSource(id(1),id(2),id(4));
   h.requests[0].resolve(reply({id:id(1),title:'Source',metadata:{}}));h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready'}]}));await tick();
-  h.requests[2].resolve(reply({id:id(5),body:'Document'}));await tick();h.requests[3].resolve(reply({document_id:id(6),source_id:id(1),version_id:id(2),body:'Wrong document'}));await loading;
+  h.requests[2].resolve(reply(original(id(5),'Document')));await tick();h.requests[3].resolve(reply({document_id:id(6),source_id:id(1),version_id:id(2),body:'Wrong document'}));await loading;
   assert.equal(h.node('reader-excerpt').hidden,true);assert.match(h.node('reader-status').textContent,/does not belong/);
 });
 test('AI guide exposes only read tasks to Readers and makes no writes',async()=>{
@@ -148,4 +149,107 @@ test('guide access loss clears instructions and a delayed older reply cannot res
   assert.equal(h.node('guide-workflows').textContent,'');
   h.requests[0].resolve(reply({authenticated:true,role:'editor',interfaces:{mcp:true},guidance:{rules:[],workflows:[{id:'consolidate',title:'Late',steps:[]}]}}));await old;
   assert.equal(h.node('guide-workflows').textContent,'');assert.equal(h.node('reader-root').hidden,true);
+});
+
+test('source Markdown uses the shared safe renderer and heading table of contents',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));
+  h.requests[0].resolve(reply({id:id(1),title:'Firewall manual',metadata:{}}));
+  h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready',media_type:'text/markdown'}]}));await tick();
+  h.requests[2].resolve(reply(original(id(3),'## Firewall configuration\n\n| Port | Use |\n| --- | --- |\n| 443 | HTTPS |\n\n```ini\nallow=true\n```\n\n<script>evil()</script>\n\n[bad](javascript:evil())')));await pending;
+  const elements=descendants(h.node('reader-document'));
+  for(const tag of ['H3','TABLE','PRE','CODE'])assert(elements.some(n=>n.tagName===tag),tag);
+  assert(h.node('reader-document-toc').children.length);
+  assert(!elements.some(n=>n.tagName==='SCRIPT' || n.href?.startsWith('javascript:')));
+});
+test('plain source text stays literal and access loss also clears its TOC',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));
+  h.requests[0].resolve(reply({id:id(1),title:'Plain original',metadata:{}}));
+  h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready',media_type:'text/plain'}]}));await tick();
+  h.requests[2].resolve(reply(original(id(3),'## Literal\n\n<script>inert</script>')));await pending;
+  assert.equal(h.node('reader-document').textContent,'## Literal\n\n<script>inert</script>');
+  assert(!descendants(h.node('reader-document')).some(n=>n.tagName==='H3'));
+  h.node('reader-document-toc').textContent='Private heading';const denied=r.loadSource(id(4));
+  h.requests[3].resolve(reply({},403));h.requests[4].resolve(reply({},403));await denied;
+  assert.equal(h.node('reader-document-toc').textContent,'');
+});
+
+test('source navigation groups explicit metadata without requesting any bodies',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.library();
+  assert.equal(h.requests[0].url,'./api/v1/source-documents?limit=50&offset=0');
+  h.requests[0].resolve(reply({documents:[{id:id(1),title:'Imported firewall',metadata:{provenance:{product:'Synthetic product',version:'8',path:['Administrator Manual','Configuration']}},state:'ready'},
+    {id:id(2),title:'Legacy source',metadata:{},state:'queued'}]}));await pending;
+  assert.match(h.node('reader-sources').textContent,/Synthetic productVersion 8Administrator ManualConfiguration/);
+  assert.match(h.node('reader-sources').textContent,/Other sources/);
+  const links=descendants(h.node('reader-sources')).filter(n=>n.tagName==='A');
+  assert.equal(links.length,2);assert.match(links[0].href+links[1].href,/document=/);
+  assert.equal(h.requests.length,1);
+});
+test('logical history is pinned and late full responses cannot restore revoked content',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadLogical(id(1),id(2));
+  h.requests[0].resolve(reply({id:id(1),revision_id:id(2),title:'Imported history',metadata:{},state:'ready',media_type:'text/markdown',body:'## Historical heading',parts:[]}));await tick();
+  assert.match(h.requests[1].url,/source-documents\/.*\/history\?limit=100/);
+  const denied=r.loadLogical(id(3));h.requests[2].resolve(reply({},403));await denied;
+  h.requests[1].resolve(reply({revisions:[{revision_id:id(2),content_hash:'hash',state:'ready'}]}));await pending;
+  assert.equal(h.node('reader-document').textContent,'');assert.equal(h.node('reader-version').textContent,'');assert(h.node('reader-root').hidden);
+});
+test('large worker parse cancellation cannot put an old document back',async()=>{
+  const h=fixture();let worker;
+  h.window.Worker=class {constructor(){worker=this;}postMessage(){}terminate(){this.stopped=true;}};
+  const pending=h.C.fullMarkdown(h.node('body'),'Large text '.repeat(7000),h.node('toc'));
+  h.C.stopMarkdown();assert.equal(await pending,false);assert(worker.stopped);assert.equal(h.node('body').textContent,'');
+});
+
+test('access loss during a DOM batch cannot append one last private code block',async()=>{
+  const h=fixture();let worker,resume,allowed=true;
+  h.window.Worker=class {constructor(){worker=this;}postMessage(){}terminate(){}};
+  h.window.setTimeout=callback=>{resume=callback;return 1;};
+  const body='```txt\nPrivate prior source.\n```\n\n'.repeat(3000);
+  const pending=h.C.fullMarkdown(h.node('body'),body,h.node('toc'),()=>allowed);
+  const tokens=JSON.parse(JSON.stringify(h.window.markdownit({html:false}).parse(body,{})));
+  worker.onmessage({data:{tokens}});await tick();assert(resume);
+  allowed=false;h.node('body').replaceChildren();resume();
+  assert.equal(await pending,false);assert.equal(h.node('body').textContent,'');
+});
+
+test('source relative links use original provenance while heading TOC stays local',()=>{
+  const h=fixture(),body=h.node('body'),toc=h.node('toc');
+  h.C.markdown(body,'## Configuration\n\n[Next section](../next.md)\n\n[bad](javascript:evil())',toc,'https://example.org/manual/chapter/firewall.md');
+  const links=descendants(body).filter(n=>n.tagName==='A');
+  assert.equal(links.length,1);assert.equal(links[0].href,'https://example.org/manual/next.md');
+  assert.equal(toc.children[0].children[0].href,'#article-heading-1');
+});
+
+test('source reader shows the selected snapshot provenance',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadLogical(id(1),id(2));
+  h.requests[0].resolve(reply({id:id(1),revision_id:id(2),title:'Versioned manual',metadata:{
+    provenance:{product:'Earlier product',version:'7'},
+    snapshot_provenance:{details:JSON.stringify({product:'Current product',version:'8',path:['Configuration']})}},
+    state:'ready',media_type:'text/markdown',body:'## Current configuration',parts:[]}));await tick();
+  h.requests[1].resolve(reply({revisions:[{revision_id:id(2),content_hash:'hash',state:'ready'}]}));await pending;
+  assert.match(h.node('reader-provenance').textContent,/Current product/);
+  assert.match(h.node('reader-provenance').textContent,/Product version: 8/);
+  assert.doesNotMatch(h.node('reader-provenance').textContent,/Earlier product/);
+});
+
+test('malformed optional provenance cannot prevent full document reading',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadLogical(id(1));
+  const hostile={toString:null,valueOf:null};
+  h.requests[0].resolve(reply({id:id(1),revision_id:id(2),title:'Readable original',metadata:{canonical_url:hostile,published_at:hostile,
+    provenance:{path:['Configuration',hostile]}},state:'ready',media_type:'text/markdown',body:'## Retained complete article',parts:[]}));await tick();
+  h.requests[1].resolve(reply({revisions:[{revision_id:id(2),state:'ready',content_hash:'hash'}]}));await pending;
+  assert.match(h.node('reader-document').textContent,/Retained complete article/);
+  assert.match(h.node('reader-provenance').textContent,/Configuration/);
+  assert.equal(h.C.safeURL(hostile),null);assert.equal(h.C.date(hostile),'');
+});
+
+test('legacy part links resolve complete parents without optional source metadata',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));
+  h.requests[0].resolve(reply({id:id(1),title:'Original',metadata:{}}));
+  h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready',media_type:'text/markdown'}]}));await tick();
+  assert.match(h.requests[2].url,/full-document$/);
+  h.requests[2].resolve(reply({id:id(7),revision_id:id(8),title:'Whole original',metadata:{},multipart:true,state:'ready',media_type:'text/markdown',
+    body:'## Beginning\n\nAll retained parts.\n\n## Ending',parts:[{source_id:id(1),version_id:id(2),document_id:id(3)}]}));await tick();
+  h.requests[3].resolve(reply({revisions:[{revision_id:id(8),state:'ready',content_hash:'hash'}]}));await pending;
+  assert.match(h.node('reader-document').textContent,/Beginning.*All retained parts.*Ending/s);
+  assert.equal(h.node('reader-version').value,id(8));
 });

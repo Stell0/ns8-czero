@@ -80,3 +80,6 @@ and the explicit
 branch does not activate real research schedules or migrate WikiPlant data.
 Producer Core publication/default consumer adoption and final acceptance remain
 required before claiming released project availability.
+
+See [complete source documents](full-documents.md) for logical identities, bounded
+summary/history APIs, safe rendering and exact historical part resolution.

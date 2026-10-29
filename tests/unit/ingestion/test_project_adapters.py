@@ -90,12 +90,13 @@ def test_offline_wikiplant_stable_identity(tmp_path):
 def test_large_unicode_text_has_complete_hashable_parts_and_byte_offsets():
     body=('A paragraph with Unicode café 🤖.\n\n'*20000).encode()
     item=Item('synthetic','stable','Large original',body)
-    split=list(parts(item))
+    split=list(parts(item,limit=131072))
     assert len(split)>1 and b''.join(part.content for part in split)==body
     assert all(len(part.content)<=131072 for part in split)
     assert all(left.end_byte==right.start_byte for left,right in zip(split,split[1:]))
     assert split[-1].end_byte==len(body)
     assert list(parts(item))[0].external_id==split[0].external_id
+    assert len(list(parts(item)))==1
 
 
 def test_dns_rebinding_mixed_private_answers_are_denied():

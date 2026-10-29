@@ -309,9 +309,9 @@ host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
 
-The source default pins released Core 0.35.1 (Authlib 1.9.1) for app 0.54.0 /
-schema 0022. The security patch's immutable publication and independent artifact
-checks pass; PR41 records final consumer/main acceptance. See PLAN for exact gates.
+The source default pins released Core 0.35.2 (Authlib 1.9.1) for app 0.55.0 /
+schema 0022. Earlier security-patch and PR41 acceptance remain recorded in PLAN.
+The full-document library release is described below. No migration is required.
 The accepted remembered website login adds an unchecked **Remember this device**
 choice at sign-in. It requires provider-authorized offline renewal and expires
 after seven days without successful website use; use renews that window across
@@ -323,3 +323,18 @@ identities](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor)
 record the approved dedicated-instance update, retained sessions/data/connections,
 real-provider remembered sign-in and successful manager restart. Existing logins
 remain ordinary; choose the option at your next sign-in to remember that device.
+
+The full-document Knowledge Explorer candidate on `feat/full-document-explorer`
+adds All knowledge, Articles and Sources. Imported Markdown opens as a complete
+formatted article with a table of contents, provenance and immutable history.
+Verified multipart originals appear as one document; Wiki pages remain separate.
+See [full-document contracts, limits and browser instructions](docs/full-documents.md).
+
+[Core 0.35.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.2) is
+immutably published from `3fb900e` after full local, both-native and artifact
+gates. The app adopts that released Git tag and frozen lock. Development evidence
+includes 2,320 Core cases, 2,322 released-Core consumer cases, 207 controller
+cases and six real Playwright workflows
+using HTTPS, PostgreSQL and a standalone extraction worker. Final application
+consumer/native acceptance is recorded in the PR checks and PLAN. This candidate
+has not been merged or deployed; the accepted production image trio is unchanged.

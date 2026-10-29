@@ -2,6 +2,161 @@
 
 C0 has two uses: a shared second brain for people and assistants, and a reusable starting point for AI knowledge applications. See [README](README.md) for the product, architecture, data model, setup and fork walkthrough.
 
+## Full documents in Knowledge Explorer — implementation in progress
+
+Original-main base: `e30bb449b165cac4a0c4b8cafaf950f64ed0675c`, isolated
+`feat/full-document-explorer`. Full baseline run 40723318218 passes;
+local baseline passes 2303 Python/PostgreSQL/packaging, 197 Node (also pinned 24),
+21 Robot dry runs and schema/shell/docs. Initial feature regressions fail before
+implementation. Focused Core/ingestion now passes 24 and reader controllers 25.
+The parent-aware unchanged-part history regression failed before its writer fix.
+This task authorizes no production access, deployment or merge.
+
+Reuse immutable source/version/document bodies and existing verified
+`c0_project_source_snapshot_v1`/history plus immutable part receipts. Add reusable
+Core reading/listing/history/resolution with current Reader authority, explicit
+space selection, bounded metadata pagination, exact parent/version/order/offset/
+hash validation and no chunk concatenation. A pending snapshot never replaces
+the last complete snapshot. No new database model or widened extraction limits.
+Core changes require a fresh immutable patch release and subsequent app pin/lock
+adoption; preserve all prior releases and deployed predecessor identities.
+
+Use the existing allowlisted Markdown renderer for source Markdown, plain text
+for other extracted formats, headings/TOC, provenance/history and immutable
+citation links. Unified All knowledge/Articles/Sources navigation groups explicit
+provenance paths without fetching bodies or inferring product versions. Parse
+large Markdown away from the UI thread and yield during DOM construction;
+selection/access generations must invalidate all late work.
+
+Prefer one existing REST upload for text within extraction limits, preserving
+external identity, retry reconciliation and exact readback. Explicit legacy
+multipart tests still exercise three or more real source parts and snapshots.
+
+Acceptance order: green exact-main baseline; failing feature regressions;
+Core/API/security/history/integrity implementation; formatted source reader;
+unified bounded navigation and deep links; genuine unattended Playwright with
+HTTP/PostgreSQL/worker/existing signed identity fixtures; full local candidate,
+Core publication/adoption, exact image/both-native/privacy/scan gates; latest-main
+rebase and final validation; reviewed unmerged PR. Synthetic data only. New
+Playwright coverage is mandatory and does not use the older interactive waiver.
+Record actual counts, timings, SHAs and limitations after execution.
+
+### Full-document development checkpoint
+
+Exact base e30bb449b165cac4a0c4b8cafaf950f64ed0675c full40723318218 now
+passes both native jobs and merge gate; independent downloaded proof/audit follows.
+Local base passes2303 Python/PostgreSQL/packaging,197 pinned-Node24 controllers,
+21 Robot checks and schema/shell/docs. Production remains untouched.
+
+Initial Core7247ead full40727801573 local reports2313 passes/two installed-probe
+failures: the added assertion compared a UUID to the ingestion receipt string.
+The isolated local run reproduces the same two failures; no release is published.
+Corrected probes plus full-document/ingestion regressions and actual wheel/archive
+installation pass68. They cover pending-parent denial, part-to-parent resolution,
+legacy immutable receipt reuse, exact hashes/offsets, current grants and history.
+A5000-source actual summary page returns50 items/no bodies in22.46ms locally.
+
+Development UI passes202 controller cases and six genuine Playwright scenarios
+using loopback HTTPS, signed test SSO, actual REST/MCP/PostgreSQL and a standalone
+worker.377950-byte/three-part fixture: directory282.41ms, initial document2095.02ms,
+Markdown rendering1213.40ms. These measurements are single local samples, not an
+SLA or final frozen-source acceptance. Core publication, pin/lock adoption,
+final full/native/browser/privacy/scan gates and an unmerged PR remain mandatory.
+
+### Corrected Core native synchronization
+
+Core7a6a601 passes the complete2319-case local suite and CI local/released-Core/
+producer/scans. Debian upgrade passes21. Rocky reports25 passes/one failure/three
+expected skips: the existing OAuth Administration browser reads the transient
+"Loading people and application requests…" before "Application approved.".
+The server mutation performs its refresh before that terminal feedback. The same
+Administration source passes both native jobs at7247ead; this failure is retained,
+not waived. Failed downloaded XML/Pino artifacts have zero OAuth-query candidates.
+
+A test-only correction now waits for terminal approval/permission feedback before
+retaining the existing assertions and actual server readback phases. Focused
+native-helper/privacy tests pass68. Core package bytes and runtime Administration
+code are unchanged; a fresh full exact-source run is required before0.35.2 can
+be published. All six genuine document browsers also pass the534750-byte fixture
+with a code fence crossing actual storage parts; a timer probe observes56 ticks
+and59.9ms maximum tick gap during954.9ms rendering on this local sample.
+
+The independent downloaded exact-main audit now passes: Debian upgrade 21,
+Rocky installation 26/three expected skips, all eight native browsers, eight
+privacy guards, 32 accessibility contexts, three OAuth-query artifacts with zero
+candidates and five actual SARIF/SBOM pairs. The full promotion verifier passes
+for the exact e30bb449 source. Fresh Core candidate 0e35adda full run 40742034125
+is pending. A separate 5,000-logical-parent disposable PostgreSQL benchmark
+returns 50 metadata summaries in 2,942 ms at offset 0 and 2,903 ms at offset 4,950;
+no document bodies are read for directory construction.
+
+
+### Directory scale regression before Core publication
+
+Exact Core candidate 0e35adda full [40742034125](https://github.com/Stell0/ns8-czero/actions/runs/40742034125)
+now passes all required jobs and the independent downloaded artifact audit:
+Debian upgrade 21, Rocky installation 26/three expected skips/all eight browsers,
+eight privacy guards, 32 accessibility contexts, three zero-query artifacts and
+five actual SARIF/SBOM pairs.
+It is not published: a new 10,000-parent regression reproduces the existing
+five-second SQL timeout in directory discovery. The first failed fixture also
+exposes an oversized foreign-key cleanup statement; bounded cleanup now succeeds.
+No database deadline, extraction bound or deployed artifact is changed.
+
+Keep UUID join columns indexable and use an equality anti-join for importer part
+exclusion. Actual PostgreSQL EXPLAIN shows primary-key lookups and a hash
+anti-join. The 10,000-parent fixture returns 50 summaries/no bodies in 562 ms at
+offset 0 and 505 ms at offset 9,950; the single-case regression passes. All 17 full-document cases now pass together, including repeated-import
+fixture state: 10,000 parents return 50 summaries in 808 ms at offset 0 and
+523 ms at offset 9,950, and bounded cleanup succeeds. Fresh full exact-source
+Core acceptance remains required before publishing 0.35.2. The last complete application producer suite
+passes 2,321, pinned Node passes 204 and all six actual document browsers pass in
+82.33 seconds, including independently consuming the genuinely delayed response
+before checking revoked document/provenance/technical content remains empty.
+
+
+### Published Core and application adoption
+
+Core3fb900e25cced88c25ca8b8dd2148ae911a31f00 passes the isolated complete2,320-case
+suite and exact full[40774328932](https://github.com/Stell0/ns8-czero/actions/runs/40774328932).
+Independent downloaded reports verify Debian upgrade21, Rocky installation26/
+three expected skips/all eight browsers, eight privacy guards,32 accessibility
+contexts, three zero-query artifacts and five actual SARIF/SBOM pairs. The full
+promotion verifier passes. No deployed predecessor or production setting changes.
+
+Immutable[core-v0.35.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.2)
+is published by[40782732045](https://github.com/Stell0/ns8-czero/actions/runs/40782732045),
+including actual supplied-distribution installation/migration/rebuild checks.
+Downloaded assets match SHA256SUMS:
+
+- wheel: `1c6c5ff4250e2df4dca2064c2e61983f993cbd49059256237b3235ef588ab6f9`
+- archive: `7699c0acbb52aa3e3b0b8a4892e4337024c09b8809548790935cc3fa7c2f6a1a`
+
+Reproduction requires the commit SOURCE_DATE_EPOCH1793223806. An initial local
+supplied-artifact run omitted it and reports seven passes/one rebuild mismatch;
+that incorrect invocation is retained. The corrected exact-epoch run passes all
+eight supplied wheel/archive tests, including identical rebuild hashes.
+The publication workflow uses the correct epoch and passes. No asset is replaced.
+
+App0.55 adopts released Core0.35.2/tag3fb900e, >=0.35.2,<0.36 and a regenerated
+frozen lock; no unrelated dependencies change. Native candidate expectations
+advance to0.55 while all three actually deployed31b0c85 predecessors remain
+frozen at app0.54/Core0.35.0. All207 pinned-Node controllers and six genuine
+Playwright scenarios pass, including malformed optional metadata, snapshot
+provenance, visible citation evidence and metadata-independent legacy source links.
+Latest535KB sample: directory266ms, initial document2080ms, rendering944ms,
+57 browser timer ticks and56.5ms maximum tick gap during rendering.
+
+The independent frozen-lock consumer uses non-editable released Core0.35.2 from
+Git3fb900e outside the checkout and passes all2,322 Python/PostgreSQL/packaging
+cases in1,293.21s, with zero failures/skips and the existing Authlib warning.
+Node207, genuine browser6, Robot dry-run21, schema, shell, actual Renovate API,
+295 documentation links and the public contribution scan pass. The primary-agent
+full staged diff review is complete; it is not an independent human review.
+Exact application PR CI/native/browser/privacy/scan acceptance remains required;
+record its actual result in the PR after execution. No merge,
+production operation or additional real-data ingestion is authorized by this task.
+
 ## Project plugin 1.2 acceptance repair
 
 PR41 adds protected-project discovery to the existing instance-bound plugin. Repair
@@ -47,7 +202,7 @@ Do not suppress the finding or override immutable Core dependency metadata.
 Core0.35.1 pins Authlib1.9.1, preserving joserfc1.7.5, all other pins, schema0022
 and authority semantics. Exact6a11469794d5070af469343aa63715fd0e727d98 passes
 [full40673116010](https://github.com/Stell0/ns8-czero/actions/runs/40673116010):2303
-Python/PostgreSQL/packaging,197 Node24 and21 Robot cases. Local complete producer
+Python/PostgreSQL/packaging, 197 Node24 and21 Robot cases. Local complete producer
 validation independently passes2303 cases in1140.44s without skips. Independent
 developer security/identity/OIDC/renewal/source review passes142 focused cases.
 Actual downloaded native/scan audit passes Debian genuine31b0c85 upgrade21 and

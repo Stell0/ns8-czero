@@ -28,7 +28,7 @@ function fixture(kind='wiki',search='') {
   vm.runInContext(fs.readFileSync('app/static/vendor/markdown-it-15.0.2.min.js','utf8'),context);
   vm.runInContext(fs.readFileSync('app/static/site.js','utf8'),context);
   function reader(){const source=fs.readFileSync('app/static/reader.js','utf8').replace('  initialize();',
-    'window.readerTest={initialize,home,loadIndex,loadArticle,loadFacts,loadHistory,loadSource,loadVersion,loadVersions,library,guide};');vm.runInContext(source,context);return sandbox.readerTest;}
+    'window.readerTest={initialize,home,loadIndex,loadArticle,loadFacts,loadHistory,loadSource,loadVersion,loadVersions,loadLogical,logicalHistory,library,guide};');vm.runInContext(source,context);return sandbox.readerTest;}
   return {nodes,requests,events,context,window:sandbox,C:sandbox.C0,node:id=>document.getElementById(id),reader};
 }
 const tick=()=>new Promise(setImmediate);

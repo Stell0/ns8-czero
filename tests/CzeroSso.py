@@ -1227,6 +1227,7 @@ class CzeroSso:
             run('Get Property','#access-approve-write','checked','==',False)
             run('Get Property','#access-approve-manage','checked','==',False)
             run('Click','#access-approve-save')
+            run('Wait For Elements State','#access-message:has-text("Application approved.")','visible','timeout=30s')
             run('Get Text','#access-message','contains','Application approved.')
             phase('approved')
             value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
@@ -1234,16 +1235,19 @@ class CzeroSso:
             run('Click','#access-refresh')
             row='#access-people tr.access-application:not([data-application-id="'+value['request_id']+'"]):has(button:text-is("Decline"))'
             run('Click',row+' button:text-is("Decline")');run('Click','#access-confirm-save')
+            run('Wait For Elements State','#access-message:has-text("Access updated.")','visible','timeout=30s')
             run('Get Text','#access-message','contains','Access updated.')
             phase('declined')
             value=json.loads(ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
             run('Click','#access-refresh')
             row='#access-people tr[data-application-id="'+value['connection_ids'][0]+'"]'
             run('Click',row+' button:text-is("Disconnect application connection")');run('Click','#access-confirm-save')
+            run('Wait For Elements State','#access-message:has-text("Access updated.")','visible','timeout=30s')
             run('Get Text','#access-message','contains','Access updated.')
             phase('disconnected')
             person='#access-people tr.access-person[data-account-id="'+value['member_id']+'"]'
             run('Click',person+' button:text-is("Block user")');run('Click','#access-confirm-save')
+            run('Wait For Elements State','#access-message:has-text("Access updated.")','visible','timeout=30s')
             run('Get Text','#access-message','contains','Access updated.')
             phase('blocked')
             # Restart while blocked; normal admission must not revive the account.
@@ -1254,11 +1258,13 @@ class CzeroSso:
             phase('blocked_after_restart')
             run('Reload');run('Click',person+' button:text-is("Unblock user")')
             run('Select Options By','#access-role','value','reader');run('Click','#access-role-save')
+            run('Wait For Elements State','#access-message:has-text("Permissions saved.")','visible','timeout=30s')
             run('Get Text','#access-message','contains','Permissions saved.')
             phase('unblocked')
             for selected,stage in [('editor','editor_permissions'),('admin','manage_permissions'),('reader','reader_permissions')]:
                 run('Click',person+' button:text-is("Change permissions")')
                 run('Select Options By','#access-role','value',selected);run('Click','#access-role-save')
+                run('Wait For Elements State','#access-message:has-text("Permissions saved.")','visible','timeout=30s')
                 run('Get Text','#access-message','contains','Permissions saved.')
                 phase(stage)
             require_workspace_access(measurements)

@@ -63,3 +63,31 @@ Follow [CI policy](ci-policy.md): scoped feedback for draft runtime work, full e
 No unsolicited reviewer assignment. Another developer reviews before merge; regular merges preserve tested source commits. Runtime milestones require the supported dedicated-instance backup/update/readiness/preservation/client/restart/journal checks before merge, then actual main validation/publication and separate documentation closeout. Documentation-only images do not replace accepted runtime images.
 
 The existing interactive Playwright and container CPU-quota waivers remain in force; all automated native browsers and other security/resource bounds remain required. Public docs/artifacts use example identities, and raw credentials, failed traces and private fixtures stay outside Git. See [release readiness](release-readiness.md) for the distinction between documentation/plugin acceptance and a stable software release.
+
+## Full-document Playwright acceptance
+
+The headless document suite is mandatory for runtime PRs in the local validation
+workflow, including scoped feedback. The older interactive Playwright waiver
+does not exempt this suite. Use the producer-development environment above and
+a disposable PostgreSQL/pgvector account with CREATE/DROP DATABASE authority:
+
+```sh
+.venv/bin/python -m pip install -r tests/e2e/requirements.txt
+.venv/bin/python -m playwright install --with-deps chromium
+.venv/bin/python -m pytest -q --tb=short -rA tests/e2e
+```
+
+`CZERO_TEST_DATABASE_URL` must already select the disposable server. Each browser
+case creates/drops its own database, serves the genuine app over loopback HTTPS,
+uses the existing signed test SSO provider and starts the actual standalone
+worker. It uses real REST/MCP publication, immutable receipts and Chromium DOM
+assertions. Missing browser/backend dependencies fail rather than skip. No live
+instance is contacted. On Ubuntu 26.04, the executed local run used
+`PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` during browser installation;
+CI uses Ubuntu 24.04 directly.
+
+Failure screenshots and sanitized action/DOM traces go to
+`CZERO_BROWSER_ARTIFACTS` (or the private pytest temp directory). Network events
+and response resources are excluded from exported traces because they may hold
+cookies/CSRF/OAuth data. Raw traces, keys and tokens stay private and are removed
+with disposable fixtures. See [full-document contracts](full-documents.md).

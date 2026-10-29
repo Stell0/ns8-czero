@@ -195,3 +195,14 @@ The final docs-only closeout must pass its own lightweight PR/main gate and pres
 in that PR after execution, avoiding a recursive documentation-marker full build.
 No Core/module release, dedicated-instance update, other live persona, real-provider
 quality or scheduled-client interoperability is claimed. Existing waivers remain.
+
+## Automated full-document browser gate
+
+Runtime local/full and scoped feedback also install the pinned
+`tests/e2e/requirements.txt` browser and run all six headless Chromium
+full-document cases against a genuine disposable app/database/standalone worker.
+A missing backend, browser or required dependency fails the job. The existing
+interactive Playwright waiver does not exempt this automated suite. Existing
+QEMU/Robot workflows, privacy audits and resource-policy waivers remain intact.
+Only sanitized failure action/DOM traces and synthetic screenshots are retained;
+network events/resources and private credential files are excluded.

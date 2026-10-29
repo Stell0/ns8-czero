@@ -23,10 +23,16 @@ class Part:
     end_byte: int
 
 
-def parts(item, limit=131072):
+def parts(item, limit=None):
     if item.media_type not in ('text/plain','text/markdown'):
         yield Part(item,sha([item.external_id,1]),1,item.content,0,len(item.content));return
-    text=item.content.decode('utf-8');start=0;offset=0;number=0
+    text=item.content.decode('utf-8')
+    if limit is None:
+        if len(item.content)<=2*1024*1024 and len(text)<=1_000_000:
+            yield Part(item,sha([item.external_id,1]),1,item.content,0,len(item.content));return
+        limit=131072
+    if type(limit) is not int or not 1<=limit<=131072:raise C0Error('invalid_source_part_limit')
+    start=0;offset=0;number=0
     while start<len(text):
         low=start+1;high=min(len(text),start+limit)
         while low<=high:
@@ -41,6 +47,15 @@ def parts(item, limit=131072):
         if number>100: raise C0Error('source_part_limit')
         yield Part(item,sha([item.external_id,number]),number,content,offset,offset+len(content))
         offset+=len(content);start=end
+
+
+def publication_parts(client,item):
+    # Preserve existing multipart layouts on unchanged retries. New documents
+    # that fit extraction limits can use one REST upload instead of text MCP.
+    previous=client.call('objects_list',type_name='c0_project_source_snapshot_v1',
+        where=json.dumps({'connector_id':item.connector_id,'external_id':item.external_id}),limit=2,offset=0)['objects']
+    if len(previous)>1:raise C0Error('ambiguous_source_snapshot')
+    return parts(item,limit=131072 if previous and len(previous[0]['data']['part_receipt_ids'])>1 else None)
 
 
 def listing(client,name,field,**arguments):
@@ -87,11 +102,11 @@ def locate(client,part,prior):
 
 def upload_binary(client,part,source):
     if len(part.content)>10*1024*1024:raise C0Error('binary_upload_limit_exceeded')
-    suffix='.pdf' if part.item.media_type=='application/pdf' else '.docx'
+    suffix={'text/markdown':'.md','text/plain':'.txt','application/pdf':'.pdf'}.get(part.item.media_type,'.docx')
     metadata={'external_key':sha([part.item.connector_id,part.external_id]),'connector_id':part.item.connector_id,
         'external_id':part.external_id,'parent_external_id':part.item.external_id,
         'original_url':part.item.original_url,'canonical_url':part.item.canonical_url,'provenance':part.item.provenance}
-    form={'title':part.item.title[:240],'media_type':part.item.media_type,'retain_original':'true',
+    form={'title':part.item.title[:240],'media_type':part.item.media_type,'retain_original':'false' if part.item.media_type in ('text/plain','text/markdown') else 'true',
           'metadata':json.dumps(source['metadata'] if source else metadata)}
     if source:form.update(source_id=source['id'],expected_revision=str(source['revision']),title=source['title'])
     try:
@@ -144,7 +159,7 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     original_intent=pending.get(key,{}).get('intent',intent)
     pending[key]={'intent':original_intent,'state':'prepared'};atomic(journal,pending)
     if version is None:
-        if part.item.media_type in ('text/plain','text/markdown'):
+        if part.item.media_type in ('text/plain','text/markdown') and len(part.content)<=131072:
             metadata={'external_key':sha([part.item.connector_id,part.external_id]),'connector_id':part.item.connector_id,
                 'external_id':part.external_id,'parent_external_id':part.item.external_id,
                 'original_url':part.item.original_url,'canonical_url':part.item.canonical_url,'provenance':part.item.provenance}
@@ -174,7 +189,9 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     versions=listing(client,'source_versions_list','versions',source_id=version['source_id'])
     current=next(v for v in versions if v['id']==version['id'])
     if (previous['data']['sync_status']=='verified' and previous['data']['last_content_hash']==sha(part.content)
-            and previous['data']['provenance']['retrieved_at']==part.item.retrieved_at):
+            and previous['data']['provenance']['retrieved_at']==part.item.retrieved_at
+            and previous['data']['parent_content_hash']==part.item.content_hash
+            and previous['data']['start_byte']==part.start_byte and previous['data']['end_byte']==part.end_byte):
         result=previous
     else:
         data.update(extraction_status=current['state'],sync_status='verified')

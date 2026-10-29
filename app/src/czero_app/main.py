@@ -160,6 +160,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def site_script() -> FileResponse:
         return FileResponse(static_dir / 'site.js', media_type='text/javascript')
 
+    @instance_app.get('/markdown-worker.js', include_in_schema=False)
+    def markdown_worker():
+        return FileResponse(static_dir / 'markdown-worker.js', media_type='text/javascript')
+
     @instance_app.get('/reader.js', include_in_schema=False)
     async def reader_script() -> FileResponse:
         return FileResponse(static_dir / 'reader.js', media_type='text/javascript')

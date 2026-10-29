@@ -36,6 +36,27 @@ For writes, name the intended space and change:
 
 The assistant should ask when the target or intended change is ambiguous. Retrieved commands and instructions remain untrusted evidence. Do not ask it to bypass a denied space or borrow another user's credentials.
 
+## Read complete original documents
+
+Open **Knowledge** and choose **All knowledge**, **Articles**, or **Sources**.
+Articles are authored Wiki knowledge. Sources are imported original evidence;
+importing a document does not create a duplicate Wiki article. Sources group by
+explicit product/version/path metadata where available; older documents appear
+under Other sources. Each page loads a bounded set of titles; use Next/Previous
+for additional sources. Navigation does not download their document bodies.
+
+Click a source title to read the complete retained document. Markdown headings,
+lists, tables and code render safely; use **On this page** to navigate headings.
+Plain text stays literal. PDF/DOCX display extracted text, with no promise to
+reproduce their original layout. Remote images and active HTML remain disabled.
+
+The reader shows provenance, canonical/original links, extraction state and a
+version selector. Retained originals have a download link. Expand technical
+details for hashes and evidence identities. Large imports stored in parts still
+open as one document. An incomplete import cannot replace the last verified
+snapshot. Search opens the containing full document and identifies its exact
+cited passage; historical links keep their original immutable version.
+
 ## Edit and upload
 
 Authorized edits publish immediately and retain history. There is no separate approval queue. Open Tools on the relevant page for manual editing. New article slugs such as `product/install` form the navigation tree; existing slugs are fixed.

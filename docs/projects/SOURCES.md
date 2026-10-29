@@ -112,8 +112,11 @@ A new adapter can return Item/Batch without changing the publisher.
 
 ## Persistence and recovery
 
-Each original has a stable connector/external identity and SHA-256. UTF-8 text
-is split on paragraph boundaries when possible, at most131072 bytes/part with
+Each original has a stable connector/external identity and SHA-256. New UTF-8
+text/Markdown within2 MiB and one million characters uses a single source: text
+MCP up to131072 bytes, otherwise existing multipart REST file upload. Existing
+multipart layouts remain stable on retries. Larger originals are split on
+paragraph boundaries when possible, at most131072 bytes/part with
 explicit parent/hash/part/byte offsets; at most100 parts/original, with an
 explicit limit error beyond that bound. No content is truncated. Binary uploads
 retain the existing10 MiB server bound despite the larger collector byte ceiling. PDF/DOCX use
@@ -186,3 +189,10 @@ incremental object revisions and revoked source grants.
 
 See [export/preparation contracts](EXPORTS.md) and the fabricated reference
 configurations for offline fixtures. No production source was imported.
+
+Readers and agents can open the complete logical original through
+`source_documents_get`/`source_version_document_get`, including historical
+multifile storage. Discovery shows verified parents once and excludes unpublished
+parts. Logical reconstruction uses immutable documents/receipts and verifies the
+full parent hash; search chunks are never concatenated. See
+[full-document contracts](../full-documents.md).

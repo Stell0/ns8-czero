@@ -530,3 +530,31 @@ The first-party sign-in form needs `Referrer-Policy: strict-origin`: Chromium se
 Core0.35.0 is immutably published at `254fd3f` after exact full40518599847/native/artifact/promotion gates and publisher40529304349; downloaded checksums and eight supplied-artifact checks pass. The app adopts that released tag/lock with >=0.35,<0.36 and matching Renovate patch bounds. Repaired aa9bfd0 passes full40541383069 and independent 2298-case frozen-lock consumer validation. Approved PR42 regularly merges at31b0c85; actual main full40581381116, canonical publication, independent downloaded native/privacy/scan audits and exact-source promotion verification pass. Main passes2298 Python/PostgreSQL/packaging,197 Node24 and21 Robot cases, Debian upgrade21, Rocky installation26/three expected skips/all8 browsers,6 remembered recovery stages,8 privacy guards,32 accessibility contexts and3 zero-query artifacts.
 
 The approved dedicated update and manager restart accept that exact 31b0c85 trio. C0-only backup/full data read, trusted HTTPS, schema0022/timer readiness,32795 original stable rows/40 domain tables,settings/auth/retrieval/mounts/schedules,3 original background grants and10 unrelated instances pass. Ordinary sessions remain ordinary. Live owner REST/five protected Wiki reads, real-provider remembered offline issuance,seven-day cookie attributes/rolling/jar reload,restart retention and own-browser logout/replay rejection pass. The existing MCP profile and4 authorized-space discoveries work after update/restart and after test-browser logout, without reconnect or client changes. Both bounded root app journal windows have38 actual entries with successful request controls andzero credential/query/JWT/traceback candidates. Original-file corpus is empty live; nonempty recovery,other roles and provider/client revocation remain disposable evidence. Broader scheduled/research acceptance and the CPU/interactive Playwright waivers remain unchanged; no stable module release is claimed. See PLAN for precise boundaries and immutable identities.
+
+## Full-document Explorer candidate
+
+The feature authorizes no live access, deployment or merge. Released Core 0.35.2
+at 3fb900e/schema0022 passes full 40774328932, both native distributions, downloaded
+artifact/privacy/scan audits and exact promotion verification. Publisher 40782732045
+and downloaded checksums pass. Preserve this immutable release; the app 0.55
+candidate pins its exact tag/lock with >=0.35.2,<0.36. No migration is introduced.
+
+DocumentService reads immutable source bodies and verified parent snapshots under
+current Reader/space authority. Never concatenate retrieval chunks. Part history
+identity includes the parent hash; legacy receipt reuse still requires exact full
+hash verification. Keep UUID lookups indexable and the part-exclusion equality
+join: the 10,000-parent regression must pass the unchanged five-second SQL bound.
+
+Ordinary navigation lists bounded summaries. Legacy source/version/chunk links
+resolve containing documents through the authoritative full-document endpoint,
+independently of optional metadata hints. Reuse the allowlisted Markdown renderer,
+worker parsing and yielded DOM construction; access/selection loss invalidates
+all late work. Selected snapshot provenance overrides original source fields;
+malformed optional URLs/dates/paths must not prevent reading. Technical evidence
+retains exact citation IDs, offsets and hashes. No automatic Wiki duplication.
+
+All six genuine disposable Playwright cases are mandatory in runtime CI; the
+older interactive waiver cannot satisfy them. Keep signed test SSO, actual HTTP,
+PostgreSQL and the standalone extraction worker, with sanitized failures and
+owned-fixture cleanup. Final app consumer/native evidence belongs in its PR;
+this is neither a production update nor a stable NS8 module release.
