@@ -361,3 +361,43 @@ def test_nested_server_path_decoding_cannot_escape_approved_root(path):
     with pytest.raises(C0Error,match='website_path_escape'):
         boundary('https://docs.example.org/it/docs/'+path,definition()['website'])
     assert boundary('https://docs.example.org/it/docs/caf%C3%A9',definition()['website']).endswith('/caf%C3%A9')
+
+
+@pytest.mark.parametrize('endpoint',['/robots.txt','/sitemap.xml'])
+def test_inventory_redirects_cannot_broaden_approved_path_scope(tmp_path,endpoint):
+    escaped='https://docs.example.org/outside/secret.xml'
+    class Redirect(Site):
+        def response(self,url,**kwargs):
+            if url.endswith(endpoint):kwargs['validate_url'](escaped)
+            assert url!=escaped
+            return super().response(url,**kwargs)
+    batch=website(definition(),root=tmp_path,fetcher=Redirect())
+    assert batch.status=='partial' and batch.items==[] and batch.errors==['website_destination_not_approved']
+
+
+def test_explicit_inventory_redirect_destination_remains_usable(tmp_path):
+    target='https://docs.example.org/approved-index.xml'
+    class Redirect(Site):
+        def response(self,url,**kwargs):
+            if url.endswith('.xml'):
+                final=target if url.endswith('/sitemap.xml') else url
+                kwargs['validate_url'](final);self.requests+=1
+                return b'<urlset><url><loc>https://docs.example.org/it/docs/manual</loc></url></urlset>',final,'application/xml',{'status':200}
+            return super().response(url,**kwargs)
+    selected=definition(sitemaps=['https://docs.example.org/sitemap.xml',target],exclude=['*/it/docs/next'])
+    batch=website(selected,root=tmp_path,fetcher=Redirect())
+    assert batch.status=='complete' and len(batch.items)==1
+
+
+def test_robots_redirect_needs_its_own_explicit_allowed_path(tmp_path):
+    target='https://docs.example.org/metadata/robots.txt'
+    class Redirect(Site):
+        def response(self,url,**kwargs):
+            if url.endswith('/robots.txt'):
+                kwargs['validate_url'](target)
+                raw,_,media,head=super().response(url,**kwargs)
+                return raw,target,media,head
+            return super().response(url,**kwargs)
+    selected=definition(allowed_roots=['https://docs.example.org/it/docs/',target],exclude=['*/it/docs/next'])
+    batch=website(selected,root=tmp_path,fetcher=Redirect())
+    assert batch.status=='complete' and len(batch.items)==1

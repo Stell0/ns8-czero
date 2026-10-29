@@ -187,6 +187,10 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
         if getattr(fetcher,'downloaded',0)-initial_bytes>=config['max_total_bytes']:raise C0Error('website_byte_budget')
         def validate(value):
             boundary(value,config,inventory=inventory)
+            if inventory and normalize(value)!=normalize(url) and (urlsplit(url).path=='/robots.txt' or normalize(value) not in config['sitemaps']):
+                # Initial discovered inventories may be outside the article
+                # prefix; redirects need explicit approval or article scope.
+                boundary(value,config)
             # Redirect destinations need their own robots permission, including
             # a separately approved origin. Robots discovery itself is exempt.
             if urlsplit(url).path!='/robots.txt' and not rules(value).can_fetch('c0-projects',value):

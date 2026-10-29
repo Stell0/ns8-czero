@@ -33,6 +33,10 @@ explicit configuration and approval. Configure selectors using `docusaurus`,
 product/version and manual metadata explicit; unknown values stay empty. Include
 rules match URL/path globs; exclude rules override them. Product versions and
 locales remain separate URLs. A publication date does not imply obsolescence.
+Robots and discovered sitemaps use approved origins for inventory discovery.
+List a redirected sitemap destination outside article prefixes in `sitemaps`.
+A redirected robots destination must match an explicit `allowed_roots` path.
+An unknown redirect never broadens scope.
 
 ## Scan, preview, publish and recover
 

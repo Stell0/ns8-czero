@@ -821,7 +821,7 @@
     {
       "path": "samples/ingestion/src/c0_projects/website.py",
       "mode": "100644",
-      "sha256": "75bc76013e3278451bd1349766e3a7c7f0b5bc03e08308ffe6c29df52e407464"
+      "sha256": "76233bf2c043c934efec652f934389fcc4f209177aae58a903ed80efeb8b046e"
     },
     {
       "path": "samples/ingestion/src/c0_projects/website_state.py",
@@ -836,7 +836,7 @@
     {
       "path": "tests/unit/ingestion/test_website.py",
       "mode": "100644",
-      "sha256": "cb631b6fc49937609c77824bbc83b3d9bdfe10678d1c166d93f367dff1fa88f1"
+      "sha256": "506871193f3b42cbc2ed99743ad8e14106258e0f8c1dc18b89f64909be1ba23b"
     },
     {
       "path": "samples/ingestion/examples/website/generic.json",
@@ -866,7 +866,7 @@
     {
       "path": "samples/ingestion/examples/website/README.md",
       "mode": "100644",
-      "sha256": "3f96b7caaf890403058353dfd004d9a665a88e7b1e88b055913ef8262cb126a5"
+      "sha256": "f3c196ca432e7739a6b44816343f139bcca79d63971ec2df218af7015cd905b8"
     },
     {
       "path": "tests/current_content_fixture.py",
