@@ -120,20 +120,21 @@ paragraph boundaries when possible, at most131072 bytes/part with
 explicit parent/hash/part/byte offsets; at most100 parts/original, with an
 explicit limit error beyond that bound. No content is truncated. Binary uploads
 retain the existing10 MiB server bound despite the larger collector byte ceiling. PDF/DOCX use
-multipart REST and retained originals. First-source and every verified-version
+multipart REST and retained originals. Current source and current-generation
 provenance retain original/canonical URLs and distinct retrieval/publication/
 update times. An old article fetched today is not a new event.
 
 Before publication, a private journal freezes intent. On lost replies the
 publisher finds the original source and exact content hash before retrying.
-The complete verified part set is saved as a current parent snapshot plus
-immutable snapshot history, referencing immutable per-version receipts. Shrinking
-a document removes stale parts from the current set while retaining old evidence.
-Unchanged bytes reuse the immutable version. Changed bytes add one version.
-Queued extraction is persisted as pending; verification requires the saved
-body/hash and actual immutable citations. No claims are created by ingestion.
+The complete verified part set is published atomically as one current parent
+snapshot with verified current-generation membership. Shrinking removes obsolete
+parts, bodies, originals, chunks and vectors. Unchanged normalized bytes reuse
+current identities; A → B → A creates fresh generation IDs. A previously applied
+observation cannot roll back a newer publication. Queued extraction is pending;
+private part verification checks full retained bodies/hashes, and citations become
+available only after complete publication. No claims are created by ingestion.
 
-Managed typed connector config/history, source current/history and connector
+Managed typed connector config/history, current source membership and connector
 coverage records live in the protected space. Expected revisions reject racing
 collectors. Connector updates must name the verified part receipt IDs. Core joins them
 to actual ready, non-archived source versions and complete immutable parent
@@ -142,13 +143,15 @@ Only verified publication advances partial progress; only complete
 verified collection advances the successful cursor/watermark. Failed extraction
 or lost responses retain recoverable receipts. Bounded exponential retry starts
 at30 seconds, caps atone hour, honors a bounded requested retry up toone day,
-and resets after success. No automatic deletion of historical evidence occurs.
+and resets after success. Latest-only replacement deletes superseded automatic
+content; expired exact citations return `content_superseded` (410). Remote deletion
+reconciliation is outside the website milestone.
 Remote missing/denied/invalid pages, incomplete pagination and rate limits are
 partial/blocked observations. Resume does not assert a source was searched or
 fully audited merely because its existing content was already saved.
 
 Local tests exercise synthetic adapters and actual signed HTTP/OAuth/SDK/Core/
-PostgreSQL text/PDF publication, uncertain-response reconciliation, old-version
+PostgreSQL text/PDF publication, uncertain-response reconciliation, expired-version
 retention, pending extraction and cursor conflicts. No private instance or live
 WikiPlant data has been synchronized by this implementation task.
 
@@ -196,3 +199,5 @@ multifile storage. Discovery shows verified parents once and excludes unpublishe
 parts. Logical reconstruction uses immutable documents/receipts and verifies the
 full parent hash; search chunks are never concatenated. See
 [full-document contracts](../full-documents.md).
+
+The reusable [website recipe and catalog](../../samples/ingestion/examples/website/README.md) documents approved roots, robots/sitemap boundaries, structured Markdown, private resumable state, periodic one-shot commands and partial-coverage reporting. See the [destructive upgrade/preflight](../latest-only-migration.md) before a separately authorized production upgrade.

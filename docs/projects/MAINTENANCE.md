@@ -75,8 +75,9 @@ gains monitoring or descendants. `project_peripheral_archive` saves a compact
 externally authored summary, assessment, actual ready references and original
 topic snapshot, then archives the topic with immutable lifecycle history.
 Preexisting topics first seen during an upgrade get an explicitly labelled
-upgrade snapshot, not invented historical revisions. Evidence is never deleted
-and archived topics cannot silently reactivate.
+upgrade snapshot, not invented historical revisions. Superseded automatic source/Wiki content is removed under latest-only storage;
+expired references are explicitly unavailable. Current authored capsules and
+archived topic semantics remain, and archived topics cannot silently reactivate.
 
 ## Calendar
 

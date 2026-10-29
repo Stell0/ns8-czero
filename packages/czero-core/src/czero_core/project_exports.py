@@ -18,10 +18,10 @@ CATALOG={
     'aliases':('c0_entity_aliases','normalized,entity_id,label,created_at',('normalized',)),
     'entity_links':('c0_entity_links','id,entity_id,target_kind,target_id,label_snapshot,object_id,page_id,source_id,document_id,chunk_id,actor_id,created_at',('id',)),
     'relations':('c0_relations','id,source_id,target_id,kind,metadata,revision,deleted,actor_id,created_at',('id',)),
-    'claims':('c0_claims','id,entity_id,page_id,predicate,value,metadata,revision,deleted,actor_id,valid_from,valid_to,created_at',('id',)),
-    'evidence_links':('c0_evidence_links','claim_id,chunk_id,created_at',('claim_id','chunk_id')),
+    'claims':('c0_claims','id,entity_id,page_id,predicate,value,metadata,revision,deleted,actor_id,valid_from,valid_to,created_at,evidence_stale',('id',)),
+    'evidence_links':('c0_evidence_links','claim_id,chunk_id,created_at,unavailable',('claim_id','chunk_id')),
     'annotation_targets':('c0_annotation_targets','id,kind,target_id,content_revision,resource_id,content_hash,created_by,created_at,source_version_id,wiki_revision_id,entity_id,object_id,claim_id',('id',)),
-    'annotations':('c0_annotations','id,anchor_id,namespace,revision,created_at',('id',)),
+    'annotations':('c0_annotations','id,anchor_id,namespace,revision,created_at,evidence_stale',('id',)),
     'annotation_revisions':('c0_annotation_revisions','id,annotation_id,number,value,actor_id,created_at',('id',)),
     'objects':('c0_objects','id,type_name,data,tags,revision,created_at,updated_at',('id',)),
     'object_relations':('c0_object_relations','id,source_id,target_id,kind,created_at',('id',)),
@@ -33,7 +33,7 @@ KINDS=tuple(CATALOG)+('document_text','wiki_text','catalog')
 LIMITATIONS=[
     'Two-read change detection is not a database transaction snapshot.',
     'Original binary bytes require the existing authorized original-file API or native backup; this contract exports metadata and extracted text.',
-    'Generic object/claim events retain revision metadata, not unavailable historical payloads; explicit project histories and immutable Wiki/source versions are retained.',
+    'Only current published bodies are exported. Expired exact evidence and payload-free events cannot reconstruct retired content.',
     'Permissions, OAuth credentials, sessions, jobs, embeddings and server storage paths are excluded.',
 ]
 
@@ -79,8 +79,9 @@ class ProjectExports:
                     start=int(after or '0')
                 except (ValueError,TypeError):raise ValueError('invalid_export_text_selection') from None
                 table='c0_documents' if kind=='document_text' else 'c0_wiki_revisions'
+                current=(" AND EXISTS(SELECT 1 FROM c0_source_versions v JOIN c0_sources s ON s.current_version_id=v.id WHERE v.id=c0_documents.version_id AND s.space_id=c0_documents.space_id)" if kind=='document_text' else '')
                 part=connection.execute(text('SELECT id,length(body) AS total_chars,substring(body FROM :start FOR 32768) AS body FROM '+table+
-                    ' WHERE space_id=:space AND id=CAST(:id AS uuid)'),{**params,'id':resource_id,'start':start+1}).mappings().one_or_none()
+                    ' WHERE space_id=:space AND id=CAST(:id AS uuid)'+current),{**params,'id':resource_id,'start':start+1}).mappings().one_or_none()
                 if part is None or start>part['total_chars']:raise ValueError('export_text_not_found')
                 end=start+len(part['body']);rows=[{'id':str(part['id']),'start_char':start,'end_char':end,'total_chars':part['total_chars'],'body':part['body']}]
                 following=str(end) if end<part['total_chars'] else ''
@@ -88,6 +89,10 @@ class ProjectExports:
                 if resource_id:raise ValueError('unexpected_export_resource')
                 table,columns,keys=CATALOG[kind];values=decode_cursor(after,self._space_id,kind,keys)
                 where='space_id=:space'
+                if kind=='source_versions':where+=' AND EXISTS(SELECT 1 FROM c0_sources s WHERE s.current_version_id=c0_source_versions.id)'
+                elif kind in ('documents','chunks'):
+                    target='c0_documents.version_id' if kind=='documents' else '(SELECT d.version_id FROM c0_documents d WHERE d.id=c0_chunks.document_id)'
+                    where+=' AND EXISTS(SELECT 1 FROM c0_sources s WHERE s.current_version_id='+target+')'
                 if kind=='object_types':where='EXISTS(SELECT 1 FROM c0_objects o WHERE o.space_id=:space AND o.type_name=c0_object_types.name)'
                 if values:
                     casts=[]

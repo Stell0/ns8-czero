@@ -31,3 +31,5 @@ Use `project_agent_package_get` to generate a project-specific, private skill/pl
 C0's deterministic `jobs_enqueue` and `schedules_create` are not agent reasoning schedulers. An HTTP or MCP success may still be a tool-level error. Distinguish SAVED / QUEUED / PARTIAL / BLOCKED / ACCEPTED_PENDING_MERGE, and distinguish persisted report, external publication, notification and human reading. No real migration or source ingestion happens merely by preparing project packages.
 
 Current reference contracts: https://github.com/Stell0/ns8-czero/tree/main/docs/projects . Current server schemas and authorized tool catalog always govern the request.
+
+Source/Wiki bodies are latest-only. Result/report records may retain payload-free past publication IDs and hashes, but those exact bodies can expire. Resolve current evidence again before verification or republication; do not manufacture old text or transfer verification to changed content. Separately authored daily reports remain distinct current articles.

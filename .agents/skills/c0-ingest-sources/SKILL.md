@@ -55,3 +55,5 @@ whole-document readback through `source_documents_get`/`source_version_document_
 Never concatenate retrieval chunks or create duplicate Wiki pages for browsing.
 Queued/failed parts do not prove complete publication; retain the last complete
 snapshot and all immutable historical citations.
+
+Source/Wiki content is latest-only. Stage and validate replacements, atomically publish whole documents, and remove retired bodies/derivatives/receipt copies. Retired exact evidence and superseded replays return authorized `content_superseded` (410). Preserve authored text and mark expired evidence stale. Back up and run the [preflight](../../../docs/latest-only-migration.md) before a separately authorized production upgrade. Website collectors use the [existing ingestion recipe](../../../samples/ingestion/examples/website/README.md), private jobs and approved public boundaries; no new OAuth/client stack or automatic schedules.

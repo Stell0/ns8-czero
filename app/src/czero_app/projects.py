@@ -329,7 +329,8 @@ def install_project_routes(app, database, auth, read_context, write_context):
             raise HTTPException(409, 'project_conflict') from None
         except ObjectNotFound:
             raise HTTPException(404, 'project_not_found') from None
-        except ValueError:
+        except ValueError as error:
+            if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
             raise HTTPException(422, 'invalid_project_request') from None
 
     @app.get('/api/v1/project', response_model=ObjectView)

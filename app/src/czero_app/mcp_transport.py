@@ -216,6 +216,9 @@ def create_mcp_app(registry, grants, *, issuer_url):
         except (PermissionDenied, GrantRejected):
             message, status = 'permission_denied', 403
         except HTTPException as error:
+            if error.status_code==410 and error.detail=='content_superseded':
+                return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text='content_superseded')],
+                    meta={'c0/error':{'code':'content_superseded','status':410}})
             code = mcp_object_error(params.name, error.status_code, error.detail)
             if code is not None:
                 return types.CallToolResult(is_error=True,

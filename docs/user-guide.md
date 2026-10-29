@@ -16,9 +16,9 @@ OAuth consent adds another bound: Editor membership alone does not authorize a C
 
 ## Read articles and original evidence
 
-Knowledge pages are readers. Search for a topic or browse the article tree. Open article history for an earlier revision. Follow source citations to the exact version, document and passage; historical content need not describe the current state.
+Knowledge pages are readers. Search for a topic or browse the article tree. Stable article/document links open current content. Exact citations bind to a specific generation and passage; after replacement they explicitly report unavailable/superseded evidence. A separately labelled current-document link may help, but does not recover the original evidence. There is no content history or rollback selector.
 
-Sources shows retained document versions and extracted text. A pending extraction is not yet usable evidence. Missing applicability or verification means unknown. A saved article, a confident answer or a successful write does not establish that a procedure was independently verified.
+Sources shows complete current documents and extracted text. Superseded automatic bodies, originals and derivatives are removed; authored quotations remain and expired evidence is marked stale. A pending extraction is not yet usable evidence. Missing applicability or verification means unknown. A saved article, a confident answer or a successful write does not establish that a procedure was independently verified.
 
 ## Use ChatGPT
 

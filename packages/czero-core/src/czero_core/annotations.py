@@ -156,7 +156,7 @@ class AnnotationService(WikiService):
     def _live(self, connection, target, *, lock=False):
         parameters = {'space': self._space(connection), 'id': target.id}
         if target.kind == 'source_version':
-            sql = '''SELECT v.*,s.deleted,s.title FROM c0_source_versions v
+            sql = '''SELECT v.*,s.deleted,s.title,CASE WHEN s.current_version_id=v.id THEN v.number END AS current_revision FROM c0_source_versions v
                 JOIN c0_sources s ON s.id=v.source_id AND s.space_id=v.space_id
                 WHERE v.space_id=:space AND v.id=:id'''
             if lock: sql += ' FOR SHARE OF v'
@@ -196,6 +196,10 @@ class AnnotationService(WikiService):
             raise KnowledgeNotFound()
         if (writing or anchor is None) and live['content_revision'] != target.revision:
             raise KnowledgeConflict()
+        if writing and live['current_revision']!=target.revision:
+            if target.kind=='source_version':
+                if live['state']=='ready':raise EvidenceNotReady()
+            else:raise KnowledgeConflict()
         binding = dict(anchor) if anchor is not None else {
             'id': None, 'space_id': self._space(connection), 'kind': target.kind,
             'target_id': target.id, 'content_revision': target.revision,
@@ -224,7 +228,7 @@ class AnnotationService(WikiService):
     def _entry(self, connection, target, namespace, *, binding=None, live=None):
         if binding is None:
             binding, live = self._binding(connection, target)
-        row = connection.execute(text('''SELECT a.id,a.revision,r.value,r.actor_id,r.created_at
+        row = connection.execute(text('''SELECT a.id,a.revision,a.evidence_stale,r.value,r.actor_id,r.created_at
             FROM c0_annotations a JOIN c0_annotation_revisions r
             ON r.space_id=a.space_id AND r.annotation_id=a.id AND r.number=a.revision
             WHERE a.space_id=:space AND a.anchor_id=:anchor AND a.namespace=:namespace'''),
@@ -235,7 +239,7 @@ class AnnotationService(WikiService):
             current = current and live['content_hash'] == binding['content_hash']
         return {'id': row['id'] if row else None, 'target': self._reference(binding),
                 'namespace': namespace, 'revision': row['revision'] if row else 0,
-                'value': value, 'status': value.get('status', 'unknown') if value is not None else 'unknown',
+                'value': value, 'status': 'stale' if row and (row['evidence_stale'] or not current) else value.get('status', 'unknown') if value is not None else 'unknown',
                 'actor_id': row['actor_id'] if row else None, 'created_at': row['created_at'] if row else None,
                 'target_current': current, 'target_archived': live is None or live['archived'],
                 'current_content_revision': live['current_revision'] if live else None}
@@ -287,13 +291,14 @@ class AnnotationService(WikiService):
                     {'id': identifier, 'space': self._space(connection), 'anchor': binding['id'], 'namespace': namespace})
             else:
                 identifier = old['id']
-                connection.execute(text('UPDATE c0_annotations SET revision=revision+1 WHERE space_id=:space AND id=:id'),
+                connection.execute(text('UPDATE c0_annotations SET revision=revision+1,evidence_stale=false WHERE space_id=:space AND id=:id'),
                     {'space': self._space(connection), 'id': identifier})
             number = expected_revision + 1
             connection.execute(text('''INSERT INTO c0_annotation_revisions(id,space_id,annotation_id,number,value,actor_id)
                 VALUES (:id,:space,:annotation,:number,CAST(:value AS jsonb),:actor)'''),
                 {'id': uuid4(), 'space': self._space(connection), 'annotation': identifier,
                  'number': number, 'value': json.dumps(value, ensure_ascii=False), 'actor': current.user_id})
+            connection.execute(text('DELETE FROM c0_annotation_revisions WHERE annotation_id=:id AND number<>:number'),{'id':identifier,'number':number})
             self._event(connection, current, 'annotation', identifier, number, namespace)
             return self._entry(connection, target, namespace, binding=binding, live=live)
         return self._mutate(actor, 'annotation.update', payload, idempotency_key, execute)

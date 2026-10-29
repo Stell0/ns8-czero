@@ -1,5 +1,7 @@
 # C0 — A shared second brain for people and AI
 
+> Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](docs/latest-only-migration.md).
+
 **Keep what you learn. Find it again. Let your AI assistants build on it.**
 
 C0 (Czero) is a self-hosted knowledge service: a Wiki, original sources and a structured knowledge graph that people and AI assistants can use together. It stores knowledge independently of a chat or model, makes it searchable through a browser and APIs, and controls who can read, write or manage it.
@@ -18,7 +20,7 @@ You can use C0 as your team's second brain, or fork it as the foundation of your
 | Find the right information without searching a folder by hand | Indexed text search, linked knowledge, and optional semantic retrieval and reranking |
 | Know where an answer came from | Original sources, immutable source versions, extracted passages and precise citations |
 | Share knowledge with a team | Verified accounts, Reader/Editor/Admin roles, Shared and protected spaces |
-| Keep AI edits accountable | Expected revisions, replay protection on supported mutations, retained Wiki history and readback |
+| Keep AI edits accountable | Expected revisions, replay protection on supported mutations, current generations, payload-free retries and readback |
 | Connect your existing assistant | An MCP server, instance-specific skills and a generated ChatGPT plugin package |
 | Build a specialized AI application | A reusable Python Core, reference web application, REST/MCP interfaces, tests and NS8 deployment machinery |
 
@@ -326,7 +328,7 @@ remain ordinary; choose the option at your next sign-in to remember that device.
 
 The full-document Knowledge Explorer candidate on `feat/full-document-explorer`
 adds All knowledge, Articles and Sources. Imported Markdown opens as a complete
-formatted article with a table of contents, provenance and immutable history.
+formatted article with a table of contents, provenance and current content.
 Verified multipart originals appear as one document; Wiki pages remain separate.
 See [full-document contracts, limits and browser instructions](docs/full-documents.md).
 

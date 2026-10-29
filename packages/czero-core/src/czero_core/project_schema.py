@@ -58,11 +58,17 @@ TOPIC_INPUT=deepcopy(TOPIC)
 for _field in ('key','schema_version','authorized_by','created_at','expires_at'):
     TOPIC_INPUT['properties'].pop(_field)
 TOPIC_INPUT['required']=['topic_id','label','classification']
-CONNECTOR_DEFINITION = record(id=string(64), adapter=string(values=['local_files','http','rss_atom','sitemap','github','c0_space','wikiplant_export']),
+WEBSITE = record(seeds=array(string(4096),maximum=100),allowed_roots=array(string(4096),maximum=100),
+    sitemaps=array(string(4096),maximum=100),exclude=array(string(4096),maximum=100),
+    profile=string(values=['generic','docusaurus','sphinx']),selectors=array(string(4096),maximum=100),
+    remove_selectors=array(string(4096),maximum=100),language=string(128,minimum=0),product=string(128,minimum=0),
+    product_version=string(128,minimum=0),manual=string(128,minimum=0),interval_ms=integer(100,60000),
+    max_total_bytes=integer(65536,67108864),max_cache_pages=integer(1,1000),configuration_version=string(128))
+CONNECTOR_DEFINITION = record(id=string(64), adapter=string(values=['local_files','http','rss_atom','sitemap','website','github','c0_space','wikiplant_export']),
     enabled={'type':'boolean'}, include=array(string(512)), paths=array(string(512)), url=string(4096),
     repository=string(150), root=string(1024), source_space_id=string(36), authorization_ref=string(512),
     max_items=integer(1,1000), max_requests=integer(1,500), max_bytes=integer(1,16777216),
-    max_pages=integer(1,20), max_depth=integer(1,4), timeout=integer(1,30))
+    max_pages=integer(1,20), max_depth=integer(1,4), timeout=integer(1,30),website=WEBSITE)
 CONNECTOR_DEFINITION['required']=['id','adapter','enabled','include','max_items','max_requests','max_bytes','max_pages','max_depth','timeout']
 SCHEMAS = {
     'manifest_v1': record(key=string(128), version=integer(1, 2147483647), manifest=MANIFEST),
@@ -90,10 +96,9 @@ SCHEMAS = {
 SCHEMAS['connector_config_v1'] = {**SCHEMAS['connector_v1'],
     'properties': {**SCHEMAS['connector_v1']['properties'], 'version':integer(1,2147483647)},
     'required': [*SCHEMAS['connector_v1']['required'],'version']}
-SCHEMAS['source_sync_history_v1'] = SCHEMAS['source_sync_v1']
+SCHEMAS['source_part_v1'] = SCHEMAS['source_sync_v1']
 SCHEMAS['source_snapshot_v1'] = record(key=string(128),connector_id=string(64),external_id=string(4096),
     content_hash=string(64),part_receipt_ids=array(string(36),maximum=100),total_bytes=integer(1,16777216),verified_at=string(40))
-SCHEMAS['source_snapshot_history_v1'] = SCHEMAS['source_snapshot_v1']
 # Operational rows are separate bounded records, not a project-sized JSON blob.
 WORKFLOWS = ['initialize','daily','weekly','manual_research','source_sync','maintenance','report_publication']
 LEASE = record(run_id=string(64),lease_owner=string(128),fencing_generation=integer(1,2147483647))

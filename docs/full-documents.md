@@ -1,103 +1,94 @@
-# Complete source documents
+# Complete current source documents
 
-Knowledge Explorer offers All knowledge, Articles and Sources. Wiki articles
-remain authored knowledge; sources remain externally ingested evidence. No Wiki
-page is created just to make an import browsable.
+Knowledge Explorer offers All knowledge, Articles and Sources. Wiki articles are
+authored knowledge; imported sources are evidence. Each logical document retains
+one current complete generation. This replaces the previous history guarantee.
 
-## Identity and storage
+## Identity and publication
 
-A single-source logical document uses its source UUID and immutable version UUID.
-A multipart original uses its existing `c0_project_source_snapshot_v1` object UUID
-and immutable `c0_project_source_snapshot_history_v1` UUIDs. `DocumentService`
-provides a generic read API over these existing storage forms; reading does not
-require a project workflow or create another database model. Use the canonical
-`id` returned by a whole-document read when requesting its history.
+A single-source document keeps its source UUID. A multipart document keeps its
+`c0_project_source_snapshot_v1` UUID. Its current generation has verified
+`c0_project_source_part_v1` membership; the document reader no longer depends on
+snapshot or synchronization history. Generation identities are never recycled,
+including A → B → A updates. Counters remain monotonic concurrency controls.
 
-A selected snapshot names at most 100 immutable part receipts. Core restricts all
-joins to the explicitly authorized space and verifies parent/connector identity,
-ready extraction, ordinal order, contiguous byte lengths, source/text hashes,
-total bytes and the full parent hash before returning a body. It reads retained
-`c0_documents`, never overlapping retrieval chunks. A changed original creates a
-new immutable snapshot; a shorter snapshot names only its current parts. Old
-versions and citations remain readable after updates or archive.
+Core stages a replacement, extracts it, validates all retained document bodies,
+and atomically publishes the complete generation. It verifies ordered parts,
+contiguous UTF-8 byte ranges, hashes, parent identity and whole-document hash.
+Overlapping search chunks are never assembly input. Pending, failed or corrupt
+parts leave the previous publication intact. An initial incomplete import reports
+`state=incomplete`, `body=null` and cannot enter ordinary search. A part is only
+technical staging until its whole parent publishes.
 
-Pending/missing parts return `state=incomplete` and `body=null`. Integrity errors
-return the existing static conflict response. Unpublished importer parts stay out
-of ordinary discovery; they remain inspectable through technical source tools.
-The last complete snapshot remains current until a new complete one is saved.
-New part receipt identities include their parent hash. For exact legacy receipt
-identities that an older writer reused, explicit immutable snapshot membership
-and all hashes must prove the reconstructed effective offsets. Current mutable
-receipts are never borrowed to complete historical content.
+Publication deletes superseded source bodies, originals, extracted documents,
+chunks, vectors and obsolete part membership. Wiki updates retain one current
+body. Database cleanup is transactional; durable file-deletion intents are retried
+by the worker after rechecking ownership. Abandoned staging is bounded and expires
+after 24 hours. There is no configurable content-history retention.
 
-## Interfaces
+Archiving preserves the current body and existing archive semantics. Old manuals
+for different product versions and separately authored reports remain distinct
+current documents. Authored quotations remain authored text; expired evidence is
+marked stale instead of deleting the author's work.
+
+## Interfaces and expired evidence
 
 | Read | REST | MCP tool |
 | --- | --- | --- |
-| Bounded summaries | `GET /api/v1/source-documents` | `source_documents_list` |
-| Selected complete body | `GET /api/v1/source-documents/{logical_document_id}?revision_id=…` | `source_documents_get` |
-| Bounded history | `GET /api/v1/source-documents/{logical_document_id}/history` | `source_document_history` |
-| Exact cited version's original | `GET /api/v1/source-versions/{version_id}/full-document` | `source_version_document_get` |
+| Bounded current summaries | `GET /api/v1/source-documents` | `source_documents_list` |
+| Complete current body | `GET /api/v1/source-documents/{logical_document_id}` | `source_documents_get` |
+| Current containing document | `GET /api/v1/source-versions/{version_id}/full-document` | `source_version_document_get` |
 
-Every call uses current Reader authority and an explicit `space_id` for protected
-spaces; delegated calls require actual `c0:read`. Denial never falls back to
-Shared. Discovery/history return 1–100 items with the established offset bound.
-Only selecting a document reads its full body. The existing sixteen-MiB parent
-bound, 2 MiB/one-million-character per-part extraction bounds, 10 MiB file upload
-bound and 8 MiB MCP response bound remain unchanged. Use REST/browser for logical
-responses too large for MCP; no transport limit is silently raised.
+Every operation rechecks current Reader authority and explicit protected-space
+selection; delegated calls require `c0:read`. Authorization precedes tombstone
+lookup, so another space's expired IDs reveal no metadata. No denied-space fallback
+is allowed. Listings contain 1–100 metadata summaries; selecting a document reads
+its body. Retained technical compatibility history routes list current content
+only. History tools are removed from MCP capabilities and the reader has no
+history selector or rollback action.
 
-Existing text extraction normalizes UTF-8 BOMs and line endings. The multipart
-publisher requires normalized UTF-8/LF input whose exact bytes match retained
-readback; mismatched input stays unverified. Ordinary uploads remain readable as
-the complete normalized retained text. This reader does not recover discarded
-original layout or byte encodings from extracted text.
+A stable logical URL opens current content. An exact generation/version/chunk
+citation selects only that evidence. Once retired, it returns HTTP 410 with
+`content_superseded` (the same structured MCP error), never new text under the old
+identity. A reader may offer a separately labelled current-document link. Minimal
+tombstones contain IDs, generation, hash and status only. Claims and annotations
+whose evidence expires report stale/unsupported evidence. Changed content never
+inherits verification. No deterministic evidence-transfer rule is implemented.
 
-Original `documents_get`, chunks and citations retain their exact immutable part
-contracts. Existing `/sources?source=…&version=…&chunk=…` URLs still work. New
-`/sources?document=…&snapshot=…` links retain a canonical logical identity. Search
-opens the complete containing document while displaying its exact cited passage,
-including historical snapshots containing a now-obsolete final part.
+An optional `revision_id` must match the current generation. Concurrent read
+snapshots retain explicit generation identity; searches recheck returned current
+IDs and may report `content_superseded` when publication races the request. Bytes
+already delivered cannot be recalled. Superseded mutation replays likewise return
+410; callers read current state, reconcile and use a new key with the current
+expected revision. Replay receipts contain no retired bodies.
 
-## Presentation and limits
+## Formatting and limits
 
-The existing markdown-it 15.0.2 allowlisted token renderer handles source Markdown.
-Large Markdown is parsed in a local worker and its DOM is built in bounded
-batches; access/selection changes stop or invalidate older rendering. TOC links
-navigate rendered headings. Text and PDF/DOCX extraction stay plain text, with
-line breaks preserved and no claim to original visual layout. HTML and remote
-media stay inactive; links use the existing safe URL policy. Relative source links resolve
-against validated canonical/original provenance when available; TOC anchors stay
-local.
+The existing markdown-it 15.0.2 token renderer uses local assets and inactive raw
+HTML/media. Markdown headings, tables, lists, fenced code and links are rendered
+with a TOC. Large Markdown is parsed in a local worker and rendered in bounded
+batches; selection/access-loss guards invalidate late results. Relative links use
+validated provenance and local heading anchors remain local. PDF/DOCX/plain text
+retain extracted text without claiming original visual layout.
 
-Navigation groups explicit product, product-version and path metadata. It never
-infers authoritative versions from document text. Each bounded summary page has
-its own groups and an explicit incomplete-navigation notice. Older unclassified
-sources use Other sources. This is not a corpus-wide hierarchy download.
+The sixteen-MiB parent, 2 MiB/one-million-character per-part extraction, 10 MiB
+file-upload and 8 MiB MCP response bounds remain unchanged. The publisher uses a
+single REST upload when it fits existing extraction limits, and genuine multipart
+otherwise. Normalized UTF-8/LF Markdown must hash exactly like retained readback.
+REST/browser reads handle bodies too large for MCP without raising its bound.
 
-## Verification
+Navigation groups explicit product, version, language and path metadata, without
+inferring dates or versions from prose. Each bounded summary page reports its own
+incomplete navigation; this is not a full-corpus hierarchy download.
 
-The [development guide](development.md#full-document-playwright-acceptance) gives
-the pinned real-browser command. Synthetic fixtures cover formatting, three-part
-legacy reconstruction, exact original bytes/hash/order, shrink/history/citations,
-search navigation, read-only protected access, revocation, late replies, sign-out
-and a large single REST upload. Core/integration cases additionally validate
-corrupt/missing/queued parts, legacy receipt reuse, archives and role boundaries.
-No production data or deployment is part of this feature's acceptance.
+See the [migration/preflight](latest-only-migration.md),
+[website recipe](../samples/ingestion/examples/website/README.md) and
+[real-browser acceptance command](development.md#full-document-playwright-acceptance).
 
-### Measured development fixtures
-
-A local headless Chromium sample loaded the 534,750-byte legacy multipart
-fixture in 2,073 ms and rendered its Markdown in 955 ms. During rendering the
-browser serviced 56 timer ticks; the largest measured interval was 60 ms.
-The directory loaded in 272 ms for that small corpus. These are individual
-observations, not a service-level guarantee.
-
-The earlier directory query timed out at the unchanged five-second SQL deadline
-with 10,000 logical parents. A revised query using indexable UUID columns and an
-equality anti-join returned 50 metadata summaries in 562 ms at offset 0 and 505 ms
-at offset 9,950. PostgreSQL EXPLAIN confirms primary-key lookups and a hash
-anti-join. The regression seeds complete synthetic source/version/document and
-receipt/snapshot rows, reads no bodies for listing and uses bounded cleanup.
-Pagination bounds response size; latency still depends on database resources and
-stored receipt history.
+An unchanged multipart part may retain its existing version/chunk IDs only when
+retained bytes and hashes match exactly and the new whole-document membership
+passes order, range and parent-hash validation. This deterministic reuse preserves
+that exact unchanged evidence; it does not transfer verification to different
+bytes or to another part. Wiki metadata/archive changes may advance concurrency
+counters while retaining byte-identical body/chunk/vector identities. No semantic
+verification is inferred from either reuse rule.
