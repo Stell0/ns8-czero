@@ -182,6 +182,10 @@ def test_persisted_shared_space_role_rechecked_for_ingest_read_delete(sources, r
     member = acl.resolve(identity(acl, key, 'member'))
     forged = Actor(member.user_id, Role.ADMIN, True)
     assert service.get(forged, row['source_id'])['id'] == row['source_id']
+    initial=service.versions(forged,row['source_id'])
+    assert [version['id'] for version in initial]==([] if role is Role.READER else [row['id']])
+    execute(sources,'source.extract',row['id'])
+    assert [version['id'] for version in service.versions(forged,row['source_id'])]==[row['id']]
     if role == Role.READER:
         with pytest.raises(PermissionDenied): service.ingest(forged, BytesIO(b'denied'), title='Title', filename='file.txt', media_type='text/plain')
         with pytest.raises(PermissionDenied): service.delete(forged, row['source_id'], expected_revision=1)

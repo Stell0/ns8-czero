@@ -300,12 +300,15 @@ class SourceService(SpaceBound):
     def versions(self, actor, source_id, *, limit=50, offset=0):
         self._page(limit, offset)
         with self.database.engine.connect() as connection:
-            self._authorize(connection, actor)
-            self._source(connection, source_id)
+            current=self._authorize(connection, actor)
+            source=self._source(connection, source_id)
+            staging=current.role is not Role.READER and (current.delegated_scopes is None or 'c0:write' in current.delegated_scopes)
             return [version_view(row) for row in connection.execute(text('''SELECT v.*,j.state AS job_state
                 FROM c0_source_versions v LEFT JOIN c0_jobs j ON j.id=v.job_id
-                WHERE v.space_id=:space AND v.source_id=:id ORDER BY v.number DESC LIMIT :limit OFFSET :offset'''),
-                {'space': self._space(connection), 'id': _uuid(source_id), 'limit': limit, 'offset': offset}).mappings()]
+                WHERE v.space_id=:space AND v.source_id=:id AND (:staging OR v.id=CAST(:current AS uuid))
+                ORDER BY v.number DESC LIMIT :limit OFFSET :offset'''),
+                {'space':self._space(connection),'id':_uuid(source_id),'staging':staging,
+                 'current':source['current_version_id'],'limit':limit,'offset':offset}).mappings()]
 
     def retry(self, actor, version_id, *, expected_generation):
         with self.database.engine.begin() as connection:

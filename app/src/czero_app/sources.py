@@ -337,7 +337,7 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
         return invoke(selected(space_id).delete, context.actor, source_id, expected_revision=expected_revision)
 
     @app.get('/api/v1/sources/{source_id}/versions', response_model=VersionsView)
-    @operation('source_versions_list', 'Inspect current and staged source versions', Role.READER, VersionsView, read_only=True, space_field='space_id')
+    @operation('source_versions_list', 'Inspect current source content; Editors with write scope may also inspect bounded staging', Role.READER, VersionsView, read_only=True, space_field='space_id')
     def versions(source_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         return {'versions': invoke(selected(space_id).versions, context.actor, source_id, limit=limit, offset=offset)}
 

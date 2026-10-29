@@ -97,3 +97,7 @@ Before the first multipart publication, discovery shows one incomplete first-par
 entry with no readable body. Current membership replaces that pending entry with
 the verified logical parent after atomic publication; its source link still opens
 the current complete parent. Other unpublished parts are not listed separately.
+
+Technical version listings expose staged replacements only to current Editors/Admins
+with write scope. Readers and read-only delegated clients receive the current
+version only; incomplete document summaries remain visible without staged bodies.
