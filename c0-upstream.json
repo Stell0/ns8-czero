@@ -821,7 +821,7 @@
     {
       "path": "samples/ingestion/src/c0_projects/website.py",
       "mode": "100644",
-      "sha256": "2b3ce9b1841dda30819685adb202d317dc0b7ac7b86d2cfad8047d9ed0e3db4b"
+      "sha256": "75bc76013e3278451bd1349766e3a7c7f0b5bc03e08308ffe6c29df52e407464"
     },
     {
       "path": "samples/ingestion/src/c0_projects/website_state.py",
@@ -836,7 +836,7 @@
     {
       "path": "tests/unit/ingestion/test_website.py",
       "mode": "100644",
-      "sha256": "db1cef786f1cb41b756a1e638b9a3a6d265705d8f8cb478ee6ab691fa51f58bd"
+      "sha256": "cb631b6fc49937609c77824bbc83b3d9bdfe10678d1c166d93f367dff1fa88f1"
     },
     {
       "path": "samples/ingestion/examples/website/generic.json",

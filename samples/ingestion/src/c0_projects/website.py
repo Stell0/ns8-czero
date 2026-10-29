@@ -13,6 +13,7 @@ from urllib.robotparser import RobotFileParser
 
 from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
+from soupsieve import compile as compile_selector,SelectorSyntaxError
 
 from c0_ingest.errors import C0Error
 from c0_ingest.state import atomic,read,safe_path
@@ -51,6 +52,9 @@ def configuration(value):
             raise C0Error('invalid_website_selection')
     if not result['seeds'] or not result['allowed_roots'] or result['profile'] not in SELECTORS:
         raise C0Error('explicit_documentation_roots_required')
+    try:
+        for selector in result['selectors']+result['remove_selectors']:compile_selector(selector)
+    except (SelectorSyntaxError,RecursionError):raise C0Error('invalid_website_selector') from None
     for field in ('seeds','allowed_roots','sitemaps'):
         result[field]=[normalize(v) for v in result[field]]
     for field in ('language','product','product_version','manual','configuration_version'):
@@ -64,8 +68,13 @@ def configuration(value):
 
 def boundary(url,config,*,inventory=False):
     url=normalize(url);parsed=urlsplit(url)
-    decoded=unquote(parsed.path)
-    if '\\' in decoded or any(part in ('.','..') for part in decoded.split('/')):raise C0Error('website_path_escape')
+    decoded=parsed.path
+    for _ in range(4):
+        following=unquote(decoded)
+        if '\\' in following or any(part in ('.','..') for part in following.split('/')):raise C0Error('website_path_escape')
+        if following==decoded:break
+        decoded=following
+    else:raise C0Error('website_path_encoding_limit')
     for root in config['allowed_roots']:
         allowed=urlsplit(root)
         if (parsed.scheme,parsed.netloc)!=(allowed.scheme,allowed.netloc):continue

@@ -349,3 +349,15 @@ def test_scan_recovery_rebinds_saved_payload_and_removes_only_owned_incomplete(t
     recover_scan(state)
     assert read(state/'website-owned-scans.json')==[first.relative_to(state).as_posix()]
     assert (unrelated/'body.md').read_text()=='Keep operator data'
+
+
+@pytest.mark.parametrize('field',['selectors','remove_selectors'])
+def test_invalid_article_selectors_are_reported_before_collection(field):
+    with pytest.raises(C0Error,match='invalid_website_selector'):definition(**{field:['main[']})
+
+
+@pytest.mark.parametrize('path',['%252e%252e/private','%25252e%25252e/private','safe%255c..%255cprivate'])
+def test_nested_server_path_decoding_cannot_escape_approved_root(path):
+    with pytest.raises(C0Error,match='website_path_escape'):
+        boundary('https://docs.example.org/it/docs/'+path,definition()['website'])
+    assert boundary('https://docs.example.org/it/docs/caf%C3%A9',definition()['website']).endswith('/caf%C3%A9')
