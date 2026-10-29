@@ -131,13 +131,17 @@ def audit_reports(directory, source, images, logs):
     assert sorted(predecessor_background, key=lambda value:value['stage']) == [
         {'stage':'seed','verified':True}, {'stage':'verify','verified':True}], 'Predecessor background upgrade was not verified'
     assert all(type(value['verified']) is bool for value in predecessor_background)
+    predecessor_content=marker_values(logs,'C0 predecessor content: ')
+    assert sorted(predecessor_content,key=lambda value:value['stage'])==[
+        {'stage':'seed','verified':True},{'stage':'verify','verified':True}], 'Actual predecessor content upgrade proof missing'
+    assert all(type(value['verified']) is bool for value in predecessor_content)
     access = require_workspace_access(marker_values(logs, 'C0 workspace access: '))
     return {'source': source, 'accepted': True, 'reports': summaries, 'browser_workflows': 8,
             'privacy_guards': privacy, 'query_artifacts': audited, 'oauth_query_candidates': 0,
             'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
             'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery,
             'remembered_browser_recovery': remembered, 'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery,
-            'workspace_access_measurements':access,'predecessor_background':predecessor_background}
+            'workspace_access_measurements':access,'predecessor_background':predecessor_background,'predecessor_content':predecessor_content}
 
 
 def main():

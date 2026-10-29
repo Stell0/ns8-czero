@@ -40,6 +40,13 @@ Initial feature CI [40945036958](https://github.com/Stell0/ns8-czero/actions/run
 exposed a clean-environment producer override error before tests. Its produced
 images, scans and native runs are preserved diagnostic evidence. The next
 candidate pins the explicit local producer path without modifying consumer pins.
+The initial 2350-case local run retained six failures (2344 passes): stale replay
+assertions in bundle/package probes and a synthetic source left in Shared. The
+current-only probes and explicitly scoped fixture fix those causes; all eight
+actual independent wheel/archive package cases and 40 sequential storage cases
+pass. The native upgrade verifier now follows established disposable TLS trust
+restoration; initial ordering/DNS failures remain failed evidence, not acceptance.
+All full/native/final consumer gates remain required.
 
 The completed PR44 section below records its historical guarantees. Latest-only
 semantics explicitly supersede its content-history promises.

@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from czero_core import Database
+from czero_core.current_content import ContentSuperseded
 from czero_core.access import AccessService
 from czero_core.annotations import AnnotationService, ContentTarget
 from czero_core.bundles import KnowledgeBundleService
@@ -101,8 +102,12 @@ try:
         target=targets[1]
         old=annotations.get(owner,target,'verification')
         annotations.update(owner,target,'verification',{'status':'verified'},expected_revision=1,idempotency_key='verified')
-        assert annotations.update(owner,target,'verification',{'status':'unverified'},expected_revision=0,idempotency_key='verify-1')==old
-        assert [r['number'] for r in annotations.history(owner,target,'verification')['revisions']]==[2,1]
+        try:annotations.update(owner,target,'verification',{'status':'unverified'},expected_revision=0,idempotency_key='verify-1')
+        except ContentSuperseded:pass
+        else:raise AssertionError('Installed Core replayed an obsolete annotation value')
+        current=annotations.get(owner,target,'verification')
+        assert current['revision']==2 and current['value']['status']=='verified'
+        assert [r['number'] for r in annotations.history(owner,target,'verification')['revisions']]==[2]
         assert annotations.get(owner,target,'applicability')['revision']==1
         assert selected.get_page(owner,first['id'])==first
         try:AnnotationService(database,access).get(owner,target,'verification')

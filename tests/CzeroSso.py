@@ -135,10 +135,17 @@ class CzeroSso:
     @keyword
     def predecessor_content(self,stage):
         assert stage in ('seed','verify'),'Invalid disposable content stage'
-        ssh=BuiltIn().get_library_instance('SSHLibrary')
-        _,_,rc=ssh.execute_command('python3 /tmp/current_content_fixture.py '+stage,
-            return_stderr=True,return_rc=True,timeout='360 seconds')
-        assert rc==0,'Disposable predecessor content '+stage+' failed'
+        builtin=BuiltIn();previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary')
+            _,_,rc=ssh.execute_command('python3 /tmp/current_content_fixture.py '+stage,
+                return_stderr=True,return_rc=True,timeout='360 seconds')
+            assert rc==0,'Disposable predecessor content '+stage+' failed'
+            proof='C0 predecessor content: '+json.dumps({'stage':stage,'verified':True},sort_keys=True)
+            hidden=builtin.set_log_level('INFO')
+            try:builtin.log(proof);builtin.log_to_console(proof)
+            finally:builtin.set_log_level(hidden)
+        finally:builtin.set_log_level(previous)
 
     @keyword
     def verify_disposable_sso(self, module_id):

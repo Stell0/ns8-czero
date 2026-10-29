@@ -120,8 +120,8 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Content    verify
         Predecessor Profile    ${module_id}    changed-${host}    verify    0.56.0    0.36.0
+        Predecessor Content    verify
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
         ...    return_rc=True    return_stdout=False    timeout=180s
