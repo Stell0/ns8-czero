@@ -87,7 +87,8 @@ class Fetcher:
                         if parsed.scheme=='https' else http.client.HTTPConnection(parsed.hostname,port,timeout=self.config['timeout']))
                     connection._create_connection=lambda address,timeout,*args: socket.create_connection((peers[0],port),timeout)
                     self._connections[origin]=(connection,peers[0])
-                wait=interval-(time.monotonic()-self._last.get(origin,0))
+                delay=interval(url) if callable(interval) else interval
+                wait=delay-(time.monotonic()-self._last.get(origin,0))
                 if wait>0:time.sleep(min(wait,60))
                 self._last[origin]=time.monotonic()
                 self.requests+=1
@@ -110,7 +111,9 @@ class Fetcher:
                         continue
                     if response.status not in allow_status:
                         raise FetchError('source_http_' + str(response.status),retry_time(response.getheader('Retry-After')))
-                    limit=self.config['max_bytes'] if remaining_bytes is None else min(self.config['max_bytes'],remaining_bytes)
+                    remaining=remaining_bytes() if callable(remaining_bytes) else remaining_bytes
+                    limit=self.config['max_bytes'] if remaining is None else min(self.config['max_bytes'],remaining)
+                    if limit<=0:raise C0Error('source_byte_budget_exhausted')
                     declared=response.getheader('Content-Length') if response.status!=304 else None
                     if declared is not None and (not declared.isdigit() or int(declared)>limit):
                         raise C0Error('source_content_length_invalid_or_too_large')

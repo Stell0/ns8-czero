@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import time
 from email.utils import parsedate_to_datetime
+from datetime import datetime,timezone
 from xml.etree.ElementTree import ParseError
 from urllib.parse import parse_qsl,urlencode,urljoin,urlsplit,urlunsplit,unquote
 from urllib.robotparser import RobotFileParser
@@ -143,7 +144,8 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
     fingerprint=sha([EXTRACTOR,config]);state_path=cache/'frontier.json'
     state=read(state_path,{})
     if state.get('configuration')!=fingerprint or state.get('complete'):
-        state={'configuration':fingerprint,'pending':config['seeds'][:],'seen':[],'aliases':{},'complete':False}
+        state={'configuration':fingerprint,'pending':config['seeds'][:],'seen':[],'aliases':{},'complete':False,
+            'retry_after':state.get('retry_after','')}
     identities=read(cache/'identities.json',{})
     if type(identities) is not dict or len(identities)>MAX_FRONTIER:raise C0Error('website_identity_limit')
     robots={};metrics={'crawl_seconds':0.,'conversion_seconds':0.,'requests':0,'downloaded_bytes':0,'excluded':0,'not_modified':0}
@@ -152,14 +154,32 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
         atomic(state_path,state)
         batch.cursor={'frontier_hash':sha(state),'complete':state['complete'],'pending':len(state['pending']),
             'visited':len(state['seen']),'metrics':metrics}
+    def delay_for_url(url):
+        parsed=urlsplit(url);origin=urlunsplit((parsed.scheme,parsed.netloc,'','',''))
+        rule=robots.get(origin)
+        delay=config['interval_ms']/1000
+        if rule:
+            delay=max(delay,rule.crawl_delay('c0-projects') or rule.crawl_delay('*') or 0)
+            rate=rule.request_rate('c0-projects') or rule.request_rate('*')
+            if rate:
+                if rate.requests<=0 or rate.seconds<0:raise C0Error('website_invalid_robots_rate')
+                delay=max(delay,rate.seconds/rate.requests)
+        if delay>60:raise C0Error('website_robots_delay_exceeds_run_budget')
+        return delay
     def fetch(url,*,inventory=False,headers=None,allow_status=(200,)):
         boundary(url,config,inventory=inventory)
         if getattr(fetcher,'downloaded',0)-initial_bytes>=config['max_total_bytes']:raise C0Error('website_byte_budget')
+        def validate(value):
+            boundary(value,config,inventory=inventory)
+            # Redirect destinations need their own robots permission, including
+            # a separately approved origin. Robots discovery itself is exempt.
+            if urlsplit(url).path!='/robots.txt' and not rules(value).can_fetch('c0-projects',value):
+                raise C0Error('website_redirect_robots_denied')
         start=time.monotonic()
         try:
             return fetcher.response(url,headers=headers,allow_status=allow_status,
-                validate_url=lambda value:boundary(value,config,inventory=inventory),interval=config['interval_ms']/1000,
-                remaining_bytes=config['max_total_bytes']-(getattr(fetcher,'downloaded',0)-initial_bytes))
+                validate_url=validate,interval=delay_for_url,
+                remaining_bytes=lambda:config['max_total_bytes']-(getattr(fetcher,'downloaded',0)-initial_bytes))
         finally:metrics['crawl_seconds']+=time.monotonic()-start
     def rules(url):
         parsed=urlsplit(url);origin=urlunsplit((parsed.scheme,parsed.netloc,'','',''))
@@ -173,6 +193,9 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
         robots[origin]=rule
         return rule
     try:
+        if state.get('retry_after') and datetime.fromisoformat(state['retry_after'])>datetime.now(timezone.utc):
+            batch.partial('website_retry_deferred');batch.retry_after=state['retry_after'];return batch
+        state.pop('retry_after',None)
         # Sitemap discovery precedes article traversal. A missing sitemap falls
         # back to navigation links; denied/failed inventories remain partial.
         if not state.get('sitemaps_done'):
@@ -229,13 +252,6 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
                 state['pending'].pop(0);state['seen'].append(url);metrics['excluded']+=1;continue
             if not rule.can_fetch('c0-projects',url):
                 state['pending'].pop(0);state['seen'].append(url);metrics['excluded']+=1;continue
-            delay=rule.crawl_delay('c0-projects') or rule.crawl_delay('*') or 0
-            rate=rule.request_rate('c0-projects') or rule.request_rate('*')
-            if rate:
-                if rate.requests<=0 or rate.seconds<0:raise C0Error('website_invalid_robots_rate')
-                delay=max(delay,rate.seconds/rate.requests)
-            if delay>60:raise C0Error('website_robots_delay_exceeds_run_budget')
-            if delay>config['interval_ms']/1000:time.sleep(delay-config['interval_ms']/1000)
             key=sha(url.encode());record=read(cache/(key+'.json'),{})
             headers={}
             if record.get('etag'):headers['If-None-Match']=record['etag']
@@ -282,7 +298,8 @@ def website(definition,*,root,fetcher=None,cursor=None,**_):
                     state['pending'].append(link)
             state['pending'].pop(0);state['seen'].append(url);persist()
         state['complete']=not state['pending'] and state.get('sitemaps_done',False) and batch.status=='complete'
-    except FetchError as error:batch.partial(str(error));batch.retry_after=error.retry_after
+    except FetchError as error:
+        batch.partial(str(error));batch.retry_after=error.retry_after;state['retry_after']=error.retry_after
     except (C0Error,ValueError,UnicodeError,OSError,ParseError,RecursionError) as error:
         batch.partial(str(error) if isinstance(error,C0Error) else 'website_collection_failed')
     finally:

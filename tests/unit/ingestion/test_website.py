@@ -184,3 +184,54 @@ def test_canonical_cannot_merge_separately_approved_language_roots():
     with pytest.raises(C0Error,match='partition'):
         extract(HTML.replace('href="/it/docs/manual"','href="/en/docs/manual"',1).encode(),
             'https://docs.example.org/it/docs/manual',config)
+
+
+def test_robots_rates_cover_sitemaps_and_redirects_and_retry_is_persistent(tmp_path):
+    from c0_projects.fetch import FetchError
+    class Rates(Site):
+        def __init__(self):super().__init__();self.delays=[]
+        def response(self,url,**kwargs):
+            if url.endswith('/robots.txt'):
+                self.requests+=1
+                return b'User-agent: *\nCrawl-delay: 3\nRequest-rate: 1/5\nDisallow: /it/docs/denied\n',url,'text/plain',{'status':200}
+            self.delays.append((url,kwargs['interval'](url)))
+            return super().response(url,**kwargs)
+    rates=Rates();collected=website(definition(exclude=['*/it/docs/next']),root=tmp_path/'rates',fetcher=rates)
+    assert collected.status=='complete'
+    assert any(url.endswith('/sitemap.xml') for url,_ in rates.delays)
+    assert all(delay==5 for _,delay in rates.delays)
+    class Redirect(Site):
+        def response(self,url,**kwargs):
+            if url.endswith('/manual'):kwargs['validate_url']('https://docs.example.org/it/docs/denied')
+            return super().response(url,**kwargs)
+    denied=website(definition(),root=tmp_path/'redirect',fetcher=Redirect())
+    assert denied.status=='partial' and denied.errors==['website_redirect_robots_denied'] and denied.items==[]
+    class Busy(Site):
+        def response(self,*args,**kwargs):raise FetchError('source_http_429','2099-01-01T00:00:00+00:00')
+    blocked=tmp_path/'busy'
+    assert website(definition(),root=blocked,fetcher=Busy()).retry_after
+    retry=Site();deferred=website(definition(configuration_version='2'),root=blocked,fetcher=retry)
+    assert deferred.status=='partial' and deferred.errors==['website_retry_deferred'] and retry.requests==0
+
+
+def test_fetch_rechecks_shared_byte_budget_after_redirect_validation(monkeypatch):
+    from c0_projects.fetch import Fetcher
+    remaining=[4];delays=[]
+    class Response:
+        status=200
+        def getheader(self,name,default=None):return '4' if name=='Content-Length' else default
+        def read(self,*args):raise AssertionError('Oversized response must not be read')
+    class Connection:
+        sock=None
+        def __init__(self,*args,**kwargs):pass
+        def request(self,*args,**kwargs):pass
+        def getresponse(self):return Response()
+        def close(self):pass
+    monkeypatch.setattr('c0_projects.fetch.public_addresses',lambda *args:['1.1.1.1'])
+    monkeypatch.setattr('c0_projects.fetch.http.client.HTTPSConnection',Connection)
+    def validate(url):remaining[0]=2
+    def interval(url):delays.append(url);return 0
+    with pytest.raises(C0Error,match='content_length'):
+        Fetcher(definition()).response('https://docs.example.org/it/docs/manual',validate_url=validate,
+            interval=interval,remaining_bytes=lambda:remaining[0])
+    assert len(delays)==1
