@@ -21,14 +21,25 @@ Actual baseline: 2322 Python/PostgreSQL/packaging, 207 Node, six real HTTPS brow
 cases, schema/shell/docs and 21 Robot dry runs pass. Full CI
 [40823668206](https://github.com/Stell0/ns8-czero/actions/runs/40823668206) and its
 downloaded native/privacy/five scan-SBOM pairs pass independent artifact audit.
-The feature's current seven real-browser cases pass; full candidate, Core
+The feature's ten real-browser cases pass on `a291917`, including private-job
+resume and inert Git-pinned recipe ingestion. Fresh independently installed Core
+wheel upgrade/preflight from released 0.35.2 passes. Full candidate, Core
 publication, consumer-pin adoption and final native CI remain open.
 
 Bounded public smoke: NethVoice 20, NethSecurity 20, NethServer 20 pages; each
 22 requests and page-budget partial coverage. All 60 pages were published through
 the actual interfaces to disposable C0 and verified by full Markdown hash readback;
 a Reader opened one from each site. Private corpora remain outside Git. These
-results do not establish full corpus coverage or production deployment.
+results do not establish full corpus coverage or production deployment. Final
+smoke repeats the 60 full readbacks in 221.83 seconds. Per-site crawl/conversion
+seconds are 20.043/0.399, 20.489/0.343 and 19.935/0.530; publication/extraction/
+readback seconds are 31.321/7.212/4.905, 31.539/9.673/4.775 and
+30.929/8.586/4.899. All three remain page-budget partial coverage.
+
+Initial feature CI [40945036958](https://github.com/Stell0/ns8-czero/actions/runs/40945036958)
+exposed a clean-environment producer override error before tests. Its produced
+images, scans and native runs are preserved diagnostic evidence. The next
+candidate pins the explicit local producer path without modifying consumer pins.
 
 The completed PR44 section below records its historical guarantees. Latest-only
 semantics explicitly supersede its content-history promises.

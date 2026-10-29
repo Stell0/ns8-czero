@@ -42,6 +42,30 @@ def predecessor_python(tmp_path_factory):
     return python
 
 
+@pytest.fixture(scope='module')
+def current_core_python(tmp_path_factory):
+    directory=tmp_path_factory.mktemp('independent-current-core')
+    root=Path(__file__).resolve().parents[2]
+    python=directory/'venv/bin/python'
+    environment={**os.environ,'UV_CACHE_DIR':str(directory/'cache')}
+    commands=(['uv','build','--no-sources','--wheel',str(root/'packages/czero-core'),'--out-dir',str(directory/'dist')],
+        ['uv','venv','--python',sys.executable,str(directory/'venv')])
+    for command in commands:
+        result=subprocess.run(command,capture_output=True,timeout=240,env=environment)
+        (directory/'install.log').write_bytes(result.stdout+result.stderr)
+        assert result.returncode==0,'Independent current Core build failed; inspect private install.log'
+    wheel=next((directory/'dist').glob('*.whl'))
+    result=subprocess.run(['uv','pip','install','--python',str(python),str(wheel)],capture_output=True,timeout=240,env=environment)
+    (directory/'install.log').write_bytes(result.stdout+result.stderr)
+    assert result.returncode==0,'Independent current Core install failed; inspect private install.log'
+    probe=subprocess.run([str(python),'-I','-c',"import czero_core,importlib.metadata;print(importlib.metadata.version('czero-core'));print(czero_core.__file__)"],capture_output=True,text=True,timeout=20)
+    import tomllib
+    version=tomllib.loads((root/'packages/czero-core/pyproject.toml').read_text())['project']['version']
+    assert probe.returncode==0 and probe.stdout.splitlines()[0]==version
+    assert '/packages/czero-core/src/' not in probe.stdout
+    return python
+
+
 @pytest.fixture
 def predecessor_database(predecessor_python,tmp_path):
     assert os.getenv('CZERO_TEST_DATABASE_URL'),'Disposable PostgreSQL is required'
@@ -64,13 +88,20 @@ def predecessor_database(predecessor_python,tmp_path):
         admin.dispose()
 
 
-def test_released_upgrade_removes_all_automatic_history_and_preserves_current(predecessor_database):
+def test_released_upgrade_removes_all_automatic_history_and_preserves_current(predecessor_database,current_core_python):
     database,ids,path=predecessor_database
     with database.engine.connect() as c:
         c.execute(text('SET TRANSACTION READ ONLY'));report,_=preflight(c)
     assert not report['blocked'] and report['superseded_source_versions']==4
     assert report['affected_evidence_links']==1 and report['superseded_wiki_bodies']==2
-    for _ in range(2):migrate_database(database)
+    environment={**os.environ,'CZERO_DATABASE_URL':database.engine.url.render_as_string(hide_password=False)}
+    dry=subprocess.run([str(current_core_python),'-I','-m','czero_core.retention','--dry-run','--originals',str(path/'originals')],capture_output=True,timeout=60,env=environment)
+    (path/'installed-preflight.log').write_bytes(dry.stdout+dry.stderr)
+    assert dry.returncode==0 and not json.loads(dry.stdout)['blocked']
+    for _ in range(2):
+        migrated=subprocess.run([str(current_core_python),'-I','-m','czero_core.migrate'],capture_output=True,timeout=60,env=environment)
+        (path/'installed-migration.log').write_bytes(migrated.stdout+migrated.stderr)
+        assert migrated.returncode==0,'Independent installed Core upgrade failed; inspect private installed-migration.log'
     access=AccessService(database,ids['issuer'],UUID(ids['owner_key']))
     actor=access.resolve(VerifiedIdentity(ids['issuer'],'owner',ids['owner_key'],'owner','Owner',time.time()+600))
     reader=DocumentService(database,access).in_space(ids['space'])

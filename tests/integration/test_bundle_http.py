@@ -373,7 +373,9 @@ def test_lost_response_after_commit_is_recovered_by_an_independent_delegated_cli
                         result=json.loads(recovered.content[0].text)
                         assert 'body' not in json.dumps(stored)
                         assert result['results'][0]['id']==stored['results'][0]['$current_wiki']
-                        assert [row['id'] for row in result['results'][1:]]==[row['id'] for row in stored['results'][1:]]
+                        assert result['results'][1]['id']==stored['results'][1]['id']
+                        assert result['results'][2]['id']==stored['results'][2]['$current_annotation']
+                        assert 'value' not in stored['results'][2]
                         assert (await rest.post(ENDPOINT,json=data)).json()==result
             with fixture[4].engine.connect() as connection:
                 for table,count in (('c0_wiki_pages',1),('c0_entities',1),('c0_knowledge_events',3),('c0_knowledge_receipts',1)):

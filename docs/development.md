@@ -16,7 +16,7 @@ Use Python 3.12–3.14 and a fresh virtual environment. The following installs p
 python3 -m venv .venv
 .venv/bin/python -m pip install uv==0.12.20 pytest robotframework robotframework-sshlibrary
 # Explicit producer override; the shipped consumer tag/lock remain unchanged.
-.venv/bin/python -c "import tomllib; print('czero-core=='+tomllib.load(open('packages/czero-core/pyproject.toml','rb'))['project']['version'])" > /tmp/c0-producer-requirement.txt
+.venv/bin/python -c "from pathlib import Path; print('czero-core @ '+Path('packages/czero-core').resolve().as_uri())" > /tmp/c0-producer-requirement.txt
 .venv/bin/uv pip install --python .venv/bin/python --override /tmp/c0-producer-requirement.txt -e packages/czero-core -e 'app[test]' -e samples/ingestion
 ```
 
