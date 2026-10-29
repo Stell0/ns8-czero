@@ -540,9 +540,9 @@ and downloaded checksums pass. Preserve this immutable release; the app 0.55
 candidate pins its exact tag/lock with >=0.35.2,<0.36. No migration is introduced.
 
 DocumentService reads immutable source bodies and verified parent snapshots under
-current Reader/space authority. Never concatenate retrieval chunks. Part history
-identity includes the parent hash; legacy receipt reuse still requires exact full
-hash verification. Keep UUID lookups indexable and the part-exclusion equality
+current Reader/space authority. Never concatenate retrieval chunks. This historical
+PR44 checkpoint used part-history identities; the latest-only contract now requires
+verified current-generation membership and exact full hash verification. Keep UUID lookups indexable and the part-exclusion equality
 join: the 10,000-parent regression must pass the unchanged five-second SQL bound.
 
 Ordinary navigation lists bounded summaries. Legacy source/version/chunk links

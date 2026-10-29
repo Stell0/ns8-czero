@@ -493,7 +493,7 @@ def install_project_routes(app, database, auth, read_context, write_context):
         return invoke(space_id,'finalize_report',context.actor,**data.model_dump())
 
     @app.get('/api/v1/project/reports',response_model=ReportView)
-    @operation('project_report_get','Read the exact local-date report or latest saved daily/weekly report with immutable Wiki identity, bounded membership and independent delivery observations. Follow pagination before claiming complete membership.',Role.READER,ReportView,space_field='space_id')
+    @operation('project_report_get','Read the exact local-date report or latest saved daily/weekly report with a pinned Wiki identity that may expire, bounded membership and independent delivery observations. Follow pagination before claiming complete membership.',Role.READER,ReportView,space_field='space_id')
     def report_get(space_id: UUID,report_type: Literal['daily','weekly']='daily',local_date: str='',limit: int=50,offset: int=0,context: RequestAccess=Depends(read_context)):
         return invoke(space_id,'get_report',context.actor,report_type=report_type,local_date=local_date,limit=limit,offset=offset)
 
@@ -537,7 +537,7 @@ def install_project_routes(app, database, auth, read_context, write_context):
         return invoke(space_id,'diagnostics',context.actor)
 
     @app.get('/api/v1/project/export',response_model=ProjectExportPage)
-    @operation('project_export_get','Read one bounded page from the fixed project interchange catalog, including immutable revisions and explicit text fragments. Select the exact protected space and follow returned cursors. Read-only export excludes permissions, credentials, jobs and server file paths; verify all hashes and change watermarks before accepting a local export.',Role.READER,ProjectExportPage,space_field='space_id')
+    @operation('project_export_get','Read one bounded page from the fixed project interchange catalog, including current content identities and explicit current text fragments. Expired exact fragments return content_superseded. Select the exact protected space and follow returned cursors. Read-only export excludes permissions, credentials, jobs and server file paths; verify all hashes and change watermarks before accepting a local export.',Role.READER,ProjectExportPage,space_field='space_id')
     def export_get(space_id: UUID,kind: str,after: str='',limit: int=50,resource_id: str='',context: RequestAccess=Depends(read_context)):
         return invoke(space_id,'export_page',context.actor,kind=kind,after=after,limit=limit,resource_id=resource_id)
     return service

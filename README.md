@@ -18,7 +18,7 @@ You can use C0 as your team's second brain, or fork it as the foundation of your
 | --- | --- |
 | Stop explaining the same background in every chat | A durable Wiki and source library that different assistants can read and maintain |
 | Find the right information without searching a folder by hand | Indexed text search, linked knowledge, and optional semantic retrieval and reranking |
-| Know where an answer came from | Original sources, immutable source versions, extracted passages and precise citations |
+| Know where an answer came from | Current original sources, extracted passages and generation-bound citations |
 | Share knowledge with a team | Verified accounts, Reader/Editor/Admin roles, Shared and protected spaces |
 | Keep AI edits accountable | Expected revisions, replay protection on supported mutations, current generations, payload-free retries and readback |
 | Connect your existing assistant | An MCP server, instance-specific skills and a generated ChatGPT plugin package |
@@ -26,7 +26,7 @@ You can use C0 as your team's second brain, or fork it as the foundation of your
 
 For example, a support team can retain troubleshooting procedures and the evidence behind them. A researcher can connect findings across papers while retaining the original passages. A product team can keep decisions, systems and structured records in one place, then use different assistants against the same authorized knowledge.
 
-The useful loop is **collect → connect → ask → improve**. Your assistant can research, summarize and propose or make authorized changes; C0 keeps the resulting knowledge, evidence and history available for the next person or conversation.
+The useful loop is **collect → connect → ask → improve**. Your assistant can research, summarize and propose or make authorized changes; C0 keeps the resulting current knowledge and evidence available for the next person or conversation.
 
 For repeatable imports, start with the [ingestion samples](samples/ingestion/README.md):
 a full GitHub project/contributor/document pipeline and shared Python helpers for
@@ -82,7 +82,7 @@ After connecting, try a scoped request such as:
 
 For maintenance:
 
-> In the protected Operations space, read the existing procedure and the selected new evidence. Update only the requested section, preserve citations and history, then read back the saved revision.
+> In the protected Operations space, read the existing procedure and the selected new evidence. Update only the requested section, preserve authored text and current citations, mark expired evidence stale, then read back the saved revision.
 
 Scheduled maintenance is an external assistant workflow. A working interactive connection or an automation lifecycle marked “completed” does not prove an unattended write succeeded; verify the saved revision and result. See the [roadmap](PLAN.md#roadmap) for the remaining acceptance work.
 
@@ -114,11 +114,11 @@ Persistent Wiki pages let later questions reuse earlier work. PostgreSQL indexes
 flowchart TB
     Space["Knowledge space<br/>Shared or protected"]
     Space --> Source[Sources]
-    Source --> Version[Immutable source versions]
+    Source --> Version[Current source generation]
     Version --> Document[Extracted document text]
     Document --> Chunk["Source passages<br/>Stable IDs, hashes and offsets"]
     Space --> Page[Wiki pages]
-    Page --> Revision[Immutable Wiki revisions]
+    Page --> Revision[Current Wiki revision]
     Revision -. Cite original evidence .-> Chunk
     Space --> Entity["Entities<br/>People, systems and concepts"]
     Entity --> Claim[Claims about an entity]
@@ -132,7 +132,7 @@ flowchart TB
 This is a conceptual map of the main relationships, rather than every database table:
 
 - **Sources and passages** retain the evidence behind an answer. A citation identifies the source/version/document/chunk and its location; a generated summary is not a substitute for that evidence.
-- **Wiki pages and revisions** hold maintained explanations, procedures and syntheses. Updates create a new revision without discarding earlier ones.
+- **Wiki pages and revisions** hold maintained explanations, procedures and syntheses. Updates replace the body and remove earlier content; monotonic counters protect concurrent edits.
 - **Entities, claims and relations** connect concepts to each other and to evidence. Structured records let an application store domain-specific data under explicit schemas.
 - **Applicability and verification annotations** attach to an exact content revision. A changed revision does not silently inherit an earlier verification.
 - **Spaces are access and data boundaries.** Content belongs to a selected space; references and evidence stay within that boundary. Record schema definitions are instance-wide, while records are space-scoped.

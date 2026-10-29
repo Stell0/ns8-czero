@@ -51,15 +51,15 @@ Plain text stays literal. PDF/DOCX display extracted text, with no promise to
 reproduce their original layout. Remote images and active HTML remain disabled.
 
 The reader shows provenance, canonical/original links, extraction state and a
-version selector. Retained originals have a download link. Expand technical
+current generation identity. Retained current originals have a download link. Expand technical
 details for hashes and evidence identities. Large imports stored in parts still
 open as one document. An incomplete import cannot replace the last verified
 snapshot. Search opens the containing full document and identifies its exact
-cited passage; historical links keep their original immutable version.
+cited passage; expired exact links report unavailable evidence without rebinding it.
 
 ## Edit and upload
 
-Authorized edits publish immediately and retain history. There is no separate approval queue. Open Tools on the relevant page for manual editing. New article slugs such as `product/install` form the navigation tree; existing slugs are fixed.
+Authorized edits publish immediately and retain only current content. There is no separate approval queue. Open Tools on the relevant page for manual editing. New article slugs such as `product/install` form the navigation tree; existing slugs are fixed.
 
 Before changing a page, read its current revision. A conflict means another change occurred: reload, reconcile both observations and retry with the new revision. An unchanged request with an idempotency key keeps that key after an uncertain reply. Not every mutation has replay protection; inspect saved results before repeating an ordinary create.
 
