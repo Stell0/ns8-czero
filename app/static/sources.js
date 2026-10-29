@@ -64,7 +64,7 @@ async function selectSource(id) {
     }
     $('source-versions').append(row);
   }
-  $('source-status').textContent = history.versions.some(v => v.state === 'queued') ? 'Extraction queued. This history refreshes while jobs are pending.' : 'Version history loaded. Originals are removed only after successful persistence.';
+  $('source-status').textContent = !history.versions.length ? 'No current published content.' : history.versions.some(v => v.state === 'queued') ? 'Extraction queued. This list refreshes while jobs are pending.' : 'Current content loaded. Superseded content is removed after successful publication.';
   if (history.versions.some(v => v.state === 'queued' && ['queued','running'].includes(v.job_state))) pollTimer = setTimeout(() => {if (currentSource?.id === id) selectSource(id).catch(error => {$('source-status').textContent = error.message;});}, 4000);
   return true;
 }

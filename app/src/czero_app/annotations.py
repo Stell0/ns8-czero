@@ -233,7 +233,9 @@ def install_annotation_routes(app, database, auth, read_context, write_context):
         except EvidenceNotReady: raise HTTPException(409, 'evidence_not_ready') from None
         except KnowledgeConflict: raise HTTPException(409, 'knowledge_conflict') from None
         except KnowledgeNotFound: raise HTTPException(404, 'knowledge_not_found') from None
-        except ValueError: raise HTTPException(422, 'invalid_knowledge_request') from None
+        except ValueError as error:
+            if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
+            raise HTTPException(422,'invalid_knowledge_request') from None
 
     previous_validation = app.exception_handlers[RequestValidationError]
     @app.exception_handler(RequestValidationError)
@@ -250,8 +252,6 @@ def install_annotation_routes(app, database, auth, read_context, write_context):
         return invoke(selected(annotations,space_id).get,context.actor,ContentTarget(kind,target_id,content_revision),namespace)
 
     @app.get(_TARGET+'/history', response_model=AnnotationHistory)
-    @operation('knowledge_annotations_history', 'Read immutable annotation history for the exact target and namespace.',
-        Role.READER, AnnotationHistory, space_field='space_id')
     def history(kind: Kind, target_id: UUID, content_revision: ObservedRevision, namespace: Namespace,
             limit: int = 50, offset: int = 0, space_id: UUID | None = None,
             context: RequestAccess = Depends(read_context)):

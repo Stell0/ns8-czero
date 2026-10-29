@@ -15,5 +15,8 @@ PROJECT_OPERATIONS = frozenset({
     'project_topic_set', 'project_records_list',
     'project_connector_set', 'project_source_status_get', 'project_source_status_set', 'project_connector_status_set', 'project_source_snapshot_set',
 })
-DOCUMENT_OPERATIONS = frozenset({'source_documents_list','source_documents_get','source_document_history','source_version_document_get'})
-TOOL_COUNT = 77 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
+DOCUMENT_OPERATIONS = frozenset({'source_documents_list','source_documents_get','source_version_document_get'})
+TOOL_COUNT = 75 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
+
+REMOVED_HISTORY_OPERATIONS=frozenset({'wiki_revisions_list','knowledge_annotations_history','source_document_history'})
+CHANGED_VALIDATION_CONTRACTS=frozenset({'claims_annotate','claims_create','claims_get','claims_list','claims_retract','knowledge_bundle_apply','sources_list'})

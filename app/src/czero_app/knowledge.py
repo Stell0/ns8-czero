@@ -144,6 +144,7 @@ class ClaimUpdate(Mutation):
 
 
 class ClaimView(BaseModel):
+    evidence_stale: bool = False
     id: UUID
     entity_id: UUID
     page_id: UUID | None
@@ -259,7 +260,9 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
         except EvidenceNotReady: raise HTTPException(409, 'evidence_not_ready') from None
         except KnowledgeConflict: raise HTTPException(409, 'knowledge_conflict') from None
         except KnowledgeNotFound: raise HTTPException(404, 'knowledge_not_found') from None
-        except ValueError: raise HTTPException(422, 'invalid_knowledge_request') from None
+        except ValueError as error:
+            if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
+            raise HTTPException(422,'invalid_knowledge_request') from None
 
     previous_validation_handler = app.exception_handlers[RequestValidationError]
     @app.exception_handler(RequestValidationError)
@@ -295,7 +298,7 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
         return invoke(selected(space_id).upsert_page, context.actor, **data.model_dump())
 
     @app.get('/api/v1/wiki/pages/{page_id}', response_model=PageView)
-    @operation('wiki_pages_get', 'Read current or historical immutable Wiki content', Role.READER, PageView, read_only=True, space_field='space_id')
+    @operation('wiki_pages_get', 'Read current Wiki content; expired revisions return 410', Role.READER, PageView, read_only=True, space_field='space_id')
     def page_detail(page_id: UUID, revision: int | None = None, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         return invoke(selected(space_id).get_page, context.actor, page_id, revision=revision)
 
@@ -310,7 +313,6 @@ def install_knowledge_routes(app, database, auth, read_context, write_context):
         return invoke(selected(space_id).delete_page, context.actor, page_id, **data.model_dump())
 
     @app.get('/api/v1/wiki/pages/{page_id}/revisions', response_model=HistoryView)
-    @operation('wiki_revisions_list', 'Inspect immutable authored revision history', Role.READER, HistoryView, read_only=True, space_field='space_id')
     def history(page_id: UUID, limit: int = 50, offset: int = 0, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         return {'revisions': invoke(selected(space_id).page_history, context.actor, page_id, limit=limit, offset=offset)}
 

@@ -45,7 +45,7 @@ def test_real_0020_repeated_upgrade_preserves_old_rows_and_adds_safe_ids():
                 assert c.execute(text('SELECT access_revision FROM c0_accounts')).scalar_one()==1
                 current=c.execute(text('SELECT id FROM c0_client_onboarding')).scalar_one()
                 assert current and (identifier is None or current==identifier);identifier=current
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0022_remembered_browsers'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0023_current_content'
         from czero_core.access import AccessService
         from czero_core.identity import Actor,Role
         from czero_core.oauth_grants import OAuthGrantService

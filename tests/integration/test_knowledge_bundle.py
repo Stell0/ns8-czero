@@ -1,3 +1,4 @@
+from czero_core.current_content import ContentSuperseded
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """A consolidation is one authorized publication, including its retry receipt."""
@@ -100,7 +101,7 @@ def test_canonical_bundle_resolves_prior_results_and_replays_original_whole_snap
     assert bundle.apply(owner, operations, idempotency_key='canonical') == result
     original = result['results'][1]
     fixture[0].update_page(owner, original['id'], 'Later', 'Newer content', expected_revision=1, idempotency_key='later')
-    assert bundle.apply(owner, operations, idempotency_key='canonical') == result
+    with pytest.raises(ContentSuperseded):bundle.apply(owner, operations, idempotency_key='canonical')
     assert fixture[0].get_page(owner, original['id'])['revision'] == 2
     assert knowledge[0].get_claim(owner, result['results'][3]['id'])['evidence'][0]['body'] == chunk['body']
 
@@ -325,11 +326,11 @@ def test_allowlisted_maintenance_lifecycle_uses_trusted_helpers_and_retains_prio
     assert rows[9]['value'] == {'state':'working'} and rows[17]['deleted']
     retained = annotations.get(owner, ContentTarget('object',rows[0]['id'],2), 'applicability')
     assert retained['value'] == rows[13]['value'] and retained['target_archived']
-    assert fixture[0].get_page(owner, rows[7]['id'], revision=1)['content'] == rows[7]['content']
+    with pytest.raises(ContentSuperseded):fixture[0].get_page(owner, rows[7]['id'], revision=1)
     assertion = knowledge[0].get_claim(owner, rows[8]['id'])
     assert assertion['deleted'] and assertion['value'] == {'state':'working'}
     assert assertion['evidence'][0]['source_hash'] == version['content_hash']
-    assert bundle.apply(owner, operations, idempotency_key='lifecycle') == result
+    with pytest.raises(ContentSuperseded):bundle.apply(owner, operations, idempotency_key='lifecycle')
     assert metadata_state(bundle, owner)['c0_knowledge_receipts'] == 1
 
 

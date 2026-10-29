@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 
+from czero_core.current_content import ContentSuperseded
 from czero_core.annotations import ContentTarget, annotation_value
 from czero_core.knowledge import EvidenceNotReady
 from czero_core.wiki import KnowledgeNotFound
@@ -53,8 +54,8 @@ def test_explicit_supersession_keeps_prior_content_verification_and_evidence(kno
     assert annotations.get(owner, old_target, 'verification') == verified
     assert annotations.get(owner, wiki_target(replacement), 'verification')['status'] == 'unknown'
     write(annotations, owner, wiki_target(replacement), 'applicability', {'status':'contradicted','knowledge_type':'future-vendor-kind'}, 1)
-    assert annotations.history(owner, wiki_target(replacement), 'applicability')['revisions'][1]['value'] == result['value']
-    assert write(annotations, owner, wiki_target(replacement), 'applicability', value, key='supersession') == result
+    assert len(annotations.history(owner, wiki_target(replacement), 'applicability')['revisions'])==1
+    with pytest.raises(ContentSuperseded):write(annotations, owner, wiki_target(replacement), 'applicability', value, key='supersession')
     assert source_fixture[0].document(owner, version['id']) == document
     assert source_fixture[0].citation(owner, chunk['id'])['source_hash'] == version['content_hash']
 

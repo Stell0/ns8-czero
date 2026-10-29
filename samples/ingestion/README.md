@@ -1,5 +1,7 @@
 # C0 ingestion samples
 
+> Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](../../docs/latest-only-migration.md).
+
 Use these scripts to collect external evidence, update one selected C0 space and
 verify the saved data. The first adapter is a complete public GitHub project,
 contributor and documentation pipeline. Shared Python helpers support other
@@ -170,12 +172,11 @@ independent receipts/readback establish what persisted.
 - Reconcile unique external keys before retrying operations without replay support.
   Run only one updater per target space; separate jobs and legacy scripts do not
   share the same local lock.
-  Text submission uses stable replay keys; changed text appends a source version
-  with current expected revision and preserved original source metadata. Conflicts
+  Text submission uses revision-bound replay keys; changed text stages a replacement
+  with the current expected revision and deliberate current provenance. Conflicts
   stop rather than overwriting another writer.
-  Source-level provenance remains the first version's metadata; the document record
-  and private receipts retain the current commit permalink/hash. Verify the selected
-  immutable version rather than treating the first source URL as a later commit.
+  Source provenance updates deliberately; verify the current complete generation
+  and current commit permalink/hash. Superseded exact references return 410.
 - Extraction is asynchronous. A queued response is not verified ingestion. Require
   ready state, exact body/hash and attribution readback; searches/citations must
   identify the matching immutable source version and passage.

@@ -1,5 +1,7 @@
 # WikiPlant migration readiness — M8 acceptance
 
+> This records the earlier milestone. The [latest-only contract](../latest-only-migration.md) supersedes its source/Wiki content-history guarantees. Current bodies and authored reports remain; expired exact evidence is explicitly unavailable.
+
 **The infrastructure is implemented and synthetically accepted.** M0–M8
 prepublication passed their exact full/native gates and independent artifact
 audits. Core0.34/app0.53/worker0.2 packaging is verified and the default build

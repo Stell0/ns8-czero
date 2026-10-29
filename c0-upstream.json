@@ -807,6 +807,71 @@
       "path": "tests/e2e/test_document_explorer.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "docs/latest-only-migration.md",
+      "mode": "100644",
+      "sha256": "9ec71a9e313d9b1ca00824d476f282b7dca41f789654a69a4d72b92b84644c55"
+    },
+    {
+      "path": "docs/full-documents.md",
+      "mode": "100644",
+      "sha256": "71b056bbfc4477bd5f6220f6269f654f8523583aca8336e79a83c5dab47d4dae"
+    },
+    {
+      "path": "samples/ingestion/src/c0_projects/website.py",
+      "mode": "100644",
+      "sha256": "75bc76013e3278451bd1349766e3a7c7f0b5bc03e08308ffe6c29df52e407464"
+    },
+    {
+      "path": "samples/ingestion/src/c0_projects/website_state.py",
+      "mode": "100644",
+      "sha256": "c5cca04172ab2db8a0847c4b52cd736199731be2c2b77061b01c9d1502b0149d"
+    },
+    {
+      "path": "samples/ingestion/src/c0_projects/recipe.py",
+      "mode": "100644",
+      "sha256": "c96822a20967b10ff407c2909fda8dae81c7db1d413db589d347508438aa8902"
+    },
+    {
+      "path": "tests/unit/ingestion/test_website.py",
+      "mode": "100644",
+      "sha256": "cb631b6fc49937609c77824bbc83b3d9bdfe10678d1c166d93f367dff1fa88f1"
+    },
+    {
+      "path": "samples/ingestion/examples/website/generic.json",
+      "mode": "100644",
+      "sha256": "56fb916a7acda6d5f15d506ed55234463615cb38ec5bcad75f411f9b995c71a7"
+    },
+    {
+      "path": "samples/ingestion/examples/website/c0-website.service",
+      "mode": "100644",
+      "sha256": "4e2d46867b8517c1aa4564bf9faeaca2a5556a04e40e05662176671b60ef83e9"
+    },
+    {
+      "path": "samples/ingestion/examples/website/run.py",
+      "mode": "100644",
+      "sha256": "e6692ceede01fdc35f8f8a1c65fc903b1876779507ef4e1149504f0ef42d5f4d"
+    },
+    {
+      "path": "samples/ingestion/examples/website/c0-website.timer",
+      "mode": "100644",
+      "sha256": "3f2e7aae3176abbad7ecdc477e646ff7d861c3c921f35de1a525a5ba07b483da"
+    },
+    {
+      "path": "samples/ingestion/examples/website/nethesis.json",
+      "mode": "100644",
+      "sha256": "2b8aa1e893fe1f3225cf127415b333d0e4e8db9bd3a6c828e8c20aaab662a2ed"
+    },
+    {
+      "path": "samples/ingestion/examples/website/README.md",
+      "mode": "100644",
+      "sha256": "3f96b7caaf890403058353dfd004d9a665a88e7b1e88b055913ef8262cb126a5"
+    },
+    {
+      "path": "tests/current_content_fixture.py",
+      "mode": "100644",
+      "sha256": "2e9bf12eaf29dc25d6f22377e7cdb036918a3f9bdd8d473f6498d17bcaa4b8ac"
     }
   ]
 }

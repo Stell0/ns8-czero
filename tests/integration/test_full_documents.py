@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import text
 
 from czero_core.documents import DocumentService
+from czero_core.current_content import ContentSuperseded
 from czero_core.identity import PermissionDenied
 from test_sources import sources, upload, execute
 from test_access import access
@@ -23,7 +24,7 @@ def test_single_full_document_ready_history_archive(sources, body):
     version = upload(sources, body.encode(), media_type='text/markdown')
     reader = DocumentService(service.database, service.access)
     queued = reader.read_document(owner, version['source_id'])
-    assert queued['state'] == 'queued' and queued['body'] is None
+    assert queued['state']=='incomplete' and queued['body'] is None
     execute(sources, 'source.extract', version['id'])
     full = reader.read_document(owner, version['source_id'])
     assert full['body'] == body and full['text_hash'] == digest(body)
@@ -35,11 +36,11 @@ def test_single_full_document_ready_history_archive(sources, body):
     assert reader.read_document(owner, version['source_id'])['body'] == body
     execute(sources, 'source.extract', changed['id'])
     assert reader.read_document(owner, version['source_id'])['body'] == '# Changed\n\nShort replacement.\n'
-    assert reader.read_document(owner, version['source_id'], revision_id=version['id'])['body'] == body
-    assert len(reader.document_history(owner, version['source_id'])) == 2
+    with pytest.raises(ContentSuperseded):reader.read_document(owner,version['source_id'],revision_id=version['id'])
+    assert len(reader.document_history(owner,version['source_id']))==1
     service.delete(owner, version['source_id'], expected_revision=2)
     assert not reader.browse_documents(owner)
-    assert reader.read_document(owner, version['source_id'], revision_id=version['id'])['body'] == body
+    with pytest.raises(ContentSuperseded):reader.read_document(owner,version['source_id'],revision_id=version['id'])
     with pytest.raises(PermissionDenied):
         reader.in_space(uuid4()).read_document(owner, version['source_id'])
 
@@ -98,10 +99,11 @@ def test_multipart_exact_order_shrink_repeat_history_and_old_citation(logical):
     second, _ = publish(client, definition, path, short)
     assert second['id'] == first['id']
     assert service.read_document(actor, first['id'])['body'] == short
-    assert service.read_document(actor, first['id'], revision_id=full['revision_id'])['body'] == body
-    assert service.containing_document(actor, receipts[-1]['version_id'])['body'] == body
-    assert client.call('citations_get', chunk_id=chunk['id']) == citation
-    assert len(service.document_history(actor, first['id'])) == 2
+    with pytest.raises(ContentSuperseded):service.read_document(actor,first['id'],revision_id=full['revision_id'])
+    with pytest.raises(ContentSuperseded):service.containing_document(actor,receipts[-1]['version_id'])
+    from c0_ingest.errors import C0Error
+    with pytest.raises(C0Error):client.call('citations_get',chunk_id=chunk['id'])
+    assert len(service.document_history(actor,first['id']))==1
     assert len(service.browse_documents(actor)) == 1
 
 
@@ -161,7 +163,7 @@ def test_updated_snapshot_can_reuse_unchanged_part_versions(logical):
     second, later = publish(client, definition, path, changed)
     assert receipts[0]['version_id'] == later[0]['version_id']
     assert service.read_document(actor, second['id'])['body'] == changed
-    assert service.read_document(actor, first['id'], revision_id=before['revision_id'])['body'] == body
+    with pytest.raises(ContentSuperseded):service.read_document(actor,first['id'],revision_id=before['revision_id'])
 
 
 def test_reader_editor_admin_and_existing_space_boundaries(sources):
@@ -202,7 +204,14 @@ def test_part_identity_resolves_whole_parent_and_pending_parent_has_no_body(logi
     part=sync_part(client,next(parts(pending)),path/'pending-parent.json',definition_hash=sha(definition),attempts=4,seconds=0)
     unresolved=service.containing_document(actor,part['version_id'])
     assert unresolved['state']=='incomplete' and unresolved['body'] is None
-    assert UUID(part['source_id']) not in {row['id'] for row in service.browse_documents(actor)}
+    rows=service.browse_documents(actor)
+    queued=next(row for row in rows if row['id']==UUID(part['source_id']))
+    assert queued['state']=='incomplete' and queued['title']=='Pending parent'
+    assert service.read_document(actor,part['source_id'])['body'] is None
+    saved=save_snapshot(client,pending,[part])
+    ids={row['id'] for row in service.browse_documents(actor)}
+    assert UUID(saved['id']) in ids and UUID(part['source_id']) not in ids
+    assert service.read_document(actor,part['source_id'])['body']==pending.content.decode()
 
 
 def test_legacy_snapshot_reuses_its_explicit_old_immutable_receipt(logical):
@@ -214,13 +223,13 @@ def test_legacy_snapshot_reuses_its_explicit_old_immutable_receipt(logical):
     changed=original+'\nUpdated legacy ending.\n'
     second,_=publish(client,definition,path,changed)
     full=service.read_document(actor,second['id'])
-    old_id=first['data']['part_receipt_ids'][0]
+    old_id=second['data']['part_receipt_ids'][0]
     with service.database.engine.begin() as connection:
         row=connection.execute(text('SELECT data FROM c0_objects WHERE id=CAST(:id AS uuid)'),{'id':old_id}).scalar_one()
         legacy_key=logical_key('source_sync_history_v1',row['connector_id']+':'+row['external_id']+':'+row['version_id'])
         connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{key}',to_jsonb(CAST(:key AS text))) WHERE id=CAST(:id AS uuid)"),{'id':old_id,'key':legacy_key})
         ids=[old_id,*second['data']['part_receipt_ids'][1:]]
-        for identifier in (second['id'],str(full['revision_id'])):
+        for identifier in (second['id'],):
             connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids}',CAST(:ids AS jsonb)) WHERE id=CAST(:id AS uuid)"),{'id':identifier,'ids':json.dumps(ids)})
     assert service.read_document(actor,second['id'])['body']==changed
     assert service.read_document(actor,second['id'],revision_id=full['revision_id'])['body']==changed
@@ -268,7 +277,7 @@ def test_ten_thousand_logical_parents_use_bounded_summary_pages(logical):
             'sync_status':'verified','extraction_status':'ready'}
         snapshot={'key':str(parent),'connector_id':'documents','external_id':str(i),
             'content_hash':content_hash,'part_receipt_ids':[str(receipt)],'total_bytes':7}
-        for identifier,kind,data in ((receipt,'source_sync_history_v1',part),(parent,'source_snapshot_v1',snapshot),(history,'source_snapshot_history_v1',snapshot)):
+        for identifier,kind,data in ((receipt,'source_part_v1',part),(parent,'source_snapshot_v1',snapshot)):
             objects.append({'id':identifier,'space':space,'type':'c0_project_'+kind,'data':json.dumps(data)})
     try:
         with service.database.engine.begin() as connection:
@@ -293,3 +302,21 @@ def test_ten_thousand_logical_parents_use_bounded_summary_pages(logical):
                         {'space':space,'ids':[row['id'] for row in rows[start:start+200]]})
         with service.database.engine.begin() as connection:
             for table in ('c0_objects','c0_sources','c0_source_versions'):connection.execute(text('ANALYZE '+table))
+
+
+def test_corrupt_staged_replacement_never_displaces_current_generation(logical):
+    from c0_ingest.errors import C0Error
+    client,definition,service,actor,path=logical
+    first,_=publish(client,definition,path,'# Current\n\nCURRENT-BEFORE-CORRUPT-REPLACEMENT\n')
+    before=service.read_document(actor,first['id'])
+    changed=Item('documents','manual.md','Synthetic full manual',b'# Replacement\n\nVALID-REPLACEMENT-BYTES\n','text/markdown')
+    pending=sync_part(client,next(parts(changed)),path/'pending.json',definition_hash=sha(definition),attempts=4,seconds=0)
+    with service.database.engine.begin() as connection:
+        connection.execute(text("UPDATE c0_documents SET body=body||'CORRUPTED-PART' WHERE version_id=CAST(:id AS uuid)"),{'id':pending['version_id']})
+    with pytest.raises(C0Error):save_snapshot(client,changed,[pending])
+    assert service.read_document(actor,first['id'])==before
+    assert client.call('sources_search',query='CORRUPTED-PART')['citations']==[]
+    with service.database.engine.begin() as connection:
+        connection.execute(text('UPDATE c0_documents SET body=:body WHERE version_id=CAST(:id AS uuid)'),{'id':pending['version_id'],'body':changed.content.decode()})
+    current=save_snapshot(client,changed,[pending])
+    assert current['id']==first['id'] and service.read_document(actor,current['id'])['body']==changed.content.decode()

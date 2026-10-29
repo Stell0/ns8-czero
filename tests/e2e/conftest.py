@@ -131,9 +131,17 @@ def live(browser_database,request,monkeypatch,tmp_path):
         assert not errors,'Disposable worker failed'
     request.addfinalizer(shutdown)
     assert ready.wait(15),'Disposable HTTP server did not start'
+    worker_control=SimpleNamespace(paused=threading.Event(),idle=threading.Event())
+    def pause_worker():
+        worker_control.paused.set()
+        assert worker_control.idle.wait(35),'Worker did not reach a bounded pause'
+    def resume_worker():worker_control.paused.clear()
     def work():
         try:
             while not stop.is_set():
+                if worker_control.paused.is_set():
+                    worker_control.idle.set();stop.wait(.05);continue
+                worker_control.idle.clear()
                 completed=subprocess.run([sys.executable,'-m','czero_app.worker'],capture_output=True,timeout=30,
                     env={**os.environ,'CZERO_DATABASE_URL':os.environ['CZERO_TEST_DATABASE_URL'],'CZERO_SOURCE_DIR':str(app.state.sources.originals.root)})
                 if completed.returncode:raise RuntimeError('Standalone extraction worker failed')
@@ -193,7 +201,7 @@ def live(browser_database,request,monkeypatch,tmp_path):
                 {'space':private['id'],'ids':[row['source_id'] for row in receipts]})
             assert result.rowcount==len(receipts)
     value=PrivateLive(origin=origin,rest=rest,client=client,definition=definition,space=private['id'],second=second['id'],upload=upload,publish=publish,legacy_metadata=legacy_metadata,
-        member=member,grant_path=grant_path,errors=errors,tmp=tmp_path,delay=delay)
+        member=member,grant_path=grant_path,errors=errors,tmp=tmp_path,delay=delay,pause_worker=pause_worker,resume_worker=resume_worker)
     yield value
 
 
@@ -215,7 +223,7 @@ def browser(live,request,tmp_path):
         yield page
         if getattr(request.node,'rep_call',None) and request.node.rep_call.failed:
             directory=Path(os.getenv('CZERO_BROWSER_ARTIFACTS',str(tmp_path/'failure')));directory.mkdir(mode=0o700,parents=True,exist_ok=True)
-            page.screenshot(path=str(directory/(request.node.name+'.png')),full_page=True)
+            page.screenshot(path=str(directory/(request.node.name+'.png')),full_page=False)
             raw=tmp_path/'private-trace.zip';context.tracing.stop(path=str(raw))
             # Keep actions/DOM snapshots only. Network events/resources can contain
             # cookies, CSRF values and OAuth responses and are never uploaded.
@@ -231,3 +239,41 @@ def browser(live,request,tmp_path):
 def pytest_runtest_makereport(item,call):
     result=yield
     setattr(item,'rep_'+result.get_result().when,result.get_result())
+
+
+@pytest.fixture
+def documentation_site(monkeypatch):
+    """Real HTTP origin in isolated test transport; no production bypass option."""
+    from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+    state=SimpleNamespace(body='',requests=[],etag='"generation-1"',fail=False)
+    origin='http://documentation.example.org'
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self,*args):pass
+        def do_GET(self):
+            state.requests.append((self.path,self.headers.get('If-None-Match')))
+            status=200;media='text/html; charset=utf-8'
+            if self.path=='/robots.txt':body='User-agent: *\nDisallow: /manual/denied\nSitemap: '+origin+'/sitemap.xml\n';media='text/plain'
+            elif self.path=='/sitemap.xml':body='<urlset><url><loc>'+origin+'/manual/article</loc></url></urlset>';media='application/xml'
+            elif self.path=='/manual/article':
+                if state.fail:status=503;body='Temporary origin failure'
+                elif self.headers.get('If-None-Match')==state.etag:status=304;body=''
+                else:body=state.body
+            else:status=404;body='Not found'
+            data=body.encode();self.send_response(status);self.send_header('Content-Type',media)
+            self.send_header('Content-Length',str(len(data)))
+            if self.path=='/manual/article':self.send_header('ETag',state.etag)
+            self.end_headers();self.wfile.write(data)
+    server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    real_resolve=socket.getaddrinfo;real_connect=socket.create_connection
+    # DNS and socket redirection are confined to this synthetic hostname. The
+    # actual Fetcher still runs every public-DNS, redirect/path and robots check.
+    def resolve(host,port,*args,**kwargs):
+        if host=='documentation.example.org':return [(socket.AF_INET,socket.SOCK_STREAM,6,'',('1.1.1.1',port))]
+        return real_resolve(host,port,*args,**kwargs)
+    def connect(address,*args,**kwargs):
+        if address==('1.1.1.1',80):address=('127.0.0.1',server.server_port)
+        return real_connect(address,*args,**kwargs)
+    monkeypatch.setattr(socket,'getaddrinfo',resolve);monkeypatch.setattr(socket,'create_connection',connect)
+    yield SimpleNamespace(origin=origin,state=state)
+    server.shutdown();server.server_close();thread.join(5)

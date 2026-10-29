@@ -10,7 +10,7 @@ from c0_ingest.client import C0
 from c0_ingest.errors import C0Error
 from c0_projects.cli import bootstrap
 from c0_projects.model import Item, source_config, sha
-from c0_projects.publish import parts, sync_part, approved
+from c0_projects.publish import save_snapshot,parts, sync_part, approved
 from test_ingestion_samples_http import sample_connection
 from test_knowledge_http import knowledge_http
 from test_mcp_http import transport
@@ -45,17 +45,27 @@ def test_source_repeat_changed_and_lost_publication_reply_preserve_versions(samp
         monkeypatch.setattr(client,'call',fail_after_save)
         with pytest.raises(C0Error):sync_part(client,part,journal,definition_hash=sha(definition),attempts=4,seconds=0)
         first=sync_part(client,part,journal,definition_hash=sha(definition),attempts=4,seconds=0)
+        save_snapshot(client,item,[first])
         again=sync_part(client,part,journal,definition_hash=sha(definition),attempts=4,seconds=0)
         assert first==again and first['version_id']==lost[0]
         assert len(client.call('source_versions_list',source_id=first['source_id'])['versions'])==1
         changed=next(parts(Item('documents','article.md','Original',b'Changed original evidence.\n','text/markdown')))
         second=sync_part(client,changed,journal,definition_hash=sha(definition),attempts=4,seconds=0)
         assert second['source_id']==first['source_id'] and second['version_id']!=first['version_id']
-        versions=client.call('source_versions_list',source_id=first['source_id'])['versions']
-        assert len(versions)==2
-        assert client.call('documents_get',version_id=first['version_id'])['body']=='Original café evidence.\n'
-        history=client.call('project_records_list',kind='source_sync_history_v1')['objects']
-        assert len(history)==2 and {r['data']['version_id'] for r in history}=={first['version_id'],second['version_id']}
+        assert client.call('source_documents_get',logical_document_id=save_snapshot(client,changed.item,[second])['id'])['body']==changed.content.decode()
+        assert len(client.call('source_versions_list',source_id=first['source_id'])['versions'])==1
+        with pytest.raises(C0Error,match='content_superseded'):client.call('documents_get',version_id=first['version_id'])
+        with pytest.raises(C0Error):client.call('project_records_list',kind='source_sync_history_v1')
+        # The applied earlier observation cannot roll back a newer generation.
+        with pytest.raises(C0Error,match='superseded'):sync_part(client,part,journal,definition_hash=sha(definition),attempts=4,seconds=0)
+        # A fresh observation returning to A is a valid new update, with new IDs.
+        returned=Item('documents','article.md','Original',item.content,'text/markdown',provenance=item.provenance)
+        third=sync_part(client,next(parts(returned)),journal,definition_hash=sha(definition),attempts=4,seconds=0)
+        restored=save_snapshot(client,returned,[third])
+        assert restored['id']==save_snapshot(client,returned,[third])['id']
+        assert third['source_id']==first['source_id'] and third['version_id'] not in (first['version_id'],second['version_id'])
+        assert client.call('source_documents_get',logical_document_id=restored['id'])['body']==item.content.decode()
+        assert len(client.call('source_versions_list',source_id=third['source_id'])['versions'])==1
     finally:client.close()
 
 
@@ -69,7 +79,7 @@ def test_queued_extraction_cannot_be_claimed_verified_and_cursors_do_not_advance
         bad={k:v for k,v in pending['data'].items() if k!='key'};bad['sync_status']='verified'
         with pytest.raises(C0Error):
             client.call('project_source_status_set',data={'data':bad,'expected_revision':pending['revision'],'idempotency_key':'premature'})
-        assert not client.call('project_records_list',kind='source_sync_history_v1')['objects']
+        with pytest.raises(C0Error):client.call('project_records_list',kind='source_sync_history_v1')
     finally:client.close()
 
 
@@ -146,10 +156,9 @@ def test_large_source_shrink_has_exact_current_snapshot_and_retained_old_parts(s
         second=save_snapshot(client,short,current)
         assert second['id']==first['id'] and len(second['data']['part_receipt_ids'])==1
         assert save_snapshot(client,short,current)==second
-        histories=client.call('project_records_list',kind='source_snapshot_history_v1')['objects']
-        assert len(histories)==2 and histories[0]['data']['part_receipt_ids']==first['data']['part_receipt_ids']
-        prior=client.call('objects_get',object_id=first['data']['part_receipt_ids'][0])
-        assert prior['data']['version_id']==initial[0]['version_id']
+        with pytest.raises(C0Error):client.call('project_records_list',kind='source_snapshot_history_v1')
+        for old in initial:
+            with pytest.raises(C0Error,match='content_superseded'):client.call('documents_get',version_id=old['version_id'])
         bad={'connector_id':'documents','external_id':short.external_id,'content_hash':short.content_hash,
             'part_receipt_ids':[row['receipt_id'] for row in initial],'expected_revision':second['revision'],'idempotency_key':'wrong-old-parts'}
         with pytest.raises(C0Error):client.call('project_source_snapshot_set',data=bad)

@@ -39,6 +39,12 @@ def select(project: Path, source: str) -> bool:
         raise ValueError("Use one inline Core source declaration")
     lines[positions[0]] = 'czero-core = { path = "../packages/czero-core", editable = false }\n'
     updated = "".join(lines)
+    producer=tomllib.loads((project.parent/'../packages/czero-core/pyproject.toml').read_text())['project']['version']
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',producer):raise ValueError('Invalid producer Core version')
+    # The generated producer manifest uses an exact local version. The declared
+    # released consumer range and frozen lock in Git remain untouched.
+    updated,count=re.subn(r'([\"\'])czero-core[^\"\']*\1',lambda match:match[1]+'czero-core=='+producer+match[1],updated)
+    if count!=1:raise ValueError('Use one Core dependency')
     if tomllib.loads(updated)["tool"]["uv"]["sources"]["czero-core"] != local:
         raise ValueError("Local source selection failed")
     project.write_text(updated)

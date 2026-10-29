@@ -18,7 +18,7 @@ class FilteredEmbeddingStore(EmbeddingStore):
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id '''
         source += filters._joins('source_version', 'v.id', 'v.number')
         source += ''' WHERE c.id=e.source_chunk_id AND c.space_id=:space AND s.space_id=:space
-            AND v.state='ready' AND ''' + filters._predicate('v.created_at', 's.deleted')
+            AND s.current_version_id=v.id AND v.state='ready' AND ''' + filters._predicate('v.created_at', 's.deleted')
         wiki = '''SELECT 1 FROM c0_wiki_chunks w JOIN c0_wiki_revisions r ON r.id=w.revision_id
             JOIN c0_wiki_pages p ON p.id=r.page_id '''
         wiki += filters._joins('wiki_revision', 'r.id', 'r.number')
@@ -58,7 +58,7 @@ class FilteredEvidenceSearch(SearchService):
             ''' + filters._columns() + ''' FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
             ''' + filters._joins('source_version', 'v.id', 'v.number') + '''
-            WHERE c.space_id=:space AND s.space_id=:space AND v.state='ready' AND :chunks
+            WHERE c.space_id=:space AND s.space_id=:space AND s.current_version_id=v.id AND v.state='ready' AND :chunks
             AND c.search_vector @@ websearch_to_tsquery('simple',:query)
             AND ''' + filters._predicate('v.created_at', 's.deleted')
 

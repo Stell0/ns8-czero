@@ -50,8 +50,10 @@ Prefer one REST file upload for text/Markdown above the128 KiB MCP bound when it
 fits the existing2 MiB/one-million-character extraction bounds. Reuse
 `publication_parts` and publisher reconciliation; preserve established multipart
 layouts on unchanged retries. Larger originals and legacy imports use verified
-parent snapshots with immutable part receipts, exact order/offset/hash checks and
+current parent snapshots with verified current part membership, exact order/offset/hash checks and
 whole-document readback through `source_documents_get`/`source_version_document_get`.
 Never concatenate retrieval chunks or create duplicate Wiki pages for browsing.
 Queued/failed parts do not prove complete publication; retain the last complete
-snapshot and all immutable historical citations.
+generation while staging. After successful publication, obsolete bodies are removed and expired exact citations explicitly return content_superseded.
+
+Source/Wiki content is latest-only. Stage and validate replacements, atomically publish whole documents, and remove retired bodies/derivatives/receipt copies. Retired exact evidence and superseded replays return authorized `content_superseded` (410). Preserve authored text and mark expired evidence stale. Back up and run the [preflight](../../../docs/latest-only-migration.md) before a separately authorized production upgrade. Website collectors use the [existing ingestion recipe](../../../samples/ingestion/examples/website/README.md), private jobs and approved public boundaries; no new OAuth/client stack or automatic schedules.
