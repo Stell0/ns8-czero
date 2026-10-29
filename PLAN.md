@@ -46,7 +46,10 @@ current-only probes and explicitly scoped fixture fix those causes; all eight
 actual independent wheel/archive package cases and 40 sequential storage cases
 pass. The native upgrade verifier now follows established disposable TLS trust
 restoration; initial ordering/DNS failures remain failed evidence, not acceptance.
-All full/native/final consumer gates remain required.
+All full/native/final consumer gates remain required. Initial multipart imports now
+have one visible body-free pending entry; the real Reader automatically opens the
+complete parent after publication. The 18-case document suite, including the
+10,000-parent bounded directory, and the real pending-to-current browser flow pass.
 
 The completed PR44 section below records its historical guarantees. Latest-only
 semantics explicitly supersede its content-history promises.

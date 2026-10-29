@@ -195,8 +195,8 @@ configurations for offline fixtures. No production source was imported.
 
 Readers and agents can open the complete logical original through
 `source_documents_get`/`source_version_document_get`, including current legacy
-multifile storage. Discovery shows verified parents once and excludes unpublished
-parts. Logical reconstruction uses verified current documents/part membership and verifies the
+multifile storage. Discovery shows verified parents once, or one incomplete entry before first
+publication. Other unpublished parts are not listed separately. Logical reconstruction uses verified current documents/part membership and verifies the
 full parent hash; search chunks are never concatenated. See
 [full-document contracts](../full-documents.md).
 

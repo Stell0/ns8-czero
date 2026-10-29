@@ -40,13 +40,20 @@ class DocumentService(SpaceBound):
             {'space':self._space(connection),'id':_uuid(identifier),'type':kind}).mappings().one_or_none()
 
     def browse_documents(self, actor, *, limit=50, offset=0):
-        """Summaries only; source parts appear once under their verified parent."""
+        """Summaries only; one initial pending entry or verified parent per document."""
         # Keep UUID columns indexable; managed receipt IDs are validated UUIDs.
         SourceService._page(limit, offset)
         with self.database.engine.begin() as connection:
             self._authorize(connection, actor)
             rows = connection.execute(text('''WITH parents AS MATERIALIZED (
                 SELECT id,data,space_id,updated_at,created_at FROM c0_objects WHERE space_id=:space AND type_name=:snapshot
+            ), hidden_parts AS MATERIALIZED (
+                SELECT receipt.space_id,receipt.data->>'source_id' AS source_id
+                FROM c0_objects receipt LEFT JOIN parents p ON p.space_id=receipt.space_id
+                    AND p.data->>'connector_id'=receipt.data->>'connector_id'
+                    AND p.data->>'external_id'=receipt.data->>'parent_external_id'
+                WHERE receipt.space_id=:space AND receipt.type_name IN (:receipt,:current_receipt)
+                    AND (receipt.type_name=:receipt OR receipt.data->>'part_number'<>'1' OR p.id IS NOT NULL)
             ), summaries AS (
                 SELECT s.id,s.title,s.metadata,s.updated_at,CASE WHEN s.current_version_id IS NULL THEN 'incomplete' ELSE COALESCE(v.state,'queued') END AS state,
                     COALESCE(v.media_type,'text/plain') AS media_type,false AS multipart,s.created_at AS sort_at
@@ -54,9 +61,8 @@ class DocumentService(SpaceBound):
                     SELECT state,media_type FROM c0_source_versions WHERE space_id=s.space_id AND source_id=s.id
                     ORDER BY (id=s.current_version_id) DESC,number DESC LIMIT 1
                 ) v ON true WHERE s.space_id=:space AND NOT s.deleted AND NOT EXISTS (
-                    SELECT 1 FROM c0_objects receipt WHERE receipt.space_id=s.space_id
-                    AND receipt.type_name IN (:receipt,:current_receipt)
-                    AND receipt.data->>'source_id'=s.id::text
+                    SELECT 1 FROM hidden_parts receipt WHERE receipt.space_id=s.space_id
+                    AND receipt.source_id=s.id::text
                 )
                 UNION ALL
                 SELECT p.id,COALESCE(s.title,p.data->>'external_id'),COALESCE(s.metadata,'{}'::jsonb),p.updated_at,

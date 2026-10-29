@@ -204,7 +204,14 @@ def test_part_identity_resolves_whole_parent_and_pending_parent_has_no_body(logi
     part=sync_part(client,next(parts(pending)),path/'pending-parent.json',definition_hash=sha(definition),attempts=4,seconds=0)
     unresolved=service.containing_document(actor,part['version_id'])
     assert unresolved['state']=='incomplete' and unresolved['body'] is None
-    assert UUID(part['source_id']) not in {row['id'] for row in service.browse_documents(actor)}
+    rows=service.browse_documents(actor)
+    queued=next(row for row in rows if row['id']==UUID(part['source_id']))
+    assert queued['state']=='incomplete' and queued['title']=='Pending parent'
+    assert service.read_document(actor,part['source_id'])['body'] is None
+    saved=save_snapshot(client,pending,[part])
+    ids={row['id'] for row in service.browse_documents(actor)}
+    assert UUID(saved['id']) in ids and UUID(part['source_id']) not in ids
+    assert service.read_document(actor,part['source_id'])['body']==pending.content.decode()
 
 
 def test_legacy_snapshot_reuses_its_explicit_old_immutable_receipt(logical):

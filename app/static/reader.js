@@ -193,7 +193,7 @@
     for(const id of doc.original_version_ids || [])if(C.uuid(id))$('reader-download').append(link('Download retained original','./api/v1/source-versions/'+id+'/original'));
     if(captured!==selection || request!==versionSequence)return;
     if(doc.state!=='ready' || typeof doc.body!=='string'){status('Complete document unavailable: '+doc.state+'.');
-      if(doc.state==='queued' || doc.state==='incomplete')pollTimer=setTimeout(()=>{if(captured===selection && request===versionSequence)loadLogical(doc.id,doc.revision_id,chunk);},4000);return;}
+      if(doc.state==='queued' || doc.state==='incomplete')pollTimer=setTimeout(()=>{if(captured===selection && request===versionSequence)loadLogical(doc.id,null,chunk);},4000);return;}
     const current=()=>captured===selection && request===versionSequence;
     $('reader-document').className=doc.media_type==='text/markdown'?'article-body source-document':'document-body';
     if(doc.media_type==='text/markdown'){if(!await C.fullMarkdown($('reader-document'),doc.body,$('reader-document-toc'),current,sourceBase(doc.metadata)))return;}

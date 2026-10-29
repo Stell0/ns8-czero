@@ -26,18 +26,27 @@ def test_real_crawl_publish_read_replace_and_unchanged(live,browser,documentatio
         'website':{'seeds':[site.origin+'/manual/article'],'allowed_roots':[site.origin+'/manual/'],
             'interval_ms':100,'language':'it','product':'Synthetic firewall','product_version':'14','manual':'Administrator manual'}})
     bootstrap(live.client,{'sources':[definition]},'explicit disposable website acceptance')
-    def crawl_publish():
+    def crawl_publish(show_pending=False):
         batch=website(definition,root=live.tmp)
         assert batch.status=='complete' and len(batch.items)==1
         item=batch.items[0]
         receipts=[sync_part(live.client,part,live.tmp/'website-publication.json',definition_hash=sha(definition),attempts=100,seconds=.1)
             for part in publication_parts(live.client,item)]
+        if show_pending:
+            browser.goto(live.origin+'/sources?'+urlencode({'space_id':live.space,'document':receipts[0]['source_id']}))
+            expect(browser.locator('#reader-status')).to_have_text('Complete document unavailable: incomplete.',timeout=20000)
+            expect(browser.locator('#reader-document')).to_be_empty()
         saved=save_snapshot(live.client,item,receipts)
+        if show_pending:
+            # The real reader polls the stable current link, without pinning an
+            # unpublished part identity, and opens the complete parent.
+            expect(browser.locator('#reader-status')).to_have_text('Complete document loaded.',timeout=20000)
+            expect(browser.locator('#reader-document')).to_contain_text('BEGIN-CRAWLED-DOCUMENT')
         document=live.client.call('source_documents_get',logical_document_id=saved['id'])
         assert document['body'].encode()==item.content
         assert document['text_hash']==hashlib.sha256(item.content).hexdigest()
         return saved,document,batch
-    first,document,_=crawl_publish()
+    first,document,_=crawl_publish(show_pending=True)
     chunk=live.client.call('document_chunks_list',document_id=document['parts'][0]['document_id'],limit=1)['chunks'][0]
     citation=live.client.call('citations_get',chunk_id=chunk['id'])
     browser.goto(live.origin+'/wiki?'+urlencode({'space_id':live.space}))
