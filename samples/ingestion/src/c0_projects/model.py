@@ -11,10 +11,10 @@ from uuid import UUID
 from c0_ingest.errors import C0Error
 from .formats import load_data
 
-ADAPTERS = {'local_files', 'http', 'rss_atom', 'sitemap', 'github', 'c0_space', 'wikiplant_export'}
+ADAPTERS = {'local_files', 'http', 'rss_atom', 'sitemap', 'website', 'github', 'c0_space', 'wikiplant_export'}
 DEFAULTS = {'enabled': True, 'include': [], 'max_items': 100, 'max_requests': 40,
     'max_bytes': 8 * 1024 * 1024, 'max_pages': 5, 'max_depth': 2, 'timeout': 15}
-FIELDS = set(DEFAULTS) | {'id','adapter','url','repository','root','paths','source_space_id','authorization_ref'}
+FIELDS = set(DEFAULTS) | {'id','adapter','url','repository','root','paths','source_space_id','authorization_ref','website'}
 
 
 def sha(value):
@@ -56,6 +56,10 @@ def source_config(value):
         if type(values) is not list or len(values)>100 or any(type(v) is not str or not v or len(v)>512 or '\0' in v for v in values):
             raise C0Error('invalid_source_selection')
     adapter=result['adapter']
+    if adapter=='website':
+        from .website import configuration
+        result['website']=configuration(result.get('website'))
+    elif 'website' in result:raise C0Error('website_configuration_requires_website_adapter')
     if adapter in ('http','rss_atom','sitemap'):
         public_url(result.get('url'))
     if adapter=='github':
