@@ -21,20 +21,51 @@ Actual baseline: 2322 Python/PostgreSQL/packaging, 207 Node, six real HTTPS brow
 cases, schema/shell/docs and 21 Robot dry runs pass. Full CI
 [40823668206](https://github.com/Stell0/ns8-czero/actions/runs/40823668206) and its
 downloaded native/privacy/five scan-SBOM pairs pass independent artifact audit.
-The feature's ten real-browser cases pass on `a291917`, including private-job
-resume and inert Git-pinned recipe ingestion. Fresh independently installed Core
-wheel upgrade/preflight from released 0.35.2 passes. Full candidate, Core
-publication, consumer-pin adoption and final native CI remain open.
+Frozen Core source `cf9c0fa38183e940877c13228a8ce753dfd07412` passes
+2352 Python/PostgreSQL/packaging cases, 207 Node controllers, ten real HTTPS
+browser cases, schema/shell/docs and 21 Robot dry runs. Full CI
+[40954071273](https://github.com/Stell0/ns8-czero/actions/runs/40954071273) passes;
+independently downloaded artifacts verify Debian update 21, Rocky installation
+26/three expected skips, eight browser workflows/privacy guards, 32 accessibility
+contexts, three OAuth-query artifacts with zero candidates and five scan/SBOM pairs.
+Actual independently installed predecessor 0.35.2 content survives the destructive
+upgrade with current identities intact; failed/corrupt preflights block removal.
 
-Bounded public smoke: NethVoice 20, NethSecurity 20, NethServer 20 pages; each
-22 requests and page-budget partial coverage. All 60 pages were published through
-the actual interfaces to disposable C0 and verified by full Markdown hash readback;
-a Reader opened one from each site. Private corpora remain outside Git. These
-results do not establish full corpus coverage or production deployment. Final
-smoke repeats the 60 full readbacks in 221.83 seconds. Per-site crawl/conversion
-seconds are 20.043/0.399, 20.489/0.343 and 19.935/0.530; publication/extraction/
-readback seconds are 31.321/7.212/4.905, 31.539/9.673/4.775 and
-30.929/8.586/4.899. All three remain page-budget partial coverage.
+Immutable [Core 0.36.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.36.0)
+is published at that source by
+[40964016296](https://github.com/Stell0/ns8-czero/actions/runs/40964016296).
+Downloaded wheel SHA-256 `e765f790fa979c38b598fdcaa0bf41936ba29523fca2fa31bb9191a30cb2bda9`
+and archive `24f9b04cc5fba68428693b78d0a112cd21dc1597dc996613bbceb760ee19e8ef`
+match published checksums. The application adopts its immutable tag/Git lock,
+`>=0.36.0,<0.37.0` and matching patch-only updater bounds. Default-image acceptance
+checks the actual installed source and latest-only schema/contracts. Final
+consumer full/native gates and PR review remain required; no merge or deployment
+is authorized.
+
+Bounded public smoke uses 20 pages each from NethVoice, NethSecurity and NethServer.
+After correcting article-header extraction, all 60 whole Markdown bodies and
+headings pass actual C0 interface/hash readback in fresh disposable spaces; a
+Reader opens one from each site. All 60 unchanged readbacks preserve generation
+identity and perform zero C0 writes. Each selection is page-budget partial
+coverage. Current cached HTML receives 20 conditional 304 responses per site and
+is reconverted with the new extractor fingerprint. No production data or instance
+is used. A transient NethSecurity DNS failure remains failed evidence; its bounded
+retry passes without weakening network restrictions.
+
+| Site | Verified pages | Requests / 304 | Crawl / conversion seconds | Publication / extraction / readback seconds |
+| --- | ---: | ---: | ---: | ---: |
+| nethvoice | 20 | 22 / 20 | 20.153 / 0.360 | 29.984 / 7.885 / 4.764 |
+| nethsecurity | 20 | 22 / 20 | 19.997 / 0.385 | 28.601 / 8.628 / 4.827 |
+| nethserver | 20 | 22 / 20 | 19.852 / 0.433 | 29.288 / 8.084 / 4.581 |
+
+Fetched corpora stay private. The crawler keeps current representations and a
+bounded resumable pending scan, then retires only its owned obsolete payloads.
+Interrupted frontier progress is replayed until the batch is durably saved;
+robots-denied discovery stays partial. Dedicated website private jobs may target
+the same project as other adapters, but mixed-adapter private jobs are rejected.
+App original-file delivery pins and hashes the authorized generation before
+streaming; an in-flight retired generation remains explicitly identified while
+new exact requests return authorized 410. No external timer is installed.
 
 Initial feature CI [40945036958](https://github.com/Stell0/ns8-czero/actions/runs/40945036958)
 exposed a clean-environment producer override error before tests. Its produced
