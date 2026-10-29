@@ -38,7 +38,7 @@ def test_legacy_operation_names_roles_scopes_and_rest_bindings(application):
     schema = app.openapi()
     for binding in baseline['rest_bindings']:
         if binding['operation'] in REMOVED_HISTORY_OPERATIONS:
-            assert 'x-c0-operation' not in schema['paths'][binding['path']][binding['method']]
+            assert binding['path'] not in schema['paths']
             continue
         assert schema['paths'][binding['path']][binding['method']]['x-c0-operation']['name'] == binding['operation']
 
