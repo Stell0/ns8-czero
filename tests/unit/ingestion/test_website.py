@@ -235,3 +235,21 @@ def test_fetch_rechecks_shared_byte_budget_after_redirect_validation(monkeypatch
         Fetcher(definition()).response('https://docs.example.org/it/docs/manual',validate_url=validate,
             interval=interval,remaining_bytes=lambda:remaining[0])
     assert len(delays)==1
+
+
+def test_article_header_is_content_and_cache_reprocesses_converter_upgrade(tmp_path,monkeypatch):
+    import c0_projects.website as adapter
+    class Header(Site):
+        def response(self,url,**kwargs):
+            raw,final,media,headers=super().response(url,**kwargs)
+            if media=='text/html' and raw:
+                raw=raw.replace(b'<h1>',b'<header><h1>',1).replace(b'</h1>',b'</h1><p>Meaningful article introduction</p></header>',1)
+            return raw,final,media,headers
+    selected=definition(exclude=['*/it/docs/next'])
+    before=Header();first=website(selected,root=tmp_path,fetcher=before)
+    assert first.status=='complete' and first.items[0].content.startswith(b'# ')
+    assert b'Meaningful article introduction' in first.items[0].content
+    monkeypatch.setattr(adapter,'EXTRACTOR',adapter.EXTRACTOR+'/upgrade-regression')
+    conditional=Header();again=website(selected,root=tmp_path,fetcher=conditional)
+    assert conditional.conditional==1 and again.items[0].content==first.items[0].content
+    assert again.items[0].provenance['extractor'].endswith('/upgrade-regression')

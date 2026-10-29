@@ -816,12 +816,12 @@
     {
       "path": "docs/full-documents.md",
       "mode": "100644",
-      "sha256": "4bd76e68bb990f6864ecc9434a209c75a8741db550e5a26b9ac4df01f044e8b6"
+      "sha256": "71b056bbfc4477bd5f6220f6269f654f8523583aca8336e79a83c5dab47d4dae"
     },
     {
       "path": "samples/ingestion/src/c0_projects/website.py",
       "mode": "100644",
-      "sha256": "ea758db27b7d6174a25adc3d12d61ff713f20d892bf035ef117d983e5d9c8d2d"
+      "sha256": "81f2787572c9d4c1d8349ceb43943d208bc9041b55117cb8cfd7b6458606b6a4"
     },
     {
       "path": "samples/ingestion/src/c0_projects/website_state.py",
@@ -836,7 +836,7 @@
     {
       "path": "tests/unit/ingestion/test_website.py",
       "mode": "100644",
-      "sha256": "7e43d81adc698c7f73a3fa518e7760f1d4627fe1b2d11920ebc694a2d81839db"
+      "sha256": "5ee9b99ff1677d849cce751c6ba117a19df1d1a9aed66a272c832fdc521c577f"
     },
     {
       "path": "samples/ingestion/examples/website/generic.json",

@@ -19,7 +19,7 @@ from c0_ingest.state import atomic,read,safe_path
 from .fetch import Fetcher,FetchError
 from .model import Item,Batch,now,public_url,sha
 
-EXTRACTOR='markdownify-1.2.3/c0-website-1'
+EXTRACTOR='markdownify-1.2.3/c0-website-2'
 DEFAULTS={'seeds':[],'allowed_roots':[],'sitemaps':[],'exclude':[],
     'profile':'generic','selectors':[],'remove_selectors':[],
     'language':'','product':'','product_version':'','manual':'',
@@ -28,7 +28,7 @@ DEFAULTS={'seeds':[],'allowed_roots':[],'sitemaps':[],'exclude':[],
 SELECTORS={'docusaurus':['article .theme-doc-markdown','.theme-doc-markdown','article'],
     'sphinx':['[role=main] .body','[role=main]','div.document div.body','article'],
     'generic':['article','main']}
-NOISE='script,style,noscript,svg,nav,footer,header,form,button,.table-of-contents,.theme-doc-toc-mobile,.theme-doc-breadcrumbs,.theme-doc-footer,.headerlink,.copybutton,.copy-code-button,.toc-backref > span'
+NOISE='script,style,noscript,svg,nav,footer,form,button,.table-of-contents,.theme-doc-toc-mobile,.theme-doc-breadcrumbs,.theme-doc-footer,.headerlink,.copybutton,.copy-code-button,.toc-backref > span'
 TRACKING={'fbclid','gclid','dclid','msclkid','mc_cid','mc_eid'}
 MAX_FRONTIER=10000
 
