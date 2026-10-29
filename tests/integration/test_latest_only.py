@@ -1,7 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Publication, deletion and payload-free retries against real PostgreSQL."""
 import json
-from uuid import UUID
+from uuid import UUID,uuid4
 
 import pytest
 from sqlalchemy import text
@@ -14,6 +14,7 @@ from test_wiki import wiki,create_page,create_entity
 from test_knowledge import knowledge,evidence
 from test_knowledge_http import knowledge_http
 from test_auth_http import application
+from test_spaces_http import space_http
 
 
 def test_source_atomic_failure_replacement_and_a_b_a(sources):
@@ -121,7 +122,7 @@ def test_claim_publication_race_invalidates_evidence_after_committed_claim(knowl
     assert current['evidence'][0]['body'] is None
 
 
-def test_exact_native_content_upgrade_verifier_uses_signed_http(knowledge_http):
+def test_exact_native_content_upgrade_verifier_uses_signed_http(knowledge_http,space_http):
     import runpy
     from pathlib import Path
     from types import SimpleNamespace
@@ -130,8 +131,12 @@ def test_exact_native_content_upgrade_verifier_uses_signed_http(knowledge_http):
     probe=runpy.run_path(str(Path(__file__).parents[1]/'current_content_fixture.py'))
     app,owner,*_=knowledge_http
     with TestClient(app,headers={'Authorization':'Bearer '+owner}) as http:
+        created=http.post('/api/v1/spaces',json={'name':'Disposable content upgrade '+uuid4().hex,'idempotency_key':uuid4().hex})
+        assert created.status_code==201
+        selected=created.json()['id'];space_http[1].append(selected)
         def api(path,data=None,method=None,csrf=None):
             if '/versions' in path:Worker(knowledge_http[4],app.state.jobs.registry).tick()
+            path+=('&' if '?' in path else '?')+'space_id='+selected
             response=http.request(method or 'GET',path,json=data)
             return response.status_code,response.content,str(response.url)
         browser=SimpleNamespace(origin='https://c0.example.test',api=api);profile={'csrf_token':None}
