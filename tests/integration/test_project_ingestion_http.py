@@ -83,6 +83,30 @@ def test_queued_extraction_cannot_be_claimed_verified_and_cursors_do_not_advance
     finally:client.close()
 
 
+def test_batch_staging_queues_all_before_waiting_and_recovers_through_normal_readback(sample_connection,knowledge_http,tmp_path):
+    from czero_core.worker import Worker
+    config,_=sample_connection;client,definition=setup(config)
+    try:
+        originals=[Item('documents',name,name,('Complete '+name+' body.\n').encode()) for name in ('first','second')]
+        pieces=[next(parts(item)) for item in originals];journal=tmp_path/'batch.json'
+        timings={}
+        staged=[sync_part(client,part,journal,definition_hash=sha(definition),stage_only=True,timings=timings) for part in pieces]
+        assert timings['publication_seconds']>0
+        assert all(r['status']=='queued' for r in staged)
+        assert all(client.call('project_source_status_get',connector_id='documents',external_id=part.external_id)['data']['sync_status']=='queued' for part in pieces)
+        assert client.call('knowledge_search',options={'query':'Complete','mode':'text','rerank':'off'})['hits']==[]
+        # Repeating the submitted stage reconciles the same versions and journal.
+        assert [sync_part(client,part,journal,definition_hash=sha(definition),stage_only=True) for part in pieces]==staged
+        worker=Worker(knowledge_http[4],knowledge_http[0].state.jobs.registry)
+        worker.tick();worker.tick()
+        for item,part,queued in zip(originals,pieces,staged):
+            verified=sync_part(client,part,journal,definition_hash=sha(definition),attempts=1,seconds=0)
+            assert verified['status']=='verified' and verified['version_id']==queued['version_id']
+            saved=save_snapshot(client,item,[verified])
+            assert client.call('source_documents_get',logical_document_id=saved['id'])['body']==item.content.decode()
+    finally:client.close()
+
+
 def test_partial_collection_keeps_success_cursor_and_recovers_with_fenced_revision(sample_connection,knowledge_http,tmp_path):
     from c0_projects.cli import connector_status
     from c0_projects.model import Batch

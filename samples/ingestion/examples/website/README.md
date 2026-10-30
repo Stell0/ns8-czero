@@ -59,6 +59,13 @@ pending run first, or scans a new bounded selection after verified publication.
 Runs and OAuth rotation use the existing locks; uncertain refresh requires the
 existing connection recovery procedure, never deleting a rotation marker.
 
+For a worker that wakes periodically, `resume --apply --batch-extraction` (or
+`sync --apply --batch-extraction`) queues the bounded saved selection before
+waiting for extraction. Queued receipts are incomplete; the ordinary full-body
+and whole-document checks still gate publication and frontier acknowledgement.
+An interrupted staging pass resumes from its existing journal and versions.
+This does not change worker settings or start a second worker.
+
 JSON is the default report; `--report-format human` prints a brief operator summary. Exit codes are `0` complete/dry-run, `1` blocked and `2` partial. Reports separate crawl, conversion, publication, extraction wait and readback durations. A page,
 request, byte, sitemap or frontier limit is partial coverage. Network failures,
 429/5xx, robots denial, missing pages and failed conversion never delete C0
@@ -73,6 +80,10 @@ text. Headings, tables, lists, code, admonitions, tab variants, links and image
 alternative text survive conversion. Remote media and raw HTML remain inactive
 in C0. Conditional 304 responses reuse a verified current HTML representation;
 an extractor/configuration upgrade still reconverts that representation.
+Highlighted Docusaurus code lines retain indentation, empty lines and shell
+continuations. Extractor revision 3 reconverts the current HTML cache to correct
+older conversions; stable document identities remain, and changed normalized
+bytes publish a new complete generation before old evidence expires.
 
 Private state contains a bounded frontier, one current HTML representation per
 URL and a pending publication scan. Only crawler-owned older verified scans are

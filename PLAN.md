@@ -1,5 +1,18 @@
 # C0 roadmap
 
+## Operational documentation and retrieval tooling
+
+Implement a small external, read-only retrieval runner using the existing
+dedicated ingestion connection and complete-document APIs. Freeze current
+identities/hashes before and after each mode; retain provisional analyst labels,
+raw chunk rankings and parent-deduplicated metrics privately. Missing providers
+and comparator access remain explicit unavailability, not simulated measurements.
+An opt-in external publisher batch queues bounded extraction before the existing
+verification/publication path, preserving uncertain-intent and lease contracts.
+Acceptance includes hand-computable metrics, current-corpus/authority/fallback
+regressions, real PostgreSQL staging/recovery and the existing HTTPS worker/browser
+suite, followed by full candidate CI. Runtime/Core storage behavior is unchanged.
+
 > Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](docs/latest-only-migration.md).
 
 ## Active: latest-only storage and reusable website crawler
