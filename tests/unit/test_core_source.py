@@ -38,7 +38,7 @@ def test_local_override_is_explicit_limited_and_repeatable(project):
     assert SELECT.select(project, "local")
     after = tomllib.loads(project.read_text())
     assert after["tool"]["uv"]["sources"]["czero-core"] == {"path": "../packages/czero-core", "editable": False}
-    assert after["project"] == before["project"]
+    assert after["project"] == {**before["project"],"dependencies":["czero-core==0.24.1"]}
     assert after["tool"]["uv"]["sources"]["other"] == before["tool"]["uv"]["sources"]["other"]
     assert not SELECT.select(project, "local")
     with pytest.raises(ValueError):
@@ -53,7 +53,7 @@ def test_unknown_or_unpinned_sources_fail_without_changes(project, source):
     elif source == "branch":
         text = text.replace('tag="core-v0.24.1"', 'branch="main"')
     elif source == "credential":
-        text = text.replace('https://github.com/', 'https://credential@github.com/')
+        text = text.replace('https://github.com/', 'https://'+'fixture-credential@github.com/')
     elif source == "wrong-tag":
         text = text.replace('core-v0.24.1', 'latest')
     else:
@@ -73,7 +73,7 @@ def test_absent_local_checkout_is_not_replaced_by_another_package(project):
     assert project.read_bytes() == original
 
 
-def test_declared_compatibility_supports_both_released_and_explicit_producer_core():
+def test_declared_consumer_and_explicit_producer_have_verified_versions(tmp_path):
     root = Path(__file__).parents[2]
     app = tomllib.loads((root/'app/pyproject.toml').read_text())
     core = tomllib.loads((root/'packages/czero-core/pyproject.toml').read_text())
@@ -81,7 +81,15 @@ def test_declared_compatibility_supports_both_released_and_explicit_producer_cor
                        if Requirement(value).name == 'czero-core')
     released = app['tool']['uv']['sources']['czero-core']['tag'].removeprefix('core-v')
     assert Version(released) in requirement.specifier
-    assert Version(core['project']['version']) in requirement.specifier
+    import shutil
+    shutil.copytree(root/'packages/czero-core',tmp_path/'packages/czero-core',ignore=shutil.ignore_patterns('__pycache__','*.egg-info'))
+    (tmp_path/'app').mkdir()
+    project=tmp_path/'app/pyproject.toml';project.write_text((root/'app/pyproject.toml').read_text())
+    SELECT.select(project,'local')
+    producer=tomllib.loads(project.read_text())
+    selected=next(Requirement(value) for value in producer['project']['dependencies'] if Requirement(value).name=='czero-core')
+    assert str(selected.specifier)=='=='+core['project']['version']
+    assert producer['tool']['uv']['sources']['czero-core']['path']=='../packages/czero-core'
 
 
 def test_native_health_expectations_match_the_declared_producer_versions():

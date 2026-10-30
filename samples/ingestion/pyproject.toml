@@ -4,16 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "c0-ingestion-samples"
-version = "0.2.0"
+version = "0.3.0"
 description = "Reusable C0 ingestion helpers and a public GitHub example"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 license = "GPL-3.0-or-later"
-dependencies = ["mcp==2.3.0", "httpx2==2.13.1", "anyio==4.15.1", "PyYAML==6.0.3"]
+dependencies = ["mcp==2.3.0", "httpx2==2.13.1", "anyio==4.15.1", "PyYAML==6.0.3", "markdownify==1.2.3", "beautifulsoup4==4.14.3"]
 
 [project.scripts]
 c0-ingest = "c0_ingest.cli:main"
 c0-projects = "c0_projects.cli:main"
+c0-docs-recipe = "c0_projects.recipe:main"
 
 [project.optional-dependencies]
 test = ["pytest==8.4.2"]

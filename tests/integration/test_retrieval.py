@@ -1,3 +1,4 @@
+from czero_core.current_content import ContentSuperseded
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 import os
@@ -45,7 +46,7 @@ def test_text_search_excludes_obsolete_wiki_and_archives_preserves_raw_history(s
     page=create_page(wiki,body=query)
     changed=wiki[0].update_page(wiki[1],page['id'],'New','New current body',expected_revision=1,idempotency_key='change')
     assert service.search(wiki[1],query)['hits']==[]
-    assert wiki[0].get_page(wiki[1],page['id'],revision=1)['content']['body']==query
+    with pytest.raises(ContentSuperseded):wiki[0].get_page(wiki[1],page['id'],revision=1)
     query='archived'+uuid4().hex
     page2=create_page(wiki,body=query)
     version=upload(source,data=query.encode());execute(source,'source.extract',version['id'])
@@ -53,7 +54,8 @@ def test_text_search_excludes_obsolete_wiki_and_archives_preserves_raw_history(s
     wiki[0].delete_page(wiki[1],page2['id'],expected_revision=1,idempotency_key='archive')
     source[0].delete(source[1],version['source_id'],expected_revision=1)
     assert service.search(wiki[1],query)['hits']==[]
-    assert wiki[0].get_page(wiki[1],page2['id'],revision=1)['content']['body']==query
+    assert wiki[0].get_page(wiki[1],page2['id'])['content']['body']==query
+    with pytest.raises(ContentSuperseded):wiki[0].get_page(wiki[1],page2['id'],revision=1)
 
 
 def test_search_roles_are_rechecked_and_invalid_options_are_bounded(search):

@@ -7,6 +7,10 @@ import json
 import re
 import sys
 from czero_core import core_version
+from czero_core.database import SCHEMA_REVISION
+from czero_core.current_content import ContentSuperseded
+from czero_core.retention import preflight
+from czero_core.documents import DocumentService
 
 version, commit = sys.argv[1:]
 assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version)
@@ -19,4 +23,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-print('Released image Core matches committed version and immutable Git source; no NS8 SDK')
+assert SCHEMA_REVISION == '0023_current_content'
+assert str(ContentSuperseded()) == 'content_superseded'
+assert callable(preflight) and callable(DocumentService.read_document)
+print('Released image Core matches immutable Git lock and latest-only schema/contracts; no NS8 SDK')

@@ -133,6 +133,12 @@ class Worker:
                 with connection.begin():
                     self._recover(connection,now)
                     self.jobs._enqueue_due(connection,now)
+                try:cleanup=self.registry.get('source.cleanup')
+                except ValueError:cleanup=None
+                if cleanup:
+                    with connection.begin():
+                        with deadline(min(cleanup.timeout_seconds,10)):
+                            cleanup.execute(connection,{'version_id':'00000000-0000-0000-0000-000000000000'})
                 while processed < max_jobs and time.monotonic() - started < budget_seconds:
                     with connection.begin():
                         job = self._claim(connection,datetime.now(timezone.utc))

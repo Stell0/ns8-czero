@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "server_url": "https://c0.example.org/mcp",
+  "project_space_id": "00000000-0000-4000-8000-000000000001",
+  "sources": [
+    {
+      "enabled": true,
+      "include": [],
+      "max_items": 20,
+      "max_requests": 80,
+      "max_bytes": 8388608,
+      "max_pages": 20,
+      "max_depth": 2,
+      "timeout": 15,
+      "id": "manuals",
+      "adapter": "website",
+      "website": {
+        "seeds": [
+          "https://docs.example.org/manual/"
+        ],
+        "allowed_roots": [
+          "https://docs.example.org/manual/"
+        ],
+        "sitemaps": [],
+        "exclude": [
+          "*/search*",
+          "*/tags/*",
+          "*/login*",
+          "*.pdf",
+          "*.zip"
+        ],
+        "profile": "generic",
+        "selectors": [],
+        "remove_selectors": [],
+        "language": "en",
+        "product": "Example product",
+        "product_version": "",
+        "manual": "Administrator manual",
+        "interval_ms": 1000,
+        "max_total_bytes": 33554432,
+        "max_cache_pages": 1000,
+        "configuration_version": "1"
+      }
+    }
+  ]
+}

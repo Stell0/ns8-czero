@@ -85,6 +85,9 @@ class OperationCatalog:
             if name:
                 metadata = self.registry.definition(name)
                 route.operation_id = name
+                if name.startswith(('wiki_','source','documents_','document_chunks_','citations_','knowledge_','claims_','project_')):
+                    route.responses[410]={'description':'Exact content or replay result was superseded; read current state and reconcile.',
+                        'content':{'application/json':{'schema':{'type':'object','properties':{'detail':{'type':'string','enum':['content_superseded']}},'required':['detail']},'example':{'detail':'content_superseded'}}}}
                 route.description = metadata['description']
                 route.openapi_extra = {**(route.openapi_extra or {}), 'x-c0-operation': {
                     **{key: metadata[key] for key in ('name', 'minimum_role', 'required_scope', 'read_only')},

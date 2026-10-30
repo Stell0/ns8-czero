@@ -39,7 +39,7 @@ An unchanged replay-protected request retains its idempotency key. Changed reque
 
 ## Runtime responsibilities
 
-C0 stores and serves knowledge, evidence, immutable history, deterministic jobs and optional retrieval. External agents perform reasoning and synthesis. The application contains no autonomous LLM, arbitrary user shell executor, local inference engine or second graph database.
+C0 stores and serves knowledge, current evidence, payload-free synchronization events, deterministic jobs and optional retrieval. External agents perform reasoning and synthesis. The application contains no autonomous LLM, arbitrary user shell executor, local inference engine or second graph database.
 
 Optional embeddings/scoring can incur configured external-provider effects. Text search remains usable independently. Retrieval/provider quality needs corpus-specific evaluation. Session policy, safe metadata fetching and retained evidence contracts remain enforced by Core/application code, not by plugin instructions.
 
@@ -83,3 +83,5 @@ required before claiming released project availability.
 
 See [complete source documents](full-documents.md) for logical identities, bounded
 summary/history APIs, safe rendering and exact historical part resolution.
+
+Source and Wiki content uses [latest-only storage](latest-only-migration.md). Historical source/Wiki body reads, rollback and content-history export are removed. History compatibility routes list current content only and are omitted from OpenAPI discovery; MCP no longer advertises `source_document_history`, `wiki_revisions_list` or `knowledge_annotations_history`. Expired exact content and superseded replay requests return HTTP 410 / MCP `content_superseded`, after current space authorization.

@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
-from project_contract import PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT
+from project_contract import PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT, REMOVED_HISTORY_OPERATIONS, CHANGED_VALIDATION_CONTRACTS
 
 from czero_app.tool_guidance import DESCRIPTIONS
 from test_auth_http import application, ORIGIN
@@ -34,11 +34,21 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
     assert len(actual) == TOOL_COUNT
     assert {item['name'] for item in actual} - {item['name'] for item in frozen['operations']} == PROJECT_OPERATIONS | DOCUMENT_OPERATIONS
     original = [item for item in actual if item['name'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS]
-    assert len(original) == len(frozen['operations']) == 77
-    assert [contract.operation_contract(item) for item in original] == frozen['operations']
+    assert len(original)==75 and len(frozen['operations'])==77
+    current=json.loads((Path(__file__).parents[1]/'fixtures/tool_guidance/latest_only_contract.json').read_text())
+    latest={row['name']:row for row in current['operations']}
+    expected=[]
+    for row in frozen['operations']:
+        if row['name'] in REMOVED_HISTORY_OPERATIONS:continue
+        if row['name'] in CHANGED_VALIDATION_CONTRACTS:
+            assert all(latest[row['name']][key]==row[key] for key in ('name','minimum_role','required_scope','read_only'))
+            expected.append(latest[row['name']])
+        else:expected.append(row)
+    assert [contract.operation_contract(item) for item in original]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()
-    assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS] == frozen['rest_bindings']
+    assert not any(path.endswith('/history') or path.endswith('/revisions') for path in schema['paths'])
+    assert [item for item in contract.route_contract(schema) if item['operation'] not in PROJECT_OPERATIONS | DOCUMENT_OPERATIONS] == [row for row in frozen['rest_bindings'] if row['operation'] not in REMOVED_HISTORY_OPERATIONS]
     for methods in schema['paths'].values():
         for route in methods.values():
             if isinstance(route, dict) and 'x-c0-operation' in route:
@@ -75,6 +85,11 @@ def test_all_sdk_wire_capability_and_openapi_hints_match_actual_behavior(transpo
             rest = (await http.get('/agents/capabilities.json')).json()
             rest_by_name = {item['name']:item for item in rest['operations']}
             assert len(rest_by_name) == TOOL_COUNT and rest['guidance']['version'] == 2
+            guidance=(await http.get('/agents?view=tools')).text
+            assert 'historical bodies are removed' in guidance
+            assert 'preserve revision history' not in guidance
+            assert 'independent histories tied to exact content revisions' not in guidance
+            assert all(name not in rest_by_name for name in REMOVED_HISTORY_OPERATIONS)
             async with child.router.lifespan_context(child):
                 async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
                         headers={'Authorization':'Bearer '+pair.access_token},

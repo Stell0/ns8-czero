@@ -441,6 +441,9 @@ ADAPTERS={'local_files':local_files,'http':http,'rss_atom':rss_atom,'sitemap':si
 
 
 def collect(config, *, root, fetcher=None, **kwargs):
+    if config['adapter']=='website':
+        from .website import website
+        return website(config,root=Path(root),fetcher=fetcher,**kwargs)
     try:
         return ADAPTERS[config['adapter']](config,root=Path(root),fetcher=fetcher or Fetcher(config),**kwargs)
     except FetchError as error:

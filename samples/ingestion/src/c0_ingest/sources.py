@@ -1,6 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Reusable original-text ingestion and bounded independent readback."""
-from time import sleep
+from time import sleep,perf_counter
 from .errors import C0Error
 from .state import digest
 
@@ -13,14 +13,15 @@ def submit_text(client, *, body, title, metadata, external_key, media_type='text
                'idempotency_key': digest([client.space_id, external_key, digest(raw)])}
     if source:
         current = client.call('sources_get', source_id=source['id'])
-        request.update(source_id=source['id'], expected_revision=current['revision'],
-                       title=current['title'], metadata=current['metadata'])
+        request.update(source_id=source['id'], expected_revision=current['revision'])
+        request['idempotency_key']=digest([client.space_id,external_key,digest(raw),source['id'],current['revision'],title,metadata])
     return client.call('sources_ingest_text', data=request)
 
 
-def verify_document(client, version, body, *, attempts=20, seconds=3):
+def verify_document(client, version, body, *, attempts=20, seconds=3, timings=None):
     if type(attempts) is not int or not 1 <= attempts <= 100 or not 0 <= seconds <= 30:
         raise C0Error('Invalid bounded extraction wait')
+    started=perf_counter()
     for attempt in range(attempts):
         if attempt == 0 and version['state'] == 'ready':
             current = version
@@ -39,7 +40,10 @@ def verify_document(client, version, body, *, attempts=20, seconds=3):
             sleep(seconds)
     else:
         raise C0Error('Source indexing not ready within bounded wait; resume')
+    if timings is not None:timings['extraction_seconds']=timings.get('extraction_seconds',0.)+perf_counter()-started
+    started=perf_counter()
     document = client.call('documents_get', version_id=version['id'])
     if document['body'] != body or digest(document['body'].encode()) != version['content_hash']:
         raise C0Error('Verbatim source body/hash readback mismatch')
+    if timings is not None:timings['readback_seconds']=timings.get('readback_seconds',0.)+perf_counter()-started
     return document

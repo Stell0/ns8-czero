@@ -78,7 +78,7 @@ def test_0019_native_authority_is_preserved_without_persistent_upgrade():
                 idle,seconds=c.execute(text('SELECT browser_idle_until,browser_idle_seconds FROM c0_sessions')).one()
                 assert idle.timestamp()==pytest.approx(current+3600,abs=0.00001,rel=0) and seconds==3600
                 assert c.execute(text('SELECT persistent,refresh_family,idle_until FROM c0_oauth_grants')).one()==(False,None,None)
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0022_remembered_browsers'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0023_current_content'
         sessions=SessionService(access,'native1',authority=authority)
         context=sessions.get(cookie);assert context.csrf_token==csrf
         grants=OAuthGrantService(access,'native1',resource,authority=authority)

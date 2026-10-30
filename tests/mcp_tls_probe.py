@@ -178,11 +178,13 @@ async def protected_spaces(client, http, previous=None):
     assert any(s['id']==identifier for s in (await call('spaces_list',{}))['spaces']), 'Installed protected discovery missing'
     data=previous['data'] if previous else {'slug':'sdk-private/'+uuid4().hex,'title':'Protected SDK observation',
         'body':'Private retained authored revision','idempotency_key':uuid4().hex}
-    first=await call('wiki_pages_upsert',{'space_id':identifier,'data':data})
     if previous:
-        assert space==previous['space'] and first==previous['first'], 'Installed protected replay changed its snapshot'
-        current=previous['current']
+        expired=await client.call_tool('wiki_pages_upsert',{'space_id':identifier,'data':data})
+        assert expired.is_error and expired.meta['c0/error']=={'code':'content_superseded','status':410}, 'Retired protected replay survived'
+        first=previous['first'];current=previous['current']
+        assert space==previous['space'], 'Protected identity changed'
     else:
+        first=await call('wiki_pages_upsert',{'space_id':identifier,'data':data})
         current=await call('wiki_pages_upsert',{'space_id':identifier,'data':{**data,
             'body':'Independent protected update','expected_revision':1,'idempotency_key':uuid4().hex}})
     assert (await call('wiki_pages_resolve',{'space_id':identifier,'slug':data['slug']}))==current, 'Installed protected resolve lost current revision'
@@ -253,15 +255,16 @@ async def consolidated_memory(client,http,space,previous_page,previous=None):
             'body':'Later retained atomic observation','expected_revision':1,'idempotency_key':uuid4().hex}})
         previous={'request':request,'receipt':original,'current':changed,'type_name':type_name,
             'source_request':source_request,'source_receipt':receipt,'citation':citation,'marker':marker}
-    assert await call('knowledge_bundle_apply',{'data':previous['request']})==previous['receipt'],'Installed whole atomic retry changed its snapshot'
+    expired=await client.call_tool('knowledge_bundle_apply',{'data':previous['request']})
+    assert expired.is_error and expired.meta['c0/error']=={'code':'content_superseded','status':410}, 'Retired atomic replay survived'
     assert await call('sources_ingest_text',{'space_id':identifier,'data':previous['source_request']})==previous['source_receipt'],'Installed atomic source retry changed'
     rows=previous['receipt']['results'];current=previous['current']
     assert await call('wiki_pages_resolve',{'space_id':identifier,'slug':rows[1]['slug']})==current,'Installed atomic current revision changed'
     unknown=await call('knowledge_annotations_get',{'space_id':identifier,'kind':'wiki_revision',
         'target_id':current['content']['id'],'content_revision':current['revision'],'namespace':'verification'})
     assert unknown['revision']==0 and unknown['status']=='unknown' and unknown['value'] is None,'Installed atomic verification transferred to new content'
-    old=await call('wiki_pages_get',{'space_id':identifier,'page_id':rows[1]['id'],'revision':1})
-    assert old['content']==rows[1]['content'],'Installed atomic prior authored content changed'
+    old=await client.call_tool('wiki_pages_get',{'space_id':identifier,'page_id':rows[1]['id'],'revision':1})
+    assert old.is_error and old.meta['c0/error']=={'code':'content_superseded','status':410}, 'Retired atomic content survived'
     citation=await call('citations_get',{'space_id':identifier,'chunk_id':previous['citation']['chunk_id']})
     assert citation==previous['citation'],'Installed atomic immutable citation changed'
     claim=await call('claims_get',{'space_id':identifier,'claim_id':rows[3]['id']})
@@ -269,7 +272,7 @@ async def consolidated_memory(client,http,space,previous_page,previous=None):
     denied=await client.call_tool('wiki_pages_get',{'page_id':rows[1]['id']})
     assert denied.is_error and denied.content[0].text=='knowledge_not_found','Installed atomic private UUID escaped into Shared'
     response=await http.post('/api/v1/knowledge/bundles/apply',json=previous['request'])
-    assert response.status_code==200 and response.json()==previous['receipt'],'Installed atomic REST/MCP replay parity differs'
+    assert response.status_code==410 and response.json()=={'detail':'content_superseded'},'Installed atomic REST/MCP expiry differs'
     failed={'space_id':identifier,'idempotency_key':uuid4().hex,'operations':[
         step('wiki.upsert',slug='rollback/'+uuid4().hex,title='Never published',body='Never published'),
         step('wiki.upsert',slug=rows[1]['slug'],title='Stale',body='Stale',expected_revision=1)]}
@@ -302,11 +305,15 @@ async def annotated_memory(client,http,space,page,previous=None):
             'value':{'status':'verified','verified_at':'2026-10-18T00:00:00Z'},'expected_revision':1,'idempotency_key':uuid4().hex}})
         previous={'requests':requests,'receipts':receipts,'current':current}
     for namespace,request in previous['requests'].items():
-        assert await call('knowledge_annotations_update',{**args,'namespace':namespace,'data':request})==previous['receipts'][namespace], 'Annotation replay snapshot changed'
+        replay=await client.call_tool('knowledge_annotations_update',{**args,'namespace':namespace,'data':request})
+        if namespace=='verification':
+            assert replay.is_error and replay.meta['c0/error']=={'code':'content_superseded','status':410}, 'Retired annotation replay survived'
+        else:
+            assert not replay.is_error and replay.structured_content==previous['receipts'][namespace], 'Current annotation replay changed'
     observed=await call('knowledge_annotations_get',{**args,'namespace':'verification'})
     assert observed==previous['current'] and observed['revision']==2,'Installed current annotation read changed'
-    history=await call('knowledge_annotations_history',{**args,'namespace':'verification'})
-    assert [row['number'] for row in history['revisions']]==[2,1],'Installed independent annotation history missing'
+    tools=await client.list_tools()
+    assert 'knowledge_annotations_history' not in {tool.name for tool in tools.tools}, 'History tool still advertised'
     stale=await client.call_tool('knowledge_annotations_update',{**args,'namespace':'verification','data':{
         'value':{'status':'stale'},'expected_revision':0,'idempotency_key':uuid4().hex}})
     assert stale.is_error and stale.content[0].text=='knowledge_conflict','Installed stale annotation write was accepted'
@@ -348,12 +355,11 @@ async def wiki_memory(client, http):
     assert not second.is_error and second.structured_content['revision']==2, 'Installed revision-checked upsert failed'
     second = second.structured_content
     await denied('wiki_pages_upsert', {'data':{**update,'idempotency_key':uuid4().hex}}, 'knowledge_conflict', 409)
-    assert (await client.call_tool('wiki_pages_upsert', {'data':data})).structured_content==first, 'Installed create receipt changed'
+    await denied('wiki_pages_upsert', {'data':data}, 'content_superseded', 410)
     assert (await client.call_tool('wiki_pages_upsert', {'data':update})).structured_content==second, 'Installed update receipt changed'
     assert (await http.get('/api/v1/wiki/pages/resolve',params={'slug':data['slug']})).json()==second, 'Installed Wiki REST/SDK parity failed'
-    assert (await client.call_tool('wiki_pages_get', {'page_id':first['id'],'revision':1})).structured_content['content']==first['content'], 'Installed Wiki history lost'
-    history = await client.call_tool('wiki_revisions_list', {'page_id':first['id']})
-    assert [r['number'] for r in history.structured_content['revisions']]==[2,1], 'Installed Wiki revisions missing'
+    await denied('wiki_pages_get', {'page_id':first['id'],'revision':1}, 'content_superseded', 410)
+    assert 'wiki_revisions_list' not in {tool.name for tool in (await client.list_tools()).tools}, 'Wiki history tool advertised'
     archived = await client.call_tool('wiki_pages_archive', {'page_id':first['id'],
         'data':{'expected_revision':2,'idempotency_key':uuid4().hex}})
     assert not archived.is_error and archived.structured_content['deleted'], 'Installed Wiki archive failed'
@@ -420,7 +426,8 @@ async def agent_workflow(client, space_id, previous=None, extraction=None, evide
     else:
         first, current = previous['first'], previous['current']
         assert await call('sources_ingest_text', {'space_id':space_id,'data':previous['source_request']})==previous['source_receipt'], 'Installed guided evidence retry changed'
-        assert await call('knowledge_bundle_apply', {'data':previous['request']})==previous['receipt'], 'Installed guided whole receipt changed'
+        replay=await client.call_tool('knowledge_bundle_apply', {'data':previous['request']})
+        assert replay.is_error and replay.meta['c0/error']=={'code':'content_superseded','status':410}, 'Retired bundle replay survived'
         assert await call('wiki_pages_resolve', {'space_id':space_id,'slug':first['slug']})==current, 'Installed guided second session lost current content'
         stale = await client.call_tool('wiki_pages_upsert', {'space_id':space_id,'data':{'slug':first['slug'],
             'title':previous['marker'],'body':'Stale would overwrite','expected_revision':1,'idempotency_key':uuid4().hex}})
@@ -431,19 +438,18 @@ async def agent_workflow(client, space_id, previous=None, extraction=None, evide
             'body':reloaded['content']['body']+'; independently reused','expected_revision':reloaded['revision'],'idempotency_key':uuid4().hex}})
         previous['current'] = current
     first, current = previous['first'], previous['current']
-    historical=await call('wiki_pages_get', {'space_id':space_id,'page_id':first['id'],'revision':1})
-    assert historical['content']==first['content'] and historical['id']==first['id'], 'Installed guided old revision changed'
+    expired=await client.call_tool('wiki_pages_get', {'space_id':space_id,'page_id':first['id'],'revision':1})
+    assert expired.is_error and expired.meta['c0/error']=={'code':'content_superseded','status':410}, 'Retired guided Wiki survived'
     assert await call('citations_get', {'space_id':space_id,'chunk_id':previous['citation']['chunk_id']})==previous['citation'], 'Installed guided citation changed across sessions'
     assert await call('documents_get', {'space_id':space_id,'version_id':previous['source_receipt']['id']})==previous['document'], 'Installed guided original evidence changed'
-    history = await call('wiki_revisions_list', {'space_id':space_id,'page_id':first['id']})
-    assert {row['number'] for row in history['revisions']}==set(range(1,current['revision']+1)), 'Installed guided history incomplete'
+    assert await call('wiki_pages_get', {'space_id':space_id,'page_id':first['id']})==current, 'Current guided Wiki changed'
     annotations = {'space_id':space_id,'kind':'wiki_revision','target_id':current['content']['id'],
                    'content_revision':current['revision'],'namespace':'verification'}
     unknown = await call('knowledge_annotations_get', annotations)
     assert unknown['status']=='unknown' and unknown['value'] is None, 'Installed guided content inherited verification'
     original_annotations = {**annotations,'target_id':first['content']['id'],'content_revision':1,'namespace':'applicability'}
-    old = await call('knowledge_annotations_history', original_annotations)
-    assert old['revisions'][0]['value']['source_references']==[{'kind':'chunk','id':previous['citation']['chunk_id']}], 'Installed guided annotation provenance lost'
+    old = await call('knowledge_annotations_get', original_annotations)
+    assert old['status']=='stale' and old['value']['source_references']==[{'kind':'chunk','id':previous['citation']['chunk_id']}], 'Expired evidence was not invalidated'
     found = await call('knowledge_search', {'options':{'query':previous['marker'],'space_id':space_id,'mode':'text','rerank':'off'}})
     assert any(hit['kind']=='wiki_revision' and hit['wiki']['page_id']==first['id'] for hit in found['hits']), 'Installed guided saved procedure is not reusable'
     typed = await call('knowledge_search_structured', {'data':{'query':previous['marker'],'space_id':space_id,

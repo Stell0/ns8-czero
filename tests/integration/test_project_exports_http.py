@@ -5,7 +5,7 @@ import pytest
 from c0_ingest.errors import C0Error
 from c0_projects.exporting import export_project,verify_export
 from c0_projects.model import Item,sha
-from c0_projects.publish import parts,sync_part
+from c0_projects.publish import parts,sync_part,save_snapshot
 from test_ingestion_samples_http import sample_connection
 from test_knowledge_http import knowledge_http
 from test_mcp_http import transport
@@ -18,8 +18,9 @@ def test_actual_sdk_export_is_deterministic_private_and_detects_tampering(sample
     config,_=sample_connection;client,definition=setup(config)
     def call(name,**values):return client.call(name,data={**values,'idempotency_key':uuid4().hex})
     try:
-        receipt=sync_part(client,next(parts(Item('documents','export.md','Original export evidence',b'Original retained evidence.'))),
-            tmp_path/'source.json',definition_hash=sha(definition),attempts=4,seconds=0)
+        item=Item('documents','export.md','Original export evidence',b'Original retained evidence.')
+        receipt=sync_part(client,next(parts(item)),tmp_path/'source.json',definition_hash=sha(definition),attempts=4,seconds=0)
+        save_snapshot(client,item,[receipt])
         document=client.call('documents_get',version_id=receipt['version_id'])
         chunk=client.call('document_chunks_list',document_id=document['id'])['chunks'][0]
         entity=call('entities_create',kind='concept',label='Synthetic export anchor',aliases=['Export alias'])

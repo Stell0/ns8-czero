@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from czero_core import Database
 from czero_core.documents import DocumentService
+from czero_core.current_content import ContentSuperseded
 from czero_core.access import AccessService
 from czero_core.identity import VerifiedIdentity
 from czero_core.jobs import default_registry
@@ -52,9 +53,14 @@ with tempfile.TemporaryDirectory(prefix='core-text-') as directory:
         acl=AccessService(later,issuer,key)
         wiki=WikiService(later,acl)
         assert wiki.resolve_page(actor,page_values['slug'])==second
-        assert wiki.upsert_page(actor,**page_values)==first
-        assert wiki.get_page(actor,first['id'],revision=1)['content']==first['content']
-        assert [v['number'] for v in wiki.page_history(actor,first['id'])]==[2,1]
+        for expired in (lambda:wiki.upsert_page(actor,**page_values),
+                        lambda:wiki.get_page(actor,first['id'],revision=1)):
+            try:expired()
+            except ContentSuperseded:pass
+            else:raise AssertionError('Installed Core retained or replayed an old Wiki body')
+        assert [v['number'] for v in wiki.page_history(actor,first['id'])]==[2]
+        assert wiki.upsert_page(actor,**{**page_values,'body':'Revised observation','expected_revision':1,
+            'idempotency_key':'packaged-revise'})==second
         try:
             wiki.upsert_page(actor,**{**page_values,'idempotency_key':'different'})
         except KnowledgeConflict: pass
