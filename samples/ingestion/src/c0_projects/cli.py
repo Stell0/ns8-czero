@@ -274,7 +274,7 @@ def run(args, *, client_factory=C0):
                         for part in publication_parts(client,item):
                             staged+=1
                             if staged>1000:raise C0Error('publication_batch_limit')
-                            sync_part(publisher,part,state/'publication.json',definition_hash=sha(definition),stage_only=True)
+                            sync_part(publisher,part,state/'publication.json',definition_hash=sha(definition),stage_only=True,timings=timings)
                 for entry in source['items']:
                     item=item_from(directory,entry,source['connector_id'])
                     item_results=[]

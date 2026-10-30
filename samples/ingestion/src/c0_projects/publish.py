@@ -195,6 +195,7 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
         previous=client.call('project_source_status_set',data={'data':data,'expected_revision':previous['revision'] if previous else 0,
             'idempotency_key':sha(['source-submitted',key,sha(data)])})
     if stage_only:
+        if timings is not None:timings['publication_seconds']=timings.get('publication_seconds',0.)+perf_counter()-started
         return {'status':'queued','source_id':version['source_id'],'version_id':version['id'],'receipt_id':previous['id']}
     try:
         verify(client,part,version,attempts=attempts,seconds=seconds,timings=observed)
