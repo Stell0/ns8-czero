@@ -127,6 +127,18 @@ Another developer reviews before merge; assign no unsolicited reviewer. Preserve
 
 The operator's **interactive Playwright** and **container CPU-quota** waivers remain unchanged. Do not introduce `--cpus=2`, change host delegation or claim CPU-rate enforcement. Automated native browsers, memory/swap/tasks limits, parser deadlines and worker lifetime checks remain required.
 
+## Latest-only source acceptance
+
+Approved [PR45](https://github.com/Stell0/ns8-czero/pull/45) regularly merges as
+`f51357d18760a83242273e1ded0c648799c8dad8`: app0.56.0, independently published
+Core0.36.0 at `cf9c0fa38183e940877c13228a8ce753dfd07412`, schema0023.
+Actual main [41010999070](https://github.com/Stell0/ns8-czero/actions/runs/41010999070)
+passes full/native/privacy/scan gates and canonical publication, with independent
+artifact audit, exact-source promotion and six fresh registry identity reads.
+See PLAN for counts and bounded public-crawl results. This is source/publication
+acceptance. The installed baseline below remains unchanged; production migration,
+upgrade, full import and schedules require separate authorization.
+
 ## Accepted baseline and preserved evidence
 
 The accepted dedicated runtime is app **0.54.0**, Core **0.35.0**, schema **0022**, source `31b0c85a71743ab6dcdb04c12ac18dd4c1500722`. Its exact installed identities and next genuine predecessor policy are recorded in [PLAN](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor). Keep those immutable candidate tags/digests available; documentation changes do not replace the runtime. The previous `c2280f5` installation remains the historical genuine predecessor used to accept this upgrade.
