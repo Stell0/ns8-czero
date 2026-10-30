@@ -154,7 +154,7 @@ def test_legacy_multipart_is_one_exact_complete_document(live,browser):
     print(json.dumps({'fixture_bytes':len(body.encode()),'directory_ms':round(directory_ms,2),'initial_document_load_ms':round(load_ms,2),'responsiveness':responsiveness,'full_document_resources':metrics}))
 
 
-def test_updates_history_shrink_and_historical_part_citation(live,browser):
+def test_updates_shrink_retire_history_and_expire_part_citation(live,browser):
     body=large_body();first,receipts=live.publish(body)
     full=live.client.call('source_documents_get',logical_document_id=first['id'])
     doc=live.client.call('documents_get',version_id=receipts[-1]['version_id'])
@@ -166,19 +166,23 @@ def test_updates_history_shrink_and_historical_part_citation(live,browser):
     open_document(browser,live,second['id'])
     expect(browser.locator('#reader-document')).to_contain_text('CHANGED-CONTENT-MARKER')
     expect(browser.locator('#reader-document')).not_to_contain_text('LAST-PART-MARKER')
-    browser.select_option('#reader-version',full['revision_id'])
-    expect(browser.locator('#reader-status')).to_have_text('Complete document loaded.',timeout=20000)
-    expect(browser.locator('#reader-document')).to_contain_text('LAST-PART-MARKER')
-    expect(browser.locator('#reader-document')).not_to_contain_text('CHANGED-CONTENT-MARKER')
-    # Preserve the pre-existing source/version/chunk URL, with no latest-version substitution.
+    assert browser.locator('#reader-version').count()==0
+    old=live.rest.get('/api/v1/source-documents/'+first['id'],params={'space_id':live.space,'revision_id':full['revision_id']})
+    assert old.status_code==410
+    # An expired exact citation never silently opens replacement bytes.
     browser.goto(live.origin+'/sources?'+urlencode({'space_id':live.space,'source':citation['source_id'],'version':citation['version_id'],'chunk':citation['chunk_id']}))
-    expect(browser.locator('#reader-excerpt')).to_contain_text(citation['body'],timeout=20000)
-    expect(browser.locator('#reader-document')).to_contain_text('Paragraph 00000')
-    expect(browser.locator('#reader-document')).to_contain_text('LAST-PART-MARKER')
-    assert browser.locator('#reader-version').input_value()==full['revision_id']
+    expect(browser.locator('#reader-status')).to_contain_text('superseded',timeout=20000)
+    expect(browser.locator('#reader-document')).not_to_contain_text('Paragraph 00000')
+    expect(browser.locator('#reader-document')).not_to_contain_text('CHANGED-CONTENT-MARKER')
+    browser.get_by_role('link',name='Open current document',exact=True).click()
+    expect(browser.locator('#reader-document')).to_contain_text('CHANGED-CONTENT-MARKER',timeout=20000)
+    assert live.client.call('sources_search',query='LAST-PART-MARKER')['citations']==[]
+    for receipt in receipts:
+        response=live.rest.get('/api/v1/source-versions/'+receipt['version_id']+'/document',params={'space_id':live.space})
+        assert response.status_code==410
 
 
-def test_search_navigates_to_full_historical_evidence(live,browser):
+def test_search_navigates_to_full_current_evidence(live,browser):
     body=large_body().replace('MIDDLESEARCHZEUS','Retained observation')
     body=body.replace('Paragraph 03250:','MIDDLESEARCHZEUS Paragraph 03250:')
     snapshot,receipts=live.publish(body)
@@ -263,3 +267,79 @@ def test_large_markdown_prefers_one_real_rest_upload(live,browser):
     expect(browser.locator('#reader-document')).to_contain_text('BEGIN-DOCUMENT-MARKER')
     expect(browser.locator('#reader-document')).to_contain_text('LAST-PART-MARKER')
     expect(browser.locator('#reader-document pre code')).to_contain_text('allow_https = true')
+
+
+def test_held_multipart_growth_keeps_previous_complete_generation(live,browser):
+    from concurrent.futures import ThreadPoolExecutor
+    original=large_body()
+    first,old_parts=live.publish(original)
+    old=live.client.call('source_documents_get',logical_document_id=first['id'])
+    replacement=original.replace('BEGIN-DOCUMENT-MARKER','BEGIN-REPLACEMENT-MARKER')+'\n'+('NEW-GROWTH-MARKER extra paragraph.\n'*5000)
+    live.pause_worker()
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending=pool.submit(live.publish,replacement)
+            # Wait for an actual queued replacement; the publisher is waiting for
+            # extraction through the same real API as a normal job.
+            deadline=time.monotonic()+8
+            while True:
+                rows=live.client.call('source_versions_list',source_id=old_parts[0]['source_id'])['versions']
+                if any(row['state']=='queued' for row in rows):break
+                assert time.monotonic()<deadline,'Replacement was not staged'
+                time.sleep(.05)
+            assert not pending.done()
+            current=live.client.call('source_documents_get',logical_document_id=first['id'])
+            assert current['body']==original and current['revision_id']==old['revision_id']
+            open_document(browser,live,first['id'])
+            expect(browser.locator('#reader-document')).to_contain_text('BEGIN-DOCUMENT-MARKER')
+            expect(browser.locator('#reader-document')).not_to_contain_text('NEW-GROWTH-MARKER')
+            assert live.client.call('sources_search',query='NEW-GROWTH-MARKER')['citations']==[]
+            live.resume_worker()
+            second,new_parts=pending.result(timeout=45)
+        assert second['id']==first['id'] and len(new_parts)>len(old_parts)
+        current=live.client.call('source_documents_get',logical_document_id=first['id'])
+        assert current['body']==replacement and current['text_hash']==hashlib.sha256(replacement.encode()).hexdigest()
+        browser.reload()
+        expect(browser.locator('#reader-document')).to_contain_text('BEGIN-REPLACEMENT-MARKER',timeout=20000)
+        retained={part['version_id'] for part in new_parts}
+        for part in old_parts:
+            response=live.rest.get('/api/v1/source-versions/'+part['version_id']+'/document',params={'space_id':live.space})
+            assert response.status_code==(200 if part['version_id'] in retained else 410)
+    finally:live.resume_worker()
+
+
+def test_unchanged_upload_waits_for_selected_metadata(live,browser):
+    """A slow metadata lookup must not turn an unchanged upload into an edit."""
+    original=live.upload('# Current evidence\n\nUNCHANGED-UPLOAD-MARKER\n','Authored source title')
+    browser.context.clear_cookies()
+    browser.goto(live.origin+'/auth/login')
+    browser.goto(live.origin+'/sources?'+urlencode({'space_id':live.space,'view':'tools'}))
+    expect(browser.locator('#sources-workspace')).to_be_visible()
+    browser.evaluate('''id=>{
+      const original=window.fetch;window.uploadLookupHeld=false;
+      window.fetch=async(...args)=>{
+        const response=await original(...args);
+        if(!window.uploadLookupHeld && new URL(response.url).pathname==='/api/v1/sources/'+id){
+          window.uploadLookupHeld=true;
+          await new Promise(resolve=>{window.releaseUploadLookup=resolve;});
+        }
+        return response;
+      };
+    }''',original['source_id'])
+    browser.locator('#source-upload > summary').click()
+    browser.select_option('#upload-source',original['source_id'])
+    browser.wait_for_function('window.uploadLookupHeld')
+    browser.locator('#upload-file').set_input_files({'name':'different-filename.md','mimeType':'text/markdown','buffer':b'# Current evidence\n\nUNCHANGED-UPLOAD-MARKER\n'})
+    expect(browser.locator('#upload-submit')).to_be_disabled()
+    expect(browser.locator('#upload-title')).to_have_value('')
+    browser.evaluate('window.releaseUploadLookup()')
+    expect(browser.locator('#upload-title')).to_have_value('Authored source title')
+    expect(browser.locator('#upload-submit')).to_be_enabled()
+    browser.locator('#upload-submit').click()
+    expect(browser.locator('#upload-status')).to_contain_text('Upload accepted',timeout=20000)
+    expect(browser.locator('#source-identity')).to_contain_text('revision 1')
+    versions=live.rest.get('/api/v1/sources/'+original['source_id']+'/versions',params={'space_id':live.space}).json()['versions']
+    assert len(versions)==1 and versions[0]['id']==original['id']
+    source=live.rest.get('/api/v1/sources/'+original['source_id'],params={'space_id':live.space}).json()
+    assert source['revision']==1 and source['title']=='Authored source title'
+    assert source['metadata']['canonical_url']=='https://example.org/manual'

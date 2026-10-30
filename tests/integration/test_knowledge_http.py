@@ -98,10 +98,10 @@ def test_external_agent_rest_workflow_wiki_aliases_sourced_claims_graph_exports_
             updated = await client.put(path, json={'title': 'Revised inventory', 'body': 'Revised authored claim', 'metadata': {}, 'expected_revision': 1, 'idempotency_key': 'update'})
             assert updated.status_code == 200 and updated.json()['revision'] == 2
             assert (await client.put(path, json={'title': 'Stale', 'body': 'Stale', 'expected_revision': 1, 'idempotency_key': 'stale'})).status_code == 409
-            assert (await client.get(path + '/revisions')).json()['revisions'][1]['id'] == page_row['content']['id']
-            assert (await client.get(path, params={'revision': 1})).json()['content']['body'] == data['body']
+            assert [r['number'] for r in (await client.get(path + '/revisions')).json()['revisions']]==[2]
+            assert (await client.get(path, params={'revision': 1})).status_code==410
             exported = await client.get(path + '/export', params={'format': 'markdown', 'revision': 1})
-            assert exported.text == data['body'] and exported.headers['content-disposition'].startswith('attachment;')
+            assert exported.status_code==410
             assert (await client.get(path + '/export')).json() == updated.json()
             entities = []
             for i in range(4):
@@ -133,7 +133,7 @@ def test_external_agent_rest_workflow_wiki_aliases_sourced_claims_graph_exports_
             assert any(e['kind'] == 'claim' for e in events)
             assert all(e['id'] > events[0]['id'] for e in (await client.get('/api/v1/knowledge/changes', params={'after': events[0]['id']})).json()['changes'])
             assert (await client.post(path + '/archive', json={'expected_revision': 2, 'idempotency_key': 'archive'})).json()['deleted']
-            assert (await client.get(path, params={'revision': 1})).status_code == 200
+            assert (await client.get(path, params={'revision': 1})).status_code == 410
             schema = (await client.get('/openapi.json')).json()
             assert schema['paths']['/api/v1/knowledge/graph/{entity_id}']['get']['responses']['200']['content']['application/json']['schema']['$ref'].endswith('/GraphView')
     asyncio.run(check())

@@ -44,7 +44,7 @@ test('copy instructions captures the task and offers manual selection after clip
   assert.equal(label.htmlFor,field.id);await control.listeners.click();assert(field.focused && field.selected);assert.match(status.textContent,/Select and copy/);
 });
 test('AI recipes target the article, preserve revision authority and distinguish REST ingestion',()=>{
-  const h=fixture();const update=h.C.task('update',page());assert.match(update,new RegExp(id(1)));assert.match(update,/fetch its current revision/);assert.match(update,/unchanged uncertain retry/);
+  const h=fixture();const update=h.C.task('update',page());assert.match(update,new RegExp(id(1)));assert.match(update,/fetch its current revision/);assert.match(update,/unchanged uncertain retry/);assert.match(update,/only the current complete content is retained/);assert.doesNotMatch(update,/retain history/);
   assert.match(h.C.task('create'),/Slugs are fixed/);assert.match(h.C.task('ingest'),/Binary upload is not an MCP tool/);assert.match(h.C.task('read'),/Do not change any content/);
 });
 test('progressive index uses metadata batches, deduplicates IDs and exposes incomplete navigation',async()=>{
@@ -55,16 +55,16 @@ test('progressive index uses metadata batches, deduplicates IDs and exposes inco
   assert.equal(descendants(h.node('reader-tree')).filter(n=>n.tagName==='A').length,101);assert.equal(h.node('tree-more').hidden,true);
   assert(h.requests.every(r=>!r.url.includes('/wiki/pages/'+id(1))));
 });
-test('historical article renders immutable title/body and does not attach current linked facts',async()=>{
-  const h=fixture(),r=h.reader(),pending=r.loadArticle(id(1),'1');const historical=page();historical.content={...historical.content,title:'Earlier title',number:1,body:'# Earlier text'};
-  h.requests[0].resolve(reply(historical));await pending;
-  assert.equal(h.node('page-title').textContent,'Earlier title');assert.match(h.node('reader-content').textContent,/Earlier text/);
-  assert.match(h.node('reader-notice').textContent,/revision 1/);assert.equal(h.requests.length,1);assert.match(h.node('reader-export').href,/revision=1/);
+test('superseded article generations are unavailable and do not attach facts',async()=>{
+  const h=fixture(),r=h.reader(),pending=r.loadArticle(id(1),'1');
+  h.requests[0].resolve(reply({detail:'content_superseded'},410));await pending;
+  assert.equal(h.node('page-title').textContent,'Article unavailable');assert.equal(h.node('reader-content').textContent,'');
+  assert.match(h.node('reader-status').textContent,/superseded/);assert.equal(h.requests.length,1);
 });
 test('late article responses cannot replace the newer article or its provenance',async()=>{
   const h=fixture(),r=h.reader(),old=r.loadArticle(id(1),'1'),current=r.loadArticle(id(2),'1');
   const earlier=page(1),latest=page(2);earlier.content.number=1;latest.content.number=1;
-  h.requests[1].resolve(reply(latest));await current;h.requests[0].resolve(reply(earlier));await old;
+  h.requests[1].resolve(reply(latest));await tick();h.requests[2].resolve(reply({claims:[]}));await current;h.requests[0].resolve(reply(earlier));await old;
   assert.equal(h.node('page-title').textContent,'Article 2');assert.match(h.node('reader-technical').textContent,new RegExp(id(2)));
 });
 test('page-scoped facts remain distinct and their exact source versions become reading links',async()=>{
@@ -82,22 +82,21 @@ test('permission loss clears private content and rejects an earlier successful i
   h.requests[0].resolve(reply({pages:[page()]}));await index;
   assert.equal(h.node('reader-root').hidden,true);assert.equal(h.node('reader-content').textContent,'');assert.equal(h.node('reader-tree').textContent,'');
 });
-test('article history is fetched lazily and links to pinned revisions',async()=>{
-  const h=fixture(),r=h.reader(),loading=r.loadArticle(id(1),'1'),data=page();data.content.number=1;h.requests[0].resolve(reply(data));await loading;assert.equal(h.requests.length,1);
-  const history=r.loadHistory();h.requests[1].resolve(reply({revisions:[{number:1,created_at:'2026-10-15T00:00:00Z'}]}));await history;
-  assert.match(h.node('reader-history').children[0].children[0].href,/revision=1/);
+test('current article reading makes no history request',async()=>{
+  const h=fixture(),r=h.reader(),loading=r.loadArticle(id(1));h.requests[0].resolve(reply(page()));await tick();
+  h.requests[1].resolve(reply({claims:[]}));await loading;
+  assert(h.requests.every(request=>!request.url.includes('/revisions')));assert.equal(typeof r.loadHistory,'undefined');
 });
-test('source version races preserve the newest document and citation document identity',async()=>{
-  const h=fixture('sources'),r=h.reader(),loading=r.loadSource(id(1),id(2),id(4));
-  h.requests[0].resolve(reply({id:id(1),title:'Source',metadata:{}}));h.requests[1].resolve(reply({versions:[{id:id(2),number:2,state:'ready'},{id:id(3),number:1,state:'ready'}]}));await tick();
-  const newer=r.loadVersion(id(3));h.requests[3].resolve(reply(original(id(10),'Newest selected text',id(3))));await newer;
-  h.requests[2].resolve(reply(original(id(11),'Late old text')));await loading;
-  assert.equal(h.node('reader-document').textContent,'Newest selected text');assert.equal(h.requests.length,4);
+test('late exact generation replies cannot replace the newer complete selection',async()=>{
+  const h=fixture('sources'),r=h.reader(),old=r.loadSource(id(1),id(2)),current=r.loadSource(id(1),id(3));
+  h.requests[1].resolve(reply({...original(id(10),'Newest selected text',id(3)),metadata:{},media_type:'text/plain'}));await current;
+  h.requests[0].resolve(reply({...original(id(11),'Late old text'),metadata:{},media_type:'text/plain'}));await old;
+  assert.equal(h.node('reader-document').textContent,'Newest selected text');assert.equal(h.requests.length,2);
 });
-test('a citation from another document cannot appear beside the selected version',async()=>{
+test('a citation from another document cannot appear beside the current generation',async()=>{
   const h=fixture('sources'),r=h.reader(),loading=r.loadSource(id(1),id(2),id(4));
-  h.requests[0].resolve(reply({id:id(1),title:'Source',metadata:{}}));h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready'}]}));await tick();
-  h.requests[2].resolve(reply(original(id(5),'Document')));await tick();h.requests[3].resolve(reply({document_id:id(6),source_id:id(1),version_id:id(2),body:'Wrong document'}));await loading;
+  h.requests[0].resolve(reply({...original(id(5),'Document'),metadata:{},media_type:'text/plain'}));await tick();
+  h.requests[1].resolve(reply({document_id:id(6),source_id:id(1),version_id:id(2),body:'Wrong document'}));await loading;
   assert.equal(h.node('reader-excerpt').hidden,true);assert.match(h.node('reader-status').textContent,/does not belong/);
 });
 test('AI guide exposes only read tasks to Readers and makes no writes',async()=>{
@@ -122,9 +121,9 @@ test('section browsing opens the requested navigation group and lists only that 
   assert.match(h.node('reader-content').textContent,/Article 1/);assert.doesNotMatch(h.node('reader-content').textContent,/Article 2/);
   assert(descendants(h.node('reader-tree')).some(n=>n.tagName==='DETAILS' && n.dataset.path==='operations' && n.open));
 });
-test('AI research tasks pin the displayed historical revision',()=>{
-  const h=fixture(),historical=page();historical.content.number=1;
-  assert.match(h.C.task('read',historical),/Read article revision 1/);
+test('AI research tasks pin the displayed current generation',()=>{
+  const h=fixture(),historical=page();historical.content.number=historical.revision;
+  assert.match(h.C.task('read',historical),/Read article revision 2/);
 });
 
 
@@ -153,23 +152,16 @@ test('guide access loss clears instructions and a delayed older reply cannot res
 
 test('source Markdown uses the shared safe renderer and heading table of contents',async()=>{
   const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));
-  h.requests[0].resolve(reply({id:id(1),title:'Firewall manual',metadata:{}}));
-  h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready',media_type:'text/markdown'}]}));await tick();
-  h.requests[2].resolve(reply(original(id(3),'## Firewall configuration\n\n| Port | Use |\n| --- | --- |\n| 443 | HTTPS |\n\n```ini\nallow=true\n```\n\n<script>evil()</script>\n\n[bad](javascript:evil())')));await pending;
+  h.requests[0].resolve(reply({...original(id(3),'## Firewall configuration\n\n| Port | Use |\n| --- | --- |\n| 443 | HTTPS |\n\n```ini\nallow=true\n```\n\n<script>evil()</script>\n\n[bad](javascript:evil())'),metadata:{},media_type:'text/markdown'}));await pending;
   const elements=descendants(h.node('reader-document'));
   for(const tag of ['H3','TABLE','PRE','CODE'])assert(elements.some(n=>n.tagName===tag),tag);
-  assert(h.node('reader-document-toc').children.length);
-  assert(!elements.some(n=>n.tagName==='SCRIPT' || n.href?.startsWith('javascript:')));
+  assert(h.node('reader-document-toc').children.length);assert(!elements.some(n=>n.tagName==='SCRIPT' || n.href?.startsWith('javascript:')));
 });
 test('plain source text stays literal and access loss also clears its TOC',async()=>{
   const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));
-  h.requests[0].resolve(reply({id:id(1),title:'Plain original',metadata:{}}));
-  h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready',media_type:'text/plain'}]}));await tick();
-  h.requests[2].resolve(reply(original(id(3),'## Literal\n\n<script>inert</script>')));await pending;
-  assert.equal(h.node('reader-document').textContent,'## Literal\n\n<script>inert</script>');
-  assert(!descendants(h.node('reader-document')).some(n=>n.tagName==='H3'));
-  h.node('reader-document-toc').textContent='Private heading';const denied=r.loadSource(id(4));
-  h.requests[3].resolve(reply({},403));h.requests[4].resolve(reply({},403));await denied;
+  h.requests[0].resolve(reply({...original(id(3),'## Literal\n\n<script>inert</script>'),metadata:{},media_type:'text/plain'}));await pending;
+  assert.equal(h.node('reader-document').textContent,'## Literal\n\n<script>inert</script>');assert(!descendants(h.node('reader-document')).some(n=>n.tagName==='H3'));
+  h.node('reader-document-toc').textContent='Private heading';const denied=r.loadSource(id(4));h.requests[1].resolve(reply({},403));await denied;
   assert.equal(h.node('reader-document-toc').textContent,'');
 });
 
@@ -184,13 +176,11 @@ test('source navigation groups explicit metadata without requesting any bodies',
   assert.equal(links.length,2);assert.match(links[0].href+links[1].href,/document=/);
   assert.equal(h.requests.length,1);
 });
-test('logical history is pinned and late full responses cannot restore revoked content',async()=>{
-  const h=fixture('sources'),r=h.reader(),pending=r.loadLogical(id(1),id(2));
-  h.requests[0].resolve(reply({id:id(1),revision_id:id(2),title:'Imported history',metadata:{},state:'ready',media_type:'text/markdown',body:'## Historical heading',parts:[]}));await tick();
-  assert.match(h.requests[1].url,/source-documents\/.*\/history\?limit=100/);
-  const denied=r.loadLogical(id(3));h.requests[2].resolve(reply({},403));await denied;
-  h.requests[1].resolve(reply({revisions:[{revision_id:id(2),content_hash:'hash',state:'ready'}]}));await pending;
-  assert.equal(h.node('reader-document').textContent,'');assert.equal(h.node('reader-version').textContent,'');assert(h.node('reader-root').hidden);
+test('late current document replies cannot restore revoked content',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadLogical(id(1),id(2));const denied=r.loadLogical(id(3));
+  h.requests[1].resolve(reply({},403));await denied;
+  h.requests[0].resolve(reply({id:id(1),revision_id:id(2),title:'Old in-flight document',metadata:{},state:'ready',media_type:'text/plain',body:'Late private body',parts:[]}));await pending;
+  assert.equal(h.node('reader-document').textContent,'');assert(h.node('reader-root').hidden);
 });
 test('large worker parse cancellation cannot put an old document back',async()=>{
   const h=fixture();let worker;
@@ -225,7 +215,7 @@ test('source reader shows the selected snapshot provenance',async()=>{
     provenance:{product:'Earlier product',version:'7'},
     snapshot_provenance:{details:JSON.stringify({product:'Current product',version:'8',path:['Configuration']})}},
     state:'ready',media_type:'text/markdown',body:'## Current configuration',parts:[]}));await tick();
-  h.requests[1].resolve(reply({revisions:[{revision_id:id(2),content_hash:'hash',state:'ready'}]}));await pending;
+  await pending;
   assert.match(h.node('reader-provenance').textContent,/Current product/);
   assert.match(h.node('reader-provenance').textContent,/Product version: 8/);
   assert.doesNotMatch(h.node('reader-provenance').textContent,/Earlier product/);
@@ -236,20 +226,15 @@ test('malformed optional provenance cannot prevent full document reading',async(
   const hostile={toString:null,valueOf:null};
   h.requests[0].resolve(reply({id:id(1),revision_id:id(2),title:'Readable original',metadata:{canonical_url:hostile,published_at:hostile,
     provenance:{path:['Configuration',hostile]}},state:'ready',media_type:'text/markdown',body:'## Retained complete article',parts:[]}));await tick();
-  h.requests[1].resolve(reply({revisions:[{revision_id:id(2),state:'ready',content_hash:'hash'}]}));await pending;
+  await pending;
   assert.match(h.node('reader-document').textContent,/Retained complete article/);
   assert.match(h.node('reader-provenance').textContent,/Configuration/);
   assert.equal(h.C.safeURL(hostile),null);assert.equal(h.C.date(hostile),'');
 });
 
-test('legacy part links resolve complete parents without optional source metadata',async()=>{
-  const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));
-  h.requests[0].resolve(reply({id:id(1),title:'Original',metadata:{}}));
-  h.requests[1].resolve(reply({versions:[{id:id(2),number:1,state:'ready',media_type:'text/markdown'}]}));await tick();
-  assert.match(h.requests[2].url,/full-document$/);
-  h.requests[2].resolve(reply({id:id(7),revision_id:id(8),title:'Whole original',metadata:{},multipart:true,state:'ready',media_type:'text/markdown',
-    body:'## Beginning\n\nAll retained parts.\n\n## Ending',parts:[{source_id:id(1),version_id:id(2),document_id:id(3)}]}));await tick();
-  h.requests[3].resolve(reply({revisions:[{revision_id:id(8),state:'ready',content_hash:'hash'}]}));await pending;
-  assert.match(h.node('reader-document').textContent,/Beginning.*All retained parts.*Ending/s);
-  assert.equal(h.node('reader-version').value,id(8));
+test('legacy part links resolve current complete parents without optional source metadata',async()=>{
+  const h=fixture('sources'),r=h.reader(),pending=r.loadSource(id(1),id(2));assert.match(h.requests[0].url,/full-document$/);
+  h.requests[0].resolve(reply({id:id(7),revision_id:id(8),title:'Whole original',metadata:{},multipart:true,state:'ready',media_type:'text/markdown',
+    body:'## Beginning\n\nAll retained parts.\n\n## Ending',parts:[{source_id:id(1),version_id:id(2),document_id:id(3)}]}));await pending;
+  assert.match(h.node('reader-document').textContent,/Beginning.*All retained parts.*Ending/s);assert.equal(h.requests.length,1);
 });

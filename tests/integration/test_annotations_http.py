@@ -14,7 +14,7 @@ from httpx import ASGITransport, AsyncClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
-from project_contract import TOOL_COUNT
+from project_contract import TOOL_COUNT, REMOVED_HISTORY_OPERATIONS
 from sqlalchemy import text
 
 from czero_core.identity import PermissionDenied, Role
@@ -33,7 +33,7 @@ spec = importlib.util.spec_from_file_location('tool_contract', Path(__file__).pa
 contract = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(contract)
 M17_CONTRACT = {item['name']:item for item in json.loads(
-    (Path(__file__).parents[1]/'fixtures/tool_guidance/m17_contract.json').read_text())['operations']}
+    (Path(__file__).parents[1]/'fixtures/tool_guidance/latest_only_contract.json').read_text())['operations']}
 
 SEARCH = '/api/v1/knowledge/search/structured'
 
@@ -91,7 +91,7 @@ def test_rest_separate_annotations_history_replay_and_exact_search(annotation_ht
             current = await http.put(path(ref), params=params, json=mutation({'status':'contradicted'},1))
             assert current.json()['revision'] == 2
             history = (await http.get(path(ref)+'/history',params=params)).json()
-            assert [r['number'] for r in history['revisions']] == [2,1]
+            assert [r['number'] for r in history['revisions']] == [2]
             request={'query':'getent','space_id':private['id'],'mode':'text', 'filters':{
                 'categories':['wiki'],'products':['NS8'],'components':['resolver'],'version_tags':['8.4']}}
             result = await http.post(SEARCH,json=request)
@@ -109,8 +109,9 @@ def test_rest_separate_annotations_history_replay_and_exact_search(annotation_ht
             fresh=(await http.get(path(target(changed)),params=params)).json()
             assert fresh['status']=='unknown' and fresh['revision']==0
             assert (await http.get(path(ref),params=params)).json()['target_current'] is False
-            assert (await http.put(path(ref,'applicability'),params=params,json=applicable)).json()==first.json()
-            assert (await http.get('/api/v1/wiki/pages/'+row['id'],params={**params,'revision':1})).json()['content']==row['content']
+            replay=(await http.put(path(ref,'applicability'),params=params,json=applicable)).json()
+            assert replay['value']==first.json()['value'] and replay['status']=='stale' and not replay['target_current']
+            assert (await http.get('/api/v1/wiki/pages/'+row['id'],params={**params,'revision':1})).status_code==410
     asyncio.run(check())
 
 
@@ -143,8 +144,9 @@ def test_sdk_annotation_and_structured_search_match_rest(annotation_http, mode):
                         assert not saved.is_error
                         assert (await rest.put(path(ref),params={'space_id':private['id']},json=data)).json()==saved.structured_content
                         assert (await client.call_tool('knowledge_annotations_get',args)).structured_content==saved.structured_content
-                        history=await client.call_tool('knowledge_annotations_history',args)
-                        assert [r['number'] for r in history.structured_content['revisions']]==[1]
+                        assert 'knowledge_annotations_history' not in tools
+                        history=(await rest.get(path(ref)+'/history',params={'space_id':private['id']})).json()
+                        assert [r['number'] for r in history['revisions']]==[1]
                         search={'query':'getent','space_id':private['id'],'mode':'text','filters':{
                             'categories':['wiki'],'verification_statuses':['verified']}}
                         result=await client.call_tool('knowledge_search_structured',{'data':search})
@@ -195,7 +197,7 @@ def test_annotation_tools_enforce_current_role_space_scope_and_regrant(annotatio
                             assert not (await client.call_tool('knowledge_annotations_update',{
                                 **args,'data':mutation({'status':'unverified'})})).is_error
                             for operation,arguments in (
-                                    ('knowledge_annotations_get',args),('knowledge_annotations_history',args),
+                                    ('knowledge_annotations_get',args),
                                     ('knowledge_search_structured',{'data':{'query':'getent','space_id':private['id']}})):
                                 denied=await client.call_tool(operation,arguments)
                                 error(denied,'insufficient_scope',403)
@@ -355,6 +357,9 @@ def test_all_accepted_am3_operation_contracts_remain_unchanged(annotation_http):
     baseline=json.loads((Path(__file__).parents[1]/'fixtures/agent_memory/am3_contract.json').read_text())
     assert len(baseline['operations'])==71
     for expected in baseline['operations']:
+        if expected['name'] in REMOVED_HISTORY_OPERATIONS:
+            assert expected['name'] not in app.state.operations._operations
+            continue
         actual=app.state.operations.definition(expected['name'])
         for key,value in expected.items():
             if key=='description':

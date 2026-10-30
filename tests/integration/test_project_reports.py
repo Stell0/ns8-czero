@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import timedelta
 from uuid import uuid4
 import pytest
+from czero_core.current_content import ContentSuperseded
 from czero_core.projects import ProjectConflict
 from test_access import access
 from test_projects import project
@@ -188,7 +189,8 @@ def test_italian_appendix_utf8_proof_and_historical_result_are_preserved(evidenc
         metadata=appendix['content']['metadata'],expected_revision=1,idempotency_key='later-appendix')
     view=service.get_report(owner)
     assert saved['data']['language']=='it' and view['members'][0]['data']['wiki_revision_id']==appendix['content']['id']
-    assert knowledge.get_page(owner,appendix['id'],revision=1)['content']['body'].endswith(text)
+    with pytest.raises(ContentSuperseded):knowledge.get_page(owner,appendix['id'],revision=1)
+    assert knowledge.get_page(owner,appendix['id'])['revision']==2
 
 
 def test_other_project_cannot_read_or_publish_foreign_report(evidence,project):

@@ -44,6 +44,8 @@ def mutate(database, authorize, actor, operation, payload, key, execute, *, conf
             connection.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': MUTATION_LOCK})
             hold_authority(connection)
             # A caller can lose membership while waiting for an earlier writer.
+            from .current_content import content_lock
+            content_lock(connection)
             current = authorize(connection, actor, Role.EDITOR)
             shared = SpaceService.shared_id(connection)
             space = current.space_id or shared
@@ -53,11 +55,15 @@ def mutate(database, authorize, actor, operation, payload, key, execute, *, conf
                 {'space': space, 'actor': current.user_id, 'key': key}).mappings().one_or_none()
             if receipt:
                 if receipt['fingerprint'] != scoped_fingerprint: raise conflict()
-                return receipt['result']
+                from .current_content import replay_receipt, check_retired
+                if operation == 'source.ingest_text':
+                    check_retired(connection, space, 'source_version', receipt['result']['id'])
+                return replay_receipt(connection, space, receipt['result'])
             result = snapshot(execute(connection, current))
+            from .current_content import thin_receipt
             connection.execute(text('''INSERT INTO c0_knowledge_receipts(space_id,actor_id,key,fingerprint,result)
                 VALUES (:space,:actor,:key,:fingerprint,CAST(:result AS jsonb))'''),
-                {'space': space, 'actor': current.user_id, 'key': key, 'fingerprint': scoped_fingerprint, 'result': json.dumps(result, ensure_ascii=False)})
+                {'space': space, 'actor': current.user_id, 'key': key, 'fingerprint': scoped_fingerprint, 'result': json.dumps(thin_receipt(result), ensure_ascii=False)})
             return result
     except IntegrityError:
         raise conflict() from None

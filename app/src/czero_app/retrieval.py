@@ -87,7 +87,9 @@ def install_retrieval_routes(app, database, auth, read_context, *, settings=None
         selected = service.in_space(options.space_id) if options.space_id is not None else service
         try: return selected.search(context.actor,**options.model_dump(exclude={'space_id'}))
         except PermissionDenied: raise
-        except ValueError: raise HTTPException(422,'invalid_retrieval_request') from None
+        except ValueError as error:
+            if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
+            raise HTTPException(422,'invalid_retrieval_request') from None
 
     @app.get('/api/v1/knowledge/index/status', response_model=IndexStatus)
     @operation('knowledge_index_status', 'Inspect optional derivative indexing state', Role.READER, IndexStatus, read_only=True, space_field='space_id')
