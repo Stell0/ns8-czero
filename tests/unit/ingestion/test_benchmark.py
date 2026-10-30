@@ -107,3 +107,19 @@ def test_unconfigured_modes_are_unavailable_without_provider_calls(tmp_path,monk
     config={'modes':[{'mode':'semantic','rerank':'off'}],'repetitions':1,'limit':10,'max_queries':1}
     result=experiment(Client(),config,[question()],manifest,tmp_path)
     assert result['query_calls']==0 and result['modes']['semantic+off']['status']=='unavailable'
+
+
+def test_text_fallback_never_becomes_a_successful_semantic_experiment(tmp_path,monkeypatch):
+    import c0_benchmark as benchmark
+    manifest={'documents':[],'hash':'empty'}
+    monkeypatch.setattr(benchmark,'snapshot',lambda c:(manifest,{},{}))
+    monkeypatch.setattr(benchmark,'validate_questions',lambda *args:None)
+    class Client:
+        def call(self,name,**kwargs):
+            if name=='knowledge_index_status':return {'configured':True}
+            return {'hits':[],'retrieval_method':'text','fallback_reason':'provider_unavailable'}
+    config={'modes':[{'mode':'semantic','rerank':'off'}],'repetitions':1,'limit':10,'max_queries':1}
+    result=experiment(Client(),config,[question()],manifest,tmp_path)
+    mode=result['modes']['semantic+off']
+    assert mode['status']=='fallback_only' and mode['fallback_samples']==1
+    assert mode['results']['all/answerable']['questions']==0

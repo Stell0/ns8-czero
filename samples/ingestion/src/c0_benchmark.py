@@ -175,7 +175,8 @@ def experiment(client,config,questions,expected,output):
                         'chunks':chunks,'documents':documents,'metrics':metrics(q,chunks,documents),'raw':result}
                     rows.append(row);measured.append(row);atomic(output/'rankings.json',rows)
             check_corpus(expected,snapshot(client)[0])
-            summaries[name]={'status':'measured','results':summarize(measured),'fallback_samples':sum(r['status']=='fallback' for r in measured)}
+            summaries[name]={'status':'measured' if any(r['status']=='measured' for r in measured) else 'fallback_only',
+                'results':summarize(measured),'fallback_samples':sum(r['status']=='fallback' for r in measured)}
         check_corpus(expected,snapshot(client)[0])
     except Exception:
         atomic(output/'status.json',{'status':'invalid_or_blocked','comparison_valid':False});raise
