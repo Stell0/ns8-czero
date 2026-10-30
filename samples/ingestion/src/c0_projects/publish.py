@@ -146,7 +146,7 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     source,version=locate(client,part,previous)
     if dry_run:return {'status':'unchanged' if version else 'would_update' if source else 'would_create','external_id':part.external_id}
     intent={'connector_id':part.item.connector_id,'external_id':part.external_id,'content_hash':sha(part.content),
-            'source_id':source['id'] if source else None}
+            'source_id':source['id'] if source else None,'source_revision':source['revision'] if source else 0}
     pending=read(journal,{})
     key=sha([client.space_id,part.item.connector_id,part.external_id,sha(part.content)])
     prior=pending.get(key,{})
@@ -155,15 +155,24 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     applied=observations.get(observation)
     if applied and (not source or not version or applied['version_id']!=version['id'] or applied['source_revision']!=source['revision']):
         raise C0Error('source_observation_superseded_scan_and_reconcile_current')
-    completed=prior.get('state')=='verified'
-    if key in pending and prior['intent']!=intent and not version and not completed:
-        raise C0Error('uncertain_source_intent_requires_reconciliation')
-    original_intent=intent if completed else prior.get('intent',intent)
-    pending[key]={'intent':original_intent,'state':'prepared','observations':observations};atomic(journal,pending)
     desired={'external_key':sha([part.item.connector_id,part.external_id]),'connector_id':part.item.connector_id,
         'external_id':part.external_id,'parent_external_id':part.item.external_id,
         'original_url':part.item.original_url,'canonical_url':part.item.canonical_url,'provenance':part.item.provenance}
     metadata_changed=source is not None and (source['title']!=part.item.title[:240] or source['metadata']!=desired)
+    completed=prior.get('state')=='verified'
+    if completed and not observations and (not version or metadata_changed):
+        raise C0Error('legacy_source_journal_requires_current_reconciliation')
+    if key in pending and prior['intent']!=intent and not completed:
+        original_revision=prior['intent'].get('source_revision')
+        known=version and prior.get('version',{}).get('id')==version['id']
+        # One own submission may advance CAS before its reply is saved. Later
+        # writes never authorize rebasing the old frozen intent onto new state.
+        reconciled=(source and version and type(original_revision) is int and source['revision']==original_revision+1
+            and (prior['intent']['source_id']==source['id'] or (prior['intent']['source_id'] is None and version['number']==1))
+            and (known or not metadata_changed))
+        if not reconciled:raise C0Error('uncertain_source_intent_requires_reconciliation')
+    original_intent=intent if completed else prior.get('intent',intent)
+    pending[key]={'intent':original_intent,'state':'prepared','observations':observations};atomic(journal,pending)
     if version is None or metadata_changed:
         if part.item.media_type in ('text/plain','text/markdown') and len(part.content)<=131072:
             metadata={'external_key':sha([part.item.connector_id,part.external_id]),'connector_id':part.item.connector_id,

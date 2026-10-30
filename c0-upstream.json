@@ -866,7 +866,7 @@
     {
       "path": "samples/ingestion/examples/website/README.md",
       "mode": "100644",
-      "sha256": "f3c196ca432e7739a6b44816343f139bcca79d63971ec2df218af7015cd905b8"
+      "sha256": "92f501417e181692cd626bac00ba0af0283d225da2325c094db28e424231e3e5"
     },
     {
       "path": "tests/current_content_fixture.py",

@@ -320,3 +320,50 @@ def test_corrupt_staged_replacement_never_displaces_current_generation(logical):
         connection.execute(text('UPDATE c0_documents SET body=:body WHERE version_id=CAST(:id AS uuid)'),{'id':pending['version_id'],'body':changed.content.decode()})
     current=save_snapshot(client,changed,[pending])
     assert current['id']==first['id'] and service.read_document(actor,current['id'])['body']==changed.content.decode()
+
+
+@pytest.mark.parametrize('lost_at',['prepared','submitted'])
+@pytest.mark.parametrize('return_to_same_bytes',[False,True])
+def test_uncertain_publisher_retry_never_rebases_onto_newer_content(logical,monkeypatch,lost_at,return_to_same_bytes):
+    from c0_ingest.errors import C0Error
+    client,definition,service,actor,path=logical
+    initial,_=publish(client,definition,path,'# Initial\n\nA\n')
+    pending_item=Item('documents','manual.md','Synthetic full manual',b'# Uncertain\n\nB\n','text/markdown')
+    journal=path/'uncertain.json';original=client.call;lost=[]
+    def lose_reply(name,**arguments):
+        result=original(name,**arguments)
+        if not lost and (name=='sources_ingest_text' if lost_at=='prepared' else name=='project_source_status_set'):
+            lost.append(True);raise C0Error('synthetic_publication_reply_lost')
+        return result
+    with monkeypatch.context() as patch:
+        patch.setattr(client,'call',lose_reply)
+        with pytest.raises(C0Error,match='synthetic_publication_reply_lost'):
+            sync_part(client,next(parts(pending_item)),journal,definition_hash=sha(definition),attempts=4,seconds=0)
+    assert service.read_document(actor,initial['id'])['body']=='# Initial\n\nA\n'
+    latest,_=publish(client,definition,path,'# Newest\n\nC\n')
+    if return_to_same_bytes:latest,_=publish(client,definition,path,pending_item.content.decode())
+    before=service.read_document(actor,latest['id'])
+    with pytest.raises(C0Error,match='reconciliation|superseded'):
+        sync_part(client,next(parts(pending_item)),journal,definition_hash=sha(definition),attempts=4,seconds=0)
+    assert service.read_document(actor,latest['id'])==before
+    versions=client.call('source_versions_list',source_id=str(before['parts'][0]['source_id']))['versions']
+    assert len(versions)==1 and versions[0]['id']==str(before['parts'][0]['version_id'])
+
+
+def test_legacy_publisher_journal_requires_reconciliation_after_change(logical):
+    from c0_ingest.errors import C0Error
+    from c0_ingest.state import read,atomic
+    client,definition,service,actor,path=logical
+    old_body='# Legacy original\n\nA\n'
+    initial,_=publish(client,definition,path,old_body)
+    newer,_=publish(client,definition,path,'# Current\n\nB\n')
+    journal=path/'journal.json';saved=read(journal)
+    for entry in saved.values():
+        entry.pop('observations',None);entry['intent'].pop('source_revision',None)
+    atomic(journal,saved);before=journal.read_bytes()
+    old=Item('documents','manual.md','Synthetic full manual',old_body.encode(),'text/markdown')
+    with pytest.raises(C0Error,match='legacy_source_journal_requires_current_reconciliation'):
+        sync_part(client,next(parts(old)),journal,definition_hash=sha(definition),attempts=4,seconds=0)
+    assert journal.read_bytes()==before
+    assert service.read_document(actor,newer['id'])['body']=='# Current\n\nB\n'
+    assert newer['id']==initial['id']

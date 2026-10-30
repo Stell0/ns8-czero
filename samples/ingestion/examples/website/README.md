@@ -79,6 +79,11 @@ URL and a pending publication scan. Only crawler-owned older verified scans are
 removed after readback; payload-free summaries remain. Pre-existing private jobs
 and unrelated datasets are never swept. Do not manually edit saved scan hashes
 or reset receipt state to force an uncertain write.
+Uncertain publication intents retain their original source revision. A later
+update, or an ambiguous older journal without that fingerprint, blocks resume
+with an explicit reconciliation error instead of restoring older content or
+metadata. Inspect current C0 state and deliberately reconcile before retrying;
+do not delete the original job or blindly replace its saved scan.
 Frontier progress is acknowledged only after the pending scan is durably saved.
 An interrupted collection replays its bounded uncheckpointed batch using the
 current HTML cache; a saved scan with a lost pointer is recovered automatically.
