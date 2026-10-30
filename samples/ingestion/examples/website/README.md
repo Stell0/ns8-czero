@@ -59,6 +59,13 @@ pending run first, or scans a new bounded selection after verified publication.
 Runs and OAuth rotation use the existing locks; uncertain refresh requires the
 existing connection recovery procedure, never deleting a rotation marker.
 
+For a worker that wakes periodically, `resume --apply --batch-extraction` (or
+`sync --apply --batch-extraction`) queues the bounded saved selection before
+waiting for extraction. Queued receipts are incomplete; the ordinary full-body
+and whole-document checks still gate publication and frontier acknowledgement.
+An interrupted staging pass resumes from its existing journal and versions.
+This does not change worker settings or start a second worker.
+
 JSON is the default report; `--report-format human` prints a brief operator summary. Exit codes are `0` complete/dry-run, `1` blocked and `2` partial. Reports separate crawl, conversion, publication, extraction wait and readback durations. A page,
 request, byte, sitemap or frontier limit is partial coverage. Network failures,
 429/5xx, robots denial, missing pages and failed conversion never delete C0

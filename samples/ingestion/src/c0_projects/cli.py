@@ -267,6 +267,14 @@ def run(args, *, client_factory=C0):
                 if not args.dry_run and args.operation!='verify' and source.get('attempted',True):
                     publisher=SourceWorkflow(client,definition['id'],sha(manifest))
                 verify_mode=args.operation=='verify' or (isinstance(publisher,SourceWorkflow) and publisher.completed)
+                if getattr(args,'batch_extraction',False) and not args.dry_run and not verify_mode:
+                    staged=0
+                    for entry in source['items']:
+                        item=item_from(directory,entry,source['connector_id'])
+                        for part in publication_parts(client,item):
+                            staged+=1
+                            if staged>1000:raise C0Error('publication_batch_limit')
+                            sync_part(publisher,part,state/'publication.json',definition_hash=sha(definition),stage_only=True)
                 for entry in source['items']:
                     item=item_from(directory,entry,source['connector_id'])
                     item_results=[]
@@ -316,6 +324,7 @@ def main(argv=None):
     parser.add_argument('--dry-run',action='store_true')
     parser.add_argument('--report-format',choices=['json','human'],default='json')
     parser.add_argument('--apply',action='store_true')
+    parser.add_argument('--batch-extraction',action='store_true',help='Queue the bounded saved batch before verifying complete publication')
     parser.add_argument('--authorization-ref')
     parser.add_argument('--output',type=Path)
     parser.add_argument('--input',type=Path)

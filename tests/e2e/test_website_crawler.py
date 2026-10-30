@@ -117,7 +117,7 @@ def test_website_private_scan_dry_run_resume_and_verified_cleanup(live,browser,d
         client.close=finished
         return client
     def run(operation,**changes):
-        args=SimpleNamespace(group='sources',operation=operation,config=path,job=job,dry_run=False,apply=True,authorization_ref=None)
+        args=SimpleNamespace(group='sources',operation=operation,config=path,job=job,dry_run=False,apply=True,authorization_ref=None,batch_extraction=True)
         for key,value in changes.items():setattr(args,key,value)
         return cli.run(args,client_factory=factory)
     assert run('scan')[0]['writes_c0']==0

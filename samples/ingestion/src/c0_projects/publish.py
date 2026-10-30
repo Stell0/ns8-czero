@@ -140,7 +140,7 @@ def verify(client,part,version,*,attempts=20,seconds=3,timings=None):
     return document
 
 
-def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publisher=upload_binary,attempts=20,seconds=3,timings=None):
+def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publisher=upload_binary,attempts=20,seconds=3,timings=None,stage_only=False):
     started=perf_counter();observed={}
     previous=prior_receipt(client,part)
     source,version=locate(client,part,previous)
@@ -194,6 +194,8 @@ def sync_part(client,part,journal,*,definition_hash,dry_run=False,binary_publish
     if previous is None or previous['data']['version_id']!=version['id']:
         previous=client.call('project_source_status_set',data={'data':data,'expected_revision':previous['revision'] if previous else 0,
             'idempotency_key':sha(['source-submitted',key,sha(data)])})
+    if stage_only:
+        return {'status':'queued','source_id':version['source_id'],'version_id':version['id'],'receipt_id':previous['id']}
     try:
         verify(client,part,version,attempts=attempts,seconds=seconds,timings=observed)
     except C0Error:
