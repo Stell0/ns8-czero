@@ -55,6 +55,12 @@ Follow the [administrator guide](docs/administration.md). The [accepted runtime 
 
 A standard installation runs the application, PostgreSQL/pgvector and the extraction/indexing worker. Optional embeddings and scoring are configuration choices; ordinary text retrieval does not require an external model provider.
 
+The Core 0.36.1 producer candidate adds bounded lexical recovery for questions
+that have no strict matches. Exact phrases/operators remain strict, and the API
+reports the actual lexical strategy. See [behavior and evaluation limits](docs/retrieval-benchmark.md).
+Independent Core publication and consumer adoption remain required; the frozen
+application dependency still selects released Core 0.36.0.
+
 ## Connect your AI assistant
 
 C0 exposes **Model Context Protocol (MCP)** at your instance's `/mcp` URL. It lets an assistant discover available operations, search and read knowledge, follow evidence and make permitted changes. The same Core services enforce authorization behind MCP, REST and the web application.

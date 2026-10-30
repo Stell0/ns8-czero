@@ -119,6 +119,15 @@ Reader pages render stored knowledge with local assets and allowlisted DOM text/
 
 ## Verification and delivery
 
+Provider-free question recovery belongs in the shared Core lexical helper, not
+transport-specific query rewriting. Preserve strict query results/operators,
+minimum term and identifier constraints, selected-space/category/annotation
+predicates and current citations. Freeze declared product/version provenance
+with benchmark bodies because it can affect fallback eligibility. Record actual
+`lexical_strategy` separately from semantic/provider modes; optional response
+metadata must not change authority or the legacy source citation-list contract.
+Keep independent Core publication and consumer pin/lock acceptance separate.
+
 [CI policy](docs/ci-policy.md) defines automated validation. Draft runtime work gets scoped feedback; ready runtime PRs require full exact-source acceptance. Only explicitly reviewed Git-only documents receive the lightweight exemption; packaged docs, plugin inputs, static app HTML, executable helpers, versions and locks broaden validation. The external-fork contribution requirement above additionally requires full checks even when automation classifies a change as documentation-only.
 
 Require the actual `C0 merge gate` and `scripts/verify-promotion.py --source <full-head-sha> --pr <number>`. Inspect completed successful checks and actual native/privacy/scan artifacts; old, skipped, cancelled or started checks are insufficient. Use `validate.yml` for manual full dispatch. Never cancel a frozen acceptance run or share a mutable PostgreSQL test database across jobs.

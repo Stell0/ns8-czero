@@ -89,6 +89,7 @@ def test_clean_install_is_independent_of_checkout_and_ns8_sdk(installed):
         "import sys,json,importlib.util,importlib.metadata;from pathlib import Path;import czero_core;"
         "from czero_core.jobs import default_registry;from czero_core.objects import ObjectService;"
         "from czero_core.wiki import WikiService;from czero_core.sources import SourceService;"
+        "from czero_core.lexical import LexicalQuery;"
         "from czero_core.renewal import NativeAuthorityService,SessionPolicy;"
         "from czero_core.cimd import CimdService;from czero_core.cimd_metadata import parse_metadata;"
         "from czero_core.projects import ProjectService;from czero_core.project_schedules import schedule_contract;"

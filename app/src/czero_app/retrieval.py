@@ -47,6 +47,8 @@ class SearchResult(BaseModel):
     scorer_truncated_candidates: int
     provider_usage: dict[str, dict[str, int]]
     graphs: list[GraphView]
+    lexical_strategy: Literal['websearch','relaxed'] | None = Field(default=None,
+        description='Actual lexical candidate strategy; null when unreported or unused. Relaxed matching is provider-free text, not semantic search.')
 
 
 class IndexStatus(BaseModel):

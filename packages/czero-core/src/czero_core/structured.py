@@ -80,7 +80,7 @@ class StructuredSearchService(SpaceBound):
         evidence_categories = set(filters.categories) & {'source', 'wiki'}
         result = {'hits': [], 'retrieval_method': 'text', 'fallback_reason': None, 'fallback_reasons': [],
             'requested_mode': mode, 'candidate_count': 0, 'scored_count': 0,
-            'scorer_truncated_candidates': 0, 'provider_usage': {}}
+            'scorer_truncated_candidates': 0, 'provider_usage': {}, 'lexical_strategy':None}
         if evidence_categories:
             evidence = FilteredEvidenceSearch(self.database, self.access, filters=filters,
                 embedding_client=self.evidence.embeddings.client, scorer=self.evidence.scorer,
