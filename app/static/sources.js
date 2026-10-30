@@ -3,7 +3,9 @@
 const $ = id => document.getElementById(id);
 let profile = null, currentSource = null, currentDocument = null;
 let sourceOffset = 0, chunkOffset = 0, sourcesSequence = 0, selectionSequence = 0, documentSequence = 0, searchSequence = 0, pollTimer = null;
-let citationSequence = 0, uploadDraftSequence = 0;
+let citationSequence = 0, uploadDraftSequence = 0, uploadLookupSequence = 0;
+let uploadReady = true, uploadBusy = false;
+function updateUploadReadiness() {$('upload-submit').disabled = uploadBusy || !uploadReady;}
 const canWrite = () => profile && ['editor', 'admin'].includes(profile.role);
 const errors = {unsupported_docx:"Unsupported DOCX text structures. Convert this file; its original is retained.",invalid_text:'Invalid UTF-8 text.', no_text:'No extractable text; the original is retained.', unsupported_scan:'Scanned PDFs need OCR outside C0.', encrypted_pdf:'Encrypted PDFs are unsupported.', archive_limit:'DOCX archive expansion exceeds the safe limit.', too_large:'The file or extracted text exceeds the safe limit.', parser_timeout:'Extraction reached its time limit.', invalid_file:'The stored original is missing or changed.', invalid_docx:'Unsupported or malformed DOCX.', invalid_pdf:'Malformed PDF.'};
 async function api(path, options = {}) {
@@ -113,15 +115,22 @@ for (const id of ['upload-title','upload-metadata']) $(id).addEventListener('inp
 $('upload-file').addEventListener('change', () => {
   const file = $('upload-file').files[0]; if (!file) return;
   const extension = file.name.split('.').pop().toLowerCase(), formats = {txt:'text/plain',md:'text/markdown',pdf:'application/pdf',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
-  if (formats[extension]) $('upload-media').value = formats[extension]; if (!$('upload-title').value) $('upload-title').value = file.name;
+  if (formats[extension]) $('upload-media').value = formats[extension]; if (!$('upload-source').value && !$('upload-title').value) $('upload-title').value = file.name;
 });
 $('upload-source').addEventListener('change', async () => {
-  const id = $('upload-source').value, draft = ++uploadDraftSequence; if (!id) return;
-  try {const source = await api('sources/' + id); if ($('upload-source').value === id && draft === uploadDraftSequence) {$('upload-title').value = source.title; $('upload-metadata').value = JSON.stringify(source.metadata);}}
-  catch (_) {if ($('upload-source').value === id && draft === uploadDraftSequence) $('upload-status').textContent = 'Cannot load this source metadata.';}
+  const id = $('upload-source').value, draft = ++uploadDraftSequence, lookup = ++uploadLookupSequence;
+  uploadReady = !id; updateUploadReadiness(); if (!id) return;
+  try {
+    const source = await api('sources/' + id);
+    if (lookup !== uploadLookupSequence) return;
+    if ($('upload-source').value === id && draft === uploadDraftSequence) {$('upload-title').value = source.title; $('upload-metadata').value = JSON.stringify(source.metadata);}
+    uploadReady = true;
+  } catch (_) {if (lookup === uploadLookupSequence) $('upload-status').textContent = 'Cannot load this source metadata. Choose the source again to retry.';}
+  finally {if (lookup === uploadLookupSequence) updateUploadReadiness();}
 });
 $('upload-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!canWrite() || $('upload-submit').disabled) return; $('upload-submit').disabled = true;
+  event.preventDefault(); if (!canWrite() || uploadBusy || !uploadReady) return;
+  uploadBusy = true; updateUploadReadiness(); $('upload-status').textContent = 'Uploading...';
   const selection = selectionSequence;
   try {
     const file = $('upload-file').files[0]; if (!file || file.size > 10*1024*1024) throw new Error('Choose a file up to 10 MiB.');
@@ -130,10 +139,10 @@ $('upload-form').addEventListener('submit', async event => {
     form.append('media_type', $('upload-media').value); form.append('metadata', JSON.stringify(metadata)); form.append('retain_original', $('upload-retain').checked ? 'true' : 'false');
     if (id) {const source = await api('sources/' + id); form.append('source_id', source.id); form.append('expected_revision', String(source.revision));}
     const version = await api('sources/upload', {method:'POST',headers:{'X-C0-CSRF':profile.csrf_token},body:form});
-    $('upload-status').textContent = 'Upload accepted. Extraction is queued or this content already exists.';
     sourceOffset = 0; await loadSources(); if (selection === selectionSequence) await selectSource(version.source_id);
+    $('upload-status').textContent = 'Upload accepted. Extraction is queued or this content already exists.';
   } catch (error) {$('upload-status').textContent = error instanceof SyntaxError ? 'Metadata must be valid JSON.' : error.message;}
-  finally {$('upload-submit').disabled = false;}
+  finally {uploadBusy = false; updateUploadReadiness();}
 });
 for (const [id, action] of [
   ['refresh-sources', loadSources], ['refresh-source', async () => {if (currentSource) await selectSource(currentSource.id);}],
@@ -154,7 +163,8 @@ async function initializeSources() {
 initializeSources();
 
 if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
-  ++sourcesSequence;++selectionSequence;++documentSequence;++searchSequence;++citationSequence;++uploadDraftSequence;
+  ++sourcesSequence;++selectionSequence;++documentSequence;++searchSequence;++citationSequence;++uploadDraftSequence;++uploadLookupSequence;
+  uploadReady=false;updateUploadReadiness();
   clearTimeout(pollTimer);profile=null;currentSource=null;currentDocument=null;
   $('sources-workspace').hidden=true;$('source-detail').hidden=true;
   for(const id of ['source-list','source-versions','source-chunks','source-results','upload-source']){const element=$(id);if(element)element.replaceChildren();}

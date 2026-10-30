@@ -306,3 +306,40 @@ def test_held_multipart_growth_keeps_previous_complete_generation(live,browser):
             response=live.rest.get('/api/v1/source-versions/'+part['version_id']+'/document',params={'space_id':live.space})
             assert response.status_code==(200 if part['version_id'] in retained else 410)
     finally:live.resume_worker()
+
+
+def test_unchanged_upload_waits_for_selected_metadata(live,browser):
+    """A slow metadata lookup must not turn an unchanged upload into an edit."""
+    original=live.upload('# Current evidence\n\nUNCHANGED-UPLOAD-MARKER\n','Authored source title')
+    browser.context.clear_cookies()
+    browser.goto(live.origin+'/auth/login')
+    browser.goto(live.origin+'/sources?'+urlencode({'space_id':live.space,'view':'tools'}))
+    expect(browser.locator('#sources-workspace')).to_be_visible()
+    browser.evaluate('''id=>{
+      const original=window.fetch;window.uploadLookupHeld=false;
+      window.fetch=async(...args)=>{
+        const response=await original(...args);
+        if(!window.uploadLookupHeld && new URL(response.url).pathname==='/api/v1/sources/'+id){
+          window.uploadLookupHeld=true;
+          await new Promise(resolve=>{window.releaseUploadLookup=resolve;});
+        }
+        return response;
+      };
+    }''',original['source_id'])
+    browser.locator('#source-upload > summary').click()
+    browser.select_option('#upload-source',original['source_id'])
+    browser.wait_for_function('window.uploadLookupHeld')
+    browser.locator('#upload-file').set_input_files({'name':'different-filename.md','mimeType':'text/markdown','buffer':b'# Current evidence\n\nUNCHANGED-UPLOAD-MARKER\n'})
+    expect(browser.locator('#upload-submit')).to_be_disabled()
+    expect(browser.locator('#upload-title')).to_have_value('')
+    browser.evaluate('window.releaseUploadLookup()')
+    expect(browser.locator('#upload-title')).to_have_value('Authored source title')
+    expect(browser.locator('#upload-submit')).to_be_enabled()
+    browser.locator('#upload-submit').click()
+    expect(browser.locator('#upload-status')).to_contain_text('Upload accepted',timeout=20000)
+    expect(browser.locator('#source-identity')).to_contain_text('revision 1')
+    versions=live.rest.get('/api/v1/sources/'+original['source_id']+'/versions',params={'space_id':live.space}).json()['versions']
+    assert len(versions)==1 and versions[0]['id']==original['id']
+    source=live.rest.get('/api/v1/sources/'+original['source_id'],params={'space_id':live.space}).json()
+    assert source['revision']==1 and source['title']=='Authored source title'
+    assert source['metadata']['canonical_url']=='https://example.org/manual'

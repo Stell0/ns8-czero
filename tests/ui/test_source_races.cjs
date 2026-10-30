@@ -92,3 +92,44 @@ test('duplicate busy upload submissions never issue a second POST',async()=>{
   const first=h.nodes.get('upload-form').listeners.submit({preventDefault(){}});await h.nodes.get('upload-form').listeners.submit({preventDefault(){}});
   assert.equal(h.requests.length,1);h.requests[0].resolve({ok:false,status:409});await first;assert.equal(h.nodes.get('upload-submit').disabled,false);
 });
+
+test('existing-source upload waits for metadata and preserves identity on file selection',async()=>{
+  const h=harness();h.run("profile={role:'editor',csrf_token:'fixture'}");
+  h.nodes.get('upload-source').value='existing';
+  const pending=h.nodes.get('upload-source').listeners.change();
+  h.nodes.get('upload-file').files=[{name:'sample.txt',size:10}];
+  h.nodes.get('upload-file').listeners.change();
+  assert.equal(h.nodes.get('upload-title').value,'');
+  assert.equal(h.nodes.get('upload-submit').disabled,true);
+  await h.nodes.get('upload-form').listeners.submit({preventDefault(){}});
+  assert.equal(h.requests.length,1);
+  h.requests[0].resolve(reply({...source('existing'),title:'Authored title',metadata:{fixture:'browser'}}));await pending;
+  assert.equal(h.nodes.get('upload-title').value,'Authored title');
+  assert.equal(h.nodes.get('upload-metadata').value,'{"fixture":"browser"}');
+  assert.equal(h.nodes.get('upload-submit').disabled,false);
+});
+test('only the latest metadata lookup releases upload readiness',async()=>{
+  const h=harness();h.nodes.get('upload-source').value='same';
+  const first=h.nodes.get('upload-source').listeners.change();
+  h.nodes.get('upload-source').value='other';const second=h.nodes.get('upload-source').listeners.change();
+  h.nodes.get('upload-source').value='same';const third=h.nodes.get('upload-source').listeners.change();
+  h.requests[0].resolve(reply(source('same')));await first;
+  h.requests[1].resolve(reply(source('other')));await second;
+  assert.equal(h.nodes.get('upload-submit').disabled,true);
+  h.requests[2].reject(new Error('transport'));await third;
+  assert.equal(h.nodes.get('upload-submit').disabled,true);
+  h.nodes.get('upload-source').value='';await h.nodes.get('upload-source').listeners.change();
+  assert.equal(h.nodes.get('upload-submit').disabled,false);
+});
+test('metadata responses cannot release an upload still in flight',async()=>{
+  const h=harness();h.run("profile={role:'editor',csrf_token:'fixture'}");
+  h.nodes.get('upload-file').files=[{name:'new.txt',size:10}];h.nodes.get('upload-metadata').value='{}';
+  h.nodes.get('upload-status').textContent='Upload accepted.';
+  const submitting=h.nodes.get('upload-form').listeners.submit({preventDefault(){}});
+  assert.equal(h.nodes.get('upload-status').textContent,'Uploading...');
+  h.nodes.get('upload-source').value='existing';const lookup=h.nodes.get('upload-source').listeners.change();
+  h.requests[1].resolve(reply(source('existing')));await lookup;
+  assert.equal(h.nodes.get('upload-submit').disabled,true);
+  h.requests[0].resolve({ok:false,status:409});await submitting;
+  assert.equal(h.nodes.get('upload-submit').disabled,false);
+});

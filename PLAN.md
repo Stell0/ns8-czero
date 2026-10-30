@@ -42,6 +42,16 @@ checks the actual installed source and latest-only schema/contracts. Final
 consumer full/native gates and PR review remain required; no merge or deployment
 is authorized.
 
+Consumer acceptance exposed an existing source-upload race: selecting a source
+could submit before its title/provenance lookup completed, accidentally making an
+unchanged upload a metadata edit. The form now waits for the latest successful
+lookup, preserves authored metadata when choosing a file and reports acceptance
+only after refreshing current content. Three controlled regressions fail before
+the fix and pass after it; the real HTTPS/worker/browser regression confirms the
+unchanged upload retains source revision and content identity. The preceding
+Rocky native failure remains failed evidence, not acceptance. Final consumer
+full/native gates must pass on the corrected frozen source.
+
 Bounded public smoke uses 20 pages each from NethVoice, NethSecurity and NethServer.
 After correcting article-header extraction, all 60 whole Markdown bodies and
 headings pass actual C0 interface/hash readback in fresh disposable spaces; a
