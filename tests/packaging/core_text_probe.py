@@ -87,7 +87,8 @@ with tempfile.TemporaryDirectory(prefix='core-text-') as directory:
         private_chunk=private_source.chunks(actor,private_document['id'])[0]
         assert private_source.citation(actor,private_chunk['id'])['body']==body
         query='How can I read packaged Core evidence?'
-        assert service.search(actor,query)[0]['source_id']==receipt['source_id']
+        # Core citations carry native UUIDs; replay receipts are JSON values.
+        assert str(service.search(actor,query)[0]['source_id'])==str(receipt['source_id'])
         found=SearchService(later,acl).search(actor,query,mode='text',kind='source',rerank='off')
         assert found['lexical_strategy']=='relaxed' and found['retrieval_method']=='text'
         assert found['hits'][0]['citation']['body']==body and found['provider_usage']=={}

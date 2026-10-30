@@ -18,9 +18,10 @@ distinguish lexical relaxation from semantics. See [the contract](docs/retrieval
 Initial question regressions fail before the correction; explicit syntax controls
 pass. Scoped Core/HTTP/current-generation and hand-computable benchmark cases pass,
 as does real HTTPS/OAuth renewal and question-to-complete-document browser
-navigation/replacement/access loss. Full exact-source local/native/artifact gates,
-fresh held-out comparison and review remain pending. Private labels/results stay
-outside Git. The independent Core publication, consumer pin/lock adoption and
+navigation/replacement/access loss. Full exact-source local/native/artifact gates
+and a fresh held-out comparison are required before review readiness; record
+their exact results in the PR. Private labels/results stay outside Git.
+The independent Core publication, consumer pin/lock adoption and
 consumer acceptance gates precede any deployment. No new PR is merged or release
 published automatically; accepted installations and predecessors remain frozen.
 

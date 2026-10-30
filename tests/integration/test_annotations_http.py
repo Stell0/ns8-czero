@@ -369,13 +369,7 @@ def test_accepted_am3_contracts_add_only_optional_lexical_metadata(annotation_ht
                 continue
             observed=actual[key]
             if key=='output_schema' and expected['name'] in ('knowledge_search','knowledge_search_structured'):
-                # Preserve the frozen contract after checking the exact additive field.
-                from copy import deepcopy
-                observed=deepcopy(observed)
-                field=observed['properties'].pop('lexical_strategy')
-                assert 'lexical_strategy' not in observed.get('required',[])
-                assert contract.structural_schema(field)=={'anyOf':[
-                    {'enum':['websearch','relaxed'],'type':'string'},{'type':'null'}],'default':None}
+                observed=contract.legacy_search_output(observed)
             if key in ('input_schema','output_schema'):
                 observed=contract.schema_hash(observed)
                 value=M17_CONTRACT[expected['name']]['input_sha256' if key=='input_schema' else 'output_sha256']
