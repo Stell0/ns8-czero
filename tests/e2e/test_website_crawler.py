@@ -15,9 +15,7 @@ def html(marker):
     <nav><a href="/manual/denied">Private navigation noise</a></nav>
     <main><h1>Controlled firewall manual</h1><p>BEGIN-CRAWLED-DOCUMENT</p>
     <h2>Configuration</h2><p>'''+marker+'''</p><table><tr><th>Port</th><th>Use</th></tr>
-    <tr><td>443</td><td>HTTPS</td></tr></table><pre><code class="language-python">if ready:
-        publish()
-</code></pre><p>END-CRAWLED-DOCUMENT café 東京</p></main></body></html>'''
+    <tr><td>443</td><td>HTTPS</td></tr></table><pre><code class="language-python"><div class="token-line">if ready:</div><div class="token-line">        publish()</div></code></pre><p>END-CRAWLED-DOCUMENT café 東京</p></main></body></html>'''
 
 
 def test_real_crawl_publish_read_replace_and_unchanged(live,browser,documentation_site):
@@ -56,6 +54,7 @@ def test_real_crawl_publish_read_replace_and_unchanged(live,browser,documentatio
     expect(body.get_by_role('heading',name='Controlled firewall manual',exact=True)).to_be_visible()
     expect(body.locator('table')).to_have_count(1)
     expect(body.locator('pre code')).to_contain_text('publish()')
+    assert body.locator('pre code').text_content()=='if ready:\n        publish()\n'
     expect(body).to_contain_text('BEGIN-CRAWLED-DOCUMENT')
     expect(body).to_contain_text('END-CRAWLED-DOCUMENT café 東京')
     expect(body).not_to_contain_text('Private navigation noise')

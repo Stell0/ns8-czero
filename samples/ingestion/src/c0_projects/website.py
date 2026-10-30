@@ -20,7 +20,7 @@ from c0_ingest.state import atomic,read,safe_path
 from .fetch import Fetcher,FetchError
 from .model import Item,Batch,now,public_url,sha
 
-EXTRACTOR='markdownify-1.2.3/c0-website-2'
+EXTRACTOR='markdownify-1.2.3/c0-website-3'
 DEFAULTS={'seeds':[],'allowed_roots':[],'sitemaps':[],'exclude':[],
     'profile':'generic','selectors':[],'remove_selectors':[],
     'language':'','product':'','product_version':'','manual':'',
@@ -117,6 +117,14 @@ def extract(raw,url,config):
             heading=soup.new_tag('h3');heading.string=label.get_text(' ',strip=True);panel.insert(0,heading)
     for selector in [NOISE,*config['remove_selectors']]:
         for node in article.select(selector):node.decompose()
+    # Docusaurus wraps each code line in a div. Converting those divs as prose
+    # strips indentation and inserts blank lines that break continued commands.
+    for pre in article.select('pre'):
+        code=pre.find('code')
+        lines=code.find_all(class_='token-line',recursive=False) if code else []
+        if lines:
+            content='\n'.join(line.get_text() for line in lines)
+            code.clear();code.append(content)
     for node in article.select('[href],[src]'):
         for attribute in ('href','src'):
             if attribute not in node.attrs:continue

@@ -80,6 +80,10 @@ text. Headings, tables, lists, code, admonitions, tab variants, links and image
 alternative text survive conversion. Remote media and raw HTML remain inactive
 in C0. Conditional 304 responses reuse a verified current HTML representation;
 an extractor/configuration upgrade still reconverts that representation.
+Highlighted Docusaurus code lines retain indentation, empty lines and shell
+continuations. Extractor revision 3 reconverts the current HTML cache to correct
+older conversions; stable document identities remain, and changed normalized
+bytes publish a new complete generation before old evidence expires.
 
 Private state contains a bounded frontier, one current HTML representation per
 URL and a pending publication scan. Only crawler-owned older verified scans are

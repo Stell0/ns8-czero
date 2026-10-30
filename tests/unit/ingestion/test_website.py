@@ -41,6 +41,22 @@ def test_markdown_keeps_structure_and_all_tab_variants():
     assert canonical=='https://docs.example.org/it/docs/manual' and metadata['source_type']=='website'
 
 
+def test_docusaurus_code_lines_preserve_indentation_blank_lines_and_continuations():
+    snippet='''<pre class="language-python"><code>
+<div class="token-line"><span>if ready:</span><br></div>
+<div class="token-line"><span>    configure(&quot;&lt;server&gt;&quot;)</span><br></div>
+<div class="token-line"><br></div>
+<div class="token-line"><span>finish()</span><br></div>
+</code></pre>'''
+    raw=('<article><h1>Code</h1>'+snippet+'</article>').encode()
+    _,body,_,_,_=extract(raw,'https://docs.example.org/it/docs/manual',definition()['website'])
+    assert '```python\nif ready:\n    configure("<server>")\n\nfinish()\n```' in body.decode()
+    shell='<pre class="language-bash"><code><div class="token-line">curl --fail \\</div><div class="token-line">  https://docs.example.org/file</div></code></pre>'
+    _,body,_,_,_=extract(('<article><h1>Shell</h1>'+shell+'</article>').encode(),
+        'https://docs.example.org/it/docs/manual',definition()['website'])
+    assert '```bash\ncurl --fail \\\n  https://docs.example.org/file\n```' in body.decode()
+
+
 @pytest.mark.parametrize('url',['https://evil.example.org/it/docs/page','https://docs.example.org/en/docs/page',
     'https://docs.example.org/it/docs/%2e%2e/private','https://docs.example.org/it/docs-other/page',
     'https://'+'user:fixture-secret@docs.example.org/it/docs/page'])
