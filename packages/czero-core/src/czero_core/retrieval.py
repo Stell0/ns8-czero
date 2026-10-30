@@ -90,7 +90,7 @@ class SearchService(SpaceBound):
             SELECT c.id,'chunk' AS kind,ts_rank_cd(c.search_vector,websearch_to_tsquery('simple',:query)) AS rank
             FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            WHERE s.space_id=:space AND :chunks AND NOT s.deleted AND c.search_vector @@ websearch_to_tsquery('simple',:query)
+            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND c.search_vector @@ websearch_to_tsquery('simple',:query)
             UNION ALL
             SELECT r.id,'wiki_revision' AS kind,ts_rank_cd(r.search_vector,websearch_to_tsquery('simple',:query)) AS rank
             FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
@@ -147,6 +147,7 @@ class SearchService(SpaceBound):
         usage={};scored_count=0;truncated=0;method='text';graphs=[]
         desired=('hybrid' if self.embeddings.client else 'text') if mode=='auto' else mode
         with self.database.engine.connect() as connection:
+            connection.execute(text('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ'))
             self._authorize(connection,actor)
             ordinary=self._text(connection,query,limit=self.limits.candidates,kind=kind)
             profile=self.embeddings._profile(connection) if self.embeddings.client else None
@@ -190,7 +191,18 @@ class SearchService(SpaceBound):
             except PermissionDenied:raise
             except (KnowledgeNotFound,SQLAlchemyError):failures.append('graph_unavailable')
         # Revocation during provider calls cannot return an admitted result.
-        with self.database.engine.connect() as connection:self._authorize(connection,actor)
+        with self.database.engine.connect() as connection:
+            self._authorize(connection,actor)
+            from .current_content import ContentSuperseded
+            for hit in hits:
+                if hit['kind']=='chunk':
+                    current=connection.execute(text('SELECT current_version_id FROM c0_sources WHERE space_id=:space AND id=:id'),
+                        {'space':self._space(connection),'id':hit['resource_id']}).scalar_one_or_none()
+                    if current!=hit['citation']['version_id']:raise ContentSuperseded()
+                elif hit['kind']=='wiki_revision':
+                    current=connection.execute(text('SELECT revision FROM c0_wiki_pages WHERE space_id=:space AND id=:id'),
+                        {'space':self._space(connection),'id':hit['resource_id']}).scalar_one_or_none()
+                    if current!=hit['revision']:raise ContentSuperseded()
         return _view({'hits':hits[:limit],'retrieval_method':method,'fallback_reason':failures[0] if failures else None,
             'fallback_reasons':failures,'requested_mode':mode,'candidate_count':candidate_count,'scored_count':scored_count,
             'scorer_truncated_candidates':truncated,'provider_usage':usage,'graphs':graphs})

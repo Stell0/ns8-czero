@@ -39,8 +39,9 @@ Authority tables, credentials, sessions, jobs, embeddings and server paths are
 excluded. User-authored metadata may itself be private; keep the snapshot private.
 Original binary bytes require the existing authorized original-file API or native
 DB/files backup. Unavailable historical generic-object/claim payloads are not
-invented. Actual explicit project histories and immutable source/Wiki revisions
-are retained. Interchange export does not replace native backup/restore.
+invented. Payload-free project operation/configuration history remains. Source/Wiki and
+annotation content exports contain only current published bodies/values. Expired
+exact bodies are unavailable and cannot be reconstructed from export metadata. Interchange export does not replace native backup/restore.
 
 ## Offline WikiPlant preparation
 

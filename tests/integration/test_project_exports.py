@@ -12,15 +12,16 @@ from test_project_evidence import evidence,page
 def test_export_pagination_history_fragments_and_explicit_exclusions(evidence):
     service,owner,_,knowledge,source,_=evidence
     one=page(evidence,'# Original\n\nMarkdown stays separate from metadata.')
-    knowledge.update_page(owner,one['id'],'Revised','# Changed\n\nActual new revision.',metadata={},expected_revision=1,idempotency_key='edit')
+    changed=knowledge.update_page(owner,one['id'],'Revised','# Changed\n\nActual new revision.',metadata={},expected_revision=1,idempotency_key='edit')
     second=page(evidence,'# Other page')
     first=service.export_page(owner,'wiki_pages',limit=1)
     assert len(first['rows'])==1 and first['next_cursor']
     following=service.export_page(owner,'wiki_pages',limit=1,after=first['next_cursor'])
     assert {row['id'] for row in first['rows']+following['rows']}=={one['id'],second['id']} and not following['next_cursor']
-    revisions=service.export_page(owner,'wiki_revisions')['rows'];assert len(revisions)==3 and all('body' not in row for row in revisions)
-    content=service.export_page(owner,'wiki_text',resource_id=one['content']['id'])['rows'][0]
-    assert content['body'].startswith('# Original') and content['end_char']==content['total_chars']
+    revisions=service.export_page(owner,'wiki_revisions')['rows'];assert len(revisions)==2 and all('body' not in row for row in revisions)
+    with pytest.raises(ValueError):service.export_page(owner,'wiki_text',resource_id=one['content']['id'])
+    content=service.export_page(owner,'wiki_text',resource_id=changed['content']['id'])['rows'][0]
+    assert content['body'].startswith('# Changed') and content['end_char']==content['total_chars']
     version,_=source('A'*50000+'é'*30000)
     document=next(row for row in service.export_page(owner,'documents')['rows'] if row['version_id']==str(version['id']))
     body='';cursor=''

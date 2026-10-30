@@ -88,8 +88,8 @@ def test_editor_sdk_ingests_real_chunks_claim_and_revision_with_rest_parity(tran
                     assert (await later.call_tool('sources_ingest_text',{'data':changed})).structured_content==revision
                     doc2=(await later.call_tool('documents_get',{'version_id':revision['id']})).structured_content
                     assert doc2['body']==changed['body'] and doc2['id']!=doc['id']
-                    assert (await http.get('/api/v1/source-versions/'+receipt['id']+'/document')).json()==doc
-                    assert (await http.get('/api/v1/chunks/'+chunks[0]['id']+'/citation')).json()==citation
+                    assert (await http.get('/api/v1/source-versions/'+receipt['id']+'/document')).status_code==410
+                    assert (await http.get('/api/v1/chunks/'+chunks[0]['id']+'/citation')).status_code==410
     asyncio.run(check())
 
 
@@ -137,6 +137,11 @@ def test_sdk_text_scope_reader_denial_and_disabled_client_replay(transport,knowl
         access.set_role(owner,member['id'],Role.READER)
         reader=issue(identity,{'c0:read'})
         data=payload()
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+owner_token}) as seed:
+            pending=await seed.post(PATH,json=data)
+            assert pending.status_code==202
+            pending=pending.json()
         async with child.router.lifespan_context(child):
             async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app),base_url=ORIGIN,
                     headers={'Authorization':'Bearer '+reader.access_token}) as http:
@@ -145,6 +150,8 @@ def test_sdk_text_scope_reader_denial_and_disabled_client_replay(transport,knowl
                     denied=await client.call_tool('sources_ingest_text',{'data':data})
                     assert denied.is_error and denied.content[0].text=='permission_denied'
                     assert not denied.meta or 'mcp/www_authenticate' not in denied.meta
+                    staged=await client.call_tool('source_versions_list',{'source_id':pending['source_id']})
+                    assert not staged.is_error and staged.structured_content['versions']==[]
                 access.set_role(owner,member['id'],Role.EDITOR)
                 narrow=issue(identity,{'c0:read'});http.headers['Authorization']='Bearer '+narrow.access_token
                 async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
@@ -152,6 +159,8 @@ def test_sdk_text_scope_reader_denial_and_disabled_client_replay(transport,knowl
                     denied=await client.call_tool('sources_ingest_text',{'data':data})
                     assert denied.is_error and denied.content[0].text=='insufficient_scope'
                     assert 'scope="c0:write"' in denied.meta['mcp/www_authenticate'][0]
+                    staged=await client.call_tool('source_versions_list',{'source_id':pending['source_id']})
+                    assert not staged.is_error and staged.structured_content['versions']==[]
                 pair=issue(identity,{'c0:write'});http.headers['Authorization']='Bearer '+pair.access_token
                 async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
                     receipt=await client.call_tool('sources_ingest_text',{'data':data})
@@ -250,7 +259,7 @@ def test_exact_native_text_seed_and_receipt_recovery_with_signed_rest(knowledge_
                 return response.status_code,response.content,str(response.url)
         browser=Browser();profile={'csrf_token':None}
         records=probe.seed_text_sources(browser,profile,title='HTTP Wiki evidence '+uuid4().hex)
-        assert len(records)==2 and records[0]['version']['source_id']==records[1]['version']['source_id']
+        assert len(records)==1 and records[0]['version']['source_id']==records[0]['superseded_version']['source_id']
         for record in records:
             probe.source_state(browser,record['version'],'ready',seconds=10)
             version=record['version']

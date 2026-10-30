@@ -17,7 +17,7 @@ const page=id=>({id,slug:id,title:id,revision:1,content:{body:'# '+id,metadata:{
 const flush=()=>new Promise(setImmediate);
 test('late page detail preserves the newer selection',async()=>{
   const h=harness(),old=h.run("selectPage('old')"),latest=h.run("selectPage('latest')");
-  h.requests[1].resolve(reply(page('latest')));await flush();h.requests[2].resolve(reply({revisions:[]}));await latest;
+  h.requests[1].resolve(reply(page('latest')));await latest;
   h.requests[0].resolve(reply(page('old')));await old;
   assert.equal(h.nodes.get('wiki-heading').textContent,'latest');
 });
@@ -56,14 +56,9 @@ test('an uncertain identical retry reuses its idempotency key',async()=>{
   h.requests[1].resolve(reply(page('saved')));await retry;
 });
 
-test('late revision previews cannot replace a newer chosen revision',async()=>{
-  const h=harness();h.run('displayPage('+JSON.stringify(page('page'))+')');
-  const history=h.run('loadHistory()');h.requests[0].resolve(reply({revisions:[{number:1},{number:2}]}));await history;
-  const buttons=h.nodes.get('wiki-history').children.map(row=>row.children[0]);
-  buttons[0].listeners.click();buttons[1].listeners.click();
-  h.requests[2].resolve(reply({content:{body:'new revision'}}));await flush();
-  h.requests[1].resolve(reply({content:{body:'old revision'}}));await flush();
-  assert.match(h.nodes.get('wiki-revision').textContent,/new revision/);assert.doesNotMatch(h.nodes.get('wiki-revision').textContent,/old revision/);
+test('current article selection makes no historical request',async()=>{
+  const h=harness(),loading=h.run("selectPage('page')");h.requests[0].resolve(reply(page('page')));await loading;
+  assert.equal(h.requests.length,1);assert.equal(h.run('typeof loadHistory'),'undefined');
 });
 test('Reader page fields remain read-only and mutations hidden',()=>{
   const h=harness();h.run("profile={role:'reader'};displayPage("+JSON.stringify(page('page'))+")");
@@ -75,7 +70,7 @@ test('same-page save advances revision while retaining edits made during the wri
   const h=harness();h.run("profile={role:'editor',csrf_token:'fixture'};displayPage("+JSON.stringify(page('same'))+")");
   h.nodes.get('wiki-body').value='first edit';const saving=h.nodes.get('wiki-form').listeners.submit({preventDefault(){}});
   h.nodes.get('wiki-body').value='newer draft';h.nodes.get('wiki-body').listeners.input();
-  h.requests[0].resolve(reply({...page('same'),revision:2}));await flush();h.requests[1].resolve(reply({revisions:[]}));await flush();h.requests[2].resolve(reply({pages:[]}));await saving;
+  h.requests[0].resolve(reply({...page('same'),revision:2}));await flush();h.requests[1].resolve(reply({pages:[]}));await saving;
   assert.equal(h.nodes.get('wiki-body').value,'newer draft');assert.equal(h.run('currentPage.revision'),2);assert.match(h.nodes.get('page-status').textContent,/newer edits are preserved/);
 });
 test('a new selection can save independently of an earlier pending write',async()=>{
@@ -120,7 +115,7 @@ test('a graph node opens its entity and preserves a picker entry beyond the init
 test('new-page save with newer edits establishes immutable slug and export links',async()=>{
   const h=harness();h.run("profile={role:'editor',csrf_token:'fixture'};displayPage(null)");h.nodes.get('wiki-slug').value='created';
   const saving=h.nodes.get('wiki-form').listeners.submit({preventDefault(){}});h.nodes.get('wiki-slug').value='too-late';h.nodes.get('wiki-slug').listeners.input();h.nodes.get('wiki-body').value='new draft';
-  h.requests[0].resolve(reply(page('created')));await flush();h.requests[1].resolve(reply({revisions:[]}));await flush();h.requests[2].resolve(reply({pages:[]}));await saving;
+  h.requests[0].resolve(reply(page('created')));await flush();h.requests[1].resolve(reply({pages:[]}));await saving;
   assert.equal(h.nodes.get('wiki-body').value,'new draft');assert.equal(h.nodes.get('wiki-slug').value,'created');assert.equal(h.nodes.get('wiki-slug').readOnly,true);
   assert.equal(h.nodes.get('export-json').hidden,false);assert.equal(h.nodes.get('export-json').href,'./api/v1/wiki/pages/created/export?format=json');
 });

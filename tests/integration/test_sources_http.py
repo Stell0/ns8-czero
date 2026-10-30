@@ -152,3 +152,124 @@ def test_upload_limits_invalid_boolean_and_chunked_body(source_http, monkeypatch
             assert list(app.state.sources.originals.root.iterdir()) == []
             assert spools and all(file.closed for file in spools)
     asyncio.run(check())
+
+
+def replace_original_during_delivery(fixture, service, actor, version):
+    from io import BytesIO
+    source=service.get(actor,version['source_id'])
+    changed=service.ingest(actor,BytesIO(b'NEW-ORIGINAL-BODY'),title=source['title'],filename='evidence.txt',
+        media_type='text/plain',retain_original=True,metadata=source['metadata'],source_id=source['id'],expected_revision=source['revision'])
+    import os,subprocess,sys
+    worker='''import sys
+from czero_core.database import Database
+from czero_core.jobs import default_registry
+from czero_core.sources import OriginalStore,register_source_handlers
+from czero_core.worker import Worker
+database=Database();registry=default_registry()
+register_source_handlers(registry,database,OriginalStore(sys.argv[1]))
+Worker(database,registry).tick()
+'''
+    result=subprocess.run([sys.executable,'-c',worker,str(service.originals.root)],capture_output=True,timeout=45,
+        env={**os.environ,'CZERO_DATABASE_URL':fixture[4].engine.url.render_as_string(hide_password=False)})
+    log=service.originals.root.parent/'original-delivery-worker.log'
+    log.write_bytes(result.stdout+result.stderr);log.chmod(0o600)
+    assert result.returncode==0,'Standalone original replacement worker failed; inspect private fixture log'
+    assert service.document(actor,changed['id'])['body']=='NEW-ORIGINAL-BODY'
+    with fixture[4].engine.begin() as connection:
+        fixture[0].state.jobs.registry.get('source.cleanup').execute(connection,{'version_id':str(UUID(int=0))})
+    return changed
+
+
+@pytest.mark.parametrize('revoke',[False,True])
+def test_original_retired_before_open_rechecks_expiry_and_current_authority(source_http,monkeypatch,revoke):
+    from czero_core.identity import Role
+    from czero_core.sources import SourceService
+    fixture,created=source_http;app,owner,member,*_=fixture
+    access=app.state.auth.access
+    owner_actor=access.resolve(app.state.auth.oidc.verify_access_token(owner))
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=app,raise_app_exceptions=False),base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+owner}) as http:
+            response=await http.post('/api/v1/sources/upload',data={'title':'Original delivery fixture','media_type':'text/plain','retain_original':'true'},
+                files={'file':('evidence.txt',b'OLD-ORIGINAL-BODY')})
+            assert response.status_code==202
+            initial=response.json();created.append(initial['source_id']);Worker(fixture[4],app.state.jobs.registry).tick()
+            if revoke:
+                assert (await http.get('/api/v1/me',headers={'Authorization':'Bearer '+member})).status_code==403
+                target=next(row for row in access.list_accounts(owner_actor) if row['username']=='member')
+                access.set_role(owner_actor,target['id'],Role.READER)
+                http.headers['Authorization']='Bearer '+member
+            original=SourceService.original;retired=[]
+            def retire_after_lookup(service,actor,version_id):
+                path,version=original(service,actor,version_id)
+                if str(version_id)==initial['id'] and not retired:
+                    retired.append(True);replace_original_during_delivery(fixture,service,owner_actor,version)
+                    assert not path.exists()
+                    if revoke:access.set_role(owner_actor,target['id'],None)
+                return path,version
+            monkeypatch.setattr(SourceService,'original',retire_after_lookup)
+            expired=await http.get('/api/v1/source-versions/'+initial['id']+'/original')
+            assert expired.status_code==(403 if revoke else 410)
+            if revoke:assert 'superseded' not in expired.text
+            else:assert expired.json()['detail']=='content_superseded'
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('range_header',[None,'bytes=4-12'])
+def test_open_original_remains_exact_and_identified_when_retired_during_delivery(source_http,monkeypatch,range_header):
+    import hashlib
+    from czero_app.sources import OriginalFileResponse
+    fixture,created=source_http;app,owner,*_=fixture
+    actor=app.state.auth.access.resolve(app.state.auth.oidc.verify_access_token(owner))
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,headers={'Authorization':'Bearer '+owner}) as http:
+            body=b'OLD-ORIGINAL-BODY'
+            response=await http.post('/api/v1/sources/upload',data={'title':'Pinned original fixture','media_type':'text/plain','retain_original':'true'},
+                files={'file':('evidence.txt',body)})
+            assert response.status_code==202
+            initial=response.json();created.append(initial['source_id']);Worker(fixture[4],app.state.jobs.registry).tick()
+            original=OriginalFileResponse.__call__;replacement=[]
+            async def retire_before_send(response,scope,receive,send):
+                if response.headers['x-c0-source-version']==initial['id'] and not replacement:
+                    changed=await asyncio.to_thread(replace_original_during_delivery,fixture,app.state.sources,actor,initial)
+                    replacement.append(changed)
+                    assert not app.state.sources.originals.path(UUID(initial['id'])).exists()
+                return await original(response,scope,receive,send)
+            monkeypatch.setattr(OriginalFileResponse,'__call__',retire_before_send)
+            downloaded=await http.get('/api/v1/source-versions/'+initial['id']+'/original',headers={'Range':range_header} if range_header else {})
+            assert downloaded.status_code==(206 if range_header else 200)
+            assert downloaded.content==(body[4:13] if range_header else body)
+            assert downloaded.headers['x-c0-source-version']==initial['id']
+            assert downloaded.headers['x-c0-content-sha256']==hashlib.sha256(body).hexdigest()
+            if range_header:assert downloaded.headers['content-range']=='bytes 4-12/'+str(len(body))
+            assert (await http.get('/api/v1/source-versions/'+initial['id']+'/original')).status_code==410
+            current=await http.get('/api/v1/source-versions/'+str(replacement[0]['id'])+'/original')
+            assert current.status_code==200 and current.content==b'NEW-ORIGINAL-BODY'
+            assert current.headers['x-c0-source-version']==str(replacement[0]['id'])
+            contract=(await http.get('/openapi.json')).json()['paths']['/api/v1/source-versions/{version_id}/original']['get']['responses']
+            assert 'superseded' in contract['410']['description']
+            assert contract['200']['headers']['X-C0-Source-Version']['schema']['format']=='uuid'
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('oversized',[False,True])
+def test_original_revalidates_bounded_bytes_before_delivery(source_http,monkeypatch,oversized):
+    from czero_core.extraction import MAX_UPLOAD
+    from czero_core.sources import SourceService
+    fixture,created=source_http;app,owner,*_=fixture
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,headers={'Authorization':'Bearer '+owner}) as http:
+            response=await http.post('/api/v1/sources/upload',data={'title':'Original integrity fixture','media_type':'text/plain','retain_original':'true'},
+                files={'file':('evidence.txt',b'ORIGINAL-INTEGRITY-BODY')})
+            assert response.status_code==202
+            initial=response.json();created.append(initial['source_id']);Worker(fixture[4],app.state.jobs.registry).tick()
+            original=SourceService.original
+            def changed_after_check(service,*args,**kwargs):
+                path,version=original(service,*args,**kwargs)
+                path.write_bytes(b'x'*(MAX_UPLOAD+1) if oversized else b'CORRUPT-BYTES')
+                return path,version
+            monkeypatch.setattr(SourceService,'original',changed_after_check)
+            failed=await http.get('/api/v1/source-versions/'+initial['id']+'/original')
+            assert failed.status_code==409 and failed.json()['detail']=='source_original_changed'
+            assert (await http.get('/api/v1/source-versions/'+initial['id']+'/document')).json()['body']=='ORIGINAL-INTEGRITY-BODY'
+    asyncio.run(check())

@@ -21,6 +21,7 @@ class ObjectNotFound(Exception):
 
 
 def _project_type(type_name, spec=None):
+    if type_name in ('c0_project_source_sync_history_v1','c0_project_source_snapshot_history_v1'):return True
     from .project_schema import PREFIX, SCHEMAS, project_unique_fields
     kind = type_name.removeprefix(PREFIX)
     if type_name != PREFIX + kind or kind not in SCHEMAS:

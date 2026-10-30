@@ -26,9 +26,12 @@ from .private_sources import load_authorization,require_snapshot_permission
 from .publish import approved, listing, publication_parts, sync_part, verify, prior_receipt, locate, save_snapshot
 
 
-def save_scan(directory,batches):
-    if directory.exists():raise C0Error('scan_identity_already_exists')
-    directory.mkdir(parents=True,mode=0o700)
+def save_scan(directory,batches,*,prepared=False):
+    if prepared:
+        from .website_state import prepared_scan
+        prepared_scan(directory)
+    elif directory.exists():raise C0Error('scan_identity_already_exists')
+    if not prepared:directory.mkdir(parents=True,mode=0o700)
     manifest={'schema_version':1,'created_at':now(),'sources':[]}
     for connector,batch in batches:
         entries=[]
@@ -36,7 +39,7 @@ def save_scan(directory,batches):
             name=connector['id']+'-'+str(index)+'.bin'
             atomic(directory/name,item.content)
             entries.append({**item.metadata(),'path':name})
-        manifest['sources'].append({'connector_id':connector['id'],'definition_hash':sha(connector),
+        manifest['sources'].append({'connector_id':connector['id'],'definition_hash':sha(connector),'adapter':connector['adapter'],
             'items':entries,'status':batch.status,'errors':batch.errors,'cursor':batch.cursor,'retry_after':batch.retry_after,'attempted':batch.attempted})
     atomic(directory/'manifest.json',manifest)
     return manifest
@@ -176,9 +179,19 @@ def run(args, *, client_factory=C0):
                 if not args.apply or not args.authorization_ref:raise C0Error('explicit_admin_approval_required')
                 return bootstrap(client,config,args.authorization_ref),0
             if (state/'latest.json').is_symlink() or (state/'publication.json').is_symlink() or (state/'scans').is_symlink():raise C0Error('unsafe_private_state_path')
+            website_only=bool(config['sources']) and all(source['adapter']=='website' for source in config['sources'])
+            if any(source['adapter']=='website' for source in config['sources']) and not website_only:
+                raise C0Error('website_requires_dedicated_private_job')
+            if website_only:
+                from .website_state import recover_scan,commit_scan_frontiers
+                recover_scan(state)
             latest=read(state/'latest.json',{})
+            reuse_pending=website_only and latest and not latest.get('verified')
             private_verified=set()
-            if args.operation in ('scan','sync'):
+            if args.operation in ('scan','sync') and not reuse_pending:
+                if website_only:
+                    from .website_state import prepare_scan
+                    directory=prepare_scan(state)
                 batches=[];total=0
                 for definition in config['sources']:
                     if not definition['enabled']:continue
@@ -222,8 +235,10 @@ def run(args, *, client_factory=C0):
                     total+=sum(len(item.content) for item in batch.items)
                     if total>64*1024*1024:raise C0Error('scan_aggregate_limit')
                     batches.append((definition,batch))
-                directory=state/'scans'/uuid4().hex;manifest=save_scan(directory,batches)
+                if not website_only:directory=state/'scans'/uuid4().hex
+                manifest=save_scan(directory,batches,prepared=website_only)
                 atomic(state/'latest.json',{'directory':str(directory),'manifest_hash':sha(manifest)})
+                if website_only:commit_scan_frontiers(job,manifest)
                 if args.operation=='scan':return {'status':'scanned','items':sum(len(b.items) for _,b in batches),'partial':any(b.status!='complete' for _,b in batches),'writes_c0':0},0 if all(b.status=='complete' for _,b in batches) else 2
             else:
                 if not latest:raise C0Error('no_saved_scan_to_resume')
@@ -231,7 +246,9 @@ def run(args, *, client_factory=C0):
                 if not directory.resolve().is_relative_to(state.resolve()) or directory.is_symlink():raise C0Error('unsafe_scan_binding')
                 manifest=load_scan(directory)
                 if sha(manifest)!=latest['manifest_hash']:raise C0Error('scan_manifest_hash_mismatch')
-            manifest=load_scan(directory);results=[];partial=False
+                if website_only:commit_scan_frontiers(job,manifest)
+                if args.operation=='scan':return {'status':'saved_pending_scan','items':sum(len(source['items']) for source in manifest['sources']),'writes_c0':0},2 if any(source['status']!='complete' for source in manifest['sources']) else 0
+            manifest=load_scan(directory);results=[];partial=False;timings={}
             for source in manifest['sources']:
                 definition=next((d for d in config['sources'] if d['id']==source['connector_id']),None)
                 if not definition or sha(definition)!=source['definition_hash']:raise C0Error('scan_configuration_changed')
@@ -265,22 +282,29 @@ def run(args, *, client_factory=C0):
                         else:
                             try:
                                 result=sync_part(publisher,part,state/'publication.json',definition_hash=sha(definition),dry_run=args.dry_run,
-                                    attempts=connection['poll_attempts'],seconds=connection['poll_seconds'])
+                                    attempts=connection['poll_attempts'],seconds=connection['poll_seconds'],timings=timings)
                             except C0Error:
                                 result={'status':'BLOCKED','external_id':part.external_id,'error':'publication_pending_resume'}
                             results.append(result);item_results.append(result)
                     if not args.dry_run and not verify_mode and item_results and all(r['status']=='verified' for r in item_results):
                         try:
-                            save_snapshot(publisher,item,item_results)
+                            save_snapshot(publisher,item,item_results,timings=timings)
                             verified+=len(item_results);verified_refs.extend(r['receipt_id'] for r in item_results)
                         except C0Error:
                             results.append({'status':'BLOCKED','external_id':item.external_id,'error':'source_snapshot_pending_resume'})
+                    if verify_mode:
+                        from .publish import verify_snapshot
+                        try:verify_snapshot(client,item,timings=timings)
+                        except C0Error:results.append({'status':'BLOCKED','external_id':item.external_id,'error':'current_snapshot_readback_failed'});partial=True
                 batch=Batch(cursor=source['cursor'],status=source['status'],errors=source['errors'],retry_after=source['retry_after'])
                 partial|=batch.status!='complete' or (not args.dry_run and verified!=count)
                 if isinstance(publisher,SourceWorkflow) and not verify_mode:
                     coverage=connector_status(publisher,definition,batch,verified,count,verified_refs)
                     publisher.finish(coverage,batch.status=='complete' and verified==count)
-            return {'status':'dry_run' if args.dry_run else 'PARTIAL' if partial else 'SAVED','items':len(results),'verified':sum(r['status']=='verified' for r in results),'resource_refs':results},2 if partial else 0
+            if website_only and not args.dry_run and all(result['status']=='verified' for result in results):
+                from .website_state import verified_scan
+                verified_scan(state,directory,manifest)
+            return {'timings':timings,'crawl_metrics':[source['cursor'].get('metrics',{}) for source in manifest['sources']],'status':'dry_run' if args.dry_run else 'PARTIAL' if partial else 'SAVED','items':len(results),'verified':sum(r['status']=='verified' for r in results),'resource_refs':results},2 if partial else 0
 
 
 def main(argv=None):
@@ -290,6 +314,7 @@ def main(argv=None):
     parser.add_argument('--config',type=Path)
     parser.add_argument('--job',type=Path)
     parser.add_argument('--dry-run',action='store_true')
+    parser.add_argument('--report-format',choices=['json','human'],default='json')
     parser.add_argument('--apply',action='store_true')
     parser.add_argument('--authorization-ref')
     parser.add_argument('--output',type=Path)
@@ -309,7 +334,15 @@ def main(argv=None):
     if args.group=='wikiplant' and args.operation!='validate':parser.error('Choose wikiplant validate')
     if args.operation in ('sync','resume') and not args.dry_run and not args.apply:parser.error('Choose --dry-run or --apply explicitly')
     try:
-        result,code=run(args);print(json.dumps(result,ensure_ascii=False,sort_keys=True));return code
+        result,code=run(args)
+        if args.report_format=='human':
+            print('C0 source job: '+str(result.get('status','observed')))
+            for field in ('items','verified','writes_c0','partial'):
+                if field in result:print(field+': '+str(result[field]))
+            for field,value in result.get('timings',{}).items():print(field+': '+format(value,'.3f'))
+            if code==2:print('Coverage is partial. Inspect the private checkpoint and retry status.')
+        else:print(json.dumps(result,ensure_ascii=False,sort_keys=True))
+        return code
     except (C0Error,OSError,ValueError,KeyError,TypeError):
         print(json.dumps({'status':'BLOCKED','error':'operation_failed_inspect_private_state_and_authority'}));return 1
 

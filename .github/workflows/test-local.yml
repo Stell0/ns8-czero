@@ -51,7 +51,11 @@ jobs:
             app/pyproject.toml
             packages/czero-core/pyproject.toml
             tests/e2e/requirements.txt
-      - run: pip install uv==0.12.20 pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]'
+      - name: Install explicit producer development environment
+        run: |
+          pip install uv==0.12.20
+          python -c "from pathlib import Path; print('czero-core @ '+Path('packages/czero-core').resolve().as_uri())" > /tmp/c0-producer-requirement.txt
+          uv pip install --system --override /tmp/c0-producer-requirement.txt pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]' -e samples/ingestion
       - uses: actions/setup-node@v6
         with:
           node-version: "24.21.0"

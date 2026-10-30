@@ -4,7 +4,7 @@ from copy import deepcopy
 from uuid import uuid4
 import pytest
 from c0_projects.model import Item,sha
-from c0_projects.publish import parts,sync_part
+from c0_projects.publish import save_snapshot,parts,sync_part
 from c0_projects.reports import save_report,render
 from c0_ingest.errors import C0Error
 from test_ingestion_samples_http import sample_connection
@@ -24,6 +24,7 @@ def test_fake_agent_evidence_report_and_lost_response_resume_through_sdk(sample_
         call('project_topic_set',topic={'topic_id':'anchor','label':'Synthetic anchor','classification':'user','authorization_ref':'synthetic:user'})
         part=next(parts(Item('documents','capacity.md','Synthetic original','La capacità sintetica è100 unità.'.encode(),'text/markdown')))
         stored=sync_part(client,part,tmp_path/'source.json',definition_hash=sha(definition),attempts=4,seconds=0)
+        save_snapshot(client,part.item,[stored])
         document=client.call('documents_get',version_id=stored['version_id'])
         chunk=client.call('document_chunks_list',document_id=document['id'])['chunks'][0]
         entity=call('entities_create',kind='concept',label='Synthetic capacity')
