@@ -43,8 +43,9 @@ suite, followed by full candidate CI. Runtime/Core storage behavior is unchanged
 ## Active: latest-only storage and reusable website crawler
 
 Authorized scope: disposable storage/migration/browser validation and bounded
-public documentation reads only. No production migration, import, schedule or
-merge is authorized. Preserve frozen deployed images and historical evidence below.
+public documentation reads only. The approved source merge is complete as
+recorded below. Production migration, import and schedules require separate
+authorization. Preserve frozen deployed images and historical evidence below.
 
 Implementation uses schema 0023, explicit current source pointers, verified current
 multipart membership, payload-free receipts/tombstones, transactional retirement
@@ -76,9 +77,24 @@ Downloaded wheel SHA-256 `e765f790fa979c38b598fdcaa0bf41936ba29523fca2fa31bb9191
 and archive `24f9b04cc5fba68428693b78d0a112cd21dc1597dc996613bbceb760ee19e8ef`
 match published checksums. The application adopts its immutable tag/Git lock,
 `>=0.36.0,<0.37.0` and matching patch-only updater bounds. Default-image acceptance
-checks the actual installed source and latest-only schema/contracts. Final
-consumer full/native gates and PR review remain required; no merge or deployment
-is authorized.
+checks the actual installed source and latest-only schema/contracts. Approved
+[PR45](https://github.com/Stell0/ns8-czero/pull/45) regularly merges as
+`f51357d18760a83242273e1ded0c648799c8dad8`, preserving tested head
+`51b8309fc833feb1e8e3d8302e46df9f680cfb34` and its identical runtime tree.
+PR full [40992071146](https://github.com/Stell0/ns8-czero/actions/runs/40992071146)
+and actual main [41010999070](https://github.com/Stell0/ns8-czero/actions/runs/41010999070)
+pass the merge gate and exact-source promotion verification. Main confirms
+2378 Python/PostgreSQL/packaging cases, 210 Node controllers, eleven real HTTPS
+browser cases, schema/shell/docs and 21 Robot dry runs. Independent downloaded
+main artifacts verify Debian update 21/zero skips, Rocky installation 26/three
+expected install-only skips, all eight native browser workflows/privacy guards,
+32 accessibility contexts, three zero-query artifacts, genuine predecessor
+content/background preservation, three installed candidate identities and five
+scan/SBOM pairs. Canonical publication succeeds; six fresh registry reads verify
+all three main/latest aliases against those accepted digests and source labels.
+This closes source/publication acceptance. Production remains untouched; the
+accepted installed baseline below is unchanged. Backup/preflight, a production
+upgrade, documentation import and external schedule require separate authority.
 
 Consumer acceptance exposed an existing source-upload race: selecting a source
 could submit before its title/provenance lookup completed, accidentally making an
@@ -87,8 +103,10 @@ lookup, preserves authored metadata when choosing a file and reports acceptance
 only after refreshing current content. Three controlled regressions fail before
 the fix and pass after it; the real HTTPS/worker/browser regression confirms the
 unchanged upload retains source revision and content identity. The preceding
-Rocky native failure remains failed evidence, not acceptance. Final consumer
-full/native gates must pass on the corrected frozen source.
+Rocky native failure remains failed evidence, not acceptance. The corrected
+head passes 2378 Python/PostgreSQL/packaging cases, 210 Node controllers and eleven
+HTTPS browser cases. Its full consumer and subsequent main/native acceptance
+are recorded above; no failed run is counted as a pass.
 
 Bounded public smoke uses 20 pages each from NethVoice, NethSecurity and NethServer.
 After correcting article-header extraction, all 60 whole Markdown bodies and
