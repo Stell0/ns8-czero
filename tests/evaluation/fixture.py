@@ -45,7 +45,7 @@ def database_parameters(value):
 
 
 @asynccontextmanager
-async def disposable_database(admin_url):
+async def disposable_database(admin_url, *, retain=False):
     url = database_parameters(admin_url)
     name = 'czero_eval_'+uuid4().hex
     admin = create_engine(url)
@@ -54,19 +54,21 @@ async def disposable_database(admin_url):
             conn.exec_driver_sql('CREATE DATABASE '+name)
         yield url.set(database=name).render_as_string(hide_password=False)
     finally:
-        with admin.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
-            # Only the random database created by this invocation is removed.
-            conn.exec_driver_sql('DROP DATABASE IF EXISTS '+name+' WITH (FORCE)')
+        if not retain:
+            with admin.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
+                # Only the random database created by this invocation is removed.
+                conn.exec_driver_sql('DROP DATABASE IF EXISTS '+name+' WITH (FORCE)')
         admin.dispose()
 
 
 class Fixture:
-    def __init__(self, url, directory):
+    def __init__(self, url, directory, *, identity=None):
         self.db = Database(url); migrate_database(self.db)
-        issuer = 'https://idp.example.test/realms/'+uuid4().hex
-        self.signer = RSAKey.generate_key(2048,{'kid':'evaluation','use':'sig'})
+        issuer = identity['issuer'] if identity else 'https://idp.example.test/realms/'+uuid4().hex
+        self.signer = identity['signer'] if identity else RSAKey.generate_key(2048,{'kid':'evaluation','use':'sig'})
         verifier = TokenVerifier(issuer,'czero900',{'keys':[self.signer.as_dict(private=False)]})
-        self.keys = {'owner':uuid4(),'reader':uuid4()}
+        self.keys = identity['keys'] if identity else {'owner':uuid4(),'reader':uuid4()}
+        self.identity = {'issuer':issuer,'signer':self.signer,'keys':self.keys}
         class Provider:
             config = OidcConfig(issuer,'czero900','synthetic-only',ORIGIN)
             verify_access_token = staticmethod(verifier.verify_access_token)

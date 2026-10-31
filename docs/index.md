@@ -16,3 +16,5 @@ C0 is an NS8 knowledge application with a website and authenticated MCP tools fo
 The [roadmap](../PLAN.md) records current work and the [CI policy](ci-policy.md) defines acceptance. [Historical evidence](history/PLAN.md) is retained separately; old milestone statuses are not current setup instructions.
 
 Use the [verified development installation candidate](installation-candidate.md) for a concrete tag and measured platform/IdP baseline.
+
+- [Controlled agentic retrieval workflows](agentic-retrieval.md)
