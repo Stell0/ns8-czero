@@ -55,11 +55,11 @@ Follow the [administrator guide](docs/administration.md). The [accepted runtime 
 
 A standard installation runs the application, PostgreSQL/pgvector and the extraction/indexing worker. Optional embeddings and scoring are configuration choices; ordinary text retrieval does not require an external model provider.
 
-The Core 0.36.1 producer candidate adds bounded lexical recovery for questions
+The independently released Core 0.36.1 adds bounded lexical recovery for questions
 that have no strict matches. Exact phrases/operators remain strict, and the API
 reports the actual lexical strategy. See [behavior and evaluation limits](docs/retrieval-benchmark.md).
-Independent Core publication and consumer adoption remain required; the frozen
-application dependency still selects released Core 0.36.0.
+The app 0.57 consumer candidate selects its immutable release tag and frozen lock.
+Full consumer acceptance and guarded deployment remain separate gates.
 
 ## Connect your AI assistant
 

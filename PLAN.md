@@ -1,5 +1,29 @@
 # C0 roadmap
 
+## Released-Core adoption candidate
+
+PR48 regularly merges as `53c6957`; its tree equals accepted head `8dbb746`.
+Exact PR full CI41110893198, promotion proof and downloaded native/privacy
+artifacts pass. Main run41192441500's required Rocky job fails during the upstream
+NS8 installer's package-mirror metadata download, before that guest's C0 suite. The
+infrastructure evidence is preserved; main/canonical acceptance is not claimed.
+
+Independent Core0.36.1 is published from the merged, fully accepted `8dbb746`
+source by [41193447358](https://github.com/Stell0/ns8-czero/actions/runs/41193447358).
+Downloaded wheel SHA-256
+`78cf510a4fe4752e0761de037f3f4b8be14383a94d223b9cbe389535ad28ef5f`
+and archive `4a4b221c452094d5f4d7ac92f4f51cc1a0eba0b8038020a45041993570e253e0`
+match its immutable release checksums. Source, license, Authlib1.9.1 and schema0023
+are verified; this independent library publication does not accept the app's
+blocked main run or constitute an NS8 module release.
+
+App0.57 stages adoption of the released tag, frozen Git lock and matching
+patch-only updater bounds. No retrieval algorithm or stored content changes.
+Complete base/consumer/native/current-PR gates and review remain required before
+merge and guarded live acceptance. Do not replace production with producer/local
+Core images. Restore upstream mirror consistency before repeating full native
+acceptance; preserve failed runs and never weaken the gate.
+
 ## Bounded natural-language retrieval candidate
 
 Controlled signed-HTTP reproduction identifies lexical eligibility before ranking:

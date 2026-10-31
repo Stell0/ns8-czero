@@ -127,6 +127,9 @@ with benchmark bodies because it can affect fallback eligibility. Record actual
 `lexical_strategy` separately from semantic/provider modes; optional response
 metadata must not change authority or the legacy source citation-list contract.
 Keep independent Core publication and consumer pin/lock acceptance separate.
+Core0.36.1 is immutably published from merged source8dbb746; app0.57 stages its
+released tag/lock adoption. Keep the published Core bytes and failed main mirror
+evidence frozen. Consumer/full/native/review/deployment gates remain separate.
 
 [CI policy](docs/ci-policy.md) defines automated validation. Draft runtime work gets scoped feedback; ready runtime PRs require full exact-source acceptance. Only explicitly reviewed Git-only documents receive the lightweight exemption; packaged docs, plugin inputs, static app HTML, executable helpers, versions and locks broaden validation. The external-fork contribution requirement above additionally requires full checks even when automation classifies a change as documentation-only.
 
