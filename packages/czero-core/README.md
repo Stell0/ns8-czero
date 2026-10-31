@@ -23,6 +23,23 @@ scripts outside this package. Optional providers do not determine authorization;
 text search remains independent of inference. Generative operations stay outside
 the runtime.
 
+## Bounded lexical recovery (0.36.1 candidate)
+
+Evidence searches preserve existing strict web-search results and explicit query
+syntax. After an eligible selection has zero matches, plain multiword queries can
+match at least two and at least half of up to 32 meaningful lexemes. PostgreSQL's
+standard English/Italian stop lists supply stop words; remaining words are not
+stemmed or translated. Numeric, uppercase and punctuated identifiers stay
+mandatory. Current source product/version provenance supplies bounded context;
+real chunk matching, current generations, persisted roles and filters still gate
+every candidate. No schema or dependency change is required.
+
+`SearchService.search` and filtered evidence return `lexical_strategy` separately
+from `retrieval_method`. Relaxed matching remains text retrieval. Source search
+preserves its citation-list API and consistent pagination. This is a producer
+candidate pending independent review/publication; consumer pins remain unchanged.
+See the [query and evaluation guide](https://github.com/Stell0/ns8-czero/blob/main/docs/retrieval-benchmark.md).
+
 ## Optional verified-user admission and client onboarding
 
 Version0.31.1 adds `AccessService(..., admit_readers=True)` for applications that admit new verified users as Readers. The default remains closed admission for existing consumers. An explicit `set_role(..., None)` persists a block, so repeated sign-in cannot readmit a revoked user. Migration0019 preserves existing accounts without membership as blocked; owner identity and existing explicit roles remain authoritative. An application Admin must explicitly grant an old blocked identity access. Protected-space grants and delegated scopes are unchanged.

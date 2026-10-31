@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from .embeddings import EmbeddingStore
 from .retrieval import SearchService, hit_key
+from .lexical import SOURCE_CONTEXT,select_lexical
 
 
 class FilteredEmbeddingStore(EmbeddingStore):
@@ -51,37 +52,39 @@ class FilteredEvidenceSearch(SearchService):
                     'id': row['target_id'], 'revision': row['target_revision'], 'resource_id': hit['resource_id']},
                 'evidence_refs': []}
 
-    def _source_candidate(self):
+    def _source_candidate(self, lexical):
         filters = self.filters
-        return '''SELECT c.id,'chunk' AS kind,v.id AS target_id,v.number AS target_revision,
-            ts_rank_cd(c.search_vector,websearch_to_tsquery('simple',:query)) AS rank,
+        return f'''SELECT c.id,'chunk' AS kind,v.id AS target_id,v.number AS target_revision,
+            {lexical.rank('c.search_vector',context=SOURCE_CONTEXT)} AS rank,
             ''' + filters._columns() + ''' FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            ''' + filters._joins('source_version', 'v.id', 'v.number') + '''
+            ''' + filters._joins('source_version', 'v.id', 'v.number') + f'''
             WHERE c.space_id=:space AND s.space_id=:space AND s.current_version_id=v.id AND v.state='ready' AND :chunks
-            AND c.search_vector @@ websearch_to_tsquery('simple',:query)
+            AND {lexical.match('c.search_vector',context=SOURCE_CONTEXT)}
             AND ''' + filters._predicate('v.created_at', 's.deleted')
 
-    def _wiki_candidate(self):
+    def _wiki_candidate(self, lexical):
         filters = self.filters
-        return '''SELECT r.id,'wiki_revision' AS kind,r.id AS target_id,r.number AS target_revision,
-            ts_rank_cd(r.search_vector,websearch_to_tsquery('simple',:query)) AS rank,
+        return f'''SELECT r.id,'wiki_revision' AS kind,r.id AS target_id,r.number AS target_revision,
+            {lexical.rank('r.search_vector')} AS rank,
             ''' + filters._columns() + ''' FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
-            ''' + filters._joins('wiki_revision', 'r.id', 'r.number') + '''
+            ''' + filters._joins('wiki_revision', 'r.id', 'r.number') + f'''
             WHERE r.space_id=:space AND p.space_id=:space AND :wiki AND p.revision=r.number
-            AND r.search_vector @@ websearch_to_tsquery('simple',:query)
+            AND {lexical.match('r.search_vector')}
             AND ''' + filters._predicate('r.created_at', 'p.deleted')
 
     def _text(self, connection, query, *, limit, kind):
-        sql = 'SELECT * FROM (' + self._source_candidate() + ' UNION ALL ' + self._wiki_candidate()
-        sql += ') matches ORDER BY rank DESC,kind,id LIMIT :limit'
-        parameters = {**self.filters._parameters(), 'space': self._space(connection), 'query': query,
+        def fetch(lexical):
+            sql = 'SELECT * FROM (' + self._source_candidate(lexical) + ' UNION ALL ' + self._wiki_candidate(lexical)
+            sql += ') matches ORDER BY rank DESC,kind,id LIMIT :limit'
+            parameters = {**self.filters._parameters(), 'space': self._space(connection), **lexical.parameters,
             'chunks': kind != 'wiki' and 'source' in self.filters.categories,
             'wiki': kind != 'source' and 'wiki' in self.filters.categories, 'limit': limit}
-        rows = connection.execute(text(sql), parameters).mappings().all()
+            return connection.execute(text(sql), parameters).mappings().all()
+        rows,strategy=select_lexical(connection,query,fetch)
         return [self._decorate(connection,
             {**(self._source_hit(connection, row['id'], query) if row['kind'] == 'chunk'
-                else self._wiki_hit(connection, row['id'], query)), 'score': float(row['rank'])}, row) for row in rows]
+                else self._wiki_hit(connection, row['id'], query)), 'score': float(row['rank'])}, row) for row in rows],strategy
 
     def _semantic_row(self, connection, row):
         filters = self.filters

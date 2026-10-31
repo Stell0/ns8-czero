@@ -1,5 +1,43 @@
 # C0 roadmap
 
+## Bounded natural-language retrieval candidate
+
+Controlled signed-HTTP reproduction identifies lexical eligibility before ranking:
+the `simple` web-search query requires every term in one chunk. Independently read
+bodies, keyword/phrase/operator controls and actual GIN access distinguish this
+from missing content, authorization, providers or a benchmark fallback. Chunk
+co-occurrence and absent product/version words are separately observed mechanisms.
+
+Core 0.36.1 preserves strict matches, then uses bounded provider-free lexical
+recovery for eligible zero-result plain queries. Standard stop lists, minimum
+term coverage, mandatory identifiers and current product/version provenance are
+shared by ordinary, filtered and source callers. No schema, dependency or global
+retrieval-setting change is introduced. Optional response metadata and guidance
+distinguish lexical relaxation from semantics. See [the contract](docs/retrieval-benchmark.md).
+
+Initial question regressions fail before the correction; explicit syntax controls
+pass. Scoped Core/HTTP/current-generation and hand-computable benchmark cases pass,
+as does real HTTPS/OAuth renewal and question-to-complete-document browser
+navigation/replacement/access loss. Full exact-source local/native/artifact gates
+and a fresh held-out comparison are required before review readiness; record
+their exact results in the PR. Private labels/results stay outside Git.
+The independent Core publication, consumer pin/lock adoption and
+consumer acceptance gates precede any deployment. No new PR is merged or release
+published automatically; accepted installations and predecessors remain frozen.
+
+## Operational documentation and retrieval tooling
+
+Implement a small external, read-only retrieval runner using the existing
+dedicated ingestion connection and complete-document APIs. Freeze current
+identities/hashes before and after each mode; retain provisional analyst labels,
+raw chunk rankings and parent-deduplicated metrics privately. Missing providers
+and comparator access remain explicit unavailability, not simulated measurements.
+An opt-in external publisher batch queues bounded extraction before the existing
+verification/publication path, preserving uncertain-intent and lease contracts.
+Acceptance includes hand-computable metrics, current-corpus/authority/fallback
+regressions, real PostgreSQL staging/recovery and the existing HTTPS worker/browser
+suite, followed by full candidate CI. Runtime/Core storage behavior is unchanged.
+
 > Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](docs/latest-only-migration.md).
 
 ## Active: latest-only storage and reusable website crawler

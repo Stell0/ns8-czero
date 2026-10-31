@@ -18,6 +18,9 @@ python3 -m venv .venv
 # Explicit producer override; the shipped consumer tag/lock remain unchanged.
 .venv/bin/python -c "from pathlib import Path; print('czero-core @ '+Path('packages/czero-core').resolve().as_uri())" > /tmp/c0-producer-requirement.txt
 .venv/bin/uv pip install --python .venv/bin/python --override /tmp/c0-producer-requirement.txt -e packages/czero-core -e 'app[test]' -e samples/ingestion
+# The override can resolve Core as a built copy. Make iterative producer edits explicit.
+.venv/bin/uv pip install --python .venv/bin/python --no-deps --reinstall -e packages/czero-core
+.venv/bin/python -c "import czero_core; print(czero_core.__file__)"
 ```
 
 Provide `CZERO_TEST_DATABASE_URL` privately for a **disposable** PostgreSQL/pgvector database. The test account must create/drop owned test databases for packaging and forced-index isolation. Do not use production data. Without that setting, database skips are not a pass.

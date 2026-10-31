@@ -1,6 +1,52 @@
-> Historical evidence. For current setup, see the [documentation index](index.md); for current acceptance, see [release readiness](release-readiness.md). The measurements and generation-specific instructions below are retained.
+# Provider-free question matching
 
-# Retrieval fixture benchmark
+Core 0.36.1 is a producer candidate; independent review, immutable publication
+and consumer pin adoption remain release gates. The app's frozen dependency
+continues to select released Core 0.36.0 until those gates pass.
+
+Ordinary, filtered and source evidence search first run the existing PostgreSQL
+`simple` web-search query. Existing matches retain their ranking. If the eligible
+selection has no strict matches, an unquoted plain query with at least four
+lexemes can use bounded lexical recovery:
+
+- Words on either standard PostgreSQL English/Italian stop list are omitted from
+  coverage. Remaining lexemes are neither stemmed nor translated.
+- Two to 32 distinct remaining terms are required; longer selections stay strict
+  without truncation. A candidate must match at least two and at least half.
+- Numeric terms, uppercase identifiers and punctuated technical names remain
+  mandatory. Current source provenance's declared product/version can supply
+  context, while candidate discovery still requires a real chunk match with a
+  GIN-indexable predicate. Annotation filters and space/current-generation predicates stay
+  mandatory.
+- Quoted phrases, `OR` and exclusions retain their original interpretation.
+  Forms containing `&`, `|`, `!`, uppercase `AND` or `NOT` also remain strict;
+  no SQL-style operator parser is added. Inline diagnostic punctuation such as
+  `Check(flag)` does not itself mean Boolean grouping.
+
+`knowledge_search` and its structured counterpart expose optional
+`lexical_strategy=websearch|relaxed`. Null means unreported or unused. Relaxation
+is still `retrieval_method=text`; semantic/hybrid provider fallbacks keep their
+separate reasons. Source-only search keeps its existing citation-list shape and
+chooses its strategy independently of pagination offset.
+
+This corrects zero-result lexical eligibility, not synonymy, translation or
+answer generation. Read the actual evidence. Missing metadata, acronyms absent
+from a body, separated chunk terms and incomplete relevance labels can still
+limit retrieval. Returned results do not establish abstention or clarification.
+
+Use the [current-corpus runner](../samples/ingestion/examples/website/BENCHMARK.md)
+with private labels, matched budgets and corpus guards. Preserve original
+baselines, reserve fresh held-out questions before implementation, predeclare
+quality/latency targets and record actual strategy/provider use. The real-HTTP
+regressions, independent wheel/archive probes and HTTPS worker/Chromium tests
+exercise the same Core behavior. See [development](development.md) for commands.
+
+## Historical provider fixture
+
+The measurements below are retained historical evidence, not a comparison with
+the new lexical strategy or proof of real provider quality.
+
+### Retrieval fixture benchmark
 
 Measured with actual PostgreSQL/pgvector and deterministic protocol mocks. Eight immutable Wiki revisions contain two relevant paraphrases and two keyword distractors for each of two queries. Each query returns at most two results. No generated answers, real provider calls or calibrated model probabilities are tested.
 

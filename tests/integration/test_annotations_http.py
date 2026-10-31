@@ -352,7 +352,7 @@ def test_ready_evidence_and_all_five_typed_categories_use_separate_annotations(a
 
 
 
-def test_all_accepted_am3_operation_contracts_remain_unchanged(annotation_http):
+def test_accepted_am3_contracts_add_only_optional_lexical_metadata(annotation_http):
     app=annotation_http[0][0]
     baseline=json.loads((Path(__file__).parents[1]/'fixtures/agent_memory/am3_contract.json').read_text())
     assert len(baseline['operations'])==71
@@ -368,6 +368,8 @@ def test_all_accepted_am3_operation_contracts_remain_unchanged(annotation_http):
                 assert actual[key] and isinstance(actual[key],str)
                 continue
             observed=actual[key]
+            if key=='output_schema' and expected['name'] in ('knowledge_search','knowledge_search_structured'):
+                observed=contract.legacy_search_output(observed)
             if key in ('input_schema','output_schema'):
                 observed=contract.schema_hash(observed)
                 value=M17_CONTRACT[expected['name']]['input_sha256' if key=='input_schema' else 'output_sha256']
