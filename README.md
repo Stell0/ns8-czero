@@ -58,7 +58,8 @@ A standard installation runs the application, PostgreSQL/pgvector and the extrac
 The independently released Core 0.36.1 adds bounded lexical recovery for questions
 that have no strict matches. Exact phrases/operators remain strict, and the API
 reports the actual lexical strategy. See [behavior and evaluation limits](docs/retrieval-benchmark.md).
-The app 0.57 consumer candidate selects its immutable release tag and frozen lock.
+The app 0.57 consumer candidate selects its immutable release tag and frozen lock
+and verifies that dependency in the image selected for native acceptance.
 Full consumer acceptance and guarded deployment remain separate gates.
 
 ## Connect your AI assistant

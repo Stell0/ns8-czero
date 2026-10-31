@@ -130,6 +130,11 @@ Keep independent Core publication and consumer pin/lock acceptance separate.
 Core0.36.1 is immutably published from merged source8dbb746; app0.57 stages its
 released tag/lock adoption. Keep the published Core bytes and failed main mirror
 evidence frozen. Consumer/full/native/review/deployment gates remain separate.
+Reference publishing selects released Core when its committed package tree equals
+the consumer lock's immutable Git tree; differing trees remain explicit producer
+development. Invalid or missing identities fail without fallback. Verify the
+released Git source in the actual published/native app image, not only a temporary
+probe. Producer acceptance is not released-consumer deployment proof.
 
 [CI policy](docs/ci-policy.md) defines automated validation. Draft runtime work gets scoped feedback; ready runtime PRs require full exact-source acceptance. Only explicitly reviewed Git-only documents receive the lightweight exemption; packaged docs, plugin inputs, static app HTML, executable helpers, versions and locks broaden validation. The external-fork contribution requirement above additionally requires full checks even when automation classifies a change as documentation-only.
 
