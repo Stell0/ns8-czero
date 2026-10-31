@@ -149,9 +149,13 @@ remove their disposable databases automatically.
 The first `loop` invocation prepares questions/partitions and a source-only layer
 proposal, then stops at `prepared_requires_audit`. Review a representative sample
 against original bodies independently of rankings. Save private `label-audit.json`
-with `questions_hash` matching `freeze.json`, `approved_for_pilot: true`, and an
+with `proposal_hash` matching the digest of `proposal.json`,
+`reviewed_questions_hash` matching the reviewed question list,
+`approved_for_pilot: true`, and an
 `audit` list describing selected question IDs, checks, uncertainties and analyst
 provenance. This is an analyst attestation, not independent human adjudication.
-Then resume the unchanged protocol with `loop --resume` and the same arguments.
+Before any retrieval, corrections may be saved in `questions-reviewed.json`;
+retain the original proposal and audit every correction against originals.
+The final partition/label freeze is written only after this audit. Then resume the unchanged protocol with `loop --resume` and the same arguments.
 Use `--prepare-only` to stop after preparation explicitly. Keep that audit, labels
 and all model traces outside Git. No production application is implied.

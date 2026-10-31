@@ -50,6 +50,7 @@ async def maintain(call,space,corpus,plan,state_path,*,apply=False,max_operation
     path=Path(state_path)
     state=json.loads(path.read_text()) if path.exists() else {'space':space,'namespace':plan['namespace'],'records':{},'pending':None}
     if (state['space'],state['namespace'])!=(space,plan['namespace']):raise ValueError('managed_target_changed')
+    if len(set(state['records'])|{r['key'] for r in plan['records']})>100:raise ValueError('managed_record_budget')
     operations=0;report=[]
     async def invoke(name,args):
         nonlocal operations
@@ -81,7 +82,7 @@ async def maintain(call,space,corpus,plan,state_path,*,apply=False,max_operation
             if (current['revision']!=saved['revision'] or body_hash(current['content']['body'])!=saved['body_hash']
                 or current['content']['metadata'].get('managed_by')!=plan['namespace']):raise RuntimeError('authored_or_concurrent_edit')
         same=current and all(current['content'].get(k)==data[k] for k in ('title','body','metadata'))
-        report.append({'key':key,'action':'unchanged' if same else 'update' if saved else 'create','support':record['evidence']})
+        report.append({'key':key,'action':'unchanged' if same else 'update' if saved else 'create','title':record['title'],'synthesis':record['synthesis'],'classification':record['classification'],'support':record['evidence']})
         if not apply:continue
         if not same:
             args={'data':{**data,'expected_revision':saved['revision'] if saved else None,
