@@ -209,6 +209,10 @@ Fetch original C0 main regularly and keep development changes rebased on it. Res
 
 Review Core dependency updates and managed infrastructure proposals through `c0-upstream.json` and `scripts/sync-upstream.py`. The updater preserves customized files for review rather than overwriting them. Use `c0-upgrade-from-upstream` for upgrades and `c0-contribute-upstream` for reusable contributions. When your improvement can benefit the C0 base, open a focused upstream PR using `c0-contribute-upstream` and the installed `nethserver-pr` skill. Keep application branding, private deployment information and unfinished work separate from those contributions. Update the Codex-facing tool catalog, plugin/skills and documentation alongside behavior changes; verify the connection after upgrading.
 
+For controlled retrieval experiments, use the three [agentic retrieval skills and
+external workflow](docs/agentic-retrieval.md). Synthetic question labels, derived
+knowledge and original evidence remain distinct; model traces stay private.
+
 ## Roadmap and project status
 
 The knowledge service, browser readers, protected spaces, OAuth/MCP access, persistent background connections and people-first administration are implemented and accepted under the recorded development gates. This remains a **development candidate**, with no stable NS8 release or public plugin-directory listing claimed.

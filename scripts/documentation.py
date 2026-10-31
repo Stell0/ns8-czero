@@ -12,7 +12,7 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 GUIDES = ('installation-candidate', 'index', 'user-guide', 'administration', 'chatgpt', 'plugin',
           'development', 'reference', 'workspace-access', 'release-readiness', 'ci-policy',
-          'tool-evaluations', 'retrieval-benchmark', 'c0-agent-memory-baseline',
+          'tool-evaluations', 'retrieval-benchmark', 'agentic-retrieval', 'c0-agent-memory-baseline',
           'm14-readiness', 'm14-release-notes')
 MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',
                'samples/ingestion/README.md', 'samples/ingestion/examples/website/README.md',
@@ -22,7 +22,8 @@ MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',
                *('.agents/skills/' + name + '/SKILL.md' for name in (
                    'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream',
                    'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources',
-                   'c0-project-workflows')))
+                   'c0-project-workflows','c0-generate-retrieval-questions',
+                   'c0-maintain-semantic-layer','c0-benchmark-agentic-retrieval')))
 
 
 def prose(text):

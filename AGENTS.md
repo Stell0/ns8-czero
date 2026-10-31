@@ -40,6 +40,9 @@ Forks use the released Core dependency and frozen lock by default. `CZERO_CORE_S
 | Change reusable services, migrations or Core packaging | [c0-develop-core](.agents/skills/c0-develop-core/SKILL.md) |
 | Isolate a reusable upstream contribution | [c0-contribute-upstream](.agents/skills/c0-contribute-upstream/SKILL.md) |
 | Review Core or managed-infrastructure upgrades | [c0-upgrade-from-upstream](.agents/skills/c0-upgrade-from-upstream/SKILL.md) |
+| Generate grounded evaluation questions | [c0-generate-retrieval-questions](.agents/skills/c0-generate-retrieval-questions/SKILL.md) |
+| Maintain a managed semantic layer | [c0-maintain-semantic-layer](.agents/skills/c0-maintain-semantic-layer/SKILL.md) |
+| Benchmark agentic retrieval | [c0-benchmark-agentic-retrieval](.agents/skills/c0-benchmark-agentic-retrieval/SKILL.md) |
 | Measure model-driven tool use | [c0-evaluate-tools](.agents/skills/c0-evaluate-tools/SKILL.md) |
 | Ingest or update an external data source | [c0-ingest-sources](.agents/skills/c0-ingest-sources/SKILL.md) |
 | Develop or verify protected project workflows and agent handoff | [c0-project-workflows](.agents/skills/c0-project-workflows/SKILL.md) |

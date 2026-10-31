@@ -61,7 +61,9 @@ def audit_event(value):
 
 
 async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt-6-astra',
-                   effort='high', timeout=180, codex='codex'):
+                   effort='high', timeout=180, codex='codex', cli_version=CLI_VERSION,
+                   final_schema=None, max_calls=MAX_CALLS, max_context_bytes=1024*1024,
+                   max_tokens=None, require_model=False, allow_no_tools=False):
     """No bearer, DB URL, grader or expected answer enters the model workspace."""
     output = Path(output)
     output.mkdir(mode=0o700,parents=True,exist_ok=False)
@@ -71,20 +73,23 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
                                                  stderr=asyncio.subprocess.PIPE)
     version_bytes,_ = await asyncio.wait_for(probe.communicate(),10)
     version = version_bytes.decode().strip()
-    if probe.returncode or version != CLI_VERSION:
-        raise RunnerFailure('App-server protocol is pinned to '+CLI_VERSION)
+    if probe.returncode or version != cli_version or cli_version not in (CLI_VERSION, 'codex-cli 0.166.0'):
+        raise RunnerFailure('App-server protocol is pinned to '+cli_version)
     definitions = [{'type':'function','name':t.name,'description':t.description or '',
                     'inputSchema':t.input_schema,'deferLoading':False} for t in tools]
-    if not definitions or len({t['name'] for t in definitions}) != len(definitions):
+    if (not definitions and not allow_no_tools) or len({t['name'] for t in definitions}) != len(definitions):
         raise RunnerFailure('Missing or duplicate actual MCP definitions')
     if len(json.dumps(definitions).encode()) > 2*1024*1024:
         raise RunnerFailure('Catalog exceeds evaluation bound')
     names = {t['name'] for t in definitions}
     events, calls, final, usage = 0, [], None, None
+    usage_events = 0
     proof = {'valid':False,'driver':'codex-app-server-eager-mcp','cli':version,
         'requested_model':model,'effort':effort,'catalog_sha256':fingerprint(definitions),
         'instructions_sha256':fingerprint(instructions),'prompt_sha256':fingerprint(prompt),
         'experimental_api':True,'native_discovery_proven':False}
+    context_bytes = len((instructions+prompt).encode())+len(json.dumps(definitions).encode())
+    schema = final_schema or FINAL_SCHEMA
     started = time.monotonic()
     # A fresh cwd and process state for every measured session. No project/skill
     # files, ground truth or private artifacts are placed here.
@@ -137,18 +142,23 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
                     'capabilities':{'experimentalApi':True}})
                 await send({'method':'initialized'})
                 thread = await request(2,'thread/start',{'model':model,'cwd':cwd,'ephemeral':True,
-                    'sandbox':'read-only','approvalPolicy':'never','dynamicTools':definitions})
+                    'sandbox':'read-only','approvalPolicy':'never','dynamicTools':definitions,
+                    **({'allowProviderModelFallback':False} if cli_version=='codex-cli 0.166.0' else {})})
                 proof['reported_thread_model'] = thread.get('model')
+                if require_model and thread.get('model') != model:
+                    raise RunnerFailure('Reported model differs from requested model')
+                if context_bytes > max_context_bytes:
+                    raise RunnerFailure('Initial context budget exceeded')
                 await request(3,'turn/start',{'threadId':thread['thread']['id'],
                     'input':[{'type':'text','text':instructions+'\n\nUser task:\n'+prompt}],
-                    'effort':effort,'outputSchema':FINAL_SCHEMA})
+                    'effort':effort,'outputSchema':schema})
                 while True:
                     value = await receive(); method = value.get('method')
                     if method == 'item/tool/call':
                         params = value['params']; name = params['tool']; arguments = params['arguments']
                         if name not in names or params.get('namespace') is not None or not isinstance(arguments,dict):
                             raise RunnerFailure('Tool routing left actual MCP catalog')
-                        if len(calls)>=MAX_CALLS or len(json.dumps(arguments).encode())>262144:
+                        if len(calls)>=max_calls or len(json.dumps(arguments).encode())>262144:
                             raise RunnerFailure('Tool call budget exceeded')
                         row = {'name':name,'arguments':arguments,'started':time.monotonic()-started}
                         calls.append(row)
@@ -160,7 +170,8 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
                             raise
                         payload = result.model_dump(mode='json',by_alias=True,exclude_none=True)
                         row['result'] = payload
-                        if len(json.dumps(payload).encode())>1024*1024:
+                        context_bytes += len(json.dumps(payload).encode())+len(json.dumps(arguments).encode())
+                        if context_bytes > max_context_bytes:
                             raise RunnerFailure('Tool response exceeds bound')
                         (output/'calls.json').write_text(json.dumps(calls,indent=2)+'\n')
                         await send({'id':value['id'],'result':{'success':not result.is_error,
@@ -173,6 +184,9 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
                             final = item.get('text')
                     elif method == 'thread/tokenUsage/updated':
                         usage = value['params'].get('tokenUsage')
+                        usage_events += 1
+                        if max_tokens is not None and usage and usage.get('total',{}).get('totalTokens',0) > max_tokens:
+                            raise RunnerFailure('Observed token budget exceeded')
                     elif method == 'turn/completed':
                         if value['params']['turn']['status'] != 'completed':
                             raise RunnerFailure('Model turn did not complete')
@@ -182,7 +196,7 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
                 if not final:
                     raise RunnerFailure('Completed turn has no final message')
                 from jsonschema import validate
-                parsed = json.loads(final); validate(parsed,FINAL_SCHEMA)
+                parsed = json.loads(final); validate(parsed,schema)
                 stderr.flush()
                 if stderr.tell()>1024*1024:
                     raise RunnerFailure('App-server stderr exceeds bound')
@@ -200,6 +214,9 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
                 except TimeoutError:
                     process.kill(); await process.wait()
             proof['calls'] = len(calls)
+            proof['context_bytes'] = context_bytes
+            proof['token_usage'] = usage
+            proof['usage_events'] = usage_events
             (output/'calls.json').write_text(json.dumps(calls,indent=2)+'\n')
             proof['elapsed_seconds'] = time.monotonic()-started
             (output/'runner.json').write_text(json.dumps(proof,indent=2)+'\n')

@@ -1,5 +1,17 @@
 # C0 roadmap
 
+## Agentic retrieval workflow (development)
+
+Build three source-grounded skills and a bounded external comparison runner,
+reusing real disposable C0 MCP and the existing isolated model driver. Freeze
+question partitions, corpus hashes, model/budgets and numerical targets before
+candidate measurement. Manage only reviewed source-backed Wiki navigation in the
+minimal semantic profile; initial construction sees no questions. Validation and
+sealed outcomes are single-use. Production enrichment, deployment, schedules and
+merges are outside this task. See [protocol and limits](docs/agentic-retrieval.md).
+Actual pilot and full acceptance results must be recorded separately; preparation
+or synthetic tests alone do not establish real-corpus quality.
+
 ## Bounded natural-language retrieval candidate
 
 Controlled signed-HTTP reproduction identifies lexical eligibility before ranking:
