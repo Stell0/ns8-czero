@@ -52,6 +52,19 @@ fallback; they never contribute to successful semantic/reranked quality means.
 No model/provider costs are inferred from request counts. Raw API replies include
 available provider usage, candidate/scored counts and fallback reasons.
 
+When supported, `lexical_strategy` records strict web search or bounded relaxed
+lexical matching separately from `retrieval_method`. Relaxed lexical matching is
+still text retrieval. Older servers can omit this optional field; record that as
+unreported, not semantic. Freeze product/version/language metadata along with the
+bodies because declared provenance can affect lexical eligibility. See the
+[query behavior](../../../../docs/retrieval-benchmark.md).
+
+Snapshots also bind each physical part's source revision and the exact declared
+product/version fields used by lexical matching. A metadata-only edit can
+invalidate a comparison even when its body hash is unchanged. After a snapshot
+format change, create a new snapshot and preserve prior manifests/results; do
+not edit an old manifest to make its hash pass.
+
 Each entry in `questions.json` has this structure (replace all fabricated values):
 
 ```json

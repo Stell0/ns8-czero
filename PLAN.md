@@ -1,5 +1,30 @@
 # C0 roadmap
 
+## Bounded natural-language retrieval candidate
+
+Controlled signed-HTTP reproduction identifies lexical eligibility before ranking:
+the `simple` web-search query requires every term in one chunk. Independently read
+bodies, keyword/phrase/operator controls and actual GIN access distinguish this
+from missing content, authorization, providers or a benchmark fallback. Chunk
+co-occurrence and absent product/version words are separately observed mechanisms.
+
+Core 0.36.1 preserves strict matches, then uses bounded provider-free lexical
+recovery for eligible zero-result plain queries. Standard stop lists, minimum
+term coverage, mandatory identifiers and current product/version provenance are
+shared by ordinary, filtered and source callers. No schema, dependency or global
+retrieval-setting change is introduced. Optional response metadata and guidance
+distinguish lexical relaxation from semantics. See [the contract](docs/retrieval-benchmark.md).
+
+Initial question regressions fail before the correction; explicit syntax controls
+pass. Scoped Core/HTTP/current-generation and hand-computable benchmark cases pass,
+as does real HTTPS/OAuth renewal and question-to-complete-document browser
+navigation/replacement/access loss. Full exact-source local/native/artifact gates
+and a fresh held-out comparison are required before review readiness; record
+their exact results in the PR. Private labels/results stay outside Git.
+The independent Core publication, consumer pin/lock adoption and
+consumer acceptance gates precede any deployment. No new PR is merged or release
+published automatically; accepted installations and predecessors remain frozen.
+
 ## Operational documentation and retrieval tooling
 
 Implement a small external, read-only retrieval runner using the existing

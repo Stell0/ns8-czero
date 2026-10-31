@@ -20,6 +20,7 @@ from c0_projects.model import sha
 def snapshot(client):
     """Read full current documents through authorized APIs; retain no old bodies."""
     documents=[];bodies={};sources={}
+    physical={row['id']:row for row in client.listing('sources_list','sources')}
     for summary in client.listing('source_documents_list','documents'):
         doc=client.call('source_documents_get',logical_document_id=summary['id'])
         if doc['state']!='ready' or doc.get('body') is None:raise C0Error('benchmark_incomplete_document')
@@ -32,12 +33,20 @@ def snapshot(client):
              'product':provenance.get('product',''),'version':provenance.get('product_version',''),
              'language':provenance.get('language','')}
         if url in bodies:raise C0Error('benchmark_duplicate_canonical_url')
-        bodies[url]=doc['body'];documents.append(row)
+        bodies[url]=doc['body']
         parts=doc['parts'] if doc['multipart'] else [{'source_id':doc['id'],'version_id':doc['revision_id']}]
+        contexts=[]
         for part in parts:
             key=part['source_id']
+            source=physical.get(key)
+            if source is None:raise C0Error('benchmark_source_context_missing')
+            provenance=source['metadata'].get('provenance',{})
+            if not isinstance(provenance,dict):provenance={}
+            contexts.append({'source_id':key,'source_revision':source['revision'],
+                'product':provenance.get('product'),'version':provenance.get('product_version')})
             if key in sources:raise C0Error('benchmark_ambiguous_source_parent')
             sources[key]={**row,'version_id':part['version_id']}
+        row['lexical_contexts']=contexts;documents.append(row)
     documents.sort(key=lambda d:d['id'])
     return {'documents':documents,'hash':sha(documents)},bodies,sources
 
@@ -170,6 +179,7 @@ def experiment(client,config,questions,expected,output):
                     chunks,documents=normalize(result,sources)
                     row={'question_id':q['id'],'split':q['split'],'answerability':q['answerability'],
                         'repetition':repetition,'requested':selection,'effective_method':result['retrieval_method'],
+                        'lexical_strategy':result.get('lexical_strategy'),
                         'status':'measured' if effective(result,mode,rerank) else 'fallback',
                         'fallback_reason':result.get('fallback_reason'),'latency_ms':elapsed,
                         'chunks':chunks,'documents':documents,'metrics':metrics(q,chunks,documents),'raw':result}

@@ -162,6 +162,16 @@ def live(browser_database,request,monkeypatch,tmp_path):
         kwargs.setdefault('verify',ssl.create_default_context(cafile=str(cert_path)))
         return http_client(*args,**kwargs)
     monkeypatch.setattr(httpx2,'Client',trusted_http)
+    # Long-running fixtures must renew through the same verified temporary CA.
+    # Keep OAuth's no-redirect policy and exact fixture-origin restriction.
+    import urllib.request
+    from c0_ingest.http import NoRedirect
+    def trusted_oauth(request, *, timeout=30):
+        if not request.full_url.startswith(origin+'/'):
+            raise RuntimeError('Disposable OAuth origin mismatch')
+        return urllib.request.build_opener(NoRedirect(),
+            urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=str(cert_path)))).open(request,timeout=timeout)
+    monkeypatch.setattr(auth,'open_url',trusted_oauth)
     private=rest.post('/api/v1/spaces',json={'name':'Synthetic documentation','idempotency_key':'private'}).json();spaces[1].append(private['id'])
     second=rest.post('/api/v1/spaces',json={'name':'Other protected documents','idempotency_key':'second'}).json();spaces[1].append(second['id'])
     profile=rest.get('/api/v1/profile').json()

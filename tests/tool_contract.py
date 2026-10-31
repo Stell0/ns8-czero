@@ -41,6 +41,16 @@ def schema_hash(schema):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def legacy_search_output(schema):
+    """Validate the one additive field before comparing frozen authority schemas."""
+    projected = deepcopy(schema)
+    assert 'lexical_strategy' not in projected.get('required', [])
+    field = projected['properties'].pop('lexical_strategy')
+    assert structural_schema(field) == {'anyOf':[
+        {'enum':['websearch','relaxed'],'type':'string'},{'type':'null'}], 'default':None}
+    return projected
+
+
 def operation_contract(operation):
     return {**{key: operation[key] for key in
         ('name', 'minimum_role', 'required_scope', 'read_only')},

@@ -13,6 +13,7 @@ from .wiki import _view,KnowledgeNotFound
 from .embeddings import EmbeddingStore
 from .knowledge import KnowledgeService
 from .providers import ProviderUnavailable
+from .lexical import SOURCE_CONTEXT,select_lexical
 
 
 def excerpt(body,query,*,origin=0):
@@ -86,20 +87,22 @@ class SearchService(SpaceBound):
                 'revision':data['number'],'slug':data['slug'],'content_hash':data['content_hash']}}
 
     def _text(self,connection,query,*,limit,kind):
-        rows=connection.execute(text('''SELECT * FROM (
-            SELECT c.id,'chunk' AS kind,ts_rank_cd(c.search_vector,websearch_to_tsquery('simple',:query)) AS rank
+        def fetch(lexical):
+            return connection.execute(text(f'''SELECT * FROM (
+            SELECT c.id,'chunk' AS kind,{lexical.rank('c.search_vector',context=SOURCE_CONTEXT)} AS rank
             FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND c.search_vector @@ websearch_to_tsquery('simple',:query)
+            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND {lexical.match('c.search_vector',context=SOURCE_CONTEXT)}
             UNION ALL
-            SELECT r.id,'wiki_revision' AS kind,ts_rank_cd(r.search_vector,websearch_to_tsquery('simple',:query)) AS rank
+            SELECT r.id,'wiki_revision' AS kind,{lexical.rank('r.search_vector')} AS rank
             FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
             WHERE p.space_id=:space AND :wiki AND NOT p.deleted AND p.revision=r.number
-                AND r.search_vector @@ websearch_to_tsquery('simple',:query)
+                AND {lexical.match('r.search_vector')}
             ) matches ORDER BY rank DESC,kind,id LIMIT :limit'''),
-            {'space':self._space(connection),'query':query,'chunks':kind!='wiki','wiki':kind!='source','limit':limit}).mappings().all()
+            {'space':self._space(connection),**lexical.parameters,'chunks':kind!='wiki','wiki':kind!='source','limit':limit}).mappings().all()
+        rows,strategy=select_lexical(connection,query,fetch)
         return [{**(self._source_hit(connection,row['id'],query) if row['kind']=='chunk'
-                    else self._wiki_hit(connection,row['id'],query)),'score':float(row['rank'])} for row in rows]
+                    else self._wiki_hit(connection,row['id'],query)),'score':float(row['rank'])} for row in rows],strategy
 
     def _semantic(self,connection,vector,query,kind):
         rows=self.embeddings.nearest(connection,vector,limit=self.limits.candidates,kind=kind)
@@ -149,7 +152,7 @@ class SearchService(SpaceBound):
         with self.database.engine.connect() as connection:
             connection.execute(text('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ'))
             self._authorize(connection,actor)
-            ordinary=self._text(connection,query,limit=self.limits.candidates,kind=kind)
+            ordinary,lexical_strategy=self._text(connection,query,limit=self.limits.candidates,kind=kind)
             profile=self.embeddings._profile(connection) if self.embeddings.client else None
             ready=profile is not None and self.embeddings._ready(connection,profile)
         hits=ordinary
@@ -205,4 +208,5 @@ class SearchService(SpaceBound):
                     if current!=hit['revision']:raise ContentSuperseded()
         return _view({'hits':hits[:limit],'retrieval_method':method,'fallback_reason':failures[0] if failures else None,
             'fallback_reasons':failures,'requested_mode':mode,'candidate_count':candidate_count,'scored_count':scored_count,
-            'scorer_truncated_candidates':truncated,'provider_usage':usage,'graphs':graphs})
+            'scorer_truncated_candidates':truncated,'provider_usage':usage,'graphs':graphs,
+            'lexical_strategy':lexical_strategy if method.startswith(('text','hybrid')) else None})

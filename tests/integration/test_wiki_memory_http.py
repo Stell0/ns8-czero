@@ -64,7 +64,7 @@ def owner_and_member(fixture, role):
     return owner, identity, issue
 
 
-def test_accepted_contracts_only_add_optional_space_selectors(application):
+def test_accepted_contracts_only_add_optional_space_and_lexical_metadata(application):
     app, owner_token, *_=application
     registry=app.state.operations
     baseline=json.loads((Path(__file__).parents[1]/'fixtures/agent_memory/am1_contract.json').read_text())
@@ -89,7 +89,9 @@ def test_accepted_contracts_only_add_optional_space_selectors(application):
                             assert contract.structural_schema(properties.pop('space_id'))=={
                                 'anyOf':[{'format':'uuid','type':'string'},{'type':'null'}],
                                 'default':None}
-                value_at_key=contract.schema_hash(actual[key])
+                observed=contract.legacy_search_output(actual[key]) if (
+                    key=='output_schema' and expected['name']=='knowledge_search') else actual[key]
+                value_at_key=contract.schema_hash(observed)
                 value=M17_CONTRACT[expected['name']]['input_sha256' if key=='input_schema' else 'output_sha256']
             else: value_at_key=actual[key]
             assert value_at_key==value, (expected['name'],key)

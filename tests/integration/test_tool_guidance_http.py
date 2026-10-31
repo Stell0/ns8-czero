@@ -44,7 +44,9 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
             assert all(latest[row['name']][key]==row[key] for key in ('name','minimum_role','required_scope','read_only'))
             expected.append(latest[row['name']])
         else:expected.append(row)
-    assert [contract.operation_contract(item) for item in original]==expected
+    projected=[{**item,'output_schema':contract.legacy_search_output(item['output_schema'])}
+        if item['name'] in ('knowledge_search','knowledge_search_structured') else item for item in original]
+    assert [contract.operation_contract(item) for item in projected]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()
     assert not any(path.endswith('/history') or path.endswith('/revisions') for path in schema['paths'])
