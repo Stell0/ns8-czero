@@ -195,3 +195,18 @@ def test_derived_metadata_cannot_impersonate_an_original_evidence_read():
         'result':{'structuredContent':{'content':{'metadata':{'citation':c}}}}}
     final={'outcome':'completed','citations':[{k:v for k,v in c.items() if k!='body'}]}
     assert grade(q,final,[forged],corpus)['invalid_citations']==1
+
+
+def test_labels_freeze_only_after_hash_bound_audit_and_exposed_questions_stay_development():
+    from agentic_retrieval.protocol import freeze_labels
+    corpus,q,plan=fixture();proposal={'corpus_hash':digest(corpus),'questions_hash':digest([q]),'plan_hash':digest(plan)}
+    with pytest.raises(ValueError,match='audit'):freeze_labels(corpus,[q],[q],{},'protocol',digest(plan))
+    audit={'proposal_hash':digest(proposal),'reviewed_questions_hash':digest([q]),'approved_for_pilot':True,
+           'audit':[{'id':q['id'],'provenance':'provisional analyst read original'}]}
+    questions,frozen=freeze_labels(corpus,[q],[q],audit,'protocol',digest(plan))
+    assert frozen['questions']==digest(questions)
+    revised=[{**q,'previously_exposed':True}];audit['reviewed_questions_hash']=digest(revised)
+    questions,_=freeze_labels(corpus,[q],revised,audit,'protocol',digest(plan))
+    assert questions[0]['split']=='development'
+    audit['reviewed_questions_hash']='tampered'
+    with pytest.raises(ValueError):freeze_labels(corpus,[q],revised,audit,'protocol',digest(plan))

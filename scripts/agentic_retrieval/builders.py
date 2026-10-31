@@ -39,7 +39,12 @@ def output_schema(kind,corpus,count,namespace):
 
 QUESTION_GUIDANCE='''Generate source-grounded retrieval questions and provisional analyst labels.
 Return the schema-defined answerable/ambiguous/unanswerable groups. Read only the supplied originals;
-do not use retrieval results or invent quotations. Each question object has exactly:
+do not use retrieval results or invent quotations. Read ALL supplied originals:
+a fact in another product manual can support a shared component. An Italian
+question remains answerable from English evidence; language mismatch is not
+unanswerability. Ambiguity needs a missing product/version/component choice;
+a fact absent from every original is unanswerable. Multi-hop/multi-document items
+must genuinely join facts across originals, with every required evidence unit. Each question object has exactly:
 id, text, language, type, answerability (answerable/ambiguous/unanswerable), products
 (array), versions (array), evidence_sets, provenance (provisional analyst, not human),
 confidence (low/medium/high), uncertainty. evidence_sets is an array of alternative

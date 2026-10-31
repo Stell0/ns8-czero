@@ -20,7 +20,7 @@ from c0_ingest.auth import locked
 from agentic_retrieval.builders import build
 from agentic_retrieval.fixture import paired_fixture,cleanup_pair
 from agentic_retrieval.layer import maintain,verify,validate_plan
-from agentic_retrieval.protocol import Budget,digest,partition,summary,validate_corpus,validate_questions
+from agentic_retrieval.protocol import Budget,digest,partition,summary,validate_corpus,validate_questions,freeze_labels
 from agentic_retrieval.runner import episode,accepted,INSTRUCTIONS
 from agentic_retrieval.job import job_client,corpus_snapshot
 
@@ -114,18 +114,20 @@ async def loop(args):
             # Crucially the initial builder never receives questions or failures.
             plan=await builder('layer',corpus,config,output/'initial-layer-builder',budget)
             questions=await builder('questions',corpus,config,output/'question-builder',budget)
-            questions=partition(questions,seed=digest(corpus))
             validate_questions(questions,corpus)
-            atomic(output/'questions.json',questions)
-            atomic(output/'freeze.json',{'corpus':digest(corpus),'questions':digest(questions),'protocol':digest(protocol),
-                'plan':digest(plan),'label_provenance':'provisional model analyst; quotation/hash validation only; semantic audit pending'})
+            proposal={'corpus_hash':digest(corpus),'questions_hash':digest(questions),'plan_hash':digest(plan)}
+            atomic(output/'questions-proposed.json',questions);atomic(output/'proposal.json',proposal)
             if args.prepare_only or not (output/'label-audit.json').exists():
                 result['status']='prepared_requires_audit'
                 atomic(output/'result.json',result)
                 print(json.dumps({'status':result['status'],'questions':len(questions)}));return 2
             audit=json.loads((output/'label-audit.json').read_text())
-            if audit.get('questions_hash')!=digest(questions) or audit.get('approved_for_pilot') is not True or not audit.get('audit'):
-                raise ValueError('label_audit_missing_or_changed')
+            reviewed_path=output/'questions-reviewed.json'
+            reviewed=json.loads(reviewed_path.read_text()) if reviewed_path.exists() else questions
+            questions,freeze=freeze_labels(corpus,questions,reviewed,audit,digest(protocol),digest(plan))
+            if (output/'freeze.json').exists() and json.loads((output/'freeze.json').read_text())!=freeze:
+                raise ValueError('frozen_labels_or_protocol_changed')
+            atomic(output/'questions.json',questions);atomic(output/'freeze.json',freeze)
             forbidden=[x for q in questions for x in (q['id'],q['text'])]
             for round_number in range(config['rounds']):
                 validate_plan(plan,corpus,forbidden)
@@ -155,7 +157,7 @@ async def loop(args):
                     result['status']='stopped_no_improvement';break
                 if round_number+1==config['rounds']:result['status']='development_target_unmet';break
                 # Only coarse development failure categories cross the builder boundary.
-                plan=await builder('layer',corpus,config,output/f'layer-builder-{round_number+1}',budget,feedback=measured['unmet'])
+                plan=await builder('layer',corpus,config,output/f'layer-builder-{round_number+1}',budget,feedback={'failure_categories':measured['unmet'],'current_managed_plan':plan})
     except Exception as exc:
         result.update(status='stopped_checkpoint',failure_type=type(exc).__name__,failure=str(exc))
         import traceback

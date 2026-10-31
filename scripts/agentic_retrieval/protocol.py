@@ -45,6 +45,7 @@ def validate_questions(questions,corpus):
         if not required<=q.keys() or q['id'] in seen or not q['id'] or not q['text']:
             raise ValueError('invalid_question')
         seen.add(q['id'])
+        if 'previously_exposed' in q and type(q['previously_exposed']) is not bool:raise ValueError('invalid_exposure_marker')
         if q['answerability'] not in ('answerable','ambiguous','unanswerable'):
             raise ValueError('invalid_answerability')
         if not q['provenance'] or q['confidence'] not in ('low','medium','high'):
@@ -75,8 +76,20 @@ def partition(questions,seed):
         for index,q in enumerate(group):
             split=(('development','validation','sealed')[index] if len(group)==3 else
                    ('development','development','validation','sealed')[index%4])
-            result.append({**q,'split':split})
+            result.append({**q,'split':'development' if q.get('previously_exposed') else split})
     return sorted(result,key=lambda q:q['id'])
+
+
+def freeze_labels(corpus,proposed,reviewed,audit,protocol_hash,plan_hash):
+    validate_questions(proposed,corpus);validate_questions(reviewed,corpus)
+    proposal={'corpus_hash':digest(corpus),'questions_hash':digest(proposed),'plan_hash':plan_hash}
+    if (audit.get('proposal_hash')!=digest(proposal) or audit.get('reviewed_questions_hash')!=digest(reviewed)
+        or audit.get('approved_for_pilot') is not True or not audit.get('audit')):
+        raise ValueError('label_audit_missing_or_changed')
+    questions=partition(reviewed,seed=digest(corpus))
+    frozen={'corpus':digest(corpus),'questions':digest(questions),'protocol':protocol_hash,
+        'plan':plan_hash,'audit':digest(audit),'label_provenance':'provisional analyst labels; independent human adjudication unavailable'}
+    return questions,frozen
 
 
 def episode_input(question,space):
