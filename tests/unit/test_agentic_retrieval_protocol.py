@@ -293,9 +293,9 @@ def test_actual_model_child_cannot_inherit_c0_or_database_credentials(tmp_path,m
         monkeypatch.setenv(key,'synthetic-private-binding')
     monkeypatch.setenv('OPENAI_API_KEY','synthetic-approved-model-auth')
     path=fake_codex(tmp_path,'success');text=path.read_text()
-    text=text.replace('import json,sys','import json,sys,os
+    text=text.replace('import json,sys', '''import json,sys,os
 assert not any(k.startswith(("CZERO_","C0_")) or k in ("PGPASSWORD","DATABASE_URL") for k in os.environ)
-assert os.environ["OPENAI_API_KEY"]=="synthetic-approved-model-auth"')
+assert os.environ["OPENAI_API_KEY"]=="synthetic-approved-model-auth"''')
     path.write_text(text)
     tool=SimpleNamespace(name='actual_probe',description='Synthetic boundary control',input_schema={'type':'object'})
     async def actual(name,args):return CallToolResult(content=[TextContent(type='text',text='{}')])
