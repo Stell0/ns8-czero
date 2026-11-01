@@ -80,13 +80,17 @@ def partition(questions,seed):
     return sorted(result,key=lambda q:q['id'])
 
 
-def freeze_labels(corpus,proposed,reviewed,audit,protocol_hash,plan_hash):
+def freeze_labels(corpus,proposed,reviewed,audit,protocol_hash,plan_hash,partitions=None):
     validate_questions(proposed,corpus);validate_questions(reviewed,corpus)
     proposal={'corpus_hash':digest(corpus),'questions_hash':digest(proposed),'plan_hash':plan_hash}
     if (audit.get('proposal_hash')!=digest(proposal) or audit.get('reviewed_questions_hash')!=digest(reviewed)
         or audit.get('approved_for_pilot') is not True or not audit.get('audit')):
         raise ValueError('label_audit_missing_or_changed')
     questions=partition(reviewed,seed=digest(corpus))
+    if partitions is not None:
+        if set(partitions)!={q['id'] for q in questions} or set(partitions.values())-{'development','validation','sealed'}:
+            raise ValueError('prepared_partition_changed')
+        questions=[{**q,'split':'development' if q.get('previously_exposed') else partitions[q['id']]} for q in questions]
     frozen={'corpus':digest(corpus),'questions':digest(questions),'protocol':protocol_hash,
         'plan':plan_hash,'audit':digest(audit),'label_provenance':'provisional analyst labels; independent human adjudication unavailable'}
     return questions,frozen
@@ -139,6 +143,7 @@ def original_citations(calls,corpus):
             citations=[h.get('citation',{}) for h in value.get('hits',[])]
         else:continue
         for citation in citations:
+            if not isinstance(citation,dict):continue
             key=citation.get('chunk_id')
             if key in seen and key not in ranked_ids:ranked.append(seen[key]);ranked_ids.add(key)
     return seen,ranked

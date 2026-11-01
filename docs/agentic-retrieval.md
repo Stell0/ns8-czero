@@ -159,3 +159,13 @@ retain the original proposal and audit every correction against originals.
 The final partition/label freeze is written only after this audit. Then resume the unchanged protocol with `loop --resume` and the same arguments.
 Use `--prepare-only` to stop after preparation explicitly. Keep that audit, labels
 and all model traces outside Git. No production application is implied.
+
+
+To repeat an invalid runner experiment after a separately committed correction,
+`loop --prepared /private/previous-run` reuses its frozen questions, partitions
+and source-only initial plan. It permits only identity rebinding after exact URL,
+normalized body/hash, metadata and chunk-layout checks. Audit the new bindings
+before scoring. It never imports old calls or grades into measured episodes.
+Previously evaluated validation/test sets are marked exposed and moved to development;
+they cannot become a fresh sealed test. Preserve both failed and corrected runs,
+label the driver/grader revisions and avoid comparing across an invalid measurement.

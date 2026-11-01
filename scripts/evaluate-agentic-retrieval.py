@@ -23,6 +23,7 @@ from agentic_retrieval.layer import maintain,verify,validate_plan
 from agentic_retrieval.protocol import Budget,digest,partition,summary,validate_corpus,validate_questions,freeze_labels
 from agentic_retrieval.runner import episode,accepted,INSTRUCTIONS
 from agentic_retrieval.job import job_client,corpus_snapshot
+from agentic_retrieval.prepared import load_prepared
 
 DEFAULTS={'model':'gpt-6-luna','effort':'medium','cli_version':'codex-cli 0.166.0',
     'calls':12,'context_bytes':524288,'episode_tokens':200000,'episode_seconds':180,
@@ -97,7 +98,8 @@ async def loop(args):
         'source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
         'dirty':bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
         'packages':{n:importlib.metadata.version(n) for n in ('czero-core','czero-app','mcp','c0-ingestion-samples')},
-        'boundary':'Disposable authenticated C0; experimental eager MCP adapter, no native discovery claim.'}
+        'boundary':'Disposable authenticated C0; experimental eager MCP adapter, no native discovery claim.',
+        'prepared_input':str(args.prepared.resolve()) if args.prepared else None}
     if args.resume:
         if json.loads((output/'protocol.json').read_text())!=protocol:raise ValueError('resume_protocol_or_code_changed')
         if json.loads((output/'result.json').read_text())['status'] not in ('stopped_checkpoint','prepared_requires_audit'):raise ValueError('terminal_experiment_cannot_resume')
@@ -111,9 +113,16 @@ async def loop(args):
         async with asyncio.timeout(max(1,config['seconds']-budget.state['elapsed'])), paired_fixture(os.environ['CZERO_EVAL_DATABASE_URL'],output/'fixture',sources,checkpoint=output/'database-binding.json') as (a,b,corpus):
             if args.resume and json.loads((output/'corpus.json').read_text())!=corpus:raise ValueError('resumed_corpus_drift')
             atomic(output/'corpus.json',corpus)
-            # Crucially the initial builder never receives questions or failures.
-            plan=await builder('layer',corpus,config,output/'initial-layer-builder',budget)
-            questions=await builder('questions',corpus,config,output/'question-builder',budget)
+            partitions=None
+            if args.prepared:
+                questions,plan,import_proof=load_prepared(args.prepared,corpus)
+                partitions=import_proof['partitions'];atomic(output/'prepared-import.json',import_proof)
+                (output/'initial-layer-builder').mkdir(mode=0o700,exist_ok=True)
+                atomic(output/'initial-layer-builder/validated.json',plan)
+            else:
+                # Crucially the initial builder never receives questions or failures.
+                plan=await builder('layer',corpus,config,output/'initial-layer-builder',budget)
+                questions=await builder('questions',corpus,config,output/'question-builder',budget)
             validate_questions(questions,corpus)
             proposal={'corpus_hash':digest(corpus),'questions_hash':digest(questions),'plan_hash':digest(plan)}
             atomic(output/'questions-proposed.json',questions);atomic(output/'proposal.json',proposal)
@@ -124,7 +133,7 @@ async def loop(args):
             audit=json.loads((output/'label-audit.json').read_text())
             reviewed_path=output/'questions-reviewed.json'
             reviewed=json.loads(reviewed_path.read_text()) if reviewed_path.exists() else questions
-            questions,freeze=freeze_labels(corpus,questions,reviewed,audit,digest(protocol),digest(plan))
+            questions,freeze=freeze_labels(corpus,questions,reviewed,audit,digest(protocol),digest(plan),partitions=partitions)
             if (output/'freeze.json').exists() and json.loads((output/'freeze.json').read_text())!=freeze:
                 raise ValueError('frozen_labels_or_protocol_changed')
             atomic(output/'questions.json',questions);atomic(output/'freeze.json',freeze)
@@ -173,6 +182,7 @@ def main():
     os.umask(0o077)
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='command',required=True)
     run=sub.add_parser('loop',help='Disposable paired-source comparison with a bounded improvement loop')
+    run.add_argument('--prepared',type=Path,help='Reuse frozen questions/partitions and the source-only plan; require identical bodies/metadata and audit new bindings')
     run.add_argument('--prepare-only',action='store_true',help='Freeze model proposals and partitions for private source-based analyst audit')
     run.add_argument('--resume',action='store_true',help='Resume only an unchanged nonterminal checkpoint; never replay uncertain episodes')
     run.add_argument('--sources',required=True,type=Path);run.add_argument('--config',type=Path);run.add_argument('--output',required=True,type=Path)
