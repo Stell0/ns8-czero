@@ -34,6 +34,12 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
+def inference_environment(environ):
+    """Inference needs normal Codex auth, never C0/database credentials."""
+    database_keys={'DATABASE_URL','PGHOST','PGPORT','PGUSER','PGPASSWORD','PGDATABASE','PGSERVICE','PGPASSFILE'}
+    return {k:v for k,v in environ.items() if not k.startswith(('CZERO_','C0_')) and k not in database_keys}
+
+
 def isolated_arguments(config, state):
     flags = {'features.shell_tool':False,'features.apps':False,'features.multi_agent':False,
         'features.shell_snapshot':False,'features.view_image':False,'features.browser_use':False,
@@ -69,7 +75,8 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
     output.mkdir(mode=0o700,parents=True,exist_ok=False)
     config_path = Path(os.environ.get('CODEX_HOME',str(Path.home()/'.codex'))) / 'config.toml'
     config = tomllib.loads(config_path.read_text()) if config_path.exists() else {}
-    probe = await asyncio.create_subprocess_exec(codex,'--version',stdout=asyncio.subprocess.PIPE,
+    child_env = inference_environment(os.environ)
+    probe = await asyncio.create_subprocess_exec(codex,'--version',env=child_env,stdout=asyncio.subprocess.PIPE,
                                                  stderr=asyncio.subprocess.PIPE)
     version_bytes,_ = await asyncio.wait_for(probe.communicate(),10)
     version = version_bytes.decode().strip()
@@ -136,7 +143,7 @@ async def evaluate(*, tools, instructions, prompt, call_tool, output, model='gpt
         try:
             args = [codex,'app-server','--stdio',*isolated_arguments(config,Path(state))]
             process = await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,stderr=stderr,cwd=cwd,limit=MAX_LINE)
+                stdout=asyncio.subprocess.PIPE,stderr=stderr,cwd=cwd,limit=MAX_LINE,env=child_env)
             async with asyncio.timeout(timeout):
                 await request(1,'initialize',{'clientInfo':{'name':'c0-tool-evaluation','version':'1'},
                     'capabilities':{'experimentalApi':True}})
