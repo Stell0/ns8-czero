@@ -2,7 +2,7 @@
 
 ## Freshdesk FAQ ingestion (development)
 
-Reuse the external ingestion package for published public Freshdesk Solutions
+Reuse the external ingestion package for selected published Freshdesk Solutions
 articles, source-backed Markdown, existing project receipts and whole-document
 verification. Keep FAQ state separate under the selected job's locked connection;
 preserve established website synchronization and all schedules. Scope, source

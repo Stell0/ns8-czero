@@ -1,5 +1,5 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
-"""Export published public Freshdesk FAQs into the existing C0 source workflow.
+"""Export selected published Freshdesk FAQs into the existing C0 source workflow.
 
 Category/folder traversal, blacklist selection and title/body mapping adapted
 from NethServer/Freshdesk2S3 (GPLv3). No S3, tickets or Freshdesk writes.
@@ -125,26 +125,14 @@ def markdown(article,url):
 
 
 def collect(api,connector,config):
-    """Default-language solutions only; inherited folder restrictions stay closed."""
+    """Default-language Solutions; match the reference category/article selection."""
     items=[];inventory=[];seen=set();folders_seen=set();total=0
     def excluded(kind,row,reason):inventory.append({'kind':kind,'id':row['id'],'status':'excluded','reason':reason})
-    def public_folder(row,ancestors=()):
-        if row['id'] in ancestors or len(ancestors)>4:raise C0Error('freshdesk_folder_hierarchy_invalid')
-        if type(row.get('visibility')) is not int or row['visibility']!=1:return False
-        parent=row.get('parent_folder_id')
-        if parent:
-            if type(parent) is not int:raise C0Error('freshdesk_folder_hierarchy_invalid')
-            above=api.get(f'/api/v2/solutions/folders/{parent}')
-            if not isinstance(above,dict) or above.get('id')!=parent:raise C0Error('freshdesk_folder_hierarchy_invalid')
-            return public_folder(above,(*ancestors,row['id']))
-        return True
     def folder(row,category,depth=0):
         nonlocal total
         fid=row['id']
         if fid in folders_seen:return
         folders_seen.add(fid)
-        if not public_folder(row):
-            excluded('folder',row,'restricted_or_unknown_visibility');return
         if depth>4:raise C0Error('freshdesk_folder_depth_limit')
         for article in api.pages(f'/api/v2/solutions/folders/{fid}/articles'):
             aid=article['id']
@@ -156,7 +144,6 @@ def collect(api,connector,config):
             if not isinstance(full,dict) or type(full.get('id')) is not int or full['id']!=aid:raise C0Error('freshdesk_article_identity_changed')
             if full.get('status')!=2:excluded('article',article,'no_longer_published');continue
             if full.get('folder_id')!=fid:raise C0Error('freshdesk_article_moved_during_scan')
-            if full.get('folder_visibility',1)!=1:excluded('article',article,'restricted_article');continue
             url=config['portal_origin']+f'/support/solutions/articles/{aid}'
             content=markdown(full,url);total+=len(content)
             if len(items)>=connector['max_items'] or total>32*1024*1024:raise C0Error('freshdesk_item_or_byte_budget_exhausted')

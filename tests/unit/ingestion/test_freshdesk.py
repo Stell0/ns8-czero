@@ -89,6 +89,8 @@ class Inventory:
                 {'id':12,'name':'Child of staff','visibility':1,'parent_folder_id':11}],
             '/api/v2/solutions/folders/10/articles':[
                 {'id':1,'status':2},{'id':2,'status':1},{'id':99,'status':2}],
+            '/api/v2/solutions/folders/11/articles':[{'id':4,'status':2}],
+            '/api/v2/solutions/folders/12/articles':[{'id':5,'status':2}],
             '/api/v2/solutions/folders/10/subfolders':[{'id':13,'name':'Nested','visibility':1,'parent_folder_id':10}],
             '/api/v2/solutions/folders/13/articles':[{'id':3,'status':2}],
         }
@@ -99,18 +101,19 @@ class Inventory:
         if path=='/api/v2/solutions/folders/10':return {'id':10,'visibility':1}
         aid=int(path.rsplit('/',1)[1])
         return {'id':aid,'status':2,'title':'Procedure '+str(aid),'description':'<p>Save configuration first.</p>',
-                'folder_id':10 if aid==1 else 13,'created_at':'2026-01-01T00:00:00Z','tags':[]}
+                'folder_id':{1:10,3:13,4:11,5:12}[aid],'created_at':'2026-01-01T00:00:00Z','tags':[]}
 
 
-def test_published_public_selection_nested_permissions_and_stable_identity():
+def test_reference_folder_selection_with_publication_and_blacklist_checks():
     api=Inventory();definition=source_config({'id':'faq','adapter':'local_files','root':'data/faq/export'})
     batch,inventory=collect(api,definition,configuration())
-    assert [i.external_id for i in batch.items]==['1.md','3.md']
+    assert [i.external_id for i in batch.items]==['1.md','3.md','4.md','5.md']
     assert all(i.provenance['source_type']=='freshdesk_faq' for i in batch.items)
     assert all(i.canonical_url.startswith('https://help.example.org/support/solutions/articles/') for i in batch.items)
-    assert not any('/11/articles' in p or '/12/articles' in p or '/articles/99' in p or '/articles/2'==p for p in api.read)
+    assert '/api/v2/solutions/folders/11/articles' in api.read and '/api/v2/solutions/folders/12/articles' in api.read
+    assert not any('/articles/99' in p or '/articles/2'==p for p in api.read)
     assert {r.get('reason') for r in inventory if r['status']=='excluded'}=={
-        'restricted_or_unknown_visibility','draft_or_unknown_status','article_blacklist','category_blacklist'}
+        'draft_or_unknown_status','article_blacklist','category_blacklist'}
     assert collect(Inventory(),definition,configuration())[0].items[0].content_hash==batch.items[0].content_hash
 
 

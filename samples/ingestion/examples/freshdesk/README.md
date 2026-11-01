@@ -1,6 +1,6 @@
 # Freshdesk FAQ import
 
-`c0-freshdesk-faq` exports current published Solutions articles from public folders,
+`c0-freshdesk-faq` exports current published Solutions articles from explicitly selected categories,
 then reuses the existing project publisher, fenced receipts and whole-document
 hash readback. Category/folder traversal, category/article exclusions and the
 title/body Markdown mapping are adapted from
@@ -88,11 +88,13 @@ pages of100 records per inventory endpoint,1000 selected articles and32 MiB per
 batch. Cached pages do not consume a resumed network request budget. Limits never
 mean exhaustive success. These commands cover the API's default language;
 additional translated collections require an explicit reviewed selection.
-Article status must be published and every known ancestor folder public. An
-all-users folder flag does not prove anonymous portal access: check the portal
-separately and record any global sign-in requirement. A credential-based FAQ
-import needs authorization for that selected collection. Draft,
-restricted and blacklisted content is excluded; no attachment or image is fetched.
+Article status must be published. Match the original exporter by applying its
+category and article blacklists without adding folder-visibility or marketing
+exclusions. All API-readable folders in the approved categories are included,
+including folders requiring portal sign-in. Authorize this selected collection
+explicitly, keep internal/legacy category exclusions in the private configuration,
+and record any global portal sign-in requirement. Draft and blacklisted content
+is excluded; no attachment or image is fetched.
 Images remain inert links. Validate table/code/procedure examples before applying.
 
 Keep JSON inventories, original API responses, scan bodies, credentials, receipts
