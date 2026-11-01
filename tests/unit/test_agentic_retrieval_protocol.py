@@ -285,3 +285,20 @@ def test_authorization_loss_is_not_recorded_as_a_quality_failure(tmp_path,monkey
     result=asyncio.run(runner.episode(Fixture(),corpus,q,config,tmp_path/'episode',budget,'case'))
     assert result['status']=='runner_failure' and 'authorization_unavailable' in result['failure']
     assert 'grade' not in result and budget.state['episodes']['case']['status']=='runner_failure'
+
+
+def test_actual_model_child_cannot_inherit_c0_or_database_credentials(tmp_path,monkeypatch):
+    monkeypatch.setenv('CODEX_HOME',str(tmp_path/'empty-config'))
+    for key in ('CZERO_EVAL_DATABASE_URL','CZERO_TEST_DATABASE_URL','C0_TOKEN','PGPASSWORD','DATABASE_URL'):
+        monkeypatch.setenv(key,'synthetic-private-binding')
+    monkeypatch.setenv('OPENAI_API_KEY','synthetic-approved-model-auth')
+    path=fake_codex(tmp_path,'success');text=path.read_text()
+    text=text.replace('import json,sys','import json,sys,os
+assert not any(k.startswith(("CZERO_","C0_")) or k in ("PGPASSWORD","DATABASE_URL") for k in os.environ)
+assert os.environ["OPENAI_API_KEY"]=="synthetic-approved-model-auth"')
+    path.write_text(text)
+    tool=SimpleNamespace(name='actual_probe',description='Synthetic boundary control',input_schema={'type':'object'})
+    async def actual(name,args):return CallToolResult(content=[TextContent(type='text',text='{}')])
+    proof,_=asyncio.run(evaluate(tools=[tool],instructions='Boundary control',prompt='Probe',call_tool=actual,
+        output=tmp_path/'episode',codex=str(path),timeout=10))
+    assert proof['valid']
