@@ -80,7 +80,8 @@ against private question text/IDs before applying. Inspect proposed changes befo
 Managed state stores request intents before writes. Reuse exact replay keys after
 uncertain writes; reconcile readback, never clear an intent to force a retry.
 Updates require the saved current revision/body hash and namespace marker. Conflicts
-stop without overwriting authored edits. Do not delete sources or unrelated records.
+stop without overwriting authored edits, including changed verification annotations.
+Do not delete sources or unrelated records.
 Verification checks source generation/hash and citation resolution. Superseded source
 references make records stale; C0 annotations retain unavailable references without
 old bodies. Access loss stops the workflow. A new current source needs a reviewed

@@ -40,6 +40,17 @@ def test_paired_real_sources_readonly_semantics_idempotency_and_expired_support(
             assert json.loads(state.read_text())==first
             assert await a.corpus()==await b.corpus()==corpus
             await verify(b.api_call,b.space,corpus,plan,state)
+            saved=first['records']['navigation']
+            page=await b.api_call('wiki_pages_get',{'page_id':saved['id'],'space_id':b.space})
+            target={'kind':'wiki_revision','target_id':page['content']['id'],
+                    'content_revision':page['revision'],'namespace':'verification','space_id':b.space}
+            annotation=await b.api_call('knowledge_annotations_get',target)
+            authored=await b.api_call('knowledge_annotations_update',{**target,'data':{
+                'value':{**annotation['value'],'status':'verified'},
+                'expected_revision':annotation['revision'],'idempotency_key':'analyst-verification'}})
+            with pytest.raises(RuntimeError,match='annotation_edit'):
+                await maintain(b.api_call,b.space,corpus,plan,state,apply=True)
+            assert await b.api_call('knowledge_annotations_get',target)==authored
             async with b.mcp('reader-denial') as client:
                 tools=(await client.list_tools()).tools
                 assert all(t.annotations.read_only_hint for t in tools)

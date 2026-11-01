@@ -98,6 +98,8 @@ async def maintain(call,space,corpus,plan,state_path,*,apply=False,max_operation
         refs=[{'kind':'chunk','id':e['chunk_id']} for e in record['evidence']]
         value={'status':'unverified','source_references':refs,'extensions':{'managed_by':plan['namespace']}}
         if annotation['value']!=value:
+            if annotation['revision']!=0:
+                raise RuntimeError('authored_or_concurrent_annotation_edit')
             await write('knowledge_annotations_update',{**target,'data':{'value':value,
                 'expected_revision':annotation['revision'],'idempotency_key':digest([current['id'],current['revision'],value])}})
             atomic(path,state)

@@ -156,6 +156,18 @@ def test_managed_identity_idempotency_uncertain_replay_and_authored_conflict(tmp
     asyncio.run(check())
 
 
+def test_managed_rerun_preserves_authored_verification(tmp_path):
+    corpus,q,plan=fixture();api=LayerAPI();state=tmp_path/'state.json'
+    async def check():
+        await maintain(api,'space',corpus,plan,state,apply=True)
+        authored={'status':'verified','source_references':[], 'extensions':{'reviewer':'Alice'}}
+        api.annotations=deepcopy(authored);writes=api.writes
+        with pytest.raises(RuntimeError,match='annotation_edit'):
+            await maintain(api,'space',corpus,plan,state,apply=True)
+        assert api.annotations==authored and api.writes==writes
+    asyncio.run(check())
+
+
 @pytest.mark.parametrize('limit,kwargs,match',[
     ('model',{'require_model':True},'model'),('context',{'max_context_bytes':1},'context'),
     ('calls',{'max_calls':0},'call budget')])
