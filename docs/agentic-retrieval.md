@@ -89,7 +89,7 @@ new plan; never silently rebind an expired reference.
 ## Commands and private inputs
 
 Run with the producer development Python environment from `docs/development.md`.
-The CLI `--help` lists freeze, questions, layer, maintain, validate, loop and status commands. Inputs
+The CLI `--help` lists freeze, questions, freeze-labels, layer, maintain, validate, loop and status commands. Inputs
 are private JSON, validated by the tooling; output directories must be new/private.
 No tokens belong in command arguments or Git. Disposable runs use only an explicit
 `CZERO_EVAL_DATABASE_URL` loopback administrator and existing local Codex sign-in.
@@ -169,3 +169,12 @@ before scoring. It never imports old calls or grades into measured episodes.
 Previously evaluated validation/test sets are marked exposed and moved to development;
 they cannot become a fresh sealed test. Preserve both failed and corrected runs,
 label the driver/grader revisions and avoid comparing across an invalid measurement.
+
+
+Independent semantic maintenance does not require benchmark data. Pass optional
+`maintain --questions` only when evaluation material exists and needs a private
+leakage check; the builder still receives originals alone. Standalone dataset
+construction can use `freeze-labels --corpus ... --proposed ... --reviewed ...
+--audit ... --plan ... --output ...` after source-based analyst review, without
+starting a model or database. Its audit uses the same proposal/review hashes as
+`loop`; failed proposals remain separate from final frozen labels.
