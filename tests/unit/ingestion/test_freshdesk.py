@@ -26,10 +26,18 @@ def test_literal_env_filters_other_credentials_and_honors_blacklists(tmp_path):
     result=settings(env)
     assert result['excluded_articles']==[99,100] and result['excluded_categories']==['Archived','Internal']
     assert 'OPENAI_API_KEY' not in json.dumps(result) and 'not-used' not in json.dumps(result)
-    for line in ('FRESHDESK_DOMAIN=127.0.0.1','ARTICLE_ID_BLACKLIST=99,invalid',
-                 'FRESHDESK_SOLUTIONS_DOMAIN=https://example.org/?token=secret'):
-        env.write_text(env.read_text()+'\n'+line+'\n')
-        with pytest.raises(C0Error):settings(env)
+    valid=env.read_text()
+    for line,code in (
+        ('FRESHDESK_DOMAIN=127.0.0.1','explicit_freshdesk_api_host_required'),
+        ('ARTICLE_ID_BLACKLIST=99,invalid','invalid_article_blacklist'),
+        ('FRESHDESK_SOLUTIONS_DOMAIN=https://example.org/?q=ordinary','explicit_https_portal_origin_required'),
+        ('FRESHDESK_SOLUTIONS_DOMAIN=https://example.org/?token=synthetic','invalid_public_url'),
+    ):
+        key=line.partition('=')[0]
+        env.write_text('\n'.join(row for row in valid.splitlines() if not row.startswith(key+'='))+'\n'+line+'\n')
+        with pytest.raises(C0Error,match=code):settings(env)
+    env.write_text(valid+'FRESHDESK_DOMAIN=example.freshdesk.com\n')
+    with pytest.raises(C0Error,match='duplicate_freshdesk_environment_key'):settings(env)
 
 
 class Transport:
