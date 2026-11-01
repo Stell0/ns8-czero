@@ -88,7 +88,10 @@ pages of100 records per inventory endpoint,1000 selected articles and32 MiB per
 batch. Cached pages do not consume a resumed network request budget. Limits never
 mean exhaustive success. These commands cover the API's default language;
 additional translated collections require an explicit reviewed selection.
-Article status must be published and every known ancestor folder public. Draft,
+Article status must be published and every known ancestor folder public. An
+all-users folder flag does not prove anonymous portal access: check the portal
+separately and record any global sign-in requirement. A credential-based FAQ
+import needs authorization for that selected collection. Draft,
 restricted and blacklisted content is excluded; no attachment or image is fetched.
 Images remain inert links. Validate table/code/procedure examples before applying.
 
