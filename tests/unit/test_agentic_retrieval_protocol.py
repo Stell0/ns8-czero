@@ -210,3 +210,34 @@ def test_labels_freeze_only_after_hash_bound_audit_and_exposed_questions_stay_de
     assert questions[0]['split']=='development'
     audit['reviewed_questions_hash']='tampered'
     with pytest.raises(ValueError):freeze_labels(corpus,[q],revised,audit,'protocol',digest(plan))
+
+
+def test_wiki_hits_without_original_citations_do_not_break_or_earn_evidence_credit():
+    corpus,q,_=fixture();c=corpus[0]['chunks'][0]
+    calls=[{'name':'knowledge_search','arguments':{'options':{'space_id':'space','query':'Orion'}},
+        'result':{'structuredContent':{'hits':[{'kind':'wiki','citation':None},{'kind':'chunk','citation':c}]}}}]
+    final={'outcome':'completed','citations':[{k:v for k,v in c.items() if k!='body'}]}
+    result=grade(q,final,calls,corpus)
+    assert result['complete_evidence'] and result['citation_validity']==1
+    calls[0]['result']['structuredContent']['hits']=calls[0]['result']['structuredContent']['hits'][:1]
+    assert grade(q,final,calls,corpus)['invalid_citations']==1
+
+
+def test_prepared_import_rebinds_only_exact_sources_and_preserves_sealed_partitions(tmp_path):
+    from agentic_retrieval.prepared import load_prepared
+    corpus,q,plan=fixture();q['split']='sealed'
+    (tmp_path/'initial-layer-builder').mkdir()
+    for name,value in [('corpus.json',corpus),('questions.json',[q]),('initial-layer-builder/validated.json',plan),
+        ('freeze.json',{'corpus':digest(corpus),'questions':digest([q]),'plan':digest(plan)})]:
+        (tmp_path/name).write_text(json.dumps(value))
+    changed=deepcopy(corpus);changed[0]|={'id':'new-source','generation':'new-version'}
+    changed[0]['chunks'][0]|={'source_id':'new-source','version_id':'new-version','document_id':'new-doc','chunk_id':'new-chunk'}
+    questions,layer,proof=load_prepared(tmp_path,changed)
+    assert questions[0]['text']==q['text'] and questions[0]['split']=='sealed'
+    assert layer['records'][0]['evidence'][0]['chunk_id']=='new-chunk'
+    assert proof['only_identity_bindings_changed']
+    changed[0]['version']='other'
+    with pytest.raises(ValueError,match='metadata'):load_prepared(tmp_path,changed)
+    exposed=tmp_path/'sealed-0-raw-question-a-0';exposed.mkdir();(exposed/'runner.json').write_text('{}')
+    questions,_,proof=load_prepared(tmp_path,corpus)
+    assert questions[0]['split']=='development' and proof['previous_test_exposure']
