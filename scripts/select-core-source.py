@@ -5,7 +5,9 @@
 import argparse
 from pathlib import Path
 import re
+import subprocess
 import tomllib
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 
 def select(project: Path, source: str) -> bool:
@@ -51,13 +53,55 @@ def select(project: Path, source: str) -> bool:
     return True
 
 
+def ci_source(project: Path, repository: str) -> str:
+    """Use producer CI only for committed upstream Core development."""
+    select(project, "released")
+    if repository != "Stell0/ns8-czero":
+        return "released"
+    declared = tomllib.loads(project.read_text())["tool"]["uv"]["sources"]["czero-core"]
+    packages = tomllib.loads(project.with_name("uv.lock").read_text()).get("package")
+    if not isinstance(packages, list) or not all(isinstance(p, dict) for p in packages):
+        raise ValueError("Invalid dependency lock")
+    matches = [p for p in packages if p.get("name") == "czero-core"]
+    if len(matches) != 1:
+        raise ValueError("Use one locked Core package")
+    package = matches[0]
+    source = package.get("source")
+    if not isinstance(source, dict) or set(source) != {"git"}:
+        raise ValueError("Core lock requires one Git source")
+    locked = source["git"]
+    if not isinstance(locked, str):
+        raise ValueError("Core lock requires an immutable Git source")
+    uri = urlsplit(locked)
+    repository_url = urlunsplit((uri.scheme, uri.netloc, uri.path, "", ""))
+    if (repository_url.removesuffix(".git") != declared["git"].removesuffix(".git")
+            or parse_qs(uri.query, keep_blank_values=True) != {
+                "tag": [declared["tag"]], "subdirectory": [declared["subdirectory"]]}
+            or declared["tag"] != "core-v" + str(package.get("version"))
+            or not re.fullmatch(r"[0-9a-f]{40}", uri.fragment)):
+        raise ValueError("Core lock does not match its declared release")
+    # Compare package content, not versions: same-version edits are still producer work.
+    trees = subprocess.check_output([
+        "git", "-C", str(project.resolve().parent.parent), "rev-parse",
+        "HEAD:packages/czero-core", uri.fragment + ":packages/czero-core",
+    ], text=True).splitlines()
+    if len(trees) != 2 or not all(re.fullmatch(r"[0-9a-f]{40}", tree) for tree in trees):
+        raise ValueError("Core package tree is unavailable")
+    return "released" if trees[0] == trees[1] else "local"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, required=True)
-    parser.add_argument("--source", choices=("released", "local"), default="released")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--source", choices=("released", "local"), default="released")
+    mode.add_argument("--ci-repository", help="Select the reference CI build policy without editing files")
     args = parser.parse_args()
     try:
+        if args.ci_repository is not None:
+            print(ci_source(args.project, args.ci_repository))
+            parser.exit()
         changed = select(args.project, args.source)
-    except (ValueError, KeyError, TypeError, OSError):
+    except (ValueError, KeyError, TypeError, OSError, subprocess.CalledProcessError):
         parser.exit(1, "Core source selection failed; no automatic fallback is permitted.\n")
     print("Explicit local Core selected" if changed else "Declared Core source verified")

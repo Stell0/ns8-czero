@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import tomllib
 import re
+import subprocess
+import sys
 
 import pytest
 from packaging.requirements import Requirement
@@ -140,11 +142,12 @@ def test_native_upgrade_freezes_all_three_accepted_predecessor_images():
         assert image in robot
 
 
-def test_released_image_workflow_extracts_the_actual_current_lock(tmp_path):
+@pytest.mark.parametrize('filename', ['test-core-consumer.yml', 'publish-images.yml'])
+def test_released_image_workflow_extracts_the_actual_current_lock(tmp_path, filename):
     import subprocess
     import sys
     root = Path(__file__).parents[2]
-    workflow = (root/'.github/workflows/test-core-consumer.yml').read_text()
+    workflow = (root/'.github/workflows'/filename).read_text()
     source = workflow.split("python3 - <<'PY' > /tmp/core-expected\n", 1)[1].split('          PY\n', 1)[0]
     import textwrap
     source = textwrap.dedent(source)
@@ -154,3 +157,97 @@ def test_released_image_workflow_extracts_the_actual_current_lock(tmp_path):
     assert result.returncode == 0
     core = next(item for item in tomllib.loads((root/'app/uv.lock').read_text())['package'] if item['name'] == 'czero-core')
     assert result.stdout.split() == [core['version'], core['source']['git'].rsplit('#', 1)[1]]
+
+
+@pytest.fixture
+def ci_project(project):
+    root = project.parent.parent
+
+    def git(*args):
+        return subprocess.check_output([
+            'git', '-C', str(root), '-c', 'user.name=Alice',
+            '-c', 'user.email=alice@example.org', '-c', 'commit.gpgsign=false',
+            *args,
+        ], text=True).strip()
+
+    git('init', '-q')
+    git('add', '.')
+    git('commit', '-qm', 'Released Core fixture')
+    commit = git('rev-parse', 'HEAD')
+    lock = project.with_name('uv.lock')
+    lock.write_text('version=1\n[[package]]\nname="czero-core"\nversion="0.24.1"\n'
+        'source={git="https://github.com/Stell0/ns8-czero.git?'
+        'subdirectory=packages%2Fczero-core&tag=core-v0.24.1#' + commit + '"}\n')
+    git('add', '.')
+    git('commit', '-qm', 'Adopt released Core fixture')
+    return project, git
+
+
+@pytest.mark.parametrize('change,expected', [
+    ('none', 'released'), ('app', 'released'),
+    ('uncommitted-core', 'released'), ('committed-core', 'local'),
+])
+def test_ci_core_source_compares_committed_package_content(ci_project, change, expected):
+    project, git = ci_project
+    if change == 'app':
+        project.write_text(project.read_text() + '\n# Application-only change\n')
+    elif change != 'none':
+        (project.parent.parent/'packages/czero-core/new.py').write_text('VALUE = 1\n')
+    if change in {'app', 'committed-core'}:
+        git('add', '.')
+        git('commit', '-qm', 'Changed fixture')
+    before = project.read_bytes(), project.with_name('uv.lock').read_bytes()
+    assert SELECT.ci_source(project, 'Stell0/ns8-czero') == expected
+    assert (project.read_bytes(), project.with_name('uv.lock').read_bytes()) == before
+
+
+def test_ci_core_fork_never_substitutes_a_local_checkout(ci_project):
+    project, git = ci_project
+    (project.parent.parent/'packages/czero-core/new.py').write_text('VALUE = 1\n')
+    git('add', '.')
+    git('commit', '-qm', 'Fork customization fixture')
+    project.with_name('uv.lock').unlink()
+    assert SELECT.ci_source(project, 'ACME/czero') == 'released'
+
+
+@pytest.mark.parametrize('problem', [
+    'missing', 'unknown-commit', 'wrong-tag', 'duplicate', 'wrong-version',
+    'credential', 'path-source', 'unpinned',
+])
+def test_ci_core_invalid_release_identity_never_selects_local(ci_project, problem):
+    project, git = ci_project
+    lock = project.with_name('uv.lock')
+    text = lock.read_text()
+    if problem == 'missing':
+        lock.unlink()
+    elif problem == 'unknown-commit':
+        lock.write_text(re.sub(r'#[a-f0-9]{40}', '#' + 'f'*40, text))
+    elif problem == 'wrong-tag':
+        lock.write_text(text.replace('tag=core-v0.24.1', 'tag=core-v0.24.2'))
+    elif problem == 'duplicate':
+        lock.write_text(text + text[text.index('[[package]]'):])
+    elif problem == 'wrong-version':
+        lock.write_text(text.replace('version="0.24.1"', 'version="0.24.2"'))
+    elif problem == 'credential':
+        lock.write_text(text.replace('https://github.com/', 'https://' + 'fixture-credential@github.com/'))
+    elif problem == 'path-source':
+        lock.write_text(text[:text.index('source=')] + 'source={path="../packages/czero-core"}\n')
+    else:
+        lock.write_text(re.sub(r'#[a-f0-9]{40}', '', text))
+    with pytest.raises((ValueError, OSError, subprocess.CalledProcessError)):
+        SELECT.ci_source(project, 'Stell0/ns8-czero')
+
+
+def test_ci_core_cli_is_read_only_and_fails_without_fallback(ci_project):
+    project, git = ci_project
+    command = [sys.executable, str(Path(SELECT.__file__)), '--project', str(project),
+               '--ci-repository', 'Stell0/ns8-czero']
+    before = project.read_bytes()
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0 and result.stdout.strip() == 'released'
+    assert project.read_bytes() == before
+    lock = project.with_name('uv.lock')
+    lock.write_text(re.sub(r'#[a-f0-9]{40}', '#' + 'f'*40, lock.read_text()))
+    failed = subprocess.run(command, capture_output=True, text=True)
+    assert failed.returncode != 0 and not failed.stdout.strip()
+    assert project.read_bytes() == before
