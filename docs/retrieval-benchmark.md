@@ -1,8 +1,9 @@
 # Provider-free question matching
 
-Core 0.36.1 is a producer candidate; independent review, immutable publication
-and consumer pin adoption remain release gates. The app's frozen dependency
-continues to select released Core 0.36.0 until those gates pass.
+Core 0.36.1 is independently published from merged source `8dbb746` after exact
+full/native acceptance and supplied wheel/archive tests. The app 0.57 consumer
+candidate selects its immutable tag and lock; consumer image/native acceptance
+and guarded deployment remain separate gates.
 
 Ordinary, filtered and source evidence search first run the existing PostgreSQL
 `simple` web-search query. Existing matches retain their ranking. If the eligible

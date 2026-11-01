@@ -61,6 +61,17 @@ The standalone [fork acceptance generator](../examples/fork/create.py) copies on
 
 Runtime builds use the released Core tag/subdirectory and frozen app lock by default. `CZERO_CORE_SOURCE=local` is an explicit producer-development override, never an implicit fallback for a fork. Core changes require an independently verified immutable release, then consumer pin/lock adoption and final image/native validation. Core artifact publication is distinct from an NS8 module release.
 
+Reference publishing CI compares the committed Core package tree with the full
+Git commit in the consumer lock. Identical trees select the released dependency;
+different trees select explicit upstream producer development. Version strings
+alone do not establish equality. The checkout includes history so missing or
+invalid release identities fail instead of falling back. Fork publishing stays
+on the released dependency. For a consumer build, the publisher verifies the
+installed immutable Git source inside the actual app image before pushing it;
+native acceptance uses that same image, rather than only a temporary probe image.
+Producer acceptance does not authorize substituting local Core in a consumer
+deployment.
+
 ## Delivery
 
 Follow [CI policy](ci-policy.md): scoped feedback for draft runtime work, full exact-source acceptance for ready runtime PRs, actual native/privacy/scan artifacts and the named merge gate. Use `scripts/verify-promotion.py` with full immutable SHAs; passing a short hash or an old successful head is insufficient.
