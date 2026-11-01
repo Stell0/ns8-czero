@@ -76,6 +76,7 @@ async def episode(fixture,corpus,question,config,output,budget,key):
                 model=config['model'],effort=config['effort'],timeout=config['episode_seconds'],
                 cli_version=config['cli_version'],require_model=True,final_schema=PACKET_SCHEMA,
                 max_calls=config['calls'],max_context_bytes=config['context_bytes'],max_tokens=config['episode_tokens'])
+            if boundary.denied:raise RunnerFailure('authorization_unavailable; comparison is not a quality measurement')
             result=grade(question,proof['final'],calls,corpus)
             observed=set(result['observed_original_chunks'])
             result['packet_parts_valid']=(bool(proof['final']['parts']) or proof['final']['outcome']!='completed') and all(p['chunk_ids'] and set(p['chunk_ids'])<=observed for p in proof['final']['parts'])
