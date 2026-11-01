@@ -257,3 +257,31 @@ def test_standalone_audited_label_freeze_and_maintenance_status_need_no_model_or
     result=subprocess.run([sys.executable,str(script),'maintain','status','--job',str(tmp_path/'not-a-job'),
         '--corpus',str(tmp_path/'corpus.json'),'--plan',str(tmp_path/'plan.json'),'--state',str(tmp_path/'state.json')],check=True,capture_output=True,text=True)
     assert json.loads(result.stdout)=={'state_present':False,'pending':False}
+
+
+def test_authorization_loss_is_not_recorded_as_a_quality_failure(tmp_path,monkeypatch):
+    from contextlib import asynccontextmanager
+    from agentic_retrieval import runner
+    corpus,q,_=fixture()
+    tool=SimpleNamespace(name='read',annotations=SimpleNamespace(read_only_hint=True,model_dump=lambda **kw:{'readOnlyHint':True}))
+    class Client:
+        async def list_tools(self):return SimpleNamespace(tools=[tool])
+        async def call_tool(self,name,args):return CallToolResult(is_error=True,content=[TextContent(type='text',text='permission_denied')])
+    class Fixture:
+        space='space'
+        async def corpus(self):return corpus
+        def snapshot(self):return {'unchanged':[]}
+        @asynccontextmanager
+        async def mcp(self,case):yield Client()
+    async def completed_denial(**kwargs):
+        kwargs['output'].mkdir()
+        result=await kwargs['call_tool']('read',{'space_id':'space'})
+        return {'valid':True,'calls':1,'elapsed_seconds':1,'final':{'outcome':'denied','citations':[]},
+                'token_usage':{'total':{'totalTokens':10}}},[{'name':'read','arguments':{'space_id':'space'},'result':result.model_dump(mode='json',by_alias=True)}]
+    monkeypatch.setattr(runner,'evaluate',completed_denial)
+    config={'sessions':1,'tokens':100000,'seconds':100,'episode_tokens':10000,'episode_seconds':10,
+            'model':'test-only','effort':'low','cli_version':'codex-cli 0.166.0','calls':2,'context_bytes':100000}
+    budget=Budget(tmp_path/'ledger.json',config)
+    result=asyncio.run(runner.episode(Fixture(),corpus,q,config,tmp_path/'episode',budget,'case'))
+    assert result['status']=='runner_failure' and 'authorization_unavailable' in result['failure']
+    assert 'grade' not in result and budget.state['episodes']['case']['status']=='runner_failure'
