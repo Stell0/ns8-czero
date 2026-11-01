@@ -101,6 +101,16 @@ def bootstrap(client,config,authorization_ref):
     return {'status':'SAVED','resource_ids':writes,'connectors':len(config['sources'])}
 
 
+def state_directory(job,relative='data/c0-projects'):
+    """Separate source configurations can share one locked connection safely."""
+    parts=Path(relative).parts
+    if len(parts)<2 or parts[0]!='data':raise C0Error('state_directory_requires_private_data_subdirectory')
+    candidate=job/relative
+    if any(p.is_symlink() for p in (candidate,*candidate.parents)):
+        raise C0Error('unsafe_private_state_path')
+    return safe_path(job,relative)
+
+
 def run(args, *, client_factory=C0):
     if args.group=='wikiplant':
         from .legacy import validate_snapshot
@@ -141,7 +151,7 @@ def run(args, *, client_factory=C0):
     connection=connection_settings(job)
     if connection['space_id']!=config['project_space_id'] or connection['url']!=config['server_url']:
         raise C0Error('configured_instance_or_space_binding_mismatch')
-    state=job/'data/c0-projects'
+    state=state_directory(job,getattr(args,'state_directory','data/c0-projects'))
     if (job/'data').is_symlink() or state.is_symlink():raise C0Error('unsafe_private_state_path')
     state.mkdir(parents=True,exist_ok=True,mode=0o700)
     with locked(job/'job.lock'):
@@ -321,6 +331,7 @@ def main(argv=None):
     parser.add_argument('operation',choices=['validate','scan','sync','status','verify','resume','bootstrap','login','bind-account','disconnect','skill','schedule','report','release-check','export','static'])
     parser.add_argument('--config',type=Path)
     parser.add_argument('--job',type=Path)
+    parser.add_argument('--state-directory',default='data/c0-projects',help='Private relative data subdirectory; preserves the default source state')
     parser.add_argument('--dry-run',action='store_true')
     parser.add_argument('--report-format',choices=['json','human'],default='json')
     parser.add_argument('--apply',action='store_true')

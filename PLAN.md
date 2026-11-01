@@ -1,5 +1,15 @@
 # C0 roadmap
 
+## Freshdesk FAQ ingestion (development)
+
+Reuse the external ingestion package for published public Freshdesk Solutions
+articles, source-backed Markdown, existing project receipts and whole-document
+verification. Keep FAQ state separate under the selected job's locked connection;
+preserve established website synchronization and all schedules. Scope, source
+blacklists and actual readback results belong in the private operational report.
+No Core/runtime schema or deployment change is required. See the
+[FAQ workflow](samples/ingestion/examples/freshdesk/README.md).
+
 ## Released-Core adoption candidate
 
 PR48 regularly merges as `53c6957`; its tree equals accepted head `8dbb746`.

@@ -96,6 +96,9 @@ the privacy checker with a private deployment denylist. No instance hostname,
 credentials, private identifiers or real dataset enters the contribution. Follow
 the full base/candidate test rule and nethserver-pr workflow above. Do not install
 schedules or broaden authority as a side effect of an ingestion request.
+Published public FAQ imports use the [Freshdesk workflow](samples/ingestion/examples/freshdesk/README.md).
+Keep their saved scan/publication state separate from website state when reusing
+the same authoritative documentation job connection and lock.
 
 ## Knowledge and product contracts
 

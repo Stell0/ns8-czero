@@ -10,6 +10,10 @@ sources without copying authentication, MCP or state-handling code.
 These are external development tools. They are not installed in C0 containers,
 do not access its database directly and do not install a scheduler.
 
+For published public FAQ articles, use the [Freshdesk importer](examples/freshdesk/README.md).
+It reuses the source publisher and supports separate state under an existing
+documentation job's locked connection, preserving website synchronization state.
+
 ## Public code, private jobs
 
 The `c0_ingest` package contains the official MCP SDK adapter, dedicated OAuth,

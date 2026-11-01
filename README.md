@@ -33,6 +33,10 @@ a full GitHub project/contributor/document pipeline and shared Python helpers fo
 other sources. Public adapters and tests stay in Git; your instance `.env`, update
 scripts, OAuth credentials, datasets and receipts stay in an ignored private job.
 
+The [Freshdesk FAQ importer](samples/ingestion/examples/freshdesk/README.md) exports
+published public articles and reuses the same protected-project publication and
+readback workflow, with separate state from an existing website job.
+
 ## Use C0
 
 ### Use an existing instance

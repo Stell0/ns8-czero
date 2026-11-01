@@ -16,6 +16,7 @@ GUIDES = ('installation-candidate', 'index', 'user-guide', 'administration', 'ch
           'm14-readiness', 'm14-release-notes')
 MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',
                'samples/ingestion/README.md', 'samples/ingestion/examples/website/README.md',
+               'samples/ingestion/examples/freshdesk/README.md',
                'docs/full-documents.md','docs/latest-only-migration.md',
                *('docs/' + name + '.md' for name in GUIDES),
                'docs/history/README.md', 'docs/history/AGENTS.md', 'docs/history/PLAN.md',
