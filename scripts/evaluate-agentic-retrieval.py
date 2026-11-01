@@ -195,8 +195,10 @@ def main():
     manage.add_argument('action',choices=('dry-run','apply','status','verify'))
     manage.add_argument('--job',required=True,type=Path);manage.add_argument('--corpus',required=True,type=Path)
     manage.add_argument('--plan',required=True,type=Path);manage.add_argument('--state',required=True,type=Path)
-    manage.add_argument('--questions',required=True,type=Path,help='Private leakage denylist; never passed to builder')
+    manage.add_argument('--questions',type=Path,help='Optional private evaluation leakage denylist; never passed to builder')
     manage.add_argument('--max-operations',type=int,default=30)
+    labels=sub.add_parser('freeze-labels',help='Freeze source-audited questions and partitions without a model or database')
+    for field in ('corpus','proposed','reviewed','audit','plan','output'):labels.add_argument('--'+field,required=True,type=Path)
     check=sub.add_parser('validate');check.add_argument('--corpus',required=True,type=Path);check.add_argument('--questions',type=Path);check.add_argument('--plan',type=Path)
     status=sub.add_parser('status');status.add_argument('output',type=Path)
     cleanup=sub.add_parser('cleanup',help='Remove only ownership-proven retained disposable databases')
@@ -214,9 +216,16 @@ def main():
         with job_client(args.job) as client:atomic(args.output/'corpus.json',corpus_snapshot(client))
         print('Frozen verified current corpus privately');return 0
     corpus=json.loads(args.corpus.read_text());validate_corpus(corpus)
+    if args.command=='freeze-labels':
+        proposed=json.loads(args.proposed.read_text());reviewed=json.loads(args.reviewed.read_text());audit=json.loads(args.audit.read_text());plan=json.loads(args.plan.read_text())
+        validate_plan(plan,corpus)
+        questions,frozen=freeze_labels(corpus,proposed,reviewed,audit,digest({'command':'freeze-labels','source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}),digest(plan))
+        args.output.mkdir(mode=0o700,parents=True,exist_ok=False)
+        atomic(args.output/'questions.json',questions);atomic(args.output/'freeze.json',frozen)
+        print('Frozen audited labels and partitions privately');return 0
     if args.command=='maintain':
-        plan=json.loads(args.plan.read_text());questions=json.loads(args.questions.read_text())
-        validate_questions(questions,corpus)
+        plan=json.loads(args.plan.read_text());questions=json.loads(args.questions.read_text()) if args.questions else []
+        if questions:validate_questions(questions,corpus)
         forbidden=[x for q in questions for x in (q['id'],q['text'])]
         validate_plan(plan,corpus,forbidden)
         if args.action=='status':

@@ -241,3 +241,19 @@ def test_prepared_import_rebinds_only_exact_sources_and_preserves_sealed_partiti
     exposed=tmp_path/'sealed-0-raw-question-a-0';exposed.mkdir();(exposed/'runner.json').write_text('{}')
     questions,_,proof=load_prepared(tmp_path,corpus)
     assert questions[0]['split']=='development' and proof['previous_test_exposure']
+
+
+def test_standalone_audited_label_freeze_and_maintenance_status_need_no_model_or_credentials(tmp_path):
+    import subprocess
+    corpus,q,plan=fixture();proposal={'corpus_hash':digest(corpus),'questions_hash':digest([q]),'plan_hash':digest(plan)}
+    audit={'proposal_hash':digest(proposal),'reviewed_questions_hash':digest([q]),'approved_for_pilot':True,'audit':[{'id':q['id'],'review':'source audit'}]}
+    for name,value in [('corpus',corpus),('proposed',[q]),('reviewed',[q]),('plan',plan),('audit',audit)]:
+        (tmp_path/(name+'.json')).write_text(json.dumps(value))
+    script=ROOT/'scripts/evaluate-agentic-retrieval.py'
+    command=[sys.executable,str(script),'freeze-labels']
+    for name in ('corpus','proposed','reviewed','plan','audit'):command+=['--'+name,str(tmp_path/(name+'.json'))]
+    subprocess.run([*command,'--output',str(tmp_path/'frozen')],check=True,capture_output=True)
+    assert json.loads((tmp_path/'frozen/questions.json').read_text())[0]['id']==q['id']
+    result=subprocess.run([sys.executable,str(script),'maintain','status','--job',str(tmp_path/'not-a-job'),
+        '--corpus',str(tmp_path/'corpus.json'),'--plan',str(tmp_path/'plan.json'),'--state',str(tmp_path/'state.json')],check=True,capture_output=True,text=True)
+    assert json.loads(result.stdout)=={'state_present':False,'pending':False}
