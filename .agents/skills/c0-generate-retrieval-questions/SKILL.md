@@ -6,7 +6,9 @@ description: Generate and validate provisional retrieval questions from explicit
 Read [the evaluation protocol](../../../docs/agentic-retrieval.md). Accept an explicit
 current corpus manifest, bounded generation settings and new private output path.
 Use `scripts/evaluate-agentic-retrieval.py questions --corpus ... --config ...
---output ...`. It uses the existing isolated model driver; preserve requested and
+--output ...`. Generation does not require a retrieval fixture, semantic layer or prior audit.
+Use bounded source packets and explicit question_counts where needed; packet
+absence alone cannot establish full-corpus unanswerability. It uses the existing isolated model driver; preserve requested and
 reported model identities and every failed attempt. Use approved Luna access where
 available; absence is a blocker, never permission to substitute another model.
 

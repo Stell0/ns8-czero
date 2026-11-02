@@ -211,7 +211,10 @@ Fetch original C0 main regularly and keep development changes rebased on it. Res
 Review Core dependency updates and managed infrastructure proposals through `c0-upstream.json` and `scripts/sync-upstream.py`. The updater preserves customized files for review rather than overwriting them. Use `c0-upgrade-from-upstream` for upgrades and `c0-contribute-upstream` for reusable contributions. When your improvement can benefit the C0 base, open a focused upstream PR using `c0-contribute-upstream` and the installed `nethserver-pr` skill. Keep application branding, private deployment information and unfinished work separate from those contributions. Update the Codex-facing tool catalog, plugin/skills and documentation alongside behavior changes; verify the connection after upgrading.
 
 For controlled retrieval experiments, use the three [agentic retrieval skills and
-external workflow](docs/agentic-retrieval.md). Synthetic question labels, derived
+external workflow](docs/agentic-retrieval.md). Preparation supports paginated
+multipart originals and bounded small-model generation. Exploratory runs can start
+before label audit; completed benchmarks report unmet targets as results.
+Synthetic question labels, derived
 knowledge and original evidence remain distinct; model traces stay private.
 
 ## Roadmap and project status

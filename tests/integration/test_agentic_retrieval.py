@@ -91,3 +91,34 @@ def test_retained_pair_resumes_exact_ids_and_ownership_checked_cleanup(tmp_path)
         with pytest.raises(ValueError,match='ownership'):owned_binding(admin,wrong)
         cleanup_pair(admin,checkpoint);assert not checkpoint.exists()
     asyncio.run(check())
+
+
+@pytest.mark.parametrize('single_count,large_part',[(0,False),(101,False),(0,True)])
+def test_full_inventory_and_multipart_import_keep_parent_evidence_in_both_arms(tmp_path,single_count,large_part):
+    from agentic_retrieval.protocol import body_hash,grade
+    async def check():
+        single=json.loads((ROOT/'tests/evaluation/agentic_sources.json').read_text())[0]
+        sources=[{**single,'key':'document-'+str(i),'url':single['url']+'/'+str(i)} for i in range(single_count)]
+        first='First café prerequisite.\n';second='Second procedure uses port 7443.\n'
+        if large_part:first+=''.join('Additional prerequisite detail '+str(i)+' café.\n' for i in range(4000))
+        body=first+second;cut=len(first.encode())
+        sources.append({**single,'id':'external-parent','url':single['url']+'/multipart','body':body,
+            'parts':[{'start_byte':0,'end_byte':cut},{'start_byte':cut,'end_byte':len(body.encode())}]})
+        async with paired_fixture(os.environ['CZERO_TEST_DATABASE_URL'],tmp_path,sources) as (a,b,corpus):
+            assert len(corpus)==single_count+1 and await a.corpus()==await b.corpus()==corpus
+            parent=next(d for d in corpus if d['url'].endswith('/multipart'))
+            assert parent['body']==body and len(parent['parts'])==2
+            assert parent['generation'] not in {c['version_id'] for c in parent['chunks']}
+            assert len({c['source_id'] for c in parent['chunks']})==2
+            evidence=[{'document_id':parent['id'],'url':parent['url'],'generation':parent['generation'],
+                'content_hash':body_hash(body),'quote':text} for text in ('First café prerequisite.','Second procedure uses port 7443.')]
+            question={'answerability':'answerable','products':[],'versions':[],'evidence_sets':[[[e] for e in evidence]]}
+            calls=[]
+            async with a.mcp('reader-denial') as client:
+                for c in parent['chunks']:
+                    result=await client.call_tool('citations_get',{'chunk_id':c['chunk_id'],'space_id':a.space})
+                    calls.append({'name':'citations_get','result':result.model_dump(mode='json',by_alias=True)})
+            packet={'outcome':'completed','citations':[{k:c[k] for k in ('source_id','version_id','document_id','chunk_id',
+                'content_hash','source_hash','start_offset','end_offset')} for c in parent['chunks']]}
+            assert grade(question,packet,calls,corpus)['complete_evidence'] is True
+    asyncio.run(check())

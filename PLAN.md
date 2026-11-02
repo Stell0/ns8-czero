@@ -45,6 +45,11 @@ candidate measurement. Manage only reviewed source-backed Wiki navigation in the
 minimal semantic profile; initial construction sees no questions. Validation and
 sealed outcomes are single-use. Production enrichment, deployment, schedules and
 merges are outside this task. See [protocol and limits](docs/agentic-retrieval.md).
+The preparation follow-up supports full paginated multipart selections, explicit
+corpus budgets and bounded source packets. Default benchmark mode records quality
+failures while measuring each held-out split once; optimization retains its
+selection gates. Exploratory development does not require an audit and cannot
+claim acceptance. Existing frozen measurements remain unchanged.
 Actual pilot and full acceptance results must be recorded separately; preparation
 or synthetic tests alone do not establish real-corpus quality.
 
