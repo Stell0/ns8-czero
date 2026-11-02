@@ -143,6 +143,14 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     async def shared_style() -> FileResponse:
         return FileResponse(static_dir / 'app.css', media_type='text/css')
 
+    @instance_app.get('/vendor/poppins-latin-400-normal.woff2', include_in_schema=False)
+    async def regular_font() -> FileResponse:
+        return FileResponse(static_dir / 'vendor' / 'poppins-latin-400-normal.woff2', media_type='font/woff2')
+
+    @instance_app.get('/vendor/poppins-latin-500-normal.woff2', include_in_schema=False)
+    async def medium_font() -> FileResponse:
+        return FileResponse(static_dir / 'vendor' / 'poppins-latin-500-normal.woff2', media_type='font/woff2')
+
     @instance_app.get('/navigation.js', include_in_schema=False)
     async def shared_navigation() -> FileResponse:
         return FileResponse(static_dir / 'navigation.js', media_type='text/javascript')

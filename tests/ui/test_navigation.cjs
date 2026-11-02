@@ -63,3 +63,12 @@ test('ordinary skip links keep their original local fragment',()=>{
   vm.runInNewContext(source,{document,URL,window:{location:{href:'https://c0.example.test/wiki?view=tools'}}});
   assert.equal(link.href,'#main-content');
 });
+
+test('knowledge categories mark only the selected category and preserve the instance prefix',()=>{
+  for(const [path,index] of [['wiki',0],['wiki?category=articles&space_id=fixture',1],['sources?document=fixture',2]]){
+    const links=['./wiki','./wiki?category=articles','./sources'].map(href=>({href,attributes:{},setAttribute(k,v){this.attributes[k]=v;}}));
+    const document={querySelectorAll(selector){return selector==='nav[aria-label="Knowledge categories"] a'?links:[];}};
+    vm.runInNewContext(source,{document,URL,window:{location:{href:'https://c0.example.test/czero/czero17/'+path}}});
+    assert.deepEqual(links.map(link=>link.attributes['aria-current']),links.map((_,i)=>i===index?'page':undefined));
+  }
+});

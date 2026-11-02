@@ -28,6 +28,14 @@
       link.setAttribute('aria-current', 'page');
     }
   }
+  for (const link of document.querySelectorAll('nav[aria-label="Knowledge categories"] a')) {
+    const destination = new URL(link.href, window.location.href);
+    const current = new URL(window.location.href);
+    if (clean(destination.pathname) === clean(current.pathname) &&
+        (destination.searchParams.get('category') || '') === (current.searchParams.get('category') || '')) {
+      link.setAttribute('aria-current', 'page');
+    }
+  }
   for (const button of document.querySelectorAll('button[data-copy-target]')) {
     button.addEventListener('click', async () => {
       if (button.disabled) return;

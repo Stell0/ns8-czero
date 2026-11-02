@@ -201,6 +201,19 @@ def test_reader_assets_are_local_and_work_under_the_instance_prefix(client, asse
     assert client('/czero/czero18/' + asset).status_code == 404
 
 
+@pytest.mark.parametrize('weight', [400, 500])
+def test_nebula_fonts_are_local_and_bound_to_the_instance_prefix(client, weight):
+    asset = f'vendor/poppins-latin-{weight}-normal.woff2'
+    response = client('/czero/czero17/' + asset)
+    assert response.status_code == 200
+    assert response.headers['content-type'] == 'font/woff2'
+    assert response.content == (STATIC / asset).read_bytes()
+    assert response.content.startswith(b'wOF2')
+    assert client('/czero/czero18/' + asset).status_code == 404
+    assert client('/czero/czero17/vendor/poppins-latin-700-normal.woff2').status_code == 404
+    assert not any('poppins' in path for path in client('/czero/czero17/openapi.json').json()['paths'])
+
+
 def test_reader_assets_do_not_expand_the_domain_api(client):
     paths = client('/czero/czero17/openapi.json').json()['paths']
     assert not any(path.endswith(('.js', '.html')) for path in paths)
