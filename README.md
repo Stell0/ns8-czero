@@ -361,3 +361,5 @@ reader stack. It follows the device's color preference; fonts ship with the app
 and require no external font service. Native NS8 settings continue to use Carbon.
 The redesign candidate preserves existing space, permission and editing flows;
 source acceptance and deployment remain subject to the recorded CI gates.
+
+<!-- Disposable CI documentation probe; never merge this branch. -->

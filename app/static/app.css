@@ -310,5 +310,3 @@ pre { padding: 1rem; background: var(--elevation-2); border-radius: .5rem; font-
   button, .action-link, input, select, textarea { border: 1px solid ButtonText; }
   .topbar > a[aria-current=page], .page-tree a[aria-current=location] { outline: 1px solid Highlight; }
 }
-
-/* Disposable CI presentation probe; never merge this branch. */
