@@ -1,5 +1,7 @@
 # C0 roadmap
 
+> **Document ingestion modernization (approved design, not implemented):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; no runtime, deployment or release authorization is implied.
+
 ## CI policy update — implementation
 
 The operator prioritizes test speed over realistic fixtures in fast feedback:
