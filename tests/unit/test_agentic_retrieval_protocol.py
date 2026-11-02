@@ -314,3 +314,144 @@ assert os.environ["OPENAI_API_KEY"]=="synthetic-approved-model-auth"''')
     proof,_=asyncio.run(evaluate(tools=[tool],instructions='Boundary control',prompt='Probe',call_tool=actual,
         output=tmp_path/'episode',codex=str(path),timeout=10))
     assert proof['valid']
+
+
+def test_multipart_corpus_reader_pages_documents_and_chunks_and_binds_physical_generations():
+    from agentic_retrieval.job import read_corpus
+    corpus,q,_=fixture();base=corpus[0];calls=[]
+    summaries=[{'id':str(i)} for i in range(101)]
+    async def api(name,**args):
+        calls.append((name,args))
+        if name=='source_documents_list':return {'documents':summaries[args['offset']:args['offset']+args['limit']]}
+        if name=='source_documents_get':
+            identifier=args['logical_document_id']
+            return {'id':identifier,'revision_id':'logical-'+identifier,'state':'ready','multipart':True,
+                'body':base['body'],'text_hash':base['content_hash'],'title':'Original',
+                'metadata':{'canonical_url':'https://docs.example.test/'+identifier},
+                'parts':[{'version_id':'part-'+identifier,'document_id':'physical-'+identifier,'text_hash':base['content_hash']}]}
+        if name=='documents_get':return {'id':args['version_id'].replace('part-','physical-'),'text_hash':base['content_hash']}
+        if name=='document_chunks_list':
+            identifier=args['document_id'].removeprefix('physical-')
+            chunks=[{'id':identifier+'-'+str(i)} for i in range(101 if identifier=='0' else 1)]
+            return {'chunks':chunks[args['offset']:args['offset']+args['limit']]}
+        if name=='citations_get':
+            identifier=args['chunk_id'].split('-')[0]
+            return {**base['chunks'][0],'chunk_id':args['chunk_id'],'version_id':'part-'+identifier,
+                    'source_id':'source-'+identifier,'document_id':'physical-'+identifier}
+        raise AssertionError(name)
+    result=asyncio.run(read_corpus(api))
+    assert len(result)==101
+    first=next(d for d in result if d['id']=='0')
+    assert first['generation']=='logical-0' and len(first['chunks'])==101
+    assert first['chunks'][0]['version_id']=='part-0'
+    assert any(name=='source_documents_list' and args['offset']==100 for name,args in calls)
+    assert any(name=='document_chunks_list' and args['offset']==100 for name,args in calls)
+    with pytest.raises(ValueError,match='selection_budget'):asyncio.run(read_corpus(api,max_sources=100))
+    async def stale(name,**args):
+        result=await api(name,**args)
+        if name=='citations_get':result['version_id']='superseded'
+        return result
+    with pytest.raises(ValueError,match='citation_identity'):asyncio.run(read_corpus(stale))
+
+
+def test_source_selection_budget_is_explicit_and_multipart_offsets_cannot_be_flattened():
+    from agentic_retrieval.fixture import validate_sources
+    source={'key':'one','body':'café first\nsecond\n'}
+    body=source['body'].encode();cut=len('café first\n'.encode())
+    source['parts']=[{'start_byte':0,'end_byte':cut},{'start_byte':cut,'end_byte':len(body)}]
+    sources=[{**source,'key':str(i)} for i in range(451)]
+    validate_sources(sources,1000,134217728)
+    with pytest.raises(ValueError,match='selection_budget'):validate_sources(sources,100,134217728)
+    with pytest.raises(ValueError,match='total_bytes'):validate_sources(sources,1000,10)
+    bad=deepcopy(source);bad['parts'][1]['start_byte']-=1
+    with pytest.raises(ValueError,match='part_layout'):validate_sources([bad],1000,134217728)
+
+
+def test_batched_builders_preserve_counts_bound_packets_and_charge_each_session(tmp_path,monkeypatch):
+    from agentic_retrieval import builders
+    corpus,q,_=fixture();prompts=[]
+    async def model(**kwargs):
+        packet=json.loads(kwargs['prompt']);prompts.append(packet)
+        props=kwargs['final_schema']['properties'];value={}
+        for group in ('answerable','ambiguous','unanswerable'):
+            value[group]=[{**deepcopy(q),'id':str(i),'answerability':group,
+                'evidence_sets':[] if group=='unanswerable' else q['evidence_sets']}
+                for i in range(props[group]['minItems'])]
+        kwargs['output'].mkdir()
+        proof={'valid':True,'final':value,'elapsed_seconds':1,'token_usage':{'total':{'totalTokens':100}}}
+        (kwargs['output']/'runner.json').write_text(json.dumps(proof))
+        return proof,[]
+    monkeypatch.setattr(builders,'evaluate',model)
+    config={'model':'test-only','effort':'medium','episode_seconds':180,'episode_tokens':10000,
+        'context_bytes':524288,'cli_version':'codex-cli 0.166.0','sessions':10,'tokens':100000,'seconds':100,
+        'batch_size':4,'source_packet_bytes':49152,'question_counts':{'answerable':6,'ambiguous':3,'unanswerable':3}}
+    value,proof=asyncio.run(builders.build('questions',corpus,config,tmp_path/'builder',count=12))
+    assert len(value)==len({q['id'] for q in value})==12
+    assert [sum(q['answerability']==group for q in value) for group in ('answerable','ambiguous','unanswerable')]==[6,3,3]
+    assert len(prompts)==4 and max(p['count'] for p in prompts)<=4
+    assert proof['token_usage']['total']['totalTokens']==400
+    ledger=json.loads((tmp_path/'builder/ledger.json').read_text())
+    assert len(ledger['episodes'])==4 and ledger['tokens']==400
+    assert all('body' not in p['originals'][0] and 'chunks' in p['originals'][0] for p in prompts)
+
+
+@pytest.mark.parametrize('mode,exploratory,expected_splits,expected_status',[
+    ('benchmark',False,['development','validation','sealed'],'completed_targets_unmet'),
+    ('optimize',False,['development'],'development_target_unmet'),
+    ('benchmark',True,['development'],'exploratory_completed')])
+def test_quality_targets_do_not_block_benchmark_and_exploration_needs_no_audit(
+        tmp_path,monkeypatch,mode,exploratory,expected_splits,expected_status):
+    from contextlib import asynccontextmanager
+    spec=importlib.util.spec_from_file_location('evaluation_cli',ROOT/'scripts/evaluate-agentic-retrieval.py')
+    cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
+    corpus,q,plan=fixture();questions=[];splits=[]
+    for group in ('answerable','ambiguous','unanswerable'):
+        questions.extend({**deepcopy(q),'id':group+str(i),'answerability':group,
+            'evidence_sets':[] if group=='unanswerable' else q['evidence_sets']} for i in range(3))
+    config=tmp_path/'config.json';config.write_text(json.dumps({'mode':mode,'rounds':1,'questions':9}))
+    sources=tmp_path/'sources.json';sources.write_text('[]')
+    output=tmp_path/'run'
+    class Fixture:
+        space='space'
+        async def api_call(self,*args):raise AssertionError('no runtime calls in control-flow test')
+    @asynccontextmanager
+    async def paired(*args,**kwargs):yield Fixture(),Fixture(),corpus
+    async def builder(kind,corpus,config,destination,budget):
+        destination.mkdir();value=plan if kind=='layer' else questions
+        (destination/'validated.json').write_text(json.dumps(value))
+        if kind=='questions' and not exploratory:
+            proposal={'corpus_hash':digest(corpus),'questions_hash':digest(questions),'plan_hash':digest(plan)}
+            (output/'label-audit.json').write_text(json.dumps({'proposal_hash':digest(proposal),
+                'reviewed_questions_hash':digest(questions),'approved_for_pilot':True,'audit':[{'provenance':'test control'}]}))
+        return value
+    async def measure(*args,**kwargs):return []
+    async def compare(*args,**kwargs):
+        splits.append(args[7])
+        return {'summary':{'raw':{},'enriched':{}},'unmet':['absolute_quality','improvement','ambiguous'],
+            'results':{'raw':[],'enriched':[]}}
+    async def maintain(*args,**kwargs):return {}
+    monkeypatch.setenv('CZERO_EVAL_DATABASE_URL','synthetic-loopback-binding')
+    monkeypatch.setattr(cli,'paired_fixture',paired);monkeypatch.setattr(cli,'builder',builder)
+    monkeypatch.setattr(cli,'measure',measure);monkeypatch.setattr(cli,'compare',compare)
+    monkeypatch.setattr(cli,'maintain',maintain);monkeypatch.setattr(cli,'verify',maintain)
+    args=SimpleNamespace(config=config,output=output,sources=sources,prepared=None,resume=False,
+                         prepare_only=False,exploratory=exploratory)
+    code=asyncio.run(cli.loop(args))
+    result=json.loads((output/'result.json').read_text())
+    assert splits==expected_splits and result['status']==expected_status
+    assert code==(2 if mode=='optimize' else 0)
+    if exploratory:assert 'unaudited' in json.loads((output/'freeze.json').read_text())['label_provenance']
+
+
+def test_question_only_label_freeze_does_not_require_a_semantic_layer(tmp_path):
+    import subprocess
+    corpus,q,_=fixture()
+    proposal={'corpus_hash':digest(corpus),'questions_hash':digest([q]),'plan_hash':digest(None)}
+    audit={'proposal_hash':digest(proposal),'reviewed_questions_hash':digest([q]),
+        'approved_for_pilot':True,'audit':[{'provenance':'source-based analyst check'}]}
+    for name,value in [('corpus',corpus),('proposed',[q]),('reviewed',[q]),('audit',audit)]:
+        (tmp_path/(name+'.json')).write_text(json.dumps(value))
+    command=[sys.executable,str(ROOT/'scripts/evaluate-agentic-retrieval.py'),'freeze-labels']
+    for name in ('corpus','proposed','reviewed','audit'):command+=['--'+name,str(tmp_path/(name+'.json'))]
+    subprocess.run([*command,'--output',str(tmp_path/'frozen')],check=True,capture_output=True)
+    assert json.loads((tmp_path/'frozen/freeze.json').read_text())['plan']==digest(None)

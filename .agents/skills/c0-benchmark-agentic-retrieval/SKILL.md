@@ -29,7 +29,10 @@ Luna cannot be sole judge of its own answer.
 
 Limit development rounds and total budget. Preserve every attempt, stop on safety,
 citation or drift regressions and record checkpoints. Select using development;
-run validation once, then sealed test once only if validation passes. Do not tune
+use `mode=optimize` for validation-gated improvement. Default `mode=benchmark`
+measures validation and sealed once even when quality targets fail; preserve those
+failures as outcomes, never as permission to tune. `--exploratory` runs development
+with provisional labels before audit, marks exposure, and cannot claim acceptance. Do not tune
 after those outcomes. Missing access/model support blocks real results, not the
 deterministic preparation. Publish sanitized aggregates only. No production corpus,
 provider, scheduler, deployment or merge change is authorized by this workflow.
