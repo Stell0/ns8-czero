@@ -872,6 +872,106 @@
       "path": "tests/current_content_fixture.py",
       "mode": "100644",
       "sha256": "2e9bf12eaf29dc25d6f22377e7cdb036918a3f9bdd8d473f6498d17bcaa4b8ac"
+    },
+    {
+      "path": "scripts/agentic_retrieval/__init__.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/builders.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/fixture.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/job.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/layer.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/protocol.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/runner.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/evaluate-agentic-retrieval.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "docs/agentic-retrieval.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "docs/agentic-retrieval.schema.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": ".agents/skills/c0-benchmark-agentic-retrieval/SKILL.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": ".agents/skills/c0-generate-retrieval-questions/SKILL.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": ".agents/skills/c0-maintain-semantic-layer/SKILL.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/evaluation/fixture.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/evaluation/codex_driver.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/evaluation/__init__.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/evaluation/agentic_sources.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "samples/ingestion/src/c0_benchmark.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/evaluation/grader.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "scripts/agentic_retrieval/prepared.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }
