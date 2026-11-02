@@ -15,10 +15,10 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    # This isolated CI service uses no reusable password and exposes only runner loopback.
+    # Fast feedback starts no database. Full checks use isolated runner loopback.
     services:
       postgres:
-        image: docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+        image: ${{ !inputs.feedback && 'docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d' || '' }}
         env:
           POSTGRES_USER: czero
           POSTGRES_DB: czero_test
@@ -29,7 +29,7 @@ jobs:
           --health-cmd="pg_isready -U czero -d czero_test"
           --health-interval=5s --health-timeout=5s --health-retries=15
     env:
-      CZERO_TEST_DATABASE_URL: postgresql+psycopg://czero@127.0.0.1:5432/czero_test
+      CZERO_TEST_DATABASE_URL: ${{ !inputs.feedback && 'postgresql+psycopg://czero@127.0.0.1:5432/czero_test' || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -64,15 +64,17 @@ jobs:
       - if: ${{ !inputs.feedback }}
         run: python -m pytest -q app/tests packages/czero-core/tests tests/unit tests/integration tests/packaging
       - name: Install pinned disposable browser
+        if: ${{ !inputs.feedback }}
         run: |
           pip install -r tests/e2e/requirements.txt
           python -m playwright install --with-deps chromium
       - name: Full document browser acceptance
+        if: ${{ !inputs.feedback }}
         env:
           CZERO_BROWSER_ARTIFACTS: /tmp/c0-document-browser-failures
         run: python -m pytest -q --tb=short -rA tests/e2e
       - name: Retain sanitized browser failures
-        if: failure()
+        if: failure() && !inputs.feedback
         uses: actions/upload-artifact@v7
         with:
           name: document-browser-failures

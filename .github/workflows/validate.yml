@@ -8,15 +8,15 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: Optional ready PR number; dispatch its exact current head branch
+        description: Full native acceptance on demand; optional ready PR number at this exact head ref
         type: string
         default: ''
 permissions:
   contents: read
   actions: read
   pull-requests: read
-# Acceptance jobs are never cancelled. Only feedback jobs below supersede
-# earlier feedback for the same PR; full candidates use unique immutable tags.
+# Full acceptance is never cancelled. Fast checks run on every runtime PR;
+# only the reviewed presentation allowlist can merge without native proof.
 jobs:
   classify:
     runs-on: ubuntu-24.04
@@ -71,14 +71,12 @@ jobs:
       - run: python scripts/check-docs.py ci-selection.json
       - name: Test the classification and gate policy
         run: |
-          pip install pytest==8.4.2
+          pip install pytest==8.4.2 PyYAML==6.0.3
           python -m pytest -q tests/unit/test_ci_policy.py
   feedback:
     needs: classify
-    if: needs.classify.outputs.mode == 'scoped'
-    concurrency:
-      group: development-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
+    if: needs.classify.outputs.kind == 'runtime' || needs.classify.outputs.mode == 'full'
+    # No cancellation group: this job also belongs to full acceptance runs.
     uses: ./.github/workflows/test-local.yml
     with:
       source: ${{ needs.classify.outputs.source }}

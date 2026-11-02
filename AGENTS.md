@@ -57,9 +57,17 @@ Explain the behavior, compatibility and migration impact, include feature regres
 
 ## Tests are part of the feature
 
-Before opening a feature/runtime PR, run the complete required base suite on the exact latest original C0 `main` and establish a green baseline. Add tests for the new feature to the branch, then run the complete suite again on the rebased candidate. Resolve base failures before opening the feature PR; retain failed evidence rather than describing a partial run or database skips as a pass. CI checks required by [CI policy](docs/ci-policy.md) must also finish successfully for the exact candidate before merge.
-
-The documentation-only lightweight exception applies to branches developed within original `Stell0/ns8-czero`. **Every contribution from an external fork to original C0 `main` requires full base and candidate checks before opening the upstream PR, including documentation-only contributions.** Complete the database, packaging, image and native matrix; a lightweight automatic docs check does not satisfy this contributor requirement. Arrange any registry-dependent checks on an authorized upstream branch without copying credentials into fork secrets or executing untrusted code with privileged PR events. Record the exact sources and results in the PR.
+Use the [CI policy](docs/ci-policy.md) on the exact latest original C0 main and
+candidate. Every PR gets fast automatic checks. Installation/configuration,
+containers, migrations, authentication, dependencies, CI/policy code and uncertain
+changes also get automatic full Debian/Rocky native acceptance. Reviewed
+presentation-only changes use the explicit low-risk allowlist and can request
+full native acceptance on demand. Both internal and external contributors follow
+this risk policy; there is no blanket full-native requirement for Git-only docs
+or low-risk UI. Preserve required tests and failed evidence; database skips are
+not a pass. Coordinate registry-dependent checks on an authorized upstream branch
+without copying credentials into fork secrets or using privileged PR events.
+Record the exact sources, selected acceptance level and results in the PR.
 
 Feature tests must exercise its observable behavior and the contracts it relies on. Cover the relevant authorization/space/scope boundaries, revisions/retries, migrations/recovery and actual browser workflows when affected. Preserve and run these tests whenever original C0 or the Core dependency changes, so the fork can demonstrate that its own code still works with the new base. Do not weaken base tests, remove regression coverage, skip database cases or silently widen dependency ranges to obtain a pass.
 
@@ -149,11 +157,34 @@ development. Invalid or missing identities fail without fallback. Verify the
 released Git source in the actual published/native app image, not only a temporary
 probe. Producer acceptance is not released-consumer deployment proof.
 
-[CI policy](docs/ci-policy.md) defines automated validation. Draft runtime work gets scoped feedback; ready runtime PRs require full exact-source acceptance. Only explicitly reviewed Git-only documents receive the lightweight exemption; packaged docs, plugin inputs, static app HTML, executable helpers, versions and locks broaden validation. The external-fork contribution requirement above additionally requires full checks even when automation classifies a change as documentation-only.
+[CI policy](docs/ci-policy.md) defines the current risk-based checks. Every PR
+gets fast checks; sensitive/unknown changes automatically require full native
+acceptance, and allowlisted presentation changes can request it on demand. Full
+native acceptance remains mandatory before Core/module releases, canonical image
+publication and production deployment. A fast merge proof never authorizes those
+operations.
 
-Require the actual `C0 merge gate` and `scripts/verify-promotion.py --source <full-head-sha> --pr <number>`. Inspect completed successful checks and actual native/privacy/scan artifacts; old, skipped, cancelled or started checks are insufficient. Use `validate.yml` for manual full dispatch. Never cancel a frozen acceptance run or share a mutable PostgreSQL test database across jobs.
+Require the actual `C0 merge gate`, current source/base/diff validation and all
+selected checks. For a direct merge use `scripts/verify-promotion.py --source
+<full-head-sha> --pr <number>`; use `--full` for release/deployment acceptance.
+Never cancel a frozen native/full acceptance run or share mutable PostgreSQL test
+databases across jobs. Preserve the existing Nebula branch and running evidence.
 
-Another developer reviews before merge; assign no unsolicited reviewer. Preserve tested commits with a regular merge. Runtime milestones require supported C0-only backup/update, real readiness, exact image/data/settings/files/client/schedule/unrelated-inventory preservation, live acceptance, restart and bounded positive-control root journald audits. Empty Podman logs do not prove privacy. Destructive recovery tests remain disposable. Verify actual main completion/publication, then use a separate checked documentation closeout. Keep failed/private evidence outside Git and public identities sanitized.
+C0 does not require a separate human review or approval before merge. Review the
+complete current diff and results (agent review is permitted), resolve feedback,
+and enable automatic **regular** merge with `gh pr merge <number> --auto --merge
+--match-head-commit <full-head-sha>`. Retain strict branch protection and the
+Actions-owned required gate; never use an admin bypass, force push or unsolicited
+reviewer assignment. If source/base changes, review and validate the new source;
+retain frozen candidates when rebasing requires a successor branch.
+
+Runtime deployment still requires explicit live authorization, supported C0-only
+backup/update, readiness, image/data/settings/files/client/schedule/unrelated-
+inventory preservation, live acceptance, restart and positive-control root
+journald audits. Empty Podman logs do not prove privacy. Keep destructive recovery
+disposable, verify actual publication when selected, and record evidence in a
+separate checked documentation closeout. Installed baselines do not change merely
+because a PR merges. Keep failed/private evidence outside Git.
 
 The operator's **interactive Playwright** and **container CPU-quota** waivers remain unchanged. Do not introduce `--cpus=2`, change host delegation or claim CPU-rate enforcement. Automated native browsers, memory/swap/tasks limits, parser deadlines and worker lifetime checks remain required.
 

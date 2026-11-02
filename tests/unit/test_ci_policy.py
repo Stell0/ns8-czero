@@ -84,6 +84,8 @@ BASE = 'b' * 40
 def evidence(kind='runtime', mode='full'):
     required = policy()['required_jobs'](kind, mode)
     return {'source': SHA, 'base': BASE, 'diff_hash': 'c' * 64, 'kind': kind,
+            'policy_version': 2, 'native_required': kind == 'runtime',
+            'native_reason': 'risk_or_unknown' if kind == 'runtime' else 'docs_allowlist',
             'mode': mode, 'draft': False, 'run_id': 12, 'run_attempt': 1,
             'jobs': {name: 'success' for name in required},
             'images_verified': mode == 'full', 'native_verified': mode == 'full'}
@@ -113,9 +115,9 @@ def test_stale_or_incomplete_proof_cannot_authorize_merge(field, value):
         policy()['verify_gate'](proof, SHA, BASE, 'c' * 64)
 
 
-def test_ready_and_subsequent_updates_always_require_full_runtime_validation():
+def test_native_sensitive_changes_are_full_even_in_drafts_and_manual_is_always_full():
     decide = policy()['validation_mode']
-    assert decide('runtime', 'app', 'pull_request', True) == 'scoped'
+    assert decide('runtime', 'app', 'pull_request', True) == 'full'
     for event in ('ready_for_review', 'synchronize', 'reopened'):
         assert decide('runtime', 'app', 'pull_request', False) == 'full', event
     assert decide('docs', 'docs', 'push', False) == 'docs'
@@ -219,15 +221,11 @@ def test_development_cancellation_covers_mode_changes_without_cancelling_accepta
     import re
     workflow = (Path(__file__).parents[2]/'.github/workflows/validate.yml').read_text()
     jobs = dict(re.findall(r'^  ([a-z-]+):\n(.*?)(?=^  [a-z-]+:\n|\Z)', workflow, re.M | re.S))
-    groups = []
-    for name in ('docs', 'feedback'):
-        job = jobs[name]
-        groups.append(re.search(r'^      group: (.+)$', job, re.M).group(1))
-        assert 'cancel-in-progress: true' in job
-    assert len(set(groups)) == 1
+    assert 'cancel-in-progress: true' in jobs['docs']
+    assert "needs.classify.outputs.kind == 'runtime'" in jobs['feedback']
     assert "needs.classify.outputs.mode == 'full'" in jobs['retire-feedback']
     assert 'retire-feedback' in policy()['required_jobs']('runtime', 'full')
-    for name in ('retire-feedback', 'local', 'released', 'renovate', 'producer', 'images', 'native', 'artifacts', 'gate', 'publish-canonical'):
+    for name in ('feedback', 'retire-feedback', 'local', 'released', 'renovate', 'producer', 'images', 'native', 'artifacts', 'gate', 'publish-canonical'):
         assert 'concurrency:' not in jobs[name], name
 
 
@@ -278,6 +276,7 @@ def test_retirement_requires_old_development_proof_and_preserves_full_runs(tmp_p
     ('full', 'refs/heads/feature', 'success', 'success', False, False),
     ('docs', 'refs/heads/main', 'success', 'success', False, False),
     ('scoped', 'refs/heads/main', 'success', 'success', False, False),
+    ('fast', 'refs/heads/main', 'success', 'success', False, False),
     ('full', 'refs/heads/main', 'failure', 'success', False, False),
     ('full', 'refs/heads/main', 'skipped', 'success', False, False),
     ('full', 'refs/heads/main', 'cancelled', 'success', False, False),
@@ -314,13 +313,248 @@ def test_broad_feedback_rejects_a_syntax_error_in_the_second_shell_file(tmp_path
                  'imageroot/update-module.d/60scheduler','imageroot/update-module.d/80restart'):
         path=tmp_path/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('true\n')
     (tmp_path/'imageroot/actions/configure-module/80start_services').write_text('if then\n')
-    selection=tmp_path/'selection.json';selection.write_text(json.dumps({'feedback':'broad','node':False,'vue':False}))
+    for name in policy()['FAST_TESTS']:
+        path=tmp_path/name
+        if name.endswith('.py'):path.parent.mkdir(parents=True,exist_ok=True);path.write_text('pass\n')
+        else:path.mkdir(parents=True,exist_ok=True)
+    selection=tmp_path/'selection.json';selection.write_text(json.dumps({'feedback':'broad','node':False,'vue':False,'pytest':policy()['FAST_TESTS']}))
     actual_run=subprocess.run
     def run(args, **kwargs):
         if args[0]=='bash':return actual_run(args, **kwargs)
         return subprocess.CompletedProcess(args,0)
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.chdir(tmp_path);monkeypatch.syspath_prepend(str(root/'scripts'))
     monkeypatch.setattr(sys,'argv',['run-ci-feedback.py',str(selection)])
     monkeypatch.setattr(subprocess,'run',run)
     with pytest.raises(subprocess.CalledProcessError):
         runpy.run_path(str(root/'scripts/run-ci-feedback.py'),run_name='__main__')
+
+
+@pytest.mark.parametrize('path', [
+    'app/static/app.css', 'app/static/wiki.html', 'app/static/sources.html',
+    'app/static/search.html', 'app/static/projects.html', 'ui/src/assets/theme.scss',
+    'tests/ui/test_navigation.cjs', 'tests/e2e/test_nebula_theme.py',
+])
+def test_presentation_changes_can_merge_after_fast_checks(path):
+    p = policy()
+    selection = p['classify']([change(path)])
+    assert selection['native_required'] is False
+    assert selection['native_reason'] == 'ui_allowlist'
+    assert p['validation_mode']('runtime', selection['feedback'], 'pull_request', False,
+                               native_required=False) == 'fast'
+    proof = evidence(mode='fast')
+    proof.update(native_required=False, native_reason='ui_allowlist')
+    p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=False)
+    with pytest.raises(ValueError, match='full_validation_required'):
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=False, require_full=True)
+
+
+@pytest.mark.parametrize('path', [
+    'imageroot/actions/configure-module/80start_services', 'ui/src/views/Settings.vue',
+    'containers/czero-app/Containerfile', 'build-images.sh', 'app/uv.lock',
+    'ui/package.json', 'ui/yarn.lock', 'app/static/vendor/new-font.woff2',
+    'packages/czero-core/src/czero_core/migrations/versions/0024.py',
+    'app/src/czero_app/auth.py', 'app/static/auth.js', 'app/static/consent.html',
+    'app/static/connect.js', 'app/static/workspace-access.js', 'app/static/admin.html',
+    'app/static/reader.js', '.github/workflows/validate.yml', 'scripts/ci-gate.py',
+    'unknown/new.css', 'ui/src/assets/../settings.css',
+])
+def test_sensitive_or_uncertain_change_cannot_hide_in_a_ui_diff(path):
+    p = policy()
+    selection = p['classify']([change('app/static/app.css'), change(path)])
+    assert selection['native_required'] is True
+    for draft in (False, True):
+        assert p['validation_mode']('runtime', selection['feedback'], 'pull_request', draft,
+                                   native_required=selection['native_required']) == 'full'
+    proof = evidence(mode='fast')
+    proof.update(native_required=False, native_reason='ui_allowlist')
+    with pytest.raises(ValueError, match='native_classification_changed'):
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=True)
+
+
+@pytest.mark.parametrize('record', [
+    change('app/static/app.css', 'A', old_mode='000000'),
+    change('app/static/app.css', 'D', mode='000000'),
+    change('app/static/wiki.html', 'R100', old='app/static/consent.html'),
+    change('app/static/wiki.html', 'R100', old='app/static/search.html'),
+    change('app/static/app.css', mode='100755'),
+    change('app/static/app.css', mode='120000'),
+])
+def test_presentation_addition_deletion_rename_and_mode_require_native(record):
+    assert policy()['classify']([record])['native_required'] is True
+
+
+def test_frozen_full_and_documentation_proofs_remain_verifiable():
+    p = policy()
+    for kind, mode in [('runtime', 'full'), ('docs', 'docs')]:
+        proof = evidence(kind, mode)
+        for key in ('policy_version', 'native_required', 'native_reason'):
+            proof.pop(key)
+        proof['jobs'].pop('feedback', None)
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, require_full=mode == 'full')
+    proof = evidence(mode='fast')
+    proof.pop('policy_version')
+    proof.update(native_required=False, native_reason='ui_allowlist')
+    with pytest.raises(ValueError, match='full_validation_required'):
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=False)
+
+
+@pytest.mark.parametrize('damage', ['missing_fast', 'failed_fast', 'unbound_risk', 'missing_version',
+                                  'wrong_reason', 'fake_native', 'draft', 'new_version'])
+def test_fast_proof_cannot_bypass_its_boundaries(damage):
+    p = policy()
+    proof = evidence(mode='fast')
+    proof.update(native_required=False, native_reason='ui_allowlist')
+    expected = False
+    if damage == 'missing_fast':proof['jobs'].pop('feedback')
+    elif damage == 'failed_fast':proof['jobs']['feedback'] = 'failure'
+    elif damage == 'unbound_risk':expected = None
+    elif damage == 'missing_version':proof.pop('policy_version')
+    elif damage == 'wrong_reason':proof['native_reason'] = 'docs_allowlist'
+    elif damage == 'fake_native':proof['native_verified'] = True
+    elif damage == 'draft':proof['draft'] = True
+    else:proof['policy_version'] = 99
+    with pytest.raises(ValueError):
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=expected)
+
+
+def test_native_required_full_proof_also_requires_its_fast_job():
+    proof = evidence()
+    proof['jobs'].pop('feedback')
+    with pytest.raises(ValueError, match='required_job_not_successful'):
+        policy()['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=True)
+
+
+def test_fast_runner_remains_bounded_for_broad_changes(tmp_path, monkeypatch):
+    import json, sys
+    root = Path(__file__).parents[2]
+    for name in policy()['FAST_TESTS']:
+        path=tmp_path/name
+        if name.endswith('.py'):path.parent.mkdir(parents=True,exist_ok=True);path.write_text('pass\n')
+        else:path.mkdir(parents=True,exist_ok=True)
+    selection = tmp_path/'selection.json'
+    selection.write_text(json.dumps({'feedback':'broad','node':False,'vue':False,'pytest':policy()['FAST_TESTS']}))
+    calls = []
+    monkeypatch.chdir(tmp_path);monkeypatch.syspath_prepend(str(root/'scripts'))
+    monkeypatch.setattr(sys, 'argv', ['run-ci-feedback.py', str(selection)])
+    monkeypatch.setattr(subprocess, 'run', lambda args, **kwargs: calls.append(args))
+    runpy.run_path(str(root/'scripts/run-ci-feedback.py'), run_name='__main__')
+    assert 'tests/unit' in calls[0] and 'packages/czero-core/tests' in calls[0]
+    assert 'app/tests/test_app.py' in calls[0]
+    assert 'tests/integration' not in calls[0] and 'tests/packaging' not in calls[0]
+    assert any(args[:2] == ['node', '--test'] for args in calls)
+    assert sum(args[:2] == ['bash', '-n'] for args in calls) == 5
+
+
+@pytest.mark.parametrize('path,event,ref,expected', [
+    ('app/static/app.css','pull_request','refs/pull/14/merge','fast'),
+    ('app/static/consent.html','pull_request','refs/pull/14/merge','full'),
+    ('README.md','pull_request','refs/pull/14/merge','docs'),
+    ('app/static/app.css','workflow_dispatch','refs/heads/ui','full'),
+    ('README.md','push','refs/tags/0.58.0','full'),
+])
+def test_event_selection_binds_risk_and_forces_manual_and_release_native(tmp_path, monkeypatch, path,event,ref,expected):
+    import json, sys
+    root=Path(__file__).parents[2]
+    monkeypatch.chdir(tmp_path);monkeypatch.syspath_prepend(str(root/'scripts'))
+    def git(*args):return subprocess.check_output(['git',*args],text=True).strip()
+    git('init','-q');target=tmp_path/path;target.parent.mkdir(parents=True,exist_ok=True)
+    target.write_text('baseline\n');git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','baseline')
+    base=git('rev-parse','HEAD');target.write_text('candidate\n');git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','candidate')
+    source=git('rev-parse','HEAD')
+    payload={'before':base,'ref':ref}
+    pr={'head':{'sha':source},'base':{'sha':base},'number':14,'draft':False}
+    if event=='pull_request':payload['pull_request']=pr
+    if event=='workflow_dispatch':payload['inputs']={'pr_number':'14'}
+    event_file=tmp_path/'event.json';event_file.write_text(json.dumps(payload))
+    for key,value in {'GITHUB_EVENT_NAME':event,'GITHUB_EVENT_PATH':str(event_file),
+            'GITHUB_SHA':source,'GITHUB_OUTPUT':str(tmp_path/'output'),'GITHUB_REPOSITORY':'example/ns8-czero',
+            'GITHUB_REF':ref}.items():monkeypatch.setenv(key,value)
+    original=subprocess.check_output
+    def output(args,**kwargs):
+        if args[0]=='gh':return json.dumps(pr)
+        return original(args,**kwargs)
+    monkeypatch.setattr(subprocess,'check_output',output)
+    runpy.run_path(str(root/'scripts/select-ci.py'))
+    selection=json.loads((tmp_path/'ci-selection.json').read_text())
+    assert selection['source']==source and selection['base']==base
+    assert selection['policy_version']==2 and selection['mode']==expected
+    assert selection['native_required']==(path=='app/static/consent.html')
+    # Exercise the actual gate on this real diff, not just a synthetic proof.
+    if expected!='full':
+        monkeypatch.setenv('GITHUB_RUN_ID','12');monkeypatch.setenv('GITHUB_RUN_ATTEMPT','1')
+        monkeypatch.setenv('CI_NEEDS',json.dumps({name:{'result':'success'} for name in policy()['required_jobs'](selection['kind'],expected)}))
+        runpy.run_path(str(root/'scripts/ci-gate.py'))
+        proof=json.loads((tmp_path/'ci-proof.json').read_text())
+        assert proof['native_verified'] is False and proof['images_verified'] is False
+        policy()['verify_gate'](proof,source,base,selection['diff_hash'],native_required=False)
+        with pytest.raises(ValueError,match='full_validation_required'):
+            policy()['verify_gate'](proof,source,base,selection['diff_hash'],native_required=False,require_full=True)
+        # A lowered native declaration on a sensitive diff must fail in the gate.
+        selection['native_required']=True
+        (tmp_path/'ci-selection.json').write_text(json.dumps(selection))
+        with pytest.raises(AssertionError):runpy.run_path(str(root/'scripts/ci-gate.py'))
+
+
+@pytest.mark.parametrize('path,body,required', [
+    ('app/static/app.css', ':root { color: var(--ink); }', False),
+    ('app/static/app.css', '@import url("https://example.org/theme.css");', True),
+    ('app/static/app.css', '[hidden] { display: block; }', True),
+    ('app/static/wiki.html', '<h1>Knowledge</h1>', False),
+    ('app/static/wiki.html', '<script src="./auth.js"></script>', True),
+    ('app/static/wiki.html', '++<script src="./auth.js"></script>', True),
+    ('app/static/wiki.html', '<link href="https://example.org/theme.css" rel="stylesheet">', True),
+    ('app/static/wiki.html', '<base href="https://example.org/">', True),
+    ('app/static/wiki.html', '<a href="javascript:login()">Connect</a>', True),
+    ('app/static/wiki.html', '<form action="./api/v1/auth"><input name="scope"></form>', True),
+    ('app/static/wiki.html', '<a onclick="login()">Connect</a>', True),
+    ('app/static/wiki.html', '<main data-page="admin">Account</main>', True),
+])
+def test_ui_content_review_cannot_hide_dependencies_or_executable_wiring(tmp_path,path,body,required):
+    def git(*args):return subprocess.check_output(['git','-C',str(tmp_path),*args],text=True).strip()
+    git('init','-q');target=tmp_path/path;target.parent.mkdir(parents=True,exist_ok=True)
+    target.write_text('baseline\n');git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','baseline')
+    base=git('rev-parse','HEAD');target.write_text(body);git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','candidate')
+    selected=policy()['classify_source'](base,git('rev-parse','HEAD'),cwd=tmp_path)
+    assert selected['native_required'] is required
+    assert selected['native_reason']==('ui_behavior_or_dependency' if required else 'ui_allowlist')
+    # The content audit does not rewrite identities of already-frozen proofs.
+    assert selected['diff_hash']==policy()['classify'](policy()['git_changes'](base,git('rev-parse','HEAD'),cwd=tmp_path))['diff_hash']
+
+
+def test_fast_workflow_starts_no_database_or_browser_and_full_retains_them():
+    import yaml
+    workflow=yaml.safe_load((Path(__file__).parents[2]/'.github/workflows/test-local.yml').read_text())
+    job=workflow['jobs']['checks']
+    assert job['services']['postgres']['image'].startswith("${{ !inputs.feedback && '")
+    assert job['services']['postgres']['image'].endswith(" || '' }}")
+    assert job['env']['CZERO_TEST_DATABASE_URL'].endswith(" || '' }}")
+    browser_steps=[step for step in job['steps'] if step.get('name') in {
+        'Install pinned disposable browser','Full document browser acceptance'}]
+    assert len(browser_steps)==2
+    assert all(step['if']=='${{ !inputs.feedback }}' for step in browser_steps)
+    assert policy()['FAST_TESTS']==['app/tests/test_app.py','packages/czero-core/tests','tests/unit']
+
+
+def test_fast_runner_rejects_slow_or_incomplete_selection(tmp_path,monkeypatch):
+    import json,sys
+    root=Path(__file__).parents[2]
+    selection=tmp_path/'selection.json'
+    selection.write_text(json.dumps({'pytest':['tests/integration'],'vue':False}))
+    monkeypatch.syspath_prepend(str(root/'scripts'))
+    monkeypatch.setattr(sys,'argv',['run-ci-feedback.py',str(selection)])
+    calls=[];monkeypatch.setattr(subprocess,'run',lambda *args,**kwargs:calls.append(args))
+    with pytest.raises(SystemExit,match='Invalid or missing fast'):
+        runpy.run_path(str(root/'scripts/run-ci-feedback.py'),run_name='__main__')
+    assert not calls
+
+
+def test_full_documentation_dispatch_still_runs_required_fast_job():
+    workflow=(Path(__file__).parents[2]/'.github/workflows/validate.yml').read_text()
+    feedback=workflow.split('  feedback:\n',1)[1].split('  retire-feedback:\n',1)[0]
+    assert "needs.classify.outputs.mode == 'full'" in feedback
+    assert 'feedback' in policy()['required_jobs']('docs','full')
+    policy()['verify_gate'](evidence('docs','full'),SHA,BASE,'c'*64,require_full=True,native_required=False)

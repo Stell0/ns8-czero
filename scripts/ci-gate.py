@@ -6,14 +6,22 @@ import os
 from pathlib import Path
 import subprocess
 
-from ci_policy import classify, git_changes, verify_gate
+from ci_policy import POLICY_VERSION, classify_source, validation_mode, verify_gate
 
 
 selection = json.loads(Path('ci-selection.json').read_text())
+assert selection['event'] == os.environ['GITHUB_EVENT_NAME'], 'Validation event changed'
 source, base = selection['source'], selection['base']
 assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == source
-actual = classify(git_changes(base, source, pr=selection.get('pr_number') is not None))
+actual = classify_source(base, source, pr=selection.get('pr_number') is not None)
 assert actual['diff_hash'] == selection['diff_hash'] and actual['kind'] == selection['kind']
+assert selection['policy_version'] == POLICY_VERSION
+assert all(selection[key] == actual[key] for key in ('native_required', 'native_reason', 'pytest', 'node', 'vue', 'feedback'))
+expected_mode = validation_mode(actual['kind'], actual['feedback'], selection['event'], selection['draft'],
+                                native_required=actual['native_required'])
+if selection['event'] == 'push' and os.environ.get('GITHUB_REF', '').startswith('refs/tags/'):
+    expected_mode = 'full'
+assert selection['mode'] == expected_mode, 'Validation mode differs from current policy'
 draft = selection['draft']
 if selection.get('pr_number') is not None:
     pr = json.loads(subprocess.check_output(['gh', 'api', 'repos/'+os.environ['GITHUB_REPOSITORY']+
@@ -32,5 +40,5 @@ proof = {**selection, 'draft': draft, 'jobs': jobs,
          'run_id': int(os.environ['GITHUB_RUN_ID']), 'run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
          'images_verified': images, 'native_verified': native}
 Path('ci-proof.json').write_text(json.dumps(proof, indent=2)+'\n')
-verify_gate(proof, source, base, actual['diff_hash'])
+verify_gate(proof, source, base, actual['diff_hash'], native_required=actual['native_required'])
 print('C0 merge acceptance verified for '+source+' ('+selection['mode']+')')

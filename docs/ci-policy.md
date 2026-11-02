@@ -1,124 +1,125 @@
 # Development feedback, merge acceptance and deployment acceptance
 
-A single [C0 validation workflow](../.github/workflows/validate.yml) owns PR and
-main validation. This policy replaces older per-commit/full-marker instructions.
-It changes no runtime API, package version, dependency pin or database schema.
+[C0 validation](../.github/workflows/validate.yml) classifies the complete Git
+diff, including deleted files, both sides of renames and file modes. C0 permits
+agent review and automatic regular merges; a separate human approval is not
+mandatory. Required checks, current-source validation and branch protection
+remain mandatory. This policy supersedes the earlier policy requiring native tests for every ready
+PR recorded in the historical evidence below.
 
 ## Development feedback
 
-Open a draft PR. Each update classifies its complete Git diff against its base,
-including deleted paths, both sides of renames and file modes. There is no second
-branch-push validation run. New feedback supersedes older feedback for that PR;
-mode transitions also retire obsolete development checks. Full acceptance runs
-are never cancelled by this policy.
+Every PR receives automatic fast checks. Reviewed Git-only documentation uses
+the explicit `DOCS` allowlist: UTF-8, conflict markers, diff/local-link checks and
+policy regressions. Runtime PRs prioritize speed: application/template, Core and tooling unit
+cases, Node controllers, schemas, shell syntax and Robot dry runs. Fast jobs
+start no PostgreSQL service, browser or extraction worker; real database,
+HTTP/MCP, browser and packaging checks belong to full acceptance.
+Changed native Vue assets also build with the frozen Yarn lock. The fast runner rejects an expanded or altered selection rather than silently
+running the entire integration/packaging suite.
 
-The explicit allowlist in [ci_policy.py](../scripts/ci_policy.py) contains only
-reviewed repository guidance: root README/PLAN/AGENTS, the listed development
-notes and Git-only agent skills. Documentation-only PRs **and main commits** run
-UTF-8, conflict-marker, diff/local-link checks and policy regressions. They skip
-packaging, images and QEMU. This exemption does not cover arbitrary Markdown:
-Core's packaged README/LICENSE, app/static HTML, generated contracts, locks,
-container inputs and native build metadata have runtime/build impact.
-
-UI feedback runs the controller suite, relevant application/template checks and
-shared PostgreSQL-backed authorization/compatibility smoke. Native Vue changes
-also build with the immutable Yarn lock. Application feedback adds the affected
-integration suites. Core/authentication/migrations/dependencies/containers/native
-lifecycle/CI machinery receive broad serial Python/PostgreSQL/packaging, script,
-schema/shell and Robot feedback. Unknown paths trigger full acceptance.
-PostgreSQL tests share no mutable database with another job or run and are not
-split into concurrent shards. Dependency download caches retain the existing
-pinned inputs; builds keep frozen Python/Yarn locks and explicit Core selection.
-
-A scoped runtime draft intentionally has a blocked **C0 merge gate**. Passing
-feedback is useful development evidence and cannot authorize a runtime merge.
+Review the complete diff and affected behavior before enabling auto-merge. This
+review may be performed by the contributing agent; no human-review label or
+approval count is required. Never assign an unsolicited reviewer. Draft PRs
+receive checks but cannot pass the merge gate.
 
 ## Merge acceptance
 
-Mark a runtime PR ready for review. `ready_for_review`, `synchronize`, `reopened`
-and initial ready PR events select full validation; later commits repeat it.
-Changing back to draft blocks merging. These are explicit [GitHub PR events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request).
+The classifier's conservative presentation allowlist makes native acceptance
+optional for modifications to the shared website CSS, Wiki/Source/Search/Project
+reader templates and native CSS/SCSS assets, plus their browser/controller tests.
+New/deleted/renamed presentation files and mode changes broaden validation.
+Changed script/form/identity wiring, hidden guards and CSS resource imports
+also require native acceptance, even inside an allowlisted presentation file.
+Authentication/account/admin pages, application JavaScript, third-party assets,
+installation/configuration/backup/restore, containers, migrations, Core,
+dependencies/locks, CI/policy code and unknown paths require full native
+acceptance automatically, including on draft PRs. Mixed diffs retain the highest
+risk; renaming a sensitive file cannot hide its original path.
 
-Full acceptance runs all PostgreSQL/Python/packaging cases, Node scripts,
-schema/shell and Robot checks, producer and independently released-Core builds,
-actual runtime/license/parser audits, all five scan/SBOM pairs, Debian genuine
-predecessor upgrade and Rocky installation with all eight automated browsers.
-It retains backup/clean restore, exact OAuth/content receipts, extraction/indexing
-recovery, accessibility and downloaded artifact privacy checks. Existing CPU and
-interactive-Playwright waivers remain unchanged.
+`fast` runtime merge acceptance requires the automatic fast job. `full` acceptance
+requires that job **and** all Python/PostgreSQL/packaging cases, released-Core
+compatibility, image/license/parser audits, five scan/SBOM pairs, immutable image
+identity checks, Debian genuine-predecessor upgrade, Rocky installation and all
+eight native browser/privacy workflows. The existing interactive-Playwright and
+CPU-quota waivers are unchanged. Database skips do not establish a pass.
 
-Every candidate uses `ci-<source>-<run>-<attempt>` image tags. All three registry
-revisions/digests and the module's exact sibling references are verified before
-QEMU. Native reports compare actual installed app/database digests and the module
-digest with those candidates. Both actual Git checkout logs, expected skips,
-mandatory browser/privacy workflows and bounded numeric accessibility evidence
-are inspected. A missing, skipped, cancelled or failed required job is not proof.
+The always-scheduled **C0 merge gate** reclassifies the actual source/base/diff,
+checks current PR head/base/readiness and requires every selected job to finish
+successfully. Missing, skipped, cancelled, failed or started required jobs cannot
+pass. Its version-2 proof records `native_required`, the classification reason,
+selected mode and actual image/native verification. A fast proof explicitly
+lacks native/image acceptance. Frozen version-1 full and documentation proofs
+remain verifiable; legacy scoped feedback never becomes merge acceptance.
 
-The always-scheduled **C0 merge gate** verifies current head/base, complete diff,
-readiness, classification and required jobs/artifacts. It has no workflow path
-filter that could leave it indefinitely pending. Repository protection requires
-this named GitHub Actions check with an up-to-date base. No merge queue is in
-use, so no `merge_group` trigger is introduced. See GitHub's [required-check
-semantics](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks).
-
-Before an autonomous merge, run from a reviewed checkout:
+Before a direct merge, verify the exact current reviewed source:
 
 ```sh
-python scripts/verify-promotion.py --source <exact-head-sha> --pr <number>
+python scripts/verify-promotion.py --source <full-head-sha> --pr <number>
 ```
 
-This downloads the successful run's acceptance proof and verifies actual jobs,
-source, base and classification. Historical successful commits, scoped feedback,
-missing jobs and skipped full validation cannot authorize runtime promotion.
-Primary-agent diff review must be recorded honestly; this tool is not an
-independent human review. Existing protections/review requirements are retained.
+This verifies actual completed jobs and the source-bound proof. Agent diff review
+is not described as independent human review. Retain strict up-to-date branch
+protection, the Actions-owned `C0 merge gate`, administrator enforcement and the
+existing bans on force pushes/deletions. No merge queue or privileged
+`pull_request_target` workflow is introduced.
 
 ## Main, manual runs and releases
 
-Runtime main commits repeat full validation. Only a fully accepted current main
-candidate is promoted to canonical `main`/`latest` aliases, without rebuilding.
-The module retains immutable candidate sibling tags. A source superseded by later runtime changes
-cannot overwrite canonical aliases. A later allowlisted documentation merge does
-not strand an in-flight runtime candidate: its runtime/build inputs are unchanged.
-Documentation-only main commits otherwise leave accepted runtime images in place.
-Use the accepted runtime source from the publication proof for deployment checks;
-a documentation-only main HEAD may have no image or full-acceptance proof of its own.
+After reviewing the exact head, enable GitHub native auto-merge for a ready PR:
 
-Manually dispatch **C0 validation** (`validate.yml`) for full validation of any
-exact branch/tag ref, including documentation markers. To validate a ready PR,
-pass `pr_number` and dispatch its current head ref. Manual full runs never take
-the documentation exemption. Standalone helper/local/UI runs are not merge proof.
-Use a fresh full dispatch to retain failed-run evidence when repeating acceptance.
-No new schedule is introduced. Existing upstream-update schedules are unchanged.
+```sh
+gh pr merge <number> --auto --merge --match-head-commit <full-head-sha>
+```
 
-Core `core-v*` publication retains exact version/tag/checkout, both native status
-contexts, supplied artifact installs/migrations, reproducible wheel/archive hashes
-and immutable no-clobber publication. It additionally requires exact-source full
-acceptance proof. Scoped or documentation-only success cannot publish Core.
-Module release tags also select full validation before publishing their aliases;
-Core tags never publish NS8 module aliases. No release is created by this policy.
+The repository enables auto-merge and regular merge commits. GitHub waits for
+required checks and an up-to-date branch; do not use an admin bypass. Review a
+changed head/base again and retain frozen candidates when a new rebased candidate
+is needed. Do not squash or rewrite accepted commits. No general-purpose bot
+merges arbitrary unreviewed PRs or executes fork code with privileged events.
+See [GitHub auto-merge](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/automatically-merging-a-pull-request)
+and the [CLI head guard](https://cli.github.com/manual/gh_pr_merge).
 
-Full candidate publication needs a repository-authorized registry writer. Fork
-PRs can obtain read-only feedback; a maintainer must bring reviewed runtime work
-to an authorized branch for publication/full acceptance. Tokens are not copied
-into fork secrets and untrusted PR code is not run with `pull_request_target`.
+Main uses the same risk classification. Request full Debian/Rocky acceptance for
+any exact source, including a reviewed low-risk UI change, with `validate.yml`:
+
+```sh
+gh workflow run validate.yml --ref <exact-branch-or-tag> -f pr_number=<number>
+```
+
+Omit `pr_number` for a main/tag source. Manual dispatch always selects `full`;
+module release tags also force `full`, regardless of the diff. There is no switch
+that disables native acceptance for a sensitive change. Existing full/native
+runs, including the frozen Nebula acceptance, are never cancelled or replaced.
+Only proven obsolete legacy development/documentation feedback may be retired;
+fast jobs participating in full acceptance have no cancelling concurrency group.
+
+Canonical `main`/`latest` publication still requires full exact-source native
+acceptance and promotes immutable candidates without rebuilding. A UI-only fast
+merge does not publish new canonical aliases until a full on-demand run passes.
+Core/module releases retain their full proof, immutable source/artifact and
+consumer gates. Registry-dependent native checks need an authorized repository
+branch; never copy privileged credentials into fork secrets. Both internal and
+external contributions follow this risk policy, with no blanket native mandate
+for Git-only documents or allowlisted presentation changes.
 
 ## Deployment and milestones
 
-Merge acceptance does not mean deployment acceptance. Before a dedicated-instance
-update, require full proof for the exact runtime source:
+Merge eligibility is not production/deployment acceptance. Core/module release
+publication and production deployment require the actual full proof:
 
 ```sh
 python scripts/verify-promotion.py --source <exact-source-sha> --full
 ```
 
-Then retain supported C0-only backup/integrity, three-image/native inventory,
-canonical native update, real readiness, preservation of original data/OAuth/
-settings/jobs/schedules/unrelated modules, live client workflows, restart and
-bounded positive-control root journald privacy. Genuine installed predecessors
-remain frozen independently of documentation images. Destructive restore tests
-remain disposable. Milestone-specific live gates still apply; a lightweight
-closeout marker does not replace the accepted runtime's release/deployment proof.
+Fast or documentation-only proof is rejected by `--full`. Preserve actual image,
+source, native/privacy/scan evidence and required live authorization. Dedicated
+updates still require supported C0-only backup/integrity, frozen genuine
+predecessor identities, readiness, data/OAuth/settings/files/jobs/schedules and
+unrelated-module preservation, live client workflows, restart and bounded
+positive-control root journald privacy checks. Destructive recovery stays
+disposable. A Git-only closeout does not replace runtime evidence or an installed
+baseline. Keep failed evidence outside Git and public identities sanitized.
 
 ## Executed evidence and limits
 
@@ -198,9 +199,9 @@ quality or scheduled-client interoperability is claimed. Existing waivers remain
 
 ## Automated full-document browser gate
 
-Runtime local/full and scoped feedback also install the pinned
-`tests/e2e/requirements.txt` browser and run all six headless Chromium
-full-document cases against a genuine disposable app/database/standalone worker.
+Full acceptance installs the pinned `tests/e2e/requirements.txt` browser and
+runs the real headless Chromium suite against a disposable app/database/worker.
+Fast feedback omits these realistic fixtures to prioritize development speed.
 A missing backend, browser or required dependency fails the job. The existing
 interactive Playwright waiver does not exempt this automated suite. Existing
 QEMU/Robot workflows, privacy audits and resource-policy waivers remain intact.

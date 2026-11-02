@@ -74,16 +74,29 @@ deployment.
 
 ## Delivery
 
-Follow [CI policy](ci-policy.md): scoped feedback for draft runtime work, full exact-source acceptance for ready runtime PRs, actual native/privacy/scan artifacts and the named merge gate. Use `scripts/verify-promotion.py` with full immutable SHAs; passing a short hash or an old successful head is insufficient.
+Follow [CI policy](ci-policy.md): fast automatic checks on every PR, full native
+acceptance automatically for sensitive/unknown changes and on demand for
+reviewed allowlisted presentation changes. Release, canonical publication and
+production deployment always require full native acceptance. The versioned proof
+keeps fast merge eligibility separate from native/image acceptance. Use full
+immutable SHAs with `scripts/verify-promotion.py`; old or partial checks cannot
+validate a new source.
 
-No unsolicited reviewer assignment. Another developer reviews before merge; regular merges preserve tested source commits. Runtime milestones normally require the supported dedicated-instance checks. The latest-only crawler task explicitly authorizes disposable acceptance only; production upgrade and import require separate operator authorization. Preserve native CI installation/upgrade and privacy checks. Documentation-only images do not replace accepted runtime images.
+No unsolicited reviewer assignment or mandatory human approval is imposed by
+C0. Review the exact diff/results, then enable GitHub auto-merge with
+`gh pr merge <number> --auto --merge --match-head-commit <full-head-sha>`.
+The strict up-to-date Actions-owned gate remains mandatory; no admin bypass or
+force push is allowed. Preserve frozen source commits and full acceptance runs.
+Production update/import still needs separate live authorization and the
+supported backup/preservation/client/restart/journal checks. Documentation-only
+images do not replace accepted runtime images.
 
 The existing interactive Playwright and container CPU-quota waivers remain in force; all automated native browsers and other security/resource bounds remain required. Public docs/artifacts use example identities, and raw credentials, failed traces and private fixtures stay outside Git. See [release readiness](release-readiness.md) for the distinction between documentation/plugin acceptance and a stable software release.
 
 ## Full-document Playwright acceptance
 
-The headless document suite is mandatory for runtime PRs in the local validation
-workflow, including scoped feedback. The older interactive Playwright waiver
+The headless document suite belongs to full acceptance; fast PR feedback uses
+unit/controller/template/syntax checks without a database or browser. The older interactive Playwright waiver
 does not exempt this suite. Use the producer-development environment above and
 a disposable PostgreSQL/pgvector account with CREATE/DROP DATABASE authority:
 
