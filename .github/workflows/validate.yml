@@ -71,7 +71,7 @@ jobs:
       - run: python scripts/check-docs.py ci-selection.json
       - name: Test the classification and gate policy
         run: |
-          pip install pytest==8.4.2
+          pip install pytest==8.4.2 PyYAML==6.0.3
           python -m pytest -q tests/unit/test_ci_policy.py
   feedback:
     needs: classify
