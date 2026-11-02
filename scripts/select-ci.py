@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from ci_policy import EMPTY_TREE, SHA, classify, git_changes, validation_mode
+from ci_policy import EMPTY_TREE, SHA, POLICY_VERSION, classify_source, validation_mode
 
 event_name = os.environ['GITHUB_EVENT_NAME']
 event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -30,9 +30,11 @@ else:
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         base = parent.stdout.strip() if parent.returncode == 0 else EMPTY_TREE
     number, draft = None, False
-selected = classify(git_changes(base, source, pr=pr is not None))
-selected.update(source=source, base=base, draft=draft, event=event_name, pr_number=number)
-selected['mode'] = validation_mode(selected['kind'], selected['feedback'], event_name, draft)
+selected = classify_source(base, source, pr=pr is not None)
+selected.update(source=source, base=base, draft=draft, event=event_name, pr_number=number,
+                policy_version=POLICY_VERSION)
+selected['mode'] = validation_mode(selected['kind'], selected['feedback'], event_name, draft,
+                                   native_required=selected['native_required'])
 if event_name == 'push' and event.get('ref', '').startswith('refs/tags/'):
     selected['mode'] = 'full'
 Path('ci-selection.json').write_text(json.dumps(selected, indent=2)+'\n')

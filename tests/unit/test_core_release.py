@@ -64,7 +64,7 @@ def test_verified_commit_cannot_authorize_a_different_checkout():
         verify('0.24.1','core-v0.24.1',SHA,native,runs,'b'*40)
 
 
-@pytest.mark.parametrize('mode', [None, False, 'scoped', 'docs'])
+@pytest.mark.parametrize('mode', [None, False, 'scoped', 'fast', 'docs'])
 def test_scoped_or_documentation_success_cannot_publish_core(mode):
     native,runs=evidence();runs[0]['full_validation']=mode
     with pytest.raises(ValueError,match='local_acceptance_not_verified'):

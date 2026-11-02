@@ -1,5 +1,34 @@
 # C0 roadmap
 
+## CI policy update — implementation
+
+The operator prioritizes test speed over realistic fixtures in fast feedback:
+unit/controller/template/syntax checks run without PostgreSQL, browsers or
+extraction workers; real database/browser/packaging checks stay in full
+acceptance. The operator authorizes fast checks on every PR, automatic Debian/Rocky native
+acceptance for installation/container/migration/authentication/dependency and
+other uncertain changes, and native tests on demand for reviewed presentation
+changes. Merge eligibility and full release/deployment acceptance are separate
+proof levels. Human review is optional in C0; reviewed agent changes may use
+GitHub automatic regular merges after current-source required checks pass.
+Keep strict branch protection, exact source/base/diff binding, immutable images
+and all full-native release/deployment gates. Preserve the Nebula branch and
+its full main acceptance run41464774914 without cancellation. That preserved
+run has now completed successfully; the new verifier accepts its frozen full
+proof for source8d12015e30d33d482a07bff66f641aa77a3f1f9a.
+
+A first local fast-path run passes in 74.23 seconds without database/browser/
+worker fixtures. Focused policy/release regressions pass 161 cases. These are
+executed development results, not full native release/deployment acceptance.
+
+Implementation and acceptance cover classification, fast/full workflow jobs,
+versioned proofs with frozen-proof compatibility, promotion rejection of fast
+proofs for release/deployment, project-aware nethserver-pr guidance, and native
+GitHub auto-merge without an admin bypass or new privileged PR event. Test mixed
+diffs, renamed/deleted files, auth/dependency boundaries, stale heads/bases,
+failed/skipped required jobs, manual/tag full requests and old full proofs.
+
+
 ## Nebula website redesign — implementation candidate
 
 The reference knowledge website in `app/static` adopts Nebula foundations while
@@ -601,7 +630,7 @@ Prior runtime main `05ce22c` passed full [40106287084](https://github.com/Stell0
 
 ## How development proceeds
 
-Agree the behavior and acceptance, implement one focused change in the right layer, verify it with disposable tests, review the PR, and follow the [CI policy](docs/ci-policy.md). Runtime changes also need supported targeted deployment and live preservation/client/restart/journal acceptance before merge, then actual main publication. Internal documentation-only guidance uses its explicit lightweight checks. All external-fork contributions to original C0 main require full base and candidate checks before opening the PR, including documentation-only changes; see [contributor requirements](AGENTS.md#tests-are-part-of-the-feature). Existing interactive Playwright and CPU-quota waivers remain unchanged.
+Agree the behavior and acceptance, implement one focused change in the right layer, verify it with disposable tests, review the PR, and follow the [CI policy](docs/ci-policy.md). Current CI policy uses fast PR checks and automatic native acceptance for sensitive changes; reviewed allowlisted UI can request it on demand. C0 permits protected automatic regular merge without mandatory human approval. Full native proof and explicit live authorization remain required for releases and production deployment. Internal and external contributions follow the same risk classification; see [contributor requirements](AGENTS.md#tests-are-part-of-the-feature). Existing interactive Playwright and CPU-quota waivers remain unchanged.
 
 The detailed plan and evidence below preserve decisions, failures, exact sources, image identities and test results. Older “current” or “pending” wording describes its checkpoint; the baseline and roadmap above govern present work.
 

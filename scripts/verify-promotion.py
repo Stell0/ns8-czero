@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-from ci_policy import EMPTY_TREE, SHA, classify, git_changes, required_jobs, verify_gate
+from ci_policy import EMPTY_TREE, SHA, classify_source, required_jobs, verify_gate
 
 
 def gh(*args):
@@ -38,15 +38,18 @@ def accepted_source(repo, source, *, pr_number=None, require_full=False):
         if subprocess.check_output(['git', 'rev-parse', '--is-shallow-repository'], text=True).strip() == 'true':
             subprocess.run([*git, 'fetch', '--no-tags', '--unshallow', 'origin'], check=True)
         subprocess.run([*git, 'fetch', '--no-tags', 'origin', source, *([base] if base != EMPTY_TREE else [])], check=True)
-        selected = classify(git_changes(base, source, pr=proof.get('pr_number') is not None))
+        selected = classify_source(base, source, pr=proof.get('pr_number') is not None)
         if selected['kind'] != proof['kind']:
             raise ValueError('promotion_classification_changed')
-        verify_gate(proof, source, base, selected['diff_hash'], require_full=require_full)
+        if proof.get('policy_version') == 2 and proof.get('native_reason') != selected['native_reason']:
+            raise ValueError('promotion_native_reason_changed')
+        verify_gate(proof, source, base, selected['diff_hash'], require_full=require_full,
+                    native_required=selected['native_required'])
         if current_pr:
             subprocess.run(['git', 'merge-base', '--is-ancestor', base, source], check=True)
         jobs = json.loads(gh('api', 'repos/'+repo+'/actions/runs/'+str(run['databaseId'])+'/jobs?per_page=100'))['jobs']
         assert any(j['name'] == 'C0 merge gate' and j['conclusion'] == 'success' for j in jobs)
-        for name in required_jobs(proof['kind'], proof['mode']):
+        for name in required_jobs(proof['kind'], proof['mode'], version=proof.get('policy_version', 1)):
             matches = [j for j in jobs if j['name'] == name or j['name'].startswith(name+' /')]
             if not matches or any(j['status'] != 'completed' or j['conclusion'] != 'success' for j in matches):
                 raise ValueError('actual_required_jobs_missing')
