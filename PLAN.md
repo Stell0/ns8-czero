@@ -1,6 +1,18 @@
 # C0 roadmap
 
-> **Document ingestion modernization (approved design, not implemented):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; no runtime, deployment or release authorization is implied.
+> **Document ingestion modernization (approved design; M0 baseline candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; no runtime, deployment or release authorization is implied.
+
+## Queued document extraction — M0 candidate
+
+Implement the [approved extraction plan](docs/ingestion-pipeline/PLAN.md)
+one milestone per reviewed PR, beginning with M0 only. The
+[contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
+bounded manifests/results, PostgreSQL leases, authorization, publication and
+cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
+originals, current whole-document retry/locking behavior, citations and external
+multipart readback. M0 changes no runtime, schema, dependency or connector contract.
+M1 queue implementation waits for review of M0's contracts. Installed baselines,
+frozen evidence, publication and separately authorized deployment gates remain.
 
 ## CI policy update — implementation
 

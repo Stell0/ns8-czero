@@ -33,6 +33,9 @@ a full GitHub project/contributor/document pipeline and shared Python helpers fo
 other sources. Public adapters and tests stay in Git; your instance `.env`, update
 scripts, OAuth credentials, datasets and receipts stay in an ignored private job.
 
+Queued document extraction starts with the [M0 contracts and synthetic baseline](docs/ingestion-pipeline/CONTRACTS.md).
+This documentation/tests milestone leaves the current extraction pipeline unchanged.
+
 ## Use C0
 
 ### Use an existing instance

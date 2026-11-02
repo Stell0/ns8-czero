@@ -1,0 +1,6 @@
+# Original whitespace is test data, including CRLF and trailing empty paragraphs.
+fenced.md -text whitespace=cr-at-eol
+plain.txt -text whitespace=cr-at-eol
+multipart.md whitespace=-blank-at-eof
+*.pdf binary
+*.docx binary
