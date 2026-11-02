@@ -1,5 +1,40 @@
 # C0 roadmap
 
+## Nebula website redesign — implementation candidate
+
+The reference knowledge website in `app/static` adopts Nebula foundations while
+retaining its plain HTML/JavaScript stack. NS8 settings remain Vue 2/Carbon, as
+required by the frontend skill. Scope includes shared navigation, local Poppins
+Regular/Medium, semantic light/dark colors, reading layouts, forms, tables,
+notifications, keyboard focus and responsive spacing. Existing DOM IDs, source
+and Wiki rendering, space selectors, request/draft guards, permissions and
+OAuth behavior remain the acceptance contract. No Core, schema, connector or
+production deployment change is planned.
+
+Acceptance: verify the exact original-main baseline; run application/template
+and controller regressions; exercise actual disposable HTTPS/database/worker
+browser workflows; inspect light/dark desktop/phone layouts and keyboard focus.
+Run Nebula mechanical checks adapted to HTML/CSS. Full exact-source CI and native
+acceptance remain mandatory before promotion. Keep local fonts and their license
+in the shipped static inventory; no external browser asset requests are allowed.
+
+
+The exact original-main baseline `4643cfb` has full CI41428851518 acceptance;
+`verify-promotion.py --full` rechecks its completed required jobs and proof.
+Local released-Core validation uses the frozen app lock and immutable Core0.36.1
+source `8dbb746`. Current candidate evidence: 211 Node24 controller cases,
+15 actual HTTPS/PostgreSQL/worker browser workflows, all 40 new light/dark
+phone/desktop page contexts with accessible-name/landmark checks, 21 Robot dry
+runs, Go schema, shell and documentation checks. Nebula mechanical checks find
+no unsupported weights, template colors, inline styles or nonsemantic click
+handlers in the changed templates. The two local font files match the verified
+public npm archive and retain its OFL license; they receive explicit binary
+review rather than a privacy-check exception. Full local Python/database/
+packaging validation passes 2,461 cases with no skips (1,329.92 seconds); the
+final theme/menu check passes after the typography and contrast adjustments.
+Final exact-source image/native/privacy/scan CI remains required before merge.
+
+
 ## Released-Core adoption candidate
 
 PR48 regularly merges as `53c6957`; its tree equals accepted head `8dbb746`.

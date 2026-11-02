@@ -354,3 +354,10 @@ cases and six real Playwright workflows
 using HTTPS, PostgreSQL and a standalone extraction worker. Final application
 consumer/native acceptance is recorded in the PR checks and PLAN. This candidate
 has not been merged or deployed; the accepted production image trio is unchanged.
+
+The reference knowledge website uses Nebula's Poppins typography, semantic
+light/dark colors and responsive navigation while retaining its local HTML/JavaScript
+reader stack. It follows the device's color preference; fonts ship with the app
+and require no external font service. Native NS8 settings continue to use Carbon.
+The redesign candidate preserves existing space, permission and editing flows;
+source acceptance and deployment remain subject to the recorded CI gates.

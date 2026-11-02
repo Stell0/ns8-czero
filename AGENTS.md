@@ -110,6 +110,16 @@ Describe integrations accurately. C0 ships OAuth-protected MCP, an instance-boun
 
 The normal browser pages are readers. Keep mutation tools, technical client controls, protected-space grants and jobs/schedules on their established surfaces. Preserve the people-first access page's distinction between application approval, user permissions, exact connection disconnect and persistent blocking. Avoid an ambiguous Revoke action. Authorized Wiki changes publish immediately with latest-only storage. Source replacements publish only after extraction and whole-document validation; this is an integrity boundary, not an editorial approval stage.
 
+## Reference website presentation
+
+`app/static` retains native HTML/JavaScript controls and local assets. Its Nebula
+foundation tokens live in `app.css`, including the emerald primary palette,
+light/dark surfaces and Poppins weights 400/500. Keep the explicit local font
+routes and OFL notice together. Preserve DOM IDs, hidden/access guards, selected
+spaces and the subpage skip-link/base-URL contract when changing presentation.
+NS8 `ui` remains Vue 2/Carbon. Run the real browser theme/layout/keyboard checks
+in `tests/e2e/test_nebula_theme.py` alongside existing reader workflows.
+
 ## Contracts to preserve
 
 Authorization uses current persisted Reader/Editor/Admin membership inside Core transactions, explicit protected-space selection and actual delegated scopes. Tool discovery does not grant authority. Preserve lock ordering, exact evidence identities, expected revisions and payload-free replay receipts; a superseded request returns 410 instead of old content. A denied space must never fall back to Shared. Optional providers cannot decide authorization or make ordinary text retrieval unavailable.
