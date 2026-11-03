@@ -118,6 +118,10 @@ pending-work behavior. No cloud OCR adapter or data egress is authorized.
 M7 reuses only same-space current or unexpired staging output, with exact input/
 profile hashes and an ownership recheck at completion. Preserve fresh IDs, 410
 and immediate current-content cleanup; no permanent body cache.
+M8 context reads bind canonical logical ID, exact current revision/hash and
+source citation offsets. Preserve no-fallback budgets and closed error mapping.
+Keep the released older Core catalog working, and the existing App identity and
+scopes unchanged. Plugin 1.4 guidance is conditional on advertised capabilities.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

@@ -45,6 +45,8 @@ for unsupported PDF scan pages, with bounded execution and page provenance.
 The [M7 candidate](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
 by current documents or unexpired work in the same space, with no separate body
 archive.
+The [M8 candidate](docs/ingestion-pipeline/M8.md) adds exact bounded outline,
+section/block, local-reference and context-bundle reads when supported by Core.
 Ordinary source imports continue
 through the existing extraction worker until the later rollout gates pass.
 

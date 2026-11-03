@@ -362,3 +362,8 @@ group timeout checks pass 15 cases. Full/native acceptance remains sequential.
 The [M7 cache candidate](M7.md), schema 0029, has 110 focused cache/queue/format/
 OCR/configuration/backup passes. Reuse adds only an ownership index/counters and
 uses existing current/staging bodies; no automatic corpus backfill or archive.
+
+The [M8 context candidate](M8.md) adds four bounded read-only operations and
+plugin 1.4 research guidance with unchanged scopes/connection identity. Focused
+Core, actual current/legacy SDK/native-probe, multipart and package controls pass
+65 cases. These are protocol/evidence checks, not model answer-quality claims.

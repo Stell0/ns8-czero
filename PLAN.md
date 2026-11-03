@@ -39,6 +39,10 @@ The [M7 cache successor](docs/ingestion-pipeline/M7.md) adds current-owned
 reuse without another body store. The cache/queue/formats/OCR/configuration/backup
 selection passes 110 cases, including expiry, revocation, protected-space and
 A→B→A checks. Acceptance remains sequential.
+The [M8 context candidate](docs/ingestion-pipeline/M8.md) adds four read-only
+operations, exact generation guards, bounded selected evidence and plugin 1.4
+research guidance. Current/legacy SDK, native guided-probe, multipart, OCR
+provenance and generated-package checks pass 65 focused cases.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

@@ -18,18 +18,19 @@ def _span(kind,start,end,**extra):
     return {'kind':kind,'start':start,'end':end,**extra}
 
 
-def derive(evidence,media,*,heading_levels=None):
+def derive(evidence,media,*,heading_levels=None,bounded=False):
     body=valid_text(evidence.text); headings=[]; blocks=[]; references=[]
     if media=='text/markdown':
-        boundaries,raw_headings=text_blocks(body,True)
+        boundaries,raw_headings=text_blocks(body,True,max_boundaries=4002 if bounded else None)
         headings=[(start,level,body.find('\n',start) if '\n' in body[start:] else len(body)) for start,level in raw_headings]
+        heading_starts={entry[0] for entry in headings}
         # Fences form one block, even when the source contains blank lines.
         for start,end in zip(boundaries,boundaries[1:]):
             value=body[start:end]
             stripped=value.lstrip()
             if not stripped: continue
             kind=('code' if re.match(r'(`{3,}|~{3,})',stripped) else
-                'heading' if any(start==h[0] for h in headings) else
+                'heading' if start in heading_starts else
                 'warning' if re.match(r'>\s*\[!(?:WARNING|CAUTION|IMPORTANT)\]',stripped,re.I) else
                 'list' if re.match(r'(?:[-+*]|[0-9]+[.)])\s',stripped) else
                 'table' if re.search(r'^\s*\|?.*\|.*\n\s*\|?\s*:?-{3,}',value,re.M) else 'paragraph')

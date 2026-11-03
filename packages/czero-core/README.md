@@ -588,3 +588,9 @@ Expired exact evidence and stale replay requests raise `ContentSuperseded`
 (`content_superseded`, mapped by the app to 410). Stable links read current content.
 Compatibility history methods list current content only. Unchanged bytes retain
 body/chunk/vector IDs; metadata/archive counters may advance independently.
+
+`DocumentService.outline/sections/references/context_bundle` provide bounded
+read-only context at an exact current logical revision, with selected source
+spans, citation handles, explicit omissions and no fallback or external fetch.
+Legacy complete-document responses retain their exact shape. See the
+[selective context contract](https://github.com/Stell0/ns8-czero/blob/main/docs/ingestion-pipeline/M8.md).
