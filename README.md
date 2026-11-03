@@ -36,7 +36,7 @@ scripts, OAuth credentials, datasets and receipts stay in an ignored private job
 Queued document extraction follows the [M0 contracts and synthetic baseline](docs/ingestion-pipeline/CONTRACTS.md).
 M1 adds opt-in private staging; M2 adds PDF page recovery and complete publication.
 The [M3 producer candidate](docs/ingestion-pipeline/M3.md) adds a bounded native
-worker pool and resource/recovery checks. Ordinary source imports continue
+worker pool and resource/recovery checks, including indexed backup/restore evidence. Ordinary source imports continue
 through the existing extraction worker until the later rollout gates pass.
 
 ## Use C0

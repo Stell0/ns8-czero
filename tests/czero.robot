@@ -703,6 +703,8 @@ Verify real native SSO and application-wide membership
 
 Preserve admitted identities through update and clean restore
     [Timeout]    15 minutes
+    # Seed extraction before retrieval is indexed, paused and snapshotted.
+    Verify Disposable Extraction Pool    ${module_id}    seed
     Prepare Disposable Identity Persistence
     Prepare Disposable Retrieval Persistence    ${module_id}
     Log To Console    SSO persistence: native configured update
@@ -712,7 +714,6 @@ Preserve admitted identities through update and clean restore
     Should Be Equal As Integers    ${rc}    0
     Verify Disposable Identity Persistence    ${module_id}
     # Core restore preserves logical UUID/path: keep its encryption key too.
-    Verify Disposable Extraction Pool    ${module_id}    seed
     ${backup} =    Create Disposable Backup    ${module_id}    ${backup_repository}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
     Log To Console    SSO persistence: native encrypted backup

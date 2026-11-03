@@ -26,7 +26,10 @@ promotion verification.
 The [M3 successor](docs/ingestion-pipeline/M3.md), schema 0026, adds configurable
 native workers, fair leases, queue/result backpressure and actual resource/restore
 grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
-21 cases; full/native acceptance is pending. Installed baselines, frozen evidence, Core publication,
+21 cases; complete local Python/PostgreSQL/packaging passes 2,661 cases.
+The native successor moves extraction seed before the indexed/paused retrieval
+snapshot after Debian `41641229029` catches incomplete recovered indexing;
+full/native acceptance remains pending. Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
 ## CI policy update — implementation
