@@ -6,6 +6,19 @@ FIELDS={'stage','workers','units','body_hash_verified','staging_cleared','native
     'backup_readback','ocr_pages','ocr_text_verified','memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds'}
 
 
+def validate_reindex(value):
+    assert type(value) is dict and set(value)=={'stage','workers','units','verified'},'Invalid explicit reindex evidence'
+    assert value['stage']=='reindex' and type(value['workers']) is int and value['workers'] in (2,4)
+    assert type(value['units']) is int and value['units']==9 and value['verified'] is True
+    return value
+
+
+def require_reindexes(values):
+    assert type(values) is list and len(values)==2,'Both restored explicit reindexes are required'
+    assert {validate_reindex(value)['workers'] for value in values}=={2,4},'Both restored explicit reindexes are required'
+    return values
+
+
 def validate_measurement(value):
     assert type(value) is dict and set(value)==FIELDS,'Invalid extraction pool evidence'
     stage=value['stage']; workers=value['workers']
