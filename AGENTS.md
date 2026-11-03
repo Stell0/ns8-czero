@@ -112,6 +112,8 @@ Seed extraction fixtures before native retrieval is indexed/paused/snapshotted;
 retain strict derivative completion through update and restore.
 The [M4 successor](docs/ingestion-pipeline/M4.md) extends complete publication to
 DOCX, Markdown and text; keep source-sync receipts and public authority unchanged.
+M5 derives bounded current section/block/reference metadata and versioned chunks.
+Keep ancestor context separate from exact citation text; no automatic backfill.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

@@ -61,11 +61,14 @@ with tempfile.TemporaryDirectory() as directory:
     word=Document(); labels=['Independent block '+str(index) for index in range(70)]
     for label in labels: word.add_paragraph(label)
     word.sections[0].header.paragraphs[0].text='Independent header'
+    word.paragraphs[0].style='Heading 1'
     stream=BytesIO(); word.save(stream); stream.seek(0)
     docx=sources.ingest(actor,stream,title='Word',filename='word.docx',
         media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',retain_original=True)
     run=queue.enqueue(actor,docx['id'],expected_generation=1)
     assert run['expected_units']==3 and ExtractionPool(queue).tick()['processed']==3
-    assert sources.document(actor,docx['id'])['body']=='\n\n'.join([*labels,'Independent header'])
+    rich=sources.document(actor,docx['id'])
+    assert rich['body']=='\n\n'.join([*labels,'Independent header'])
+    assert rich['chunking_profile']=='sections-v1' and rich['structure']['sections'][1]['heading']['start']==0
 database.close()
 print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True}))

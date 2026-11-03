@@ -62,7 +62,7 @@ def _parts(parts,*,allow_empty=False):
     return Extracted(result,locations)
 
 
-def _docx(path,*,first=1,last=None,inventory=False,allow_empty=False):
+def _docx(path,*,first=1,last=None,inventory=False,allow_empty=False,heading_levels=None):
     try:
         from lxml import etree
         namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -104,6 +104,10 @@ def _docx(path,*,first=1,last=None,inventory=False,allow_empty=False):
         def paragraph(kind,item):
             nonlocal ordinal
             ordinal+=1
+            if heading_levels is not None and kind=='paragraph':
+                style=item.style.name if item.style is not None else ''
+                match=re.fullmatch(r'Heading ([1-6])',style)
+                if match: heading_levels[ordinal]=int(match[1])
             if inventory or (ordinal>=first and (last is None or ordinal<=last)):
                 parts.append((kind,ordinal,item.text))
         def walk(container,kind):
