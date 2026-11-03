@@ -15,6 +15,8 @@ from sqlalchemy import text
 from .current_content import check_retired, content_lock
 from .extraction import Extracted, ExtractionError, MAX_LOCATIONS, extract_isolated, valid_text, chunks
 from .pdf_units import inventory_isolated, extract_page_isolated, validate_page, assemble_pdf
+from .document_units import (DOCX,inventory_isolated as document_inventory,
+    extract_unit_isolated,validate_spec,validate_fragment,locators as document_locators,assemble as assemble_document)
 from .identity import Actor, PermissionDenied, Role
 from .sources import SourceConflict, SourceNotFound
 from .spaces import SpaceBound, hold_authority
@@ -30,28 +32,38 @@ def _hash(value):
         ensure_ascii=False, allow_nan=False).encode()).hexdigest()
 
 
-def _profile(partitioner='whole-document-v1',pages=None):
+FORMATS={'docx-block-v1':DOCX,'markdown-block-v1':'text/markdown','text-block-v1':'text/plain'}
+
+
+def _profile(partitioner='whole-document-v1',pages=None,*,spec=None):
     result={'partitioner':partitioner,'normalization':1,
             'pypdf':version('pypdf'),'python_docx':version('python-docx')}
     if partitioner=='pdf-page-v1':
         if type(pages) is not int or not 1<=pages<=200: raise ValueError('invalid_manifest')
         result['pages']=pages
+    elif partitioner in FORMATS:
+        result['spec']=validate_spec(FORMATS[partitioner],spec)
     elif partitioner!='whole-document-v1': raise ValueError('invalid_manifest')
     return result
+
+
+def _locators(profile):
+    kind=profile['partitioner']
+    if kind=='pdf-page-v1': return [{'kind':'page','first':page,'last':page} for page in range(1,profile['pages']+1)]
+    if kind in FORMATS: return document_locators(FORMATS[kind],profile['spec'])
+    return [{'kind':'document'}]
 
 
 def _manifest(source, space, profile):
     return {'space_id':str(space),'version_id':str(source['id']),
             'generation':source['generation'],'original_sha256':source['content_hash'],
             'size_bytes':source['size_bytes'],'media_type':source['media_type'],'profile':profile,
-            'units':([{'ordinal':page,'locator':{'kind':'page','first':page,'last':page}}
-                for page in range(1,profile['pages']+1)] if profile['partitioner']=='pdf-page-v1'
-                else [{'ordinal':1,'locator':{'kind':'document'}}])}
+            'units':[{'ordinal':ordinal,'locator':locator} for ordinal,locator in enumerate(_locators(profile),1)]}
 
 
 def _locator(profile,ordinal):
-    if profile['partitioner']=='pdf-page-v1': return {'kind':'page','first':ordinal,'last':ordinal}
-    return {'kind':'document'}
+    values=_locators(profile)
+    return values[ordinal-1] if 1<=ordinal<=len(values) else {}
 
 
 def _fingerprint(manifest,profile,ordinal,locator):
@@ -63,7 +75,7 @@ def _result(result,*,allow_blank=False):
     if not isinstance(result, Extracted) or not isinstance(result.text, str):
         raise ExtractionError('parser_failed')
     valid_text(result.text)
-    if not result.text.strip() and not (allow_blank and result.text=='' and result.locations==[]):
+    if not result.text.strip() and not allow_blank:
         raise ExtractionError('no_text')
     if '\r' in result.text or not isinstance(result.locations, list) or len(result.locations)>MAX_LOCATIONS:
         raise ExtractionError('parser_failed')
@@ -164,6 +176,13 @@ class ExtractionQueue(SpaceBound):
         if original['media_type']=='application/pdf':
             profile=_profile('pdf-page-v1',inventory_isolated(self.originals.check(original)))
             self.originals.check(original)
+        elif original['media_type']==DOCX or original['size_bytes']>65536:
+            spec=document_inventory(self.originals.check(original),original['media_type'])
+            self.originals.check(original)
+            if original['media_type']==DOCX:
+                if spec['blocks']>64 or spec['characters']>65536: profile=_profile('docx-block-v1',spec=spec)
+            else:
+                profile=_profile('markdown-block-v1' if original['media_type']=='text/markdown' else 'text-block-v1',spec=spec)
         with self.database.engine.begin() as c:
             content_lock(c); hold_authority(c)
             current = self._space_authorize(c, actor, Role.EDITOR)
@@ -186,7 +205,7 @@ class ExtractionQueue(SpaceBound):
                 JOIN c0_extraction_runs r ON r.id=u.run_id
                 WHERE r.state IN ('extracting','assembling','failed') AND r.expires_at>clock_timestamp()
                 AND u.state IN ('queued','leased','retry_wait')"""),{'space':current.space_id}).mappings().one()
-            count=profile.get('pages',1)
+            count=len(_locators(profile))
             if counts['total']+count>self.max_queued_units or counts['selected']+count>max(200,self.max_queued_units//2):
                 raise ValueError('extraction_queue_full')
             now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
@@ -255,9 +274,10 @@ class ExtractionQueue(SpaceBound):
             return False
         try:
             profile=run['profile']
-            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'))
-                and run['expected_units']==profile.get('pages',1)
+            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'),spec=profile.get('spec'))
+                and run['expected_units']==len(_locators(profile))
                 and (profile['partitioner']!='pdf-page-v1' or source['media_type']=='application/pdf')
+                and (profile['partitioner'] not in FORMATS or source['media_type']==FORMATS[profile['partitioner']])
                 and run['manifest_sha256']==_hash(_manifest(source,run['space_id'],profile)))
         except (ValueError,TypeError,KeyError): valid=False
         if not valid:
@@ -357,8 +377,10 @@ class ExtractionQueue(SpaceBound):
 
     def complete(self, claim, result):
         page=claim.locator.get('kind')=='page'
+        fragment=claim.locator.get('kind') in ('blocks','characters')
         if page: validate_page(result,claim.ordinal)
-        digest = _result(result,allow_blank=page)
+        if fragment: validate_fragment(result,claim.locator)
+        digest = _result(result,allow_blank=page or fragment)
         with self.database.engine.begin() as c:
             attempt = self._attempt(c, claim, replay=True)
             if attempt is None:
@@ -366,7 +388,7 @@ class ExtractionQueue(SpaceBound):
             run,unit,now = attempt
             if unit['state']=='published': return unit['result_sha256']==digest
             if unit['state']=='succeeded':
-                return unit['result_sha256']==digest==_result(Extracted(unit['body'],unit['locations']),allow_blank=page)
+                return unit['result_sha256']==digest==_result(Extracted(unit['body'],unit['locations']),allow_blank=page or fragment)
             if (run['result_bytes']+len(result.text.encode())>2097152
                 or run['result_characters']+len(result.text)>1000000):
                 self._fail(c,run,unit,'too_large',now)
@@ -475,7 +497,7 @@ class ExtractionQueue(SpaceBound):
             run=c.execute(text('SELECT * FROM c0_extraction_runs WHERE id=:id'),{'id':identifier}).mappings().one_or_none()
             if run is None: return False
             if run['state']=='ready': return True
-            if run['state']!='assembling' or run['profile'].get('partitioner')!='pdf-page-v1': return False
+            if run['state']!='assembling': return False
             units=[dict(row) for row in c.execute(text('SELECT * FROM c0_extraction_units WHERE run_id=:id ORDER BY ordinal LIMIT 201'),
                 {'id':identifier}).mappings()]
             source=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),{'id':run['version_id']}).mappings().one_or_none()
@@ -484,10 +506,18 @@ class ExtractionQueue(SpaceBound):
         error=None
         try:
             self.originals.check(source)
-            evidence=assemble_pdf(units,run['expected_units'])
+            kind=run['profile']['partitioner']
+            if kind=='pdf-page-v1': evidence=assemble_pdf(units,run['expected_units'])
+            elif kind in FORMATS: evidence=assemble_document(units,source['media_type'],run['profile']['spec'])
+            else:
+                if len(units)!=1 or units[0]['state']!='succeeded': raise ExtractionError('parser_failed')
+                unit=units[0]; evidence=Extracted(unit['body'],unit['locations'])
+                if _result(evidence)!=unit['result_sha256'] or evidence.text_hash!=unit['text_sha256']:
+                    raise ExtractionError('parser_failed')
             segments=chunks(evidence)
             self.originals.check(source)
         except ExtractionError as failure: error=failure.code
+        except (ValueError,TypeError,KeyError,IndexError): error='parser_failed'
         from .sources import _publish_extracted, register_source_handlers
         from .jobs import default_registry, JobService
         registry=default_registry(); register_source_handlers(registry,self.database,self.originals)
@@ -512,7 +542,7 @@ class ExtractionQueue(SpaceBound):
                     {'id':identifier,'code':error or 'manifest_mismatch'})
                 return False
             version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),{'id':current['version_id']}).mappings().one()
-            _publish_extracted(c,version,evidence,segments,JobService(self.database,registry))
+            _publish_extracted(c,version,evidence,segments,JobService(self.database,registry),reuse_identical=False)
             c.execute(text("""UPDATE c0_extraction_units SET state='published',body=NULL,locations=NULL,
                 lease_deadline=NULL WHERE run_id=:id"""),{'id':identifier})
             c.execute(text("""UPDATE c0_extraction_runs SET state='ready',error_code=NULL,
@@ -522,7 +552,7 @@ class ExtractionQueue(SpaceBound):
     def publish_pending(self):
         with self.database.engine.connect() as c:
             identifiers=c.execute(text("""SELECT id FROM c0_extraction_runs WHERE state='assembling'
-                AND profile->>'partitioner'='pdf-page-v1' ORDER BY created_at,id LIMIT 20""")).scalars().all()
+                ORDER BY created_at,id LIMIT 20""")).scalars().all()
         for identifier in identifiers: self.publish(identifier)
 
     def cleanup(self, *, limit=20):
@@ -562,8 +592,10 @@ class ExtractionWorker:
             idle=0
             try:
                 path = self.queue.originals.check(claim.original)
-                result = (extract_page_isolated(path,claim.ordinal) if claim.locator['kind']=='page'
-                    else extract_isolated(path,claim.original['media_type']))
+                if claim.locator['kind']=='page': result=extract_page_isolated(path,claim.ordinal)
+                elif claim.locator['kind'] in ('blocks','characters'):
+                    result=extract_unit_isolated(path,claim.original['media_type'],claim.locator)
+                else: result=extract_isolated(path,claim.original['media_type'])
                 self.queue.originals.check(claim.original)
                 self.queue.complete(claim,result)
             except ExtractionError as error:

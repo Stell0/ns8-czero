@@ -25,13 +25,16 @@ the runtime.
 
 ## Private extraction units (0.37.0 producer candidate)
 
-The 0.37.0 producer candidate adds private extraction staging and schema 0024.
+The 0.37.0 producer candidate adds private extraction staging and schema 0026.
 `czero_core.extraction_queue.ExtractionQueue` is disabled by default; trusted
 native actors can explicitly hand a queued original to the leased worker.
-Parsing runs outside transactions and results remain private until the separate
-publication milestone. Existing source extraction remains the ordinary path.
-See the [M1 contracts and acceptance](https://github.com/Stell0/ns8-czero/blob/main/docs/ingestion-pipeline/M1.md).
-This candidate has not been independently published or adopted by the app's
+Parsing runs outside transactions. PDF pages and larger DOCX/text units retain
+successful results for selective recovery; verified complete documents publish
+atomically with current-generation citations and staging cleanup. A bounded pool
+runs two isolated parsers by default, with an explicit maximum of four.
+Existing source extraction remains the ordinary path. See the
+[implementation contracts](https://github.com/Stell0/ns8-czero/blob/main/docs/ingestion-pipeline/PLAN.md).
+This producer has not been independently published or adopted by the app's
 released Core tag/lock.
 
 ## Bounded lexical recovery (0.36.1 candidate)

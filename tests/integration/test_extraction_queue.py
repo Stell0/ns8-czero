@@ -101,7 +101,7 @@ def test_real_process_death_and_reconstructed_worker_resume(staged):
     make_due(queue)
     later = ExtractionQueue(queue.database, acl, queue.originals, enabled=True)
     assert ExtractionWorker(later).tick() == 1
-    assert later.status(owner, run['id'])['state'] == 'assembling'
+    assert later.status(owner, run['id'])['state'] == 'ready'
     assert ExtractionWorker(later).tick() == 0
 
 
@@ -114,6 +114,9 @@ def test_parser_has_no_transaction_or_locks_and_ordinary_jobs_continue(staged, s
     real = module.extract_isolated
     def observed(path, media_type):
         assert queue.database.engine.pool.checkedout() == 0
+        assert service.search(owner,'evidence')==[]
+        with queue.database.engine.connect() as c:
+            assert c.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'),{'id':version['id']}).scalar_one()==0
         with queue.database.engine.begin() as c:
             for key in (CONTENT_LOCK, WORKER_LOCK):
                 assert c.execute(text('SELECT pg_try_advisory_xact_lock(:key)'), {'key':key}).scalar_one()
@@ -124,8 +127,9 @@ def test_parser_has_no_transaction_or_locks_and_ordinary_jobs_continue(staged, s
     assert jobs.get_job(owner, health['id'])['state'] == 'succeeded'
     assert queue.status(owner, run['id'])['succeeded'] == 1
     with queue.database.engine.connect() as c:
-        assert c.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'), {'id':version['id']}).scalar_one() == 0
-    assert service.search(owner, 'evidence') == []
+        assert c.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'), {'id':version['id']}).scalar_one() == 1
+    assert service.document(owner,version['id'])['body']=='Unit evidence café'
+    assert service.search(owner, 'evidence')
 
 
 @pytest.mark.parametrize('code,attempts', [('parser_timeout',3),('invalid_file',1),('unsupported_scan',1)])
@@ -258,4 +262,4 @@ def test_actual_opt_in_app_worker_uses_saved_native_configuration(staged):
     output=json.loads(child.stdout)
     assert child.returncode==0 and output['processed']==1 and output['workers']==2
     assert not any(word in child.stdout for word in ('lease_token','original','password','body'))
-    assert queue.status(owner,run['id'])['state']=='assembling'
+    assert queue.status(owner,run['id'])['state']=='ready'

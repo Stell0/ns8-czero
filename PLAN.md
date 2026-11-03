@@ -27,9 +27,13 @@ The [M3 successor](docs/ingestion-pipeline/M3.md), schema 0026, adds configurabl
 native workers, fair leases, queue/result backpressure and actual resource/restore
 grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
 21 cases; complete local Python/PostgreSQL/packaging passes 2,661 cases.
-The native successor moves extraction seed before the indexed/paused retrieval
-snapshot after Debian `41641229029` catches incomplete recovered indexing;
-full/native acceptance remains pending. Installed baselines, frozen evidence, Core publication,
+PR59 regularly merged as `ed160592cd42f711a78dc8f861497ccc42c859cd` after full
+`41654247380`, both native distributions, independent artifact audit and exact-source
+promotion verification. The earlier native retrieval failure remains preserved;
+fixtures now seed before indexing is paused and snapshotted. The [M4 candidate](docs/ingestion-pipeline/M4.md)
+adds canonical DOCX block and Markdown/text range extraction. Its original complete
+local suite passes 2,677 cases; accepted-base validation and M4 native gates remain.
+Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
 ## CI policy update — implementation

@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M2 merged; M3 worker-pool candidate implemented**
+Status: **M0–M3 merged; M4 acceptance pending; M4 formats implemented**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -346,3 +346,12 @@ After M10 acceptance, consider larger PDFs/uploads, distributed multi-host worke
 authorizes developing isolated successor candidates while prerequisite CI runs,
 with acceptance and merges kept sequential and one milestone per PR. All native
 and rollout acceptance uses disposable instances; live deployment remains separate.
+
+M4's [format candidate](M4.md) passes 64 focused format, queue, PDF recovery and
+independent-package cases. It preserves default imports and external source-sync
+authority/receipts; full compatibility and native acceptance remain separate.
+
+M3 PR59 regularly merged as `ed160592cd42f711a78dc8f861497ccc42c859cd` after
+exact head `455f7ed` passes full `41654247380`, both native distributions,
+independent downloaded native/scan artifact grading and full promotion verification.
+M4 is now based on that accepted merge, retaining the strict indexed recovery fix.
