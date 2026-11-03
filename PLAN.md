@@ -1,22 +1,24 @@
 # C0 roadmap
 
-> **Document ingestion modernization (approved design; M1 staging candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; no runtime, deployment or release authorization is implied.
+> **Document ingestion modernization (M0/M1 merged; M2 publication candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M1 candidate
+## Queued document extraction — M2 candidate
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0 established the baseline; M1 is the current candidate. The
+milestone per reviewed PR. M0 and M1 are merged; M2 is the current candidate. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
 originals, current whole-document retry/locking behavior, citations and external
 multipart readback. M0 changes no runtime, schema, dependency or connector contract.
 M0's contract review authorizes the separate [M1 implementation](docs/ingestion-pipeline/M1.md).
-The producer Core 0.37.0/schema 0024 candidate adds private durable units,
-three-attempt fenced leases, isolated parsing outside transactions, durable result
-reconciliation and bounded cleanup. Ordinary extraction remains the default;
-the released consumer dependency/lock is unchanged. M2 publication and M3 worker
-lifecycle are separate. Installed baselines, frozen evidence, Core publication,
+M1 full `41605913790` passes and merges as `6380d38`. The
+[M2 producer candidate](docs/ingestion-pipeline/M2.md), Core 0.37.0/schema 0025,
+adds PDF page units, failed-unit retry and complete atomic publication. The
+operator authorizes isolated successor development while prerequisite CI runs,
+with sequential acceptance/merges and disposable instances for native/rollout
+tests. Ordinary extraction and the released consumer lock remain unchanged.
+M3 worker lifecycle is separate. Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
 ## CI policy update — implementation

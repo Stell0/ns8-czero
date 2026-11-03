@@ -35,5 +35,22 @@ with tempfile.TemporaryDirectory() as directory:
         assert connection.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'),{'id':version['id']}).scalar_one()==0
     sources.delete(actor,version['source_id'],expected_revision=1)
     assert queue.status(actor,run['id'])['state']=='superseded'
+    from pypdf import PdfWriter
+    from pypdf.generic import DecodedStreamObject,DictionaryObject,NameObject
+    writer=PdfWriter(); page=writer.add_blank_page(width=612,height=792)
+    font=DictionaryObject({NameObject('/Type'):NameObject('/Font'),NameObject('/Subtype'):NameObject('/Type1'),NameObject('/BaseFont'):NameObject('/Helvetica')})
+    page[NameObject('/Resources')]=DictionaryObject({NameObject('/Font'):DictionaryObject({NameObject('/F1'):writer._add_object(font)})})
+    stream=DecodedStreamObject(); stream.set_data(b'BT /F1 12 Tf 72 720 Td (Independent PDF evidence) Tj ET')
+    page[NameObject('/Contents')]=writer._add_object(stream)
+    original=BytesIO(); writer.write(original); original.seek(0)
+    pdf=sources.ingest(actor,original,title='PDF',filename='pdf.pdf',media_type='application/pdf',retain_original=True)
+    run=queue.enqueue(actor,pdf['id'],expected_generation=1)
+    assert ExtractionWorker(queue).tick()==1
+    assert queue.status(actor,run['id'])['state']=='ready'
+    document=sources.document(actor,pdf['id'])
+    assert document['body']=='Independent PDF evidence'
+    assert sources.citation(actor,sources.chunks(actor,document['id'])[0]['id'])['body']==document['body']
+    with database.engine.connect() as connection:
+        assert connection.execute(text('SELECT body FROM c0_extraction_units WHERE run_id=:id'),{'id':run['id']}).scalar_one() is None
 database.close()
-print(json.dumps({'installed_extraction_staging':True}))
+print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True}))

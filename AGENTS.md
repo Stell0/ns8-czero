@@ -98,7 +98,11 @@ and [baseline evidence](docs/ingestion-pipeline/BASELINE.md), one independently
 reviewed milestone at a time. M0 contracts are reviewed for the
 [M1 producer candidate](docs/ingestion-pipeline/M1.md): private native-actor leases,
 not public HTTP/MCP handoff or publication. Preserve disabled defaults and the
-released consumer lock; M2 publication and M3 lifecycle are separate milestones.
+released consumer lock. M1 full `41605913790` passes and regularly merges as
+`6380d38`; the [M2 candidate](docs/ingestion-pipeline/M2.md) adds PDF publication.
+The operator authorizes isolated successor development while prerequisite CI runs,
+but acceptance and merges remain sequential. Native/rollout fixtures are disposable;
+live deployment remains separate. M3 lifecycle is a separate milestone.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)
