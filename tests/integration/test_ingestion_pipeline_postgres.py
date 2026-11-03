@@ -12,17 +12,18 @@ from sqlalchemy import text
 from czero_core.current_content import CONTENT_LOCK, ContentSuperseded
 from czero_core.documents import DocumentService
 from czero_core.extraction import ExtractionError
-from czero_core.jobs import JobService, default_registry
+from czero_core.jobs import default_registry
 from czero_core.worker import Worker, WORKER_LOCK
 from test_access import access
 from test_sources import sources, upload
+from test_job_services import service as job_service
 
 pytestmark = pytest.mark.skipif(not os.getenv("CZERO_TEST_DATABASE_URL"),
                                 reason="disposable PostgreSQL required")
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/evidence/pipeline"
 
 
-def test_whole_document_retry_locks_and_atomic_replacement(sources, monkeypatch, record_property):
+def test_whole_document_retry_locks_and_atomic_replacement(sources, job_service, monkeypatch, record_property):
     import czero_core.sources as module
     service, owner, registry, _ = sources
     reader = DocumentService(service.database, service.access)
@@ -34,7 +35,8 @@ def test_whole_document_retry_locks_and_atomic_replacement(sources, monkeypatch,
     original = (FIXTURES / "readable-100.pdf").read_bytes()
     replacement = upload(sources, original, source_id=previous["source_id"],
                          expected_revision=1, media_type="application/pdf", retain_original=True)
-    queue = JobService(service.database, registry, service.access)
+    queue, queue_owner = job_service
+    assert queue_owner == owner
     health = queue.enqueue(owner, "health", {}, "m0-health")
     parser = module.extract_isolated
     attempts = []

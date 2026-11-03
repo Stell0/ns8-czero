@@ -76,6 +76,13 @@ them, produced the 1,333 passes above. No cases or bounds were removed or weaken
 
 ## Measured whole-document behavior
 
+PR56 first full run `41532806456` passed native Debian/Rocky and artifact checks,
+but failed two queue tests (2,540 Python passes): the M0 control leaked its
+synthetic health job. The repair reuses the existing queue fixture's owned-job
+cleanup. The M0 control followed by queue service/worker regressions passes all
+20 cases on a fresh disposable database. The failed run remains preserved; its
+native results do not establish acceptance of the repaired source.
+
 These are **single local observations**, not P50/P95, cold-cache controls, an old/new
 comparison or production service levels. JUnit properties from the new integration
 controls record raw seconds for repeatable inspection.
