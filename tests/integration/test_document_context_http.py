@@ -15,25 +15,27 @@ from test_auth_http import application,ORIGIN
 from test_knowledge_http import knowledge_http
 from test_mcp_http import transport,RESOURCE
 from test_document_context import BODY
+from test_sources_http import source_http
 
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='disposable PostgreSQL required')
 TOOLS={'source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'}
 
 
-def seed(app,token):
+def seed(app,token,created):
     actor=app.state.auth.access.resolve(app.state.auth.oidc.verify_access_token(token))
     source=app.state.sources
     version=source.ingest(actor,BytesIO(BODY.encode()),title='Context fixture '+uuid4().hex,
         filename='context.md',media_type='text/markdown',retain_original=True)
+    created.append(version['source_id'])
     queue=ExtractionQueue(source.database,source.access,source.originals,enabled=True)
     queue.enqueue(actor,version['id'],expected_generation=1); ExtractionPool(queue).tick()
     return actor,version
 
 
 @pytest.mark.parametrize('mode',['auto','legacy'])
-def test_real_sdk_refresh_reads_exact_context_and_rest_matches(transport,mode):
+def test_real_sdk_refresh_reads_exact_context_and_rest_matches(transport,source_http,mode):
     app,child,_,_,_,issue,token,_=transport
-    owner,version=seed(app,token)
+    owner,version=seed(app,token,source_http[1])
     pair=issue(app.state.auth.oidc.verify_access_token(token),{'c0:read'})
     async def check():
         async with child.router.lifespan_context(child):
@@ -72,9 +74,9 @@ def test_real_sdk_refresh_reads_exact_context_and_rest_matches(transport,mode):
     asyncio.run(check())
 
 
-def test_reader_scope_revocation_and_protected_space_do_not_fall_back(transport):
+def test_reader_scope_revocation_and_protected_space_do_not_fall_back(transport,source_http):
     app,_,_,_,_,issue,owner_token,member_token=transport
-    owner,version=seed(app,owner_token); access=app.state.auth.access
+    owner,version=seed(app,owner_token,source_http[1]); access=app.state.auth.access
     member_identity=app.state.auth.oidc.verify_access_token(member_token)
     with pytest.raises(PermissionDenied): access.resolve(member_identity)
     member=next(row for row in access.list_accounts(owner) if row['username']=='member')
@@ -94,9 +96,9 @@ def test_reader_scope_revocation_and_protected_space_do_not_fall_back(transport)
     asyncio.run(check())
 
 
-def test_context_request_errors_and_chunked_limits_never_echo_payload(transport):
+def test_context_request_errors_and_chunked_limits_never_echo_payload(transport,source_http):
     app,_,_,_,_,_,token,_=transport
-    _,version=seed(app,token)
+    _,version=seed(app,token,source_http[1])
     async def check():
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,
                 headers={'Authorization':'Bearer '+token}) as http:
