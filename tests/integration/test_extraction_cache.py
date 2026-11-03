@@ -37,6 +37,24 @@ def test_current_pdf_outputs_reuse_exact_page_slices_including_blank_pages(sourc
     assert status['cache_hits']==5 and status['cache_misses']==0 and status['reused_bytes']==len(right['body'].replace('\n\n','').encode())
 
 
+def test_current_body_without_structure_reuses_exact_text_units(sources,monkeypatch):
+    import czero_core.extraction_queue as module
+    original=(FIXTURES/'multipart.md').read_bytes()
+    queue,owner,first,run=queued(sources,original,media_type='text/markdown')
+    ExtractionPool(queue).tick()
+    _,_,second,later=queued(sources,original,media_type='text/markdown',title='Current unstructured duplicate')
+    monkeypatch.setattr(module,'extract_unit_isolated',lambda *args:pytest.fail('Eligible current text was reparsed'))
+    assert ExtractionPool(queue).tick()['processed']==run['expected_units']
+    service=sources[0]
+    left=service.document(owner,first['id'],include_derivatives=True)
+    right=service.document(owner,second['id'],include_derivatives=True)
+    assert left['body']==right['body'] and left['locations']==right['locations'] and left['id']!=right['id']
+    assert left['structure'] is right['structure'] is None
+    assert left['chunking_profile']==right['chunking_profile']=='fixed-v1'
+    status=queue.status(owner,later['id'])
+    assert status['cache_hits']==run['expected_units'] and status['cache_misses']==0
+
+
 def test_live_staging_reuse_is_private_and_duplicate_completion_does_not_count_twice(sources):
     queue,owner,first,run=queued(sources)
     claim=queue.claim(); evidence=extract_isolated(queue.originals.check(claim.original),'text/plain')
