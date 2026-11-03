@@ -312,6 +312,9 @@ class SourceService(SpaceBound):
 
     def retry(self, actor, version_id, *, expected_generation):
         with self.database.engine.begin() as connection:
+            from .current_content import content_lock
+            from .extraction_queue import cancel_versions
+            content_lock(connection)
             hold_authority(connection)
             self._authorize(connection, actor, Role.EDITOR)
             row = connection.execute(text('''SELECT v.*,j.state AS job_state FROM c0_source_versions v
@@ -323,6 +326,7 @@ class SourceService(SpaceBound):
                 or row['state'] == 'ready' or (row['state'] == 'queued' and row['job_state'] in ('queued','running'))):
                 raise SourceConflict()
             self.originals.check(row)
+            cancel_versions(connection, [row['id']])
             generation = row['generation'] + 1
             job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(row['id'])},
                 'source:' + str(row['id']) + ':extract:' + str(generation), space_id=self._space(connection))
@@ -332,12 +336,17 @@ class SourceService(SpaceBound):
 
     def delete(self, actor, source_id, *, expected_revision):
         with self.database.engine.begin() as connection:
+            from .current_content import content_lock
+            from .extraction_queue import cancel_versions
+            content_lock(connection)
             hold_authority(connection)
             self._authorize(connection, actor, Role.EDITOR)
             row = self._source(connection, source_id, lock=True)
             if type(expected_revision) is not int or row['revision'] != expected_revision:
                 raise SourceConflict()
             if not row['deleted']:
+                versions = connection.execute(text('SELECT id FROM c0_source_versions WHERE source_id=:id'), {'id':source_id}).scalars().all()
+                cancel_versions(connection, versions, 'source_deleted')
                 row = content_row(connection.execute(text('''UPDATE c0_sources SET deleted=true,
                     revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'''), {'id': row['id']}).mappings().one())
             return row
@@ -467,6 +476,10 @@ def register_source_handlers(registry, database, originals):
             {'id': version_id}).mappings().one_or_none()
         if row is None or row['state'] != 'queued':
             return {'state': 'unchanged'}
+        if connection.execute(text('''SELECT 1 FROM c0_extraction_runs
+            WHERE version_id=:id AND processing_generation=:generation'''),
+            {'id':version_id,'generation':row['generation']}).scalar_one_or_none():
+            return {'state':'extraction_staged'}
         try:
             evidence = extract_isolated(originals.check(row), row['media_type'])
             segments = chunks(evidence)
@@ -505,6 +518,8 @@ def register_source_handlers(registry, database, originals):
         from .current_content import content_lock,retire_versions
         content_lock(connection)
         if _uuid(payload['version_id']).int==0:
+            from .extraction_queue import cleanup_extractions
+            cleanup_extractions(connection)
             abandoned=connection.execute(text("SELECT v.id FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id WHERE v.id IS DISTINCT FROM s.current_version_id AND v.created_at<now()-interval '24 hours' ORDER BY v.created_at LIMIT 20")).scalars().all()
             retire_versions(connection,abandoned)
             removed=0
