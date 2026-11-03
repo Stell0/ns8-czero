@@ -75,10 +75,16 @@ with tempfile.TemporaryDirectory() as directory:
     later=queue.enqueue(actor,duplicate['id'],expected_generation=1)
     assert ExtractionPool(queue).tick()['processed']==3 and queue.status(actor,later['id'])['cache_hits']==3
     assert sources.document(actor,duplicate['id'])['body']==rich['body']
+    from czero_core.documents import DocumentService
+    reader=DocumentService(database,access)
+    outline=reader.outline(actor,duplicate['source_id'])
+    selected=reader.sections(actor,duplicate['source_id'],revision_id=outline['revision_id'],selection_ids=['s0'])
+    assert selected['sections'][0]['body']==rich['body'] and selected['sections'][0]['citations']
+    assert selected['no_fallback'] and not selected['complete_document']
     import runpy
     from czero_core.local_ocr import preflight,extract_unit
     fixture=runpy.run_path(str(Path(__file__).with_name('ocr_original.py')))
     scanned=originals.root/'synthetic-scan.pdf'; scanned.write_bytes(fixture['scanned_original']())
     assert extract_unit(scanned,1,preflight()).evidence.text==fixture['PHRASE']
 database.close()
-print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True,'installed_current_cache':True}))
+print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True,'installed_current_cache':True,'installed_selective_context':True}))

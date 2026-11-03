@@ -4,7 +4,7 @@
 from copy import deepcopy
 
 GUIDANCE = {
-    'version': 2,
+    'version': 3,
     'rules': [
         'Discover current operations and authorized spaces before reading or writing. Membership, space grants and actual OAuth scopes remain authoritative on every request.',
         'Choose an explicit space_id for all content. Never silently fall back to Shared after an invalid selector, denial or revoked access. Private investigations need an existing authorized protected space; ask an Admin to create or grant one.',
@@ -30,6 +30,15 @@ GUIDANCE = {
                 'Discover authorized spaces and choose the intended one. Search text first; use immutable IDs to read matching articles and original evidence.',
                 'Follow citations to exact source passages, distinguish findings from inference and describe missing or contradictory evidence. Make no content changes for a read-only task.',
                 'If optional embeddings/scoring are unavailable, use mode=text and rerank=off. Inspect actual result/index status; deterministic text retrieval remains available.',
+            ],
+        },
+        {
+            'id': 'selective-context', 'title': 'Read selected exact source context',
+            'tools': ['source_documents_list','source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'],
+            'steps': [
+                'When these operations are advertised, inspect the logical document outline and retain its exact revision_id and full-body hash. Use view=blocks for bN page/paragraph/table/code IDs; section IDs use sN.',
+                'Plan only the needed section/block/reference IDs in the same selected space. Require that revision on every request, inspect explicit oversized omissions and unresolved links, and cite the returned source chunk handles. Context bundles are selected evidence, not complete documents.',
+                'On content_superseded (410), report expired evidence and inspect current state separately. Never silently substitute a new generation, broaden selection or fetch a referenced URL. max_tokens is a bytes/3 estimate, so retain an independent model/message budget.',
             ],
         },
         {

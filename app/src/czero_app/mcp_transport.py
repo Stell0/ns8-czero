@@ -13,6 +13,7 @@ import re
 from urllib.parse import urlsplit
 
 from anyio import to_thread
+from .context_errors import CONTEXT_OPERATIONS,mcp_context_error
 from fastapi import HTTPException
 from mcp.server import Server
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -209,7 +210,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 'error="insufficient_scope", error_description="Additional OAuth scope is required", '
                 f'scope="{error.scope}"')
             metadata = {'mcp/www_authenticate':[challenge]}
-            if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS:
+            if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS | CONTEXT_OPERATIONS:
                 metadata['c0/error'] = {'code':'insufficient_scope', 'status':403}
             return types.CallToolResult(is_error=True,
                 content=[types.TextContent(type='text', text='insufficient_scope')], meta=metadata)
@@ -226,11 +227,13 @@ def create_mcp_app(registry, grants, *, issuer_url):
                     meta={'c0/error':{'code':code, 'status':error.status_code}})
             mapped = (mcp_project_error(params.name, error.status_code, error.detail)
                 or mcp_space_error(params.name, error.status_code, error.detail)
-                or mcp_knowledge_error(params.name, error.status_code, error.detail))
+                or mcp_knowledge_error(params.name, error.status_code, error.detail)
+                or mcp_context_error(params.name,error.status_code,error.detail))
             message, status = mapped if mapped is not None else ('invalid_operation_request', 422)
         except (OperationRejected, ValueError):
             message = ('invalid_space_request' if params.name in SPACE_OPERATIONS else
                 ('invalid_project_request' if params.name in PROJECT_OPERATIONS else
+                 'invalid_source_request' if params.name in CONTEXT_OPERATIONS else
                  'invalid_knowledge_request' if params.name in KNOWLEDGE_OPERATIONS else 'invalid_operation_request'))
             status = 422
         except (SQLAlchemyError, TransportUnavailable):
@@ -238,7 +241,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
         except Exception as error:
             logging.getLogger('czero.mcp').error('Operation failed (%s)', type(error).__name__)
             message, status = 'service_unavailable', 503
-        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS else None
+        metadata = {'c0/error':{'code':message, 'status':status}} if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS | CONTEXT_OPERATIONS else None
         return types.CallToolResult(is_error=True, content=[types.TextContent(type='text', text=message)], meta=metadata)
 
     async def resources(ctx, params):

@@ -14,3 +14,12 @@ When the user explicitly requests saving or updating knowledge, read existing co
 Ingest only selected, sanitized plain text or Markdown with `sources_ingest_text`, within its 128-KiB UTF-8 limit. Keep credentials, unrelated personal data and unselected conversation material out of saved knowledge. Wait for extraction and retrieve the actual document/chunks before using it as evidence. Binary files require an authorized REST upload integration or the instance's Source tools; do not claim a file was ingested without verifying it.
 
 Read back saved content, revisions and evidence links. Report what changed and what remains incomplete. Permission denial requires an authorized grant; insufficient scope requires fresh explicit consent if the user's role and approved connection permit it. Do not administer permissions, enqueue jobs or switch instances as a workaround.
+
+When selective context tools are advertised, inspect `source_document_outline_get`,
+keep its exact revision/hash, and request only needed sN sections or bN blocks.
+`source_document_references_get` resolves explicit local rN references without
+fetching; `context_bundle_get` validates a bounded same-space selection plan.
+Read omissions and unresolved references as missing context. Returned context is
+selected evidence, never a complete original. Do not broaden on failure or
+substitute a newer generation; cite exact returned chunks. Token counts are
+bytes/3 estimates, separate from your model/message budget.

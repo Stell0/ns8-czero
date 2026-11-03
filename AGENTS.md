@@ -127,6 +127,10 @@ and immediate current-content cleanup; no permanent body cache.
 M6 is accepted at `39dc9cc` after full/native `41699410483`, independent artifact
 grading and exact-source proof. Preserve actual nine-unit OCR/resource/restore
 grading in subsequent cache/context/rollout candidates.
+M8 context reads bind canonical logical ID, exact current revision/hash and
+source citation offsets. Preserve no-fallback budgets and closed error mapping.
+Keep the released older Core catalog working, and the existing App identity and
+scopes unchanged. Plugin 1.4 guidance is conditional on advertised capabilities.
 Extraction units never become external source-sync publication parts.
 M3 and M4 are accepted at `ed160592` / `b51112e`, with full native/artifact
 proofs `41654247380` / `41666816436`. M5 is accepted as `b0db3d2` after full/native `41687775493`, independent
