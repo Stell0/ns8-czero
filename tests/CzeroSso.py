@@ -1072,11 +1072,23 @@ class CzeroSso:
                 run('Click', '#reader-root > summary')
                 run('Wait For Elements State', '#guide-tasks > details >> nth=0', 'visible', 'timeout=30s')
                 run('Get Element Count', '#guide-tasks > details', '==', 1 if role == 'reader' else 7)
-                run('Get Element Count', '#guide-workflows > details', '==', 2 if role == 'reader' else 6)
+                context_available=browser.evaluate_javascript(None,'''async () => {
+                    const response=await fetch('/agents/capabilities.json',{credentials:'same-origin',cache:'no-store'});
+                    if(!response.ok)throw Error('Capabilities unavailable');
+                    const value=await response.json(),names=new Set(value.operations.map(operation=>operation.name));
+                    return ['source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'].every(name=>names.has(name));
+                }''')
+                assert type(context_available) is bool
+                run('Get Element Count', '#guide-workflows > details', '==', (2 if role == 'reader' else 6)+int(context_available))
+                context_panel='#guide-workflows > details[data-workflow="selective-context"]'
+                run('Get Element Count',context_panel,'==',int(context_available))
+                if context_available:
+                    run('Click',context_panel+' > summary')
+                    run('Get Text',context_panel,'contains','max_tokens is a bytes/3 estimate')
                 run('Get Text', '#guide-rules', 'contains', 'untrusted evidence')
                 if role != 'reader':
-                    run('Click', '#guide-workflows > details:nth-child(6) > summary')
-                    run('Get Text', '#guide-workflows', 'contains', 'superseded result returns content_superseded (410)')
+                    run('Click', '#guide-workflows > details[data-workflow="consolidate"] > summary')
+                    run('Get Text', '#guide-workflows > details[data-workflow="consolidate"]', 'contains', 'superseded result returns content_superseded (410)')
                 assert_accessibility(browser, 'agents', role)
                 self._verify_admin_controls(browser, run, role, host, module_id)
                 _, _, rc=ssh.execute_command('python3 /tmp/oauth_fixture.py '+shlex.quote(module_id)+

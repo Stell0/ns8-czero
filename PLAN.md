@@ -66,6 +66,12 @@ The [M8 context candidate](docs/ingestion-pipeline/M8.md) adds four read-only
 operations, exact generation guards, bounded selected evidence and plugin 1.4
 research guidance. Current/legacy SDK, native guided-probe, multipart, OCR
 provenance and generated-package checks pass 65 focused cases.
+M8 original `4589600` passes 2,732 Python/database/package cases and Debian but
+fails one Rocky OAuth-browser assertion against the new guidance inventory.
+The isolated successor preserves exact old/new catalog counts, adds stable
+workflow IDs and exposes read-only context guidance to authorized Readers.
+Four actual role/space browser controls and 213 local controller cases pass;
+current-source full/native acceptance remains required. Failed evidence stays.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

@@ -409,3 +409,9 @@ cases, 15 automated browser workflows, 211 controller checks and 21 Robot dry
 runs. Debian passes 21; Rocky passes 26 with three expected installation skips.
 Independent downloaded native/scan grading and full exact-source promotion pass.
 M8 is based on that accepted main, preserving the M5 complete-body repair.
+
+M8 source `4589600` / run `41718181568` fails one Rocky guidance-inventory
+assertion, despite passing all 2,732 local cases and Debian. Its isolated repair
+adds stable workflow IDs, exact capability-bound old/new inventories and Reader
+selective-context presentation. Four real role/space browser controls pass;
+full/native and independent downloaded-artifact acceptance must repeat.

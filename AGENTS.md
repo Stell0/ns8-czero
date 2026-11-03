@@ -134,6 +134,9 @@ M8 context reads bind canonical logical ID, exact current revision/hash and
 source citation offsets. Preserve no-fallback budgets and closed error mapping.
 Keep the released older Core catalog working, and the existing App identity and
 scopes unchanged. Plugin 1.4 guidance is conditional on advertised capabilities.
+Guidance UI keeps stable workflow IDs and exact capability-bound inventory,
+including read-only selective context for Readers. Preserve protected-space
+role checks; the failed M8 `4589600` native inventory evidence stays frozen.
 Extraction units never become external source-sync publication parts.
 M3 and M4 are accepted at `ed160592` / `b51112e`, with full native/artifact
 proofs `41654247380` / `41666816436`. M5 is accepted as `b0db3d2` after full/native `41687775493`, independent
