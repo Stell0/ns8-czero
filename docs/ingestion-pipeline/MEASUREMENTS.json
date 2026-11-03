@@ -61,6 +61,15 @@
         "p50": 0.4087147139944136,
         "p95_nearest_rank": 0.4766036960063502
       },
+      "upload_seconds": {
+        "p50": 0.05858101198100485,
+        "p95_nearest_rank": 0.07132838701363653
+      },
+      "manifest_preflight_enqueue_seconds": null,
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.03203937315265648,
+        "p95_nearest_rank": 0.03780663400539197
+      },
       "end_to_end_seconds": {
         "p50": 0.4715165750239976,
         "p95_nearest_rank": 0.5597287029959261
@@ -102,6 +111,18 @@
       "extraction_seconds": {
         "p50": 36.483665663021384,
         "p95_nearest_rank": 50.705503261997364
+      },
+      "upload_seconds": {
+        "p50": 0.058857688010903075,
+        "p95_nearest_rank": 0.10532936800154857
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3834603800205514,
+        "p95_nearest_rank": 0.4378370790218469
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.9704196191160008,
+        "p95_nearest_rank": 1.086204148887191
       },
       "end_to_end_seconds": {
         "p50": 36.55278403201373,
@@ -156,6 +177,18 @@
         "p50": 7.068539807019988,
         "p95_nearest_rank": 8.39025653898716
       },
+      "upload_seconds": {
+        "p50": 0.05868726599146612,
+        "p95_nearest_rank": 0.12404506900929846
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.4066248149902094,
+        "p95_nearest_rank": 0.4271847209893167
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 1.660124672431266,
+        "p95_nearest_rank": 1.6952291287889238
+      },
       "end_to_end_seconds": {
         "p50": 7.13727077000658,
         "p95_nearest_rank": 8.484628705016803
@@ -208,6 +241,18 @@
       "extraction_seconds": {
         "p50": 25.191334868984995,
         "p95_nearest_rank": 25.864145789993927
+      },
+      "upload_seconds": {
+        "p50": 0.05181603899109177,
+        "p95_nearest_rank": 0.09071822901023552
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3818522499932442,
+        "p95_nearest_rank": 1.0793844110157806
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 2.068596570257796,
+        "p95_nearest_rank": 3.596000418328913
       },
       "end_to_end_seconds": {
         "p50": 25.29083573000389,
@@ -262,6 +307,18 @@
         "p50": 5.134107818012126,
         "p95_nearest_rank": 6.620235439011594
       },
+      "upload_seconds": {
+        "p50": 0.04338759899837896,
+        "p95_nearest_rank": 0.3901823250052985
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3975870029826183,
+        "p95_nearest_rank": 0.4860752640233841
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 5.786377776210429,
+        "p95_nearest_rank": 7.193991889595054
+      },
       "end_to_end_seconds": {
         "p50": 5.490486886992585,
         "p95_nearest_rank": 6.715427960996749
@@ -314,6 +371,18 @@
       "extraction_seconds": {
         "p50": 12.949764699005755,
         "p95_nearest_rank": 14.98217344598379
+      },
+      "upload_seconds": {
+        "p50": 0.06126026299898513,
+        "p95_nearest_rank": 0.06989578698994592
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.40218944899970666,
+        "p95_nearest_rank": 0.4513222099922132
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 2.943688733037561,
+        "p95_nearest_rank": 3.3396248532808386
       },
       "end_to_end_seconds": {
         "p50": 13.029719001002377,
@@ -368,6 +437,18 @@
         "p50": 5.360552066005766,
         "p95_nearest_rank": 6.515444774995558
       },
+      "upload_seconds": {
+        "p50": 0.03761547899921425,
+        "p95_nearest_rank": 0.08854122200864367
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.4428295189864002,
+        "p95_nearest_rank": 0.5267088310210966
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 15.67673167513567,
+        "p95_nearest_rank": 19.147345295990817
+      },
       "end_to_end_seconds": {
         "p50": 5.425374443992041,
         "p95_nearest_rank": 6.6142925590102095
@@ -421,6 +502,15 @@
         "p50": 0.39461498500895686,
         "p95_nearest_rank": 0.47636950301239267
       },
+      "upload_seconds": {
+        "p50": 0.05338976500206627,
+        "p95_nearest_rank": 0.10989117799908854
+      },
+      "manifest_preflight_enqueue_seconds": null,
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.029013167833909392,
+        "p95_nearest_rank": 0.03105088201118633
+      },
       "end_to_end_seconds": {
         "p50": 0.4662002809927799,
         "p95_nearest_rank": 0.5390027319954243
@@ -462,6 +552,18 @@
       "extraction_seconds": {
         "p50": 2.2817325170035474,
         "p95_nearest_rank": 2.5622767259774264
+      },
+      "upload_seconds": {
+        "p50": 0.06601425498956814,
+        "p95_nearest_rank": 0.09616503398865461
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3787001050077379,
+        "p95_nearest_rank": 0.41157033600029536
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.1034789879922755,
+        "p95_nearest_rank": 0.10648299686727114
       },
       "end_to_end_seconds": {
         "p50": 2.357765940017998,
@@ -516,6 +618,18 @@
         "p50": 0.5865418769826647,
         "p95_nearest_rank": 0.791347777005285
       },
+      "upload_seconds": {
+        "p50": 0.03652940000756644,
+        "p95_nearest_rank": 0.08504897600505501
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.35611145000439137,
+        "p95_nearest_rank": 0.3880276359850541
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.11911703221267089,
+        "p95_nearest_rank": 0.13246393724693917
+      },
       "end_to_end_seconds": {
         "p50": 0.6272045569785405,
         "p95_nearest_rank": 0.8856985839956906
@@ -568,6 +682,18 @@
       "extraction_seconds": {
         "p50": 1.5861135050072335,
         "p95_nearest_rank": 1.7795756729901768
+      },
+      "upload_seconds": {
+        "p50": 0.04601179200108163,
+        "p95_nearest_rank": 0.12313196898321621
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.36010100101702847,
+        "p95_nearest_rank": 0.4173497850133572
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.15463808015920222,
+        "p95_nearest_rank": 0.29230697607272305
       },
       "end_to_end_seconds": {
         "p50": 1.634961096016923,
@@ -622,6 +748,18 @@
         "p50": 0.622164102998795,
         "p95_nearest_rank": 0.7788362889841665
       },
+      "upload_seconds": {
+        "p50": 0.04571706097340211,
+        "p95_nearest_rank": 0.11152194501482882
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3610425810038578,
+        "p95_nearest_rank": 0.40861744299763814
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.29141877774964087,
+        "p95_nearest_rank": 0.4301617601013277
+      },
       "end_to_end_seconds": {
         "p50": 0.6711123349959962,
         "p95_nearest_rank": 0.8993260170100257
@@ -674,6 +812,18 @@
       "extraction_seconds": {
         "p50": 1.2607692950114142,
         "p95_nearest_rank": 1.5752335819997825
+      },
+      "upload_seconds": {
+        "p50": 0.0853539380186703,
+        "p95_nearest_rank": 0.13454040998476557
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.36282629900961183,
+        "p95_nearest_rank": 0.3957034410268534
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.35734256796422414,
+        "p95_nearest_rank": 0.5320857453625649
       },
       "end_to_end_seconds": {
         "p50": 1.3151643190067261,
@@ -728,6 +878,18 @@
         "p50": 0.6108370200090576,
         "p95_nearest_rank": 0.8915001309942454
       },
+      "upload_seconds": {
+        "p50": 0.037207759014563635,
+        "p95_nearest_rank": 0.12850676299422048
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3492349990119692,
+        "p95_nearest_rank": 0.38433200999861583
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.6546462161932141,
+        "p95_nearest_rank": 1.0836892101506237
+      },
       "end_to_end_seconds": {
         "p50": 0.6481386490049772,
         "p95_nearest_rank": 1.0271434460009914
@@ -781,6 +943,15 @@
         "p50": 0.3975280190061312,
         "p95_nearest_rank": 0.5036502930161078
       },
+      "upload_seconds": {
+        "p50": 0.05484831999638118,
+        "p95_nearest_rank": 0.0772923729964532
+      },
+      "manifest_preflight_enqueue_seconds": null,
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.029630006931256503,
+        "p95_nearest_rank": 0.037977261090418324
+      },
       "end_to_end_seconds": {
         "p50": 0.48603174401796423,
         "p95_nearest_rank": 0.5882065969926771
@@ -822,6 +993,18 @@
       "extraction_seconds": {
         "p50": 1.18470090298797,
         "p95_nearest_rank": 1.4177608799946029
+      },
+      "upload_seconds": {
+        "p50": 0.057446792983682826,
+        "p95_nearest_rank": 0.12763223302317783
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3879182660020888,
+        "p95_nearest_rank": 0.46121967301587574
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.062433176120975986,
+        "p95_nearest_rank": 0.07133881907793693
       },
       "end_to_end_seconds": {
         "p50": 1.321263411984546,
@@ -876,6 +1059,18 @@
         "p50": 0.8520227480039466,
         "p95_nearest_rank": 0.9252697969786823
       },
+      "upload_seconds": {
+        "p50": 0.05484130699187517,
+        "p95_nearest_rank": 0.09091037302277982
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.37719646299956366,
+        "p95_nearest_rank": 0.413893939985428
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.05789148004259914,
+        "p95_nearest_rank": 0.06314003994339146
+      },
       "end_to_end_seconds": {
         "p50": 0.9511781180044636,
         "p95_nearest_rank": 0.988360780000221
@@ -928,6 +1123,18 @@
       "extraction_seconds": {
         "p50": 1.210933513008058,
         "p95_nearest_rank": 1.3106431330088526
+      },
+      "upload_seconds": {
+        "p50": 0.0700849209970329,
+        "p95_nearest_rank": 0.7871467339864466
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.39134961800300516,
+        "p95_nearest_rank": 0.4164518369943835
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.08465269592124969,
+        "p95_nearest_rank": 0.09206711297156289
       },
       "end_to_end_seconds": {
         "p50": 1.3129583690024447,
@@ -982,6 +1189,18 @@
         "p50": 0.8395493130083196,
         "p95_nearest_rank": 1.0269927209883463
       },
+      "upload_seconds": {
+        "p50": 0.050366070005111396,
+        "p95_nearest_rank": 0.12482670499593951
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3839435469999444,
+        "p95_nearest_rank": 0.4288966500025708
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.07778425820288248,
+        "p95_nearest_rank": 0.09206473905942403
+      },
       "end_to_end_seconds": {
         "p50": 0.9466539770073723,
         "p95_nearest_rank": 1.1596448199998122
@@ -1034,6 +1253,18 @@
       "extraction_seconds": {
         "p50": 1.1936889020144008,
         "p95_nearest_rank": 1.3899200090090744
+      },
+      "upload_seconds": {
+        "p50": 0.13048244098899886,
+        "p95_nearest_rank": 0.4270506849861704
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.351759615004994,
+        "p95_nearest_rank": 0.44826440000906587
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.1543147031625267,
+        "p95_nearest_rank": 0.17555752911721356
       },
       "end_to_end_seconds": {
         "p50": 1.344212655996671,
@@ -1088,6 +1319,18 @@
         "p50": 0.9167818980058655,
         "p95_nearest_rank": 1.2805102150014136
       },
+      "upload_seconds": {
+        "p50": 0.07392786399577744,
+        "p95_nearest_rank": 0.11643650798941962
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3943992169806734,
+        "p95_nearest_rank": 0.561669989983784
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.15956714414642192,
+        "p95_nearest_rank": 0.229781939269742
+      },
       "end_to_end_seconds": {
         "p50": 1.0194562730030157,
         "p95_nearest_rank": 1.405141644005198
@@ -1141,6 +1384,15 @@
         "p50": 0.33565020401147194,
         "p95_nearest_rank": 0.36699377797776833
       },
+      "upload_seconds": {
+        "p50": 0.04990815100609325,
+        "p95_nearest_rank": 0.08190465401276015
+      },
+      "manifest_preflight_enqueue_seconds": null,
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.028822500084061176,
+        "p95_nearest_rank": 0.03585123200900853
+      },
       "end_to_end_seconds": {
         "p50": 0.3952579709875863,
         "p95_nearest_rank": 0.44186602300032973
@@ -1182,6 +1434,18 @@
       "extraction_seconds": {
         "p50": 0.41470092299277894,
         "p95_nearest_rank": 0.4854576429934241
+      },
+      "upload_seconds": {
+        "p50": 0.05035967499134131,
+        "p95_nearest_rank": 0.11118811898631975
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.02303338801721111,
+        "p95_nearest_rank": 0.04059782001422718
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.0656987740949262,
+        "p95_nearest_rank": 0.09201861306792125
       },
       "end_to_end_seconds": {
         "p50": 0.4937580550031271,
@@ -1236,6 +1500,18 @@
         "p50": 0.12410021299729124,
         "p95_nearest_rank": 0.2059175300237257
       },
+      "upload_seconds": {
+        "p50": 0.04553093999857083,
+        "p95_nearest_rank": 0.1113141659880057
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.018594310007756576,
+        "p95_nearest_rank": 0.08910218998789787
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.06372122000902891,
+        "p95_nearest_rank": 0.12032149601145647
+      },
       "end_to_end_seconds": {
         "p50": 0.18049550900468603,
         "p95_nearest_rank": 0.28292574899387546
@@ -1288,6 +1564,18 @@
       "extraction_seconds": {
         "p50": 0.3966058840160258,
         "p95_nearest_rank": 0.44036668399348855
+      },
+      "upload_seconds": {
+        "p50": 0.05234549997840077,
+        "p95_nearest_rank": 0.12896326000918634
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.026116963010281324,
+        "p95_nearest_rank": 0.05712370699620806
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.0803945708903484,
+        "p95_nearest_rank": 0.09364852026919834
       },
       "end_to_end_seconds": {
         "p50": 0.48169716901611537,
@@ -1342,6 +1630,18 @@
         "p50": 0.11291846900712699,
         "p95_nearest_rank": 0.15710670000407845
       },
+      "upload_seconds": {
+        "p50": 0.03689782600849867,
+        "p95_nearest_rank": 0.09989175800001249
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.02080267999554053,
+        "p95_nearest_rank": 0.033536764996824786
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.07821224330109544,
+        "p95_nearest_rank": 0.08403276698663831
+      },
       "end_to_end_seconds": {
         "p50": 0.15709202000289224,
         "p95_nearest_rank": 0.2559135960182175
@@ -1394,6 +1694,18 @@
       "extraction_seconds": {
         "p50": 0.39132062398130074,
         "p95_nearest_rank": 0.45415460600634106
+      },
+      "upload_seconds": {
+        "p50": 0.050782318983692676,
+        "p95_nearest_rank": 0.16734293301124126
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.023435743991285563,
+        "p95_nearest_rank": 0.028410243015969172
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.14908281509997323,
+        "p95_nearest_rank": 0.2942467560642399
       },
       "end_to_end_seconds": {
         "p50": 0.4513055320130661,
@@ -1448,6 +1760,18 @@
         "p50": 0.11238858601427637,
         "p95_nearest_rank": 0.17063220500131138
       },
+      "upload_seconds": {
+        "p50": 0.070061487989733,
+        "p95_nearest_rank": 0.11301802200614475
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.02174589500646107,
+        "p95_nearest_rank": 0.03119513500132598
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.14534854082739912,
+        "p95_nearest_rank": 0.1805174399050884
+      },
       "end_to_end_seconds": {
         "p50": 0.1871695739973802,
         "p95_nearest_rank": 0.28059764398494735
@@ -1501,6 +1825,15 @@
         "p50": 0.3033041750022676,
         "p95_nearest_rank": 0.390825811016839
       },
+      "upload_seconds": {
+        "p50": 0.06111902499105781,
+        "p95_nearest_rank": 0.1442704779910855
+      },
+      "manifest_preflight_enqueue_seconds": null,
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.028919861855683848,
+        "p95_nearest_rank": 0.03533196682110429
+      },
       "end_to_end_seconds": {
         "p50": 0.3879131489957217,
         "p95_nearest_rank": 0.5452688939985819
@@ -1542,6 +1875,18 @@
       "extraction_seconds": {
         "p50": 0.4288167299819179,
         "p95_nearest_rank": 0.5626916119945236
+      },
+      "upload_seconds": {
+        "p50": 0.11163108400069177,
+        "p95_nearest_rank": 0.21752534099505283
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.023492381995311007,
+        "p95_nearest_rank": 0.049958403018536046
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.05796042995643802,
+        "p95_nearest_rank": 0.062100067880237475
       },
       "end_to_end_seconds": {
         "p50": 0.5490592019923497,
@@ -1596,6 +1941,18 @@
         "p50": 0.16587708500446752,
         "p95_nearest_rank": 0.5571686550101731
       },
+      "upload_seconds": {
+        "p50": 0.03867283198633231,
+        "p95_nearest_rank": 0.10184765100711957
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.023662958992645144,
+        "p95_nearest_rank": 0.03096661501331255
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.057881962187821046,
+        "p95_nearest_rank": 0.06505004278733395
+      },
       "end_to_end_seconds": {
         "p50": 0.2702917749993503,
         "p95_nearest_rank": 0.6031582380237523
@@ -1648,6 +2005,18 @@
       "extraction_seconds": {
         "p50": 0.4147773179865908,
         "p95_nearest_rank": 0.44214601698331535
+      },
+      "upload_seconds": {
+        "p50": 0.08151914298650809,
+        "p95_nearest_rank": 0.12971088901394978
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.02549418999115005,
+        "p95_nearest_rank": 0.06931612099288031
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.08512299307039939,
+        "p95_nearest_rank": 0.08706859112135135
       },
       "end_to_end_seconds": {
         "p50": 0.46151710298727266,
@@ -1702,6 +2071,18 @@
         "p50": 0.13128397599211894,
         "p95_nearest_rank": 0.1402785319951363
       },
+      "upload_seconds": {
+        "p50": 0.067929489974631,
+        "p95_nearest_rank": 0.24981758100329898
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.02118092801538296,
+        "p95_nearest_rank": 0.028636666014790535
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.07476972410222515,
+        "p95_nearest_rank": 0.08762655797181651
+      },
       "end_to_end_seconds": {
         "p50": 0.2133591180026997,
         "p95_nearest_rank": 0.3909137180016842
@@ -1754,6 +2135,18 @@
       "extraction_seconds": {
         "p50": 0.3781558169866912,
         "p95_nearest_rank": 0.5024504199973308
+      },
+      "upload_seconds": {
+        "p50": 0.08077183397836052,
+        "p95_nearest_rank": 0.1575786129978951
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.02200365299358964,
+        "p95_nearest_rank": 0.027449649991467595
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.15897674005827866,
+        "p95_nearest_rank": 0.7000607679074164
       },
       "end_to_end_seconds": {
         "p50": 0.4620852539956104,
@@ -1808,6 +2201,18 @@
         "p50": 0.12326651401235722,
         "p95_nearest_rank": 0.19569817101000808
       },
+      "upload_seconds": {
+        "p50": 0.039337271999102086,
+        "p95_nearest_rank": 0.21798928998759948
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.020184797002002597,
+        "p95_nearest_rank": 0.026646680023986846
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.15736954985186458,
+        "p95_nearest_rank": 0.17379453894682229
+      },
       "end_to_end_seconds": {
         "p50": 0.17084376199636608,
         "p95_nearest_rank": 0.42212996701709926
@@ -1861,6 +2266,15 @@
         "p50": 0.33240653498796746,
         "p95_nearest_rank": 0.43529580999165773
       },
+      "upload_seconds": {
+        "p50": 0.0727879110199865,
+        "p95_nearest_rank": 0.19803651198162697
+      },
+      "manifest_preflight_enqueue_seconds": null,
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.0726827961334493,
+        "p95_nearest_rank": 0.08946811096393503
+      },
       "end_to_end_seconds": {
         "p50": 0.4111467050097417,
         "p95_nearest_rank": 0.6567799350013956
@@ -1902,6 +2316,18 @@
       "extraction_seconds": {
         "p50": 2.1115635390160605,
         "p95_nearest_rank": 2.688873412000248
+      },
+      "upload_seconds": {
+        "p50": 0.06741818401496857,
+        "p95_nearest_rank": 0.07754716800991446
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3112377069774084,
+        "p95_nearest_rank": 0.4632746369752567
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.1442964491143357,
+        "p95_nearest_rank": 0.16359262785408646
       },
       "end_to_end_seconds": {
         "p50": 2.1977462240029126,
@@ -1956,6 +2382,18 @@
         "p50": 0.6251222009886988,
         "p95_nearest_rank": 0.9396090320078656
       },
+      "upload_seconds": {
+        "p50": 0.054374164988985285,
+        "p95_nearest_rank": 0.09866136900382116
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.2870132050011307,
+        "p95_nearest_rank": 0.3439088770246599
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.1670294273062609,
+        "p95_nearest_rank": 0.19162938819499686
+      },
       "end_to_end_seconds": {
         "p50": 0.6812232859956566,
         "p95_nearest_rank": 1.0150371629861183
@@ -2008,6 +2446,18 @@
       "extraction_seconds": {
         "p50": 1.4428607789741363,
         "p95_nearest_rank": 1.696775044023525
+      },
+      "upload_seconds": {
+        "p50": 0.07327526100561954,
+        "p95_nearest_rank": 0.14286464400356635
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3127424030099064,
+        "p95_nearest_rank": 0.4765928690030705
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.21896051408839412,
+        "p95_nearest_rank": 0.319314178370405
       },
       "end_to_end_seconds": {
         "p50": 1.534128803992644,
@@ -2062,6 +2512,18 @@
         "p50": 0.7055634860007558,
         "p95_nearest_rank": 0.7908423999906518
       },
+      "upload_seconds": {
+        "p50": 0.07479673600755632,
+        "p95_nearest_rank": 0.08714765202603303
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.2932110960246064,
+        "p95_nearest_rank": 0.3446815100032836
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.3729743721487466,
+        "p95_nearest_rank": 0.45229704718803987
+      },
       "end_to_end_seconds": {
         "p50": 0.7677854649955407,
         "p95_nearest_rank": 0.881149191991426
@@ -2115,6 +2577,18 @@
         "p50": 1.1346606140141375,
         "p95_nearest_rank": 1.298512381996261
       },
+      "upload_seconds": {
+        "p50": 0.06156824101344682,
+        "p95_nearest_rank": 0.11827417500899173
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.2979635769734159,
+        "p95_nearest_rank": 0.3668781539890915
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.4093969510286115,
+        "p95_nearest_rank": 0.5642531038902234
+      },
       "end_to_end_seconds": {
         "p50": 1.27207762200851,
         "p95_nearest_rank": 1.3765846189926378
@@ -2167,6 +2641,18 @@
       "extraction_seconds": {
         "p50": 0.7512047839991283,
         "p95_nearest_rank": 5.216675420990214
+      },
+      "upload_seconds": {
+        "p50": 0.0488290730281733,
+        "p95_nearest_rank": 1.1986153080069926
+      },
+      "manifest_preflight_enqueue_seconds": {
+        "p50": 0.3291256800002884,
+        "p95_nearest_rank": 0.6902827529993374
+      },
+      "sql_elapsed_seconds_sum": {
+        "p50": 0.8530411199026275,
+        "p95_nearest_rank": 10.902000139205484
       },
       "end_to_end_seconds": {
         "p50": 0.8246789900003932,
