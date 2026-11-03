@@ -351,11 +351,14 @@ class SourceService(SpaceBound):
                     revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'''), {'id': row['id']}).mappings().one())
             return row
 
-    def document(self, actor, version_id):
+    def document(self, actor, version_id,*,include_derivatives=False):
+        if type(include_derivatives) is not bool: raise ValueError('invalid_document_options')
+        columns='id,version_id,body,text_hash,locations,created_at'
+        if include_derivatives: columns+=',structure,chunking_profile'
         with self.database.engine.connect() as connection:
             current=self._authorize(connection, actor)
             self._read_version(connection,current,version_id)
-            row = connection.execute(text('SELECT * FROM c0_documents WHERE space_id=:space AND version_id=:id'),
+            row = connection.execute(text('SELECT '+columns+' FROM c0_documents WHERE space_id=:space AND version_id=:id'),
                 {'space': self._space(connection), 'id': _uuid(version_id)}).mappings().one_or_none()
             if row is None:
                 raise SourceNotFound()

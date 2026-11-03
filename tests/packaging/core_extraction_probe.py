@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as directory:
         media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',retain_original=True)
     run=queue.enqueue(actor,docx['id'],expected_generation=1)
     assert run['expected_units']==3 and ExtractionPool(queue).tick()['processed']==3
-    rich=sources.document(actor,docx['id'])
+    rich=sources.document(actor,docx['id'],include_derivatives=True)
     assert rich['body']=='\n\n'.join([*labels,'Independent header'])
     assert rich['chunking_profile']=='sections-v1' and rich['structure']['sections'][1]['heading']['start']==0
 database.close()
