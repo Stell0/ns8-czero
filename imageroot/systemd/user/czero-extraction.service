@@ -20,7 +20,7 @@ ExecStart=/usr/bin/podman run --rm --name=czero-extraction \
     --env-file=./passwords.env --env-file=./auth.env \
     --env=CZERO_EXTRACTION_UNITS --env=CZERO_EXTRACTION_WORKERS \
     --env=CZERO_EXTRACTION_DOCUMENT_WORKERS --env=CZERO_EXTRACTION_SPACE_WORKERS \
-    --env=CZERO_EXTRACTION_OCR_ENABLED --env=CZERO_EXTRACTION_OCR_LANGUAGE \
+    --env=CZERO_EXTRACTION_CACHE_ENABLED --env=CZERO_EXTRACTION_OCR_ENABLED --env=CZERO_EXTRACTION_OCR_LANGUAGE \
     --env=CZERO_EXTRACTION_MAX_QUEUED_UNITS --env=CZERO_EXTRACTION_MAX_STAGING_BYTES \
     --volume=czero-sources:/var/lib/czero/sources:z \
     --entrypoint=python ${CZERO_APP_IMAGE} -m czero_app.extraction_worker

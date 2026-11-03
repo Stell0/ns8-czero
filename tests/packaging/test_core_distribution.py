@@ -123,7 +123,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0028_local_ocr'
+        assert results[0]==results[1] and results[0][1]=='0029_extraction_cache'
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,
@@ -139,7 +139,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
         shutil.copyfile(ROOT/'tests/packaging/core_extraction_probe.py',extraction_probe)
         staged=command([str(python),'-I',str(extraction_probe)],cwd=directory,
                        env={**env,'CZERO_DATABASE_URL':target})
-        assert json.loads(staged)=={'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True}
+        assert json.loads(staged)=={'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True,'installed_current_cache':True}
         cimd_probe = directory/'core_cimd_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_cimd_probe.py', cimd_probe)
         cimd = command([str(python), '-I', str(cimd_probe)], cwd=directory,

@@ -35,6 +35,10 @@ three-passage containment comparison; no model quality improvement is claimed.
 The [M6 successor](docs/ingestion-pipeline/M6.md) adds opt-in local page OCR,
 backend/model fingerprints and synthetic scan/timeout/disable checks. Native
 fixtures now verify an OCR page alongside ordinary pages before/after restore.
+The [M7 cache successor](docs/ingestion-pipeline/M7.md) adds current-owned
+reuse without another body store. The cache/queue/formats/OCR/configuration/backup
+selection passes 110 cases, including expiry, revocation, protected-space and
+A→B→A checks. Acceptance remains sequential.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

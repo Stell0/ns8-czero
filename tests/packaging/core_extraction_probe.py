@@ -70,10 +70,15 @@ with tempfile.TemporaryDirectory() as directory:
     rich=sources.document(actor,docx['id'],include_derivatives=True)
     assert rich['body']=='\n\n'.join([*labels,'Independent header'])
     assert rich['chunking_profile']=='sections-v1' and rich['structure']['sections'][1]['heading']['start']==0
+    stream.seek(0)
+    duplicate=sources.ingest(actor,stream,title='Duplicate Word',filename='duplicate.docx',media_type=docx['media_type'])
+    later=queue.enqueue(actor,duplicate['id'],expected_generation=1)
+    assert ExtractionPool(queue).tick()['processed']==3 and queue.status(actor,later['id'])['cache_hits']==3
+    assert sources.document(actor,duplicate['id'])['body']==rich['body']
     import runpy
     from czero_core.local_ocr import preflight,extract_unit
     fixture=runpy.run_path(str(Path(__file__).with_name('ocr_original.py')))
     scanned=originals.root/'synthetic-scan.pdf'; scanned.write_bytes(fixture['scanned_original']())
     assert extract_unit(scanned,1,preflight()).evidence.text==fixture['PHRASE']
 database.close()
-print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True}))
+print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True,'installed_current_cache':True}))

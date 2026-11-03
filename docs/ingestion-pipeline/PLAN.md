@@ -358,3 +358,7 @@ indices and pending older manifests retain fixed chunks; no corpus is rewritten.
 The [M6 OCR candidate](M6.md) adds schema 0028 checksummed page provenance and
 explicit local Tesseract settings. Actual scan/disable/selective-retry/process-
 group timeout checks pass 15 cases. Full/native acceptance remains sequential.
+
+The [M7 cache candidate](M7.md), schema 0029, has 110 focused cache/queue/format/
+OCR/configuration/backup passes. Reuse adds only an ownership index/counters and
+uses existing current/staging bodies; no automatic corpus backfill or archive.
