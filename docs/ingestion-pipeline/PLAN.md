@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **approved design; M0 candidate implemented, review/CI pending**
+Status: **M0 merged and fully accepted; M1 producer candidate implemented, acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -11,9 +11,15 @@ This is a **standalone execution plan** for `ns8-czero`. The root [roadmap](../.
 M0 candidate: [assembly/manifest/lease/authorization contracts](CONTRACTS.md),
 [executed baseline and reproduction commands](BASELINE.md), and deterministic
 synthetic originals/regressions are implemented. Local evidence includes 114
-focused database/parser/HTTP/MCP cases and 1,333 fast Python cases. Runtime,
-schema, versions, dependencies, connector contracts and installed baselines are
-unchanged. Exact-source CI and milestone review remain separate; M1 has not started.
+focused database/parser/HTTP/MCP cases and 1,333 fast Python cases. M0 changed no
+runtime, schema, versions, dependencies, connector contracts or installed baselines.
+Its exact-source CI and milestone review remain separate from M1 acceptance.
+
+The subsequent [M1 candidate](M1.md) implements the opt-in PostgreSQL lease and
+private-result foundation with Core 0.37.0/schema 0024. M0's repaired source passed
+full run `41598413767` and regularly merged as `e297376938ad12fa629bb595b50a43c0320d1207`.
+M1 deliberately stages
+one whole-original unit; page fan-out and atomic publication remain M2 work.
 
 The conference talk's key lesson is **fan-out at extraction time**: partition an original document into separately queued extraction units, persist each successful unit, retry only failed units, and assemble/publish only after the complete set is verified. **Extraction units are not search chunks.** Extraction units isolate processing cost and failure; search chunks are separately derived for retrieval.
 
