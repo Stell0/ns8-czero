@@ -21,7 +21,7 @@ def test_styled_docx_structure_is_published_atomically_and_retired_with_body(sou
     stream=BytesIO(); word.save(stream)
     queue,owner,version,run=queue_version(sources,stream.getvalue(),DOCX)
     ExtractionPool(queue).tick()
-    document=sources[0].document(owner,version['id'])
+    document=sources[0].document(owner,version['id'],include_derivatives=True)
     structure=document['structure']
     assert document['chunking_profile']=='sections-v1'
     assert [document['body'][s['heading']['start']:s['heading']['end']] for s in structure['sections'][1:]]==['Required key','Start procedure']
@@ -38,12 +38,12 @@ def test_styled_docx_structure_is_published_atomically_and_retired_with_body(sou
 def test_legacy_index_stays_fixed_and_explicit_comparison_profile_is_bound(sources):
     body='# Setup\n\nSafety key.\n\n## Procedure\n\nTurn switch.\n'
     first=upload(sources,body.encode(),media_type='text/markdown'); execute(sources,'source.extract',first['id'])
-    assert sources[0].document(sources[1],first['id'])['structure'] is None
+    assert sources[0].document(sources[1],first['id'],include_derivatives=True)['structure'] is None
     version=upload(sources,(body+'Changed.\n').encode(),media_type='text/markdown')
     service,owner,_,_=sources
     queue=ExtractionQueue(service.database,service.access,service.originals,enabled=True,chunking_profile='fixed-v1')
     run=queue.enqueue(owner,version['id'],expected_generation=1)
     assert ExtractionPool(queue).tick()['processed']==1
-    assert service.document(owner,version['id'])['chunking_profile']=='fixed-v1'
+    assert service.document(owner,version['id'],include_derivatives=True)['chunking_profile']=='fixed-v1'
     with queue.database.engine.connect() as c:
         assert c.execute(text("SELECT profile->>'chunking' FROM c0_extraction_runs WHERE id=:id"),{'id':run['id']}).scalar_one()=='fixed-v1'
