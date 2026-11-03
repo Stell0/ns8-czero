@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0/M1 merged; M2 acceptance pending; M3 worker-pool successor implemented**
+Status: **M0–M2 merged; M3 worker-pool candidate implemented**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -19,14 +19,17 @@ The subsequent [M1 candidate](M1.md) implements the opt-in PostgreSQL lease and
 private-result foundation with Core 0.37.0/schema 0024. M0's repaired source passed
 full run `41598413767` and regularly merged as `e297376938ad12fa629bb595b50a43c0320d1207`.
 M1 regularly merged as `6380d38d7f76a6ad1dbb7d1c32c2713e60fdcf20` after full
-run `41605913790` and exact-source promotion verification. The [M2 candidate](M2.md)
+run `41605913790` and exact-source promotion verification. The [M2 implementation](M2.md)
 adds one unit per PDF page, failed-unit retry and complete atomic publication.
+PR58 regularly merged as `d2fc9a5fe24bb1579bb867e375f18be06f38d56b`: exact
+`cfecd8c` passes full `41616861662` and `41620456266`, including both native
+distributions, artifact grading and exact-source promotion verification.
 The default extraction path and released consumer lock remain unchanged.
 
 The [M3 successor candidate](M3.md) adds a configurable bounded native pool,
 fair claims, backpressure, aggregate timing/resource observations and explicit
-native two/four-worker plus backup/restore proof. It is developed while M2 CI
-runs, with separate databases and sequential acceptance/merges.
+native two/four-worker plus backup/restore proof. M2 is accepted; M3 keeps
+separate databases and sequential acceptance/merges.
 
 The conference talk's key lesson is **fan-out at extraction time**: partition an original document into separately queued extraction units, persist each successful unit, retry only failed units, and assemble/publish only after the complete set is verified. **Extraction units are not search chunks.** Extraction units isolate processing cost and failure; search chunks are separately derived for retrieval.
 
@@ -339,7 +342,7 @@ After M10 acceptance, consider larger PDFs/uploads, distributed multi-host worke
 
 ---
 
-**Execution:** M0 and M1 are merged; M2 acceptance is pending. The operator
+**Execution:** M0–M2 are merged; M3 acceptance is pending. The operator
 authorizes developing isolated successor candidates while prerequisite CI runs,
 with acceptance and merges kept sequential and one milestone per PR. All native
 and rollout acceptance uses disposable instances; live deployment remains separate.
