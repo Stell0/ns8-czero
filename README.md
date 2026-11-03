@@ -41,7 +41,7 @@ The [M4 implementation](docs/ingestion-pipeline/M4.md) extends selective extract
 complete publication to DOCX, Markdown and text. The [M5 implementation](docs/ingestion-pipeline/M5.md)
 derives current section metadata and exact-offset chunks on explicitly queued
 publications.
-The [M6 candidate](docs/ingestion-pipeline/M6.md) adds explicit local-only OCR
+The [M6 implementation](docs/ingestion-pipeline/M6.md) adds explicit local-only OCR
 for unsupported PDF scan pages, with bounded execution and page provenance.
 The [M7 candidate](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
 by current documents or unexpired work in the same space, with no separate body

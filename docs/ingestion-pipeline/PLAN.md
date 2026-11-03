@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M5 merged; M6 OCR acceptance pending**
+Status: **M0–M6 merged; M7 cache acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -392,3 +392,8 @@ M6 is based on that accepted main; its code-identical compatibility source passe
 The [M7 cache candidate](M7.md), schema 0029, has 110 focused cache/queue/format/
 OCR/configuration/backup passes. Reuse adds only an ownership index/counters and
 uses existing current/staging bodies; no automatic corpus backfill or archive.
+
+M6 PR63 regularly merges as `39dc9cc0d7eefa4558e683c7142f9dceca574332`
+after exact `064a7bf` passes full/native `41699410483`, independent downloaded
+artifact grading and full promotion verification. Both distributions include
+actual nine-unit OCR/resource/restore proof. M7 is based on that accepted main.
