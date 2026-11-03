@@ -38,7 +38,9 @@ M1 adds opt-in private staging; M2 adds PDF page recovery and complete publicati
 The [M3 producer candidate](docs/ingestion-pipeline/M3.md) adds a bounded native
 worker pool and resource/recovery checks, including indexed backup/restore evidence.
 The [M4 candidate](docs/ingestion-pipeline/M4.md) extends selective extraction and
-complete publication to DOCX, Markdown and text. Ordinary source imports continue
+complete publication to DOCX, Markdown and text. The [M5 candidate](docs/ingestion-pipeline/M5.md)
+derives current section metadata and exact-offset chunks on explicitly queued
+publications. Ordinary source imports continue
 through the existing extraction worker until the later rollout gates pass.
 
 ## Use C0

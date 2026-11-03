@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M3 merged; M4 acceptance pending; M4 formats implemented**
+Status: **M0–M3 merged; M4 final gate pending; M5 structure implemented**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -355,3 +355,7 @@ M3 PR59 regularly merged as `ed160592cd42f711a78dc8f861497ccc42c859cd` after
 exact head `455f7ed` passes full `41654247380`, both native distributions,
 independent downloaded native/scan artifact grading and full promotion verification.
 M4 is now based on that accepted merge, retaining the strict indexed recovery fix.
+
+The [M5 structure candidate](M5.md) adds schema 0027 current-document derivatives,
+configurable fixed/section chunks and exact-offset ancestor metadata. Legacy
+indices and pending older manifests retain fixed chunks; no corpus is rewritten.
