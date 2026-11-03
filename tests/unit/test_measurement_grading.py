@@ -3,7 +3,7 @@ from copy import deepcopy
 import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from benchmarks.ingestion import percentile,corpus,measure
+from benchmarks.ingestion import percentile,corpus,measure,source_proof
 from benchmarks.selective_context import BODY,CASES,grade
 from benchmarks.restart import validate_container,IMAGE
 import pytest
@@ -14,6 +14,15 @@ def test_frozen_measurement_refuses_an_unowned_database_before_migration(tmp_pat
         measure({},'postgresql+psycopg://fixture@127.0.0.1/live',tmp_path)
     with pytest.raises(ValueError,match='loopback'):
         measure({},'postgresql+psycopg://fixture@production.example.org/live',tmp_path)
+    with pytest.raises(ValueError,match='frozen_source_drift'):
+        measure({},'postgresql+psycopg://fixture@127.0.0.1/czero_eval_'+'0'*32,tmp_path)
+
+
+def test_matching_version_cannot_hide_installed_source_drift(tmp_path,monkeypatch):
+    import czero_core
+    fake=tmp_path/'core';fake.mkdir();(fake/'__init__.py').write_text('')
+    monkeypatch.setattr(czero_core,'__file__',str(fake/'__init__.py'))
+    with pytest.raises(ValueError,match='installed_core_source_mismatch'):source_proof()
 
 
 def test_corpus_is_frozen_and_small_sample_p95_uses_the_declared_nearest_rank():
