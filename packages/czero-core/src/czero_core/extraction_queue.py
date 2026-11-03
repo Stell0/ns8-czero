@@ -19,6 +19,7 @@ from .document_units import (DOCX,inventory_isolated as document_inventory,
     extract_unit_isolated,validate_spec,validate_fragment,locators as document_locators,assemble as assemble_document)
 from .local_ocr import preflight as ocr_preflight,validate_profile as validate_ocr,validate_provenance,extract_unit as ocr_extract
 from .structure import PROFILES,build as build_structure,section_chunks
+from .extraction_cache import ReusedUnit,owners as cache_owners,live as cache_live,output as cache_output
 from .identity import Actor, PermissionDenied, Role
 from .sources import SourceConflict, SourceNotFound
 from .spaces import SpaceBound, hold_authority
@@ -26,7 +27,7 @@ from .spaces import SpaceBound, hold_authority
 TRANSIENT = frozenset({'parser_timeout', 'resource_limit', 'parser_failed', 'lease_expired'})
 SUMMARY = ('id','space_id','version_id','processing_generation','state','error_code',
            'expected_units','revision','claimed','succeeded','failed','retried','expires_at',
-           'wait_ms','run_ms','retry_wait_ms','timeout_count')
+           'wait_ms','run_ms','retry_wait_ms','timeout_count','cache_hits','cache_misses','reused_bytes')
 
 
 def _hash(value):
@@ -147,12 +148,14 @@ class Claim:
 
 class ExtractionQueue(SpaceBound):
     def __init__(self, database, access, originals, *, enabled=False,
-                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432,chunking_profile='sections-v1',ocr_language=None):
+                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432,chunking_profile='sections-v1',ocr_language=None,cache_enabled=True):
         if type(enabled) is not bool:
             raise ValueError('invalid_extraction_flag')
         self.database, self.access, self.originals, self.enabled = database, access, originals, enabled
         if chunking_profile not in PROFILES: raise ValueError('invalid_chunking_profile')
         self.chunking_profile=chunking_profile
+        if type(cache_enabled) is not bool: raise ValueError('invalid_cache_flag')
+        self.cache_enabled=cache_enabled
         self.ocr_profile=ocr_preflight(ocr_language) if ocr_language is not None else None
         for limit in (instance_workers,document_workers,space_workers):
             if type(limit) is not int or not 1<=limit<=4: raise ValueError('invalid_worker_limit')
@@ -356,6 +359,7 @@ class ExtractionQueue(SpaceBound):
         now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
         run = c.execute(text('SELECT * FROM c0_extraction_runs WHERE id=:id AND space_id=:space FOR UPDATE'),
             {'id':claim.run_id,'space':claim.space_id}).mappings().one_or_none()
+        if run is not None and _hash(claim.profile)!=_hash(run['profile']): return None
         if replay and run is not None and run['state']=='ready':
             try:
                 if run['actor_id'] is None: raise PermissionDenied()
@@ -388,7 +392,38 @@ class ExtractionQueue(SpaceBound):
             return None
         return run,unit,now
 
-    def complete(self, claim, result,*,provenance=None):
+    @staticmethod
+    def _cache_manifest(owner):
+        try:
+            source={'id':owner['version_id'],'generation':owner['processing_generation'],
+                'content_hash':owner['original_sha256'],'size_bytes':owner['size_bytes'],'media_type':owner['media_type']}
+            profile=owner['profile']
+            digest=_hash(_manifest(source,owner['space_id'],profile))
+            return (digest==owner['manifest_sha256'] and owner['expected_units']==len(_locators(profile))
+                and owner['input_sha256']==_fingerprint(digest,profile,owner['ordinal'],owner['locator']))
+        except (ValueError,TypeError,KeyError): return False
+
+    def cached(self,claim):
+        if not self.cache_enabled: return None
+        with self.database.engine.begin() as c:
+            attempt=self._attempt(c,claim)
+            if attempt is None: return None
+            run,_,now=attempt
+            eligible=('ocr' not in claim.profile or self.ocr_profile==claim.profile['ocr'])
+            if eligible:
+                for owner in cache_owners(c,claim):
+                    if not self._cache_manifest(owner) or not cache_live(self,c,owner,now): continue
+                    try:
+                        evidence,metadata=cache_output(c,owner)
+                        digest=_result(evidence,allow_blank=claim.locator['kind']!='document')
+                        if (digest!=owner['result_sha256'] or evidence.text_hash!=owner['text_sha256']
+                            or (_hash(metadata) if metadata is not None else None)!=owner['provenance_sha256']): continue
+                        return ReusedUnit(owner['id'],digest,owner['provenance_sha256'],evidence,metadata)
+                    except (ExtractionError,ValueError,TypeError,KeyError,IndexError): continue
+            c.execute(text('UPDATE c0_extraction_runs SET cache_misses=cache_misses+1 WHERE id=:id'),{'id':run['id']})
+            return None
+
+    def complete(self, claim, result,*,provenance=None,reused=None):
         page=claim.locator.get('kind')=='page'
         fragment=claim.locator.get('kind') in ('blocks','characters')
         if page: validate_page(result,claim.ordinal)
@@ -407,6 +442,15 @@ class ExtractionQueue(SpaceBound):
             if unit['state']=='published': return unit['result_sha256']==digest
             if unit['state']=='succeeded':
                 return unit['result_sha256']==digest==_result(Extracted(unit['body'],unit['locations']),allow_blank=page or fragment)
+            if reused is not None:
+                if not isinstance(reused,ReusedUnit): raise ValueError('invalid_cache_proof')
+                owners=cache_owners(c,claim,owner_id=reused.owner_id)
+                valid=(self.cache_enabled and len(owners)==1 and self._cache_manifest(owners[0]) and cache_live(self,c,owners[0],now)
+                    and owners[0]['result_sha256']==reused.result_sha256==digest
+                    and owners[0]['provenance_sha256']==reused.provenance_sha256==metadata_hash)
+                if not valid:
+                    c.execute(text('UPDATE c0_extraction_runs SET cache_misses=cache_misses+1 WHERE id=:id'),{'id':run['id']})
+                    return False
             if (run['result_bytes']+len(result.text.encode())>2097152
                 or run['result_characters']+len(result.text)>1000000):
                 self._fail(c,run,unit,'too_large',now)
@@ -417,13 +461,15 @@ class ExtractionQueue(SpaceBound):
                 self._fail(c,run,unit,'resource_limit',now)
                 return False
             c.execute(text("""UPDATE c0_extraction_units SET state='succeeded',body=:body,locations=CAST(:locations AS jsonb),
-                result_sha256=:hash,text_sha256=:text_hash,provenance=CAST(:provenance AS jsonb),provenance_sha256=:provenance_hash,lease_deadline=NULL,finished_at=:now WHERE id=:id"""),
-                {'id':unit['id'],'body':result.text,'locations':json.dumps(result.locations),'hash':digest,'text_hash':result.text_hash,'now':now,'provenance':json.dumps(provenance) if provenance is not None else None,'provenance_hash':metadata_hash})
+                reused=:reused,result_sha256=:hash,text_sha256=:text_hash,provenance=CAST(:provenance AS jsonb),provenance_sha256=:provenance_hash,lease_deadline=NULL,finished_at=:now WHERE id=:id"""),
+                {'id':unit['id'],'body':result.text,'locations':json.dumps(result.locations),'hash':digest,'text_hash':result.text_hash,'now':now,'provenance':json.dumps(provenance) if provenance is not None else None,'provenance_hash':metadata_hash,'reused':reused is not None})
             c.execute(text("""UPDATE c0_extraction_runs SET succeeded=succeeded+1,revision=revision+1,error_code=NULL,
                 result_bytes=result_bytes+:bytes,result_characters=result_characters+:characters,run_ms=run_ms+:duration,
+                cache_hits=cache_hits+:hit,reused_bytes=reused_bytes+:reused,
                 state=CASE WHEN succeeded+1=expected_units THEN 'assembling' ELSE 'extracting' END WHERE id=:id"""),
                 {'id':run['id'],'bytes':len(result.text.encode()),'characters':len(result.text),
-                 'duration':max(0,min(86400000,int((now-unit['started_at']).total_seconds()*1000)))})
+                 'duration':max(0,min(86400000,int((now-unit['started_at']).total_seconds()*1000))),
+                 'hit':int(reused is not None),'reused':len(result.text.encode()) if reused is not None else 0})
             return True
 
     @staticmethod
@@ -626,6 +672,12 @@ class ExtractionWorker:
             idle=0
             try:
                 path = self.queue.originals.check(claim.original)
+                reused=self.queue.cached(claim)
+                if reused is not None:
+                    self.queue.originals.check(claim.original)
+                    if self.queue.complete(claim,reused.evidence,provenance=reused.provenance,reused=reused):
+                        processed+=1
+                        continue
                 provenance=None
                 if claim.locator['kind']=='page':
                     try: result=extract_page_isolated(path,claim.ordinal)

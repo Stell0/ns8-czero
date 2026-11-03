@@ -223,6 +223,9 @@
                         "ita",
                         "eng+ita"
                     ]
+                },
+                "cache_enabled": {
+                    "type": "boolean"
                 }
             }
         }

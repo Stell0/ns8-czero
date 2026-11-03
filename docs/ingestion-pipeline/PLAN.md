@@ -388,3 +388,7 @@ independent artifact grading and full promotion verification. Superseded PR61
 remains closed with its original source/CI and failed measurement evidence.
 M6 is based on that accepted main; its code-identical compatibility source passes
 2,700 complete local cases and 32 focused checks. Defaults/consumer lock stay.
+
+The [M7 cache candidate](M7.md), schema 0029, has 110 focused cache/queue/format/
+OCR/configuration/backup passes. Reuse adds only an ownership index/counters and
+uses existing current/staging bodies; no automatic corpus backfill or archive.

@@ -48,6 +48,11 @@ M5 repaired source `b2c87b5` passes full/native `41687775493`, independent
 artifact grading and promotion verification, then regularly merges as `b0db3d2`.
 The original PR61 remains frozen and superseded. M6 retains the repair and passes
 2,700 full local cases plus 32 focused controls before its own native acceptance.
+
+The [M7 cache successor](docs/ingestion-pipeline/M7.md) adds current-owned
+reuse without another body store. The cache/queue/formats/OCR/configuration/backup
+selection passes 110 cases, including expiry, revocation, protected-space and
+A→B→A checks. Acceptance remains sequential.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

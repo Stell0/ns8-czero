@@ -115,7 +115,7 @@ def test_schema_0015_upgrade_preserves_current_content_and_protected_authority(t
                     if table not in ('c0_wiki_revisions','c0_knowledge_receipts'):assert after[table]==before[table],table
                 assert len(after['c0_wiki_revisions'])==1
                 assert 'Original caf' not in ''.join(after['c0_knowledge_receipts'])
-                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0028_local_ocr'
+                assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0029_extraction_cache'
                 assert connection.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one() == shared
             knowledge=KnowledgeService(database,access).in_space(private['id'])
             sources=SourceService(database,access,default_registry(),originals).in_space(private['id'])
