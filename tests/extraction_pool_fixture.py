@@ -16,6 +16,7 @@ from czero_core.identity import Actor,Role
 from czero_core.jobs import default_registry
 from czero_core.sources import OriginalStore,SourceService,register_source_handlers
 from czero_core.spaces import SpaceService
+from czero_core.worker import WORKER_LOCK
 
 
 def main(stage,workers):
@@ -55,9 +56,12 @@ def main(stage,workers):
         stream=BytesIO(); writer.write(stream); stream.seek(0)
         registry=default_registry(); register_source_handlers(registry,database,originals)
         sources=SourceService(database,access,registry,originals).in_space(space['id'])
-        version=sources.ingest(actor,stream,title='Disposable pool original',filename='pool.pdf',media_type='application/pdf',retain_original=True)
         queue=ExtractionQueue(database,access,originals,enabled=True,ocr_language='eng').in_space(space['id'])
-        run=queue.enqueue(actor,version['id'],expected_generation=1)
+        # Keep the ordinary timer from claiming this synthetic native handoff.
+        with database.engine.begin() as guard:
+            guard.execute(text('SELECT pg_advisory_xact_lock(:key)'),{'key':WORKER_LOCK})
+            version=sources.ingest(actor,stream,title='Disposable pool original',filename='pool.pdf',media_type='application/pdf',retain_original=True)
+            run=queue.enqueue(actor,version['id'],expected_generation=1)
         value={'space':str(space['id']),'version':str(version['id']),'run':str(run['id'])}
         descriptor=os.open(saved,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
         with os.fdopen(descriptor,'w') as out: json.dump(value,out)
@@ -83,10 +87,12 @@ def main(stage,workers):
             before=sources.versions(actor,sources.citation(actor,chunks[0]['id'])['source_id'])[0]
             original=sources.originals.check(before).read_bytes()
             source=sources.get(actor,before['source_id'])
-            replacement=sources.reindex(actor,before['source_id'],expected_revision=source['revision'],idempotency_key='native-explicit-reindex-'+str(workers))
             queue=ExtractionQueue(database,access,originals,enabled=True,ocr_language='eng',instance_workers=workers,
                 document_workers=workers,space_workers=workers).in_space(value['space'])
-            later=queue.enqueue(actor,replacement['id'],expected_generation=1)
+            with database.engine.begin() as guard:
+                guard.execute(text('SELECT pg_advisory_xact_lock(:key)'),{'key':WORKER_LOCK})
+                replacement=sources.reindex(actor,before['source_id'],expected_revision=source['revision'],idempotency_key='native-explicit-reindex-'+str(workers))
+                later=queue.enqueue(actor,replacement['id'],expected_generation=1)
             from czero_core.extraction_queue import ExtractionPool
             assert ExtractionPool(queue,workers=workers).tick()['processed']==9
             status=queue.status(actor,later['id'])

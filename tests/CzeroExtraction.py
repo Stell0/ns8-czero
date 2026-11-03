@@ -18,20 +18,31 @@ class CzeroExtraction:
         try:
             ssh=builtin.get_library_instance('SSHLibrary')
             output,error,code=ssh.execute_command('api-cli run module/'+module_id+'/get-configuration',return_rc=True,return_stderr=True)
-            assert code==0 and json.loads(output)['host'].endswith('.test')
-            # Use the exact fixed fixtures already copied for pool acceptance.
-            for workers in (2,4):
-                command='runagent -m '+module_id+' podman exec -i --env=CZERO_DISPOSABLE_TEST=1 czero python - reindex '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'
-                output,error,code=ssh.execute_command(command,return_rc=True,return_stderr=True,timeout='180 seconds')
-                assert code==0,operation_error('reindex',workers,error)
-                proof=json.loads(output)
-                validate_reindex(proof)
-                assert proof['workers']==workers
-                level=builtin.set_log_level('INFO')
-                try:
-                    marker='C0 explicit reindex: '+json.dumps(proof,sort_keys=True)
-                    builtin.log(marker);builtin.log_to_console(marker)
-                finally:builtin.set_log_level(level)
+            assert code==0
+            config=json.loads(output)
+            assert config['host'].endswith('.test') and config['extraction']['enabled'] is True
+            timer='runagent -m '+module_id+' systemctl --user '
+            output,error,code=ssh.execute_command(timer+'is-active czero-extraction.timer',return_rc=True,return_stderr=True)
+            assert code==0 and output.strip()=='active','Active disposable extraction timer required'
+            try:
+                # This fixed manual pool must not race the native timer's pool.
+                output,error,code=ssh.execute_command(timer+'stop czero-extraction.timer czero-extraction.service',return_rc=True,return_stderr=True,timeout='180 seconds')
+                assert code==0,operation_error('configure',None,error)
+                for workers in (2,4):
+                    command='runagent -m '+module_id+' podman exec -i --env=CZERO_DISPOSABLE_TEST=1 czero python - reindex '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'
+                    output,error,code=ssh.execute_command(command,return_rc=True,return_stderr=True,timeout='180 seconds')
+                    assert code==0,operation_error('reindex',workers,error)
+                    proof=json.loads(output)
+                    validate_reindex(proof)
+                    assert proof['workers']==workers
+                    level=builtin.set_log_level('INFO')
+                    try:
+                        marker='C0 explicit reindex: '+json.dumps(proof,sort_keys=True)
+                        builtin.log(marker);builtin.log_to_console(marker)
+                    finally:builtin.set_log_level(level)
+            finally:
+                output,error,code=ssh.execute_command(timer+'start czero-extraction.timer',return_rc=True,return_stderr=True,timeout='180 seconds')
+                assert code==0,operation_error('configure',None,error)
         finally:builtin.set_log_level(previous)
 
     @keyword
@@ -53,10 +64,10 @@ class CzeroExtraction:
             for workers in (2,4):
                 measurements={key:None for key in ('memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds')}
                 if stage=='seed':
-                    assert json.loads(run(command+'seed '+str(workers)+' < /tmp/c0-combined-extraction-pool.py','seed',workers))['units']==9
                     data={key:config[key] for key in ('host','lets_encrypt','user_domain','idp','owner')}
                     data['extraction']={'enabled':True,'workers':workers,'document_workers':workers,'space_workers':workers,'ocr_enabled':True,'ocr_language':'eng'}
                     run('api-cli run module/'+module_id+'/configure-module --data '+shlex.quote(json.dumps(data)),'configure',workers)
+                    assert json.loads(run(command+'seed '+str(workers)+' < /tmp/c0-combined-extraction-pool.py','seed',workers))['units']==9
                     run('runagent -m '+module_id+' systemctl --user start czero-extraction.service','drain',workers)
                     log=run('runagent -m '+module_id+' journalctl --user -u czero-extraction.service -n 100 --no-pager -o cat','journal',workers)
                     assert not any(word in log for word in ('Synthetic pool page','SCANNED SAFETY','lease_token','CZERO_DATABASE_URL','password='))

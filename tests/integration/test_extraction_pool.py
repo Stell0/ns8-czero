@@ -174,12 +174,41 @@ def test_native_fixture_exercises_real_core_before_systemd_acceptance(spaces,sou
     monkeypatch.setenv('CZERO_OIDC_ISSUER',service.access.issuer)
     monkeypatch.setenv('CZERO_OWNER_LDAP_UUID',str(service.access.owner_account_key))
     monkeypatch.setattr(module,'OriginalStore',lambda _:service.originals)
+    actual_ingest=module.SourceService.ingest
+    actual_reindex=module.SourceService.reindex
+    observations=[]
+    def compete(instance,version):
+        from czero_core.worker import Worker
+        if version['source_id'] not in created: created.append(version['source_id'])
+        with instance.database.engine.connect() as c:
+            space=c.execute(text('SELECT space_id FROM c0_source_versions WHERE id=:id'),{'id':version['id']}).scalar_one()
+        if str(space) not in spaces[2]: spaces[2].append(str(space))
+        observations.append(Worker(instance.database,instance.jobs.registry).tick(max_jobs=1))
+        assert observations[-1]==0,'Ordinary worker claimed the native fixture before handoff'
+        return version
+    def ingest_with_competing_worker(instance,*args,**kwargs):
+        return compete(instance,actual_ingest(instance,*args,**kwargs))
+    def reindex_with_competing_worker(instance,*args,**kwargs):
+        return compete(instance,actual_reindex(instance,*args,**kwargs))
+    monkeypatch.setattr(module.SourceService,'ingest',ingest_with_competing_worker)
+    monkeypatch.setattr(module.SourceService,'reindex',reindex_with_competing_worker)
     module.main('seed',workers)
+    assert observations==[0]
+    from czero_core.worker import Worker
+    from uuid import uuid4
+    with service.database.engine.begin() as c:
+        health=service.jobs._enqueue(c,'health',{},'native-handoff-'+uuid4().hex)
+    try:
+        assert Worker(service.database,service.jobs.registry).tick(max_jobs=1)==1
+        with service.database.engine.connect() as c:
+            assert c.execute(text('SELECT state FROM c0_jobs WHERE id=:id'),{'id':health['id']}).scalar_one()=='succeeded'
+    finally:
+        with service.database.engine.begin() as c:c.execute(text('DELETE FROM c0_jobs WHERE id=:id'),{'id':health['id']})
     value=json.loads((service.originals.root/('.c0-extraction-acceptance-'+str(workers)+'.json')).read_text())
-    spaces[2].append(value['space'])
+    if value['space'] not in spaces[2]: spaces[2].append(value['space'])
     with service.database.engine.connect() as c:
         source=c.execute(text('SELECT source_id FROM c0_source_versions WHERE id=:id'),{'id':UUID(value['version'])}).scalar_one()
-    created.append(source)
+    if source not in created: created.append(source)
     queue=ExtractionQueue(service.database,service.access,service.originals,enabled=True,
         instance_workers=workers,document_workers=workers,space_workers=workers,ocr_language='eng')
     assert ExtractionPool(queue,workers=workers).tick()['processed']==9
@@ -189,3 +218,4 @@ def test_native_fixture_exercises_real_core_before_systemd_acceptance(spaces,sou
         with service.database.engine.begin() as c:
             c.execute(text('DELETE FROM c0_knowledge_receipts WHERE space_id=:space AND actor_id=:actor AND key=:key'),
                 {'space':UUID(value['space']),'actor':owner.user_id,'key':'native-explicit-reindex-'+str(workers)})
+    assert observations==[0,0]
