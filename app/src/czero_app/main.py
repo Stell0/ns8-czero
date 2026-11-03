@@ -118,6 +118,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     registry = build_registry(database, originals, settings=retrieval_settings)
     install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
     sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
+    from czero_app.extraction_status import install as install_extraction_status
+    install_extraction_status(instance_app,auth,sources,read_context,write_context)
     knowledge = install_knowledge_routes(instance_app, database, auth, read_context, write_context)
     install_retrieval_routes(instance_app, database, auth, read_context, settings=retrieval_settings)
     install_annotation_routes(instance_app, database, auth, read_context, write_context)
@@ -219,6 +221,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get('/admin.js', include_in_schema=False)
     async def admin_script() -> FileResponse:
         return FileResponse(static_dir / 'admin.js', media_type='text/javascript')
+
+    @instance_app.get('/extraction-work.js', include_in_schema=False)
+    async def extraction_work_script() -> FileResponse:
+        return FileResponse(static_dir / 'extraction-work.js', media_type='text/javascript')
 
     @instance_app.get("/objects", include_in_schema=False)
     async def objects_page() -> FileResponse:

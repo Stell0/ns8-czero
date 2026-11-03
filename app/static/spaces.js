@@ -20,7 +20,7 @@
     if(!supplied)return value;
     const url=new URL(value,document.baseURI || window.location.href), base=new URL('./api/v1/',document.baseURI || window.location.href);
     const local=url.pathname.slice(base.pathname.length);
-    if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:project|me|wiki|sources|source-documents|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
+    if(url.origin===base.origin && url.pathname.startsWith(base.pathname) && /^(?:project|me|wiki|sources|extraction-runs|source-documents|source-versions|documents|chunks|entities|claims|knowledge|objects|object-relations|object-events|references)(?:\/|$)/.test(local))url.searchParams.set('space_id',identifier);
     return url.pathname+url.search+url.hash;
   }
   function pageURL(value) {

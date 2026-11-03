@@ -415,3 +415,9 @@ assertion, despite passing all 2,732 local cases and Debian. Its isolated repair
 adds stable workflow IDs, exact capability-bound old/new inventories and Reader
 selective-context presentation. Four real role/space browser controls pass;
 full/native and independent downloaded-artifact acceptance must repeat.
+
+The [M9 progress/recovery candidate](M9.md), schema 0030, adds selected-space
+reader progress, Admin-only paginated unit diagnostics, revision-bound retry/
+cancel, full restart and explicit retained-original reindex. Its original native
+handoff remains bound to its submitting account. Ordinary public imports and
+the released Core lock remain unchanged; no automatic corpus work is introduced.

@@ -682,3 +682,8 @@ older interactive waiver cannot satisfy them. Keep signed test SSO, actual HTTP,
 PostgreSQL and the standalone extraction worker, with sanitized failures and
 owned-fixture cleanup. Final app consumer/native evidence belongs in its PR;
 this is neither a production update nor a stable NS8 module release.
+
+M9 extraction progress is metadata-only and selected-space. Keep Admin unit
+diagnostics separate from ordinary readers. Retry retains original run authority;
+it never promotes a browser or OAuth grant to native authority. Explicit reindex
+requires retained original bytes and publishes fresh exact evidence atomically.
