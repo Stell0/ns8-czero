@@ -10,8 +10,8 @@ evidence=runpy.run_path(str(ROOT/'tests/extraction_pool_evidence.py'))
 
 def record(stage,workers):
     seed=stage=='seed'
-    return {'stage':stage,'workers':workers,'units':8,'body_hash_verified':True,'staging_cleared':True,
-        'native_limits_verified':seed,'backup_readback':not seed,
+    return {'stage':stage,'workers':workers,'units':9,'body_hash_verified':True,'staging_cleared':True,
+        'native_limits_verified':seed,'backup_readback':not seed,'ocr_pages':1,'ocr_text_verified':True,
         'memory_peak_bytes':100000000 if seed else None,'parser_peak_rss_bytes':40000000 if seed else None,
         'memory_limit_bytes':workers*1073741824 if seed else None,
         'swap_limit_bytes':workers*1073741824 if seed else None,'pids_limit':256 if seed else None,

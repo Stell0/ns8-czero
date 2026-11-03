@@ -41,7 +41,10 @@ ENV PATH="/opt/czero/.venv/bin:${PATH}" \
 
 # Dependencies are already installed by the builder; keep package installers
 # and build tooling out of the runtime filesystem.
-RUN python -m pip uninstall --yes pip setuptools \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-ita fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall --yes pip setuptools \
     && useradd --system --uid 10001 --create-home czero \
     && install -d -o 10001 -g 10001 /var/lib/czero/sources
 WORKDIR /opt/czero

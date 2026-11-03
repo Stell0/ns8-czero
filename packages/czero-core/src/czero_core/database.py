@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0027_document_structure"
+SCHEMA_REVISION = "0028_local_ocr"
 
 
 class Database:

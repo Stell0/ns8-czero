@@ -35,7 +35,13 @@ def probe():
         source = root / 'document.pdf'
         writer.write(source)
         assert extract_isolated(source, 'application/pdf').text == 'PDF evidence'
-    print('Four isolated packaged parsers preserve expected text')
+    for name in ('tesseract-ocr','tesseract-ocr-eng','tesseract-ocr-ita','poppler-utils'):
+        assert (Path('/usr/share/doc')/name/'copyright').is_file()
+    from czero_core.local_ocr import preflight,extract_unit
+    with TemporaryDirectory() as directory:
+        scanned=Path(directory)/'scan.pdf'; scanned.write_bytes(scanned_original())
+        assert extract_unit(scanned,1,preflight()).evidence.text==PHRASE
+    print('Four isolated packaged parsers and optional local OCR preserve expected text')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M4 merged; M5 compatibility successor under acceptance**
+Status: **M0–M5 merged; M6 OCR acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -26,10 +26,11 @@ PR58 regularly merged as `d2fc9a5fe24bb1579bb867e375f18be06f38d56b`: exact
 distributions, artifact grading and exact-source promotion verification.
 The default extraction path and released consumer lock remain unchanged.
 
-The [M3 successor candidate](M3.md) adds a configurable bounded native pool,
+The [accepted M3 implementation](M3.md) adds a configurable bounded native pool,
 fair claims, backpressure, aggregate timing/resource observations and explicit
-native two/four-worker plus backup/restore proof. M2 is accepted; M3 keeps
-separate databases and sequential acceptance/merges.
+native two/four-worker plus backup/restore proof. M3 PR59 regularly merged as `ed160592` after full `41654247380`,
+independent native/artifact grading and exact-source verification.
+Successors keep separate databases and sequential acceptance/merges.
 
 The conference talk's key lesson is **fan-out at extraction time**: partition an original document into separately queued extraction units, persist each successful unit, retry only failed units, and assemble/publish only after the complete set is verified. **Extraction units are not search chunks.** Extraction units isolate processing cost and failure; search chunks are separately derived for retrieval.
 
@@ -370,3 +371,20 @@ legacy-compatible Markdown body. The M5 successor preserves complete text and
 uses explicitly recorded fixed chunks when only structure exceeds its bounds.
 Original source `9ec57bf`, full `41680331420` and failed measurements stay frozen.
 No prior candidate is accepted by substituting successor evidence.
+
+The [M6 OCR candidate](M6.md) adds schema 0028 checksummed page provenance and
+explicit local Tesseract settings. Actual scan/disable/selective-retry/process-
+group timeout checks pass 15 cases. Full/native acceptance remains sequential.
+
+The [M6 OCR candidate](M6.md) handles explicitly enabled unsupported scan pages
+with local bounded rendering/Tesseract, frozen engine/model provenance and no
+remote provider. Final original source `c6276e4` passes 2,697 complete local
+cases without database skips; the accepted-base successor passes 16 focused
+OCR/migration cases. M5 and M6 retain separate sequential native acceptance.
+
+M5 PR62 regularly merges as `b0db3d23e77aabee8911ae7426f2d2790f01c3bd`
+after exact `b2c87b5` passes 2,685 complete local cases, full/native `41687775493`,
+independent artifact grading and full promotion verification. Superseded PR61
+remains closed with its original source/CI and failed measurement evidence.
+M6 is based on that accepted main; its code-identical compatibility source passes
+2,700 complete local cases and 32 focused checks. Defaults/consumer lock stay.

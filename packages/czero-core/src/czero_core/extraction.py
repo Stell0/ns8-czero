@@ -21,7 +21,7 @@ MEDIA_TYPES={'text/plain','text/markdown','application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
 ERRORS={'unsupported_format','too_large','invalid_text','invalid_pdf','invalid_docx',
     'encrypted_pdf','no_text','unsupported_scan','archive_limit','unsupported_xml',
-    'resource_limit','parser_timeout','parser_failed','invalid_file','unsupported_docx'}
+    'resource_limit','parser_timeout','parser_failed','invalid_file','unsupported_docx','ocr_unavailable'}
 
 
 class ExtractionError(ValueError):

@@ -24,23 +24,25 @@ class CzeroExtraction:
             config=json.loads(run('api-cli run module/'+module_id+'/get-configuration'))
             assert config['host'].endswith('.test'),'Disposable native hostname required'
             ssh.put_file(str(Path(__file__).with_name('extraction_pool_fixture.py')),'/tmp/c0-extraction-pool.py',mode='0644')
+            ssh.put_file(str(Path(__file__).parent/'integration/ocr_original.py'),'/tmp/c0-ocr-original.py',mode='0644')
+            run('cat /tmp/c0-ocr-original.py /tmp/c0-extraction-pool.py > /tmp/c0-combined-extraction-pool.py')
             command='runagent -m '+module_id+' podman exec -i --env=CZERO_DISPOSABLE_TEST=1 czero python - '
             for workers in (2,4):
                 measurements={key:None for key in ('memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds')}
                 if stage=='seed':
-                    assert json.loads(run(command+'seed '+str(workers)+' < /tmp/c0-extraction-pool.py'))['units']==8
+                    assert json.loads(run(command+'seed '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'))['units']==9
                     data={key:config[key] for key in ('host','lets_encrypt','user_domain','idp','owner')}
-                    data['extraction']={'enabled':True,'workers':workers,'document_workers':workers,'space_workers':workers}
+                    data['extraction']={'enabled':True,'workers':workers,'document_workers':workers,'space_workers':workers,'ocr_enabled':True,'ocr_language':'eng'}
                     run('api-cli run module/'+module_id+'/configure-module --data '+shlex.quote(json.dumps(data)))
                     run('runagent -m '+module_id+' systemctl --user start czero-extraction.service')
                     log=run('runagent -m '+module_id+' journalctl --user -u czero-extraction.service -n 100 --no-pager -o cat')
-                    assert not any(word in log for word in ('Synthetic pool page','lease_token','CZERO_DATABASE_URL','password='))
+                    assert not any(word in log for word in ('Synthetic pool page','SCANNED SAFETY','lease_token','CZERO_DATABASE_URL','password='))
                     reports=[]
                     for line in log.splitlines():
                         if line.startswith('{'):
                             try: reports.append(json.loads(line))
                             except ValueError: pass
-                    accepted=[value for value in reports if value.get('processed')==8 and value.get('workers')==workers]
+                    accepted=[value for value in reports if value.get('processed')==9 and value.get('workers')==workers]
                     assert accepted,'Actual native parallel worker report required'
                     report=accepted[-1]; memory=workers*1073741824
                     assert report['cgroup_limit_bytes']==memory and report['cgroup_swap_limit_bytes']==memory
@@ -52,9 +54,10 @@ class CzeroExtraction:
                         'duration_seconds':report['seconds']}
                 else:
                     assert config['extraction']['enabled'] and config['extraction']['workers']==4
-                assert json.loads(run(command+'verify '+str(workers)+' < /tmp/c0-extraction-pool.py'))=={'stage':'verify','workers':workers,'units':8,'verified':True}
-                proof={'stage':stage,'workers':workers,'units':8,'body_hash_verified':True,'staging_cleared':True,
-                    'native_limits_verified':stage=='seed','backup_readback':stage=='verify',**measurements}
+                    assert config['extraction']['ocr_enabled'] and config['extraction']['ocr_language']=='eng'
+                assert json.loads(run(command+'verify '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'))=={'stage':'verify','workers':workers,'units':9,'verified':True}
+                proof={'stage':stage,'workers':workers,'units':9,'body_hash_verified':True,'staging_cleared':True,
+                    'ocr_pages':1,'ocr_text_verified':True,'native_limits_verified':stage=='seed','backup_readback':stage=='verify',**measurements}
                 validate_measurement(proof)
                 hidden=builtin.set_log_level('INFO')
                 try:
