@@ -36,6 +36,8 @@ with tempfile.TemporaryDirectory() as directory:
         assert connection.execute(text('SELECT body FROM c0_extraction_units WHERE run_id=:id'),{'id':run['id']}).scalar_one()=='Independent unit evidence'
         assert connection.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'),{'id':version['id']}).scalar_one()==0
     assert queue.publish(run['id']) and sources.document(actor,version['id'])['body']=='Independent unit evidence'
+    assert queue.progress(actor,version['source_id'])['run']['completed']==1
+    assert queue.units(actor,run['id'])['units'][0]['state']=='published'
     sources.delete(actor,version['source_id'],expected_revision=1)
     assert queue.status(actor,run['id'])['state']=='superseded'
     from pypdf import PdfWriter
@@ -57,6 +59,16 @@ with tempfile.TemporaryDirectory() as directory:
     assert sources.citation(actor,sources.chunks(actor,document['id'])[0]['id'])['body']==document['body']
     with database.engine.connect() as connection:
         assert connection.execute(text('SELECT body FROM c0_extraction_units WHERE run_id=:id'),{'id':run['id']}).scalar_one() is None
+    old_chunk=sources.chunks(actor,document['id'])[0]['id']
+    replacement=sources.reindex(actor,pdf['source_id'],expected_revision=1,idempotency_key='independent-reindex')
+    replacement_run=queue.enqueue(actor,replacement['id'],expected_generation=1)
+    assert ExtractionPool(queue).tick()['processed']==1
+    assert queue.progress(actor,pdf['source_id'])['run']['completed']==1
+    assert queue.status(actor,replacement_run['id'])['state']=='ready'
+    from czero_core.current_content import ContentSuperseded
+    try: sources.citation(actor,old_chunk)
+    except ContentSuperseded: pass
+    else: raise AssertionError('Explicit reindex retained expired exact evidence')
     from docx import Document
     word=Document(); labels=['Independent block '+str(index) for index in range(70)]
     for label in labels: word.add_paragraph(label)
@@ -87,4 +99,4 @@ with tempfile.TemporaryDirectory() as directory:
     scanned=originals.root/'synthetic-scan.pdf'; scanned.write_bytes(fixture['scanned_original']())
     assert extract_unit(scanned,1,preflight()).evidence.text==fixture['PHRASE']
 database.close()
-print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True,'installed_current_cache':True,'installed_selective_context':True}))
+print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True,'installed_local_ocr':True,'installed_current_cache':True,'installed_selective_context':True,'installed_progress_reindex':True}))

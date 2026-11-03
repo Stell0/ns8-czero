@@ -119,3 +119,20 @@ Replies always say `complete_document=false`, list oversized omissions and keep
 unresolved references explicit. Whole-document readers remain unchanged. Legacy
 in-memory structural derivation retains the 2 MiB/1M-character extracted-body
 ceiling; larger multipart originals retain their existing complete reader.
+
+## Extraction progress and recovery (producer candidate)
+
+When installed Core exposes these capabilities, browser REST provides
+`GET /sources/{source_id}/extraction` for selected-space Reader progress and
+`GET /extraction-runs`, `GET /extraction-runs/{run_id}/units` for Admin diagnostics.
+Lists accept limit 1–100 and offset 0–10000. Results contain metadata, never unit
+bodies or leases. The usual API base and explicit `space_id` apply.
+
+Editor writes use `POST /extraction-runs/{run_id}/retry` with expected_revision
+and idempotency_key, or `/cancel` with expected_revision. Full restart retains
+the existing `/source-versions/{version_id}/retry` expected_generation contract.
+Explicit `POST /sources/{source_id}/reindex` requires expected_revision and
+idempotency_key plus a retained original; successful full publication expires
+previous exact citations. Managed source-sync publications use their own workflow.
+Cookie writes require current CSRF. No MCP tool, new scope, public durable handoff,
+background grant promotion or automatic reindex is added.

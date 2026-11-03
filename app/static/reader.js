@@ -16,7 +16,7 @@
     C.stopMarkdown();logical=null;
     ++epoch;++selection;++versionSequence;profile=null;article=null;source=null;pages.clear();versions=[];evidence.clear();clearTimeout(pollTimer);
     if($('reader-root'))$('reader-root').hidden=true;
-    for(const id of ['tree-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','article-task','reader-document','reader-document-toc','reader-provenance','reader-document-version','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','guide-rules','guide-workflows','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-download','reader-source-notice'])if($(id))$(id).replaceChildren();
+    for(const id of ['tree-status','facts-status','library-status','reader-tree','reader-toc','reader-content','reader-facts','reader-evidence','reader-related','article-task','reader-document','reader-document-toc','reader-provenance','reader-document-version','reader-excerpt','reader-source-metadata','home-recent','home-sections','reader-sources','guide-tasks','guide-rules','guide-workflows','reader-breadcrumbs','reader-technical','reader-updated','reader-notice','reader-source-title','reader-source-description','reader-download','reader-source-notice','reader-extraction-status'])if($(id))$(id).replaceChildren();
     if($('page-title'))$('page-title').textContent={index:'A place to find what we know.',wiki:'Knowledge',sources:'Sources',agents:'Use C0 with ChatGPT'}[kind];
     for(const id of ['reader-export','reader-json'])if($(id)){$(id).removeAttribute('href');$(id).hidden=true;}
     if($('article-update-task'))$('article-update-task').hidden=true;
@@ -211,12 +211,33 @@
       $('reader-excerpt').focus();$('reader-excerpt').scrollIntoView?.({block:'start'});
     }
   }
+  async function extractionProgress(doc,captured,request) {
+    const target=$('reader-extraction-status');
+    if(!target || doc.multipart)return;
+    try {
+      const progress=await read('sources/'+doc.id+'/extraction');
+      if(captured!==selection || request!==versionSequence)return;
+      target.hidden=false;target.replaceChildren();
+      const run=progress.run;
+      const labels={queued:'Queued',processing:'Processing',retrying:'Retrying',failed:'Failed',ready:'Ready',cancelled:'Cancelled'};
+      target.append(node('span','Extraction: '+(labels[progress.state] || 'Unavailable')+(run?' · '+run.completed+' of '+run.expected_units+' units complete':'')+'.'));
+      if(progress.error_code==='staging_expired')target.append(node('span',' Saved extraction results expired. Ask an Editor to run a full extraction again.'));
+      if(progress.current_available && !['ready','cancelled'].includes(progress.state))target.append(node('span',' The previous complete document remains available.'));
+      if(profile?.role==='admin')target.append(link('Inspect extraction','./admin/work'+(window.C0Space?.identifier?'?space_id='+window.C0Space.identifier:'')));
+      if(['queued','processing','retrying'].includes(progress.state))pollTimer=setTimeout(()=>{
+        if(captured===selection && request===versionSequence)extractionProgress(doc,captured,request);
+      },3000);
+      else if(progress.state==='ready' && (doc.state!=='ready' || !doc.parts.some(part=>part.version_id===progress.version_id)))await loadLogical(doc.id,null,null);
+    } catch (_) {
+      if(captured===selection && request===versionSequence){target.hidden=true;target.replaceChildren();}
+    }
+  }
   async function loadLogical(id,revision,chunk) {
     if(!C.uuid(id) || (revision && !C.uuid(revision)) || (chunk && !C.uuid(chunk))){status('This document link is invalid.');return;}
     const captured=++selection,request=++versionSequence;C.stopMarkdown();clearTimeout(pollTimer);logical=null;source=null;versions=[];
-    for(const key of ['reader-document','reader-document-toc','reader-excerpt','reader-download','reader-provenance','reader-source-metadata','reader-document-version','reader-source-notice','reader-source-description'])$(key).replaceChildren();
+    for(const key of ['reader-document','reader-document-toc','reader-excerpt','reader-download','reader-provenance','reader-source-metadata','reader-document-version','reader-source-notice','reader-source-description','reader-extraction-status'])$(key).replaceChildren();
     $('reader-document-toc-panel').hidden=true;$('reader-excerpt').hidden=true;$('reader-source-details').hidden=true;$('reader-source-title').textContent='Loading source…';status('Loading document…');
-    try{const doc=await read('source-documents/'+id+(revision?'?revision_id='+revision:''));if(captured!==selection || request!==versionSequence)return;await displayLogical(doc,chunk,captured,request);}
+    try{const doc=await read('source-documents/'+id+(revision?'?revision_id='+revision:''));if(captured!==selection || request!==versionSequence)return;await displayLogical(doc,chunk,captured,request);if(!revision)extractionProgress(doc,captured,request);}
     catch(error){if(captured===selection && request===versionSequence){$('reader-document').replaceChildren();$('reader-document-toc').replaceChildren();$('reader-document-toc-panel').hidden=true;$('reader-source-title').textContent='Source unavailable';$('reader-source-notice').textContent='The complete document could not be displayed. Try again.';status(error.message);}}
   }
   async function guide() {

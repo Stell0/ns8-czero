@@ -215,7 +215,7 @@ class SourceService(SpaceBound):
                       idempotency_key, execute, conflict=SourceConflict)
 
     def _ingest(self, connection, stream, *, title, filename, media_type,
-                retain_original, encoded, source_id, expected_revision):
+                retain_original, encoded, source_id, expected_revision, force_reindex=False):
         """Trusted writer; callers own validation, authorization and transaction."""
         from .current_content import content_lock,retire_versions
         content_lock(connection)
@@ -250,7 +250,7 @@ class SourceService(SpaceBound):
                 raise SourceConflict()
         existing = connection.execute(text('SELECT * FROM c0_source_versions WHERE source_id=:source AND content_hash=:hash ORDER BY number DESC LIMIT 1'),
             {'source': source_id, 'hash': digest}).mappings().one_or_none()
-        if existing:
+        if existing and not force_reindex:
             self.originals.remove(version_id)
             connection.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=:id'),{'id':version_id})
             if existing['media_type'] != media_type or existing['retain_original'] != retain_original:
@@ -271,10 +271,10 @@ class SourceService(SpaceBound):
         job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(version_id)},
             'source:' + str(version_id) + ':extract:1', space_id=self._space(connection))
         row = connection.execute(text('''INSERT INTO c0_source_versions
-            (space_id,id,source_id,number,filename,media_type,content_hash,size_bytes,retain_original,job_id,publication_title,publication_metadata)
-            VALUES (:space,:id,:source,:number,:filename,:media,:hash,:size,:retain,:job,:title,CAST(:metadata AS jsonb)) RETURNING *'''),
+            (space_id,id,source_id,number,filename,media_type,content_hash,size_bytes,retain_original,job_id,publication_title,publication_metadata,force_reindex)
+            VALUES (:space,:id,:source,:number,:filename,:media,:hash,:size,:retain,:job,:title,CAST(:metadata AS jsonb),:reindex) RETURNING *'''),
             {'space': self._space(connection), 'id': version_id, 'source': source_id, 'number': number, 'filename': filename,
-             'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job['id'],'title':title,'metadata':encoded}).mappings().one()
+             'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job['id'],'title':title,'metadata':encoded,'reindex':force_reindex}).mappings().one()
         if number > 1:
             connection.execute(text('UPDATE c0_sources SET revision=revision+1,updated_at=now() WHERE id=:id'), {'id': source_id})
         connection.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=:id'),{'id':version_id})
@@ -333,6 +333,35 @@ class SourceService(SpaceBound):
             return version_view(connection.execute(text('''UPDATE c0_source_versions SET state='queued',error_code=NULL,
                 generation=:generation,job_id=:job WHERE id=:id RETURNING *'''),
                 {'id': row['id'], 'generation': generation, 'job': job['id']}).mappings().one())
+
+    def reindex(self, actor, source_id, *, expected_revision, idempotency_key):
+        """A new complete generation, using only a retained verified original.
+
+        Existing published evidence remains current until replacement succeeds.
+        Managed multipart publications must use their source-sync workflow.
+        """
+        identifier=_uuid(source_id)
+        if type(expected_revision) is not int or expected_revision<1: raise ValueError('invalid_revision')
+        payload={'source_id':str(identifier),'expected_revision':expected_revision}
+        def execute(connection,current):
+            source=self._source(connection,identifier,lock=True)
+            if source['deleted'] or source['revision']!=expected_revision: raise SourceConflict()
+            if source['metadata'].get('parent_external_id') or connection.execute(text("""SELECT 1 FROM c0_objects
+                WHERE space_id=:space AND type_name IN ('c0_project_source_sync_v1','c0_project_source_part_v1')
+                AND data->>'source_id'=:id LIMIT 1"""),{'space':current.space_id,'id':str(identifier)}).scalar_one_or_none():
+                raise ValueError('managed_source_reindex')
+            row=connection.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),
+                {'id':source['current_version_id']}).mappings().one_or_none()
+            if row is None or not row['original_present']: raise ValueError('original_unavailable')
+            if connection.execute(text("SELECT 1 FROM c0_source_versions WHERE source_id=:id AND state='queued' LIMIT 1"),
+                    {'id':identifier}).scalar_one_or_none(): raise SourceConflict()
+            # check() verifies immutable input; open pins bytes across cleanup.
+            with self.originals.check(row).open('rb') as original:
+                return self._ingest(connection,original,title=source['title'],filename=row['filename'],
+                    media_type=row['media_type'],retain_original=row['retain_original'],encoded=json.dumps(source['metadata']),
+                    source_id=identifier,expected_revision=expected_revision,force_reindex=True)
+        return mutate(self.database,self._authorize,actor,'source.reindex',payload,idempotency_key,
+            execute,conflict=SourceConflict)
 
     def delete(self, actor, source_id, *, expected_revision):
         with self.database.engine.begin() as connection:
@@ -522,7 +551,7 @@ def register_source_handlers(registry, database, originals):
             connection.execute(text("UPDATE c0_source_versions SET state='failed',error_code=:code WHERE id=:id"),
                 {'id': version_id, 'code': error.code})
             return {'state': 'failed', 'error_code': error.code}
-        return _publish_extracted(connection,row,evidence,segments,jobs)
+        return _publish_extracted(connection,row,evidence,segments,jobs,reuse_identical=not row['force_reindex'])
 
     def cleanup(connection, payload):
         from .current_content import content_lock,retire_versions

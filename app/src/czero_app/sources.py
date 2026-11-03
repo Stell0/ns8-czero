@@ -223,6 +223,8 @@ class UploadBodyLimit:
                 limited, maximum = True, 1048576
             if resource=='context-bundles' or resource.startswith('source-documents/'):
                 limited,maximum=True,16384
+            if resource.startswith('extraction-runs/') or resource.startswith('sources/') and resource.endswith('/reindex'):
+                limited,maximum=True,4096
             if resource.startswith(('oauth/', '/oauth/')):
                 limited, maximum = True, 16384
             if path.endswith('/agents/plugin.zip'):
@@ -278,7 +280,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
         # out of every validation response, including malformed JSON/Unicode.
         if (request.url.path.endswith('/api/v1/sources/ingest-text')
             or ('/api/v1/source-documents/' in request.url.path and request.url.path.endswith(('/outline','/sections','/references')))
-            or request.url.path.endswith('/api/v1/context-bundles')):
+            or request.url.path.endswith('/api/v1/context-bundles')
+            or '/api/v1/extraction-runs/' in request.url.path
+            or request.url.path.endswith('/reindex')):
             return JSONResponse({'detail': 'invalid_source_request'}, status_code=422)
         return await request_validation_exception_handler(request, error)
 

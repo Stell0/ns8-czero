@@ -25,7 +25,7 @@ the runtime.
 
 ## Private extraction units (0.37.0 producer candidate)
 
-The 0.37.0 producer candidate adds private extraction staging and schema 0029.
+The 0.37.0 producer candidate adds private extraction staging and schema 0030.
 `czero_core.extraction_queue.ExtractionQueue` is disabled by default; trusted
 native actors can explicitly hand a queued original to the leased worker.
 Parsing runs outside transactions. PDF pages and larger DOCX/text units retain
@@ -594,3 +594,10 @@ read-only context at an exact current logical revision, with selected source
 spans, citation handles, explicit omissions and no fallback or external fetch.
 Legacy complete-document responses retain their exact shape. See the
 [selective context contract](https://github.com/Stell0/ns8-czero/blob/main/docs/ingestion-pipeline/M8.md).
+
+`ExtractionQueue.progress` returns bounded source progress; `runs` and `units`
+require current selected-space Admin authority and never return staging bodies.
+Cancellation optionally binds the expected revision and cannot cancel a published
+run. Operator retry retains the original run actor. `SourceService.reindex` is an
+explicit revision/idempotency-bound retained-original operation, with fresh exact
+publication and no implicit corpus backfill. Schema 0030 adds only its intent flag.

@@ -2025,3 +2025,9 @@ Review correction: isolate ordinary browser inactivity too. Snapshot existing or
 Successful-sign-in replacement also retires the prior opaque cookie without revoking separately authorized grants. Old in-flight requests cannot restore browser access; authority cleanup retains unexpired finite grants too. The earlier2fd8631 remains unpublished, with its exact checks retained; the corrected release source must repeat full/native acceptance.
 
 The2fd8631 Debian native run40511353228 exposed a disposable expiry fixture that updated only the absolute timestamp and violated the independent idle-window constraint. Update the exact fixture to expire both timestamps, retaining the runtime constraint. Its new actual renewable signed-HTTP recovery regression passes; new exact-source full/native gates are required.
+
+The ingestion [M9 candidate](docs/ingestion-pipeline/M9.md) adds bounded progress,
+unit diagnostics and controlled recovery, schema 0030. It passes 24 focused
+Core/source HTTP cases, signed cookie/CSRF recovery, four migration controls,
+211 existing plus four new JavaScript cases and the real 100-page/two-failure
+browser flow. Broader full/native/independent-package acceptance remains separate.
