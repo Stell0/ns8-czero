@@ -370,3 +370,7 @@ legacy-compatible Markdown body. The M5 successor preserves complete text and
 uses explicitly recorded fixed chunks when only structure exceeds its bounds.
 Original source `9ec57bf`, full `41680331420` and failed measurements stay frozen.
 No prior candidate is accepted by substituting successor evidence.
+
+The [M6 OCR candidate](M6.md) adds schema 0028 checksummed page provenance and
+explicit local Tesseract settings. Actual scan/disable/selective-retry/process-
+group timeout checks pass 15 cases. Full/native acceptance remains sequential.

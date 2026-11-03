@@ -117,6 +117,10 @@ Keep ancestor context separate from exact citation text; no automatic backfill.
 Optional structure bounds must not reject otherwise valid complete originals.
 On derivative overflow only, retain the verified body with null structure and
 actual fixed chunks; parser/integrity failures remain publication failures.
+
+M6 local OCR is explicit and limited to unsupported PDF pages; preserve fixed
+commands, backend/model fingerprints, whole-process-group deadlines and disabled
+pending-work behavior. No cloud OCR adapter or data egress is authorized.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

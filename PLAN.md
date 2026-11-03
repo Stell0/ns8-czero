@@ -41,6 +41,9 @@ passes 15 focused structure/migration/source HTTP cases. M5 native gates remain.
 rejected by optional structure bounds; the successor preserves complete body
 publication with explicitly recorded fixed chunks when only derivatives overflow.
 No model answer-quality improvement is claimed.
+The [M6 successor](docs/ingestion-pipeline/M6.md) adds opt-in local page OCR,
+backend/model fingerprints and synthetic scan/timeout/disable checks. Native
+fixtures now verify an OCR page alongside ordinary pages before/after restore.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
