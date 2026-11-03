@@ -17,6 +17,7 @@ from .extraction import Extracted, ExtractionError, MAX_LOCATIONS, extract_isola
 from .pdf_units import inventory_isolated, extract_page_isolated, validate_page, assemble_pdf
 from .document_units import (DOCX,inventory_isolated as document_inventory,
     extract_unit_isolated,validate_spec,validate_fragment,locators as document_locators,assemble as assemble_document)
+from .structure import PROFILES,build as build_structure,section_chunks
 from .identity import Actor, PermissionDenied, Role
 from .sources import SourceConflict, SourceNotFound
 from .spaces import SpaceBound, hold_authority
@@ -35,9 +36,12 @@ def _hash(value):
 FORMATS={'docx-block-v1':DOCX,'markdown-block-v1':'text/markdown','text-block-v1':'text/plain'}
 
 
-def _profile(partitioner='whole-document-v1',pages=None,*,spec=None):
+def _profile(partitioner='whole-document-v1',pages=None,*,spec=None,chunking=None):
     result={'partitioner':partitioner,'normalization':1,
             'pypdf':version('pypdf'),'python_docx':version('python-docx')}
+    if chunking is not None:
+        if chunking not in PROFILES: raise ValueError('invalid_chunking_profile')
+        result['chunking']=chunking
     if partitioner=='pdf-page-v1':
         if type(pages) is not int or not 1<=pages<=200: raise ValueError('invalid_manifest')
         result['pages']=pages
@@ -138,10 +142,12 @@ class Claim:
 
 class ExtractionQueue(SpaceBound):
     def __init__(self, database, access, originals, *, enabled=False,
-                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432):
+                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432,chunking_profile='sections-v1'):
         if type(enabled) is not bool:
             raise ValueError('invalid_extraction_flag')
         self.database, self.access, self.originals, self.enabled = database, access, originals, enabled
+        if chunking_profile not in PROFILES: raise ValueError('invalid_chunking_profile')
+        self.chunking_profile=chunking_profile
         for limit in (instance_workers,document_workers,space_workers):
             if type(limit) is not int or not 1<=limit<=4: raise ValueError('invalid_worker_limit')
         if type(max_queued_units) is not int or not 200<=max_queued_units<=4000: raise ValueError('invalid_queue_limit')
@@ -183,6 +189,7 @@ class ExtractionQueue(SpaceBound):
                 if spec['blocks']>64 or spec['characters']>65536: profile=_profile('docx-block-v1',spec=spec)
             else:
                 profile=_profile('markdown-block-v1' if original['media_type']=='text/markdown' else 'text-block-v1',spec=spec)
+        profile['chunking']=self.chunking_profile
         with self.database.engine.begin() as c:
             content_lock(c); hold_authority(c)
             current = self._space_authorize(c, actor, Role.EDITOR)
@@ -274,7 +281,7 @@ class ExtractionQueue(SpaceBound):
             return False
         try:
             profile=run['profile']
-            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'),spec=profile.get('spec'))
+            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'),spec=profile.get('spec'),chunking=profile.get('chunking'))
                 and run['expected_units']==len(_locators(profile))
                 and (profile['partitioner']!='pdf-page-v1' or source['media_type']=='application/pdf')
                 and (profile['partitioner'] not in FORMATS or source['media_type']==FORMATS[profile['partitioner']])
@@ -514,7 +521,9 @@ class ExtractionQueue(SpaceBound):
                 unit=units[0]; evidence=Extracted(unit['body'],unit['locations'])
                 if _result(evidence)!=unit['result_sha256'] or evidence.text_hash!=unit['text_sha256']:
                     raise ExtractionError('parser_failed')
-            segments=chunks(evidence)
+            structure=build_structure(evidence,source['media_type'],self.originals.check(source))
+            chunking=run['profile'].get('chunking','fixed-v1')
+            segments=section_chunks(evidence,structure,profile=chunking)
             self.originals.check(source)
         except ExtractionError as failure: error=failure.code
         except (ValueError,TypeError,KeyError,IndexError): error='parser_failed'
@@ -542,7 +551,7 @@ class ExtractionQueue(SpaceBound):
                     {'id':identifier,'code':error or 'manifest_mismatch'})
                 return False
             version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),{'id':current['version_id']}).mappings().one()
-            _publish_extracted(c,version,evidence,segments,JobService(self.database,registry),reuse_identical=False)
+            _publish_extracted(c,version,evidence,segments,JobService(self.database,registry),reuse_identical=False,structure=structure,chunking_profile=chunking)
             c.execute(text("""UPDATE c0_extraction_units SET state='published',body=NULL,locations=NULL,
                 lease_deadline=NULL WHERE run_id=:id"""),{'id':identifier})
             c.execute(text("""UPDATE c0_extraction_runs SET state='ready',error_code=NULL,

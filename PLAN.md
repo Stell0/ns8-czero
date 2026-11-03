@@ -29,7 +29,10 @@ grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
 21 cases; full/native acceptance is pending. The [M4 candidate](docs/ingestion-pipeline/M4.md)
 adds canonical DOCX block and Markdown/text range extraction; focused formats,
 lease/PDF recovery and independent packages pass 64 cases. M4 acceptance waits
-for M3. Installed baselines, frozen evidence, Core publication,
+for M3. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded current
+structure and versioned section chunks, with 21 focused passes and a frozen
+three-passage containment comparison; no model quality improvement is claimed.
+Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
 ## CI policy update — implementation
