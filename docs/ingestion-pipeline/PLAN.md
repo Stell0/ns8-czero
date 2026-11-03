@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M3 merged; M4 acceptance pending; M4 formats implemented**
+Status: **M0–M4 merged; M5 compatibility successor under acceptance**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -355,3 +355,18 @@ M3 PR59 regularly merged as `ed160592cd42f711a78dc8f861497ccc42c859cd` after
 exact head `455f7ed` passes full `41654247380`, both native distributions,
 independent downloaded native/scan artifact grading and full promotion verification.
 M4 is now based on that accepted merge, retaining the strict indexed recovery fix.
+
+The [M5 structure candidate](M5.md) adds schema 0027 current-document derivatives,
+configurable fixed/section chunks and exact-offset ancestor metadata. Legacy
+indices and pending older manifests retain fixed chunks; no corpus is rewritten.
+
+M4 PR60 regularly merged as `b51112e15693f456384b231a675ce651949d3efd`.
+Exact source `43af133` passes complete local 2,677 cases and full/native
+`41666816436` plus `41668554721`; independent native/scan artifact grading
+and full promotion verification pass. M5 is based on that accepted main.
+
+M10 repeated measurements found an optional-structure bound rejecting a valid
+legacy-compatible Markdown body. The M5 successor preserves complete text and
+uses explicitly recorded fixed chunks when only structure exceeds its bounds.
+Original source `9ec57bf`, full `41680331420` and failed measurements stay frozen.
+No prior candidate is accepted by substituting successor evidence.

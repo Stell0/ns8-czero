@@ -351,11 +351,14 @@ class SourceService(SpaceBound):
                     revision=revision+1,updated_at=now() WHERE id=:id RETURNING *'''), {'id': row['id']}).mappings().one())
             return row
 
-    def document(self, actor, version_id):
+    def document(self, actor, version_id,*,include_derivatives=False):
+        if type(include_derivatives) is not bool: raise ValueError('invalid_document_options')
+        columns='id,version_id,body,text_hash,locations,created_at'
+        if include_derivatives: columns+=',structure,chunking_profile'
         with self.database.engine.connect() as connection:
             current=self._authorize(connection, actor)
             self._read_version(connection,current,version_id)
-            row = connection.execute(text('SELECT * FROM c0_documents WHERE space_id=:space AND version_id=:id'),
+            row = connection.execute(text('SELECT '+columns+' FROM c0_documents WHERE space_id=:space AND version_id=:id'),
                 {'space': self._space(connection), 'id': _uuid(version_id)}).mappings().one_or_none()
             if row is None:
                 raise SourceNotFound()
@@ -465,7 +468,7 @@ class SourceService(SpaceBound):
         return {'source': source, 'document': document, 'chunk': chunk}
 
 
-def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True):
+def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True,structure=None,chunking_profile='fixed-v1'):
     """Trusted complete evidence; caller owns the content lock/transaction."""
     from .current_content import publish_versions
     version_id=row['id']
@@ -480,15 +483,15 @@ def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=T
             retire_versions(connection,[version_id])
             return {'state':'unchanged','current_version_id':str(source['current_version_id'])}
     document_id = uuid5(version_id, 'document')
-    connection.execute(text('''INSERT INTO c0_documents(space_id,id,version_id,body,text_hash,locations)
-        VALUES (:space,:id,:version,:body,:hash,CAST(:locations AS jsonb))'''),
+    connection.execute(text('''INSERT INTO c0_documents(space_id,id,version_id,body,text_hash,locations,structure,chunking_profile)
+        VALUES (:space,:id,:version,:body,:hash,CAST(:locations AS jsonb),CAST(:structure AS jsonb),:profile)'''),
         {'space': row['space_id'], 'id': document_id, 'version': version_id, 'body': evidence.text, 'hash': evidence.text_hash,
-         'locations': json.dumps(evidence.locations)})
-    connection.execute(text('''INSERT INTO c0_chunks(space_id,id,document_id,ordinal,start_offset,end_offset,body,content_hash,locations)
-        VALUES (:space,:id,:document,:ordinal,:start,:end,:body,:hash,CAST(:locations AS jsonb))'''),
+         'locations': json.dumps(evidence.locations),'structure':json.dumps(structure) if structure is not None else None,'profile':chunking_profile})
+    connection.execute(text('''INSERT INTO c0_chunks(space_id,id,document_id,ordinal,start_offset,end_offset,body,content_hash,locations,section_context)
+        VALUES (:space,:id,:document,:ordinal,:start,:end,:body,:hash,CAST(:locations AS jsonb),CAST(:context AS jsonb))'''),
         [{'space': row['space_id'], 'id': uuid5(document_id, str(i)), 'document': document_id, 'ordinal': i,
           'start': chunk['start'], 'end': chunk['end'], 'body': chunk['text'],
-          'hash': chunk['text_hash'], 'locations': json.dumps(chunk['locations'])}
+          'hash': chunk['text_hash'], 'locations': json.dumps(chunk['locations']),'context':json.dumps(chunk.get('context',[]))}
          for i, chunk in enumerate(segments)])
     connection.execute(text("UPDATE c0_source_versions SET state='ready',error_code=NULL WHERE id=:id"), {'id': version_id})
     if not managed:publish_versions(connection,[version_id])

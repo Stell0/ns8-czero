@@ -34,23 +34,26 @@ def _text(path):
     return body
 
 
-def text_blocks(body,markdown):
+def text_blocks(body,markdown,*,max_boundaries=None):
     """C0's bounded ATX/fence grammar; only LF separates source lines."""
     boundaries={0,len(body)}; headings=[]; fence=None
+    def add(value):
+        boundaries.add(value)
+        if max_boundaries is not None and len(boundaries)>max_boundaries: raise ExtractionError('too_large')
     for match in re.finditer(r'[^\n]*(?:\n|$)',body):
         if match.start()==match.end(): continue
         line=match.group()
         if fence is not None:
             if re.fullmatch(r' {0,3}'+re.escape(fence[0])+r'{'+str(fence[1])+r',}[ \t]*\n?',line):
-                fence=None; boundaries.add(match.end())
+                fence=None; add(match.end())
             continue
         opening=re.match(r' {0,3}(`{3,}|~{3,})([^\n]*)',line) if markdown else None
         if opening and not (opening[1][0]=='`' and '`' in opening[2]):
-            fence=(opening[1][0],len(opening[1])); boundaries.add(match.start()); continue
+            fence=(opening[1][0],len(opening[1])); add(match.start()); continue
         heading=re.match(r' {0,3}(#{1,6})[ \t]+[^\n]*',line) if markdown else None
         if heading:
-            boundaries.add(match.start()); headings.append((match.start(),len(heading[1])))
-        if not line.strip(): boundaries.add(match.end())
+            add(match.start()); headings.append((match.start(),len(heading[1])))
+        if not line.strip(): add(match.end())
     return sorted(boundaries),headings
 
 

@@ -29,8 +29,10 @@ def test_0023_repeat_upgrade_preserves_all_existing_rows_and_no_backfill():
         with database.engine.begin() as c:
             config.attributes['connection']=c; command.upgrade(config,'0023_current_content')
             tables=c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
+            columns={table:c.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=:table ORDER BY ordinal_position"),{'table':table}).scalars().all() for table in tables}
             def snapshot(c):
-                return {table:c.execute(text('SELECT row_to_json(r)::text FROM '+table+' r ORDER BY row_to_json(r)::text')).scalars().all() for table in tables}
+                return {table:c.execute(text('SELECT row_to_json(r)::text FROM (SELECT '+
+                    ','.join('"'+column+'"' for column in columns[table])+' FROM "'+table+'") r ORDER BY row_to_json(r)::text')).scalars().all() for table in tables}
             # Seed coherent predecessor source/document/chunk rows directly;
             # the current service requires the new guard tables.
             source=uuid4(); version=uuid4(); document=uuid4(); chunk=uuid4()
@@ -46,6 +48,8 @@ def test_0023_repeat_upgrade_preserves_all_existing_rows_and_no_backfill():
             migrate_database(database)
             with database.engine.connect() as c:
                 assert snapshot(c)==before
+                assert c.execute(text("SELECT count(*) FROM c0_documents WHERE structure IS NOT NULL OR chunking_profile<>'fixed-v1'")).scalar_one()==0
+                assert c.execute(text("SELECT count(*) FROM c0_chunks WHERE section_context<>'[]'::jsonb")).scalar_one()==0
                 assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()==SCHEMA_REVISION
                 assert c.execute(text('SELECT count(*) FROM c0_extraction_runs')).scalar_one()==0
                 assert c.execute(text('SELECT count(*) FROM c0_extraction_units')).scalar_one()==0
