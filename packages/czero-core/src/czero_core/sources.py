@@ -465,13 +465,13 @@ class SourceService(SpaceBound):
         return {'source': source, 'document': document, 'chunk': chunk}
 
 
-def _publish_extracted(connection,row,evidence,segments,jobs):
+def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True):
     """Trusted complete evidence; caller owns the content lock/transaction."""
     from .current_content import publish_versions
     version_id=row['id']
     source=connection.execute(text('SELECT * FROM c0_sources WHERE id=:id'),{'id':row['source_id']}).mappings().one()
     managed=bool(source['metadata'].get('parent_external_id') or (row['publication_metadata'] or {}).get('parent_external_id')) or connection.execute(text("SELECT 1 FROM c0_objects WHERE type_name IN ('c0_project_source_sync_v1','c0_project_source_part_v1') AND data->>'source_id'=:id LIMIT 1"),{'id':str(row['source_id'])}).scalar_one_or_none()
-    if not managed and row['media_type'] in TEXT_MEDIA_TYPES and source['current_version_id']:
+    if reuse_identical and not managed and row['media_type'] in TEXT_MEDIA_TYPES and source['current_version_id']:
         current=connection.execute(text('SELECT * FROM c0_documents WHERE version_id=:id'),{'id':source['current_version_id']}).mappings().one_or_none()
         if current and current['text_hash']==evidence.text_hash and current['body']==evidence.text:
             from .current_content import retire_versions

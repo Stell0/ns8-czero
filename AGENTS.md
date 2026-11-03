@@ -108,6 +108,8 @@ live deployment remains separate. The [M3 successor](docs/ingestion-pipeline/M3.
 adds bounded native workers and actual two/four-worker resource/restore grading.
 Preserve both timers' activation during backup and the CPU-quota waiver. M2 full
 local passes 2,619 cases; actual CI/native acceptance remains source-bound.
+The [M4 successor](docs/ingestion-pipeline/M4.md) extends complete publication to
+DOCX, Markdown and text; keep source-sync receipts and public authority unchanged.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

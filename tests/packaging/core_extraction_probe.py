@@ -15,6 +15,7 @@ from czero_core.extraction_queue import ExtractionQueue, ExtractionWorker, Extra
 from czero_core.identity import VerifiedIdentity
 from czero_core.jobs import default_registry
 from czero_core.sources import OriginalStore, SourceService, register_source_handlers
+from czero_core.extraction import extract_isolated
 
 database = Database(os.environ['CZERO_DATABASE_URL'])
 owner_key = uuid4()
@@ -28,11 +29,13 @@ with tempfile.TemporaryDirectory() as directory:
     version = sources.ingest(actor,BytesIO(b'Independent unit evidence'),title='Units',filename='units.txt',media_type='text/plain')
     queue = ExtractionQueue(database,access,originals,enabled=True)
     run = queue.enqueue(actor,version['id'],expected_generation=1)
-    assert ExtractionWorker(queue).tick()==1
+    claim=queue.claim()
+    assert queue.complete(claim,extract_isolated(originals.check(claim.original),claim.original['media_type']))
     assert queue.status(actor,run['id'])['state']=='assembling'
     with database.engine.connect() as connection:
         assert connection.execute(text('SELECT body FROM c0_extraction_units WHERE run_id=:id'),{'id':run['id']}).scalar_one()=='Independent unit evidence'
         assert connection.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'),{'id':version['id']}).scalar_one()==0
+    assert queue.publish(run['id']) and sources.document(actor,version['id'])['body']=='Independent unit evidence'
     sources.delete(actor,version['source_id'],expected_revision=1)
     assert queue.status(actor,run['id'])['state']=='superseded'
     from pypdf import PdfWriter
@@ -54,5 +57,15 @@ with tempfile.TemporaryDirectory() as directory:
     assert sources.citation(actor,sources.chunks(actor,document['id'])[0]['id'])['body']==document['body']
     with database.engine.connect() as connection:
         assert connection.execute(text('SELECT body FROM c0_extraction_units WHERE run_id=:id'),{'id':run['id']}).scalar_one() is None
+    from docx import Document
+    word=Document(); labels=['Independent block '+str(index) for index in range(70)]
+    for label in labels: word.add_paragraph(label)
+    word.sections[0].header.paragraphs[0].text='Independent header'
+    stream=BytesIO(); word.save(stream); stream.seek(0)
+    docx=sources.ingest(actor,stream,title='Word',filename='word.docx',
+        media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',retain_original=True)
+    run=queue.enqueue(actor,docx['id'],expected_generation=1)
+    assert run['expected_units']==3 and ExtractionPool(queue).tick()['processed']==3
+    assert sources.document(actor,docx['id'])['body']=='\n\n'.join([*labels,'Independent header'])
 database.close()
-print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True}))
+print(json.dumps({'installed_extraction_staging':True,'installed_pdf_publication':True,'installed_document_formats':True}))
