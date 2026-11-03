@@ -1,12 +1,19 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **approved design; implementation not started**  
+Status: **approved design; M0 candidate implemented, review/CI pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
 This is a **standalone execution plan** for `ns8-czero`. The root [roadmap](../../PLAN.md) links here; this document does not replace existing release, Core publication, or deployment gates. Implement **one milestone per independently reviewed pull request**. The user approved all defaults underlying this plan. No production ingestion, deployment, credentials, scheduling, release, or merge is authorized by this planning document.
 
 ## 1. Problem, baseline and decisions
+
+M0 candidate: [assembly/manifest/lease/authorization contracts](CONTRACTS.md),
+[executed baseline and reproduction commands](BASELINE.md), and deterministic
+synthetic originals/regressions are implemented. Local evidence includes 114
+focused database/parser/HTTP/MCP cases and 1,333 fast Python cases. Runtime,
+schema, versions, dependencies, connector contracts and installed baselines are
+unchanged. Exact-source CI and milestone review remain separate; M1 has not started.
 
 The conference talk's key lesson is **fan-out at extraction time**: partition an original document into separately queued extraction units, persist each successful unit, retry only failed units, and assemble/publish only after the complete set is verified. **Extraction units are not search chunks.** Extraction units isolate processing cost and failure; search chunks are separately derived for retrieval.
 

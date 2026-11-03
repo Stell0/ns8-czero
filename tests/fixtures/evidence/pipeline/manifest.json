@@ -1,0 +1,790 @@
+{
+  "baseline_source": "fe38990b7c74594e2a7f91dbbb23697e7d1f1793",
+  "files": [
+    {
+      "name": "readable-100.pdf",
+      "media_type": "application/pdf",
+      "original_sha256": "15ffb685623f4643a250ffea09d550d01891b78670e38911c272f46ea9fba89f",
+      "text_sha256": "d8b5e6a46dd2cb99e2ab01611662dc9e6851d31a65e1c60ed1c3cafda178af12",
+      "characters": 3498,
+      "locations": [
+        {
+          "kind": "page",
+          "index": 1,
+          "start": 0,
+          "end": 33
+        },
+        {
+          "kind": "page",
+          "index": 2,
+          "start": 35,
+          "end": 68
+        },
+        {
+          "kind": "page",
+          "index": 3,
+          "start": 70,
+          "end": 103
+        },
+        {
+          "kind": "page",
+          "index": 4,
+          "start": 105,
+          "end": 138
+        },
+        {
+          "kind": "page",
+          "index": 5,
+          "start": 140,
+          "end": 173
+        },
+        {
+          "kind": "page",
+          "index": 6,
+          "start": 175,
+          "end": 208
+        },
+        {
+          "kind": "page",
+          "index": 7,
+          "start": 210,
+          "end": 243
+        },
+        {
+          "kind": "page",
+          "index": 8,
+          "start": 245,
+          "end": 278
+        },
+        {
+          "kind": "page",
+          "index": 9,
+          "start": 280,
+          "end": 313
+        },
+        {
+          "kind": "page",
+          "index": 10,
+          "start": 315,
+          "end": 348
+        },
+        {
+          "kind": "page",
+          "index": 11,
+          "start": 350,
+          "end": 383
+        },
+        {
+          "kind": "page",
+          "index": 12,
+          "start": 385,
+          "end": 418
+        },
+        {
+          "kind": "page",
+          "index": 13,
+          "start": 420,
+          "end": 453
+        },
+        {
+          "kind": "page",
+          "index": 14,
+          "start": 455,
+          "end": 488
+        },
+        {
+          "kind": "page",
+          "index": 15,
+          "start": 490,
+          "end": 523
+        },
+        {
+          "kind": "page",
+          "index": 16,
+          "start": 525,
+          "end": 558
+        },
+        {
+          "kind": "page",
+          "index": 17,
+          "start": 560,
+          "end": 593
+        },
+        {
+          "kind": "page",
+          "index": 18,
+          "start": 595,
+          "end": 628
+        },
+        {
+          "kind": "page",
+          "index": 19,
+          "start": 630,
+          "end": 663
+        },
+        {
+          "kind": "page",
+          "index": 20,
+          "start": 665,
+          "end": 698
+        },
+        {
+          "kind": "page",
+          "index": 21,
+          "start": 700,
+          "end": 733
+        },
+        {
+          "kind": "page",
+          "index": 22,
+          "start": 735,
+          "end": 768
+        },
+        {
+          "kind": "page",
+          "index": 23,
+          "start": 770,
+          "end": 803
+        },
+        {
+          "kind": "page",
+          "index": 24,
+          "start": 805,
+          "end": 838
+        },
+        {
+          "kind": "page",
+          "index": 25,
+          "start": 840,
+          "end": 873
+        },
+        {
+          "kind": "page",
+          "index": 26,
+          "start": 875,
+          "end": 908
+        },
+        {
+          "kind": "page",
+          "index": 27,
+          "start": 910,
+          "end": 943
+        },
+        {
+          "kind": "page",
+          "index": 28,
+          "start": 945,
+          "end": 978
+        },
+        {
+          "kind": "page",
+          "index": 29,
+          "start": 980,
+          "end": 1013
+        },
+        {
+          "kind": "page",
+          "index": 30,
+          "start": 1015,
+          "end": 1048
+        },
+        {
+          "kind": "page",
+          "index": 31,
+          "start": 1050,
+          "end": 1083
+        },
+        {
+          "kind": "page",
+          "index": 32,
+          "start": 1085,
+          "end": 1118
+        },
+        {
+          "kind": "page",
+          "index": 33,
+          "start": 1120,
+          "end": 1153
+        },
+        {
+          "kind": "page",
+          "index": 34,
+          "start": 1155,
+          "end": 1188
+        },
+        {
+          "kind": "page",
+          "index": 35,
+          "start": 1190,
+          "end": 1223
+        },
+        {
+          "kind": "page",
+          "index": 36,
+          "start": 1225,
+          "end": 1258
+        },
+        {
+          "kind": "page",
+          "index": 37,
+          "start": 1260,
+          "end": 1293
+        },
+        {
+          "kind": "page",
+          "index": 38,
+          "start": 1295,
+          "end": 1328
+        },
+        {
+          "kind": "page",
+          "index": 39,
+          "start": 1330,
+          "end": 1363
+        },
+        {
+          "kind": "page",
+          "index": 40,
+          "start": 1365,
+          "end": 1398
+        },
+        {
+          "kind": "page",
+          "index": 41,
+          "start": 1400,
+          "end": 1433
+        },
+        {
+          "kind": "page",
+          "index": 42,
+          "start": 1435,
+          "end": 1468
+        },
+        {
+          "kind": "page",
+          "index": 43,
+          "start": 1470,
+          "end": 1503
+        },
+        {
+          "kind": "page",
+          "index": 44,
+          "start": 1505,
+          "end": 1538
+        },
+        {
+          "kind": "page",
+          "index": 45,
+          "start": 1540,
+          "end": 1573
+        },
+        {
+          "kind": "page",
+          "index": 46,
+          "start": 1575,
+          "end": 1608
+        },
+        {
+          "kind": "page",
+          "index": 47,
+          "start": 1610,
+          "end": 1643
+        },
+        {
+          "kind": "page",
+          "index": 48,
+          "start": 1645,
+          "end": 1678
+        },
+        {
+          "kind": "page",
+          "index": 49,
+          "start": 1680,
+          "end": 1713
+        },
+        {
+          "kind": "page",
+          "index": 50,
+          "start": 1715,
+          "end": 1748
+        },
+        {
+          "kind": "page",
+          "index": 51,
+          "start": 1750,
+          "end": 1783
+        },
+        {
+          "kind": "page",
+          "index": 52,
+          "start": 1785,
+          "end": 1818
+        },
+        {
+          "kind": "page",
+          "index": 53,
+          "start": 1820,
+          "end": 1853
+        },
+        {
+          "kind": "page",
+          "index": 54,
+          "start": 1855,
+          "end": 1888
+        },
+        {
+          "kind": "page",
+          "index": 55,
+          "start": 1890,
+          "end": 1923
+        },
+        {
+          "kind": "page",
+          "index": 56,
+          "start": 1925,
+          "end": 1958
+        },
+        {
+          "kind": "page",
+          "index": 57,
+          "start": 1960,
+          "end": 1993
+        },
+        {
+          "kind": "page",
+          "index": 58,
+          "start": 1995,
+          "end": 2028
+        },
+        {
+          "kind": "page",
+          "index": 59,
+          "start": 2030,
+          "end": 2063
+        },
+        {
+          "kind": "page",
+          "index": 60,
+          "start": 2065,
+          "end": 2098
+        },
+        {
+          "kind": "page",
+          "index": 61,
+          "start": 2100,
+          "end": 2133
+        },
+        {
+          "kind": "page",
+          "index": 62,
+          "start": 2135,
+          "end": 2168
+        },
+        {
+          "kind": "page",
+          "index": 63,
+          "start": 2170,
+          "end": 2203
+        },
+        {
+          "kind": "page",
+          "index": 64,
+          "start": 2205,
+          "end": 2238
+        },
+        {
+          "kind": "page",
+          "index": 65,
+          "start": 2240,
+          "end": 2273
+        },
+        {
+          "kind": "page",
+          "index": 66,
+          "start": 2275,
+          "end": 2308
+        },
+        {
+          "kind": "page",
+          "index": 67,
+          "start": 2310,
+          "end": 2343
+        },
+        {
+          "kind": "page",
+          "index": 68,
+          "start": 2345,
+          "end": 2378
+        },
+        {
+          "kind": "page",
+          "index": 69,
+          "start": 2380,
+          "end": 2413
+        },
+        {
+          "kind": "page",
+          "index": 70,
+          "start": 2415,
+          "end": 2448
+        },
+        {
+          "kind": "page",
+          "index": 71,
+          "start": 2450,
+          "end": 2483
+        },
+        {
+          "kind": "page",
+          "index": 72,
+          "start": 2485,
+          "end": 2518
+        },
+        {
+          "kind": "page",
+          "index": 73,
+          "start": 2520,
+          "end": 2553
+        },
+        {
+          "kind": "page",
+          "index": 74,
+          "start": 2555,
+          "end": 2588
+        },
+        {
+          "kind": "page",
+          "index": 75,
+          "start": 2590,
+          "end": 2623
+        },
+        {
+          "kind": "page",
+          "index": 76,
+          "start": 2625,
+          "end": 2658
+        },
+        {
+          "kind": "page",
+          "index": 77,
+          "start": 2660,
+          "end": 2693
+        },
+        {
+          "kind": "page",
+          "index": 78,
+          "start": 2695,
+          "end": 2728
+        },
+        {
+          "kind": "page",
+          "index": 79,
+          "start": 2730,
+          "end": 2763
+        },
+        {
+          "kind": "page",
+          "index": 80,
+          "start": 2765,
+          "end": 2798
+        },
+        {
+          "kind": "page",
+          "index": 81,
+          "start": 2800,
+          "end": 2833
+        },
+        {
+          "kind": "page",
+          "index": 82,
+          "start": 2835,
+          "end": 2868
+        },
+        {
+          "kind": "page",
+          "index": 83,
+          "start": 2870,
+          "end": 2903
+        },
+        {
+          "kind": "page",
+          "index": 84,
+          "start": 2905,
+          "end": 2938
+        },
+        {
+          "kind": "page",
+          "index": 85,
+          "start": 2940,
+          "end": 2973
+        },
+        {
+          "kind": "page",
+          "index": 86,
+          "start": 2975,
+          "end": 3008
+        },
+        {
+          "kind": "page",
+          "index": 87,
+          "start": 3010,
+          "end": 3043
+        },
+        {
+          "kind": "page",
+          "index": 88,
+          "start": 3045,
+          "end": 3078
+        },
+        {
+          "kind": "page",
+          "index": 89,
+          "start": 3080,
+          "end": 3113
+        },
+        {
+          "kind": "page",
+          "index": 90,
+          "start": 3115,
+          "end": 3148
+        },
+        {
+          "kind": "page",
+          "index": 91,
+          "start": 3150,
+          "end": 3183
+        },
+        {
+          "kind": "page",
+          "index": 92,
+          "start": 3185,
+          "end": 3218
+        },
+        {
+          "kind": "page",
+          "index": 93,
+          "start": 3220,
+          "end": 3253
+        },
+        {
+          "kind": "page",
+          "index": 94,
+          "start": 3255,
+          "end": 3288
+        },
+        {
+          "kind": "page",
+          "index": 95,
+          "start": 3290,
+          "end": 3323
+        },
+        {
+          "kind": "page",
+          "index": 96,
+          "start": 3325,
+          "end": 3358
+        },
+        {
+          "kind": "page",
+          "index": 97,
+          "start": 3360,
+          "end": 3393
+        },
+        {
+          "kind": "page",
+          "index": 98,
+          "start": 3395,
+          "end": 3428
+        },
+        {
+          "kind": "page",
+          "index": 99,
+          "start": 3430,
+          "end": 3463
+        },
+        {
+          "kind": "page",
+          "index": 100,
+          "start": 3465,
+          "end": 3498
+        }
+      ],
+      "text": "Page 001: synthetic evidence 001.\n\nPage 002: synthetic evidence 002.\n\nPage 003: synthetic evidence 003.\n\nPage 004: synthetic evidence 004.\n\nPage 005: synthetic evidence 005.\n\nPage 006: synthetic evidence 006.\n\nPage 007: synthetic evidence 007.\n\nPage 008: synthetic evidence 008.\n\nPage 009: synthetic evidence 009.\n\nPage 010: synthetic evidence 010.\n\nPage 011: synthetic evidence 011.\n\nPage 012: synthetic evidence 012.\n\nPage 013: synthetic evidence 013.\n\nPage 014: synthetic evidence 014.\n\nPage 015: synthetic evidence 015.\n\nPage 016: synthetic evidence 016.\n\nPage 017: synthetic evidence 017.\n\nPage 018: synthetic evidence 018.\n\nPage 019: synthetic evidence 019.\n\nPage 020: synthetic evidence 020.\n\nPage 021: synthetic evidence 021.\n\nPage 022: synthetic evidence 022.\n\nPage 023: synthetic evidence 023.\n\nPage 024: synthetic evidence 024.\n\nPage 025: synthetic evidence 025.\n\nPage 026: synthetic evidence 026.\n\nPage 027: synthetic evidence 027.\n\nPage 028: synthetic evidence 028.\n\nPage 029: synthetic evidence 029.\n\nPage 030: synthetic evidence 030.\n\nPage 031: synthetic evidence 031.\n\nPage 032: synthetic evidence 032.\n\nPage 033: synthetic evidence 033.\n\nPage 034: synthetic evidence 034.\n\nPage 035: synthetic evidence 035.\n\nPage 036: synthetic evidence 036.\n\nPage 037: synthetic evidence 037.\n\nPage 038: synthetic evidence 038.\n\nPage 039: synthetic evidence 039.\n\nPage 040: synthetic evidence 040.\n\nPage 041: synthetic evidence 041.\n\nPage 042: synthetic evidence 042.\n\nPage 043: synthetic evidence 043.\n\nPage 044: synthetic evidence 044.\n\nPage 045: synthetic evidence 045.\n\nPage 046: synthetic evidence 046.\n\nPage 047: synthetic evidence 047.\n\nPage 048: synthetic evidence 048.\n\nPage 049: synthetic evidence 049.\n\nPage 050: synthetic evidence 050.\n\nPage 051: synthetic evidence 051.\n\nPage 052: synthetic evidence 052.\n\nPage 053: synthetic evidence 053.\n\nPage 054: synthetic evidence 054.\n\nPage 055: synthetic evidence 055.\n\nPage 056: synthetic evidence 056.\n\nPage 057: synthetic evidence 057.\n\nPage 058: synthetic evidence 058.\n\nPage 059: synthetic evidence 059.\n\nPage 060: synthetic evidence 060.\n\nPage 061: synthetic evidence 061.\n\nPage 062: synthetic evidence 062.\n\nPage 063: synthetic evidence 063.\n\nPage 064: synthetic evidence 064.\n\nPage 065: synthetic evidence 065.\n\nPage 066: synthetic evidence 066.\n\nPage 067: synthetic evidence 067.\n\nPage 068: synthetic evidence 068.\n\nPage 069: synthetic evidence 069.\n\nPage 070: synthetic evidence 070.\n\nPage 071: synthetic evidence 071.\n\nPage 072: synthetic evidence 072.\n\nPage 073: synthetic evidence 073.\n\nPage 074: synthetic evidence 074.\n\nPage 075: synthetic evidence 075.\n\nPage 076: synthetic evidence 076.\n\nPage 077: synthetic evidence 077.\n\nPage 078: synthetic evidence 078.\n\nPage 079: synthetic evidence 079.\n\nPage 080: synthetic evidence 080.\n\nPage 081: synthetic evidence 081.\n\nPage 082: synthetic evidence 082.\n\nPage 083: synthetic evidence 083.\n\nPage 084: synthetic evidence 084.\n\nPage 085: synthetic evidence 085.\n\nPage 086: synthetic evidence 086.\n\nPage 087: synthetic evidence 087.\n\nPage 088: synthetic evidence 088.\n\nPage 089: synthetic evidence 089.\n\nPage 090: synthetic evidence 090.\n\nPage 091: synthetic evidence 091.\n\nPage 092: synthetic evidence 092.\n\nPage 093: synthetic evidence 093.\n\nPage 094: synthetic evidence 094.\n\nPage 095: synthetic evidence 095.\n\nPage 096: synthetic evidence 096.\n\nPage 097: synthetic evidence 097.\n\nPage 098: synthetic evidence 098.\n\nPage 099: synthetic evidence 099.\n\nPage 100: synthetic evidence 100."
+    },
+    {
+      "name": "mixed-scan.pdf",
+      "media_type": "application/pdf",
+      "original_sha256": "ebf68c00bc172887717c6e3c2e723668155218c9b3e782cebdbba64540d3c5fc",
+      "error": "unsupported_scan"
+    },
+    {
+      "name": "blank-pages.pdf",
+      "media_type": "application/pdf",
+      "original_sha256": "23ec99d9e96660cc0b9aa720f29748409d65c5f624992289cf8e4e7509ba649e",
+      "text_sha256": "f61e434bbfe282ad3bdd7c5053fee10367f0d3094f7d32c8c177f77652626f9c",
+      "characters": 51,
+      "locations": [
+        {
+          "kind": "page",
+          "index": 2,
+          "start": 0,
+          "end": 25
+        },
+        {
+          "kind": "page",
+          "index": 4,
+          "start": 27,
+          "end": 51
+        }
+      ],
+      "text": "Page 002: first evidence.\n\nPage 004: last evidence."
+    },
+    {
+      "name": "all-blank.pdf",
+      "media_type": "application/pdf",
+      "original_sha256": "cc9545513014b904fc414a02d5e399f5a23a56b1165ed36ccda1bd7f26dafeb3",
+      "error": "no_text"
+    },
+    {
+      "name": "structured.docx",
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "original_sha256": "a82b5ce23e76ac365d2c11d79f737dad948d3be3d59bbe312be5e4fd9de2a940",
+      "text_sha256": "b7254d9a1bb6e37b08a3f3dbcc2df8eff441cc7273bee9a940806721304ff07b",
+      "characters": 146,
+      "locations": [
+        {
+          "kind": "paragraph",
+          "index": 1,
+          "start": 0,
+          "end": 11
+        },
+        {
+          "kind": "paragraph",
+          "index": 2,
+          "start": 13,
+          "end": 26
+        },
+        {
+          "kind": "table-cell",
+          "index": 3,
+          "start": 28,
+          "end": 33
+        },
+        {
+          "kind": "table-cell",
+          "index": 4,
+          "start": 35,
+          "end": 40
+        },
+        {
+          "kind": "table-cell",
+          "index": 5,
+          "start": 42,
+          "end": 56
+        },
+        {
+          "kind": "table-cell",
+          "index": 6,
+          "start": 58,
+          "end": 63
+        },
+        {
+          "kind": "paragraph",
+          "index": 8,
+          "start": 65,
+          "end": 76
+        },
+        {
+          "kind": "paragraph",
+          "index": 9,
+          "start": 78,
+          "end": 98
+        },
+        {
+          "kind": "header",
+          "index": 10,
+          "start": 100,
+          "end": 110
+        },
+        {
+          "kind": "footer",
+          "index": 11,
+          "start": 112,
+          "end": 122
+        },
+        {
+          "kind": "header",
+          "index": 12,
+          "start": 124,
+          "end": 134
+        },
+        {
+          "kind": "footer",
+          "index": 13,
+          "start": 136,
+          "end": 146
+        }
+      ],
+      "text": "Section One\n\nBody café 東京.\n\nAsset\n\nState\n\nExample server\n\nReady\n\nSection Two\n\nLast body paragraph.\n\nHeader One\n\nFooter One\n\nHeader Two\n\nFooter Two"
+    },
+    {
+      "name": "fenced.md",
+      "media_type": "text/markdown",
+      "original_sha256": "ee5c84e94e37031e7c128cb7e47369187d2866beb1859513957afc4313474c49",
+      "text_sha256": "5f071240fad92a6c9f1f55b1984bc47cb72834c2d484cc897b2b1955b5b02cf0",
+      "characters": 101,
+      "locations": [
+        {
+          "kind": "section",
+          "index": 1,
+          "start": 0,
+          "end": 53
+        },
+        {
+          "kind": "section",
+          "index": 2,
+          "start": 53,
+          "end": 88
+        },
+        {
+          "kind": "section",
+          "index": 3,
+          "start": 88,
+          "end": 101
+        }
+      ],
+      "text": "# Real heading\n\ncafé 東京 [reference](#last).\n\n```text\n# Fenced heading\nliteral body\n```\n\n## Last\nEnd.\n"
+    },
+    {
+      "name": "plain.txt",
+      "media_type": "text/plain",
+      "original_sha256": "1872723c56934c31fb4c4fb0e4c6c8c5f957964c6c30f9b67bb1dac7d14bbd40",
+      "text_sha256": "b8fb13870bd52a5d866423e0c384264a8402b722343da3f7fcf7a6164cd12166",
+      "characters": 27,
+      "locations": [
+        {
+          "kind": "body",
+          "index": 1,
+          "start": 0,
+          "end": 27
+        }
+      ],
+      "text": "First café 東京.\n\nLast line.\n"
+    },
+    {
+      "name": "multipart.md",
+      "media_type": "text/markdown",
+      "original_sha256": "637292797ca04dd7c37c8a5905a7662b8e15af68a24801d4323785147bfab00d",
+      "text_sha256": "637292797ca04dd7c37c8a5905a7662b8e15af68a24801d4323785147bfab00d",
+      "characters": 140030,
+      "locations": [
+        {
+          "kind": "section",
+          "index": 1,
+          "start": 0,
+          "end": 140030
+        }
+      ]
+    }
+  ]
+}

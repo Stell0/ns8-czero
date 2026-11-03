@@ -93,6 +93,12 @@ Never waive this finding or override the published Core dependency metadata.
 
 ## Reuse ingestion scripts and preserve private jobs
 
+Queued extraction work follows the [M0 contracts](docs/ingestion-pipeline/CONTRACTS.md)
+and [baseline evidence](docs/ingestion-pipeline/BASELINE.md), one independently
+reviewed milestone at a time. M0 is documentation/tests only; do not implement
+M1 leases or change production extraction defaults before contract review.
+Extraction units never become external source-sync publication parts.
+
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)
 and use c0-ingest-sources before creating another script. Put reusable source logic,
 synthetic feature tests and acquired source-specific lessons in the public samples;

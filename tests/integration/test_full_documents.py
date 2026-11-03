@@ -68,6 +68,27 @@ def publish(client, definition, tmp_path, body):
     return save_snapshot(client, item, receipts), receipts
 
 
+def test_ingestion_pipeline_m0_external_parts_are_not_extraction_units(logical, record_property):
+    import time
+    client, definition, service, actor, path = logical
+    body = (Path(__file__).resolve().parents[1] /
+            'fixtures/evidence/pipeline/multipart.md').read_text(encoding='utf-8')
+    started = time.perf_counter()
+    saved, receipts = publish(client, definition, path, body)
+    publication_seconds = time.perf_counter() - started
+    assert len(receipts) >= 2
+    started = time.perf_counter()
+    full = service.read_document(actor, saved['id'])
+    assert full['state'] == 'ready' and full['body'] == body
+    assert full['text_hash'] == sha(body.encode())
+    assert len(full['parts']) == len(receipts)
+    assert [row['id'] for row in service.browse_documents(actor)] == [UUID(saved['id'])]
+    record_property('m0_multipart_timings', __import__('json').dumps({
+        'publish_seconds': publication_seconds,
+        'full_read_seconds': time.perf_counter() - started,
+        'parts': len(receipts)}))
+
+
 @pytest.fixture
 def logical(sample_connection, knowledge_http, tmp_path):
     config, _ = sample_connection
