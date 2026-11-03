@@ -37,7 +37,9 @@ and full promotion verification pass. Ready-transition full/native `41668554721`
 also passes; PR60 regularly merges as `b51112e15693f456384b231a675ce651949d3efd`. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded
 current structure and versioned section chunks. Original final source `2afbe4a`
 passes 2,682 complete local cases; the code-identical accepted-base candidate
-passes 15 focused structure/migration/source HTTP cases. M5 native gates remain.
+passes 15 focused structure/migration/source HTTP cases. M5 native gates remain. M10 measurements exposed a valid large Markdown body
+rejected by optional structure bounds; the successor preserves complete body
+publication with explicitly recorded fixed chunks when only derivatives overflow.
 No model answer-quality improvement is claimed.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.

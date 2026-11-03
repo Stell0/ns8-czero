@@ -9,6 +9,7 @@ from czero_core.extraction_queue import ExtractionQueue,ExtractionPool
 from test_access import access
 from test_sources import sources,upload,execute
 from test_document_unit_formats import queue_version
+from test_pdf_unit_pipeline import FIXTURES
 
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='disposable PostgreSQL required')
 
@@ -47,3 +48,42 @@ def test_legacy_index_stays_fixed_and_explicit_comparison_profile_is_bound(sourc
     assert service.document(owner,version['id'],include_derivatives=True)['chunking_profile']=='fixed-v1'
     with queue.database.engine.connect() as c:
         assert c.execute(text("SELECT profile->>'chunking' FROM c0_extraction_runs WHERE id=:id"),{'id':run['id']}).scalar_one()=='fixed-v1'
+
+
+def test_structure_bounds_preserve_complete_legacy_compatible_markdown(sources):
+    import json
+    from czero_core.extraction import extract_isolated
+    original=(FIXTURES/'multipart.md').read_bytes()
+    queue,owner,version,run=queue_version(sources,original,'text/markdown')
+    baseline=extract_isolated(queue.originals.check(version),'text/markdown')
+    assert ExtractionPool(queue).tick()['processed']==run['expected_units']
+    assert queue.status(owner,run['id'])['state']=='ready'
+    document=sources[0].document(owner,version['id'],include_derivatives=True)
+    assert document['body']==baseline.text and document['text_hash']==baseline.text_hash
+    assert document['locations']==baseline.locations
+    assert document['structure'] is None and document['chunking_profile']=='fixed-v1'
+    expected=next(row for row in json.loads((FIXTURES/'manifest.json').read_text())['files'] if row['name']=='multipart.md')
+    assert document['text_hash']==expected['text_sha256'] and document['locations']==expected['locations']
+    chunks=[]
+    while True:
+        rows=sources[0].chunks(owner,document['id'],limit=100,offset=len(chunks))
+        chunks.extend(rows)
+        if len(rows)<100: break
+    assert chunks[0]['start_offset']==0 and chunks[-1]['end_offset']==len(baseline.text)
+    assert all(row['body']==baseline.text[row['start_offset']:row['end_offset']] for row in chunks)
+    with queue.database.engine.connect() as c:
+        assert c.execute(text('SELECT count(*) FROM c0_extraction_units WHERE run_id=:id AND body IS NOT NULL'),{'id':run['id']}).scalar_one()==0
+
+
+def test_structure_parser_failure_cannot_fall_back_or_replace_current(sources,monkeypatch):
+    import czero_core.extraction_queue as module
+    from czero_core.extraction import ExtractionError
+    first=upload(sources,b'Existing complete evidence');execute(sources,'source.extract',first['id'])
+    queue,owner,version,run=queue_version(sources,b'# Replacement\n\nNew evidence.','text/markdown',
+        source_id=first['source_id'],expected_revision=1)
+    def failed(*args):raise ExtractionError('parser_failed')
+    monkeypatch.setattr(module,'build_structure',failed)
+    ExtractionPool(queue).tick()
+    assert queue.status(owner,run['id'])['error_code']=='parser_failed'
+    assert sources[0].document(owner,first['id'])['body']=='Existing complete evidence'
+    assert sources[0].get(owner,first['source_id'])['current_version_id']==first['id']

@@ -114,6 +114,9 @@ The [M4 successor](docs/ingestion-pipeline/M4.md) extends complete publication t
 DOCX, Markdown and text; keep source-sync receipts and public authority unchanged.
 M5 derives bounded current section/block/reference metadata and versioned chunks.
 Keep ancestor context separate from exact citation text; no automatic backfill.
+Optional structure bounds must not reject otherwise valid complete originals.
+On derivative overflow only, retain the verified body with null structure and
+actual fixed chunks; parser/integrity failures remain publication failures.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

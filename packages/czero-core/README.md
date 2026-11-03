@@ -35,7 +35,9 @@ runs two isolated parsers by default, with an explicit maximum of four.
 Queued generations also retain bounded section/block/reference metadata and
 versioned chunks whose text is always an exact full-body slice. Ancestor context
 contains section IDs, never invented evidence text. Existing documents are not
-reindexed automatically. Existing source extraction remains the ordinary path. See the
+reindexed automatically. A valid complete body whose optional structure exceeds
+its bound publishes with null structure and effective fixed chunks; parser or
+integrity errors still block publication. Existing source extraction remains the ordinary path. See the
 [implementation contracts](https://github.com/Stell0/ns8-czero/blob/main/docs/ingestion-pipeline/PLAN.md).
 This producer has not been independently published or adopted by the app's
 released Core tag/lock.
