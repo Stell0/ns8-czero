@@ -13,7 +13,8 @@ from uuid import UUID, uuid4, uuid5
 from sqlalchemy import text
 
 from .current_content import check_retired, content_lock
-from .extraction import Extracted, ExtractionError, MAX_LOCATIONS, extract_isolated, valid_text
+from .extraction import Extracted, ExtractionError, MAX_LOCATIONS, extract_isolated, valid_text, chunks
+from .pdf_units import inventory_isolated, extract_page_isolated, validate_page, assemble_pdf
 from .identity import Actor, PermissionDenied, Role
 from .sources import SourceConflict, SourceNotFound
 from .spaces import SpaceBound, hold_authority
@@ -28,23 +29,40 @@ def _hash(value):
         ensure_ascii=False, allow_nan=False).encode()).hexdigest()
 
 
-def _profile():
-    return {'partitioner':'whole-document-v1','normalization':1,
+def _profile(partitioner='whole-document-v1',pages=None):
+    result={'partitioner':partitioner,'normalization':1,
             'pypdf':version('pypdf'),'python_docx':version('python-docx')}
+    if partitioner=='pdf-page-v1':
+        if type(pages) is not int or not 1<=pages<=200: raise ValueError('invalid_manifest')
+        result['pages']=pages
+    elif partitioner!='whole-document-v1': raise ValueError('invalid_manifest')
+    return result
 
 
 def _manifest(source, space, profile):
     return {'space_id':str(space),'version_id':str(source['id']),
             'generation':source['generation'],'original_sha256':source['content_hash'],
             'size_bytes':source['size_bytes'],'media_type':source['media_type'],'profile':profile,
-            'units':[{'ordinal':1,'locator':{'kind':'document'}}]}
+            'units':([{'ordinal':page,'locator':{'kind':'page','first':page,'last':page}}
+                for page in range(1,profile['pages']+1)] if profile['partitioner']=='pdf-page-v1'
+                else [{'ordinal':1,'locator':{'kind':'document'}}])}
 
 
-def _result(result):
+def _locator(profile,ordinal):
+    if profile['partitioner']=='pdf-page-v1': return {'kind':'page','first':ordinal,'last':ordinal}
+    return {'kind':'document'}
+
+
+def _fingerprint(manifest,profile,ordinal,locator):
+    if profile['partitioner']=='whole-document-v1': return manifest
+    return _hash({'manifest':manifest,'ordinal':ordinal,'locator':locator})
+
+
+def _result(result,*,allow_blank=False):
     if not isinstance(result, Extracted) or not isinstance(result.text, str):
         raise ExtractionError('parser_failed')
     valid_text(result.text)
-    if not result.text.strip():
+    if not result.text.strip() and not (allow_blank and result.text=='' and result.locations==[]):
         raise ExtractionError('no_text')
     if '\r' in result.text or not isinstance(result.locations, list) or len(result.locations)>MAX_LOCATIONS:
         raise ExtractionError('parser_failed')
@@ -82,6 +100,7 @@ def cleanup_extractions(connection, *, limit=20):
     content_lock(connection)
     ids = connection.execute(text("""SELECT id FROM c0_extraction_runs
         WHERE expires_at<=clock_timestamp() AND error_code IS DISTINCT FROM 'staging_expired'
+        AND state NOT IN ('ready','superseded')
         ORDER BY expires_at,id LIMIT :limit FOR UPDATE SKIP LOCKED"""), {'limit':limit}).scalars().all()
     if ids:
         _erase(connection, ids)
@@ -100,6 +119,8 @@ class Claim:
     fence: int
     token: UUID = field(repr=False)
     original: dict = field(repr=False)
+    ordinal: int = 1
+    locator: dict = field(default_factory=lambda:{'kind':'document'})
 
 
 class ExtractionQueue(SpaceBound):
@@ -117,6 +138,23 @@ class ExtractionQueue(SpaceBound):
             raise ValueError('unsupported_extraction_handoff')
         if type(expected_generation) is not int or expected_generation<1:
             raise ValueError('invalid_generation')
+        # Read/preflight without holding any work connection or content lock.
+        with self.database.engine.connect() as c:
+            current=self._space_authorize(c,actor,Role.EDITOR)
+            check_retired(c,current.space_id,'source_version',UUID(str(version_id)))
+            original=c.execute(text('''SELECT v.* FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id
+                WHERE v.space_id=:space AND v.id=:id AND NOT s.deleted'''),
+                {'space':current.space_id,'id':UUID(str(version_id))}).mappings().one_or_none()
+            if original is None: raise SourceNotFound()
+            if original['generation']!=expected_generation or original['state']!='queued': raise SourceConflict()
+            existing=c.execute(text('SELECT * FROM c0_extraction_runs WHERE version_id=:id AND processing_generation=:generation'),
+                {'id':original['id'],'generation':expected_generation}).mappings().one_or_none()
+            if existing: return self._summary(existing,c.execute(text('SELECT clock_timestamp()')).scalar_one())
+            original=dict(original)
+        profile=_profile()
+        if original['media_type']=='application/pdf':
+            profile=_profile('pdf-page-v1',inventory_isolated(self.originals.check(original)))
+            self.originals.check(original)
         with self.database.engine.begin() as c:
             content_lock(c); hold_authority(c)
             current = self._space_authorize(c, actor, Role.EDITOR)
@@ -128,38 +166,41 @@ class ExtractionQueue(SpaceBound):
                 raise SourceNotFound()
             if v['generation']!=expected_generation or v['state']!='queued':
                 raise SourceConflict()
+            if any(v[key]!=original[key] for key in ('content_hash','size_bytes','media_type','original_present')):
+                raise SourceConflict()
             existing = c.execute(text('SELECT * FROM c0_extraction_runs WHERE version_id=:id AND processing_generation=:generation'),
                 {'id':v['id'],'generation':expected_generation}).mappings().one_or_none()
             if existing:
                 return self._summary(existing, c.execute(text('SELECT clock_timestamp()')).scalar_one())
             now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
-            expiry = v['created_at']+timedelta(hours=24)
-            if expiry<=now or not v['original_present']:
+            expiry = now+timedelta(hours=24)
+            if not v['original_present']:
                 raise ValueError('staging_expired')
             # Only a still-queued legacy attempt can be handed off atomically.
             changed = c.execute(text("""UPDATE c0_jobs SET state='succeeded',finished_at=clock_timestamp(),
                 result='{"state":"extraction_staged"}'::jsonb WHERE id=:id AND state='queued'"""), {'id':v['job_id']})
             if changed.rowcount!=1:
                 raise SourceConflict()
-            profile = _profile()
             manifest = _manifest(v,current.space_id,profile)
             run_id = uuid5(v['id'], 'extraction:'+str(expected_generation))
             row = c.execute(text("""INSERT INTO c0_extraction_runs
                 (id,space_id,version_id,actor_id,processing_generation,original_sha256,manifest_sha256,
                  profile,expected_units,state,expires_at) VALUES
-                (:id,:space,:version,:actor,:generation,:hash,:manifest,CAST(:profile AS jsonb),1,'extracting',:expiry) RETURNING *"""),
+                (:id,:space,:version,:actor,:generation,:hash,:manifest,CAST(:profile AS jsonb),:count,'extracting',:expiry) RETURNING *"""),
                 {'id':run_id,'space':current.space_id,'version':v['id'],'actor':current.user_id,
                  'generation':expected_generation,'hash':v['content_hash'],'manifest':_hash(manifest),
-                 'profile':json.dumps(profile),'expiry':min(expiry,now+timedelta(hours=24))}).mappings().one()
+                 'profile':json.dumps(profile),'count':len(manifest['units']),'expiry':expiry}).mappings().one()
             c.execute(text("""INSERT INTO c0_extraction_units(id,space_id,run_id,ordinal,locator,input_sha256)
-                VALUES (:id,:space,:run,1,'{"kind":"document"}'::jsonb,:hash)"""),
-                {'id':uuid5(run_id,'1'),'space':current.space_id,'run':run_id,'hash':_hash(manifest)})
+                VALUES (:id,:space,:run,:ordinal,CAST(:locator AS jsonb),:hash)"""),
+                [{'id':uuid5(run_id,str(unit['ordinal'])),'space':current.space_id,'run':run_id,
+                  'ordinal':unit['ordinal'],'locator':json.dumps(unit['locator']),
+                  'hash':_fingerprint(_hash(manifest),profile,unit['ordinal'],unit['locator'])} for unit in manifest['units']])
             return self._summary(row)
 
     @staticmethod
     def _summary(row, now=None):
         result = {key:row[key] for key in SUMMARY}
-        if now is not None and row['expires_at']<=now:
+        if now is not None and row['state'] not in ('ready','superseded') and row['expires_at']<=now:
             result.update(state='failed',error_code='staging_expired')
         return result
 
@@ -195,7 +236,14 @@ class ExtractionQueue(SpaceBound):
             or source['content_hash']!=run['original_sha256']):
             cancel_versions(c, [run['version_id']])
             return False
-        if run['profile']!=_profile() or run['manifest_sha256']!=_hash(_manifest(source,run['space_id'],run['profile'])):
+        try:
+            profile=run['profile']
+            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'))
+                and run['expected_units']==profile.get('pages',1)
+                and (profile['partitioner']!='pdf-page-v1' or source['media_type']=='application/pdf')
+                and run['manifest_sha256']==_hash(_manifest(source,run['space_id'],profile)))
+        except (ValueError,TypeError,KeyError): valid=False
+        if not valid:
             cancel_versions(c,[run['version_id']],'manifest_mismatch')
             return False
         try:
@@ -226,24 +274,39 @@ class ExtractionQueue(SpaceBound):
             unit = c.execute(text("""SELECT * FROM c0_extraction_units WHERE run_id=:id AND
                 ((state IN ('queued','retry_wait') AND available_at<=:now) OR (state='leased' AND lease_deadline<=:now))
                 ORDER BY ordinal LIMIT 1 FOR UPDATE SKIP LOCKED"""), {'id':run['id'],'now':now}).mappings().one()
-            if unit['input_sha256']!=run['manifest_sha256'] or unit['locator']!={'kind':'document'}:
+            locator=_locator(run['profile'],unit['ordinal'])
+            if (unit['ordinal']>run['expected_units'] or _hash(unit['locator'])!=_hash(locator)
+                or unit['input_sha256']!=_fingerprint(run['manifest_sha256'],run['profile'],unit['ordinal'],locator)):
                 cancel_versions(c,[run['version_id']],'manifest_mismatch')
                 return None
             if unit['state']=='leased':
                 self._fail(c, run, unit, 'lease_expired', now)
                 return None
             token = uuid4()
-            c.execute(text("""UPDATE c0_extraction_units SET state='leased',attempts=attempts+1,fence=fence+1,
+            c.execute(text("""UPDATE c0_extraction_units SET state='leased',attempts=attempts+1,lifetime_attempts=lifetime_attempts+1,fence=fence+1,
                 lease_token=:token,lease_deadline=:deadline,started_at=:now,finished_at=NULL,error_code=NULL WHERE id=:id"""),
                 {'id':unit['id'],'token':token,'deadline':now+timedelta(seconds=60),'now':now})
             c.execute(text('UPDATE c0_extraction_runs SET claimed=claimed+1,revision=revision+1 WHERE id=:id'), {'id':run['id']})
-            return Claim(run['id'],unit['id'],source['id'],run['space_id'],source['generation'],unit['fence']+1,token,dict(source))
+            return Claim(run['id'],unit['id'],source['id'],run['space_id'],source['generation'],unit['fence']+1,token,dict(source),unit['ordinal'],locator)
 
     def _attempt(self, c, claim, *, replay=False):
         content_lock(c); hold_authority(c)
         now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
         run = c.execute(text('SELECT * FROM c0_extraction_runs WHERE id=:id AND space_id=:space FOR UPDATE'),
             {'id':claim.run_id,'space':claim.space_id}).mappings().one_or_none()
+        if replay and run is not None and run['state']=='ready':
+            try:
+                if run['actor_id'] is None: raise PermissionDenied()
+                self.in_space(run['space_id'])._space_authorize(c,Actor(run['actor_id'],Role.READER),Role.EDITOR)
+            except PermissionDenied: return None
+            unit=c.execute(text('SELECT * FROM c0_extraction_units WHERE id=:id AND run_id=:run'),
+                {'id':claim.unit_id,'run':claim.run_id}).mappings().one_or_none()
+            if (unit is not None and unit['state']=='published' and unit['lease_token']==claim.token
+                and unit['fence']==claim.fence and unit['ordinal']==claim.ordinal
+                and run['version_id']==claim.version_id and run['processing_generation']==claim.generation
+                and _hash(unit['locator'])==_hash(claim.locator)):
+                return run,unit,now
+            return None
         if (run is None or run['state'] not in ('extracting','assembling') or run['version_id']!=claim.version_id
             or run['processing_generation']!=claim.generation or self._live(c,run,now) is False):
             return None
@@ -251,7 +314,10 @@ class ExtractionQueue(SpaceBound):
             {'id':claim.unit_id,'run':claim.run_id}).mappings().one_or_none()
         if unit is None or unit['lease_token']!=claim.token or unit['fence']!=claim.fence:
             return None
-        if unit['input_sha256']!=run['manifest_sha256'] or unit['locator']!={'kind':'document'}:
+        locator=_locator(run['profile'],unit['ordinal'])
+        if (unit['ordinal']>run['expected_units'] or _hash(unit['locator'])!=_hash(locator)
+            or claim.ordinal!=unit['ordinal'] or _hash(claim.locator)!=_hash(locator)
+            or unit['input_sha256']!=_fingerprint(run['manifest_sha256'],run['profile'],unit['ordinal'],locator)):
             cancel_versions(c,[run['version_id']],'manifest_mismatch')
             return None
         if replay and unit['state']=='succeeded':
@@ -261,14 +327,17 @@ class ExtractionQueue(SpaceBound):
         return run,unit,now
 
     def complete(self, claim, result):
-        digest = _result(result)
+        page=claim.locator.get('kind')=='page'
+        if page: validate_page(result,claim.ordinal)
+        digest = _result(result,allow_blank=page)
         with self.database.engine.begin() as c:
             attempt = self._attempt(c, claim, replay=True)
             if attempt is None:
                 return False
             run,unit,now = attempt
+            if unit['state']=='published': return unit['result_sha256']==digest
             if unit['state']=='succeeded':
-                return unit['result_sha256']==digest==_result(Extracted(unit['body'],unit['locations']))
+                return unit['result_sha256']==digest==_result(Extracted(unit['body'],unit['locations']),allow_blank=page)
             if (run['result_bytes']+len(result.text.encode())>2097152
                 or run['result_characters']+len(result.text)>1000000):
                 self._fail(c,run,unit,'too_large',now)
@@ -303,6 +372,121 @@ class ExtractionQueue(SpaceBound):
             self._fail(c,*attempt[:2],code,attempt[2])
             return True
 
+    def retry_failed(self,actor,run_id,*,expected_revision,idempotency_key):
+        from .receipts import _KEY
+        from .current_content import ContentSuperseded
+        if not isinstance(actor,Actor): raise PermissionDenied()
+        if actor.delegation is not None or actor.delegated_scopes is not None or actor.session_binding is not None:
+            raise ValueError('unsupported_extraction_handoff')
+        if type(expected_revision) is not int or expected_revision<1: raise ValueError('invalid_revision')
+        if not isinstance(idempotency_key,str) or not _KEY.fullmatch(idempotency_key):
+            raise ValueError('invalid_idempotency_key')
+        identifier=UUID(str(run_id))
+        fingerprint=_hash({'operation':'extraction.retry','run':str(identifier),'revision':expected_revision})
+        receipt_key='extraction.retry:'+hashlib.sha256(idempotency_key.encode()).hexdigest()
+        with self.database.engine.connect() as c:
+            current=self._space_authorize(c,actor,Role.EDITOR)
+            run=c.execute(text('SELECT * FROM c0_extraction_runs WHERE space_id=:space AND id=:id'),
+                {'space':current.space_id,'id':identifier}).mappings().one_or_none()
+            if run is None: raise SourceNotFound()
+            if run['state'] not in ('ready','superseded') and run['expires_at']<=c.execute(text('SELECT clock_timestamp()')).scalar_one():
+                raise ValueError('staging_expired')
+            original=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),{'id':run['version_id']}).mappings().one_or_none()
+            original=dict(original) if original is not None else None
+            needs_original=run['state'] not in ('ready','superseded')
+        if needs_original:
+            if original is None: raise SourceNotFound()
+            self.originals.check(original)
+        with self.database.engine.begin() as c:
+            content_lock(c); hold_authority(c)
+            current=self._space_authorize(c,actor,Role.EDITOR)
+            run=c.execute(text('SELECT * FROM c0_extraction_runs WHERE space_id=:space AND id=:id FOR UPDATE'),
+                {'space':current.space_id,'id':identifier}).mappings().one_or_none()
+            if run is None: raise SourceNotFound()
+            check_retired(c,current.space_id,'source_version',run['version_id'])
+            now=c.execute(text('SELECT clock_timestamp()')).scalar_one()
+            if run['state']=='superseded': raise ContentSuperseded()
+            if run['state']!='ready' and run['expires_at']<=now: raise ValueError('staging_expired')
+            receipt=c.execute(text('''SELECT fingerprint,result FROM c0_knowledge_receipts
+                WHERE space_id=:space AND actor_id=:actor AND key=:key'''),
+                {'space':current.space_id,'actor':current.user_id,'key':receipt_key}).mappings().one_or_none()
+            if receipt:
+                if receipt['fingerprint']!=fingerprint: raise SourceConflict()
+                return receipt['result']
+            if run['state']!='failed' or run['revision']!=expected_revision: raise SourceConflict()
+            if self._live(c,run,now) is False: raise SourceConflict()
+            changed=c.execute(text("""UPDATE c0_extraction_units SET state='queued',attempts=0,
+                lease_token=NULL,lease_deadline=NULL,available_at=clock_timestamp(),error_code=NULL,
+                started_at=NULL,finished_at=NULL WHERE run_id=:id AND state='failed' RETURNING id"""),
+                {'id':identifier}).scalars().all()
+            if not changed: raise SourceConflict()
+            row=c.execute(text("""UPDATE c0_extraction_runs SET state='extracting',error_code=NULL,
+                revision=revision+1 WHERE id=:id RETURNING revision"""),{'id':identifier}).scalar_one()
+            result={'id':str(identifier),'revision':row,'retried_units':len(changed)}
+            c.execute(text('''INSERT INTO c0_knowledge_receipts(space_id,actor_id,key,fingerprint,result)
+                VALUES(:space,:actor,:key,:fingerprint,CAST(:result AS jsonb))'''),
+                {'space':current.space_id,'actor':current.user_id,'key':receipt_key,
+                 'fingerprint':fingerprint,'result':json.dumps(result)})
+            return result
+
+    def publish(self,run_id):
+        """Assemble without a connection, then atomically publish a fenced snapshot."""
+        if not self.enabled: return False
+        identifier=UUID(str(run_id))
+        with self.database.engine.connect() as c:
+            run=c.execute(text('SELECT * FROM c0_extraction_runs WHERE id=:id'),{'id':identifier}).mappings().one_or_none()
+            if run is None: return False
+            if run['state']=='ready': return True
+            if run['state']!='assembling' or run['profile'].get('partitioner')!='pdf-page-v1': return False
+            units=[dict(row) for row in c.execute(text('SELECT * FROM c0_extraction_units WHERE run_id=:id ORDER BY ordinal LIMIT 201'),
+                {'id':identifier}).mappings()]
+            source=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),{'id':run['version_id']}).mappings().one_or_none()
+            if source is None: return False
+            run=dict(run); source=dict(source)
+        error=None
+        try:
+            self.originals.check(source)
+            evidence=assemble_pdf(units,run['expected_units'])
+            segments=chunks(evidence)
+            self.originals.check(source)
+        except ExtractionError as failure: error=failure.code
+        from .sources import _publish_extracted, register_source_handlers
+        from .jobs import default_registry, JobService
+        registry=default_registry(); register_source_handlers(registry,self.database,self.originals)
+        with self.database.engine.begin() as c:
+            content_lock(c); hold_authority(c)
+            current=c.execute(text('SELECT * FROM c0_extraction_runs WHERE id=:id FOR UPDATE'),{'id':identifier}).mappings().one_or_none()
+            if current is None: return False
+            if current['state']=='ready': return True
+            if current['state']!='assembling' or self._live(c,current,c.execute(text('SELECT clock_timestamp()')).scalar_one()) is False:
+                return False
+            if current['revision']!=run['revision'] or current['manifest_sha256']!=run['manifest_sha256']: return False
+            stored=c.execute(text('''SELECT id,ordinal,locator,input_sha256,state,result_sha256,text_sha256
+                FROM c0_extraction_units WHERE run_id=:id ORDER BY ordinal FOR UPDATE'''),{'id':identifier}).mappings().all()
+            keys=('id','ordinal','locator','input_sha256','state','result_sha256','text_sha256')
+            same=(len(stored)==len(units) and all(all(a[key]==b[key] for key in keys) for a,b in zip(stored,units)))
+            if not same: return False
+            manifest_ok=all(_hash(row['locator'])==_hash(_locator(current['profile'],row['ordinal']))
+                and row['input_sha256']==_fingerprint(current['manifest_sha256'],current['profile'],row['ordinal'],row['locator'])
+                for row in stored)
+            if error is not None or not manifest_ok:
+                c.execute(text("UPDATE c0_extraction_runs SET state='failed',error_code=:code,revision=revision+1 WHERE id=:id"),
+                    {'id':identifier,'code':error or 'manifest_mismatch'})
+                return False
+            version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),{'id':current['version_id']}).mappings().one()
+            _publish_extracted(c,version,evidence,segments,JobService(self.database,registry))
+            c.execute(text("""UPDATE c0_extraction_units SET state='published',body=NULL,locations=NULL,
+                lease_deadline=NULL WHERE run_id=:id"""),{'id':identifier})
+            c.execute(text("""UPDATE c0_extraction_runs SET state='ready',error_code=NULL,
+                result_bytes=0,result_characters=0,revision=revision+1 WHERE id=:id"""),{'id':identifier})
+            return True
+
+    def publish_pending(self):
+        with self.database.engine.connect() as c:
+            identifiers=c.execute(text("""SELECT id FROM c0_extraction_runs WHERE state='assembling'
+                AND profile->>'partitioner'='pdf-page-v1' ORDER BY created_at,id LIMIT 20""")).scalars().all()
+        for identifier in identifiers: self.publish(identifier)
+
     def cleanup(self, *, limit=20):
         with self.database.engine.begin() as c:
             return cleanup_extractions(c,limit=limit)
@@ -326,10 +510,12 @@ class ExtractionWorker:
                 break
             try:
                 path = self.queue.originals.check(claim.original)
-                result = extract_isolated(path,claim.original['media_type'])
+                result = (extract_page_isolated(path,claim.ordinal) if claim.locator['kind']=='page'
+                    else extract_isolated(path,claim.original['media_type']))
                 self.queue.originals.check(claim.original)
                 self.queue.complete(claim,result)
             except ExtractionError as error:
                 self.queue.fail(claim,error.code)
             processed += 1
+        self.queue.publish_pending()
         return processed

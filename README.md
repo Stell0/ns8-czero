@@ -34,8 +34,9 @@ other sources. Public adapters and tests stay in Git; your instance `.env`, upda
 scripts, OAuth credentials, datasets and receipts stay in an ignored private job.
 
 Queued document extraction follows the [M0 contracts and synthetic baseline](docs/ingestion-pipeline/CONTRACTS.md).
-The [M1 producer candidate](docs/ingestion-pipeline/M1.md) adds opt-in private staging;
-ordinary source imports continue through the existing extraction worker.
+M1 adds opt-in private staging; the [M2 producer candidate](docs/ingestion-pipeline/M2.md)
+adds PDF page recovery and complete publication. Ordinary source imports continue
+through the existing extraction worker until the later rollout gates pass.
 
 ## Use C0
 

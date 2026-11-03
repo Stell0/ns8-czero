@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0 merged and fully accepted; M1 producer candidate implemented, acceptance pending**
+Status: **M0/M1 merged; M2 PDF publication candidate implemented, acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -18,8 +18,10 @@ Its exact-source CI and milestone review remain separate from M1 acceptance.
 The subsequent [M1 candidate](M1.md) implements the opt-in PostgreSQL lease and
 private-result foundation with Core 0.37.0/schema 0024. M0's repaired source passed
 full run `41598413767` and regularly merged as `e297376938ad12fa629bb595b50a43c0320d1207`.
-M1 deliberately stages
-one whole-original unit; page fan-out and atomic publication remain M2 work.
+M1 regularly merged as `6380d38d7f76a6ad1dbb7d1c32c2713e60fdcf20` after full
+run `41605913790` and exact-source promotion verification. The [M2 candidate](M2.md)
+adds one unit per PDF page, failed-unit retry and complete atomic publication.
+The default extraction path and released consumer lock remain unchanged.
 
 The conference talk's key lesson is **fan-out at extraction time**: partition an original document into separately queued extraction units, persist each successful unit, retry only failed units, and assemble/publish only after the complete set is verified. **Extraction units are not search chunks.** Extraction units isolate processing cost and failure; search chunks are separately derived for retrieval.
 
@@ -332,4 +334,7 @@ After M10 acceptance, consider larger PDFs/uploads, distributed multi-host worke
 
 ---
 
-**First implementation task:** execute **M0 only** on the newest original main, confirm each existing contract, add the specified fixtures and submit a *documentation/tests-only* PR. Do not start M1 until M0's state machine and assembly/hash/lease contracts are reviewed.
+**Execution:** M0 and M1 are merged; M2 acceptance is pending. The operator
+authorizes developing isolated successor candidates while prerequisite CI runs,
+with acceptance and merges kept sequential and one milestone per PR. All native
+and rollout acceptance uses disposable instances; live deployment remains separate.

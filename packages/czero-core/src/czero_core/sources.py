@@ -465,11 +465,43 @@ class SourceService(SpaceBound):
         return {'source': source, 'document': document, 'chunk': chunk}
 
 
+def _publish_extracted(connection,row,evidence,segments,jobs):
+    """Trusted complete evidence; caller owns the content lock/transaction."""
+    from .current_content import publish_versions
+    version_id=row['id']
+    source=connection.execute(text('SELECT * FROM c0_sources WHERE id=:id'),{'id':row['source_id']}).mappings().one()
+    managed=bool(source['metadata'].get('parent_external_id') or (row['publication_metadata'] or {}).get('parent_external_id')) or connection.execute(text("SELECT 1 FROM c0_objects WHERE type_name IN ('c0_project_source_sync_v1','c0_project_source_part_v1') AND data->>'source_id'=:id LIMIT 1"),{'id':str(row['source_id'])}).scalar_one_or_none()
+    if not managed and row['media_type'] in TEXT_MEDIA_TYPES and source['current_version_id']:
+        current=connection.execute(text('SELECT * FROM c0_documents WHERE version_id=:id'),{'id':source['current_version_id']}).mappings().one_or_none()
+        if current and current['text_hash']==evidence.text_hash and current['body']==evidence.text:
+            from .current_content import retire_versions
+            connection.execute(text('UPDATE c0_sources SET title=:title,metadata=CAST(:metadata AS jsonb),updated_at=now() WHERE id=:id'),
+                {'id':source['id'],'title':row['publication_title'],'metadata':json.dumps(row['publication_metadata'])})
+            retire_versions(connection,[version_id])
+            return {'state':'unchanged','current_version_id':str(source['current_version_id'])}
+    document_id = uuid5(version_id, 'document')
+    connection.execute(text('''INSERT INTO c0_documents(space_id,id,version_id,body,text_hash,locations)
+        VALUES (:space,:id,:version,:body,:hash,CAST(:locations AS jsonb))'''),
+        {'space': row['space_id'], 'id': document_id, 'version': version_id, 'body': evidence.text, 'hash': evidence.text_hash,
+         'locations': json.dumps(evidence.locations)})
+    connection.execute(text('''INSERT INTO c0_chunks(space_id,id,document_id,ordinal,start_offset,end_offset,body,content_hash,locations)
+        VALUES (:space,:id,:document,:ordinal,:start,:end,:body,:hash,CAST(:locations AS jsonb))'''),
+        [{'space': row['space_id'], 'id': uuid5(document_id, str(i)), 'document': document_id, 'ordinal': i,
+          'start': chunk['start'], 'end': chunk['end'], 'body': chunk['text'],
+          'hash': chunk['text_hash'], 'locations': json.dumps(chunk['locations'])}
+         for i, chunk in enumerate(segments)])
+    connection.execute(text("UPDATE c0_source_versions SET state='ready',error_code=NULL WHERE id=:id"), {'id': version_id})
+    if not managed:publish_versions(connection,[version_id])
+    if not row['retain_original']:
+        jobs._enqueue(connection, 'source.cleanup', {'version_id':str(version_id)}, 'source:' + str(version_id) + ':cleanup', space_id=row['space_id'])
+    return {'state': 'ready', 'document_id': str(document_id), 'chunks': len(segments)}
+
+
 def register_source_handlers(registry, database, originals):
     jobs = JobService(database, registry)
 
     def extract(connection, payload):
-        from .current_content import content_lock,publish_versions
+        from .current_content import content_lock
         content_lock(connection)
         version_id = _uuid(payload['version_id'])
         row = connection.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),
@@ -487,32 +519,7 @@ def register_source_handlers(registry, database, originals):
             connection.execute(text("UPDATE c0_source_versions SET state='failed',error_code=:code WHERE id=:id"),
                 {'id': version_id, 'code': error.code})
             return {'state': 'failed', 'error_code': error.code}
-        source=connection.execute(text('SELECT * FROM c0_sources WHERE id=:id'),{'id':row['source_id']}).mappings().one()
-        managed=bool(source['metadata'].get('parent_external_id') or (row['publication_metadata'] or {}).get('parent_external_id')) or connection.execute(text("SELECT 1 FROM c0_objects WHERE type_name IN ('c0_project_source_sync_v1','c0_project_source_part_v1') AND data->>'source_id'=:id LIMIT 1"),{'id':str(row['source_id'])}).scalar_one_or_none()
-        if not managed and row['media_type'] in TEXT_MEDIA_TYPES and source['current_version_id']:
-            current=connection.execute(text('SELECT * FROM c0_documents WHERE version_id=:id'),{'id':source['current_version_id']}).mappings().one_or_none()
-            if current and current['text_hash']==evidence.text_hash and current['body']==evidence.text:
-                from .current_content import retire_versions
-                connection.execute(text('UPDATE c0_sources SET title=:title,metadata=CAST(:metadata AS jsonb),updated_at=now() WHERE id=:id'),
-                    {'id':source['id'],'title':row['publication_title'],'metadata':json.dumps(row['publication_metadata'])})
-                retire_versions(connection,[version_id])
-                return {'state':'unchanged','current_version_id':str(source['current_version_id'])}
-        document_id = uuid5(version_id, 'document')
-        connection.execute(text('''INSERT INTO c0_documents(space_id,id,version_id,body,text_hash,locations)
-            VALUES (:space,:id,:version,:body,:hash,CAST(:locations AS jsonb))'''),
-            {'space': row['space_id'], 'id': document_id, 'version': version_id, 'body': evidence.text, 'hash': evidence.text_hash,
-             'locations': json.dumps(evidence.locations)})
-        connection.execute(text('''INSERT INTO c0_chunks(space_id,id,document_id,ordinal,start_offset,end_offset,body,content_hash,locations)
-            VALUES (:space,:id,:document,:ordinal,:start,:end,:body,:hash,CAST(:locations AS jsonb))'''),
-            [{'space': row['space_id'], 'id': uuid5(document_id, str(i)), 'document': document_id, 'ordinal': i,
-              'start': chunk['start'], 'end': chunk['end'], 'body': chunk['text'],
-              'hash': chunk['text_hash'], 'locations': json.dumps(chunk['locations'])}
-             for i, chunk in enumerate(segments)])
-        connection.execute(text("UPDATE c0_source_versions SET state='ready',error_code=NULL WHERE id=:id"), {'id': version_id})
-        if not managed:publish_versions(connection,[version_id])
-        if not row['retain_original']:
-            jobs._enqueue(connection, 'source.cleanup', payload, 'source:' + str(version_id) + ':cleanup', space_id=row['space_id'])
-        return {'state': 'ready', 'document_id': str(document_id), 'chunks': len(segments)}
+        return _publish_extracted(connection,row,evidence,segments,jobs)
 
     def cleanup(connection, payload):
         from .current_content import content_lock,retire_versions
@@ -520,7 +527,11 @@ def register_source_handlers(registry, database, originals):
         if _uuid(payload['version_id']).int==0:
             from .extraction_queue import cleanup_extractions
             cleanup_extractions(connection)
-            abandoned=connection.execute(text("SELECT v.id FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id WHERE v.id IS DISTINCT FROM s.current_version_id AND v.created_at<now()-interval '24 hours' ORDER BY v.created_at LIMIT 20")).scalars().all()
+            abandoned=connection.execute(text("""SELECT v.id FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id
+                WHERE v.id IS DISTINCT FROM s.current_version_id AND v.created_at<now()-interval '24 hours'
+                AND NOT EXISTS(SELECT 1 FROM c0_extraction_runs r WHERE r.version_id=v.id
+                    AND r.expires_at>clock_timestamp() AND r.state IN ('extracting','assembling','failed'))
+                ORDER BY v.created_at LIMIT 20""")).scalars().all()
             retire_versions(connection,abandoned)
             removed=0
             pending=connection.execute(text('SELECT version_id FROM c0_original_cleanup WHERE available_at<=now() ORDER BY available_at,version_id LIMIT 100 FOR UPDATE')).scalars().all()
