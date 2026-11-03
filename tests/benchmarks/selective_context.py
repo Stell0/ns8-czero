@@ -21,6 +21,7 @@ from joserfc import jwt
 from czero_core.extraction_queue import ExtractionQueue,ExtractionPool
 from evaluation.codex_driver import evaluate,fingerprint,RunnerFailure
 from evaluation.fixture import Fixture,disposable_database,database_parameters
+from benchmarks.ingestion import source_proof
 
 ROOT=Path(__file__).resolve().parents[2]
 BODY=('# Prerequisite\n\nBefore energizing, insert isolation key K17.\n\n'
@@ -124,7 +125,7 @@ async def read_connection(fixture):
 
 async def benchmark(args,output,plan):
     database_parameters(args.database_url)
-    proof={**plan,'episodes':[],'fixture_only':args.fixture_check}
+    proof={**plan,**source_proof(),'episodes':[],'fixture_only':args.fixture_check}
     async with disposable_database(args.database_url) as url:
         with tempfile.TemporaryDirectory(prefix='c0-context-benchmark-') as private:
             fixture=Fixture(url,private)

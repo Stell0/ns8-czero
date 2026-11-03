@@ -39,6 +39,21 @@ ARMS=('whole','units-1-cold','units-1-warm','units-2-cold','units-2-warm','units
 def digest(value):return hashlib.sha256(value).hexdigest()
 
 
+def source_proof():
+    import czero_core,czero_app
+    codes={}
+    for name,module,relative in (('core',czero_core,'packages/czero-core/src/czero_core'),('app',czero_app,'app/src/czero_app')):
+        def files(directory):
+            return {str(p.relative_to(directory)):digest(p.read_bytes()) for p in directory.rglob('*')
+                if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc'}
+        expected=files(ROOT/relative);actual=files(Path(module.__file__).resolve().parent)
+        if actual!=expected:raise ValueError('installed_'+name+'_source_mismatch')
+        codes[name]=digest(json.dumps(expected,sort_keys=True).encode())
+    return {'source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
+        'dirty':bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
+        'verified_runtime_code_sha256':codes}
+
+
 def corpus():
     raw=(FIXTURES/'manifest.json').read_bytes()
     values={row['name']:row for row in json.loads(raw)['files'] if 'text_sha256' in row}
@@ -102,9 +117,11 @@ def drain(queue,actor,run_id):
 
 
 def measure(spec,url,directory):
+    provenance=source_proof()
     parsed=database_parameters(url)
     if not re.fullmatch(r'czero_eval_[0-9a-f]{32}',parsed.database or ''):
         raise ValueError('measurement_requires_owned_random_database')
+    if provenance!=spec.get('provenance'):raise ValueError('frozen_source_drift')
     frozen,values=corpus()
     if spec['corpus_sha256']!=frozen or spec['case'] not in values or spec['arm'] not in ARMS:
         raise ValueError('invalid_frozen_measurement')
@@ -164,7 +181,7 @@ def measure(spec,url,directory):
         event.remove(database.engine,'after_cursor_execute',sql_finished)
         after_usage=usage();after=database_observation(database)
         if warm:assert status['cache_hits']==status['expected_units'] and status['cache_misses']==0
-        result={**spec,'source_sha256':expected['original_sha256'],'text_sha256':document['text_hash'],
+        result={**spec,'provenance':provenance,'source_sha256':expected['original_sha256'],'text_sha256':document['text_hash'],
             'quality':quality,'workers':workers,'output_cache':'warm-current' if warm else 'disabled' if workers else 'legacy-none',
             'os_disk_cache':'uncontrolled','upload_seconds':upload_seconds,'extraction_seconds':extraction_seconds,
             'manifest_seconds':manifest_seconds,'sql_during_submission_execution_readback':sql,
@@ -198,8 +215,7 @@ async def benchmark(args):
     output=Path(args.output);output.mkdir(mode=0o700,parents=True,exist_ok=False)
     frozen,values=corpus();cases=args.cases or list(values)
     if not set(cases)<=values.keys():raise ValueError('unknown_frozen_case')
-    source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
-    proof={'source':source,'dirty':bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True)),
+    proof={**source_proof(),
         'kind':'extraction fidelity and observed execution; no retrieval or model-quality claim',
         'corpus_sha256':frozen,'arms':args.arms,'cases':cases,'repeats':args.repeats,'smoke_only':args.smoke,
         'platform':platform.system(),'machine':platform.machine(),'python':platform.python_version(),
@@ -212,7 +228,8 @@ async def benchmark(args):
         arms=args.arms[repeat%len(args.arms):]+args.arms[:repeat%len(args.arms)]
         for case in cases:
             for arm in arms:
-                spec={'case':case,'arm':arm,'repeat':repeat,'corpus_sha256':frozen}
+                spec={'case':case,'arm':arm,'repeat':repeat,'corpus_sha256':frozen,
+                    'provenance':{key:proof[key] for key in ('source','dirty','verified_runtime_code_sha256')}}
                 trial=output/(str(repeat)+'-'+case+'-'+arm);trial.mkdir(mode=0o700)
                 path=trial/'spec.json';path.write_text(json.dumps(spec))
                 async with disposable_database(args.database_url) as url:

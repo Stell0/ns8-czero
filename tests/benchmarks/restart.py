@@ -26,6 +26,7 @@ from czero_core.migrate import migrate_database
 from czero_core.pdf_units import extract_page_isolated
 from czero_core.sources import OriginalStore,SourceService,register_source_handlers
 from evaluation.fixture import database_parameters,disposable_database
+from benchmarks.ingestion import source_proof
 
 ROOT=Path(__file__).resolve().parents[2]
 IMAGE='docker.io/pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d'
@@ -125,13 +126,14 @@ def prove(url,container_id,private):
 
 
 async def run(args):
+    provenance=source_proof()
     info=json.loads(subprocess.check_output(['podman','inspect',args.container],text=True))
     if len(info)!=1:raise ValueError('one_owned_container_required')
     identifier=validate_container(info[0],args.database_url)
     output=Path(args.output);output.mkdir(mode=0o700,parents=True,exist_ok=False)
     async with disposable_database(args.database_url) as url:
         with tempfile.TemporaryDirectory(prefix='c0-restart-proof-') as private:
-            proof=prove(url,identifier,private)
+            proof={**provenance,**prove(url,identifier,private)}
             (output/'restart-observation.json').write_text(json.dumps(proof,indent=2)+'\n')
     proof['owned_database_cleanup_completed']=True
     (output/'restart.json').write_text(json.dumps(proof,indent=2)+'\n')
