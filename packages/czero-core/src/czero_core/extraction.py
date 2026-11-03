@@ -48,7 +48,7 @@ def valid_text(text):
     return text
 
 
-def _parts(parts):
+def _parts(parts,*,allow_empty=False):
     texts=[]; locations=[]; cursor=0
     for kind,index,text in parts:
         text=valid_text(text.replace('\r\n','\n').replace('\r','\n'))
@@ -58,11 +58,11 @@ def _parts(parts):
         if cursor>MAX_CHARACTERS or len(locations)>=MAX_LOCATIONS:raise ExtractionError('too_large')
         locations.append({'kind':kind,'index':index,'start':start,'end':cursor})
     result=valid_text(''.join(texts))
-    if not result.strip():raise ExtractionError('no_text')
+    if not result.strip() and not allow_empty:raise ExtractionError('no_text')
     return Extracted(result,locations)
 
 
-def _docx(path):
+def _docx(path,*,first=1,last=None,inventory=False,allow_empty=False):
     try:
         from lxml import etree
         namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -100,10 +100,15 @@ def _docx(path):
         document=Document(path)
         # OPC relationships can give XML parts arbitrary names/extensions.
         check_text_tree(document.element)
-        parts=[]
+        parts=[]; ordinal=0
+        def paragraph(kind,item):
+            nonlocal ordinal
+            ordinal+=1
+            if inventory or (ordinal>=first and (last is None or ordinal<=last)):
+                parts.append((kind,ordinal,item.text))
         def walk(container,kind):
             for item in container.iter_inner_content():
-                if isinstance(item,Paragraph): parts.append((kind,len(parts)+1,item.text))
+                if isinstance(item,Paragraph): paragraph(kind,item)
                 elif isinstance(item,Table):
                     # Merged cells share XML; do not repeat their text.
                     seen=set()
@@ -122,7 +127,9 @@ def _docx(path):
                 key=str(container.part.partname)
                 if key in headers:continue
                 headers.add(key);walk(container,kind)
-        return _parts(parts)
+        result=_parts(parts,allow_empty=allow_empty)
+        if inventory:return {'blocks':ordinal,'characters':len(result.text),'text_sha256':result.text_hash}
+        return result
     except ExtractionError:raise
     except MemoryError:raise ExtractionError('resource_limit') from None
     except Exception:raise ExtractionError('invalid_docx') from None
