@@ -72,3 +72,9 @@ Do not import a template with an example app ID. Do not replace or delete an exi
 - **Continuity:** repeat a read beyond five minutes, reconnect after expected expiry and verify targeted client revocation.
 
 Test both explicit skill selection and ordinary requests that should activate it, plus unrelated requests that should not. Keep private traces and credentials outside Git. Record actual web behavior for private Creator setup and managed import separately. No public directory submission or workspace-wide rollout is performed by the packager.
+
+Plugin 1.4 adds conditional selective-context research instructions for the
+0.37 producer APIs. Discover actual tools first, retain exact revision IDs, read
+only selected spans and respect explicit omissions/410. The registered App
+binding, scopes and archive inventory remain unchanged; source/package checks
+do not establish installed ChatGPT packaged-skill acceptance.

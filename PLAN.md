@@ -57,6 +57,10 @@ M6 exact `064a7bf` passes full/native `41699410483`, independent artifact gradin
 and promotion proof, then regularly merges as `39dc9cc`. Both distributions prove
 actual OCR with two/four workers and restored readback. M7 retains complete-body
 bounds and conservative same-space current/staging ownership.
+The [M8 context candidate](docs/ingestion-pipeline/M8.md) adds four read-only
+operations, exact generation guards, bounded selected evidence and plugin 1.4
+research guidance. Current/legacy SDK, native guided-probe, multipart, OCR
+provenance and generated-package checks pass 65 focused cases.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

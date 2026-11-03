@@ -397,3 +397,7 @@ M6 PR63 regularly merges as `39dc9cc0d7eefa4558e683c7142f9dceca574332`
 after exact `064a7bf` passes full/native `41699410483`, independent downloaded
 artifact grading and full promotion verification. Both distributions include
 actual nine-unit OCR/resource/restore proof. M7 is based on that accepted main.
+The [M8 context candidate](M8.md) adds four bounded read-only operations and
+plugin 1.4 research guidance with unchanged scopes/connection identity. Focused
+Core, actual current/legacy SDK/native-probe, multipart and package controls pass
+65 cases. These are protocol/evidence checks, not model answer-quality claims.
