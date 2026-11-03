@@ -597,7 +597,12 @@ class ExtractionQueue(SpaceBound):
                 unit=units[0]; evidence=Extracted(unit['body'],unit['locations'])
                 if _result(evidence)!=unit['result_sha256'] or evidence.text_hash!=unit['text_sha256']:
                     raise ExtractionError('parser_failed')
-            structure=build_structure(evidence,source['media_type'],self.originals.check(source))
+            chunking=run['profile'].get('chunking','fixed-v1')
+            try: structure=build_structure(evidence,source['media_type'],self.originals.check(source))
+            except ExtractionError as failure:
+                # Optional metadata bounds cannot reject an otherwise valid body.
+                if failure.code!='too_large': raise
+                structure=None; chunking='fixed-v1'
             metadata=[]
             for unit in units:
                 if unit['provenance'] is not None:
@@ -605,8 +610,9 @@ class ExtractionQueue(SpaceBound):
                     if _hash(unit['provenance'])!=unit['provenance_sha256']: raise ExtractionError('parser_failed')
                     metadata.append(unit['provenance'])
                 elif unit['provenance_sha256'] is not None: raise ExtractionError('parser_failed')
-            if metadata: structure['ocr']={'profile':run['profile']['ocr'],'pages':metadata}
-            chunking=run['profile'].get('chunking','fixed-v1')
+            if metadata:
+                if structure is None: raise ExtractionError('parser_failed')
+                structure['ocr']={'profile':run['profile']['ocr'],'pages':metadata}
             segments=section_chunks(evidence,structure,profile=chunking)
             self.originals.check(source)
         except ExtractionError as failure: error=failure.code

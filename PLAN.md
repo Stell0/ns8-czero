@@ -26,12 +26,21 @@ promotion verification.
 The [M3 successor](docs/ingestion-pipeline/M3.md), schema 0026, adds configurable
 native workers, fair leases, queue/result backpressure and actual resource/restore
 grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
-21 cases; full/native acceptance is pending. The [M4 candidate](docs/ingestion-pipeline/M4.md)
-adds canonical DOCX block and Markdown/text range extraction; focused formats,
-lease/PDF recovery and independent packages pass 64 cases. M4 acceptance waits
-for M3. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded current
-structure and versioned section chunks, with 21 focused passes and a frozen
-three-passage containment comparison; no model quality improvement is claimed.
+21 cases; complete local Python/PostgreSQL/packaging passes 2,661 cases.
+PR59 regularly merged as `ed160592cd42f711a78dc8f861497ccc42c859cd` after full
+`41654247380`, both native distributions, independent artifact audit and exact-source
+promotion verification. The earlier native retrieval failure remains preserved;
+fixtures now seed before indexing is paused and snapshotted. The [M4 implementation](docs/ingestion-pipeline/M4.md)
+adds canonical DOCX block and Markdown/text range extraction. Its exact current
+local suite passes 2,677 cases; full/native 41666816436, independent artifact grading
+and full promotion verification pass. Ready-transition full/native `41668554721`
+also passes; PR60 regularly merges as `b51112e15693f456384b231a675ce651949d3efd`. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded
+current structure and versioned section chunks. Original final source `2afbe4a`
+passes 2,682 complete local cases; the code-identical accepted-base candidate
+passes 15 focused structure/migration/source HTTP cases. M5 native gates remain. M10 measurements exposed a valid large Markdown body
+rejected by optional structure bounds; the successor preserves complete body
+publication with explicitly recorded fixed chunks when only derivatives overflow.
+No model answer-quality improvement is claimed.
 The [M6 successor](docs/ingestion-pipeline/M6.md) adds opt-in local page OCR,
 backend/model fingerprints and synthetic scan/timeout/disable checks. Native
 fixtures now verify an OCR page alongside ordinary pages before/after restore.

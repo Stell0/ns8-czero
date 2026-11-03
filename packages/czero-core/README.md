@@ -35,7 +35,9 @@ runs two isolated parsers by default, with an explicit maximum of four.
 Queued generations also retain bounded section/block/reference metadata and
 versioned chunks whose text is always an exact full-body slice. Ancestor context
 contains section IDs, never invented evidence text. Existing documents are not
-reindexed automatically. Optional local OCR handles only explicitly enabled
+reindexed automatically. A valid complete body whose optional structure exceeds
+its bound publishes with null structure and effective fixed chunks; parser or
+integrity errors still block publication. Optional local OCR handles only explicitly enabled
 unsupported PDF pages and binds installed engine/model/settings fingerprints.
 Independent Core needs no OCR tools unless that adapter is selected.
 Optional cache reuse binds space/input/profile/partition identity and rechecks

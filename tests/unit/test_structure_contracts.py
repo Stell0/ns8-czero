@@ -34,3 +34,9 @@ def test_oversized_code_is_bounded_without_inventing_ancestor_text():
 def test_duplicate_anchor_stays_unresolved():
     body='# Repeat\n\n# Repeat\n\n[ambiguous](#repeat)\n'
     assert derive(Extracted(body,[]),'text/markdown')['references'][0]['section'] is None
+
+
+def test_legacy_body_can_exceed_optional_structure_bounds():
+    body='# Manual\n\n'+('Complete original paragraph.\n\n'*4000)
+    with pytest.raises(ExtractionError,match='too_large'):
+        derive(Extracted(body,[]),'text/markdown')

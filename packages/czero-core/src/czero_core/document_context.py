@@ -122,7 +122,7 @@ def _load(service,connection,identifier,revision=None):
     origin='persisted' if saved is not None else 'derived_current_body'
     if saved is None:
         # Bound a legacy/multipart derivation before allocating line metadata.
-        saved=derive(Extracted(full['body'],locations),full['media_type'],bounded=True)
+        saved=derive(Extracted(full['body'],locations),full['media_type'])
     structure=_structure(saved,full['body'])
     identity={'logical_document_id':str(full['id']),'revision_id':str(full['revision_id']),
         'text_sha256':full['text_hash'],'structure_revision':1,'structure_origin':origin}

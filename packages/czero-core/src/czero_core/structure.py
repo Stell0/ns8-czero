@@ -18,10 +18,10 @@ def _span(kind,start,end,**extra):
     return {'kind':kind,'start':start,'end':end,**extra}
 
 
-def derive(evidence,media,*,heading_levels=None,bounded=False):
+def derive(evidence,media,*,heading_levels=None):
     body=valid_text(evidence.text); headings=[]; blocks=[]; references=[]
     if media=='text/markdown':
-        boundaries,raw_headings=text_blocks(body,True,max_boundaries=4002 if bounded else None)
+        boundaries,raw_headings=text_blocks(body,True,max_boundaries=MAX_LOCATIONS+2)
         headings=[(start,level,body.find('\n',start) if '\n' in body[start:] else len(body)) for start,level in raw_headings]
         heading_starts={entry[0] for entry in headings}
         # Fences form one block, even when the source contains blank lines.
@@ -35,6 +35,7 @@ def derive(evidence,media,*,heading_levels=None,bounded=False):
                 'list' if re.match(r'(?:[-+*]|[0-9]+[.)])\s',stripped) else
                 'table' if re.search(r'^\s*\|?.*\|.*\n\s*\|?\s*:?-{3,}',value,re.M) else 'paragraph')
             blocks.append(_span(kind,start,end))
+            if len(blocks)>MAX_LOCATIONS: raise ExtractionError('too_large')
         for match in re.finditer(r'(?<!\\)\[[^\]\n]{1,256}\]\((#[A-Za-z0-9_.:%-]{1,256})\)',body):
             if any(b['kind']=='code' and b['start']<=match.start()<b['end'] for b in blocks): continue
             line_start=body.rfind('\n',0,match.start())+1
@@ -43,6 +44,7 @@ def derive(evidence,media,*,heading_levels=None,bounded=False):
             # before their apparent links can be treated as references.
             if '`' in body[line_start:line_end if line_end>=0 else len(body)]: continue
             references.append(_span('link',match.start(),match.end(),target=match[1][1:]))
+            if len(references)>MAX_LOCATIONS: raise ExtractionError('too_large')
     else:
         for location in evidence.locations:
             if location['start']==location['end']: continue
