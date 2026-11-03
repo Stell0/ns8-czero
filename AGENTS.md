@@ -127,6 +127,9 @@ and immediate current-content cleanup; no permanent body cache.
 M6 is accepted at `39dc9cc` after full/native `41699410483`, independent artifact
 grading and exact-source proof. Preserve actual nine-unit OCR/resource/restore
 grading in subsequent cache/context/rollout candidates.
+M7 is accepted at `e9a485f` after full/native `41708740692`, independent downloaded
+artifact grading and exact-source promotion. Preserve current/staging ownership,
+complete-body fallback and strict native resource/restore evidence in successors.
 M8 context reads bind canonical logical ID, exact current revision/hash and
 source citation offsets. Preserve no-fallback budgets and closed error mapping.
 Keep the released older Core catalog working, and the existing App identity and
