@@ -115,6 +115,6 @@ def main(stage,workers):
 
 if __name__=='__main__':
     try: main(sys.argv[1],int(sys.argv[2]))
-    except Exception:
-        print('Disposable extraction pool proof failed',file=sys.stderr)
+    except Exception as error:
+        print('Disposable extraction pool proof failed ('+type(error).__name__+')',file=sys.stderr)
         sys.exit(1)

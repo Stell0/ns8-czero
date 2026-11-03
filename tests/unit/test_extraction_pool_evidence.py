@@ -34,6 +34,19 @@ def test_explicit_reindex_proof_requires_actual_both_workers_and_closed_typed_su
         with pytest.raises(AssertionError):evidence['require_reindexes'](rows)
 
 
+def test_native_failure_diagnostics_keep_only_closed_phase_and_exception_type():
+    private='private-test-body password=private-test-secret'
+    message=evidence['operation_error']('seed',4,
+        private+'\nDisposable extraction pool proof failed (SourceConflict)\n'+private)
+    assert message=='Disposable native extraction operation failed (phase=seed, workers=4, type=SourceConflict)'
+    assert private not in message
+    for error in (private,'Disposable extraction pool proof failed ('+private+')',
+                  'Disposable extraction pool proof failed (UnregisteredException)'):
+        assert 'type=unclassified)' in evidence['operation_error']('verify',2,error)
+    for phase,workers in ((private,2),('seed',True),('seed',3)):
+        with pytest.raises(AssertionError):evidence['operation_error'](phase,workers,private)
+
+
 @pytest.mark.parametrize('change',[{'memory_peak_bytes':True},{'memory_peak_bytes':0},
     {'memory_limit_bytes':0},{'swap_limit_bytes':0},{'pids_limit':0},
     {'duration_seconds':float('nan')},{'duration_seconds':131},{'workers':True},

@@ -7,7 +7,7 @@ import shlex
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
-from extraction_pool_evidence import validate_measurement,validate_reindex
+from extraction_pool_evidence import validate_measurement,validate_reindex,operation_error
 
 
 class CzeroExtraction:
@@ -23,7 +23,7 @@ class CzeroExtraction:
             for workers in (2,4):
                 command='runagent -m '+module_id+' podman exec -i --env=CZERO_DISPOSABLE_TEST=1 czero python - reindex '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'
                 output,error,code=ssh.execute_command(command,return_rc=True,return_stderr=True,timeout='180 seconds')
-                assert code==0,'Disposable explicit reindex failed'
+                assert code==0,operation_error('reindex',workers,error)
                 proof=json.loads(output)
                 validate_reindex(proof)
                 assert proof['workers']==workers
@@ -40,25 +40,25 @@ class CzeroExtraction:
         builtin=BuiltIn(); previous=builtin.set_log_level('NONE')
         try:
             ssh=builtin.get_library_instance('SSHLibrary')
-            def run(command,timeout='180 seconds'):
+            def run(command,phase,workers=None,timeout='180 seconds'):
                 output,error,code=ssh.execute_command(command,return_rc=True,return_stderr=True,timeout=timeout)
-                assert code==0,'Disposable native extraction operation failed'
+                assert code==0,operation_error(phase,workers,error)
                 return output
-            config=json.loads(run('api-cli run module/'+module_id+'/get-configuration'))
+            config=json.loads(run('api-cli run module/'+module_id+'/get-configuration','configuration'))
             assert config['host'].endswith('.test'),'Disposable native hostname required'
             ssh.put_file(str(Path(__file__).with_name('extraction_pool_fixture.py')),'/tmp/c0-extraction-pool.py',mode='0644')
             ssh.put_file(str(Path(__file__).parent/'integration/ocr_original.py'),'/tmp/c0-ocr-original.py',mode='0644')
-            run('cat /tmp/c0-ocr-original.py /tmp/c0-extraction-pool.py > /tmp/c0-combined-extraction-pool.py')
+            run('cat /tmp/c0-ocr-original.py /tmp/c0-extraction-pool.py > /tmp/c0-combined-extraction-pool.py','prepare')
             command='runagent -m '+module_id+' podman exec -i --env=CZERO_DISPOSABLE_TEST=1 czero python - '
             for workers in (2,4):
                 measurements={key:None for key in ('memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds')}
                 if stage=='seed':
-                    assert json.loads(run(command+'seed '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'))['units']==9
+                    assert json.loads(run(command+'seed '+str(workers)+' < /tmp/c0-combined-extraction-pool.py','seed',workers))['units']==9
                     data={key:config[key] for key in ('host','lets_encrypt','user_domain','idp','owner')}
                     data['extraction']={'enabled':True,'workers':workers,'document_workers':workers,'space_workers':workers,'ocr_enabled':True,'ocr_language':'eng'}
-                    run('api-cli run module/'+module_id+'/configure-module --data '+shlex.quote(json.dumps(data)))
-                    run('runagent -m '+module_id+' systemctl --user start czero-extraction.service')
-                    log=run('runagent -m '+module_id+' journalctl --user -u czero-extraction.service -n 100 --no-pager -o cat')
+                    run('api-cli run module/'+module_id+'/configure-module --data '+shlex.quote(json.dumps(data)),'configure',workers)
+                    run('runagent -m '+module_id+' systemctl --user start czero-extraction.service','drain',workers)
+                    log=run('runagent -m '+module_id+' journalctl --user -u czero-extraction.service -n 100 --no-pager -o cat','journal',workers)
                     assert not any(word in log for word in ('Synthetic pool page','SCANNED SAFETY','lease_token','CZERO_DATABASE_URL','password='))
                     reports=[]
                     for line in log.splitlines():
@@ -78,7 +78,7 @@ class CzeroExtraction:
                 else:
                     assert config['extraction']['enabled'] and config['extraction']['workers']==4
                     assert config['extraction']['ocr_enabled'] and config['extraction']['ocr_language']=='eng'
-                assert json.loads(run(command+'verify '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'))=={'stage':'verify','workers':workers,'units':9,'verified':True}
+                assert json.loads(run(command+'verify '+str(workers)+' < /tmp/c0-combined-extraction-pool.py','verify',workers))=={'stage':'verify','workers':workers,'units':9,'verified':True}
                 proof={'stage':stage,'workers':workers,'units':9,'body_hash_verified':True,'staging_cleared':True,
                     'ocr_pages':1,'ocr_text_verified':True,'native_limits_verified':stage=='seed','backup_readback':stage=='verify',**measurements}
                 validate_measurement(proof)

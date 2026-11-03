@@ -1,9 +1,20 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Strict grading of actual native extraction/resource/restore observations."""
 import math
+import re
 
 FIELDS={'stage','workers','units','body_hash_verified','staging_cleared','native_limits_verified',
     'backup_readback','ocr_pages','ocr_text_verified','memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds'}
+
+
+def operation_error(phase,workers,stderr):
+    assert phase in {'configuration','prepare','seed','configure','drain','journal','verify','reindex'}
+    assert workers is None or (type(workers) is int and workers in (2,4))
+    found=re.search(r'^Disposable extraction pool proof failed \(([A-Za-z]{1,64})\)$',stderr,re.M)
+    known={'AssertionError','FileNotFoundError','JSONDecodeError','SourceConflict',
+        'PermissionDenied','OperationalError','IntegrityError','ExtractionError','ValueError'}
+    kind=found[1] if found and found[1] in known else 'unclassified'
+    return f'Disposable native extraction operation failed (phase={phase}, workers={workers}, type={kind})'
 
 
 def validate_reindex(value):
