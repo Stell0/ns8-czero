@@ -184,3 +184,8 @@ def test_native_fixture_exercises_real_core_before_systemd_acceptance(spaces,sou
         instance_workers=workers,document_workers=workers,space_workers=workers,ocr_language='eng')
     assert ExtractionPool(queue,workers=workers).tick()['processed']==9
     module.main('verify',workers)
+    try:module.main('reindex',workers)
+    finally:
+        with service.database.engine.begin() as c:
+            c.execute(text('DELETE FROM c0_knowledge_receipts WHERE space_id=:space AND actor_id=:actor AND key=:key'),
+                {'space':UUID(value['space']),'actor':owner.user_id,'key':'native-explicit-reindex-'+str(workers)})

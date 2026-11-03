@@ -117,6 +117,10 @@ def audit_reports(directory, source, images, logs):
             assert len(identity) == 2 and all(kw.find('status').get('status') == 'PASS' for kw in identity), 'Predecessor profile identity was not verified'
             predecessors = re.findall(r'ghcr.io/[^\s\x27\x22]+@sha256:([0-9a-f]{64})', Path('tests/czero.robot').read_text())
             assert len(set(predecessors)) == 3 and all(p in raw for p in predecessors), 'Genuine predecessor images missing'
+        reindexed=marker_values(html.unescape(raw),'C0 explicit reindex: ')
+        assert sorted(reindexed,key=lambda value:value['workers'])==[
+            {'stage':'reindex','workers':2,'units':9,'verified':True},
+            {'stage':'reindex','workers':4,'units':9,'verified':True}], 'Actual restored retained-original reindex proof missing'
         summaries.append({'artifact': report.parent.name, 'passed': len(tests)-len(skips), 'skipped': len(skips), 'ui': len(ui)})
     assert actual_ui == REQUIRED_UI and privacy >= 8 and audited == 3
     installed = marker_values(logs, 'C0 installed candidates: ')

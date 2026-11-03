@@ -55,6 +55,10 @@ The [M9 candidate](docs/ingestion-pipeline/M9.md) shows extraction progress in t
 reader and detailed recovery in Background Work. Full reindex is explicit and
 replaces exact citations only when the complete replacement publishes.
 
+The [M10 candidate](docs/ingestion-pipeline/M10.md) adds reproducible extraction
+and selective-context comparisons plus disposable recovery and rollout guidance.
+Measurements, released-consumer acceptance and live deployment remain separate.
+
 ## Use C0
 
 ### Use an existing instance

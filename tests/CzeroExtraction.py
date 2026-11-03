@@ -12,6 +12,28 @@ from extraction_pool_evidence import validate_measurement
 
 class CzeroExtraction:
     @keyword
+    def verify_disposable_explicit_reindex(self,module_id):
+        assert re.fullmatch(r'czero[0-9]+',module_id)
+        builtin=BuiltIn();previous=builtin.set_log_level('NONE')
+        try:
+            ssh=builtin.get_library_instance('SSHLibrary')
+            output,error,code=ssh.execute_command('api-cli run module/'+module_id+'/get-configuration',return_rc=True,return_stderr=True)
+            assert code==0 and json.loads(output)['host'].endswith('.test')
+            # Use the exact fixed fixtures already copied for pool acceptance.
+            for workers in (2,4):
+                command='runagent -m '+module_id+' podman exec -i --env=CZERO_DISPOSABLE_TEST=1 czero python - reindex '+str(workers)+' < /tmp/c0-combined-extraction-pool.py'
+                output,error,code=ssh.execute_command(command,return_rc=True,return_stderr=True,timeout='180 seconds')
+                assert code==0,'Disposable explicit reindex failed'
+                proof=json.loads(output)
+                assert proof=={'stage':'reindex','workers':workers,'units':9,'verified':True}
+                level=builtin.set_log_level('INFO')
+                try:
+                    marker='C0 explicit reindex: '+json.dumps(proof,sort_keys=True)
+                    builtin.log(marker);builtin.log_to_console(marker)
+                finally:builtin.set_log_level(level)
+        finally:builtin.set_log_level(previous)
+
+    @keyword
     def verify_disposable_extraction_pool(self,module_id,stage):
         assert re.fullmatch(r'czero[0-9]+',module_id) and stage in ('seed','verify')
         builtin=BuiltIn(); previous=builtin.set_log_level('NONE')

@@ -2070,3 +2070,12 @@ unit diagnostics and controlled recovery, schema 0030. It passes 24 focused
 Core/source HTTP cases, signed cookie/CSRF recovery, four migration controls,
 211 existing plus four new JavaScript cases and the real 100-page/two-failure
 browser flow. Broader full/native/independent-package acceptance remains separate.
+
+The ingestion [M10 measurement candidate](docs/ingestion-pipeline/M10.md) adds
+frozen-input extraction arms, read-only context comparison, owned PostgreSQL
+restart/worker recovery and restored explicit-reindex proof. Original M4 exact
+source `43af133` passes 2,677 full local cases, and M5 final `2afbe4a` passes
+2,682, without database skips. Sequential full/native acceptance still applies.
+
+The operator keeps ingestion model-quality acceptance open (2026-11-03); no
+model turns are run. Other implementation and disposable acceptance continue.
