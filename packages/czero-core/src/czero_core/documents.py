@@ -249,3 +249,20 @@ class DocumentService(SpaceBound):
         if part is not None:
             result.update(state='incomplete',body=None,parts=[],text_hash=None,error_code='unverified_parent_snapshot')
         return result
+
+
+    def outline(self,actor,identifier,**options):
+        from .document_context import outline
+        return outline(self,actor,identifier,**options)
+
+    def sections(self,actor,identifier,**options):
+        from .document_context import sections
+        return sections(self,actor,identifier,**options)
+
+    def references(self,actor,identifier,**options):
+        from .document_context import references
+        return references(self,actor,identifier,**options)
+
+    def context_bundle(self,actor,plan,**options):
+        from .document_context import bundle
+        return bundle(self,actor,plan,**options)

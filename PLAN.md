@@ -57,6 +57,21 @@ M6 exact `064a7bf` passes full/native `41699410483`, independent artifact gradin
 and promotion proof, then regularly merges as `39dc9cc`. Both distributions prove
 actual OCR with two/four workers and restored readback. M7 retains complete-body
 bounds and conservative same-space current/staging ownership.
+M7 exact `0b3732f` passes full/native `41708740692`, independent artifact grading
+and full promotion verification, then regularly merges as `e9a485f`. Its local
+CI passes 2,710 Python/database/package cases, 15 browser workflows, 211 controller
+checks and 21 Robot dry runs. Both native distributions and actual OCR/resource/
+restore evidence pass. M8 remains the next sequential acceptance gate.
+The [M8 context candidate](docs/ingestion-pipeline/M8.md) adds four read-only
+operations, exact generation guards, bounded selected evidence and plugin 1.4
+research guidance. Current/legacy SDK, native guided-probe, multipart, OCR
+provenance and generated-package checks pass 65 focused cases.
+M8 original `4589600` passes 2,732 Python/database/package cases and Debian but
+fails one Rocky OAuth-browser assertion against the new guidance inventory.
+The isolated successor preserves exact old/new catalog counts, adds stable
+workflow IDs and exposes read-only context guidance to authorized Readers.
+Four actual role/space browser controls and 213 local controller cases pass;
+current-source full/native acceptance remains required. Failed evidence stays.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

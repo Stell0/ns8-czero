@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M6 merged; M7 cache acceptance pending**
+Status: **M0–M7 merged; M8 context acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -343,10 +343,11 @@ After M10 acceptance, consider larger PDFs/uploads, distributed multi-host worke
 
 ---
 
-**Execution:** M0–M2 are merged; M3 acceptance is pending. The operator
-authorizes developing isolated successor candidates while prerequisite CI runs,
+**Execution policy:** The operator authorizes developing isolated successor candidates while prerequisite CI runs,
 with acceptance and merges kept sequential and one milestone per PR. All native
 and rollout acceptance uses disposable instances; live deployment remains separate.
+
+### Preserved implementation checkpoints
 
 M4's [format candidate](M4.md) passes 64 focused format, queue, PDF recovery and
 independent-package cases. It preserves default imports and external source-sync
@@ -397,3 +398,20 @@ M6 PR63 regularly merges as `39dc9cc0d7eefa4558e683c7142f9dceca574332`
 after exact `064a7bf` passes full/native `41699410483`, independent downloaded
 artifact grading and full promotion verification. Both distributions include
 actual nine-unit OCR/resource/restore proof. M7 is based on that accepted main.
+The [M8 context candidate](M8.md) adds four bounded read-only operations and
+plugin 1.4 research guidance with unchanged scopes/connection identity. Focused
+Core, actual current/legacy SDK/native-probe, multipart and package controls pass
+65 cases. These are protocol/evidence checks, not model answer-quality claims.
+
+M7 PR64 regularly merged as `e9a485f49d03b781885a98594c60b7c496b7dccb`.
+Exact `0b3732f` passes full/native `41708740692`: 2,710 Python/database/package
+cases, 15 automated browser workflows, 211 controller checks and 21 Robot dry
+runs. Debian passes 21; Rocky passes 26 with three expected installation skips.
+Independent downloaded native/scan grading and full exact-source promotion pass.
+M8 is based on that accepted main, preserving the M5 complete-body repair.
+
+M8 source `4589600` / run `41718181568` fails one Rocky guidance-inventory
+assertion, despite passing all 2,732 local cases and Debian. Its isolated repair
+adds stable workflow IDs, exact capability-bound old/new inventories and Reader
+selective-context presentation. Four real role/space browser controls pass;
+full/native and independent downloaded-artifact acceptance must repeat.

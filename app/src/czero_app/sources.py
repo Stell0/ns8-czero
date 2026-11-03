@@ -221,6 +221,8 @@ class UploadBodyLimit:
             resource = path.split('/api/v1/', 1)[-1]
             if resource in ('entities', 'sources/ingest-text') or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
                 limited, maximum = True, 1048576
+            if resource=='context-bundles' or resource.startswith('source-documents/'):
+                limited,maximum=True,16384
             if resource.startswith(('oauth/', '/oauth/')):
                 limited, maximum = True, 16384
             if path.endswith('/agents/plugin.zip'):
@@ -274,7 +276,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     async def text_validation_error(request, error):
         # FastAPI's default errors contain submitted input. Keep text evidence
         # out of every validation response, including malformed JSON/Unicode.
-        if request.url.path.endswith('/api/v1/sources/ingest-text'):
+        if (request.url.path.endswith('/api/v1/sources/ingest-text')
+            or ('/api/v1/source-documents/' in request.url.path and request.url.path.endswith(('/outline','/sections','/references')))
+            or request.url.path.endswith('/api/v1/context-bundles')):
             return JSONResponse({'detail': 'invalid_source_request'}, status_code=422)
         return await request_validation_exception_handler(request, error)
 
@@ -405,4 +409,6 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     @operation('citations_get', 'Read the stable citation of an evidence chunk', Role.READER, CitationView, read_only=True, space_field='space_id')
     def citation(chunk_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
         return invoke(selected(space_id).citation, context.actor, chunk_id)
+    from .document_context import install_context_routes
+    install_context_routes(app,documents,read_context,invoke)
     return service

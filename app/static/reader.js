@@ -230,10 +230,10 @@
     profile=window.C0Space?await read('me'):{role:capabilities.role};if(captured!==epoch)return;
     $('guide-status').textContent='Your current access: '+profile.role+'.';
     const choices=[['read','Read and research']];if(writable())choices.push(['create','Create an article'],['update','Update knowledge'],['ingest','Import a document']);
-    const workflows=(capabilities.guidance?.workflows || []).filter(flow=>writable() || ['research','structured-research'].includes(flow.id));
+    const workflows=(capabilities.guidance?.workflows || []).filter(flow=>writable() || ['research','structured-research','selective-context'].includes(flow.id));
     for(const [id,kind,title]of [['evidence','evidence','Save selected text evidence'],['investigation','investigate','Private sourced investigation'],['consolidate','consolidate','Consolidate and supersede']])if(workflows.some(flow=>flow.id===id))choices.push([kind,title]);
     if($('guide-rules'))$('guide-rules').replaceChildren(...(capabilities.guidance?.rules || []).map(rule=>node('li',rule)));
-    if($('guide-workflows')){$('guide-workflows').replaceChildren();for(const flow of workflows){const section=node('details'),summary=node('summary',flow.title),steps=node('ol');for(const instruction of flow.steps)steps.append(node('li',instruction));section.append(summary,steps);$('guide-workflows').append(section);}}
+    if($('guide-workflows')){$('guide-workflows').replaceChildren();for(const flow of workflows){const section=node('details'),summary=node('summary',flow.title),steps=node('ol');section.dataset.workflow=flow.id;for(const instruction of flow.steps)steps.append(node('li',instruction));section.append(summary,steps);$('guide-workflows').append(section);}}
     $('guide-tasks').replaceChildren();for(const [kind,title]of choices){const panel=node('details');panel.append(node('summary',title));const body=node('div');C.copyPanel(body,C.task(kind,null,capabilities));panel.append(body);$('guide-tasks').append(panel);}
   }
   async function initialize() {

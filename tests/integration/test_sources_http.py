@@ -27,11 +27,13 @@ def source_http(application, tmp_path):
     db = application[4]
     with db.engine.begin() as c:
         for key in created:
-            ids = c.execute(text('SELECT id FROM c0_source_versions WHERE source_id=:id'), {'id': key}).scalars().all()
+            ids = c.execute(text("SELECT id FROM c0_source_versions WHERE source_id=:id UNION SELECT id FROM c0_content_tombstones WHERE kind='source_version' AND resource_id=:id"), {'id': key}).scalars().all()
             c.execute(text('DELETE FROM c0_chunks WHERE document_id IN (SELECT id FROM c0_documents WHERE version_id IN (SELECT id FROM c0_source_versions WHERE source_id=:id))'), {'id': key})
             c.execute(text('DELETE FROM c0_documents WHERE version_id IN (SELECT id FROM c0_source_versions WHERE source_id=:id)'), {'id': key})
             c.execute(text('DELETE FROM c0_source_versions WHERE source_id=:id'), {'id': key})
             c.execute(text('DELETE FROM c0_sources WHERE id=:id'), {'id': key})
+            c.execute(text('DELETE FROM c0_content_tombstones WHERE resource_id=:id'), {'id':key})
+            c.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=ANY(CAST(:ids AS uuid[]))'), {'ids':ids})
             for version in ids:
                 c.execute(text("DELETE FROM c0_jobs WHERE payload->>'version_id'=:id"), {'id': str(version)})
         for row in schedules:

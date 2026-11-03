@@ -142,6 +142,17 @@ test('guided tasks and steps use DOM text and keep write workflows away from Rea
     else {assert.match(h.node('guide-workflows').textContent,/<script>hostile/);assert(!descendants(h.node('guide-workflows')).some(node=>node.tagName==='SCRIPT'));assert.match(h.C.task('consolidate',null,{guidance:{workflows:flows}}),/Keep the whole receipt/);}
   }
 });
+for(const advertised of [false,true])test(`Reader guidance includes selective context only when advertised: ${advertised}`,async()=>{
+  const flows=[{id:'research',title:'Research',steps:[]},{id:'structured-research',title:'Structured research',steps:[]}];
+  if(advertised)flows.push({id:'selective-context',title:'Selected exact context',steps:['Retain the exact revision and explicit budget.']});
+  flows.push({id:'consolidate',title:'Write knowledge',steps:[]});
+  const h=fixture('agents'),pending=h.reader().guide();
+  h.requests[0].resolve(reply({authenticated:true,role:'reader',interfaces:{mcp:true},guidance:{rules:[],workflows:flows}}));await pending;
+  assert.deepEqual(h.node('guide-workflows').children.map(node=>node.dataset.workflow),advertised?['research','structured-research','selective-context']:['research','structured-research']);
+  assert.equal(h.node('guide-tasks').children.length,1);
+  assert.doesNotMatch(h.node('guide-workflows').textContent,/Write knowledge/);
+  assert(h.requests.every(request=>!request.options?.method));
+});
 test('guide access loss clears instructions and a delayed older reply cannot restore them',async()=>{
   const h=fixture('agents'),r=h.reader();h.node('guide-workflows').textContent='Earlier private instructions';
   const old=r.guide(),current=r.guide();h.requests[1].resolve(reply({},403));await assert.rejects(current,/permitted access/);

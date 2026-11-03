@@ -85,3 +85,37 @@ See [complete source documents](full-documents.md) for logical identities, bound
 summary/history APIs, safe rendering and exact historical part resolution.
 
 Source and Wiki content uses [latest-only storage](latest-only-migration.md). Historical source/Wiki body reads, rollback and content-history export are removed. History compatibility routes list current content only and are omitted from OpenAPI discovery; MCP no longer advertises `source_document_history`, `wiki_revisions_list` or `knowledge_annotations_history`. Expired exact content and superseded replay requests return HTTP 410 / MCP `content_superseded`, after current space authorization.
+
+
+## Selective source context (0.37 producer)
+
+When advertised by the installed Core, `source_document_outline_get` reads bounded
+section metadata for a stable logical document. Retain its exact `revision_id` and
+full-body hash; use `view=blocks` for bN page/paragraph/table/code spans. Paginate
+with `limit`, `offset` and `next_offset`. This metadata contains no complete body.
+
+`source_document_sections_get` requires `data.revision_id` and 1–20 `selection_ids`
+(sN sections or bN blocks). It returns exact Unicode character offsets, selected
+text/hash and source chunk citation handles. Chunk `start_offset`/`end_offset` are
+relative to the extracted source part; `document_start_offset`/`document_end_offset`
+are relative to the complete logical document. OCR selections include observed
+page confidence and the frozen local extractor profile; absence is not a score.
+
+`source_document_references_get` resolves explicit local rN IDs from selected
+context at that same revision. Unresolved/ambiguous anchors remain unresolved.
+`context_bundle_get` accepts `data.plan`: at most five objects containing
+`logical_document_id`, `revision_id`, `selection_ids` and `reference_ids`, with
+at most twenty total selected IDs in one space and caller order. It performs no
+model inference or network fetch. A denied/missing/stale selection never falls
+back; retired revisions return `content_superseded` (410).
+
+These are Reader operations under `c0:read`, with ordinary top-level `space_id`.
+REST uses GET `/api/v1/source-documents/{id}/outline`, POST the corresponding
+`/sections` and `/references`, and POST `/api/v1/context-bundles`. Request bodies
+are bounded to 16 KiB. `max_bytes` bounds the serialized context payload (4096–65536
+UTF-8 bytes, excluding transport envelopes); `max_tokens` bounds its bytes/3
+estimate (256–16384). Provider tokenization and message overhead remain external.
+Replies always say `complete_document=false`, list oversized omissions and keep
+unresolved references explicit. Whole-document readers remain unchanged. Legacy
+in-memory structural derivation retains the 2 MiB/1M-character extracted-body
+ceiling; larger multipart originals retain their existing complete reader.

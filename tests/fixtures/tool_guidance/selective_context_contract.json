@@ -1,0 +1,58 @@
+{
+  "operations": [
+    {
+      "name": "context_bundle_get",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_sha256": "63e4e0402a5f2566a4c2a1690d2be2665ae2c69629de38934cb8ccbd828b9a09",
+      "output_sha256": "4802ba553bd4ebfaa6c4092316db9ddeb4f7cbc894ece002703b42814779abf6"
+    },
+    {
+      "name": "source_document_outline_get",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_sha256": "2da60e482a6bfe8a5f1fafc4605342c50109e4c06c013e51bc3dde578e90d109",
+      "output_sha256": "5dd8ad9c0a6c3b3174ef4ab500b3e6a92a68cefe366ffe9d9450d15126e308ff"
+    },
+    {
+      "name": "source_document_references_get",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_sha256": "dc1cdffe5f52d51f0800ecd846dadb6a4cf22ba5c0c83698ef71fb30a216911f",
+      "output_sha256": "96df7221d51f2f204fcd5351b866a994c9268b07cbfe070d84fcb3363dc9a33c"
+    },
+    {
+      "name": "source_document_sections_get",
+      "minimum_role": "reader",
+      "required_scope": "c0:read",
+      "read_only": true,
+      "input_sha256": "1e7f58b1aa3b59d4a8fa349d8c61fd31adb6bbd1299ccf6d09ec16f94160a03f",
+      "output_sha256": "4802ba553bd4ebfaa6c4092316db9ddeb4f7cbc894ece002703b42814779abf6"
+    }
+  ],
+  "rest_bindings": [
+    {
+      "path": "/api/v1/context-bundles",
+      "method": "post",
+      "operation": "context_bundle_get"
+    },
+    {
+      "path": "/api/v1/source-documents/{logical_document_id}/outline",
+      "method": "get",
+      "operation": "source_document_outline_get"
+    },
+    {
+      "path": "/api/v1/source-documents/{logical_document_id}/references",
+      "method": "post",
+      "operation": "source_document_references_get"
+    },
+    {
+      "path": "/api/v1/source-documents/{logical_document_id}/sections",
+      "method": "post",
+      "operation": "source_document_sections_get"
+    }
+  ]
+}
