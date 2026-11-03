@@ -79,3 +79,24 @@ def test_generated_consumer_includes_workspace_audit_dependencies(tmp_path):
     module=runpy.run_path(str(validator))
     assert 'blocked_after_restart' in module['EXPECTED']
     assert (destination/'tests/access_fixture.py').is_file()
+
+
+def test_generated_fork_keeps_publisher_and_ingestion_audit_dependencies(tmp_path):
+    import ast
+    import re
+    import runpy
+    destination=tmp_path/'consumer'
+    EXAMPLE.create(destination,ROOT)
+    publisher=(ROOT/'.github/workflows/publish-images.yml').read_text()
+    for path in re.findall(r'\btests/[A-Za-z0-9_./-]+\.py\b',publisher):
+        assert (destination/path).is_file(),path
+    known={path.stem for path in (ROOT/'tests').glob('*.py')}
+    audit=ast.parse((destination/'scripts/audit-ci-artifacts.py').read_text())
+    for node in ast.walk(audit):
+        if isinstance(node,ast.ImportFrom) and node.module in known:
+            assert (destination/'tests'/(node.module+'.py')).is_file(),node.module
+    assert (destination/'tests/CzeroExtraction.py').is_file()
+    assert (destination/'tests/extraction_pool_fixture.py').is_file()
+    evidence=runpy.run_path(str(destination/'tests/extraction_pool_evidence.py'))
+    assert evidence['require_reindexes']([
+        {'stage':'reindex','workers':workers,'units':9,'verified':True} for workers in (2,4)])
