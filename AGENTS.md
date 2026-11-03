@@ -667,3 +667,9 @@ M9 extraction progress is metadata-only and selected-space. Keep Admin unit
 diagnostics separate from ordinary readers. Retry retains original run authority;
 it never promotes a browser or OAuth grant to native authority. Explicit reindex
 requires retained original bytes and publishes fresh exact evidence atomically.
+
+M10 benchmark outputs stay private until sanitized aggregation. Distinguish
+output-cache state from operating-system caches and sampled RSS from exact peaks.
+Keep model authorization, observed evidence/citations, producer publication,
+released-consumer proof and deployment separate. Restart tests require a labelled
+owned disposable database container and may never share the acceptance cluster.

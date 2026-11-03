@@ -48,7 +48,7 @@ def database_parameters(value):
 async def disposable_database(admin_url, *, retain=False):
     url = database_parameters(admin_url)
     name = 'czero_eval_'+uuid4().hex
-    admin = create_engine(url)
+    admin = create_engine(url,pool_pre_ping=True,hide_parameters=True)
     try:
         with admin.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
             conn.exec_driver_sql('CREATE DATABASE '+name)

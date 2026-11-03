@@ -373,3 +373,14 @@ reader progress, Admin-only paginated unit diagnostics, revision-bound retry/
 cancel, full restart and explicit retained-original reindex. Its original native
 handoff remains bound to its submitting account. Ordinary public imports and
 the released Core lock remain unchanged; no automatic corpus work is introduced.
+
+The [M10 measurement/rollout candidate](M10.md) separates exact extraction
+fidelity/performance from read-only model retrieval evidence. New bounded
+harnesses, owned-container database interruption and restored retained-original
+reindex proof are implemented. Actual model calls require the evaluation skill's
+operator authorization; release/consumer/native/pilot gates remain sequential.
+See [disposable pilot and rollback](ROLLOUT.md); no installed baseline changes.
+
+Operator decision, 2026-11-03: keep model-quality acceptance open. No model calls
+are authorized for this implementation. Deterministic/native/released-consumer
+verification continues; model answer-quality and default-rollout gates remain open.

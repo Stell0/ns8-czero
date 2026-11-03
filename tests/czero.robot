@@ -827,6 +827,7 @@ Check protected spaces, grants and revocation in a browser
 
 Uninstall only the disposable Czero module
     Should Not Be Empty    ${module_id}
+    Verify Disposable Explicit Reindex    ${module_id}
     ${removed_id} =    Set Variable    ${module_id}
     Remove disposable module
     ${output}    ${rc} =    Execute Command    api-cli run list-installed-modules
