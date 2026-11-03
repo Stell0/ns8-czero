@@ -44,6 +44,7 @@ async function loadSources() {
 }
 async function selectSource(id) {
   clearTimeout(pollTimer); const sequence = ++selectionSequence; clearDocument(); currentSource = null; $('source-detail').hidden = true;
+  if($('source-reindex'))$('source-reindex').hidden=true;
   const [source, history] = await Promise.all([api('sources/' + id), api(`sources/${id}/versions?limit=100`)]);
   if (sequence !== selectionSequence) return false;
   currentSource = source; $('source-detail').hidden = false;
@@ -66,7 +67,13 @@ async function selectSource(id) {
     }
     $('source-versions').append(row);
   }
-  if($('source-reindex'))$('source-reindex').hidden=!canWrite() || !history.versions.some(v=>v.state==='ready' && v.original_present) || history.versions.some(v=>v.state==='queued');
+  if($('source-reindex') && canWrite() && history.versions.some(v=>v.state==='ready' && v.original_present) && !history.versions.some(v=>v.state==='queued')) {
+    // Older released Core keeps its original routes. Probe the current selected
+    // source capability without delaying the existing source reader.
+    api('sources/'+id+'/extraction').then(()=>{
+      if(sequence===selectionSequence && currentSource?.id===id && canWrite())$('source-reindex').hidden=false;
+    }).catch(()=>{});
+  }
   $('source-status').textContent = !history.versions.length ? 'No current published content.' : history.versions.some(v => v.state === 'queued') ? 'Extraction queued. This list refreshes while jobs are pending.' : 'Current content loaded. Superseded content is removed after successful publication.';
   if (history.versions.some(v => v.state === 'queued' && ['queued','running'].includes(v.job_state))) pollTimer = setTimeout(() => {if (currentSource?.id === id) selectSource(id).catch(error => {$('source-status').textContent = error.message;});}, 4000);
   return true;
