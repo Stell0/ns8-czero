@@ -13,6 +13,11 @@ const inspect=(h,n=0)=>h.node('extraction-list').children[n].children[1].listene
 test('ordinary Reader and Editor never load Admin extraction diagnostics',async()=>{
   for(const role of ['reader','editor']){const h=setup();h.requests[0].resolve(reply({role}));await tick();assert.equal(h.requests.length,1);}
 });
+test('older released Core keeps unavailable extraction controls hidden',async()=>{
+  const h=setup();h.requests[0].resolve(reply({role:'admin',csrf_token:'fixture-only'}));await tick();
+  h.requests[1].resolve(reply({detail:'Not Found'},404));await tick();
+  assert.equal(h.node('extraction-work').hidden,true);assert.equal(h.requests.length,2);
+});
 test('diagnostics preserve the explicit selected space and ignore late details',async()=>{
   const h=await ready();assert.match(h.requests[1].url,new RegExp('space_id='+id(99)));
   inspect(h,0);inspect(h,1);h.requests[3].resolve(reply(detail(2)));await tick();h.requests[2].resolve(reply(detail(1)));await tick();

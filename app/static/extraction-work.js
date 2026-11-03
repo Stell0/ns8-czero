@@ -19,6 +19,7 @@
       {method,cache:'no-store',headers:body?{'Content-Type':'application/json','X-C0-CSRF':profile.csrf_token}:{},body:body?JSON.stringify(body):null});}
     catch{throw new Error('Cannot update extraction. Refresh to check saved state before retrying.');}
     if(captured!==epoch)throw new Error('Space access changed.');
+    if(response.status===404 && path.startsWith('extraction-runs?'))panel.hidden=true;
     if([401,403].includes(response.status)){
       if(window.C0Space?.clear)window.C0Space.clear('Your access changed. Choose a permitted space.');else clear();
       throw new Error('Your access changed. Sign in or choose a permitted space.');
