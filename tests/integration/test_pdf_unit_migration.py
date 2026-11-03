@@ -45,7 +45,9 @@ def test_0024_staged_results_and_fences_survive_repeated_upgrade():
             migrate_database(database)
             with database.engine.connect() as c:
                 after=dict(c.execute(text('SELECT * FROM c0_extraction_units WHERE id=:id'),{'id':unit}).mappings().one())
-                assert after.pop('lifetime_attempts')==2 and after==before
+                assert after['lifetime_attempts']==2
+                assert {key:after[key] for key in before}==before
+                assert after['provenance'] is None and after['provenance_sha256'] is None
                 assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()==SCHEMA_REVISION
                 assert c.execute(text('SELECT count(*) FROM c0_extraction_units')).scalar_one()==1
     finally:
