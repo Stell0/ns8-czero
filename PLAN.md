@@ -30,13 +30,14 @@ grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
 PR59 regularly merged as `ed160592cd42f711a78dc8f861497ccc42c859cd` after full
 `41654247380`, both native distributions, independent artifact audit and exact-source
 promotion verification. The earlier native retrieval failure remains preserved;
-fixtures now seed before indexing is paused and snapshotted. The [M4 candidate](docs/ingestion-pipeline/M4.md)
+fixtures now seed before indexing is paused and snapshotted. The [M4 implementation](docs/ingestion-pipeline/M4.md)
 adds canonical DOCX block and Markdown/text range extraction. Its exact current
 local suite passes 2,677 cases; full/native 41666816436, independent artifact grading
-and full promotion verification pass. Protected auto-merge waits on the duplicate
-ready-transition run. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded
+and full promotion verification pass. Ready-transition full/native `41668554721`
+also passes; PR60 regularly merges as `b51112e15693f456384b231a675ce651949d3efd`. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded
 current structure and versioned section chunks. Original final source `2afbe4a`
-passes 2,682 complete local cases; its accepted-base and native gates remain.
+passes 2,682 complete local cases; the code-identical accepted-base candidate
+passes 15 focused structure/migration/source HTTP cases. M5 native gates remain.
 No model answer-quality improvement is claimed.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
