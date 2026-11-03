@@ -16,20 +16,43 @@ from test_knowledge_http import knowledge_http
 from test_mcp_http import transport,RESOURCE
 from test_document_context import BODY
 from test_sources_http import source_http
+from test_pdf_unit_pipeline import FIXTURES
 
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='disposable PostgreSQL required')
 TOOLS={'source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'}
 
 
-def seed(app,token,created):
+def seed(app,token,created,*,body=BODY):
     actor=app.state.auth.access.resolve(app.state.auth.oidc.verify_access_token(token))
     source=app.state.sources
-    version=source.ingest(actor,BytesIO(BODY.encode()),title='Context fixture '+uuid4().hex,
+    version=source.ingest(actor,BytesIO(body.encode()),title='Context fixture '+uuid4().hex,
         filename='context.md',media_type='text/markdown',retain_original=True)
     created.append(version['source_id'])
     queue=ExtractionQueue(source.database,source.access,source.originals,enabled=True)
     queue.enqueue(actor,version['id'],expected_generation=1); ExtractionPool(queue).tick()
     return actor,version
+
+
+@pytest.mark.parametrize('mode',['auto','legacy'])
+def test_structure_overflow_keeps_complete_reader_and_explicit_context_limit(transport,source_http,mode):
+    app,child,_,_,_,issue,token,_=transport
+    body=(FIXTURES/'multipart.md').read_text()
+    _,version=seed(app,token,source_http[1],body=body)
+    pair=issue(app.state.auth.oidc.verify_access_token(token),{'c0:read'})
+    async def check():
+        async with child.router.lifespan_context(child):
+            async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app),base_url=ORIGIN,
+                    headers={'Authorization':'Bearer '+pair.access_token}) as http:
+                path='/api/v1/source-documents/'+str(version['source_id'])
+                complete=await http.get(path)
+                assert complete.status_code==200 and complete.json()['body']==body
+                limited=await http.get(path+'/outline')
+                assert limited.status_code==413 and limited.json()=={'detail':'too_large'}
+                async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as sdk:
+                    result=await sdk.call_tool('source_document_outline_get',{'logical_document_id':str(version['source_id'])})
+                    assert result.is_error and result.content[0].text=='too_large'
+                assert (await http.get(path)).json()['body']==body
+    asyncio.run(check())
 
 
 @pytest.mark.parametrize('mode',['auto','legacy'])
