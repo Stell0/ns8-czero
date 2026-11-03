@@ -88,3 +88,39 @@ def test_real_100_page_two_failure_progress_admin_retry_and_reader_boundaries(li
         assert browser.evaluate('document.documentElement.scrollWidth<=innerWidth')
     finally:
         database.close();live.resume_worker()
+
+
+def test_source_tools_reindex_retains_current_until_complete_and_retires_citations(live,browser):
+    body='# Retained original\n\nComplete original safety evidence.\n'
+    version=live.upload(body,title='Explicit reindex fixture',retain_original='true')
+    params={'space_id':live.space}
+    path='/api/v1/source-documents/'+version['source_id']
+    before=live.rest.get(path,params=params).json()
+    document=before['parts'][0]['document_id']
+    chunk=live.rest.get('/api/v1/documents/'+document+'/chunks',params=params).json()['chunks'][0]
+    browser.goto(live.origin+'/sources?'+urlencode({'space_id':live.space,'document':version['source_id']}))
+    expect(browser.locator('#reader-document')).to_contain_text('Complete original safety evidence.')
+    expect(browser.locator('#source-reindex')).not_to_be_visible()
+    browser.context.add_cookies([{'name':'fixture_persona','value':'owner','url':live.origin}])
+    browser.goto(live.origin+'/auth/login')
+    browser.goto(live.origin+'/sources?'+urlencode({'space_id':live.space,'view':'tools'}))
+    browser.get_by_role('button',name='Explicit reindex fixture',exact=True).click()
+    details=browser.locator('#source-reindex')
+    expect(details).to_be_visible()
+    details.locator('summary').click()
+    expect(details).to_contain_text('old citations become unavailable')
+    live.pause_worker()
+    try:
+        browser.get_by_role('button',name='Reindex retained original',exact=True).click()
+        expect(browser.locator('#source-status')).to_contain_text('Extraction queued')
+        pending=live.rest.get(path,params=params).json()
+        assert pending['body']==body and pending['revision_id']==before['revision_id']
+        assert live.rest.get('/api/v1/chunks/'+chunk['id']+'/citation',params=params).status_code==200
+    finally:
+        live.resume_worker()
+    expect(browser.locator('#source-status')).to_contain_text('Current content loaded',timeout=15000)
+    after=live.rest.get(path,params=params).json()
+    assert after['body']==body and after['revision_id']!=before['revision_id']
+    assert after['parts'][0]['document_id']!=document
+    retired=live.rest.get('/api/v1/chunks/'+chunk['id']+'/citation',params=params)
+    assert retired.status_code==410 and retired.json()=={'detail':'content_superseded'}
