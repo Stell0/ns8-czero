@@ -11,7 +11,7 @@ from uuid import uuid4
 from sqlalchemy import text
 from czero_core.access import AccessService
 from czero_core.database import Database
-from czero_core.extraction_queue import ExtractionQueue, ExtractionWorker
+from czero_core.extraction_queue import ExtractionQueue, ExtractionWorker, ExtractionPool
 from czero_core.identity import VerifiedIdentity
 from czero_core.jobs import default_registry
 from czero_core.sources import OriginalStore, SourceService, register_source_handlers
@@ -45,8 +45,10 @@ with tempfile.TemporaryDirectory() as directory:
     original=BytesIO(); writer.write(original); original.seek(0)
     pdf=sources.ingest(actor,original,title='PDF',filename='pdf.pdf',media_type='application/pdf',retain_original=True)
     run=queue.enqueue(actor,pdf['id'],expected_generation=1)
-    assert ExtractionWorker(queue).tick()==1
+    result=ExtractionPool(queue).tick()
+    assert result['processed']==1 and result['workers']==2
     assert queue.status(actor,run['id'])['state']=='ready'
+    assert queue.status(actor,run['id'])['run_ms']>0
     document=sources.document(actor,pdf['id'])
     assert document['body']=='Independent PDF evidence'
     assert sources.citation(actor,sources.chunks(actor,document['id'])[0]['id'])['body']==document['body']

@@ -255,5 +255,7 @@ def test_actual_opt_in_app_worker_uses_saved_native_configuration(staged):
              'CZERO_OWNER_LDAP_UUID':str(queue.access.owner_account_key),
              'CZERO_SOURCE_DIR':str(queue.originals.root)},
         capture_output=True,text=True,timeout=10)
-    assert child.returncode==0 and json.loads(child.stdout)=={'processed':1}
+    output=json.loads(child.stdout)
+    assert child.returncode==0 and output['processed']==1 and output['workers']==2
+    assert not any(word in child.stdout for word in ('lease_token','original','password','body'))
     assert queue.status(owner,run['id'])['state']=='assembling'

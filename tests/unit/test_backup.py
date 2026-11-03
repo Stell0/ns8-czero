@@ -44,7 +44,7 @@ def test_dump_failure_and_cold_database_leave_service_state_intact(monkeypatch,t
     else:
         runpy.run_path(script)
         assert (tmp_path/'czero.pg_dump').read_bytes().startswith(b'PGDMP')
-        assert json.loads((tmp_path/'backup-metadata.json').read_text()) == {'format':1,'app_active':False,'app_enabled':False,'scheduler_active':False}
+        assert json.loads((tmp_path/'backup-metadata.json').read_text()) == {'format':1,'app_active':False,'app_enabled':False,'scheduler_active':False,'extraction_active':False}
     assert ['systemctl','--user','start','czero-postgres.service'] in calls
     assert ['systemctl','--user','stop','czero-postgres.service'] in calls
     assert ['systemctl','--user','stop','czero-pod.service'] in calls
@@ -77,6 +77,7 @@ def test_backup_pauses_worker_until_cleanup_and_resumes_after_failure(monkeypatc
         assert resume not in calls
         assert (tmp_path/'backup-worker-state.json').stat().st_mode & 0o777==0o600
         assert calls.index(stop)<next(i for i,c in enumerate(calls) if c[:3]==['podman','exec','czero-postgres'])
+        assert calls.index(['systemctl','--user','stop','czero-extraction.timer','czero-extraction.service'])<next(i for i,c in enumerate(calls) if c[:3]==['podman','exec','czero-postgres'])
         assert calls.index(['systemctl','--user','stop','czero.service'])<next(i for i,c in enumerate(calls) if c[:3]==['podman','exec','czero-postgres'])
         assert ['systemctl','--user','start','czero.service'] not in calls
         runpy.run_path(str(ROOT/'imageroot/bin/module-cleanup-state'))
@@ -139,6 +140,17 @@ def test_non_boolean_backup_timer_state_is_rejected(monkeypatch,tmp_path):
     with pytest.raises(SystemExit):runpy.run_path(str(ROOT/'imageroot/actions/restore-module/30validate-backup'))
 
 
+@pytest.mark.parametrize('active',[True,False])
+def test_restore_preserves_extraction_timer_activation(monkeypatch,tmp_path,active):
+    import subprocess
+    metadata={'format':1,'app_active':True,'app_enabled':True,'scheduler_active':True,'extraction_active':active}
+    (tmp_path/'backup-metadata.json').write_text(json.dumps(metadata))
+    monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path)); calls=[]
+    monkeypatch.setattr(subprocess,'run',lambda command,**kw:calls.append(command))
+    runpy.run_path(str(ROOT/'imageroot/actions/restore-module/80start-services'))
+    assert ['systemctl','--user','start' if active else 'stop','czero-extraction.timer'] in calls
+
+
 @pytest.mark.parametrize('metadata,archive',[(None,b'PGDMP'),([],b'PGDMP'),({'format':2,'app_active':True,'app_enabled':True},b'PGDMP'),({'format':True,'app_active':True,'app_enabled':True},b'PGDMP'),({'format':1,'app_active':True,'app_enabled':True},b'not an archive')])
 def test_invalid_backup_stops_before_database_restore(monkeypatch,tmp_path,capsys,metadata,archive):
     monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path))
@@ -160,7 +172,7 @@ def test_backup_destination_helper_sanitizes_generated_password(monkeypatch):
     from robot.libraries.BuiltIn import BuiltIn
     calls=[]
     levels=[]
-    outputs=[('10.5.4.1',0),(json.dumps({'id':'destination-id','password':'sensitive-generated-value'}),0),('3',0),('czero/space-id',0)]
+    outputs=[('10.5.4.1',0),(json.dumps({'id':'destination-id','password':'synthetic-generated-value'}),0),('3',0),('czero/space-id',0)]
     def execute(command,**kwargs):
         calls.append(command)
         assert levels[-1] == 'NONE'
@@ -174,8 +186,8 @@ def test_backup_destination_helper_sanitizes_generated_password(monkeypatch):
     library=runpy.run_path(str(ROOT/'tests/CzeroBackup.py'))['CzeroBackup']()
     result=library.create_disposable_backup('czero1')
     assert result == {'repository':'destination-id','backup_id':3,'path':'czero/space-id'}
-    assert 'sensitive-generated-value' not in json.dumps(result)
-    assert not any('sensitive-generated-value' in c for c in calls)
+    assert 'synthetic-generated-value' not in json.dumps(result)
+    assert not any('synthetic-generated-value' in c for c in calls)
     assert levels == ['NONE','INFO']
     schedule_command=next(c for c in calls if 'api-cli run add-backup --data' in c)
     assert '"enabled": true' in schedule_command
@@ -245,6 +257,10 @@ def test_restore_settings_keep_new_platform_port_and_identity(monkeypatch,tmp_pa
         'CZERO_SESSION_ABSOLUTE_SECONDS':'28800','CZERO_SESSION_IDLE_SECONDS':'3600',
         'CZERO_CIMD_ENABLED':'false',
         'CZERO_CONNECTION_IDLE_SECONDS':'2592000',
+        'CZERO_EXTRACTION_UNITS':'0','CZERO_EXTRACTION_WORKERS':'2',
+        'CZERO_EXTRACTION_DOCUMENT_WORKERS':'2','CZERO_EXTRACTION_SPACE_WORKERS':'2',
+        'CZERO_EXTRACTION_MAX_QUEUED_UNITS':'2000','CZERO_EXTRACTION_MAX_STAGING_BYTES':'33554432',
+        'CZERO_EXTRACTION_MEMORY':'2g','CZERO_EXTRACTION_SWAP':'4g',
         **{key:'' for key in ('CZERO_USER_DOMAIN','CZERO_IDP_UUID','CZERO_OWNER_USERNAME','CZERO_OWNER_LDAP_UUID')}}
     assert not {'TCP_PORT','NODE_ID','IMAGE_URL'} & values.keys()
 

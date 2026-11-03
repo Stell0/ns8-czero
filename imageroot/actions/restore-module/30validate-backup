@@ -13,6 +13,8 @@ try:
         raise ValueError('Unsupported C0 backup metadata')
     if 'scheduler_active' in metadata and type(metadata['scheduler_active']) is not bool:
         raise ValueError('Invalid C0 scheduler state')
+    if 'extraction_active' in metadata and type(metadata['extraction_active']) is not bool:
+        raise ValueError('Invalid C0 extraction state')
     with (state / 'czero.pg_dump').open('rb') as source:
         if source.read(5) != b'PGDMP':
             raise ValueError('Invalid C0 PostgreSQL archive')

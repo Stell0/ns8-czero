@@ -99,10 +99,17 @@ reviewed milestone at a time. M0 contracts are reviewed for the
 [M1 producer candidate](docs/ingestion-pipeline/M1.md): private native-actor leases,
 not public HTTP/MCP handoff or publication. Preserve disabled defaults and the
 released consumer lock. M1 full `41605913790` passes and regularly merges as
-`6380d38`; the [M2 candidate](docs/ingestion-pipeline/M2.md) adds PDF publication.
+`6380d38`; [M2](docs/ingestion-pipeline/M2.md) adds PDF publication and merges
+as `d2fc9a5` after full `41616861662` and `41620456266`, both native distributions,
+artifact grading and exact-source promotion verification.
 The operator authorizes isolated successor development while prerequisite CI runs,
 but acceptance and merges remain sequential. Native/rollout fixtures are disposable;
-live deployment remains separate. M3 lifecycle is a separate milestone.
+live deployment remains separate. The [M3 successor](docs/ingestion-pipeline/M3.md)
+adds bounded native workers and actual two/four-worker resource/restore grading.
+Preserve both timers' activation during backup and the CPU-quota waiver. M2 full
+local passes 2,619 cases; actual CI/native acceptance remains source-bound.
+Seed extraction fixtures before native retrieval is indexed/paused/snapshotted;
+retain strict derivative completion through update and restore.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

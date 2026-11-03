@@ -1,11 +1,11 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0/M1 merged; M2 publication candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M2 merged; M3 worker-pool candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M2 candidate
+## Queued document extraction — M2 accepted / M3 candidate
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0 and M1 are merged; M2 is the current candidate. The
+milestone per reviewed PR. M0–M2 are merged; M3 is the current candidate. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
@@ -18,7 +18,18 @@ adds PDF page units, failed-unit retry and complete atomic publication. The
 operator authorizes isolated successor development while prerequisite CI runs,
 with sequential acceptance/merges and disposable instances for native/rollout
 tests. Ordinary extraction and the released consumer lock remain unchanged.
-M3 worker lifecycle is separate. Installed baselines, frozen evidence, Core publication,
+M2 exact `cfecd8c` passes 2,619 local Python/PostgreSQL/packaging cases without
+skips, including independent predecessor/wheel/source proofs. Failed environment
+and probe evidence is retained. PR58 regularly merges as `d2fc9a5` after full
+`41616861662` and `41620456266`, including native/artifact gates and exact-source
+promotion verification.
+The [M3 successor](docs/ingestion-pipeline/M3.md), schema 0026, adds configurable
+native workers, fair leases, queue/result backpressure and actual resource/restore
+grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
+21 cases; complete local Python/PostgreSQL/packaging passes 2,661 cases.
+The native successor moves extraction seed before the indexed/paused retrieval
+snapshot after Debian `41641229029` catches incomplete recovered indexing;
+full/native acceptance remains pending. Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
 ## CI policy update — implementation

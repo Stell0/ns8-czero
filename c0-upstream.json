@@ -972,6 +972,41 @@
       "path": "scripts/agentic_retrieval/prepared.py",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero_extraction_config.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/12validate-extraction",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/39persist-extraction",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/create-module/39extraction-settings",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/update-module.d/59extraction-settings",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/systemd/user/czero-extraction.service",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/systemd/user/czero-extraction.timer",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

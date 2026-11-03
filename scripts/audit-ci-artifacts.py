@@ -18,6 +18,7 @@ from persistent_fixture import validate as validate_persistent_connection
 from persistent_fixture import require_recovery as require_persistent_recovery
 from workspace_access_evidence import require_stages as require_workspace_access
 from remembered_fixture import require_recovery as require_remembered_recovery
+from extraction_pool_evidence import require_stages as require_extraction_pool
 
 
 REQUIRED_UI = {
@@ -61,6 +62,7 @@ def audit_reports(directory, source, images, logs):
     reports = sorted(directory.rglob('output.xml'))
     assert len(reports) == 2, 'Both native reports are required'
     actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []; persistent = []; background_recovery = []; remembered = []
+    pool_measurements=[]
     for report in reports:
         raw = report.read_text()
         measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
@@ -75,6 +77,7 @@ def audit_reports(directory, source, images, logs):
         persistent.append(validate_persistent_connection(background[0]))
         background_recovery.append(require_persistent_recovery(marker_values(html.unescape(raw),'C0 persistent recovery: ')))
         remembered.append(require_remembered_recovery(marker_values(html.unescape(raw), 'C0 remembered browser: ')))
+        pool_measurements.append(require_extraction_pool(marker_values(html.unescape(raw),'C0 extraction pool: ')))
         admission = marker_values(html.unescape(raw), 'C0 admission: ')
         assert len(admission) == 2 and any(p['fresh_readers'] >= 1 for p in admission), 'Native fresh Reader admission missing'
         assert all(p['blocked_signins'] == 3 and p['shared_only'] is True for p in admission), 'Native persistent blocking missing'
@@ -141,7 +144,8 @@ def audit_reports(directory, source, images, logs):
             'accessibility_contexts': len(measurements), 'three_installed_candidate_images_verified': True,
             'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery,
             'remembered_browser_recovery': remembered, 'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery,
-            'workspace_access_measurements':access,'predecessor_background':predecessor_background,'predecessor_content':predecessor_content}
+            'workspace_access_measurements':access,'predecessor_background':predecessor_background,'predecessor_content':predecessor_content,
+            'extraction_pool_measurements':pool_measurements}
 
 
 def main():

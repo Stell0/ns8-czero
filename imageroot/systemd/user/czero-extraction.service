@@ -1,0 +1,28 @@
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=C0 bounded extraction pool
+PartOf=czero.service czero-pod.service
+Requisite=czero.service
+After=czero.service czero-postgres.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+ExecCondition=/usr/bin/test ${CZERO_EXTRACTION_UNITS} = 1
+TimeoutStartSec=150
+TimeoutStopSec=35
+ExecStartPre=/usr/bin/podman rm --ignore -f czero-extraction
+ExecStart=/usr/bin/podman run --rm --name=czero-extraction \
+    --memory=${CZERO_EXTRACTION_MEMORY} --memory-swap=${CZERO_EXTRACTION_SWAP} --pids-limit=256 \
+    --cap-drop=ALL --security-opt=no-new-privileges \
+    --pod-id-file=%t/czero.pod-id \
+    --env-file=./passwords.env --env-file=./auth.env \
+    --env=CZERO_EXTRACTION_UNITS --env=CZERO_EXTRACTION_WORKERS \
+    --env=CZERO_EXTRACTION_DOCUMENT_WORKERS --env=CZERO_EXTRACTION_SPACE_WORKERS \
+    --env=CZERO_EXTRACTION_MAX_QUEUED_UNITS --env=CZERO_EXTRACTION_MAX_STAGING_BYTES \
+    --volume=czero-sources:/var/lib/czero/sources:z \
+    --entrypoint=python ${CZERO_APP_IMAGE} -m czero_app.extraction_worker
+ExecStop=/usr/bin/podman stop --ignore -t 30 czero-extraction
+ExecStopPost=/usr/bin/podman rm --ignore -f czero-extraction
+SyslogIdentifier=%N

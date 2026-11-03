@@ -4,6 +4,7 @@ Library    CzeroActions.py
 Library    CzeroBrowser.py
 Library    CzeroBackup.py
 Library    CzeroSso.py
+Library    CzeroExtraction.py
 Suite Teardown    Cleanup disposable Czero resources
 
 *** Variables ***
@@ -702,6 +703,8 @@ Verify real native SSO and application-wide membership
 
 Preserve admitted identities through update and clean restore
     [Timeout]    15 minutes
+    # Seed extraction before retrieval is indexed, paused and snapshotted.
+    Verify Disposable Extraction Pool    ${module_id}    seed
     Prepare Disposable Identity Persistence
     Prepare Disposable Retrieval Persistence    ${module_id}
     Log To Console    SSO persistence: native configured update
@@ -730,6 +733,7 @@ Preserve admitted identities through update and clean restore
     ${restored_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${restored_id}
     Should Not Be Equal    ${module_id}    ${donor_id}
+    Verify Disposable Extraction Pool    ${module_id}    verify
     Verify Disposable Identity Persistence    ${module_id}
     Wait Until Keyword Succeeds    30s    2s    Check application route
 
