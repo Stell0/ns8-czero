@@ -4,12 +4,13 @@
 import os
 
 DEFAULTS={'enabled':False,'workers':2,'document_workers':2,'space_workers':2,
-    'max_queued_units':2000,'max_staging_bytes':33554432,'ocr_enabled':False,'ocr_language':'eng'}
+    'max_queued_units':2000,'max_staging_bytes':33554432,'ocr_enabled':False,'ocr_language':'eng','cache_enabled':True}
 VARIABLES={'enabled':'CZERO_EXTRACTION_UNITS',**{key:'CZERO_EXTRACTION_'+key.upper() for key in DEFAULTS if key!='enabled'}}
 
 
 def validate(value):
     if type(value) is not dict or set(value)!=set(DEFAULTS): raise ValueError('invalid_extraction_config')
+    if type(value['cache_enabled']) is not bool: raise ValueError('invalid_extraction_config')
     if type(value['ocr_enabled']) is not bool or value['ocr_language'] not in ('eng','ita','eng+ita'): raise ValueError('invalid_extraction_config')
     if type(value['enabled']) is not bool: raise ValueError('invalid_extraction_config')
     for key in ('workers','document_workers','space_workers'):

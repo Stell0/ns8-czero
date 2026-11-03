@@ -1,11 +1,11 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M5 merged; M6 OCR acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M6 merged; M7 cache acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M5 accepted / M6 candidate
+## Queued document extraction — M6 accepted / M7 candidate
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0–M5 are merged; M6 is the current OCR candidate. The
+milestone per reviewed PR. M0–M6 are merged; M7 is the current cache candidate. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
@@ -48,6 +48,15 @@ M5 repaired source `b2c87b5` passes full/native `41687775493`, independent
 artifact grading and promotion verification, then regularly merges as `b0db3d2`.
 The original PR61 remains frozen and superseded. M6 retains the repair and passes
 2,700 full local cases plus 32 focused controls before its own native acceptance.
+
+The [M7 cache successor](docs/ingestion-pipeline/M7.md) adds current-owned
+reuse without another body store. The cache/queue/formats/OCR/configuration/backup
+selection passes 110 cases, including expiry, revocation, protected-space and
+A→B→A checks. Acceptance remains sequential.
+M6 exact `064a7bf` passes full/native `41699410483`, independent artifact grading
+and promotion proof, then regularly merges as `39dc9cc`. Both distributions prove
+actual OCR with two/four workers and restored readback. M7 retains complete-body
+bounds and conservative same-space current/staging ownership.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
