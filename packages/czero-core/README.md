@@ -23,9 +23,9 @@ scripts outside this package. Optional providers do not determine authorization;
 text search remains independent of inference. Generative operations stay outside
 the runtime.
 
-## Private extraction units (0.37.0 producer candidate)
+## Private extraction units (0.37.0)
 
-The 0.37.0 producer candidate adds private extraction staging and schema 0030.
+Version 0.37.0 adds private extraction staging and schema 0030.
 `czero_core.extraction_queue.ExtractionQueue` is disabled by default; trusted
 native actors can explicitly hand a queued original to the leased worker.
 Parsing runs outside transactions. PDF pages and larger DOCX/text units retain
@@ -44,10 +44,11 @@ Independent Core needs no OCR tools unless that adapter is selected.
 Optional cache reuse binds space/input/profile/partition identity and rechecks
 current or live-staging ownership at completion; no separate body store exists. Existing source extraction remains the ordinary path. See the
 [implementation contracts](https://github.com/Stell0/ns8-czero/blob/main/docs/ingestion-pipeline/PLAN.md).
-This producer has not been independently published or adopted by the app's
-released Core tag/lock.
+Library publication and application tag/lock adoption have separate acceptance
+gates. Check the repository roadmap for immutable artifacts and actual consumer
+image/native evidence before adoption; a producer test is not consumer proof.
 
-## Bounded lexical recovery (0.36.1 candidate)
+## Bounded lexical recovery (0.36.1)
 
 Evidence searches preserve existing strict web-search results and explicit query
 syntax. After an eligible selection has zero matches, plain multiword queries can
@@ -60,8 +61,8 @@ every candidate. No schema or dependency change is required.
 
 `SearchService.search` and filtered evidence return `lexical_strategy` separately
 from `retrieval_method`. Relaxed matching remains text retrieval. Source search
-preserves its citation-list API and consistent pagination. This is a producer
-candidate pending independent review/publication; consumer pins remain unchanged.
+preserves its citation-list API and consistent pagination. Version 0.36.1 is
+independently published; application pins and native acceptance remain separate.
 See the [query and evaluation guide](https://github.com/Stell0/ns8-czero/blob/main/docs/retrieval-benchmark.md).
 
 ## Optional verified-user admission and client onboarding
