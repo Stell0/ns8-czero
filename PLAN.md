@@ -1,11 +1,11 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M4 merged; M5 acceptance and M6 OCR candidates):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M5 merged; M6 OCR acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M4 accepted / M5–M6 candidates
+## Queued document extraction — M5 accepted / M6 candidate
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0–M4 are merged; M5 acceptance remains sequential before M6. The
+milestone per reviewed PR. M0–M5 are merged; M6 is the current OCR candidate. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
@@ -44,6 +44,10 @@ No model answer-quality improvement is claimed.
 The [M6 successor](docs/ingestion-pipeline/M6.md) adds opt-in local page OCR,
 backend/model fingerprints and synthetic scan/timeout/disable checks. Native
 fixtures now verify an OCR page alongside ordinary pages before/after restore.
+M5 repaired source `b2c87b5` passes full/native `41687775493`, independent
+artifact grading and promotion verification, then regularly merges as `b0db3d2`.
+The original PR61 remains frozen and superseded. M6 retains the repair and passes
+2,700 full local cases plus 32 focused controls before its own native acceptance.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

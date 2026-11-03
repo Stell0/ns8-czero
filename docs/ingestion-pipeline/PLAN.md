@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M4 merged; M5 compatibility acceptance pending; M6 OCR implemented**
+Status: **M0–M5 merged; M6 OCR acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -381,3 +381,10 @@ with local bounded rendering/Tesseract, frozen engine/model provenance and no
 remote provider. Final original source `c6276e4` passes 2,697 complete local
 cases without database skips; the accepted-base successor passes 16 focused
 OCR/migration cases. M5 and M6 retain separate sequential native acceptance.
+
+M5 PR62 regularly merges as `b0db3d23e77aabee8911ae7426f2d2790f01c3bd`
+after exact `b2c87b5` passes 2,685 complete local cases, full/native `41687775493`,
+independent artifact grading and full promotion verification. Superseded PR61
+remains closed with its original source/CI and failed measurement evidence.
+M6 is based on that accepted main; its code-identical compatibility source passes
+2,700 complete local cases and 32 focused checks. Defaults/consumer lock stay.

@@ -123,7 +123,8 @@ commands, backend/model fingerprints, whole-process-group deadlines and disabled
 pending-work behavior. No cloud OCR adapter or data egress is authorized.
 Extraction units never become external source-sync publication parts.
 M3 and M4 are accepted at `ed160592` / `b51112e`, with full native/artifact
-proofs `41654247380` / `41666816436`. M5 remains the sequential prerequisite.
+proofs `41654247380` / `41666816436`. M5 is accepted as `b0db3d2` after full/native `41687775493`, independent
+artifact grading and exact-source verification.
 M6 adds explicitly enabled local-only OCR; keep fixed commands, installed model
 hashes, isolated process-group deadlines and readable-page extraction unchanged.
 
