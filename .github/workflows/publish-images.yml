@@ -60,8 +60,8 @@ jobs:
             "${REPOBASE,,}/czero-app:${IMAGETAG}" - < tests/audit_runtime.py
       - name: Validate packaged document parsers
         run: |
-          podman run --rm --interactive --entrypoint python \
-            "${REPOBASE,,}/czero-app:${IMAGETAG}" - < tests/parser_runtime_probe.py
+          cat tests/integration/ocr_original.py tests/parser_runtime_probe.py | podman run --rm --interactive --network=none --entrypoint python \
+            "${REPOBASE,,}/czero-app:${IMAGETAG}" -
       - name: Verify released Core in published image
         if: steps.core_source.outputs.source == 'released'
         run: |

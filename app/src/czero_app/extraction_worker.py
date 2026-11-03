@@ -27,11 +27,14 @@ def main():
             access = AccessService(database, issuer, owner)
             originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
             workers=int(os.getenv('CZERO_EXTRACTION_WORKERS','2'))
+            ocr=os.getenv('CZERO_EXTRACTION_OCR_ENABLED','0')
+            if ocr not in ('0','1'): raise ValueError('invalid_extraction_flag')
             queue=ExtractionQueue(database,access,originals,enabled=True,instance_workers=workers,
                 document_workers=int(os.getenv('CZERO_EXTRACTION_DOCUMENT_WORKERS','2')),
                 space_workers=int(os.getenv('CZERO_EXTRACTION_SPACE_WORKERS','2')),
                 max_queued_units=int(os.getenv('CZERO_EXTRACTION_MAX_QUEUED_UNITS','2000')),
-                max_staging_bytes=int(os.getenv('CZERO_EXTRACTION_MAX_STAGING_BYTES','33554432')))
+                max_staging_bytes=int(os.getenv('CZERO_EXTRACTION_MAX_STAGING_BYTES','33554432')),
+                ocr_language=os.getenv('CZERO_EXTRACTION_OCR_LANGUAGE','eng') if ocr=='1' else None)
             stop=Event()
             previous=signal.signal(signal.SIGTERM,lambda *_:stop.set())
             try: result=ExtractionPool(queue,workers=workers).tick(stop=stop)

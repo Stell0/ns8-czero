@@ -166,6 +166,8 @@ def test_native_fixture_exercises_real_core_before_systemd_acceptance(spaces,sou
     path=Path(__file__).resolve().parents[1]/'extraction_pool_fixture.py'
     spec=importlib.util.spec_from_file_location('disposable_pool_fixture',path)
     module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    from ocr_original import PHRASE,scanned_original
+    module.PHRASE=PHRASE; module.scanned_original=scanned_original
     service,owner,_,created=sources
     monkeypatch.setenv('CZERO_DISPOSABLE_TEST','1')
     monkeypatch.setenv('CZERO_DATABASE_URL',service.database.engine.url.render_as_string(hide_password=False))
@@ -179,6 +181,6 @@ def test_native_fixture_exercises_real_core_before_systemd_acceptance(spaces,sou
         source=c.execute(text('SELECT source_id FROM c0_source_versions WHERE id=:id'),{'id':UUID(value['version'])}).scalar_one()
     created.append(source)
     queue=ExtractionQueue(service.database,service.access,service.originals,enabled=True,
-        instance_workers=workers,document_workers=workers,space_workers=workers)
-    assert ExtractionPool(queue,workers=workers).tick()['processed']==8
+        instance_workers=workers,document_workers=workers,space_workers=workers,ocr_language='eng')
+    assert ExtractionPool(queue,workers=workers).tick()['processed']==9
     module.main('verify',workers)

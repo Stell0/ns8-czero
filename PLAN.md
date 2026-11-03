@@ -32,6 +32,9 @@ lease/PDF recovery and independent packages pass 64 cases. M4 acceptance waits
 for M3. The [M5 successor](docs/ingestion-pipeline/M5.md) adds bounded current
 structure and versioned section chunks, with 21 focused passes and a frozen
 three-passage containment comparison; no model quality improvement is claimed.
+The [M6 successor](docs/ingestion-pipeline/M6.md) adds opt-in local page OCR,
+backend/model fingerprints and synthetic scan/timeout/disable checks. Native
+fixtures now verify an OCR page alongside ordinary pages before/after restore.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 

@@ -17,6 +17,7 @@ from .extraction import Extracted, ExtractionError, MAX_LOCATIONS, extract_isola
 from .pdf_units import inventory_isolated, extract_page_isolated, validate_page, assemble_pdf
 from .document_units import (DOCX,inventory_isolated as document_inventory,
     extract_unit_isolated,validate_spec,validate_fragment,locators as document_locators,assemble as assemble_document)
+from .local_ocr import preflight as ocr_preflight,validate_profile as validate_ocr,validate_provenance,extract_unit as ocr_extract
 from .structure import PROFILES,build as build_structure,section_chunks
 from .identity import Actor, PermissionDenied, Role
 from .sources import SourceConflict, SourceNotFound
@@ -36,12 +37,15 @@ def _hash(value):
 FORMATS={'docx-block-v1':DOCX,'markdown-block-v1':'text/markdown','text-block-v1':'text/plain'}
 
 
-def _profile(partitioner='whole-document-v1',pages=None,*,spec=None,chunking=None):
+def _profile(partitioner='whole-document-v1',pages=None,*,spec=None,chunking=None,ocr=None):
     result={'partitioner':partitioner,'normalization':1,
             'pypdf':version('pypdf'),'python_docx':version('python-docx')}
     if chunking is not None:
         if chunking not in PROFILES: raise ValueError('invalid_chunking_profile')
         result['chunking']=chunking
+    if ocr is not None:
+        if partitioner!='pdf-page-v1': raise ValueError('invalid_ocr_profile')
+        result['ocr']=validate_ocr(ocr)
     if partitioner=='pdf-page-v1':
         if type(pages) is not int or not 1<=pages<=200: raise ValueError('invalid_manifest')
         result['pages']=pages
@@ -108,7 +112,7 @@ def _erase(connection, ids):
     if ids:
         connection.execute(text("""UPDATE c0_extraction_units SET state='cancelled',
             lease_token=NULL,lease_deadline=NULL,fence=fence+1,body=NULL,locations=NULL,
-            result_sha256=NULL,text_sha256=NULL WHERE run_id=ANY(CAST(:ids AS uuid[]))"""), {'ids':list(ids)})
+            result_sha256=NULL,text_sha256=NULL,provenance=NULL,provenance_sha256=NULL WHERE run_id=ANY(CAST(:ids AS uuid[]))"""), {'ids':list(ids)})
 
 
 def cleanup_extractions(connection, *, limit=20):
@@ -138,16 +142,18 @@ class Claim:
     original: dict = field(repr=False)
     ordinal: int = 1
     locator: dict = field(default_factory=lambda:{'kind':'document'})
+    profile: dict = field(default_factory=dict,repr=False)
 
 
 class ExtractionQueue(SpaceBound):
     def __init__(self, database, access, originals, *, enabled=False,
-                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432,chunking_profile='sections-v1'):
+                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432,chunking_profile='sections-v1',ocr_language=None):
         if type(enabled) is not bool:
             raise ValueError('invalid_extraction_flag')
         self.database, self.access, self.originals, self.enabled = database, access, originals, enabled
         if chunking_profile not in PROFILES: raise ValueError('invalid_chunking_profile')
         self.chunking_profile=chunking_profile
+        self.ocr_profile=ocr_preflight(ocr_language) if ocr_language is not None else None
         for limit in (instance_workers,document_workers,space_workers):
             if type(limit) is not int or not 1<=limit<=4: raise ValueError('invalid_worker_limit')
         if type(max_queued_units) is not int or not 200<=max_queued_units<=4000: raise ValueError('invalid_queue_limit')
@@ -180,7 +186,7 @@ class ExtractionQueue(SpaceBound):
             original=dict(original)
         profile=_profile()
         if original['media_type']=='application/pdf':
-            profile=_profile('pdf-page-v1',inventory_isolated(self.originals.check(original)))
+            profile=_profile('pdf-page-v1',inventory_isolated(self.originals.check(original)),ocr=self.ocr_profile)
             self.originals.check(original)
         elif original['media_type']==DOCX or original['size_bytes']>65536:
             spec=document_inventory(self.originals.check(original),original['media_type'])
@@ -281,7 +287,7 @@ class ExtractionQueue(SpaceBound):
             return False
         try:
             profile=run['profile']
-            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'),spec=profile.get('spec'),chunking=profile.get('chunking'))
+            valid=(profile==_profile(profile.get('partitioner'),profile.get('pages'),spec=profile.get('spec'),chunking=profile.get('chunking'),ocr=profile.get('ocr'))
                 and run['expected_units']==len(_locators(profile))
                 and (profile['partitioner']!='pdf-page-v1' or source['media_type']=='application/pdf')
                 and (profile['partitioner'] not in FORMATS or source['media_type']==FORMATS[profile['partitioner']])
@@ -343,7 +349,7 @@ class ExtractionQueue(SpaceBound):
             c.execute(text('''UPDATE c0_extraction_runs SET claimed=claimed+1,revision=revision+1,
                 last_claimed_at=:now,wait_ms=wait_ms+:wait,retry_wait_ms=retry_wait_ms+:retry_wait WHERE id=:id'''),
                 {'id':run['id'],'now':now,'wait':wait,'retry_wait':retry_wait})
-            return Claim(run['id'],unit['id'],source['id'],run['space_id'],source['generation'],unit['fence']+1,token,dict(source),unit['ordinal'],locator)
+            return Claim(run['id'],unit['id'],source['id'],run['space_id'],source['generation'],unit['fence']+1,token,dict(source),unit['ordinal'],locator,dict(run['profile']))
 
     def _attempt(self, c, claim, *, replay=False):
         content_lock(c); hold_authority(c)
@@ -382,7 +388,7 @@ class ExtractionQueue(SpaceBound):
             return None
         return run,unit,now
 
-    def complete(self, claim, result):
+    def complete(self, claim, result,*,provenance=None):
         page=claim.locator.get('kind')=='page'
         fragment=claim.locator.get('kind') in ('blocks','characters')
         if page: validate_page(result,claim.ordinal)
@@ -393,6 +399,11 @@ class ExtractionQueue(SpaceBound):
             if attempt is None:
                 return False
             run,unit,now = attempt
+            if provenance is not None:
+                if not page or 'ocr' not in run['profile']: raise ExtractionError('parser_failed')
+                validate_provenance(provenance,run['profile']['ocr'],claim.ordinal)
+            metadata_hash=_hash(provenance) if provenance is not None else None
+            if unit['state'] in ('published','succeeded') and unit['provenance_sha256']!=metadata_hash: return False
             if unit['state']=='published': return unit['result_sha256']==digest
             if unit['state']=='succeeded':
                 return unit['result_sha256']==digest==_result(Extracted(unit['body'],unit['locations']),allow_blank=page or fragment)
@@ -406,8 +417,8 @@ class ExtractionQueue(SpaceBound):
                 self._fail(c,run,unit,'resource_limit',now)
                 return False
             c.execute(text("""UPDATE c0_extraction_units SET state='succeeded',body=:body,locations=CAST(:locations AS jsonb),
-                result_sha256=:hash,text_sha256=:text_hash,lease_deadline=NULL,finished_at=:now WHERE id=:id"""),
-                {'id':unit['id'],'body':result.text,'locations':json.dumps(result.locations),'hash':digest,'text_hash':result.text_hash,'now':now})
+                result_sha256=:hash,text_sha256=:text_hash,provenance=CAST(:provenance AS jsonb),provenance_sha256=:provenance_hash,lease_deadline=NULL,finished_at=:now WHERE id=:id"""),
+                {'id':unit['id'],'body':result.text,'locations':json.dumps(result.locations),'hash':digest,'text_hash':result.text_hash,'now':now,'provenance':json.dumps(provenance) if provenance is not None else None,'provenance_hash':metadata_hash})
             c.execute(text("""UPDATE c0_extraction_runs SET succeeded=succeeded+1,revision=revision+1,error_code=NULL,
                 result_bytes=result_bytes+:bytes,result_characters=result_characters+:characters,run_ms=run_ms+:duration,
                 state=CASE WHEN succeeded+1=expected_units THEN 'assembling' ELSE 'extracting' END WHERE id=:id"""),
@@ -522,6 +533,14 @@ class ExtractionQueue(SpaceBound):
                 if _result(evidence)!=unit['result_sha256'] or evidence.text_hash!=unit['text_sha256']:
                     raise ExtractionError('parser_failed')
             structure=build_structure(evidence,source['media_type'],self.originals.check(source))
+            metadata=[]
+            for unit in units:
+                if unit['provenance'] is not None:
+                    validate_provenance(unit['provenance'],run['profile']['ocr'],unit['ordinal'])
+                    if _hash(unit['provenance'])!=unit['provenance_sha256']: raise ExtractionError('parser_failed')
+                    metadata.append(unit['provenance'])
+                elif unit['provenance_sha256'] is not None: raise ExtractionError('parser_failed')
+            if metadata: structure['ocr']={'profile':run['profile']['ocr'],'pages':metadata}
             chunking=run['profile'].get('chunking','fixed-v1')
             segments=section_chunks(evidence,structure,profile=chunking)
             self.originals.check(source)
@@ -538,9 +557,9 @@ class ExtractionQueue(SpaceBound):
             if current['state']!='assembling' or self._live(c,current,c.execute(text('SELECT clock_timestamp()')).scalar_one()) is False:
                 return False
             if current['revision']!=run['revision'] or current['manifest_sha256']!=run['manifest_sha256']: return False
-            stored=c.execute(text('''SELECT id,ordinal,locator,input_sha256,state,result_sha256,text_sha256
+            stored=c.execute(text('''SELECT id,ordinal,locator,input_sha256,state,result_sha256,text_sha256,provenance,provenance_sha256
                 FROM c0_extraction_units WHERE run_id=:id ORDER BY ordinal FOR UPDATE'''),{'id':identifier}).mappings().all()
-            keys=('id','ordinal','locator','input_sha256','state','result_sha256','text_sha256')
+            keys=('id','ordinal','locator','input_sha256','state','result_sha256','text_sha256','provenance','provenance_sha256')
             same=(len(stored)==len(units) and all(all(a[key]==b[key] for key in keys) for a,b in zip(stored,units)))
             if not same: return False
             manifest_ok=all(_hash(row['locator'])==_hash(_locator(current['profile'],row['ordinal']))
@@ -552,7 +571,7 @@ class ExtractionQueue(SpaceBound):
                 return False
             version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),{'id':current['version_id']}).mappings().one()
             _publish_extracted(c,version,evidence,segments,JobService(self.database,registry),reuse_identical=False,structure=structure,chunking_profile=chunking)
-            c.execute(text("""UPDATE c0_extraction_units SET state='published',body=NULL,locations=NULL,
+            c.execute(text("""UPDATE c0_extraction_units SET state='published',body=NULL,locations=NULL,provenance=NULL,
                 lease_deadline=NULL WHERE run_id=:id"""),{'id':identifier})
             c.execute(text("""UPDATE c0_extraction_runs SET state='ready',error_code=NULL,
                 result_bytes=0,result_characters=0,revision=revision+1 WHERE id=:id"""),{'id':identifier})
@@ -601,12 +620,20 @@ class ExtractionWorker:
             idle=0
             try:
                 path = self.queue.originals.check(claim.original)
-                if claim.locator['kind']=='page': result=extract_page_isolated(path,claim.ordinal)
+                provenance=None
+                if claim.locator['kind']=='page':
+                    try: result=extract_page_isolated(path,claim.ordinal)
+                    except ExtractionError as error:
+                        if error.code!='unsupported_scan' or 'ocr' not in claim.profile: raise
+                        if self.queue.ocr_profile is None: raise
+                        if self.queue.ocr_profile!=claim.profile['ocr']: raise ExtractionError('ocr_unavailable')
+                        parsed=ocr_extract(path,claim.ordinal,claim.profile['ocr'])
+                        result,provenance=parsed.evidence,parsed.provenance
                 elif claim.locator['kind'] in ('blocks','characters'):
                     result=extract_unit_isolated(path,claim.original['media_type'],claim.locator)
                 else: result=extract_isolated(path,claim.original['media_type'])
                 self.queue.originals.check(claim.original)
-                self.queue.complete(claim,result)
+                self.queue.complete(claim,result,provenance=provenance)
             except ExtractionError as error:
                 self.queue.fail(claim,error.code)
             processed += 1

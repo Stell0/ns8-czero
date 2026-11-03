@@ -3,14 +3,15 @@
 import math
 
 FIELDS={'stage','workers','units','body_hash_verified','staging_cleared','native_limits_verified',
-    'backup_readback','memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds'}
+    'backup_readback','ocr_pages','ocr_text_verified','memory_peak_bytes','parser_peak_rss_bytes','memory_limit_bytes','swap_limit_bytes','pids_limit','duration_seconds'}
 
 
 def validate_measurement(value):
     assert type(value) is dict and set(value)==FIELDS,'Invalid extraction pool evidence'
     stage=value['stage']; workers=value['workers']
     assert stage in ('seed','verify') and type(workers) is int and workers in (2,4)
-    assert type(value['units']) is int and value['units']==8
+    assert type(value['units']) is int and value['units']==9
+    assert type(value['ocr_pages']) is int and value['ocr_pages']==1 and value['ocr_text_verified'] is True
     assert value['body_hash_verified'] is True and value['staging_cleared'] is True
     assert value['native_limits_verified'] is (stage=='seed') and value['backup_readback'] is (stage=='verify')
     if stage=='seed':

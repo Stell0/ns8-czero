@@ -112,6 +112,9 @@ The [M4 successor](docs/ingestion-pipeline/M4.md) extends complete publication t
 DOCX, Markdown and text; keep source-sync receipts and public authority unchanged.
 M5 derives bounded current section/block/reference metadata and versioned chunks.
 Keep ancestor context separate from exact citation text; no automatic backfill.
+M6 local OCR is explicit and limited to unsupported PDF pages; preserve fixed
+commands, backend/model fingerprints, whole-process-group deadlines and disabled
+pending-work behavior. No cloud OCR adapter or data egress is authorized.
 Extraction units never become external source-sync publication parts.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)

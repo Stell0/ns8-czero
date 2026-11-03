@@ -354,3 +354,7 @@ authority/receipts; full compatibility and native acceptance remain separate.
 The [M5 structure candidate](M5.md) adds schema 0027 current-document derivatives,
 configurable fixed/section chunks and exact-offset ancestor metadata. Legacy
 indices and pending older manifests retain fixed chunks; no corpus is rewritten.
+
+The [M6 OCR candidate](M6.md) adds schema 0028 checksummed page provenance and
+explicit local Tesseract settings. Actual scan/disable/selective-retry/process-
+group timeout checks pass 15 cases. Full/native acceptance remains sequential.
