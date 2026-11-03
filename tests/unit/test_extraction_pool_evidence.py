@@ -26,6 +26,14 @@ def test_both_actual_worker_budgets_and_backup_readbacks_are_required():
     assert evidence['validate_measurement']({**record('seed',2),'memory_peak_bytes':None})['memory_peak_bytes'] is None
 
 
+def test_explicit_reindex_proof_requires_actual_both_workers_and_closed_typed_success():
+    values=[{'stage':'reindex','workers':workers,'units':9,'verified':True} for workers in (2,4)]
+    assert evidence['require_reindexes'](values)==values
+    for rows in (values[:1],[values[0],values[0]],[{**values[0],'verified':1},values[1]],
+                 [{**values[0],'private':'private-test-canary'},values[1]]):
+        with pytest.raises(AssertionError):evidence['require_reindexes'](rows)
+
+
 @pytest.mark.parametrize('change',[{'memory_peak_bytes':True},{'memory_peak_bytes':0},
     {'memory_limit_bytes':0},{'swap_limit_bytes':0},{'pids_limit':0},
     {'duration_seconds':float('nan')},{'duration_seconds':131},{'workers':True},

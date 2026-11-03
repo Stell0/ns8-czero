@@ -7,7 +7,7 @@ import shlex
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
-from extraction_pool_evidence import validate_measurement
+from extraction_pool_evidence import validate_measurement,validate_reindex
 
 
 class CzeroExtraction:
@@ -25,7 +25,8 @@ class CzeroExtraction:
                 output,error,code=ssh.execute_command(command,return_rc=True,return_stderr=True,timeout='180 seconds')
                 assert code==0,'Disposable explicit reindex failed'
                 proof=json.loads(output)
-                assert proof=={'stage':'reindex','workers':workers,'units':9,'verified':True}
+                validate_reindex(proof)
+                assert proof['workers']==workers
                 level=builtin.set_log_level('INFO')
                 try:
                     marker='C0 explicit reindex: '+json.dumps(proof,sort_keys=True)
