@@ -112,7 +112,9 @@ def drain(queue,actor,run_id):
         ExtractionPool(queue,workers=queue.instance_workers).tick()
         state=queue.status(actor,run_id)
         if state['state']=='ready':return state
-        if state['state'] in ('failed','superseded'):raise AssertionError('benchmark_extraction_failed')
+        if state['state'] in ('failed','superseded'):
+            safe={key:state[key] for key in ('state','error_code','expected_units','claimed','succeeded','failed','retried')}
+            raise AssertionError('benchmark_extraction_failed:'+json.dumps(safe))
     raise AssertionError('benchmark_drain_limit')
 
 
@@ -164,17 +166,23 @@ def measure(spec,url,directory):
                 manifest_seconds=time.perf_counter()-manifest_started
                 status=drain(queue,actor,run['id'])
             extraction_seconds=time.perf_counter()-extraction_started
-            document=sources.document(actor,version['id'])
+            document=sources.document(actor,version['id'],include_derivatives=True)
             chunks=sources.chunks(actor,document['id'],limit=100)
             # Page through every chunk; default reads never establish full coverage.
             all_chunks=list(chunks)
             while len(chunks)==100:
                 chunks=sources.chunks(actor,document['id'],limit=100,offset=len(all_chunks));all_chunks.extend(chunks)
-            exact_spans=all(row['body']==document['body'][row['start_offset']:row['end_offset']]
+            exact_spans=all(0<=row['start_offset']<row['end_offset']<=len(document['body'])
+                and row['body']==document['body'][row['start_offset']:row['end_offset']]
                 and digest(row['body'].encode())==row['content_hash'] for row in all_chunks)
+            covered=0;complete=bool(all_chunks)
+            for row in all_chunks:
+                complete=complete and row['start_offset']<=covered
+                covered=max(covered,row['end_offset'])
             quality={'text_hash_exact':document['text_hash']==digest(document['body'].encode())==expected['text_sha256'],
                 'character_count_exact':len(document['body'])==expected['characters'],
-                'locations_exact':document['locations']==expected['locations'],'chunk_spans_exact':exact_spans}
+                'locations_exact':document['locations']==expected['locations'],'chunk_spans_exact':exact_spans,
+                'chunk_coverage_complete':complete and covered==len(document['body'])}
             assert all(quality.values()),'extraction_quality_regression'
             wall=time.perf_counter()-started
         event.remove(database.engine,'before_cursor_execute',sql_started)
@@ -183,6 +191,8 @@ def measure(spec,url,directory):
         if warm:assert status['cache_hits']==status['expected_units'] and status['cache_misses']==0
         result={**spec,'provenance':provenance,'source_sha256':expected['original_sha256'],'text_sha256':document['text_hash'],
             'quality':quality,'workers':workers,'output_cache':'warm-current' if warm else 'disabled' if workers else 'legacy-none',
+            'requested_chunking_profile':queue.chunking_profile if workers else 'fixed-v1',
+            'effective_chunking_profile':document['chunking_profile'],'structure_available':document['structure'] is not None,
             'os_disk_cache':'uncontrolled','upload_seconds':upload_seconds,'extraction_seconds':extraction_seconds,
             'manifest_seconds':manifest_seconds,'sql_during_submission_execution_readback':sql,
             'end_to_end_seconds':wall,'cpu_seconds':after_usage['cpu_seconds']-prior['cpu_seconds'],
