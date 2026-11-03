@@ -14,6 +14,7 @@ if worker_state.exists():
     if saved.get('app_active') is True:
         subprocess.run(['systemctl','--user','start','czero.service'],check=True)
     # App activation may start an enabled timer that was explicitly paused.
+    subprocess.run(['systemctl','--user','start' if saved.get('extraction_active') is True else 'stop','czero-extraction.timer'],check=True)
     subprocess.run(['systemctl','--user','start' if saved.get('scheduler_active') is True else 'stop','czero-worker.timer'],check=True)
     worker_state.unlink()
 for name in ('czero.pg_dump','backup-metadata.json'):

@@ -4,6 +4,7 @@ Library    CzeroActions.py
 Library    CzeroBrowser.py
 Library    CzeroBackup.py
 Library    CzeroSso.py
+Library    CzeroExtraction.py
 Suite Teardown    Cleanup disposable Czero resources
 
 *** Variables ***
@@ -711,6 +712,7 @@ Preserve admitted identities through update and clean restore
     Should Be Equal As Integers    ${rc}    0
     Verify Disposable Identity Persistence    ${module_id}
     # Core restore preserves logical UUID/path: keep its encryption key too.
+    Verify Disposable Extraction Pool    ${module_id}    seed
     ${backup} =    Create Disposable Backup    ${module_id}    ${backup_repository}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
     Log To Console    SSO persistence: native encrypted backup
@@ -730,6 +732,7 @@ Preserve admitted identities through update and clean restore
     ${restored_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${restored_id}
     Should Not Be Equal    ${module_id}    ${donor_id}
+    Verify Disposable Extraction Pool    ${module_id}    verify
     Verify Disposable Identity Persistence    ${module_id}
     Wait Until Keyword Succeeds    30s    2s    Check application route
 

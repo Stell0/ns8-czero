@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0/M1 merged; M2 PDF publication candidate implemented, acceptance pending**
+Status: **M0/M1 merged; M2 acceptance pending; M3 worker-pool successor implemented**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -22,6 +22,11 @@ M1 regularly merged as `6380d38d7f76a6ad1dbb7d1c32c2713e60fdcf20` after full
 run `41605913790` and exact-source promotion verification. The [M2 candidate](M2.md)
 adds one unit per PDF page, failed-unit retry and complete atomic publication.
 The default extraction path and released consumer lock remain unchanged.
+
+The [M3 successor candidate](M3.md) adds a configurable bounded native pool,
+fair claims, backpressure, aggregate timing/resource observations and explicit
+native two/four-worker plus backup/restore proof. It is developed while M2 CI
+runs, with separate databases and sequential acceptance/merges.
 
 The conference talk's key lesson is **fan-out at extraction time**: partition an original document into separately queued extraction units, persist each successful unit, retry only failed units, and assemble/publish only after the complete set is verified. **Extraction units are not search chunks.** Extraction units isolate processing cost and failure; search chunks are separately derived for retrieval.
 

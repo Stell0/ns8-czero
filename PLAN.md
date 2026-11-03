@@ -2,7 +2,7 @@
 
 > **Document ingestion modernization (M0/M1 merged; M2 publication candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M2 candidate
+## Queued document extraction — M2 acceptance / M3 successor
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
 milestone per reviewed PR. M0 and M1 are merged; M2 is the current candidate. The
@@ -18,7 +18,13 @@ adds PDF page units, failed-unit retry and complete atomic publication. The
 operator authorizes isolated successor development while prerequisite CI runs,
 with sequential acceptance/merges and disposable instances for native/rollout
 tests. Ordinary extraction and the released consumer lock remain unchanged.
-M3 worker lifecycle is separate. Installed baselines, frozen evidence, Core publication,
+M2 exact `cfecd8c` passes 2,619 local Python/PostgreSQL/packaging cases without
+skips, including independent predecessor/wheel/source proofs. Failed environment
+and probe evidence is retained; native/merge acceptance remains separate.
+The [M3 successor](docs/ingestion-pipeline/M3.md), schema 0026, adds configurable
+native workers, fair leases, queue/result backpressure and actual resource/restore
+grading. Focused pool/package checks pass 74 cases and Robot dry-run passes all
+21 cases; full/native acceptance is pending. Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
 ## CI policy update — implementation

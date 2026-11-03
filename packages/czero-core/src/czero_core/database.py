@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0025_pdf_units"
+SCHEMA_REVISION = "0026_extraction_pool"
 
 
 class Database:

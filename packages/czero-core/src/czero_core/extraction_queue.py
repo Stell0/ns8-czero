@@ -21,7 +21,8 @@ from .spaces import SpaceBound, hold_authority
 
 TRANSIENT = frozenset({'parser_timeout', 'resource_limit', 'parser_failed', 'lease_expired'})
 SUMMARY = ('id','space_id','version_id','processing_generation','state','error_code',
-           'expected_units','revision','claimed','succeeded','failed','retried','expires_at')
+           'expected_units','revision','claimed','succeeded','failed','retried','expires_at',
+           'wait_ms','run_ms','retry_wait_ms','timeout_count')
 
 
 def _hash(value):
@@ -124,10 +125,18 @@ class Claim:
 
 
 class ExtractionQueue(SpaceBound):
-    def __init__(self, database, access, originals, *, enabled=False):
+    def __init__(self, database, access, originals, *, enabled=False,
+                 instance_workers=2,document_workers=2,space_workers=2,max_queued_units=2000,max_staging_bytes=33554432):
         if type(enabled) is not bool:
             raise ValueError('invalid_extraction_flag')
         self.database, self.access, self.originals, self.enabled = database, access, originals, enabled
+        for limit in (instance_workers,document_workers,space_workers):
+            if type(limit) is not int or not 1<=limit<=4: raise ValueError('invalid_worker_limit')
+        if type(max_queued_units) is not int or not 200<=max_queued_units<=4000: raise ValueError('invalid_queue_limit')
+        if type(max_staging_bytes) is not int or not 2097152<=max_staging_bytes<=67108864: raise ValueError('invalid_staging_limit')
+        self.document_workers,self.space_workers=document_workers,space_workers
+        self.instance_workers=instance_workers
+        self.max_queued_units,self.max_staging_bytes=max_queued_units,max_staging_bytes
 
     def enqueue(self, actor, version_id, *, expected_generation):
         if not self.enabled:
@@ -172,6 +181,14 @@ class ExtractionQueue(SpaceBound):
                 {'id':v['id'],'generation':expected_generation}).mappings().one_or_none()
             if existing:
                 return self._summary(existing, c.execute(text('SELECT clock_timestamp()')).scalar_one())
+            counts=c.execute(text("""SELECT count(*) AS total,
+                count(*) FILTER(WHERE u.space_id=:space) AS selected FROM c0_extraction_units u
+                JOIN c0_extraction_runs r ON r.id=u.run_id
+                WHERE r.state IN ('extracting','assembling','failed') AND r.expires_at>clock_timestamp()
+                AND u.state IN ('queued','leased','retry_wait')"""),{'space':current.space_id}).mappings().one()
+            count=profile.get('pages',1)
+            if counts['total']+count>self.max_queued_units or counts['selected']+count>max(200,self.max_queued_units//2):
+                raise ValueError('extraction_queue_full')
             now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
             expiry = now+timedelta(hours=24)
             if not v['original_present']:
@@ -262,10 +279,17 @@ class ExtractionQueue(SpaceBound):
             content_lock(c); hold_authority(c)
             now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
             run = c.execute(text("""SELECT r.* FROM c0_extraction_runs r WHERE r.state='extracting'
+                AND (SELECT count(*) FROM c0_extraction_units a
+                    WHERE a.state='leased' AND a.lease_deadline>:now)<:instance_limit
+                AND (SELECT count(*) FROM c0_extraction_units a WHERE a.run_id=r.id
+                    AND a.state='leased' AND a.lease_deadline>:now)<:document_limit
+                AND (SELECT count(*) FROM c0_extraction_units a WHERE a.space_id=r.space_id
+                    AND a.state='leased' AND a.lease_deadline>:now)<:space_limit
                 AND EXISTS(SELECT 1 FROM c0_extraction_units u WHERE u.run_id=r.id AND
                     ((u.state IN ('queued','retry_wait') AND u.available_at<=:now)
                      OR (u.state='leased' AND u.lease_deadline<=:now)))
-                ORDER BY r.created_at,r.id LIMIT 1 FOR UPDATE SKIP LOCKED"""), {'now':now}).mappings().one_or_none()
+                ORDER BY COALESCE(r.last_claimed_at,r.created_at),r.created_at,r.id LIMIT 1 FOR UPDATE SKIP LOCKED"""),
+                {'now':now,'instance_limit':self.instance_workers,'document_limit':self.document_workers,'space_limit':self.space_workers}).mappings().one_or_none()
             if run is None:
                 return None
             source = self._live(c, run, now)
@@ -286,7 +310,12 @@ class ExtractionQueue(SpaceBound):
             c.execute(text("""UPDATE c0_extraction_units SET state='leased',attempts=attempts+1,lifetime_attempts=lifetime_attempts+1,fence=fence+1,
                 lease_token=:token,lease_deadline=:deadline,started_at=:now,finished_at=NULL,error_code=NULL WHERE id=:id"""),
                 {'id':unit['id'],'token':token,'deadline':now+timedelta(seconds=60),'now':now})
-            c.execute(text('UPDATE c0_extraction_runs SET claimed=claimed+1,revision=revision+1 WHERE id=:id'), {'id':run['id']})
+            wait=max(0,int((now-unit['available_at']).total_seconds()*1000))
+            retry_wait=(max(0,int((now-unit['finished_at']).total_seconds()*1000))
+                if unit['state']=='retry_wait' and unit['finished_at'] else 0)
+            c.execute(text('''UPDATE c0_extraction_runs SET claimed=claimed+1,revision=revision+1,
+                last_claimed_at=:now,wait_ms=wait_ms+:wait,retry_wait_ms=retry_wait_ms+:retry_wait WHERE id=:id'''),
+                {'id':run['id'],'now':now,'wait':wait,'retry_wait':retry_wait})
             return Claim(run['id'],unit['id'],source['id'],run['space_id'],source['generation'],unit['fence']+1,token,dict(source),unit['ordinal'],locator)
 
     def _attempt(self, c, claim, *, replay=False):
@@ -342,13 +371,19 @@ class ExtractionQueue(SpaceBound):
                 or run['result_characters']+len(result.text)>1000000):
                 self._fail(c,run,unit,'too_large',now)
                 return False
+            staged=c.execute(text("""SELECT COALESCE(sum(result_bytes),0) FROM c0_extraction_runs
+                WHERE state IN ('extracting','assembling','failed') AND expires_at>clock_timestamp()""")).scalar_one()
+            if staged+len(result.text.encode())>self.max_staging_bytes:
+                self._fail(c,run,unit,'resource_limit',now)
+                return False
             c.execute(text("""UPDATE c0_extraction_units SET state='succeeded',body=:body,locations=CAST(:locations AS jsonb),
                 result_sha256=:hash,text_sha256=:text_hash,lease_deadline=NULL,finished_at=:now WHERE id=:id"""),
                 {'id':unit['id'],'body':result.text,'locations':json.dumps(result.locations),'hash':digest,'text_hash':result.text_hash,'now':now})
             c.execute(text("""UPDATE c0_extraction_runs SET succeeded=succeeded+1,revision=revision+1,error_code=NULL,
-                result_bytes=result_bytes+:bytes,result_characters=result_characters+:characters,
+                result_bytes=result_bytes+:bytes,result_characters=result_characters+:characters,run_ms=run_ms+:duration,
                 state=CASE WHEN succeeded+1=expected_units THEN 'assembling' ELSE 'extracting' END WHERE id=:id"""),
-                {'id':run['id'],'bytes':len(result.text.encode()),'characters':len(result.text)})
+                {'id':run['id'],'bytes':len(result.text.encode()),'characters':len(result.text),
+                 'duration':max(0,min(86400000,int((now-unit['started_at']).total_seconds()*1000)))})
             return True
 
     @staticmethod
@@ -358,10 +393,13 @@ class ExtractionQueue(SpaceBound):
         c.execute(text("""UPDATE c0_extraction_units SET state=:state,error_code=:code,lease_token=NULL,
             lease_deadline=NULL,available_at=:due,finished_at=:finished WHERE id=:id"""),
             {'id':unit['id'],'state':'retry_wait' if again else 'failed','code':code,
-             'due':now+timedelta(seconds=delay),'finished':None if again else now})
+             'due':now+timedelta(seconds=delay),'finished':now})
         c.execute(text("""UPDATE c0_extraction_runs SET failed=failed+1,retried=retried+:retry,
-            revision=revision+1,state=:state,error_code=:code WHERE id=:id"""),
-            {'id':run['id'],'retry':int(again),'state':'extracting' if again else 'failed','code':code})
+            revision=revision+1,state=:state,error_code=:code,run_ms=run_ms+:duration,
+            timeout_count=timeout_count+:timeout WHERE id=:id"""),
+            {'id':run['id'],'retry':int(again),'state':'extracting' if again else 'failed','code':code,
+             'duration':max(0,min(86400000,int((now-unit['started_at']).total_seconds()*1000))) if unit['started_at'] else 0,
+             'timeout':int(code in ('parser_timeout','lease_expired'))})
 
     def fail(self, claim, code):
         code = ExtractionError(code).code
@@ -491,23 +529,37 @@ class ExtractionQueue(SpaceBound):
         with self.database.engine.begin() as c:
             return cleanup_extractions(c,limit=limit)
 
+    def metrics(self):
+        """Trusted worker aggregates; never an unauthorised reader status route."""
+        with self.database.engine.connect() as c:
+            row=c.execute(text("""SELECT count(*) FILTER(WHERE u.state IN ('queued','retry_wait')) AS queue_depth,
+                count(*) FILTER(WHERE u.state='leased' AND u.lease_deadline>clock_timestamp()) AS active_units,
+                count(*) FILTER(WHERE (u.state IN ('queued','retry_wait') AND u.available_at<=clock_timestamp())
+                    OR (u.state='leased' AND u.lease_deadline<=clock_timestamp())) AS due_units
+                FROM c0_extraction_units u JOIN c0_extraction_runs r ON r.id=u.run_id
+                WHERE r.state='extracting' AND r.expires_at>clock_timestamp()""")).mappings().one()
+            return dict(row)
+
 
 class ExtractionWorker:
     """Bounded one-shot runner. Claim, parse and result commit are separate phases."""
     def __init__(self, queue):
         self.queue = queue
 
-    def tick(self, *, max_units=20, budget_seconds=90):
+    def tick(self, *, max_units=20, budget_seconds=90,stop=None):
         if type(max_units) is not int or not 1<=max_units<=20 or type(budget_seconds) is not int or not 1<=budget_seconds<=90:
             raise ValueError('invalid_worker_limit')
         if not self.queue.enabled:
             return 0
         self.queue.cleanup()
-        started = time.monotonic(); processed = 0
-        while processed<max_units and time.monotonic()-started<budget_seconds:
+        started = time.monotonic(); processed = 0; idle=0
+        while processed<max_units and time.monotonic()-started<budget_seconds and not (stop is not None and stop.is_set()):
             claim = self.queue.claim()
             if claim is None:
+                idle+=1
+                if idle<20 and self.queue.metrics()['due_units'] and not self.queue.metrics()['active_units']: continue
                 break
+            idle=0
             try:
                 path = self.queue.originals.check(claim.original)
                 result = (extract_page_isolated(path,claim.ordinal) if claim.locator['kind']=='page'
@@ -519,3 +571,35 @@ class ExtractionWorker:
             processed += 1
         self.queue.publish_pending()
         return processed
+
+
+class ExtractionPool:
+    """Bounded threads coordinate independent isolated parser processes."""
+    def __init__(self,queue,*,workers=2):
+        if type(workers) is not int or not 1<=workers<=4: raise ValueError('invalid_worker_limit')
+        if workers>queue.instance_workers: raise ValueError('invalid_worker_limit')
+        self.queue,self.workers=queue,workers
+
+    def tick(self,*,max_units=20,budget_seconds=90,stop=None):
+        from concurrent.futures import ThreadPoolExecutor
+        from pathlib import Path
+        from threading import Event
+        import resource
+        if not self.queue.enabled: return {'processed':0,'workers':0}
+        stop=stop if stop is not None else Event()
+        started=time.monotonic()
+        with ThreadPoolExecutor(max_workers=self.workers) as pool:
+            futures=[pool.submit(ExtractionWorker(self.queue).tick,max_units=max_units,
+                budget_seconds=budget_seconds,stop=stop) for _ in range(self.workers)]
+            processed=sum(future.result() for future in futures)
+        def measurement(name):
+            try:
+                value=(Path('/sys/fs/cgroup')/name).read_text().strip()
+                if value.isdecimal() and len(value)<=20: return int(value)
+            except OSError: pass
+            return None
+        return {'processed':processed,'workers':self.workers,'seconds':round(time.monotonic()-started,6),
+            'cgroup_peak_bytes':measurement('memory.peak'),'cgroup_limit_bytes':measurement('memory.max'),
+            'cgroup_swap_limit_bytes':measurement('memory.swap.max'),'cgroup_pids_limit':measurement('pids.max'),
+            'parser_peak_rss_bytes':resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss*1024,
+            **self.queue.metrics()}

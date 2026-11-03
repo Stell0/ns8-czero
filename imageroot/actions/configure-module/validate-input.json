@@ -176,6 +176,40 @@
             "minimum": 86400,
             "maximum": 31536000,
             "multipleOf": 86400
+        },
+        "extraction": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "workers": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4
+                },
+                "document_workers": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4
+                },
+                "space_workers": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4
+                },
+                "max_queued_units": {
+                    "type": "integer",
+                    "minimum": 200,
+                    "maximum": 4000
+                },
+                "max_staging_bytes": {
+                    "type": "integer",
+                    "minimum": 2097152,
+                    "maximum": 67108864
+                }
+            }
         }
     },
     "additionalProperties": false,

@@ -19,14 +19,16 @@ pod_active = active('czero-pod.service')
 db_active = active('czero-postgres.service')
 metadata = {'format': 1, 'app_active': active('czero.service'),
     'app_enabled': subprocess.run(['systemctl','--user','is-enabled','--quiet','czero.service']).returncode == 0,
-    'scheduler_active': active('czero-worker.timer')}
+    'scheduler_active': active('czero-worker.timer'),'extraction_active':active('czero-extraction.timer')}
 old_umask = os.umask(0o077)
 failed = False
 try:
     # Quiesce file writers across both the SQL dump and Restic volume copy.
     with agent.safe_open(str(state / 'backup-worker-state.json')) as output:
-        json.dump({'scheduler_active':metadata['scheduler_active'], 'app_active':metadata['app_active']},output)
+        json.dump({'scheduler_active':metadata['scheduler_active'], 'app_active':metadata['app_active'],
+            'extraction_active':metadata['extraction_active']},output)
     subprocess.run(['systemctl','--user','stop','czero-worker.timer','czero-worker.service'],check=True)
+    subprocess.run(['systemctl','--user','stop','czero-extraction.timer','czero-extraction.service'],check=True)
     subprocess.run(['systemctl','--user','stop','czero.service'],check=True)
     if not db_active:
         subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True)
@@ -49,5 +51,6 @@ finally:
     if failed:
         if metadata['app_active']:
             subprocess.run(['systemctl','--user','start','czero.service'],check=True)
+        subprocess.run(['systemctl','--user','start' if metadata['extraction_active'] else 'stop','czero-extraction.timer'],check=True)
         subprocess.run(['systemctl','--user','start' if metadata['scheduler_active'] else 'stop','czero-worker.timer'],check=True)
         (state / 'backup-worker-state.json').unlink(missing_ok=True)

@@ -4,4 +4,4 @@
 set -e
 exec 1>&2
 # The following native restart starts this app dependency only if app is active.
-systemctl --user enable czero-worker.timer
+systemctl --user enable czero-worker.timer czero-extraction.timer

@@ -1,0 +1,18 @@
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=C0 extraction pool wake
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
+PartOf=czero.service
+Requisite=czero.service
+After=czero.service
+
+[Timer]
+OnActiveSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=5s
+Unit=czero-extraction.service
+
+[Install]
+WantedBy=czero.service

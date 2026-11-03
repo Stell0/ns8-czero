@@ -4,4 +4,4 @@
 set -e
 exec 1>&2
 # Attach to app startup; never start an unconfigured app via a timer.
-systemctl --user enable czero-worker.timer
+systemctl --user enable czero-worker.timer czero-extraction.timer
