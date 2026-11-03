@@ -104,13 +104,13 @@ as `d2fc9a5` after full `41616861662` and `41620456266`, both native distributio
 artifact grading and exact-source promotion verification.
 The operator authorizes isolated successor development while prerequisite CI runs,
 but acceptance and merges remain sequential. Native/rollout fixtures are disposable;
-live deployment remains separate. The [M3 successor](docs/ingestion-pipeline/M3.md)
+live deployment remains separate. The [M3 implementation](docs/ingestion-pipeline/M3.md)
 adds bounded native workers and actual two/four-worker resource/restore grading.
 Preserve both timers' activation during backup and the CPU-quota waiver. M2 full
 local passes 2,619 cases; actual CI/native acceptance remains source-bound.
 Seed extraction fixtures before native retrieval is indexed/paused/snapshotted;
 retain strict derivative completion through update and restore.
-The [M4 successor](docs/ingestion-pipeline/M4.md) extends complete publication to
+The [M4 implementation](docs/ingestion-pipeline/M4.md) extends complete publication to
 DOCX, Markdown and text; keep source-sync receipts and public authority unchanged.
 M5 derives bounded current section/block/reference metadata and versioned chunks.
 Keep ancestor context separate from exact citation text; no automatic backfill.
@@ -122,6 +122,10 @@ M6 local OCR is explicit and limited to unsupported PDF pages; preserve fixed
 commands, backend/model fingerprints, whole-process-group deadlines and disabled
 pending-work behavior. No cloud OCR adapter or data egress is authorized.
 Extraction units never become external source-sync publication parts.
+M3 and M4 are accepted at `ed160592` / `b51112e`, with full native/artifact
+proofs `41654247380` / `41666816436`. M5 remains the sequential prerequisite.
+M6 adds explicitly enabled local-only OCR; keep fixed commands, installed model
+hashes, isolated process-group deadlines and readable-page extraction unchanged.
 
 For external-source ingestion and updates, read [samples](samples/ingestion/README.md)
 and use c0-ingest-sources before creating another script. Put reusable source logic,

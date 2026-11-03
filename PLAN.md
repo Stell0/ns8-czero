@@ -1,11 +1,11 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M2 merged; M3 worker-pool candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M4 merged; M5 acceptance and M6 OCR candidates):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M2 accepted / M3 candidate
+## Queued document extraction — M4 accepted / M5–M6 candidates
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0–M2 are merged; M3 is the current candidate. The
+milestone per reviewed PR. M0–M4 are merged; M5 acceptance remains sequential before M6. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
