@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M9 merged; M10 released-consumer/native acceptance pending**
+Status: **M0–M10 implementation merged; deterministic/disposable acceptance complete; M10 model quality open**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -472,3 +472,29 @@ M10 now proposes the frozen 0.37.0 consumer tag/lock with schema 0030 and matchi
 updater bounds. The current application still needs final exact-source consumer/
 native and merged-main acceptance. No default or installation changes; model
 quality remains open by operator decision.
+
+## Final execution status — 4 November 2026
+
+M2–M10 code is implemented and regularly merged in the accepted milestone PRs.
+M10 [PR69](https://github.com/Stell0/ns8-czero/pull/69) exact `b22d7c9` passes
+[full 41754721407](https://github.com/Stell0/ns8-czero/actions/runs/41754721407).
+Actual merged source `84a0bcd09de6e2f5b4d263c7509c977488505415` passes
+[full/native/canonical 41761803984](https://github.com/Stell0/ns8-czero/actions/runs/41761803984).
+Independent downloaded artifact audits and exact-source full promotion pass.
+Both CI and the exact-head Git consumer pass 2,760 Python/database/package cases
+without skips; the consumer includes actual downloaded public Core distributions.
+All 21 browsers, 219 Node 24 controls, 21 Robot dry runs, both native distributions
+and five scans pass. Both systems verify two/four-worker retained-original reindex
+and no backfill. Actual published/native app identities carry released Core
+0.37.0/schema 0030 at the locked Git source; independent image and six fresh
+canonical registry checks pass. See [source, images and limits](M10.md#accepted-main-publication).
+Earlier pending statements record retained development checkpoints.
+
+M10 **model/held-out answer-quality acceptance remains open by operator decision**;
+no model sessions are run, and deterministic controls do not accept that gate.
+Extraction stays opt-in, ordinary imports retain their established path, and no
+default-on rollout follows from these measurements. No live update, production
+reindex/import, external schedule or stable NS8 module release occurs. The
+installed app 0.54.0/Core 0.35.0/schema 0022 baseline remains unchanged. Preserve
+failed/private evidence, frozen candidates, immutable Core assets and both the
+interactive Playwright and container CPU-quota waivers.

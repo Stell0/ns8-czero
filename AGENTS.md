@@ -709,3 +709,21 @@ source with >=0.37.0,<0.38.0 and matching patch-only updater bounds, schema0030.
 Do not edit the frozen Core package tree720902f5bfdc3774d93660e8b968943498e15288.
 Final consumer/native/main publication and separate checked closeout remain;
 model quality is open by operator decision. No live/default/stable-module change.
+
+
+Ingestion M2–M10 implementation and deterministic/disposable released-consumer
+acceptance are complete at main `84a0bcd09de6e2f5b4d263c7509c977488505415`.
+PR69 exact `b22d7c9`/full `41754721407` and actual main/full `41761803984` pass,
+including independent artifact audits and exact-source full promotion. Both CI
+and the exact-head Git consumer pass 2,760 cases without database skips; actual
+published Core distributions are included. Native installed images match the
+independently checked published app's Git source/schema; six fresh canonical
+registry identities pass. Frozen images and exact results live in
+[the M10 closeout](docs/ingestion-pipeline/M10.md#accepted-main-publication).
+Model/held-out answer quality stays open by operator decision: no model sessions
+or non-inferiority claim. Keep extraction opt-in and public imports on their
+established path until separate default/durable-authority acceptance. No live
+update, production import/reindex, external schedule or stable NS8 module release
+occurs. Preserve the installed `31b0c85`/app 0.54/Core 0.35/schema 0022 baseline,
+failed/private evidence, immutable Core 0.37 bytes and both operator waivers.
+Documentation commits never replace accepted runtime image identities.

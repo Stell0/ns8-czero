@@ -1,11 +1,12 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M9 merged; M10 released-consumer/native acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M10 implementation merged; model quality open):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M9 accepted / M10 candidate
+## Queued document extraction — implementation merged
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0–M9 are merged; M10 is the current measurement/consumer candidate. The
+milestone per reviewed PR. M0–M10 implementations are merged; M10 model-quality
+acceptance remains open. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
@@ -106,6 +107,23 @@ artifact acceptance; the original failed run and signed tag remain preserved.
 M10 adopts the frozen tag/lock and schema 0030 on that accepted main, retaining
 all Core package bytes. Final consumer/native/main gates remain; model quality
 is explicitly open and the live baseline/default remain unchanged.
+
+M10 [PR69](https://github.com/Stell0/ns8-czero/pull/69) regularly merges as
+`84a0bcd09de6e2f5b4d263c7509c977488505415`. Exact `b22d7c9` passes
+[full/native 41754721407](https://github.com/Stell0/ns8-czero/actions/runs/41754721407);
+actual merged main passes
+[41761803984](https://github.com/Stell0/ns8-czero/actions/runs/41761803984), independent
+artifact audits and exact-source full promotion. Both current CI and the separate
+Git consumer pass 2,760 Python/database/package cases without skips, including
+the actual published Core distributions. All 21 browsers, 219 Node 24 controls,
+21 Robot dry runs, five scans, Debian 21 and Rocky 26/three expected skips pass.
+Actual published/native released-Core identity, OCR/resource/restore, no backfill
+and two/four-worker reindex pass. Canonical publication and six fresh registry
+checks match [the immutable images](docs/ingestion-pipeline/M10.md#accepted-main-publication).
+Model/held-out answer quality stays open by operator decision; no model calls,
+default-on rollout, live update, production import/reindex, external schedule or
+stable NS8 module release occurs. The app 0.54/Core 0.35/schema 0022 installed
+baseline stays frozen. Earlier pending wording records retained checkpoints.
 
 ## CI policy update — implementation
 

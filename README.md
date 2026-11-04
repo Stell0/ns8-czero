@@ -55,7 +55,7 @@ The [M9 implementation](docs/ingestion-pipeline/M9.md) shows extraction progress
 reader and detailed recovery in Background Work. Full reindex is explicit and
 replaces exact citations only when the complete replacement publishes.
 
-The [M10 candidate](docs/ingestion-pipeline/M10.md) adds reproducible extraction
+The [M10 implementation](docs/ingestion-pipeline/M10.md) adds reproducible extraction
 and selective-context comparisons plus disposable recovery and rollout guidance.
 Measurements, released-consumer acceptance and live deployment remain separate.
 
@@ -86,9 +86,12 @@ that have no strict matches. Exact phrases/operators remain strict, and the API
 reports the actual lexical strategy. See [behavior and evaluation limits](docs/retrieval-benchmark.md).
 It also supplies queued extraction, structure, optional local OCR, current-owned
 reuse, selective context and progress/reindex services. The app 0.57 consumer
-candidate selects its immutable 0.37.0 release tag and frozen lock
+selects its immutable 0.37.0 release tag and frozen lock
 and verifies that dependency in the image selected for native acceptance.
-Full consumer acceptance and guarded deployment remain separate gates.
+Released-consumer full/native and merged-main publication acceptance pass; see
+[exact source and image identities](docs/ingestion-pipeline/M10.md#accepted-main-publication).
+Model answer-quality acceptance remains open. The extraction default and installed
+baseline stay unchanged; a live upgrade requires separate authorization.
 
 ## Connect your AI assistant
 
