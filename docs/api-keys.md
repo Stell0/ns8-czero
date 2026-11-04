@@ -1,5 +1,8 @@
 # Personal API keys
 
+Core 0.38 provides the reusable key service. This guide describes the matching
+reference application; standalone forks provide their own transport and account UI.
+
 API keys let automation call REST and MCP without an interactive login or token
 refresh. Sign in and open **Account → API keys**. Enter a name, choose Read or
 Read and write, explicitly select allowed spaces, and choose an expiration.
@@ -70,6 +73,5 @@ from the preserved first producer candidate revokes its prototype keys because
 their original permission revisions cannot be recovered. Existing OAuth
 credentials and knowledge remain unchanged.
 
-This feature is a producer-development candidate. Released-Core adoption, full
-native acceptance and live deployment are separate gates; the installed baseline
-has not changed.
+See the [current acceptance and installed baseline](../PLAN.md) before selecting
+an image. Source acceptance and deployment remain separate.

@@ -1,6 +1,6 @@
 # C0 roadmap
 
-## Personal API keys — implementation candidate
+## Personal API keys — producer accepted, consumer adoption
 
 Personal REST/MCP keys add hashed credentials, explicit scope/space ceilings,
 optional expiry, browser-only lifecycle and ingestion-client support. Core 0.38.0/schema
@@ -2215,3 +2215,40 @@ source `43af133` passes 2,677 full local cases, and M5 final `2afbe4a` passes
 
 The operator keeps ingestion model-quality acceptance open (2026-11-03); no
 model turns are run. Other implementation and disposable acceptance continue.
+
+
+### API-key producer acceptance and released Core
+
+PR72 regularly merges as `a30d45c80948d0f7447ec887e9c74e9697304cf3`.
+Exact source `2eb0b453f329f2f1044ff6151854298aac1b7e88` passes full/native
+[41820035695](https://github.com/Stell0/ns8-czero/actions/runs/41820035695),
+independent downloaded artifact grading and exact-source full promotion.
+Debian upgrade21, Rocky install26/three expected skips, all native browser/privacy
+workflows and five scan pairs pass. Original failed candidates/runs remain frozen.
+The schema0015 bootstrap regression is corrected without weakening its test.
+
+Core0.38.0 is immutably published at that source by
+[41837683939](https://github.com/Stell0/ns8-czero/actions/runs/41837683939).
+Downloaded public distributions and checksums match the prepared artifacts.
+Schemas0031/0032 are additive; prototype keys from the first candidate are revoked
+rather than acquiring reconstructed permission revisions. Existing OAuth and
+knowledge remain unchanged. Actual producer main/full
+[41828728776](https://github.com/Stell0/ns8-czero/actions/runs/41828728776) passes.
+
+The app0.58 consumer candidate adopts the released tag and immutable Git lock,
+with >=0.38.0,<0.39.0 and matching patch-only updater bounds. It keeps creation
+validation usable for Readers/Editors and redacts one-time keys in retained
+browser traces/screenshots. Final released-consumer full/native and image-source
+acceptance remain required. No live update or stable NS8 module release occurs.
+
+
+Consumer local validation uses the actual released Git Core: 26 focused
+API/migration/privacy cases, 60 source/fork/runtime checks, 219 Node controllers
+and all 24 real browser workflows pass. The published wheel's 95 runtime files
+match the tagged Git source byte for byte; wheel/source assets match the
+publisher-prepared bytes. Wheel SHA256 is
+`2363fc717e82b7cdb6ab1e59598f94e4e829c7518f6ba962e9d7987376f489dd`;
+source SHA256 is
+`9ba30d4146beec2a42fedbe178554498362d8ce0f2b740e2e7f77f582fb9f3b9`.
+The consumer keeps frozen Core package tree
+`bd00a8d9bf7ee4b1d878d7d72d4172346951b4a2` unchanged.
