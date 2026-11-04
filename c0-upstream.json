@@ -1007,6 +1007,36 @@
       "path": "imageroot/systemd/user/czero-extraction.timer",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "tests/audit_runtime.py",
+      "mode": "100644",
+      "sha256": "aee65de168a8d73a930871a1a8d2ba28692026495f9be567387d1a71b601d0e1"
+    },
+    {
+      "path": "tests/parser_runtime_probe.py",
+      "mode": "100644",
+      "sha256": "c4bfb3292be6c1ff1ee4388658f6586ac1953d51e1daeae225767b531dbe8b8c"
+    },
+    {
+      "path": "tests/integration/ocr_original.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/extraction_pool_evidence.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/extraction_pool_fixture.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/CzeroExtraction.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

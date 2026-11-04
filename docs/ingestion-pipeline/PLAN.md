@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M8 merged; M9 progress/reindex acceptance pending**
+Status: **M0–M9 merged; M10 released-consumer/native acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -429,3 +429,46 @@ promotion verification: 2,732 Python/database/package cases, 19 browser workflow
 213 Node 24 controllers and 21 Robot dry runs; Debian 21, Rocky 26/three expected
 skips, all eight native browser workflows, eight privacy guards and five scans.
 PR65 stays closed and failed. M9 is based on that accepted repaired main.
+
+The [M10 measurement/rollout candidate](M10.md) separates exact extraction
+fidelity/performance from read-only model retrieval evidence. New bounded
+harnesses, owned-container database interruption and restored retained-original
+reindex proof are implemented. Actual model calls require the evaluation skill's
+operator authorization; release/consumer/native/pilot gates remain sequential.
+See [disposable pilot and rollback](ROLLOUT.md); no installed baseline changes.
+
+Operator decision, 2026-11-03: keep model-quality acceptance open. No model calls
+are authorized for this implementation. Deterministic/native/released-consumer
+verification continues; model answer-quality and default-rollout gates remain open.
+
+## Accepted M9 source
+
+[PR67](https://github.com/Stell0/ns8-czero/pull/67) regularly merges as
+`ec7f45c8859357b486a21042484b7a338b8978d6`. Exact head
+`37ce3cec4c8de2778f90792b7abd9202d5357791` passes full
+[41737196843](https://github.com/Stell0/ns8-czero/actions/runs/41737196843),
+independent downloaded artifact grading and exact-source full promotion checks.
+The run passes 2,741 Python/database/package cases without skips, 21 browser
+workflows, 219 Node 24 controls and 21 Robot dry runs. Native results pass Debian
+21 and Rocky 26/three expected skips, all eight browser/privacy workflows, five
+scans and actual OCR/two/four-worker resource/restore proof. Earlier candidate
+checkpoints above remain historical evidence. M10 follows this accepted source;
+model-quality acceptance stays open by operator decision.
+
+## Core publication and M10 consumer acceptance
+
+M9's actual merged main `ec7f45c` passes full/native/canonical publication
+[41745904240](https://github.com/Stell0/ns8-czero/actions/runs/41745904240), plus
+independent downloaded artifact grading and exact-source full promotion checks.
+[Core 0.37.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.37.0) is
+independently and immutably published from accepted M9 source `37ce3cec` after
+[publisher 41754099289](https://github.com/Stell0/ns8-czero/actions/runs/41754099289).
+The failed initial publisher is retained; maintenance PR68 passes its own full/
+native/artifact proof and regularly merges as `2096f11` without moving the Core
+tag or changing package bytes. Actual downloaded release checksums match the
+prepared artifacts. See [M10 source and checksums](M10.md).
+
+M10 now proposes the frozen 0.37.0 consumer tag/lock with schema 0030 and matching
+updater bounds. The current application still needs final exact-source consumer/
+native and merged-main acceptance. No default or installation changes; model
+quality remains open by operator decision.

@@ -43,17 +43,21 @@ derives current section metadata and exact-offset chunks on explicitly queued
 publications.
 The [M6 implementation](docs/ingestion-pipeline/M6.md) adds explicit local-only OCR
 for unsupported PDF scan pages, with bounded execution and page provenance.
-The [M7 candidate](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
+The [M7 implementation](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
 by current documents or unexpired work in the same space, with no separate body
 archive.
-The [M8 candidate](docs/ingestion-pipeline/M8.md) adds exact bounded outline,
+The [M8 implementation](docs/ingestion-pipeline/M8.md) adds exact bounded outline,
 section/block, local-reference and context-bundle reads when supported by Core.
 Ordinary source imports continue
 through the existing extraction worker until the later rollout gates pass.
 
-The [M9 candidate](docs/ingestion-pipeline/M9.md) shows extraction progress in the
+The [M9 implementation](docs/ingestion-pipeline/M9.md) shows extraction progress in the
 reader and detailed recovery in Background Work. Full reindex is explicit and
 replaces exact citations only when the complete replacement publishes.
+
+The [M10 candidate](docs/ingestion-pipeline/M10.md) adds reproducible extraction
+and selective-context comparisons plus disposable recovery and rollout guidance.
+Measurements, released-consumer acceptance and live deployment remain separate.
 
 ## Use C0
 
@@ -77,10 +81,12 @@ Follow the [administrator guide](docs/administration.md). The [accepted runtime 
 
 A standard installation runs the application, PostgreSQL/pgvector and the extraction/indexing worker. Optional embeddings and scoring are configuration choices; ordinary text retrieval does not require an external model provider.
 
-The independently released Core 0.36.1 adds bounded lexical recovery for questions
+The independently released [Core 0.37.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.37.0) includes bounded lexical recovery, introduced in 0.36.1, for questions
 that have no strict matches. Exact phrases/operators remain strict, and the API
 reports the actual lexical strategy. See [behavior and evaluation limits](docs/retrieval-benchmark.md).
-The app 0.57 consumer candidate selects its immutable release tag and frozen lock
+It also supplies queued extraction, structure, optional local OCR, current-owned
+reuse, selective context and progress/reindex services. The app 0.57 consumer
+candidate selects its immutable 0.37.0 release tag and frozen lock
 and verifies that dependency in the image selected for native acceptance.
 Full consumer acceptance and guarded deployment remain separate gates.
 
@@ -347,7 +353,7 @@ host's cached C0 tool catalog to expose the new project operations. No real
 WikiPlant migration, project-space initialization or research-schedule activation
 has occurred.
 
-The source default pins released Core 0.35.2 (Authlib 1.9.1) for app 0.55.0 /
+The earlier app 0.55.0 source checkpoint pins released Core 0.35.2 (Authlib 1.9.1) /
 schema 0022. Earlier security-patch and PR41 acceptance remain recorded in PLAN.
 The full-document library release is described below. No migration is required.
 The accepted remembered website login adds an unchecked **Remember this device**
@@ -370,7 +376,7 @@ See [full-document contracts, limits and browser instructions](docs/full-documen
 
 [Core 0.35.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.2) is
 immutably published from `3fb900e` after full local, both-native and artifact
-gates. The app adopts that released Git tag and frozen lock. Development evidence
+gates. That app generation adopts its released Git tag and frozen lock. Development evidence
 includes 2,320 Core cases, 2,322 released-Core consumer cases, 207 controller
 cases and six real Playwright workflows
 using HTTPS, PostgreSQL and a standalone extraction worker. Final application

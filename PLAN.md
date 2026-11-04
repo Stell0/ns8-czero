@@ -1,11 +1,11 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M8 merged; M9 progress/reindex acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M9 merged; M10 released-consumer/native acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M8 accepted / M9 candidate
+## Queued document extraction — M9 accepted / M10 candidate
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0–M8 are merged; M9 is the current progress/reindex candidate. The
+milestone per reviewed PR. M0–M9 are merged; M10 is the current measurement/consumer candidate. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
@@ -84,6 +84,28 @@ passes all 21 browser workflows. Core publication and released-consumer adoption
 remain separate M10 gates.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
+
+M9 [PR67](https://github.com/Stell0/ns8-czero/pull/67) regularly merges as
+`ec7f45c8859357b486a21042484b7a338b8978d6`. Exact `37ce3cec` passes full/native
+[41737196843](https://github.com/Stell0/ns8-czero/actions/runs/41737196843),
+independent artifact grading and full promotion checks: 2,741 Python cases with
+no skips, 21 browser workflows, 219 Node 24 controls, 21 Robot dry runs, Debian
+21 and Rocky 26/three expected skips. All native browser/privacy, OCR/resource/
+restore and five image scans pass. Earlier pending statements describe retained
+checkpoints; M10 consumer/native/model-quality gates remain separate.
+
+M9 actual main `ec7f45c` passes full/native/canonical publication
+[41745904240](https://github.com/Stell0/ns8-czero/actions/runs/41745904240), with
+independent artifact and exact-source full promotion proof. Core
+[0.37.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.37.0) is immutably
+published from accepted `37ce3cec` by
+[41754099289](https://github.com/Stell0/ns8-czero/actions/runs/41754099289): eight
+independent package cases pass and downloaded public assets match prepared bytes.
+Publisher repair PR68 regularly merges as `2096f11` after its own full/native/
+artifact acceptance; the original failed run and signed tag remain preserved.
+M10 adopts the frozen tag/lock and schema 0030 on that accepted main, retaining
+all Core package bytes. Final consumer/native/main gates remain; model quality
+is explicitly open and the live baseline/default remain unchanged.
 
 ## CI policy update — implementation
 
@@ -2070,3 +2092,12 @@ unit diagnostics and controlled recovery, schema 0030. It passes 24 focused
 Core/source HTTP cases, signed cookie/CSRF recovery, four migration controls,
 211 existing plus four new JavaScript cases and the real 100-page/two-failure
 browser flow. Broader full/native/independent-package acceptance remains separate.
+
+The ingestion [M10 measurement candidate](docs/ingestion-pipeline/M10.md) adds
+frozen-input extraction arms, read-only context comparison, owned PostgreSQL
+restart/worker recovery and restored explicit-reindex proof. Original M4 exact
+source `43af133` passes 2,677 full local cases, and M5 final `2afbe4a` passes
+2,682, without database skips. Sequential full/native acceptance still applies.
+
+The operator keeps ingestion model-quality acceptance open (2026-11-03); no
+model turns are run. Other implementation and disposable acceptance continue.
