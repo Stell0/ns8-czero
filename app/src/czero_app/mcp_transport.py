@@ -27,7 +27,7 @@ from pydantic import AnyHttpUrl, Field
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import JSONResponse
 
-from czero_core.identity import PermissionDenied
+from czero_core.identity import PermissionDenied, TokenRejected
 from czero_core.oauth_grants import GrantRejected
 from czero_core.renewal import RenewalUnavailable
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
@@ -105,6 +105,8 @@ class TransportLimits:
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http':
             return await self.app(scope, receive, send)
+        if sum(name.lower()==b'authorization' for name, _ in scope.get('headers', [])) > 1:
+            return await JSONResponse({'error':'invalid_token'}, status_code=401)(scope, receive, send)
         bad_start, bad_body, bad_overflow = None, bytearray(), False
         async def private_send(message):
             nonlocal bad_start, bad_overflow
@@ -144,7 +146,7 @@ class TransportLimits:
                 await JSONResponse({'error': 'service_unavailable'}, status_code=503)(scope, receive, private_send)
 
 
-def create_mcp_app(registry, grants, *, issuer_url):
+def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
     resource = grants.resource
     parsed = urlsplit(resource)
     if parsed.path != '/mcp':
@@ -154,7 +156,8 @@ def create_mcp_app(registry, grants, *, issuer_url):
 
     async def verified(value):
         try:
-            return await to_thread.run_sync(partial(grants.verify, value, resource=resource))
+            verifier = api_keys if value.startswith('c0k_') and len(value) != 43 and api_keys is not None else grants
+            return await to_thread.run_sync(partial(verifier.verify, value, resource=resource))
         except (SQLAlchemyError, RenewalUnavailable):
             raise TransportUnavailable() from None
 
@@ -162,11 +165,11 @@ def create_mcp_app(registry, grants, *, issuer_url):
         async def verify_token(self, value):
             try:
                 current = await verified(value)
-            except GrantRejected:
+            except (GrantRejected, TokenRejected, PermissionDenied):
                 return None
             return PrivateAccessToken(token=value, client_id=current.client_id,
                 subject=str(current.actor.user_id), scopes=sorted(current.scopes),
-                expires_at=int(current.expires_at.timestamp()), resource=resource,
+                expires_at=int(current.expires_at.timestamp()) if current.expires_at else None, resource=resource,
                 claims={'iss': issuer_url})
 
     async def principal():
@@ -180,7 +183,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
         current = await principal()
         # Discovery may show a role-eligible operation requiring fresh consent.
         # Execution and resource discovery always use the token's actual scopes.
-        scopes = SCOPES if include_scope_upgrades else current.scopes
+        scopes = SCOPES if include_scope_upgrades and getattr(current.actor, 'api_key_binding', None) is None else current.scopes
         return await to_thread.run_sync(partial(registry.describe, current.actor, scopes=scopes))
 
     async def execute(name, arguments):
@@ -198,7 +201,9 @@ def create_mcp_app(registry, grants, *, issuer_url):
             for item in await describe(include_scope_upgrades=True)])
 
     async def call(ctx, params):
+        is_api_key = False
         try:
+            is_api_key = getattr((await principal()).actor, 'api_key_binding', None) is not None
             result = await execute(params.name, params.arguments or {})
             encoded = _json(result)
             return types.CallToolResult(content=[types.TextContent(type='text', text=encoded)],
@@ -209,12 +214,12 @@ def create_mcp_app(registry, grants, *, issuer_url):
             challenge = (f'Bearer resource_metadata="{parsed.scheme}://{parsed.netloc}{path}", '
                 'error="insufficient_scope", error_description="Additional OAuth scope is required", '
                 f'scope="{error.scope}"')
-            metadata = {'mcp/www_authenticate':[challenge]}
+            metadata = {'mcp/www_authenticate':[challenge]} if not is_api_key else {}
             if params.name in KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS | CONTEXT_OPERATIONS:
                 metadata['c0/error'] = {'code':'insufficient_scope', 'status':403}
             return types.CallToolResult(is_error=True,
                 content=[types.TextContent(type='text', text='insufficient_scope')], meta=metadata)
-        except (PermissionDenied, GrantRejected):
+        except (PermissionDenied, GrantRejected, TokenRejected):
             message, status = 'permission_denied', 403
         except HTTPException as error:
             if error.status_code==410 and error.detail=='content_superseded':
@@ -275,7 +280,7 @@ def create_mcp_app(registry, grants, *, issuer_url):
                 result = await execute(operation, arguments)
             return types.ReadResourceResult(contents=[types.TextResourceContents(uri=uri,
                 mime_type='application/json', text=_json(result))])
-        except (PermissionDenied, GrantRejected, OperationRejected, HTTPException, ValueError):
+        except (PermissionDenied, GrantRejected, TokenRejected, OperationRejected, HTTPException, ValueError):
             raise MCPError(-32602, 'invalid_resource_request') from None
         except (SQLAlchemyError, TransportUnavailable):
             raise MCPError(-32603, 'service_unavailable') from None

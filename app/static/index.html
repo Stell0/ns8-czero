@@ -31,6 +31,23 @@
         <ul id="connections-list"></ul>
         <p id="connections-message" role="status" aria-live="polite"></p>
       </section>
+      <section id="api-keys-panel" aria-labelledby="api-keys-heading" hidden>
+        <h2 id="api-keys-heading">API keys</h2>
+        <p>Use a personal key for automation. Keys keep working after sign-out. Revoke a key to stop its access.</p>
+        <form id="api-key-create">
+          <label for="api-key-name">Name</label><input id="api-key-name" required maxlength="128" autocomplete="off">
+          <label for="api-key-permissions">Permissions</label><select id="api-key-permissions"><option value="read">Read</option><option value="write">Read and write</option></select>
+          <fieldset id="api-key-spaces"><legend>Allowed spaces</legend></fieldset>
+          <label for="api-key-expiry">Expiration</label><select id="api-key-expiry"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="365">One year</option><option value="">No expiration</option></select>
+          <button type="submit">Create key</button>
+        </form>
+        <div id="api-key-secret-panel" hidden><p>Copy this key now. You cannot view it again. Store it as a GitHub Actions secret.</p>
+          <label for="api-key-secret">New API key</label><input id="api-key-secret" readonly autocomplete="off">
+          <button id="api-key-copy" type="button">Copy key</button><button id="api-key-dismiss" type="button">Dismiss key</button>
+        </div>
+        <button id="api-key-refresh" type="button">Refresh keys</button><ul id="api-key-list"></ul>
+        <p id="api-key-status" role="status" aria-live="polite"></p>
+      </section>
       <section id="sharing" aria-labelledby="sharing-heading" hidden>
         <h2 id="sharing-heading">Workspace access</h2><p>Manage people, application requests and connections in <a href="./admin">Workspace access</a>.</p>
         <div id="accounts" hidden></div><p id="sharing-status" role="status" hidden></p>
@@ -41,5 +58,6 @@
     <script src="./spaces.js" defer></script><script src="./site.js" defer></script><script src="./reader.js" defer></script><script src="./status.js" defer></script>
     <script src="./auth.js" defer></script>
     <script src="./connections.js" defer></script>
+    <script src="./api-keys.js" defer></script>
   <script src="./navigation.js" defer></script></body>
 </html>

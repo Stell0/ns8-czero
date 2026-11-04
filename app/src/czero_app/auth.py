@@ -135,6 +135,14 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             if not authorization.startswith("Bearer ") or not authorization[7:]:
                 raise TokenRejected()
             active = configured()
+            if len(request.headers.getlist('authorization')) != 1:
+                raise TokenRejected()
+            if authorization[7:].startswith('c0k_') and len(authorization[7:]) != 43:
+                keys = getattr(app.state, 'api_keys', None)
+                if keys is None:
+                    raise TokenRejected()
+                current = keys.verify(authorization[7:], resource=keys.resource)
+                return RequestAccess(current.actor, scopes=current.scopes)
             grants = getattr(app.state, 'delegated_grants', None)
             if grants is not None and re.fullmatch(r'[A-Za-z0-9_-]{43}', authorization[7:]):
                 try:

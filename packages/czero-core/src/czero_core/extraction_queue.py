@@ -170,7 +170,7 @@ class ExtractionQueue(SpaceBound):
             raise ValueError('extraction_units_disabled')
         if not isinstance(actor, Actor):
             raise PermissionDenied()
-        if (actor.delegation is not None or actor.delegated_scopes is not None or actor.session_binding is not None):
+        if (actor.api_key_binding is not None or actor.delegation is not None or actor.delegated_scopes is not None or actor.session_binding is not None):
             raise ValueError('unsupported_extraction_handoff')
         if type(expected_generation) is not int or expected_generation<1:
             raise ValueError('invalid_generation')

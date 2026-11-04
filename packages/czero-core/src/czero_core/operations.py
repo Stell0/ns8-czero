@@ -88,7 +88,7 @@ class OperationRegistry:
             selected.require(operation.role)
             # A policy may narrow the effective role/space, but cannot discard
             # the invocation's actual delegation while refreshing that Actor.
-            current = replace(selected, delegation=current.delegation,
+            current = replace(selected, api_key_binding=current.api_key_binding, delegation=current.delegation,
                               delegated_scopes=current.delegated_scopes)
         if ((scopes is not None and operation.scope not in scopes)
                 or (current.delegated_scopes is not None and operation.scope not in current.delegated_scopes)):

@@ -1,5 +1,19 @@
 # C0 roadmap
 
+## Personal API keys — implementation candidate
+
+Personal REST/MCP keys add hashed credentials, explicit scope/space ceilings,
+optional expiry, browser-only lifecycle and ingestion-client support. Core 0.38.0/schema
+0031 is additive after 0030. The released Core 0.37 tag/lock stays frozen until
+a new independently verified Core release is available. Focused database/HTTP/
+MCP/authentication checks pass 65 cases; the final key-specific selection passes
+11, including both SDK protocol writes/readback and legacy-token prefix collision.
+All 22 real browser workflows and 219 existing Node controllers pass. Broader
+base/candidate regressions and independent packaging are running; local host OCR
+prerequisites are unavailable, so required packaging is repeated in an isolated
+container with real OCR. Full/native and released-consumer acceptance remain.
+No live deployment or release is claimed. See [API key contracts](docs/api-keys.md).
+
 > **Document ingestion modernization (M0–M10 implementation merged; model quality open):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; the separately authorized dedicated deployment is recorded below.
 
 ## Queued document extraction — implementation merged

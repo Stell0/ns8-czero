@@ -513,7 +513,7 @@ class OAuthGrantService:
 
     def connections(self, actor):
         """First-party account view; no token, native credential or other user."""
-        if actor.delegation is not None or actor.delegated_scopes is not None:
+        if actor.api_key_binding is not None or actor.delegation is not None or actor.delegated_scopes is not None:
             raise PermissionDenied()
         with self.access.database.engine.connect() as connection:
             self.access.checked_actor(connection, actor).require(Role.READER)
@@ -529,7 +529,7 @@ class OAuthGrantService:
             return [{**row, 'id': str(row['id'])} for row in rows]
 
     def disconnect(self, actor, identifier):
-        if actor.delegation is not None or actor.delegated_scopes is not None or not isinstance(identifier, UUID):
+        if actor.api_key_binding is not None or actor.delegation is not None or actor.delegated_scopes is not None or not isinstance(identifier, UUID):
             raise PermissionDenied()
         with self.access.database.engine.begin() as connection:
             self._lock(connection, roles=True)

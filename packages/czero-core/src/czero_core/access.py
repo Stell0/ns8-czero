@@ -93,7 +93,7 @@ class AccessService:
             raise PermissionDenied()
         # Session/delegation checks hold the final revocation lock through
         # the caller's transaction, including non-content administrative writes.
-        if actor.session_binding is not None or actor.delegation is not None:
+        if actor.session_binding is not None or actor.delegation is not None or actor.api_key_binding is not None:
             connection.execute(text('SELECT pg_advisory_xact_lock_shared(49382)'))
         current = self._actor(connection, actor.user_id)
         if actor.delegation is not None:
@@ -108,6 +108,19 @@ class AccessService:
                 raise PermissionDenied()
             current = replace(current, delegation=actor.delegation,
                               delegated_scopes=delegated.scopes)
+        if actor.api_key_binding is not None:
+            from .api_keys import ApiKeyBinding
+            from .identity import TokenRejected
+            if not isinstance(actor.api_key_binding, ApiKeyBinding):
+                raise PermissionDenied()
+            try:
+                row = actor.api_key_binding.validate(connection)
+            except TokenRejected:
+                raise PermissionDenied() from None
+            if row['account_id'] != current.user_id or actor.api_key_binding.service.access.issuer != self.issuer:
+                raise PermissionDenied()
+            current = replace(current, api_key_binding=actor.api_key_binding,
+                              delegated_scopes=frozenset(row['scopes']))
         if actor.session_binding is not None:
             from .sessions import SessionBinding, SessionRejected
             from .renewal import RenewalRejected
@@ -186,6 +199,7 @@ class AccessService:
                 raise AccessConflict()
             # Delegation never survives a membership change, including a later
             # regrant of the same role. Grant issuance takes this role lock too.
+            connection.execute(text('UPDATE c0_api_keys SET revoked_at=now() WHERE account_id=:id AND revoked_at IS NULL'), {'id': account_id})
             connection.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account_id})
             connection.execute(text('UPDATE c0_native_authority SET revoked=true,credential=NULL,checking=false WHERE account_id=:id'),
                                {'id': account_id})

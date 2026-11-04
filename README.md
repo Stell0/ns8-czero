@@ -98,6 +98,9 @@ this is not a default-on rollout or a stable NS8 release. The server supplies
 plugin 1.4.0; refresh a cached client plugin/catalog to expose the new tools while
 preserving its registered connection.
 
+For GitHub Actions and other automation, see [personal API keys](docs/api-keys.md)
+(producer candidate; release and deployment acceptance pending).
+
 ## Connect your AI assistant
 
 C0 exposes **Model Context Protocol (MCP)** at your instance's `/mcp` URL. It lets an assistant discover available operations, search and read knowledge, follow evidence and make permitted changes. The same Core services enforce authorization behind MCP, REST and the web application.

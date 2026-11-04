@@ -118,6 +118,12 @@ def save_tokens(config, tokens, previous=None):
 
 def credentials(config):
     """A durable marker prevents retry after an interrupted/uncertain rotation."""
+    if config.get('auth_mode') == 'api_key':
+        token = os.environ.get('C0_API_KEY', '')
+        import re
+        if not re.fullmatch(r'c0k_[A-Za-z0-9_-]{43}', token):
+            raise C0Error('Configure C0_API_KEY for API-key authentication')
+        return token
     path = store_path(config)
     pending = path.with_suffix(path.suffix + '.pending')
     with locked(str(path) + '.lock'):
@@ -140,6 +146,8 @@ def credentials(config):
 
 def login(config, *, launch=webbrowser.open, timeout=300):
     """Interactive only; normal scripts never open a browser or print auth URLs."""
+    if config.get('auth_mode') == 'api_key':
+        raise C0Error('Create API keys on the C0 Account page; no OAuth login is required')
     _, expected_issuer = destination(config)
     redirect = config['redirect_uri']
     url = urlsplit(redirect)
@@ -176,6 +184,8 @@ def login(config, *, launch=webbrowser.open, timeout=300):
             self.end_headers()
             self.wfile.write(b'Return to the ingestion terminal.' if valid else b'Invalid callback.')
 
+    if config.get('auth_mode') == 'api_key':
+        raise C0Error('Revoke API keys on the C0 Account page')
     path = store_path(config)
     with locked(str(path) + '.lock'):
         if path.exists():
@@ -203,6 +213,8 @@ def login(config, *, launch=webbrowser.open, timeout=300):
 
 def disconnect(config):
     """Public revocation of this job's grant; never touch another connection."""
+    if config.get('auth_mode') == 'api_key':
+        raise C0Error('Revoke API keys on the C0 Account page')
     path = store_path(config)
     with locked(str(path) + '.lock'):
         value = stored(config)

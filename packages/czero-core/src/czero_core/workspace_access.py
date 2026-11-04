@@ -34,7 +34,7 @@ class WorkspaceAccessService:
     def _authorize(self, connection, actor):
         # Browser administration only. A Manage-only delegated token is neither
         # a browser CSRF context nor permission to enumerate native authority.
-        if not isinstance(actor, Actor) or actor.delegation is not None or actor.delegated_scopes is not None:
+        if not isinstance(actor, Actor) or actor.api_key_binding is not None or actor.delegation is not None or actor.delegated_scopes is not None:
             raise PermissionDenied()
         self.access.checked_actor(connection, actor).require(Role.ADMIN)
 

@@ -605,3 +605,12 @@ Cancellation optionally binds the expected revision and cannot cancel a publishe
 run. Operator retry retains the original run actor. `SourceService.reindex` is an
 explicit revision/idempotency-bound retained-original operation, with fresh exact
 publication and no implicit corpus backfill. Schema 0030 adds only its intent flag.
+
+## Personal automation credentials (0.38 producer candidate)
+
+`ApiKeyService` issues personal, hashed REST/MCP credentials restricted to explicit
+scopes and spaces. Schema0031 is additive. Trusted applications must preserve
+`Actor.api_key_binding` through policy adapters and enforce it through Core
+transactions; API-key credentials are never native extraction authority.
+See [the API-key contracts](../../docs/api-keys.md). The app consumer tag/lock
+remains frozen pending independent publication and released-consumer acceptance.

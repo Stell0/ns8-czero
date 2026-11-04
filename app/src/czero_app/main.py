@@ -107,6 +107,8 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     read_context, write_context = install_auth_routes(instance_app, auth, base_path)
     instance_app.state.read_context = read_context
     instance_app.state.write_context = write_context
+    from czero_app.api_keys import install as install_api_keys
+    install_api_keys(instance_app, auth, read_context, write_context)
     catalog = OperationCatalog(auth)
     instance_app.state.operations = catalog.registry
     instance_app.state.operation_catalog = catalog
@@ -177,6 +179,10 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     @instance_app.get('/reader.js', include_in_schema=False)
     async def reader_script() -> FileResponse:
         return FileResponse(static_dir / 'reader.js', media_type='text/javascript')
+
+    @instance_app.get('/api-keys.js', include_in_schema=False)
+    async def api_key_script() -> FileResponse:
+        return FileResponse(static_dir / 'api-keys.js', media_type='text/javascript')
 
     @instance_app.get('/connections.js', include_in_schema=False)
     async def connections_script() -> FileResponse:
@@ -357,7 +363,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         from czero_app.mcp_transport import create_mcp_app
         grants, _ = install_oauth_server(instance_app, auth, read_context, write_context, static_dir)
         mcp_child = create_mcp_app(catalog.registry, grants,
-            issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth')
+            issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth', api_keys=getattr(instance_app.state, 'api_keys', None))
         instance_app.state.mcp_app = mcp_child
         instance_app.mount('/', mcp_child, name='mcp')
     elif auth is not None:
