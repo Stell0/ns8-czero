@@ -188,3 +188,31 @@ def test_legacy_oauth_token_with_api_key_prefix_remains_valid(transport):
                 async with Client(streamable_http_client(ORIGIN+'/mcp',http_client=http)) as client:
                     assert not (await client.call_tool('get_profile',{})).is_error
     asyncio.run(check())
+
+
+def test_older_writer_revisions_cannot_revive_a_key(access):
+    keys,owner,shared=setup(access)
+    account_key=uuid4();record_unadmitted(access[0],account_key,'older-writer-member')
+    account=account_named(access[0],owner,'older-writer-member')
+    access[0].set_role(owner,account['id'],Role.EDITOR)
+    member=access[0].resolve(identity(access[0],account_key,'older-writer-member'))
+    token=keys.create(member,name='Before old role edit',scopes={'c0:read'},space_ids=[shared])['key']
+    # The 0.37 writer advances access_revision and deletes OAuth grants, but
+    # cannot know about c0_api_keys. Model its edit/regrant without touching keys.
+    with access[1].engine.begin() as c:
+        c.execute(text('UPDATE c0_accounts SET access_revision=access_revision+2 WHERE id=:id'),{'id':member.user_id})
+    with pytest.raises(TokenRejected):keys.verify(token,resource=keys.resource)
+    spaces=SpaceService(access[1],access[0])
+    private=spaces.create(owner,name='Revision fixture '+uuid4().hex,idempotency_key=uuid4().hex)
+    try:
+        spaces.set_grant(owner,private['id'],member.user_id,Role.EDITOR,expected_revision=0,idempotency_key=uuid4().hex)
+        token=keys.create(member,name='Before old space edit',scopes={'c0:read'},space_ids=[private['id']])['key']
+        with access[1].engine.begin() as c:
+            c.execute(text('UPDATE c0_space_grants SET revision=revision+2 WHERE account_id=:account AND space_id=:space'),
+                      {'account':member.user_id,'space':private['id']})
+        with pytest.raises(TokenRejected):keys.verify(token,resource=keys.resource)
+    finally:
+        with access[1].engine.begin() as c:
+            c.execute(text('DELETE FROM c0_space_grants WHERE space_id=:id'),{'id':private['id']})
+            c.execute(text('DELETE FROM c0_space_receipts WHERE actor_id=:id'),{'id':owner.user_id})
+            c.execute(text('DELETE FROM c0_spaces WHERE id=:id'),{'id':private['id']})

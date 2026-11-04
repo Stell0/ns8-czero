@@ -12,3 +12,9 @@ def test_api_key_never_refreshes_or_creates_credential_files(monkeypatch):
         network.assert_not_called()
     monkeypatch.delenv('C0_API_KEY')
     with pytest.raises(C0Error): credentials({'auth_mode':'api_key'})
+
+
+def test_key_lifecycle_does_not_open_an_oauth_store():
+    from c0_ingest.auth import login, disconnect
+    for operation in (login, disconnect):
+        with pytest.raises(C0Error): operation({'auth_mode':'api_key'})

@@ -45,9 +45,13 @@ class ApiKeyService:
             separators=(',', ':')).encode(), hashlib.sha256).hexdigest()
 
     def _row(self, c, digest):
-        row = c.execute(text("""SELECT * FROM c0_api_keys WHERE digest=:digest
-            AND configuration=:configuration AND revoked_at IS NULL
-            AND (expires_at IS NULL OR expires_at>:now)"""),
+        row = c.execute(text("""SELECT k.* FROM c0_api_keys k JOIN c0_accounts a ON a.id=k.account_id
+            WHERE k.digest=:digest AND k.configuration=:configuration AND k.revoked_at IS NULL
+            AND (k.expires_at IS NULL OR k.expires_at>:now)
+            AND a.access_revision=k.account_revision
+            AND NOT EXISTS (SELECT 1 FROM unnest(k.space_ids) AS selected(id)
+                LEFT JOIN c0_space_grants g ON g.space_id=selected.id AND g.account_id=k.account_id
+                WHERE COALESCE(g.revision,0) IS DISTINCT FROM CAST(k.space_revisions->>CAST(selected.id AS text) AS bigint))"""),
             {'digest': digest, 'configuration': self.configuration, 'now': self._now()}).mappings().one_or_none()
         if row is None:
             raise TokenRejected()
@@ -89,13 +93,20 @@ class ApiKeyService:
             for identifier in identifiers:
                 SpaceService(self.access.database, self.access).authorize(c, current,
                     Role.EDITOR if 'c0:write' in scopes else Role.READER, space_id=identifier)
+            # Older released writers already advance these persisted revisions.
+            # Their permission edits must invalidate keys without knowing this table.
+            values['account_revision'] = c.execute(text('SELECT access_revision FROM c0_accounts WHERE id=:id'),
+                                                   {'id':current.user_id}).scalar_one()
+            revisions = dict(c.execute(text('SELECT space_id,revision FROM c0_space_grants WHERE account_id=:id AND space_id=ANY(CAST(:spaces AS uuid[]))'),
+                                      {'id':current.user_id,'spaces':identifiers}).all())
+            values['space_revisions'] = json.dumps({str(identifier):revisions.get(identifier,0) for identifier in identifiers})
             count = c.execute(text('SELECT count(*) FROM c0_api_keys WHERE account_id=:id AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>:now)'),
                               {'id': current.user_id, 'now': now}).scalar_one()
             if count >= 100:
                 raise ValueError('api_key_limit')
             c.execute(text("""INSERT INTO c0_api_keys
-                (id,account_id,digest,configuration,name,scopes,space_ids,created_at,expires_at)
-                VALUES (:id,:account,:digest,:configuration,:name,:scopes,:space_ids,:created_at,:expires_at)"""),
+                (id,account_id,digest,configuration,name,scopes,space_ids,created_at,expires_at,account_revision,space_revisions)
+                VALUES (:id,:account,:digest,:configuration,:name,:scopes,:space_ids,:created_at,:expires_at,:account_revision,CAST(:space_revisions AS jsonb))"""),
                 {**values, 'account': current.user_id})
         return {**{k:values[k] for k in ('id','name','scopes','space_ids','created_at','expires_at')}, 'key': token}
 

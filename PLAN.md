@@ -4,10 +4,14 @@
 
 Personal REST/MCP keys add hashed credentials, explicit scope/space ceilings,
 optional expiry, browser-only lifecycle and ingestion-client support. Core 0.38.0/schema
-0031 is additive after 0030. The released Core 0.37 tag/lock stays frozen until
+0031/0032 are additive after 0030. The released Core 0.37 tag/lock stays frozen until
 a new independently verified Core release is available. Focused database/HTTP/
 MCP/authentication checks pass 65 cases; the final key-specific selection passes
 11, including both SDK protocol writes/readback and legacy-token prefix collision.
+Review adds account/selected-space revision snapshots against older-writer
+permission edit/regrant, preserving the first candidate and its CI evidence.
+The original verifier fails the new negative control; the corrected selection
+passes 14 cases including repeated migration from the original producer schema.
 All 22 real browser workflows and 219 existing Node controllers pass. Broader
 base/candidate regressions and independent packaging are running; local host OCR
 prerequisites are unavailable, so required packaging is repeated in an isolated

@@ -10,9 +10,10 @@ Keys act as their creator and have no administration scope. They cannot exceed
 the creator's current permissions or enter a space outside their selected list.
 An omitted space selects Shared as usual; it never selects another allowed space.
 Membership and protected-space permission changes invalidate existing keys;
-restoring permissions does not restore old keys. Revocation takes effect at Core
-operation boundaries, including captured credentials. The account list shows all
-active keys (up to 100) and recent expired/revoked keys, with last use sampled at
+restoring permissions does not restore old keys. Keys also snapshot account and
+selected-space revisions so older released writers cannot revive their authority. Revocation takes effect at Core
+operation boundaries, including captured credentials. The account list shows up to 100
+unrevoked keys and recent expired/revoked keys, with last use sampled at
 five-minute intervals. Create a replacement, update the workflow secret, verify
 it, then revoke the old key to rotate without interrupting a workflow.
 
@@ -63,6 +64,11 @@ for no expiration). It returns metadata and the one-time `key` with status 201.
 All lifecycle endpoints require a browser session; writes require same-origin
 CSRF. API keys and OAuth grants cannot manage keys. API keys cannot enter native
 extraction handoff or first-party administrative workflows.
+
+Schema 0031 creates the key store; schema 0032 adds revision bindings. Upgrading
+from the preserved first producer candidate revokes its prototype keys because
+their original permission revisions cannot be recovered. Existing OAuth
+credentials and knowledge remain unchanged.
 
 This feature is a producer-development candidate. Released-Core adoption, full
 native acceptance and live deployment are separate gates; the installed baseline
