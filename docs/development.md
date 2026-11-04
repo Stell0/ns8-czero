@@ -60,6 +60,14 @@ Use the explicit `c0-upstream.json` file registry and trusted `scripts/sync-upst
 The standalone [fork acceptance generator](../examples/fork/create.py) copies only registered infrastructure; verify newly linked developer references are included. Customer-specific docs/configuration and generated plugin packages remain outside automatic upgrades. Workflow changes require the publisher's appropriate GitHub permission; a token without it is not a reason to copy a broad personal secret into a fork.
 
 Runtime builds use the released Core tag/subdirectory and frozen app lock by default. `CZERO_CORE_SOURCE=local` is an explicit producer-development override, never an implicit fallback for a fork. Core changes require an independently verified immutable release, then consumer pin/lock adoption and final image/native validation. Core artifact publication is distinct from an NS8 module release.
+The Core publisher installs the same local parser runtime used by package
+acceptance. If publisher infrastructure needs repair after a tag is frozen,
+run `Publish C0 Core` manually from the repaired workflow with its existing
+`core-v<version>` tag. The workflow resolves that tag to the actual checkout,
+rechecks exact-source full/native acceptance and version metadata, builds with
+the tagged source timestamp, and refuses to replace different published bytes.
+The workflow commit and the released Core commit can differ; the tag never moves.
+
 
 Reference publishing CI compares the committed Core package tree with the full
 Git commit in the consumer lock. Identical trees select the released dependency;
