@@ -697,3 +697,15 @@ output-cache state from operating-system caches and sampled RSS from exact peaks
 Keep model authorization, observed evidence/citations, producer publication,
 released-consumer proof and deployment separate. Restart tests require a labelled
 owned disposable database container and may never share the acceptance cluster.
+
+
+Core 0.37.0 ingestion producer source `37ce3cec` is now immutably published by
+41754099289 after its accepted M9 exact-source full/native proof. The existing
+signed tag never moves; downloaded wheel/source checksums match prepared bytes.
+Publisher repair PR68 regularly merges as `2096f11` after full/native41746485159,
+independent artifact audit and full promotion proof. Keep the failed first
+publisher41745977134. M10 consumer adoption pins the released tag/immutable Git
+source with >=0.37.0,<0.38.0 and matching patch-only updater bounds, schema0030.
+Do not edit the frozen Core package tree720902f5bfdc3774d93660e8b968943498e15288.
+Final consumer/native/main publication and separate checked closeout remain;
+model quality is open by operator decision. No live/default/stable-module change.

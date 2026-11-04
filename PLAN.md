@@ -94,6 +94,19 @@ no skips, 21 browser workflows, 219 Node 24 controls, 21 Robot dry runs, Debian
 restore and five image scans pass. Earlier pending statements describe retained
 checkpoints; M10 consumer/native/model-quality gates remain separate.
 
+M9 actual main `ec7f45c` passes full/native/canonical publication
+[41745904240](https://github.com/Stell0/ns8-czero/actions/runs/41745904240), with
+independent artifact and exact-source full promotion proof. Core
+[0.37.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.37.0) is immutably
+published from accepted `37ce3cec` by
+[41754099289](https://github.com/Stell0/ns8-czero/actions/runs/41754099289): eight
+independent package cases pass and downloaded public assets match prepared bytes.
+Publisher repair PR68 regularly merges as `2096f11` after its own full/native/
+artifact acceptance; the original failed run and signed tag remain preserved.
+M10 adopts the frozen tag/lock and schema 0030 on that accepted main, retaining
+all Core package bytes. Final consumer/native/main gates remain; model quality
+is explicitly open and the live baseline/default remain unchanged.
+
 ## CI policy update — implementation
 
 The operator prioritizes test speed over realistic fixtures in fast feedback:

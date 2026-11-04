@@ -454,3 +454,21 @@ workflows, 219 Node 24 controls and 21 Robot dry runs. Native results pass Debia
 scans and actual OCR/two/four-worker resource/restore proof. Earlier candidate
 checkpoints above remain historical evidence. M10 follows this accepted source;
 model-quality acceptance stays open by operator decision.
+
+## Core publication and M10 consumer acceptance
+
+M9's actual merged main `ec7f45c` passes full/native/canonical publication
+[41745904240](https://github.com/Stell0/ns8-czero/actions/runs/41745904240), plus
+independent downloaded artifact grading and exact-source full promotion checks.
+[Core 0.37.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.37.0) is
+independently and immutably published from accepted M9 source `37ce3cec` after
+[publisher 41754099289](https://github.com/Stell0/ns8-czero/actions/runs/41754099289).
+The failed initial publisher is retained; maintenance PR68 passes its own full/
+native/artifact proof and regularly merges as `2096f11` without moving the Core
+tag or changing package bytes. Actual downloaded release checksums match the
+prepared artifacts. See [M10 source and checksums](M10.md).
+
+M10 now proposes the frozen 0.37.0 consumer tag/lock with schema 0030 and matching
+updater bounds. The current application still needs final exact-source consumer/
+native and merged-main acceptance. No default or installation changes; model
+quality remains open by operator decision.
