@@ -40,3 +40,16 @@ def test_browser_assertions_and_safe_api_diagnostics_remain_available(tmp_path):
     check=runpy.run_path(str(ROOT/'browser_privacy.py'))['assert_no_oauth_queries']
     path=tmp_path/'output.xml';path.write_text('PASS objects_get; GET /api/v1/me HTTP/1.1')
     check([path,tmp_path/'missing-log.txt'])
+
+
+def test_retained_action_and_dom_traces_redact_one_time_keys():
+    import json
+    import secrets
+    scrub = runpy.run_path(str(ROOT/'browser_privacy.py'))['redact_api_keys']
+    keys = ['c0k_'+secrets.token_urlsafe(32) for _ in range(2)]
+    trace = json.dumps({'input_value':keys[0], 'snapshot':{'value':keys[1]}, 'title':'Workflow'}).encode()
+    cleaned = scrub(trace)
+    assert all(key.encode() not in cleaned for key in keys)
+    value = json.loads(cleaned)
+    assert value['input_value'] == value['snapshot']['value'] == '<redacted-api-key>'
+    assert value['title'] == 'Workflow'

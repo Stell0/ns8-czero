@@ -23,3 +23,8 @@ def assert_no_oauth_queries(paths):
         if path.exists() and re.search(r'[?&](?:state|nonce|code_challenge|code|access_token|id_token|refresh_token)=',
                 unescape(path.read_text(errors='replace'))):
             raise AssertionError('OAuth query values entered browser test output')
+
+
+def redact_api_keys(data):
+    """Remove one-time key values from retained Playwright DOM/action traces."""
+    return re.sub(rb'c0k_[A-Za-z0-9_-]{43}', b'<redacted-api-key>', data)

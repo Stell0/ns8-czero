@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import runpy
 from pathlib import Path
 import socket
 import subprocess
@@ -27,6 +28,9 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+
+redact_api_keys = runpy.run_path(str(Path(__file__).resolve().parents[1] / 'browser_privacy.py'))['redact_api_keys']
+
 
 class PrivateLive(SimpleNamespace):
     def __repr__(self):return '<private disposable browser fixture>'
@@ -233,13 +237,13 @@ def browser(live,request,tmp_path):
         yield page
         if getattr(request.node,'rep_call',None) and request.node.rep_call.failed:
             directory=Path(os.getenv('CZERO_BROWSER_ARTIFACTS',str(tmp_path/'failure')));directory.mkdir(mode=0o700,parents=True,exist_ok=True)
-            page.screenshot(path=str(directory/(request.node.name+'.png')),full_page=False)
+            page.screenshot(path=str(directory/(request.node.name+'.png')),full_page=False,mask=[page.locator('#api-key-secret')])
             raw=tmp_path/'private-trace.zip';context.tracing.stop(path=str(raw))
             # Keep actions/DOM snapshots only. Network events/resources can contain
             # cookies, CSRF values and OAuth responses and are never uploaded.
             with zipfile.ZipFile(raw) as source,zipfile.ZipFile(directory/(request.node.name+'.zip'),'w') as target:
                 for name in source.namelist():
-                    if name.endswith('.trace'):target.writestr(name,source.read(name))
+                    if name.endswith('.trace'):target.writestr(name,redact_api_keys(source.read(name)))
             raw.unlink()
         else:context.tracing.stop()
         context.close();chromium.close()

@@ -136,3 +136,10 @@ idempotency_key plus a retained original; successful full publication expires
 previous exact citations. Managed source-sync publications use their own workflow.
 Cookie writes require current CSRF. No MCP tool, new scope, public durable handoff,
 background grant promotion or automatic reindex is added.
+
+## Personal API keys
+
+REST and MCP accept personal API keys through the existing Bearer header. Keys
+carry explicit Read/Write scope ceilings and selected spaces; they never grant
+administration. Create, list and revoke keys only from a browser session on the
+Account page. See [the API-key interface and workflow guide](api-keys.md).
