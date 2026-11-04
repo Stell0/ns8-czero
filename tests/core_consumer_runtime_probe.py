@@ -23,7 +23,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0023_current_content'
+assert SCHEMA_REVISION == '0030_explicit_reindex'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(preflight) and callable(DocumentService.read_document)
 print('Released image Core matches immutable Git lock and latest-only schema/contracts; no NS8 SDK')
