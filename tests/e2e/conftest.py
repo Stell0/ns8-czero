@@ -211,7 +211,7 @@ def live(browser_database,request,monkeypatch,tmp_path):
                 {'space':private['id'],'ids':[row['source_id'] for row in receipts]})
             assert result.rowcount==len(receipts)
     value=PrivateLive(origin=origin,rest=rest,client=client,definition=definition,space=private['id'],second=second['id'],upload=upload,publish=publish,legacy_metadata=legacy_metadata,
-        member=member,grant_path=grant_path,errors=errors,tmp=tmp_path,delay=delay,pause_worker=pause_worker,resume_worker=resume_worker)
+        member=member,grant_path=grant_path,errors=errors,tmp=tmp_path,originals=app.state.sources.originals,delay=delay,pause_worker=pause_worker,resume_worker=resume_worker)
     yield value
 
 

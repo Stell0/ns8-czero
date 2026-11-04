@@ -44,6 +44,7 @@ async function loadSources() {
 }
 async function selectSource(id) {
   clearTimeout(pollTimer); const sequence = ++selectionSequence; clearDocument(); currentSource = null; $('source-detail').hidden = true;
+  if($('source-reindex'))$('source-reindex').hidden=true;
   const [source, history] = await Promise.all([api('sources/' + id), api(`sources/${id}/versions?limit=100`)]);
   if (sequence !== selectionSequence) return false;
   currentSource = source; $('source-detail').hidden = false;
@@ -65,6 +66,13 @@ async function selectSource(id) {
       const link = document.createElement('a'); link.textContent = 'Download original'; link.href = typeof window!=='undefined' && window.C0Space?window.C0Space.apiURL('source-versions/'+version.id+'/original'):'./api/v1/source-versions/' + version.id + '/original'; row.append(link);
     }
     $('source-versions').append(row);
+  }
+  if($('source-reindex') && canWrite() && history.versions.some(v=>v.state==='ready' && v.original_present) && !history.versions.some(v=>v.state==='queued')) {
+    // Older released Core keeps its original routes. Probe the current selected
+    // source capability without delaying the existing source reader.
+    api('sources/'+id+'/extraction').then(()=>{
+      if(sequence===selectionSequence && currentSource?.id===id && canWrite())$('source-reindex').hidden=false;
+    }).catch(()=>{});
   }
   $('source-status').textContent = !history.versions.length ? 'No current published content.' : history.versions.some(v => v.state === 'queued') ? 'Extraction queued. This list refreshes while jobs are pending.' : 'Current content loaded. Superseded content is removed after successful publication.';
   if (history.versions.some(v => v.state === 'queued' && ['queued','running'].includes(v.job_state))) pollTimer = setTimeout(() => {if (currentSource?.id === id) selectSource(id).catch(error => {$('source-status').textContent = error.message;});}, 4000);
@@ -150,6 +158,19 @@ for (const [id, action] of [
   ['chunks-previous', async () => {chunkOffset=Math.max(0,chunkOffset-50); await loadChunks();}], ['chunks-next', async () => {chunkOffset+=50; await loadChunks();}],
   ['archive-source', async () => {const source=currentSource; if (!source || !canWrite()) return; await api(`sources/${source.id}?expected_revision=${source.revision}`, {method:'DELETE',headers:{'X-C0-CSRF':profile.csrf_token}}); await loadSources(); if(currentSource?.id===source.id) await selectSource(source.id);}]
 ]) $(id).addEventListener('click', () => action().catch(error => {$('source-status').textContent = error.message;}));
+$('reindex-source')?.addEventListener('click',async()=>{
+  const source=currentSource,sequence=selectionSequence,button=$('reindex-source');
+  if(!source || !canWrite() || button.disabled)return;
+  button.disabled=true;
+  try {
+    // Keep the same key across uncertain replies for this exact source revision.
+    const fingerprint=source.id+':'+source.revision;
+    if(button.dataset.reindexFingerprint!==fingerprint){button.dataset.reindexFingerprint=fingerprint;button.dataset.reindexKey=crypto.randomUUID();}
+    await api('sources/'+source.id+'/reindex',{method:'POST',headers:{'Content-Type':'application/json','X-C0-CSRF':profile.csrf_token},body:JSON.stringify({expected_revision:source.revision,idempotency_key:button.dataset.reindexKey})});
+    if(sequence===selectionSequence)await selectSource(source.id);
+  } catch(error){if(sequence===selectionSequence)$('source-status').textContent=error.message;}
+  finally{button.disabled=false;}
+});
 $('source-search-form').addEventListener('submit', event => {event.preventDefault(); searchSources().catch(error => {$('search-status').textContent = error.message;});});
 async function initializeSources() {
   if(typeof window!=='undefined' && window.C0 && !window.C0.toolsMode)return;
@@ -166,7 +187,7 @@ if(typeof window!=='undefined' && window.C0Space)window.C0Space.onClear(()=>{
   ++sourcesSequence;++selectionSequence;++documentSequence;++searchSequence;++citationSequence;++uploadDraftSequence;++uploadLookupSequence;
   uploadReady=false;updateUploadReadiness();
   clearTimeout(pollTimer);profile=null;currentSource=null;currentDocument=null;
-  $('sources-workspace').hidden=true;$('source-detail').hidden=true;
+  $('sources-workspace').hidden=true;$('source-detail').hidden=true;if($('source-reindex'))$('source-reindex').hidden=true;
   for(const id of ['source-list','source-versions','source-chunks','source-results','upload-source']){const element=$(id);if(element)element.replaceChildren();}
   for(const id of ['source-heading','sources-status','upload-status','document-text','source-citation','source-identity','source-metadata','source-status','document-status','search-status']){const element=$(id);if(element)element.textContent='';}
   for(const id of ['source-query','upload-title','upload-metadata','upload-file']){const element=$(id);if(element)element.value='';}

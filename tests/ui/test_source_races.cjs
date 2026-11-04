@@ -36,6 +36,17 @@ test('late source history cannot replace the latest selection', async()=>{
   assert.match(h.nodes.get('source-identity').textContent,/^new ·/);
   assert.equal(h.nodes.get('source-versions').children.length,1);
 });
+test('retained-original reindex waits for this source capability and hides on older Core',async()=>{
+  const h=harness();h.run("profile={role:'editor',csrf_token:'fixture-only'}");
+  const retained=id=>({versions:[{id,number:1,state:'ready',original_present:true,retain_original:true}]});
+  const first=h.run("selectSource('old')");h.requests[0].resolve(reply(source('old')));h.requests[1].resolve(reply(retained('old')));await first;
+  assert.equal(h.nodes.get('source-reindex').hidden,true);assert.match(h.requests[2].url,/sources\/old\/extraction/);
+  const second=h.run("selectSource('new')");h.requests[3].resolve(reply(source('new')));h.requests[4].resolve(reply(retained('new')));await second;
+  h.requests[2].resolve(reply({state:'ready'}));await new Promise(setImmediate);
+  assert.equal(h.nodes.get('source-reindex').hidden,true);
+  h.requests[5].resolve({ok:false,status:404,json:async()=>({detail:'Not Found'})});await new Promise(setImmediate);
+  assert.equal(h.nodes.get('source-reindex').hidden,true);assert.equal(h.run('currentSource.id'),'new');
+});
 test('late extracted text cannot replace a newer version', async()=>{
   const h=harness(),first=h.run("loadDocument('old')"),second=h.run("loadDocument('new')");
   h.requests[1].resolve(reply({id:'new-doc',body:'new evidence',text_hash:'new'}));

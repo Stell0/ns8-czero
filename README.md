@@ -51,6 +51,10 @@ section/block, local-reference and context-bundle reads when supported by Core.
 Ordinary source imports continue
 through the existing extraction worker until the later rollout gates pass.
 
+The [M9 candidate](docs/ingestion-pipeline/M9.md) shows extraction progress in the
+reader and detailed recovery in Background Work. Full reindex is explicit and
+replaces exact citations only when the complete replacement publishes.
+
 ## Use C0
 
 ### Use an existing instance

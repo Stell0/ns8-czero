@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0029_extraction_cache"
+SCHEMA_REVISION = "0030_explicit_reindex"
 
 
 class Database:

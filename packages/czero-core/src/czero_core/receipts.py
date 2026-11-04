@@ -56,7 +56,7 @@ def mutate(database, authorize, actor, operation, payload, key, execute, *, conf
             if receipt:
                 if receipt['fingerprint'] != scoped_fingerprint: raise conflict()
                 from .current_content import replay_receipt, check_retired
-                if operation == 'source.ingest_text':
+                if operation in ('source.ingest_text','source.reindex'):
                     check_retired(connection, space, 'source_version', receipt['result']['id'])
                 return replay_receipt(connection, space, receipt['result'])
             result = snapshot(execute(connection, current))

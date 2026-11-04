@@ -137,6 +137,10 @@ scopes unchanged. Plugin 1.4 guidance is conditional on advertised capabilities.
 Guidance UI keeps stable workflow IDs and exact capability-bound inventory,
 including read-only selective context for Readers. Preserve protected-space
 role checks; the failed M8 `4589600` native inventory evidence stays frozen.
+M8 repair is accepted at `dd5f341` after full/native `41727509130`, independent
+artifact grading and source verification. Preserve its Reader guidance, stable
+workflow IDs and exact old/new capability inventories in M9/M10. PR65 remains
+failed and frozen; neither it nor the installed runtime is replaced as evidence.
 Extraction units never become external source-sync publication parts.
 M3 and M4 are accepted at `ed160592` / `b51112e`, with full native/artifact
 proofs `41654247380` / `41666816436`. M5 is accepted as `b0db3d2` after full/native `41687775493`, independent
@@ -682,3 +686,8 @@ older interactive waiver cannot satisfy them. Keep signed test SSO, actual HTTP,
 PostgreSQL and the standalone extraction worker, with sanitized failures and
 owned-fixture cleanup. Final app consumer/native evidence belongs in its PR;
 this is neither a production update nor a stable NS8 module release.
+
+M9 extraction progress is metadata-only and selected-space. Keep Admin unit
+diagnostics separate from ordinary readers. Retry retains original run authority;
+it never promotes a browser or OAuth grant to native authority. Explicit reindex
+requires retained original bytes and publishes fresh exact evidence atomically.

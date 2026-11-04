@@ -265,7 +265,19 @@ class ExtractionQueue(SpaceBound):
                 raise SourceNotFound()
             return self._summary(row,c.execute(text('SELECT clock_timestamp()')).scalar_one())
 
-    def cancel(self, actor, run_id):
+    def progress(self, actor, source_id):
+        from .extraction_status import progress
+        return progress(self,actor,source_id)
+
+    def runs(self, actor, *, limit=50, offset=0):
+        from .extraction_status import runs
+        return runs(self,actor,limit=limit,offset=offset)
+
+    def units(self, actor, run_id, *, limit=50, offset=0):
+        from .extraction_status import units
+        return units(self,actor,run_id,limit=limit,offset=offset)
+
+    def cancel(self, actor, run_id, *, expected_revision=None):
         with self.database.engine.begin() as c:
             content_lock(c); hold_authority(c)
             current = self._space_authorize(c, actor, Role.EDITOR)
@@ -273,7 +285,14 @@ class ExtractionQueue(SpaceBound):
                 {'space':current.space_id,'id':UUID(str(run_id))}).mappings().one_or_none()
             if row is None:
                 raise SourceNotFound()
+            if row['state']=='superseded' and row['error_code']=='cancelled':
+                return self._summary(row)
+            if row['state'] in ('ready','superseded') or (expected_revision is not None
+                    and (type(expected_revision) is not int or expected_revision!=row['revision'])):
+                raise SourceConflict()
             cancel_versions(c, [row['version_id']], 'cancelled')
+            return self._summary(c.execute(text('SELECT * FROM c0_extraction_runs WHERE id=:id'),
+                {'id':row['id']}).mappings().one())
 
     def _live(self, c, run, now):
         if run['expires_at']<=now:
@@ -500,8 +519,8 @@ class ExtractionQueue(SpaceBound):
         from .receipts import _KEY
         from .current_content import ContentSuperseded
         if not isinstance(actor,Actor): raise PermissionDenied()
-        if actor.delegation is not None or actor.delegated_scopes is not None or actor.session_binding is not None:
-            raise ValueError('unsupported_extraction_handoff')
+        # This authorizes an operator action, not a new durable handoff. _live
+        # still checks the original submitting account and selected space.
         if type(expected_revision) is not int or expected_revision<1: raise ValueError('invalid_revision')
         if not isinstance(idempotency_key,str) or not _KEY.fullmatch(idempotency_key):
             raise ValueError('invalid_idempotency_key')

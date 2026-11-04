@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M7 merged; M8 context acceptance pending**
+Status: **M0–M8 merged; M9 progress/reindex acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -415,3 +415,17 @@ assertion, despite passing all 2,732 local cases and Debian. Its isolated repair
 adds stable workflow IDs, exact capability-bound old/new inventories and Reader
 selective-context presentation. Four real role/space browser controls pass;
 full/native and independent downloaded-artifact acceptance must repeat.
+
+The [M9 progress/recovery candidate](M9.md), schema 0030, adds selected-space
+reader progress, Admin-only paginated unit diagnostics, revision-bound retry/
+cancel, full restart and explicit retained-original reindex. Its original native
+handoff remains bound to its submitting account. Ordinary public imports and
+the released Core lock remain unchanged; no automatic corpus work is introduced.
+
+M8 repaired [PR66](https://github.com/Stell0/ns8-czero/pull/66) regularly merges
+as `dd5f341bad7564b1391f11eed7d304446f8dd08c`. Exact `0d522b0` passes
+full/native `41727509130`, independent downloaded artifact grading and full
+promotion verification: 2,732 Python/database/package cases, 19 browser workflows,
+213 Node 24 controllers and 21 Robot dry runs; Debian 21, Rocky 26/three expected
+skips, all eight native browser workflows, eight privacy guards and five scans.
+PR65 stays closed and failed. M9 is based on that accepted repaired main.

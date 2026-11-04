@@ -1,11 +1,11 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M6 merged; M7 cache acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M8 merged; M9 progress/reindex acceptance candidate):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
 
-## Queued document extraction — M6 accepted / M7 candidate
+## Queued document extraction — M8 accepted / M9 candidate
 
 The [approved extraction plan](docs/ingestion-pipeline/PLAN.md) proceeds one
-milestone per reviewed PR. M0–M6 are merged; M7 is the current cache candidate. The
+milestone per reviewed PR. M0–M8 are merged; M9 is the current progress/reindex candidate. The
 [contracts](docs/ingestion-pipeline/CONTRACTS.md) specify canonical assembly,
 bounded manifests/results, PostgreSQL leases, authorization, publication and
 cleanup. [Baseline evidence](docs/ingestion-pipeline/BASELINE.md) records synthetic
@@ -72,6 +72,16 @@ The isolated successor preserves exact old/new catalog counts, adds stable
 workflow IDs and exposes read-only context guidance to authorized Readers.
 Four actual role/space browser controls and 213 local controller cases pass;
 current-source full/native acceptance remains required. Failed evidence stays.
+M8 repaired exact `0d522b0` passes full/native `41727509130`, independent
+artifact grading and full promotion verification, then regularly merges as
+`dd5f341`. All 2,732 Python/database/package cases, 19 browser workflows,
+213 Node 24 controllers, 21 Robot dry runs and both native distributions pass.
+The failed PR65/source remains closed and frozen. M9 uses accepted repaired main.
+The [M9 progress/recovery candidate](docs/ingestion-pipeline/M9.md), schema 0030,
+adds reader progress, Admin diagnostics, retry/cancel and retained-original
+reindex. Current 28 focused controls pass; its code-identical integration source
+passes all 21 browser workflows. Core publication and released-consumer adoption
+remain separate M10 gates.
 Installed baselines, frozen evidence, Core publication,
 consumer adoption and separately authorized deployment gates remain.
 
@@ -2054,3 +2064,9 @@ Review correction: isolate ordinary browser inactivity too. Snapshot existing or
 Successful-sign-in replacement also retires the prior opaque cookie without revoking separately authorized grants. Old in-flight requests cannot restore browser access; authority cleanup retains unexpired finite grants too. The earlier2fd8631 remains unpublished, with its exact checks retained; the corrected release source must repeat full/native acceptance.
 
 The2fd8631 Debian native run40511353228 exposed a disposable expiry fixture that updated only the absolute timestamp and violated the independent idle-window constraint. Update the exact fixture to expire both timestamps, retaining the runtime constraint. Its new actual renewable signed-HTTP recovery regression passes; new exact-source full/native gates are required.
+
+The ingestion [M9 candidate](docs/ingestion-pipeline/M9.md) adds bounded progress,
+unit diagnostics and controlled recovery, schema 0030. It passes 24 focused
+Core/source HTTP cases, signed cookie/CSRF recovery, four migration controls,
+211 existing plus four new JavaScript cases and the real 100-page/two-failure
+browser flow. Broader full/native/independent-package acceptance remains separate.
