@@ -739,3 +739,11 @@ update, production import/reindex, external schedule or stable NS8 module releas
 occurs. Preserve the installed `31b0c85`/app 0.54/Core 0.35/schema 0022 baseline,
 failed/private evidence, immutable Core 0.37 bytes and both operator waivers.
 Documentation commits never replace accepted runtime image identities.
+
+## API-key candidate
+
+Personal automation key contracts live in [docs/api-keys.md](docs/api-keys.md).
+Preserve API-key bindings through trusted Actor refreshes and operation policies;
+keys remain scoped credentials, never native extraction or first-party authority.
+The additive schema0031 producer candidate does not replace the frozen released
+Core0.37 consumer lock or installed runtime.

@@ -104,6 +104,9 @@ class SpaceService:
     def authorize(self, connection, actor, minimum=Role.READER, *, space_id=None, check_scopes=True):
         current = self._actor(connection, actor, Role.READER)
         identifier = self.shared_id(connection) if space_id is None else space_uuid(space_id)
+        if current.api_key_binding is not None:
+            if identifier not in current.api_key_binding.validate(connection)['space_ids']:
+                raise PermissionDenied()
         shared = connection.execute(text('SELECT shared FROM c0_spaces WHERE id=:id'),
                                     {'id': identifier}).scalar_one_or_none()
         # Unknown and inaccessible selectors have the same denial. Never
@@ -132,14 +135,16 @@ class SpaceService:
         with self.database.engine.connect() as c:
             current = self._actor(c, actor, Role.READER)
             require_scope(current, Role.READER)
+            allowed = current.api_key_binding.validate(c)['space_ids'] if current.api_key_binding is not None else None
             rows = c.execute(text('''SELECT s.id,s.name,s.shared,s.revision,s.created_at,
                 CASE WHEN :admin THEN 'admin' WHEN s.shared THEN CAST(:role AS text)
                 WHEN CAST(:role AS text)='reader' THEN 'reader' ELSE g.role::text END AS role
                 FROM c0_spaces s LEFT JOIN c0_space_grants g
                 ON g.space_id=s.id AND g.account_id=:account
-                WHERE s.shared OR :admin OR g.role IS NOT NULL
+                WHERE (s.shared OR :admin OR g.role IS NOT NULL)
+                AND (CAST(:allowed AS uuid[]) IS NULL OR s.id=ANY(CAST(:allowed AS uuid[])))
                 ORDER BY s.shared DESC,s.name,s.id LIMIT :limit OFFSET :offset'''),
-                {'admin': current.role is Role.ADMIN, 'role': current.role.value,
+                {'allowed': allowed, 'admin': current.role is Role.ADMIN, 'role': current.role.value,
                  'account': current.user_id, 'limit': limit, 'offset': offset}).mappings().all()
             return snapshot({'spaces': [dict(row) for row in rows]})
 
@@ -245,6 +250,8 @@ class SpaceService:
                     {'space': identifier, 'account': account, 'role': value}).mappings().one()
             # Persist the tombstone/revision and invalidate old opaque authority
             # in the same transaction. Regrant cannot revive any old token.
+            from .api_keys import revoke_account_keys
+            revoke_account_keys(c, account)
             c.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account})
             return dict(row)
         return self._mutate(actor, 'space.grant', {'space_id': str(identifier),

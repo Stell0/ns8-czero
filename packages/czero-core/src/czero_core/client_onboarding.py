@@ -37,7 +37,7 @@ class ClientOnboardingService:
             raise OnboardingRejected()
         actor = self.grants.access.checked_actor(connection, session.actor)
         actor.require(Role.READER)
-        if actor.delegation is not None or actor.delegated_scopes is not None:
+        if actor.api_key_binding is not None or actor.delegation is not None or actor.delegated_scopes is not None:
             raise PermissionDenied()
         return actor
 

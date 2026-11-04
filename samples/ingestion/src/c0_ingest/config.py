@@ -29,12 +29,15 @@ def connection_settings(root):
     env = dotenv(root / '.env')
     c0 = {'url': env['C0_URL'], 'identity': env['C0_ACCOUNT_NAME'],
           'account_id': env.get('C0_ACCOUNT_ID', ''), 'space_id': env.get('C0_SPACE_ID', ''),
-          'space_name': env['C0_SPACE_NAME'], 'client_id': env['C0_CLIENT_ID'],
+          'space_name': env['C0_SPACE_NAME'], 'client_id': env.get('C0_CLIENT_ID', ''),
+          'auth_mode': env.get('C0_AUTH_MODE', 'oauth'),
           'redirect_uri': env.get('C0_REDIRECT_URI', 'http://127.0.0.1:43220/callback/c0-ingestion'),
           'scopes': env.get('C0_SCOPES', 'c0:read c0:write'),
           'credentials_file': str(root / 'oauth.json'), 'poll_attempts': 20, 'poll_seconds': 3}
     destination(c0)
-    if not c0['identity'] or not c0['space_name'] or not c0['client_id']:
+    if c0['auth_mode'] not in ('oauth', 'api_key'):
+        raise ValueError('Unsupported authentication mode')
+    if not c0['identity'] or not c0['space_name'] or (c0['auth_mode']=='oauth' and not c0['client_id']):
         raise ValueError('Configure expected account, space and dedicated client ID in .env')
     if not set(c0['scopes'].split()) <= {'c0:read', 'c0:write', 'c0:admin'}:
         raise ValueError('Unsupported OAuth scopes')

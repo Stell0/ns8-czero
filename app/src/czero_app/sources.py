@@ -221,7 +221,7 @@ class UploadBodyLimit:
             resource = path.split('/api/v1/', 1)[-1]
             if resource in ('entities', 'sources/ingest-text') or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
                 limited, maximum = True, 1048576
-            if resource=='context-bundles' or resource.startswith('source-documents/'):
+            if resource in ('context-bundles', 'api-keys') or resource.startswith('source-documents/'):
                 limited,maximum=True,16384
             if resource.startswith('extraction-runs/') or resource.startswith('sources/') and resource.endswith('/reindex'):
                 limited,maximum=True,4096

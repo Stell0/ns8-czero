@@ -50,6 +50,8 @@ class Actor:
     space_id: UUID | None = field(default=None, repr=False, compare=False)
     session_binding: object | None = field(default=None, repr=False, compare=False)
 
+    api_key_binding: object | None = field(default=None, repr=False, compare=False)
+
     def __post_init__(self):
         if not isinstance(self.user_id, UUID) or not isinstance(self.role, Role) or type(self.is_owner) is not bool:
             raise ValueError("Invalid admitted actor")
