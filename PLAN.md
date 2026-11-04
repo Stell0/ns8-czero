@@ -1,22 +1,31 @@
 # C0 roadmap
 
-## Personal API keys — producer accepted, consumer adoption
+## Personal API keys — released consumer accepted
 
-Personal REST/MCP keys add hashed credentials, explicit scope/space ceilings,
-optional expiry, browser-only lifecycle and ingestion-client support. Core 0.38.0/schema
-0031/0032 are additive after 0030. The released Core 0.37 tag/lock stays frozen until
-a new independently verified Core release is available. Focused database/HTTP/
-MCP/authentication checks pass 65 cases; the final key-specific selection passes
-11, including both SDK protocol writes/readback and legacy-token prefix collision.
-Review adds account/selected-space revision snapshots against older-writer
-permission edit/regrant, preserving the first candidate and its CI evidence.
-The original verifier fails the new negative control; the corrected selection
-passes 14 cases including repeated migration from the original producer schema.
-All 22 real browser workflows and 219 existing Node controllers pass. Broader
-base/candidate regressions and independent packaging are running; local host OCR
-prerequisites are unavailable, so required packaging is repeated in an isolated
-container with real OCR. Full/native and released-consumer acceptance remain.
-No live deployment or release is claimed. See [API key contracts](docs/api-keys.md).
+App0.58.0 adopts independently published Core0.38.0 and schema0032. Personal
+REST/MCP keys use hashed credentials, explicit scope/space ceilings, optional
+expiry, browser-only lifecycle and ingestion-client support. Permission changes
+invalidate keys, including older-writer edit/regrant through revision snapshots.
+The original verifier fails the new negative control; corrected migration,
+authorization, SDK writes/readback and legacy-token compatibility checks pass.
+
+[PR72](https://github.com/Stell0/ns8-czero/pull/72) publishes the reusable service;
+[PR73](https://github.com/Stell0/ns8-czero/pull/73) regularly merges the released
+consumer as `1a92b7aebbec3c5ad217f03e84f2b57a250f9d18`. Exact consumer source
+`00ffd370c0f9c9241eed26c91d7725078cea86e7` passes
+[full/native41840958720](https://github.com/Stell0/ns8-czero/actions/runs/41840958720):
+2,775 Python/database/packaging cases, 24 real browser workflows, 219 Node cases,
+schema/shell checks and 21 Robot dry runs. Independently downloaded native reports,
+scan reports and exact-source full promotion pass. Actual merged-main
+[41851447750](https://github.com/Stell0/ns8-czero/actions/runs/41851447750) passes
+full/native acceptance and canonical publication, with independent artifact
+grading and six fresh registry identity reads. The promotion verifier's separate
+optional-screenshot limitation is recorded below; no main promotion check is
+claimed to pass.
+
+See [API key contracts](docs/api-keys.md) and the evidence below. The installed
+app0.57/Core0.37/schema0030 baseline stays unchanged. No live update or stable
+NS8 module release occurs; both operator waivers and failed/private evidence remain.
 
 > **Document ingestion modernization (M0–M10 implementation merged; model quality open):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; the separately authorized dedicated deployment is recorded below.
 
@@ -2235,11 +2244,10 @@ rather than acquiring reconstructed permission revisions. Existing OAuth and
 knowledge remain unchanged. Actual producer main/full
 [41828728776](https://github.com/Stell0/ns8-czero/actions/runs/41828728776) passes.
 
-The app0.58 consumer candidate adopts the released tag and immutable Git lock,
+The app0.58 consumer adopts the released tag and immutable Git lock,
 with >=0.38.0,<0.39.0 and matching patch-only updater bounds. It keeps creation
 validation usable for Readers/Editors and redacts one-time keys in retained
-browser traces/screenshots. Final released-consumer full/native and image-source
-acceptance remain required. No live update or stable NS8 module release occurs.
+browser traces/screenshots. No live update or stable NS8 module release occurs.
 
 
 Consumer local validation uses the actual released Git Core: 26 focused
@@ -2252,3 +2260,69 @@ source SHA256 is
 `9ba30d4146beec2a42fedbe178554498362d8ce0f2b740e2e7f77f582fb9f3b9`.
 The consumer keeps frozen Core package tree
 `bd00a8d9bf7ee4b1d878d7d72d4172346951b4a2` unchanged.
+
+### API-key released-consumer acceptance
+
+PR73 exact source `00ffd370c0f9c9241eed26c91d7725078cea86e7` passes
+[full41840958720](https://github.com/Stell0/ns8-czero/actions/runs/41840958720).
+Its actual published/default application images verify the immutable released
+Core Git source `2eb0b453f329f2f1044ff6151854298aac1b7e88`; the native suites
+verify all three installed candidate images. The complete local job passes
+2,775 Python/database/packaging cases, 24 real browsers, 219 Node cases,
+schema/shell checks and 21 Robot dry runs, without database skips.
+
+Independent downloaded artifacts pass Debian genuine-predecessor upgrade21,
+Rocky installation26/three expected skips, eight native browser workflows,
+eight privacy guards, 32 numeric accessibility contexts, all ten access stages,
+three OAuth-query artifacts with zero candidates, and five scan/SBOM pairs.
+The exact-source full promotion verifier passes while PR73 is open; the
+Actions-owned merge gate then permits regular merge as
+`1a92b7aebbec3c5ad217f03e84f2b57a250f9d18`.
+
+Frozen consumer candidate tag:
+`ci-00ffd370c0f9c9241eed26c91d7725078cea86e7-41840958720-1`.
+
+| Image | Candidate digest |
+| --- | --- |
+| `czero` | `sha256:b74252d9524ab8943492907af63ada6d85008054555c84a639d17e6161a9ec53` |
+| `czero-app` | `sha256:0f98d7eb6ddf4e6774f16d5afe28fcff55b2003df61d53402806dee14c882b99` |
+| `czero-postgres` | `sha256:ab69d3553b77a483b57f11125175ca5da230858720aa3e2c1277e6c613c3a069` |
+
+Producer merged-main41828728776 also passes independent downloaded artifact
+grading and six fresh registry reads against its accepted images. Preserve all
+earlier failed/local evidence privately; it is not substituted for accepted CI.
+Actual consumer merged-main
+[41851447750](https://github.com/Stell0/ns8-czero/actions/runs/41851447750) passes
+all full/native jobs, the Actions-owned merge gate and canonical publication.
+The source has the same tracked tree as the accepted consumer candidate:
+`f0c39edad1ba66dcd7612bfd69fdf8a35022b754`.
+Its local counts and independently graded native/browser/privacy/access/scan
+results match the candidate counts above. The actual published application image
+selects released Core0.38.0 from the immutable Git lock and passes the runtime
+source/schema probe; the native suites verify that image's digest.
+
+Frozen merged-main tag:
+`ci-1a92b7aebbec3c5ad217f03e84f2b57a250f9d18-41851447750-1`.
+
+| Image | Merged-main digest |
+| --- | --- |
+| `czero` | `sha256:0c68d56d754b78f7e78ebdf52a0f361e242b0f3ca41b78d688ff08324efedb9c` |
+| `czero-app` | `sha256:9463a0eb90011ad36f8b797ba7ee2c8813f1850805278a6ad7927fc58630d2c8` |
+| `czero-postgres` | `sha256:ec06e6021deecc4f6fa97dbb8123e26056426369f989e89322ba7cffe384f9e9` |
+
+Six fresh registry manifest reads at 15:46–15:47 UTC on 4 November 2026 verify
+each image's `main` and `latest` tag against these independently accepted digests.
+This is source/publication acceptance, not a live installation or stable module
+release. Keep these immutable identities when documentation main advances.
+
+**Promotion-tool limitation:** the separate `verify-promotion.py --source
+1a92b7aebbec3c5ad217f03e84f2b57a250f9d18 --full` check rejects
+`actual_required_jobs_missing`: its broad `native /` match includes the optional
+skipped `native / debian / screenshots` publishing job. Both actual native suites,
+artifact grading and the Actions-owned gate pass. Preserve this failed check;
+do not claim main's command passes or bypass it for deployment. The exact
+consumer candidate's full promotion check passes. Future selection of merged-main
+for release/deployment needs the promotion-tool issue resolved and verified.
+
+The installed app0.57/Core0.37/schema0030 runtime at
+`5e89055de12f46b2e87325d8fee1e6ee59dfa15d` remains the live baseline.
