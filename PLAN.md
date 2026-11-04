@@ -1,6 +1,6 @@
 # C0 roadmap
 
-> **Document ingestion modernization (M0–M10 implementation merged; model quality open):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; live deployment remains separate.
+> **Document ingestion modernization (M0–M10 implementation merged; model quality open):** [queued extraction units, selective retries, structured documents, optional OCR and selective context retrieval](docs/ingestion-pipeline/PLAN.md). Execute one independently tested milestone at a time; the separately authorized dedicated deployment is recorded below.
 
 ## Queued document extraction — implementation merged
 
@@ -121,9 +121,87 @@ Actual published/native released-Core identity, OCR/resource/restore, no backfil
 and two/four-worker reindex pass. Canonical publication and six fresh registry
 checks match [the immutable images](docs/ingestion-pipeline/M10.md#accepted-main-publication).
 Model/held-out answer quality stays open by operator decision; no model calls,
-default-on rollout, live update, production import/reindex, external schedule or
-stable NS8 module release occurs. The app 0.54/Core 0.35/schema 0022 installed
-baseline stays frozen. Earlier pending wording records retained checkpoints.
+default-on rollout, production import/reindex, new external schedule or stable
+NS8 module release occurs. The separately authorized live upgrade is recorded
+below. Earlier pending wording records retained checkpoints.
+
+## Ingestion deployed runtime and frozen predecessor — 4 November 2026
+
+The operator separately authorizes the dedicated C0 update. The installed source
+is `5e89055de12f46b2e87325d8fee1e6ee59dfa15d`, app **0.57.0**, independently
+released **Core 0.37.0** at `37ce3cec4c8de2778f90792b7abd9202d5357791`, schema
+**0030_explicit_reindex**. Exact merged-main
+[full/native 41774490933](https://github.com/Stell0/ns8-czero/actions/runs/41774490933),
+independent downloaded native/artifact grading, canonical publication and fresh
+exact-source full promotion pass. Fresh registry reads and both actual installed
+image inspections verify all three immutable digests below. The installed app's
+`direct_url.json` verifies the released Core Git source and tag, without a local
+producer fallback. Documentation descendants do not replace this installation.
+
+All three images retain tag
+`ci-5e89055de12f46b2e87325d8fee1e6ee59dfa15d-41774490933-1` in `ghcr.io/stell0`:
+
+| Image | Installed digest |
+| --- | --- |
+| `czero` | `sha256:4e406cf1a6765aac0138551313114151915605f775276b5dd01767dc0e6ad8fb` |
+| `czero-app` | `sha256:5469c1d718f28bdf5f0b4f0edd213e04815379a6457df04453bc97c6cc7014f8` |
+| `czero-postgres` | `sha256:f1a85e8f62c51676bb842773581f5af190b82b396006bc87f624dd1520a0c68d` |
+
+The genuine immediately preceding installation is app 0.57.0 / Core 0.36.1 /
+schema 0023, source `96b55d81dfd91be3dc0190796755a50ae9d983b9`, tag
+`ci-96b55d81dfd91be3dc0190796755a50ae9d983b9-41487239536-1`. Preserve its
+`czero` digest `sha256:5a339ec16308b49ab98a0f8d3fc965ef400f804747d14222e41eb738ad6f6160`,
+`czero-app` digest `sha256:955cb026e6299a565dc61252f405a8cee1a0ded06b154e196902fbd7fb519fd1`
+and `czero-postgres` digest `sha256:68c63729eaf6f2c348a4f1931021d719f50b7c678332881c9468a31003e56d3f`.
+Earlier `31b0c85` and other installed checkpoints remain historical evidence.
+Use the newly installed three-image identities as the next genuine predecessor.
+
+Supported C0-only backup and full repository read-data integrity pass. All fifteen
+backup plans return to their original configuration, with the owned one-off plan
+disabled and empty. New-Core read-only retention preflight passes before and
+after the upgrade. No retained original files are present, so this live instance
+does not establish nonempty original-file retention; native clean-restore and
+original/reindex acceptance remain the separate full-CI evidence.
+
+The supported targeted `update-module` completes successfully in 28 seconds;
+the supported dedicated module-manager restart also passes. Trusted HTTPS
+readiness, configuration, runtime, both containers, ordinary worker timer and
+extraction timer pass after both operations. There are no matching update/restart
+rows in the local API audit database; action receipts plus actual installed state
+establish the operations, without manufacturing an HTTP audit entry.
+
+Independent old-column projections preserve **74,362 stable rows across 44
+original domain tables**, including **1,207 source documents, 9,430 chunks and
+13 Wiki pages**. Existing content counters/events, four exact protected Wiki
+reads, settings, mounts, authentication/retrieval configuration, routes, domains,
+all six original persistent grants and ten unrelated module identities remain
+unchanged. The existing external ingestion timer retains its schedule; its job
+is not run as an acceptance fixture. The existing browser session survives both
+operations, fresh ordinary native sign-in works, and actual connected MCP
+profile/space reads preserve account identity and grants before/after both.
+
+The runtime advertises **122 operations**, including all four new read-only
+context operations. Real selected-space outline, section and context-bundle
+reads return exact original spans with citations and no whole-document fallback.
+The public skill archive is valid; actual plugin **1.4.0** download exactly equals
+the offline package for the existing registered connection identity. Public local
+font/CSS bytes match accepted source after update and restart. This client's
+cached plugin is still 1.2.0 and its catalog lacks the four new operations; a host
+catalog/plugin refresh remains pending. Existing connected reads pass; no new
+consent, connection replacement or broadened scope is performed.
+
+Extraction and OCR remain **disabled**; two-worker resource defaults are added by
+the supported lifecycle. There are zero extraction runs/units, persisted structure
+backfills or forced reindexes after update and restart. Both bounded root app
+journals pass, with **36 and 38 actual entries**, successful health/profile/guide/
+native-callback/MCP positive controls and zero query, credential, JWT or traceback
+candidates. Empty Podman logs are not used as privacy evidence. Private backups,
+credentials, raw observations and failed observer assumptions stay outside Git.
+
+This accepts the separately authorized live upgrade, not a default-on rollout,
+model-quality comparison, production reindex/import, new schedule or stable NS8
+module release. Model/held-out answer quality remains open by operator choice;
+no model calls occur. Interactive Playwright and CPU-quota waivers remain intact.
 
 ## CI policy update — implementation
 

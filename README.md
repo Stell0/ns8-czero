@@ -90,8 +90,13 @@ selects its immutable 0.37.0 release tag and frozen lock
 and verifies that dependency in the image selected for native acceptance.
 Released-consumer full/native and merged-main publication acceptance pass; see
 [exact source and image identities](docs/ingestion-pipeline/M10.md#accepted-main-publication).
-Model answer-quality acceptance remains open. The extraction default and installed
-baseline stay unchanged; a live upgrade requires separate authorization.
+The separately authorized dedicated update and manager restart now pass with
+app 0.57.0 / Core 0.37.0 / schema 0030, retaining content, settings, schedules and
+connections. See [installed image and live verification evidence](PLAN.md#ingestion-deployed-runtime-and-frozen-predecessor--4-november-2026).
+Extraction and OCR remain disabled. Model answer-quality acceptance remains open;
+this is not a default-on rollout or a stable NS8 release. The server supplies
+plugin 1.4.0; refresh a cached client plugin/catalog to expose the new tools while
+preserving its registered connection.
 
 ## Connect your AI assistant
 
