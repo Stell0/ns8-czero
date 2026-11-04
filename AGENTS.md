@@ -257,7 +257,19 @@ upgrade, full import and schedules require separate authorization.
 
 ## Accepted baseline and preserved evidence
 
-The accepted dedicated runtime is app **0.54.0**, Core **0.35.0**, schema **0022**, source `31b0c85a71743ab6dcdb04c12ac18dd4c1500722`. Its exact installed identities and next genuine predecessor policy are recorded in [PLAN](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor). Keep those immutable candidate tags/digests available; documentation changes do not replace the runtime. The previous `c2280f5` installation remains the historical genuine predecessor used to accept this upgrade.
+The accepted dedicated runtime is app **0.57.0**, released Core **0.37.0**,
+schema **0030**, source `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` after the
+separately authorized 4 November update and manager restart. See [exact installed
+identities and predecessor](PLAN.md#ingestion-deployed-runtime-and-frozen-predecessor--4-november-2026).
+The genuine immediate predecessor is `96b55d81` / Core 0.36.1 / schema 0023;
+retain all its immutable images and historical `31b0c85` evidence. Supported
+backup/read-data integrity, actual released-Core/image identity, old-column data,
+settings/schedules/connections/unrelated inventory, native sign-in and bounded
+root privacy journals pass. Extraction/OCR remain disabled with no backfill.
+Runtime plugin 1.4.0 matches its exact offline bytes; this client's cached 1.2.0
+plugin/catalog still needs refresh for the four new tools. Model quality remains
+open, with no model calls, production reindex/import, new external schedule or
+stable module release. Documentation changes never replace installed images.
 
 Prior reviewed closeout PR35 merged as `f735004`; actual main documentation check [40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source promotion verification pass. The full runtime/main publication evidence remains in PLAN. Broader M21 packaged-skill/client/scheduled acceptance and release obligations remain open; no stable module release is claimed.
 
