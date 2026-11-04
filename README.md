@@ -43,15 +43,15 @@ derives current section metadata and exact-offset chunks on explicitly queued
 publications.
 The [M6 implementation](docs/ingestion-pipeline/M6.md) adds explicit local-only OCR
 for unsupported PDF scan pages, with bounded execution and page provenance.
-The [M7 candidate](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
+The [M7 implementation](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
 by current documents or unexpired work in the same space, with no separate body
 archive.
-The [M8 candidate](docs/ingestion-pipeline/M8.md) adds exact bounded outline,
+The [M8 implementation](docs/ingestion-pipeline/M8.md) adds exact bounded outline,
 section/block, local-reference and context-bundle reads when supported by Core.
 Ordinary source imports continue
 through the existing extraction worker until the later rollout gates pass.
 
-The [M9 candidate](docs/ingestion-pipeline/M9.md) shows extraction progress in the
+The [M9 implementation](docs/ingestion-pipeline/M9.md) shows extraction progress in the
 reader and detailed recovery in Background Work. Full reindex is explicit and
 replaces exact citations only when the complete replacement publishes.
 

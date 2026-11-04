@@ -1,6 +1,6 @@
 # C0 ingestion pipeline — implementation plan
 
-Status: **M0–M8 merged; M9 progress/reindex acceptance pending**
+Status: **M0–M9 merged; M10 released-consumer/native acceptance pending**
 Decision date: **2026-11-02**  
 Scope: independently queued document extraction units, selective retries, bounded concurrency, structure-aware indexing, optional OCR, conservative caching, selective-context REST/MCP interfaces, observability and measurement.
 
@@ -440,3 +440,17 @@ See [disposable pilot and rollback](ROLLOUT.md); no installed baseline changes.
 Operator decision, 2026-11-03: keep model-quality acceptance open. No model calls
 are authorized for this implementation. Deterministic/native/released-consumer
 verification continues; model answer-quality and default-rollout gates remain open.
+
+## Accepted M9 source
+
+[PR67](https://github.com/Stell0/ns8-czero/pull/67) regularly merges as
+`ec7f45c8859357b486a21042484b7a338b8978d6`. Exact head
+`37ce3cec4c8de2778f90792b7abd9202d5357791` passes full
+[41737196843](https://github.com/Stell0/ns8-czero/actions/runs/41737196843),
+independent downloaded artifact grading and exact-source full promotion checks.
+The run passes 2,741 Python/database/package cases without skips, 21 browser
+workflows, 219 Node 24 controls and 21 Robot dry runs. Native results pass Debian
+21 and Rocky 26/three expected skips, all eight browser/privacy workflows, five
+scans and actual OCR/two/four-worker resource/restore proof. Earlier candidate
+checkpoints above remain historical evidence. M10 follows this accepted source;
+model-quality acceptance stays open by operator decision.
