@@ -99,7 +99,7 @@ plugin 1.4.0; refresh a cached client plugin/catalog to expose the new tools whi
 preserving its registered connection.
 
 For GitHub Actions and other automation, see [personal API keys](docs/api-keys.md)
-(Core 0.38; app 0.58 released-consumer acceptance is tracked in PLAN).
+(app 0.58 and Core 0.38; acceptance and the installed baseline are tracked in PLAN).
 
 ## Connect your AI assistant
 

@@ -749,5 +749,13 @@ Core0.38.0 is immutably published from `2eb0b453f329f2f1044ff6151854298aac1b7e88
 after full/native41820035695 and publisher41837683939. Schemas0031/0032 bind keys
 to persisted account/space revisions; preserve the schema0015 grant-setup path.
 App0.58 adopts its released tag/lock with patch-only >=0.38.0,<0.39.0 bounds.
-Final released-consumer/full/native acceptance remains separate. The installed
+Released consumer `00ffd370c0f9c9241eed26c91d7725078cea86e7` passes
+full/native41840958720, independent artifact grading and exact-source full
+promotion; PR73 regularly merges as `1a92b7aebbec3c5ad217f03e84f2b57a250f9d18`.
+Actual merged-main41851447750 passes full/native, independent artifact grading,
+canonical publication and six registry identity reads. Its separate promotion
+verifier rejects an optional skipped screenshot job; preserve that failed check
+and resolve it before selecting main for release/deployment. The exact consumer
+candidate's full promotion check passes. Preserve immutable runtime identities
+in PLAN; documentation commits do not replace them. The installed
 app0.57/Core0.37/schema0030 baseline is unchanged.
