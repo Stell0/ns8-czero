@@ -16,6 +16,14 @@ from .spaces import SpaceService
 KEY = re.compile(r'c0k_[A-Za-z0-9_-]{43}')
 
 
+def revoke_account_keys(connection, account_id):
+    # Supported predecessor setup can change grants before this store exists.
+    # There is no key authority to invalidate on those earlier schemas.
+    if connection.execute(text("SELECT to_regclass('c0_api_keys') IS NOT NULL")).scalar_one():
+        connection.execute(text('UPDATE c0_api_keys SET revoked_at=now() WHERE account_id=:id AND revoked_at IS NULL'),
+                           {'id':account_id})
+
+
 @dataclass(frozen=True, repr=False)
 class ApiKeyBinding:
     service: object = field(repr=False)

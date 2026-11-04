@@ -250,7 +250,8 @@ class SpaceService:
                     {'space': identifier, 'account': account, 'role': value}).mappings().one()
             # Persist the tombstone/revision and invalidate old opaque authority
             # in the same transaction. Regrant cannot revive any old token.
-            c.execute(text('UPDATE c0_api_keys SET revoked_at=now() WHERE account_id=:id AND revoked_at IS NULL'), {'id': account})
+            from .api_keys import revoke_account_keys
+            revoke_account_keys(c, account)
             c.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account})
             return dict(row)
         return self._mutate(actor, 'space.grant', {'space_id': str(identifier),

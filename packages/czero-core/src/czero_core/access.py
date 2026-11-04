@@ -199,7 +199,8 @@ class AccessService:
                 raise AccessConflict()
             # Delegation never survives a membership change, including a later
             # regrant of the same role. Grant issuance takes this role lock too.
-            connection.execute(text('UPDATE c0_api_keys SET revoked_at=now() WHERE account_id=:id AND revoked_at IS NULL'), {'id': account_id})
+            from .api_keys import revoke_account_keys
+            revoke_account_keys(connection, account_id)
             connection.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account_id})
             connection.execute(text('UPDATE c0_native_authority SET revoked=true,credential=NULL,checking=false WHERE account_id=:id'),
                                {'id': account_id})
