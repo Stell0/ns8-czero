@@ -48,6 +48,12 @@ const types = useResource(
 const selectedType = computed(() =>
   String(route.query.type || types.data.value?.types[0]?.name || ''),
 )
+function selectType(value: unknown) {
+  if (String(value) === selectedType.value) return
+  void router.push({
+    query: { ...route.query, type: String(value), offset: 0 },
+  })
+}
 const list = useResource(
   () => `${kind.value}:${selectedType.value}:${offset.value}`,
   async () => {
@@ -145,12 +151,7 @@ function referencePath(kind: string, id: string) {
       "
       :no-options-label="t('common.options')"
       :optional-label="t('common.optional')"
-      @update:model-value="
-        (value) =>
-          router.push({
-            query: { ...route.query, type: String(value), offset: 0 },
-          })
-      "
+      @update:model-value="selectType"
     />
     <ResourceState
       v-if="!id"

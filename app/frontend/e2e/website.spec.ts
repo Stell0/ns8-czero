@@ -9,6 +9,75 @@ import {
   fixturePage,
 } from './fixtures'
 
+test('initial search selections preserve the URL and navigation focus', async ({
+  page,
+}) => {
+  await api(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`/search?space_id=${shared}&query=fixture#main`)
+  await page.getByText('Advanced search', { exact: true }).click()
+  const retrieval = page.getByRole('button', {
+    name: 'Retrieval Text',
+    exact: true,
+  })
+  await expect(retrieval).toBeVisible()
+  await expect(page).toHaveURL(
+    (url) => url.hash === '#main' && url.searchParams.size === 2,
+  )
+  const trigger = page.getByRole('button', { name: 'Navigation', exact: true })
+  await trigger.click()
+  await expect(
+    page.getByRole('dialog').getByRole('link', { name: 'Home', exact: true }),
+  ).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+  await retrieval.click()
+  await page.getByRole('option', { name: 'Hybrid', exact: true }).click()
+  await expect(page).toHaveURL(
+    (url) =>
+      url.searchParams.get('mode') === 'hybrid' && url.searchParams.size === 3,
+  )
+  await page.goBack()
+  await expect(page).toHaveURL(
+    (url) => url.hash === '#main' && url.searchParams.size === 2,
+  )
+})
+
+test('initial record type selection preserves the requested page', async ({
+  page,
+}) => {
+  await api(page)
+  await page.route('**/api/v1/object-types', (route) =>
+    route.fulfill({
+      json: {
+        types: [
+          { name: 'inventory', label: 'Inventory' },
+          { name: 'other', label: 'Other records' },
+        ],
+      },
+    }),
+  )
+  await page.route('**/api/v1/objects?**', (route) =>
+    route.fulfill({ json: { objects: [] } }),
+  )
+  await page.goto(
+    `/explore/records?space_id=${shared}&type=inventory&offset=50#main`,
+  )
+  const type = page.getByRole('button', { name: /Inventory$/ })
+  await expect(type).toBeVisible()
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get('offset') === '50' && url.hash === '#main',
+  )
+  await type.click()
+  await page.getByRole('option', { name: 'Other records', exact: true }).click()
+  await expect(page).toHaveURL(
+    (url) =>
+      url.searchParams.get('offset') === '0' &&
+      url.searchParams.get('type') === 'other',
+  )
+})
+
 test('direct search links restore the field through reload and history', async ({
   page,
 }) => {

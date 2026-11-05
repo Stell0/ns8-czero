@@ -28,8 +28,13 @@ const index = useResource(
     request<{ configured: boolean; indexed: number }>('knowledge/index/status'),
   () => advanced.value,
 )
-function option(key: string, value: unknown) {
+function option(key: 'mode' | 'rerank' | 'graph_depth', value: unknown) {
+  if (String(value) === options.value[key]) return
   void router.push({ query: { ...route.query, [key]: String(value) } })
+}
+function selectKind(value: unknown) {
+  if (String(value) === kind.value) return
+  void router.push({ query: { ...route.query, kind: String(value) } })
 }
 const { data, error, isPending } = useResource(
   () => `search:${query.value}:${kind.value}:${JSON.stringify(options.value)}`,
@@ -50,10 +55,7 @@ const { data, error, isPending } = useResource(
       "
       :no-options-label="t('common.options')"
       :optional-label="t('common.optional')"
-      @update:model-value="
-        (value) =>
-          router.push({ query: { ...route.query, kind: String(value) } })
-      "
+      @update:model-value="selectKind"
     />
     <details @toggle="advanced = ($event.target as HTMLDetailsElement).open">
       <summary>{{ t('search.advanced') }}</summary>
