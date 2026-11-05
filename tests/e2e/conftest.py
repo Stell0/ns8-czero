@@ -158,7 +158,9 @@ def live(browser_database,request,monkeypatch,tmp_path):
     async def connection(config):
         from mcp import Client
         from mcp.client.streamable_http import streamable_http_client
-        async with httpx2.AsyncClient(auth=CredentialAuth(config),verify=ssl.create_default_context(cafile=str(cert_path)),follow_redirects=False) as http:
+        # Match the shipped ingestion client's bounded request timeout.
+        async with httpx2.AsyncClient(auth=CredentialAuth(config),verify=ssl.create_default_context(cafile=str(cert_path)),follow_redirects=False,
+                                     timeout=httpx2.Timeout(60)) as http:
             async with Client(streamable_http_client(config['url'],http_client=http)) as client:yield client
     monkeypatch.setattr('c0_ingest.client.connection',connection)
     http_client=httpx2.Client
