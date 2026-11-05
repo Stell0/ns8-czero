@@ -250,7 +250,7 @@ function review(client: Client) {
         ><template v-else
           ><NeTextInput
             v-model="url"
-            :label="t('agents.url')"
+            :label="t('admin.metadataUrl')"
             :disabled="
               !!selected || save.isLoading.value || preview.isLoading.value
             "

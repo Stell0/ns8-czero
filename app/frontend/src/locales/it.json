@@ -254,6 +254,7 @@
     "extractions": "Estrazioni",
     "clients": "Client",
     "createClient": "Registra client",
+    "metadataUrl": "URL dei metadati del client",
     "enqueue": "Accoda attività",
     "handler": "Gestore",
     "payload": "Parametri (JSON)",

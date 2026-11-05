@@ -236,7 +236,7 @@ test('closing a metadata preview cannot populate a newly opened client form', as
   await dialog.getByRole('button', { name: 'Clients', exact: false }).click()
   await page.getByRole('option', { name: 'HTTPS', exact: true }).click()
   await dialog
-    .getByRole('textbox', { name: 'MCP server URL', exact: true })
+    .getByRole('textbox', { name: 'Client metadata URL', exact: true })
     .fill(descriptor.client_id)
   await dialog.getByRole('button', { name: 'Details', exact: true }).click()
   await expect.poll(() => started).toBe(true)

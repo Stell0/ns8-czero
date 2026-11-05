@@ -254,6 +254,7 @@
     "extractions": "Extractions",
     "clients": "Clients",
     "createClient": "Register client",
+    "metadataUrl": "Client metadata URL",
     "enqueue": "Queue job",
     "handler": "Handler",
     "payload": "Parameters (JSON)",
