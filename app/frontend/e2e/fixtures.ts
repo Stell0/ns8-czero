@@ -25,7 +25,7 @@ export async function api(page: Page, role = 'reader') {
     else if (path === 'spaces')
       value = {
         spaces: [
-          { id: shared, name: 'Knowledge space Shared', shared: true, role },
+          { id: shared, name: 'Shared', shared: true, role },
           { id: privateSpace, name: 'Protected', shared: false, role },
         ],
       }

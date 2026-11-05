@@ -35,8 +35,11 @@ test('reader navigation is local, read-only and keyboard accessible in both lang
         await page.goto(`/wiki/${article}?space_id=${shared}`)
         await expect(
           page.getByRole('button', {
-            name: /Knowledge space Shared/,
-            exact: false,
+            name:
+              language === 'en'
+                ? 'Knowledge space Shared'
+                : 'Spazio di conoscenza Shared',
+            exact: true,
           }),
         ).toBeVisible({ timeout: 15000 })
         await expect(page.locator('article')).toContainText('Final checks.')
@@ -198,9 +201,7 @@ test('closing key creation discards a late one-time secret', async ({
     .getByRole('textbox', { name: 'Name', exact: true })
     .fill('Cancelled disclosure')
   await drawer.getByRole('checkbox', { name: 'Write', exact: true }).check()
-  await drawer
-    .getByRole('checkbox', { name: 'Knowledge space Shared', exact: true })
-    .check()
+  await drawer.getByRole('checkbox', { name: 'Shared', exact: true }).check()
   await drawer
     .getByRole('button', { name: 'Create API key', exact: true })
     .click()
@@ -226,7 +227,7 @@ test('closing key creation discards a late one-time secret', async ({
   ).not.toBeChecked()
   await expect(
     drawer.getByRole('checkbox', {
-      name: 'Knowledge space Shared',
+      name: 'Shared',
       exact: true,
     }),
   ).not.toBeChecked()

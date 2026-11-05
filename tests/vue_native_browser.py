@@ -62,13 +62,13 @@ class NativeWebsite:
         if remember:self.run('Check Checkbox', remember_control)
         self.click('Continue with NethServer')
         self.provider(username)
-        self.run('Wait For Elements State', 'header button:has-text("Knowledge space"), [name="accept"]', 'visible', 'timeout=30s')
+        self.run('Wait For Elements State', 'header:has-text("Knowledge space") button[aria-haspopup="listbox"], [name="accept"]', 'visible', 'timeout=30s')
         if self.browser.get_element_count('[name="accept"]'):self.run('Click', '[name="accept"]')
         self.signed()
         if remember:assert self.api('me')['browser_session']['remembered'] is True
 
     def signed(self):
-        self.run('Wait For Elements State', 'header button:has-text("Knowledge space")', 'visible', 'timeout=30s')
+        self.run('Wait For Elements State', 'role=button[name=/^Knowledge space /]', 'visible', 'timeout=30s')
 
     def goto(self, path):
         self.run('Go To', self.origin + path)
@@ -152,13 +152,18 @@ class NativeWebsite:
         self.click('Upload replacement' if replacement else 'Upload source',dialog)
         self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
 
+    def extracted(self, selector, text):
+        # Native extraction retains the pre-cutover 100-second worker deadline.
+        self.builtin.run_keyword('Wait Until Keyword Succeeds','100s','1s',
+            'Browser.Get Text',selector,'contains',text)
+
     def sources(self):
         self.login();self.goto('/sources')
         self.accessible('sources','admin')
         title='<img src=x onerror=alert(1)> browser-source-'+secrets.token_hex(4)
         sample=Path(__file__).parent/'fixtures/evidence/sample.txt'
         self.upload(sample,title,retain=True)
-        self.run('Get Text','[role="article"]','contains',sample.read_text())
+        self.extracted('[role="article"]',sample.read_text())
         self.run('Get Element Count','main img','==',0)
         source_id=urlsplit(self.browser.get_url()).path.rsplit('/',1)[1]
         before=self.api('source-documents/'+source_id)
@@ -168,16 +173,17 @@ class NativeWebsite:
         with tempfile.TemporaryDirectory(prefix='c0-native-source-') as directory:
             changed=Path(directory)/'changed.txt';changed.write_text('Browser revised evidence inventory\n')
             self.upload(changed,title,replacement=True,retain=True)
-            self.run('Get Text','[role="article"]','contains','Browser revised evidence')
+            self.extracted('[role="article"]','Browser revised evidence')
             assert self.api('sources/'+source_id)['revision']==2
             self.api('chunks/'+chunk['id']+'/citation',status=410)
             invalid=Path(directory)/'invalid.txt';invalid.write_bytes(b'\xff\xfeinvalid')
             self.goto('/sources');self.upload(invalid,'Browser quarantined evidence')
             failed_id=urlsplit(self.browser.get_url()).path.rsplit('/',1)[1]
-            self.run('Get Text','main [role=status]','contains','Failed')
+            self.extracted('main div[role=status]','Failed')
             self.run('Get Element Count','[role="article"]','==',0)
             self.click('Retry processing')
-            self.run('Get Text','main [role=status]','contains','Failed')
+            self.run('Wait For Elements State',self.button('Retry processing'),'enabled','timeout=100s')
+            self.extracted('main div[role=status]','Failed')
         self.reader();self.goto('/sources/'+source_id)
         self.run('Get Text','[role="article"]','contains','Browser revised evidence')
         self.run('Get Element Count',self.button('Upload replacement'),'==',0)
@@ -283,7 +289,7 @@ class NativeWebsite:
         retained=json.loads(self.ssh.execute_command('cat /tmp/czero-oidc-fixture/expected-identities.json'))['protected']
         citation=retained['sources'][0]['citation']
         self.goto('/evidence/'+citation['chunk_id']+'?space_id='+retained['space']['id'])
-        self.run('Get Text','article','contains','Selected native memory evidence');self.accessible('sources','reader')
+        self.run('Get Text','role=article','contains','Selected native memory evidence');self.accessible('sources','reader')
         self.run('Switch Context',owner_context);self.goto('/admin/spaces?space_id='+space);self.grant('Write')
         self.run('Switch Context',member_context);self.goto(article)
         self.api('wiki/pages/'+page['id'],{'title':page['title'],'body':'# Independent private update','metadata':{},'expected_revision':2,'idempotency_key':'native-editor-update'},'PUT',space=space)
