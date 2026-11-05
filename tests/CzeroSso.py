@@ -10,6 +10,7 @@ import tempfile
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from browser_privacy import configure_browser_diagnostics, assert_no_oauth_queries
+from vue_native_browser import NativeWebsite
 from renewal_evidence import validate_measurement
 from offline_provider_probe import validate as validate_offline_provider
 from persistent_fixture import validate as validate_persistent_connection
@@ -401,7 +402,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_account_switch_browser(self, module_id, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).account_switch(module_id)
@@ -412,7 +412,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_objects_browser(self, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).objects()
@@ -423,7 +422,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_sources_browser(self, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).sources()
@@ -434,7 +432,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_wiki_browser(self, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).wiki()
@@ -445,7 +442,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_spaces_browser(self, module_id, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).spaces(module_id)
@@ -456,7 +452,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_search_browser(self, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).search()
@@ -467,7 +462,6 @@ class CzeroSso:
 
     @keyword
     def verify_disposable_oauth_browser(self, module_id, host):
-        from vue_native_browser import NativeWebsite
         builtin=BuiltIn();previous=builtin.set_log_level('NONE')
         try:
             NativeWebsite(self,host,builtin).oauth(module_id)

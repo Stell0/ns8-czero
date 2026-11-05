@@ -12,6 +12,33 @@ from robot.libraries.BuiltIn import BuiltIn
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_robot_loads_native_helpers_before_restoring_import_path(tmp_path):
+    import os
+    import subprocess
+    import sys
+    script = f'''
+import sys
+from types import SimpleNamespace
+from robot.utils.importer import Importer
+library = Importer().import_class_or_module({str(ROOT/'tests/CzeroSso.py')!r})
+module = sys.modules[library.__module__]
+assert {str(ROOT/'tests')!r} not in sys.path
+calls = []
+module.assert_accessibility = lambda *args: calls.append(args[1:])
+website = module.NativeWebsite.__new__(module.NativeWebsite)
+website.browser = object()
+website.accessible('sources', 'reader')
+assert calls == [('sources', 'reader')]
+module.BuiltIn = lambda: SimpleNamespace(set_log_level=lambda value: 'INFO')
+module.NativeWebsite = lambda *args: SimpleNamespace(search=lambda: calls.append('search'))
+library().verify_disposable_search_browser('c0.example.test')
+assert calls[-1] == 'search'
+'''
+    result = subprocess.run([sys.executable, '-c', script], cwd=tmp_path,
+        env={**os.environ, 'PYTHONPATH':''}, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize('change', ['valid', 'missing_project', 'extra', 'replacement'])
 def test_native_download_guard_checks_the_actual_four_skill_package(tmp_path, change):
     from czero_app.agent_packages import plugin_payload, zip_bytes
