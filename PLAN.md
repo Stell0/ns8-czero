@@ -1,5 +1,49 @@
 # C0 roadmap
 
+## Vue website — dedicated installation accepted
+
+The operator authorized the supported C0-only update on 5 November 2026.
+The installed baseline is now app **0.59.0**, released Core **0.38.0**, schema
+**0032**, exact source `c011a0b9b9eb57b9a0f545f21e129e8732eb65e4` from
+[accepted main full/native/publication](https://github.com/Stell0/ns8-czero/actions/runs/42106339803).
+Fresh exact-source full promotion verification passes before installation.
+No stable module release is claimed.
+
+The existing dedicated backup completes and passes a full Restic read-data
+integrity check; its temporary plan changes are restored. All three cached and
+installed image digests/source labels match the accepted CI identities below.
+The supported module update and dedicated user service-manager restart pass
+readiness at app0.59/Core0.38/schema0032.
+
+Preservation verifies 50 unchanged tables/76,314 identical rows, original-file
+inventory, configuration, authentication/retrieval settings, knowledge events and
+space cursors, plus ten unrelated instances. Expected changes are the schema
+marker, additive empty API-key table and transient login/credential-use records;
+legacy OAuth grant/token counts remain unchanged. Real HTTPS sign-in and all
+eight main routes pass, followed by an existing protected-space Wiki article
+readback on desktop/phone and the same browser session after manager restart.
+The existing connected assistant reads its authenticated profile before and after
+restart. No content import, new schedule or permission expansion is performed.
+
+Bounded root journald contains 231 entries with actual health/account/MCP positive
+controls, zero OAuth/query/JWT/credential candidates, absent search canaries and
+known browser credentials, and no tracebacks. Private raw evidence, failed helper
+attempts and the pre-update backup remain outside Git. Both operator waivers
+remain unchanged.
+
+Freeze this installed tag and all three digests as the next genuine upgrade
+predecessor; later documentation images never replace them. The former installed
+`5e89055de12f46b2e87325d8fee1e6ee59dfa15d` trio remains the historical genuine
+predecessor used for this upgrade.
+
+Frozen installed tag: `ci-c011a0b9b9eb57b9a0f545f21e129e8732eb65e4-42106339803-1`.
+
+| Image | Installed immutable digest |
+| --- | --- |
+| `czero` | `sha256:1f53ce284c85b6b8fe2738095c1a0e8d9a48e239f6b0891c4eca3602e169ffcc` |
+| `czero-app` | `sha256:fd46e0e53f427d90737463e32e6dbcd7243d572f4b6b5858a8d95650c9718d9c` |
+| `czero-postgres` | `sha256:827a93a604708e15c79101e1e015817e0d832523955f70ec3ead42bb8743adaf` |
+
 ## Vue 3 website remake — source and publication accepted
 
 [PR75](https://github.com/Stell0/ns8-czero/pull/75) replaces the reference
@@ -76,8 +120,8 @@ head. The original final-source run `42081177164` is retained; the fresh complet
 run above provides the selected proof. Separate targeted passes never substitute
 for an unsuccessful candidate's full acceptance. No frozen run was cancelled.
 
-This is source/publication acceptance. The installed app0.57/Core0.37/schema0030
-baseline at `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` is unchanged. No live
+At this source/publication checkpoint, the installed app0.57/Core0.37/schema0030
+baseline at `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` was unchanged. No live
 update, stable module tag, Core release, import or external schedule is included.
 Both operator waivers and all private/failed evidence remain preserved.
 

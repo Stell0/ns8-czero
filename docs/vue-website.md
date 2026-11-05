@@ -143,6 +143,8 @@ desktop/phone contexts verify translated status, keyboard access and download
 visibility. Failed candidates and separate targeted passes are not represented
 as complete acceptance. No frozen run or image was removed.
 
-App 0.59.0 retains Core 0.38.0/schema 0032. This is source/publication acceptance;
-the installed app0.57 baseline remains unchanged. No live upgrade, stable module
-release, Core publication or external schedule is included.
+App 0.59.0 retains Core 0.38.0/schema 0032. The separately authorized
+[dedicated installation](../PLAN.md#vue-website--dedicated-installation-accepted)
+is accepted after verified backup/update, manager restart, preservation, real
+HTTPS/browser/connector and positive-control root-journal checks. No stable module
+release, additional Core publication or external schedule is included.
