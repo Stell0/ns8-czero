@@ -264,3 +264,24 @@ def test_vue_admin_surfaces_space_creation_and_reader_denial(live,vue_browser):
     assert not space['shared']
     assert live.rest.get('/api/v1/spaces/'+space['id'],headers={'Authorization':'Bearer '+live.member}).status_code==403
     assert not failures and not errors
+
+
+def test_vue_admin_can_identify_and_inspect_each_queued_job(live,vue_browser):
+    page=vue_browser
+    page.context.clear_cookies();page.goto(live.origin+'/auth/login')
+    page.goto(live.origin+'/admin/work')
+    for _ in range(2):
+        page.get_by_role('button',name='Queue job',exact=True).click()
+        dialog=page.get_by_role('dialog')
+        dialog.get_by_role('button',name='Handler',exact=False).click()
+        page.get_by_role('option',name='health',exact=True).click()
+        dialog.get_by_role('textbox',name='Parameters (JSON)',exact=True).fill('{}')
+        dialog.get_by_role('button',name='Queue job',exact=True).click()
+        expect(dialog).to_have_count(0)
+    jobs=[row for row in live.rest.get('/api/v1/jobs').json()['jobs'] if row['handler']=='health']
+    assert len(jobs)==2 and jobs[0]['id']!=jobs[1]['id']
+    for job in jobs:
+        row=page.locator('main li').filter(has_text=job['id'])
+        expect(row).to_be_visible()
+        row.get_by_role('button',name='Details',exact=True).click()
+        expect(page.locator('main pre')).to_contain_text(job['id'])

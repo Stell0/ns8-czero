@@ -258,7 +258,10 @@ function selectRun(id: string) {
           :key="item.id"
           class="flex flex-wrap items-center gap-4"
         >
-          <span>{{ item.handler }} · {{ item.state }}</span
+          <span>{{ item.handler }} · {{ item.state }}</span>
+          <span class="break-all text-sm text-text-secondary">{{
+            item.id
+          }}</span
           ><NeButton kind="secondary" @click="jobId = item.id">{{
             t('common.details')
           }}</NeButton>
