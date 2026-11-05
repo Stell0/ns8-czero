@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Vue candidate against genuine HTTPS, cookies, Core, database and extraction."""
 from pathlib import Path
+import runpy
 from urllib.parse import urlencode
 import pytest
 from playwright.sync_api import expect, sync_playwright
@@ -47,33 +48,46 @@ def test_vue_actual_source_and_wiki_readback_and_csp(live,vue_browser):
 
 
 def test_vue_native_signin_form_and_owner_key_lifecycle(live,vue_browser):
+    NativeWebsite=runpy.run_path(str(Path(__file__).resolve().parents[1]/'vue_native_browser.py'))['NativeWebsite']
+    native=NativeWebsite.__new__(NativeWebsite)
     page=vue_browser
     page.context.clear_cookies()
     page.goto(live.origin+'/auth/sign-in')
     expect(page.get_by_role('checkbox',name='Remember this device',exact=True)).not_to_be_checked()
-    page.get_by_role('button',name='Continue with NethServer',exact=True).click()
+    expect(page.locator(native.button('Continue with NethServer'))).to_be_visible()
+    page.locator(native.button('Continue with NethServer')).click()
     expect(page.get_by_role('link',name='Administration',exact=True)).to_be_visible()
     page.goto(live.origin+'/account')
-    page.get_by_role('button',name='Create API key',exact=True).click()
+    expect(page.locator(native.button('Create API key'))).to_be_visible()
+    def count(name,selector,operator,value):
+        assert name=='Get Element Count' and operator=='=='
+        assert page.locator(selector).count()==value
+    native.run=count
+    # A real Nebula creation control must trip the native read-only guard.
+    with pytest.raises(AssertionError):native.read_only()
+    page.locator(native.button('Create API key')).click()
     dialog=page.get_by_role('dialog')
     from test_nebula_theme import assert_accessibility
     assert_accessibility(page)
     dialog.get_by_role('textbox',name='Name',exact=True).fill('Disposable workflow')
     dialog.get_by_role('checkbox',name='Shared',exact=True).check()
-    dialog.get_by_role('button',name='Create API key',exact=True).click()
+    page.locator(native.button('Create API key','[role="dialog"] ')).click()
     expect(page.get_by_role('textbox',name='Copy this key now. It will not be shown again.',exact=True)).to_be_visible()
     key=page.get_by_role('textbox',name='Copy this key now. It will not be shown again.',exact=True).input_value()
     assert key.startswith('c0k_')
     assert live.rest.get('/api/v1/me',headers={'Authorization':'Bearer '+key}).status_code==200
-    page.get_by_role('button',name='I saved the key',exact=True).click()
+    page.locator(native.button('I saved the key')).click()
     expect(page.get_by_role('textbox',name='Copy this key now. It will not be shown again.',exact=True)).to_have_count(0)
     expect(page.get_by_role('button',name='Revoke API key',exact=True)).to_be_visible()
     assert_accessibility(page)
-    page.get_by_role('button',name='Revoke API key',exact=True).click()
-    page.get_by_role('dialog').get_by_role('button',name='Revoke API key',exact=True).click()
+    page.locator(native.button('Revoke API key')).click()
+    page.locator(native.button('Revoke API key','[role="dialog"] ')).click()
     expect(page.get_by_role('dialog')).to_have_count(0)
     assert live.rest.get('/api/v1/me',headers={'Authorization':'Bearer '+key}).status_code==401
     assert key not in page.content()
+    page.goto(live.origin+'/wiki')
+    expect(page.get_by_role('heading',name='Wiki',exact=True)).to_be_visible()
+    native.read_only()
 
 
 def test_vue_protected_denial_and_late_response(live,vue_browser):

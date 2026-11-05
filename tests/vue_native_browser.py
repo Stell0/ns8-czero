@@ -25,7 +25,7 @@ class NativeWebsite:
         return self.builtin.run_keyword('Browser.' + name, *args)
 
     def button(self, name, within=''):
-        return within + 'button:text-is(' + json.dumps(name) + ')'
+        return (within.strip() + ' >> ' if within else '') + self.role('button', name)
 
     def role(self, kind, name):
         return 'role=' + kind + '[name=' + json.dumps(name) + ']'
@@ -106,7 +106,8 @@ class NativeWebsite:
         assert_accessibility(self.browser, page, role)
 
     def read_only(self):
-        self.run('Get Element Count', 'main form, main textarea:not([readonly]), main button:text-matches("^(Save|Create|Edit|Delete|Archive|Annotate)")', '==', 0)
+        self.run('Get Element Count', 'main form, main textarea:not([readonly])', '==', 0)
+        self.run('Get Element Count', 'main >> role=button[name=/^(Save|Create|Edit|Delete|Archive|Annotate)/]', '==', 0)
         self.run('Get Element Count', 'main img, main iframe, main script', '==', 0)
 
     def account_switch(self, module_id):
@@ -195,7 +196,8 @@ class NativeWebsite:
         self.run('Get Text','details[open]','contains',chunk['id'])
         self.accessible('sources','reader')
         self.goto('/sources/'+failed_id)
-        self.run('Get Element Count','[role="article"], main button:text-is("Retry processing"), main a:has-text("Download original")','==',0)
+        self.run('Get Element Count','[role="article"], main a:has-text("Download original")','==',0)
+        self.run('Get Element Count',self.button('Retry processing','main'),'==',0)
         self.fresh();self.login();self.api('sources/'+source_id+'?expected_revision=2',method='DELETE')
         assert not self.api('sources/search?'+urlencode({'query':'"Browser revised evidence"'}))['citations']
         self.goto('/sources?'+urlencode({'query':'"Browser revised evidence"'}))
@@ -255,7 +257,7 @@ class NativeWebsite:
         self.select('c0member',choice)
         self.click('Save access',row)
         # The actual post-save readback must settle before another revision.
-        self.run('Wait For Elements State',row+'button:text-is("Save access")','enabled','timeout=30s')
+        self.run('Wait For Elements State',self.button('Save access',row),'enabled','timeout=30s')
 
     def spaces(self, module_id):
         owner_context=self.fresh();self.login()
@@ -458,7 +460,7 @@ class NativeWebsite:
             if role=='admin':
                 self.checked('Allow background access');self.click('Continue to background sign-in')
                 self.provider('c0owner')
-                self.run('Wait For Elements State','main button:text-is("Authorize"), [name="accept"]','visible','timeout=30s')
+                self.run('Wait For Elements State','main button:has-text("Authorize"), [name="accept"]','visible','timeout=30s')
                 if self.browser.get_element_count('[name="accept"]'):self.run('Click','[name="accept"]')
                 self.run('Wait For Elements State',self.button('Authorize'),'enabled','timeout=30s')
                 self.run('Get Property',self.role('checkbox','Allow background access'),'checked','==',True)
