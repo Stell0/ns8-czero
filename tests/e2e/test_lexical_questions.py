@@ -1,7 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Real HTTPS/OAuth/worker acceptance for plain-question evidence retrieval."""
 import time
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from playwright.sync_api import expect
 
@@ -35,6 +35,9 @@ def test_question_search_opens_complete_current_document_and_loses_access(live,b
     browser.goto(live.origin+'/search?'+urlencode({'space_id':live.space}))
     browser.get_by_role('search').get_by_role('textbox').fill(query)
     browser.get_by_role('search').get_by_role('button',name='Search',exact=True).click()
+    browser.wait_for_url(lambda url: parse_qs(urlsplit(url).query).get('query')==[query])
+    browser.reload()
+    expect(browser.get_by_role('search').get_by_role('textbox')).to_have_value(query)
     browser.locator('main').get_by_role('link',name='Complete mail backup manual',exact=True).first.click()
     expect(browser.get_by_role('article')).not_to_have_attribute('aria-busy','true',timeout=20000)
     document=browser.get_by_role('article')

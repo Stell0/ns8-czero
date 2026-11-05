@@ -9,6 +9,35 @@ import {
   fixturePage,
 } from './fixtures'
 
+test('direct search links restore the field through reload and history', async ({
+  page,
+}) => {
+  await api(page)
+  await page.goto(`/search?space_id=${shared}&query=original%20terms`)
+  const field = page.getByRole('textbox', {
+    name: 'Search knowledge',
+    exact: true,
+  })
+  await expect(field).toHaveValue('original terms')
+  await page.reload()
+  await expect(field).toHaveValue('original terms')
+  await field.fill('updated terms')
+  await page
+    .locator('header')
+    .getByRole('button', { name: 'Search', exact: true })
+    .click()
+  await expect(page).toHaveURL(
+    (url) =>
+      url.pathname === '/search' &&
+      url.searchParams.get('space_id') === shared &&
+      url.searchParams.get('query') === 'updated terms',
+  )
+  await page.goBack()
+  await expect(field).toHaveValue('original terms')
+  await page.goForward()
+  await expect(field).toHaveValue('updated terms')
+})
+
 test('reader navigation is local, read-only and keyboard accessible in both languages and themes', async ({
   page,
 }) => {

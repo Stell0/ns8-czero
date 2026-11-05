@@ -74,7 +74,7 @@ watch(
   () => route.fullPath,
   async (to, from) => {
     query.value = String(route.query.query || '')
-    if (to.split('#')[0] !== from.split('#')[0]) {
+    if (from !== undefined && to.split('#')[0] !== from.split('#')[0]) {
       menu.value = false
       if (!route.hash) {
         await nextTick()
@@ -82,6 +82,7 @@ watch(
       }
     }
   },
+  { immediate: true },
 )
 watch(
   title,
