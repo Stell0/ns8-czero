@@ -208,6 +208,49 @@ test('approval respects metadata ceiling and unchanged permissions preserve exis
   expect(writes[0]).toContain('/preview')
 })
 
+test('application approval remains open until the save completes', async ({
+  page,
+}) => {
+  await access(page)
+  await page.route('**/access/requests/request-id/preview', (route) =>
+    route.fulfill({
+      json: { descriptor, metadata_digest: digest, client: null },
+    }),
+  )
+  let finish!: () => void
+  const held = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  let started = false
+  await page.route('**/access/requests/request-id/approve', async (route) => {
+    started = true
+    expect(route.request().postDataJSON()).toEqual({
+      metadata_digest: digest,
+      allowed_scopes: ['c0:read'],
+      client_id: null,
+      expected_revision: null,
+    })
+    await held
+    await route.fulfill({ json: {} })
+  })
+  await page.goto('/admin')
+  await page
+    .getByRole('button', { name: 'Approve application', exact: true })
+    .click()
+  const modal = page.getByRole('dialog')
+  const save = modal.getByRole('button', {
+    name: 'Approve application',
+    exact: true,
+  })
+  await save.click()
+  await expect.poll(() => started).toBe(true)
+  await expect(modal).toHaveCount(1)
+  await expect(save).toBeVisible()
+  await expect(save).toBeDisabled()
+  finish()
+  await expect(modal).toHaveCount(0)
+})
+
 test('closing a metadata preview cannot populate a newly opened client form', async ({
   page,
 }) => {

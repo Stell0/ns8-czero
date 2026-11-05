@@ -114,9 +114,80 @@ def test_vue_native_wiki_fixture_and_search_title(live,vue_browser):
     result=page.locator('main').locator(native.role('link',stored['title']))
     expect(result).to_have_count(1)
     expect(page.locator('main')).to_contain_text('Revised browser content')
+    native.browser.get_property=lambda selector,name:page.locator(selector).evaluate('(element, name) => element[name]',name)
+    def run(name,*args):
+        selector=page.locator(args[0])
+        if name=='Wait For Elements State':selector.wait_for(state=args[1],timeout=30000)
+        elif name=='Click':selector.click()
+        else:
+            assert name=='Get Text' and args[1]=='contains'
+            expect(selector).to_contain_text(args[2])
+    native.run=run
+    native.search_details('text')
+    page.get_by_role('button',name='Content Wiki',exact=True).click()
+    page.get_by_role('option',name='All knowledge',exact=True).click()
+    native.search_details('text')
     result.click()
     expect(page.locator('article')).to_contain_text('Revised browser content')
     expect(page.locator('main img')).to_have_count(0)
+
+
+def test_vue_native_approval_waits_for_saved_metadata(live,vue_browser,request,monkeypatch):
+    import asyncio
+    import time
+    from czero_app.cimd_fetch import FetchedMetadata
+    from czero_core.cimd_metadata import parse_metadata
+    NativeWebsite=runpy.run_path(str(Path(__file__).resolve().parents[1]/'vue_native_browser.py'))['NativeWebsite']
+    app=request.getfixturevalue('transport')[0]
+    registry=app.state.delegated_grants.cimd
+    registry.sync_policy(True)
+    metadata_url='https://client.example.test/browser-approval.json'
+    import json
+    metadata=parse_metadata(metadata_url,json.dumps({'client_id':metadata_url,'client_name':'Delayed approval',
+        'redirect_uris':['https://client.example.test/callback'],'scope':'c0:read c0:write',
+        'token_endpoint_auth_method':'none','grant_types':['authorization_code','refresh_token']}).encode())
+    fetches=0
+    async def fetch(url,**_):
+        nonlocal fetches
+        assert url==metadata_url
+        fetches+=1
+        if fetches==2:await asyncio.sleep(2)
+        return FetchedMetadata(metadata,time.monotonic()+60)
+    monkeypatch.setattr(app.state.cimd.fetcher,'fetch',fetch)
+    page=vue_browser
+    params={'client_id':metadata_url,'redirect_uri':'https://client.example.test/callback',
+        'response_type':'code','code_challenge_method':'S256','code_challenge':'a'*43,
+        'scope':'c0:read c0:write','resource':live.origin+'/mcp'}
+    page.goto(live.origin+'/oauth/authorize?'+urlencode(params))
+    profile=page.request.get(live.origin+'/api/v1/me').json()
+    pending=page.request.post(live.origin+'/oauth/connect/request',data={},
+        headers={'X-C0-CSRF':profile['csrf_token'],'Origin':live.origin})
+    assert pending.status==200 and not pending.json()['approved']
+    context=page.context.browser.new_context(ignore_https_errors=True)
+    try:
+        admin=context.new_page();admin.goto(live.origin+'/auth/login')
+        expect(admin.get_by_role('link',name='Administration',exact=True)).to_be_visible()
+        admin.goto(live.origin+'/admin')
+        admin.get_by_role('button',name='Approve application',exact=True).click()
+        dialog=admin.get_by_role('dialog')
+        expect(dialog.get_by_role('checkbox',name='Read',exact=True)).to_be_checked()
+        for name in ('Write','Manage'):
+            expect(dialog.get_by_role('checkbox',name=name,exact=True)).not_to_be_checked()
+        dialog.get_by_role('button',name='Approve application',exact=True).click()
+        native=NativeWebsite.__new__(NativeWebsite)
+        def wait(name,selector,state,timeout):
+            assert name=='Wait For Elements State' and timeout=='timeout=30s'
+            admin.locator(selector).wait_for(state=state,timeout=30000)
+        native.run=wait
+        native.dialog_closed()
+        clients=admin.request.get(live.origin+'/api/v1/oauth/cimd').json()['clients']
+        saved=next((client for client in clients if client['metadata_url']==metadata_url),None)
+        assert saved is not None,'Native verifier ran before approval was saved'
+        assert saved['enabled'] and saved['allowed_scopes']==['c0:read']
+        assert saved['metadata_digest']==metadata.digest
+        assert fetches==2
+    finally:
+        context.close();registry.sync_policy(False)
 
 
 def test_vue_protected_denial_and_late_response(live,vue_browser):

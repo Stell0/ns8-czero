@@ -251,7 +251,8 @@ def test_search_browser_keeps_credentials_out_of_robot_arguments(monkeypatch, ac
         return json.dumps({'password':secret}) if command.startswith('cat ') else ('', '', 0)
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
-        evaluate_javascript=accessibility_measurement,get_element_count=lambda selector:0)
+        evaluate_javascript=accessibility_measurement,get_element_count=lambda selector:0,
+        get_property=lambda selector,name:False)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))

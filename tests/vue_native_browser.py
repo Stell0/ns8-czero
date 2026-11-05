@@ -33,6 +33,11 @@ class NativeWebsite:
     def click(self, name, within=''):
         self.run('Click', self.button(name, within))
 
+    def dialog_closed(self):
+        # Nebula's fixed panel leaves its role wrapper with no layout box.
+        # Hidden therefore does not establish that an asynchronous save ended.
+        self.run('Wait For Elements State','[role="dialog"]','detached','timeout=30s')
+
     def fill(self, name, value):
         self.browser.fill_text(self.role('textbox', name), value)
 
@@ -151,7 +156,7 @@ class NativeWebsite:
         self.run('Upload File By Selector',dialog+'input[type=file]',str(path))
         if retain:self.checked('Retain the original file')
         self.click('Upload replacement' if replacement else 'Upload source',dialog)
-        self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
+        self.dialog_closed()
 
     def extracted(self, selector, text):
         # Native extraction retains the pre-cutover 100-second worker deadline.
@@ -230,6 +235,13 @@ class NativeWebsite:
                 self.run('Wait For Elements State','main a[href*="/evidence/"]','visible','timeout=30s')
                 self.read_only()
 
+    def search_details(self, method):
+        selector='main details:has(> summary:text-is("Search details")):has(> p:has-text('+json.dumps(method+' ·',ensure_ascii=False)+'))'
+        self.run('Wait For Elements State',selector,'attached','timeout=30s')
+        if not self.browser.get_property(selector,'open'):
+            self.run('Click',selector+' > summary')
+        self.run('Get Text',selector,'contains',method)
+
     def search(self):
         page=json.loads(self.ssh.execute_command('cat /tmp/czero-oidc-fixture/expected-identities.json'))['knowledge']['page']
         result='main >> '+self.role('link',page['title'])
@@ -241,11 +253,10 @@ class NativeWebsite:
             self.click('Search','header ')
             self.run('Click','summary:text-is("Advanced search")')
             self.select('Retrieval','Hybrid');self.select('Scoring','Filter if allowed')
-            self.run('Click','summary:text-is("Search details")')
-            self.run('Get Text','main','contains','hybrid+filter')
+            self.search_details('hybrid+filter')
             self.run('Get Element Count',result,'==',1)
             self.select('Retrieval','Text');self.select('Scoring','Off')
-            self.run('Get Text','main','contains','text')
+            self.search_details('text')
             self.run('Click',result)
             self.run('Wait For Elements State','article','visible','timeout=30s')
             self.run('Get Text','article','contains','Independent authored claims')
@@ -258,7 +269,7 @@ class NativeWebsite:
         self.click('Change permissions',row)
         self.select('Permission',choice)
         self.click('Save','[role="dialog"] ')
-        self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
+        self.dialog_closed()
 
     def grant(self, choice):
         row='main li:has(button[aria-labelledby]):has-text("c0member") '
@@ -350,15 +361,15 @@ class NativeWebsite:
             for name in ('Write','Manage'):self.run('Get Property',self.role('checkbox',name),'checked','==',False)
             self.run('Get Property',self.role('checkbox','Read'),'checked','==',True)
             self.click('Approve application','[role="dialog"] ')
-            self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s');phase('approved')
+            self.dialog_closed();phase('approved')
             self.click('Reload')
             sibling='[data-application-id]:not([data-application-id="'+value['request_id']+'"]) '
             self.click('Decline application',sibling);self.click('Decline application','[role="dialog"] ')
-            self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s');phase('declined')
+            self.dialog_closed();phase('declined')
             value=json.loads(self.ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
             self.click('Reload');row='[data-application-id="'+value['connection_ids'][0]+'"] '
             self.click('Disconnect',row);self.click('Disconnect','[role="dialog"] ')
-            self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s');phase('disconnected')
+            self.dialog_closed();phase('disconnected')
             self.permissions(value['member_id'],'Block access');phase('blocked')
             self.command('api-cli run node/1/restart-module --data '+shlex.quote(json.dumps({'module_id':module_id})))
             self.builtin.run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route');phase('blocked_after_restart')
@@ -407,7 +418,7 @@ class NativeWebsite:
         self.goto('/admin/work');self.skip();self.click('Queue job')
         self.select('Handler','health');self.fill('Parameters (JSON)','{}')
         self.click('Queue job','[role="dialog"] ')
-        self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
+        self.dialog_closed()
         job=next(item for item in self.api('jobs')['jobs'] if item['handler']=='health')
         for _ in range(45):
             if self.api('jobs/'+job['id'])['state']=='succeeded':break
@@ -420,7 +431,7 @@ class NativeWebsite:
         self.fill('Name',name);self.select('Handler','health')
         self.fill('Parameters (JSON)','{}');self.fill('Interval in seconds','3600')
         self.click('Create schedule','[role="dialog"] ')
-        self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
+        self.dialog_closed()
         row='main li:has-text('+json.dumps(name)+') '
         self.click('Details',row);self.checked('Enabled',False)
         self.fill('Interval in seconds','7200');self.click('Save')
@@ -449,7 +460,7 @@ class NativeWebsite:
         self.accessible('account',role)
         status=self.key_status(secret);assert status==200,'Created key returned HTTP '+str(status)
         self.click('Revoke API key',row);self.click('Revoke API key','[role="dialog"] ')
-        self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
+        self.dialog_closed()
         self.run('Wait For Elements State',self.button('Revoke API key',row),'hidden','timeout=30s')
         saved=next(item for item in self.api('api-keys')['api_keys'] if item['name']==name)
         assert saved['revoked_at'],'Selected key revocation was not saved'
