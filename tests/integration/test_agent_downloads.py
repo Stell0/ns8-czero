@@ -36,9 +36,9 @@ def test_stale_cookie_keeps_simple_guide_and_canonical_skill_download_available(
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
             http.cookies.set('c0_session', 'x' * 43, domain='c0.example.test', path='/')
             page = await http.get('/agents')
-            assert page.status_code == 200 and 'Plugins → personal' in page.text and 'Download .skill' in page.text
-            assert 'data-copy-name="Description"' in page.text and 'aria-label="Copy description"' in page.text
-            assert '<h2>Available operations</h2>' not in page.text
+            assert page.status_code == 200 and 'id="app"' in page.text
+            assert page.headers['cache-control']=='no-store'
+            assert json.loads(page.text.split('id="c0-boot" type="application/json">')[1].split('</script>')[0])=={}
             connection = await http.get('/agents/connection.json', headers={'Host': 'untrusted.example.test'})
             assert connection.status_code == 200
             value = connection.json()

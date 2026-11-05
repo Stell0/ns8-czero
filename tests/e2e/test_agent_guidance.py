@@ -33,3 +33,14 @@ def test_selective_context_guidance_and_stable_workflow_identity(live,browser,ro
     else:
         consolidate.locator('summary').click()
         expect(consolidate).to_contain_text('superseded result returns content_superseded (410)')
+
+
+def test_stale_session_keeps_public_connection_and_skill_available(live,browser):
+    browser.context.clear_cookies()
+    browser.context.add_cookies([{'name':'c0_session','value':'x'*43,'url':live.origin,'secure':True}])
+    browser.goto(live.origin+'/agents')
+    expect(browser.get_by_role('heading',name='Use with AI',exact=True)).to_be_visible()
+    expect(browser.get_by_role('textbox',name='MCP server URL',exact=True)).to_have_value(live.origin+'/mcp')
+    expect(browser.get_by_role('link',name='Download skill',exact=True)).to_be_visible()
+    expect(browser.get_by_role('button',name='Download ChatGPT plugin',exact=True)).to_have_count(0)
+    expect(browser.locator('details[data-workflow]')).to_have_count(0)

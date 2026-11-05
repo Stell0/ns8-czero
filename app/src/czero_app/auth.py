@@ -223,6 +223,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     def remembered_unavailable(request):
         configured().sessions.destroy(request.cookies.get('c0_session'))
         response = app.state.website.render({'error': 'remembered_unavailable'}, status_code=403)
+        response.headers['Referrer-Policy'] = 'no-referrer'
         for name in ('c0_login', 'c0_session', 'c0_login_return'):
             response.delete_cookie(name, path=cookie_path, secure=True, httponly=True, samesite='lax')
         return response
@@ -333,6 +334,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             # Admission failure does not clear the provider's SSO session.
             # Retry must explicitly reauthenticate instead of reusing it.
             response = app.state.website.render({'error': 'access_denied'}, status_code=403)
+            response.headers['Referrer-Policy'] = 'no-referrer'
             response.delete_cookie("c0_login", path=cookie_path,
                                    secure=True, httponly=True, samesite="lax")
             response.delete_cookie("c0_session", path=cookie_path,
