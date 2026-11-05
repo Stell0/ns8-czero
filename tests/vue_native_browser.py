@@ -90,7 +90,7 @@ class NativeWebsite:
             return {status:response.status,data:response.status===204?null:await response.json()};
         }'''.replace('PAYLOAD', json.dumps(payload))
         result = self.browser.evaluate_javascript(None, code)
-        assert result['status'] == status, 'Native REST assertion failed: ' + path.split('?')[0]
+        assert result['status'] == status, 'Native REST assertion failed: ' + path.split('?')[0] + ' (HTTP ' + str(result['status']) + ')'
         return result['data']
 
     def command(self, value, timeout='180 seconds'):
@@ -203,13 +203,18 @@ class NativeWebsite:
         self.goto('/sources?'+urlencode({'query':'"Browser revised evidence"'}))
         self.run('Get Text','main','contains','No items found')
 
+    def create_wiki_fixture(self):
+        slug='browser-wiki/article-'+secrets.token_hex(4);title='<img src=x onerror=alert(1)> '+slug
+        retry_key=slug.replace('/',':')
+        page=self.api('wiki/pages',{'slug':slug,'title':title,'body':'# Authored browser content','metadata':{'fixture':'browser'},'idempotency_key':retry_key},status=201)
+        revised=self.api('wiki/pages/'+page['id'],{'title':title,'body':'# Revised browser content','metadata':page['content']['metadata'],'expected_revision':page['revision'],'idempotency_key':retry_key+'-update'},'PUT')
+        assert revised['revision']==2
+        return revised
+
     def wiki(self):
         self.login()
         expected=json.loads(self.ssh.execute_command('cat /tmp/czero-oidc-fixture/expected-identities.json'))['knowledge']
-        slug='browser-wiki/article-'+secrets.token_hex(4);title='<img src=x onerror=alert(1)> '+slug
-        page=self.api('wiki/pages',{'slug':slug,'title':title,'body':'# Authored browser content','metadata':{'fixture':'browser'},'idempotency_key':slug},status=201)
-        revised=self.api('wiki/pages/'+page['id'],{'title':title,'body':'# Revised browser content','metadata':page['content']['metadata'],'expected_revision':page['revision'],'idempotency_key':slug+'-update'},'PUT')
-        assert revised['revision']==2
+        page=self.create_wiki_fixture();title=page['title']
         for role in ('admin','reader'):
             if role=='reader':self.reader()
             self.goto('/wiki/'+page['id'])
@@ -226,6 +231,8 @@ class NativeWebsite:
                 self.read_only()
 
     def search(self):
+        page=json.loads(self.ssh.execute_command('cat /tmp/czero-oidc-fixture/expected-identities.json'))['knowledge']['page']
+        result='main >> '+self.role('link',page['title'])
         for username,role in [('c0owner','admin'),('c0member','reader')]:
             if role=='reader':self.fresh()
             self.login(username);self.goto('/search')
@@ -236,11 +243,12 @@ class NativeWebsite:
             self.select('Retrieval','Hybrid');self.select('Scoring','Filter if allowed')
             self.run('Click','summary:text-is("Search details")')
             self.run('Get Text','main','contains','hybrid+filter')
-            self.run('Get Element Count','main a:text-is("Independent authored claims")','==',1)
+            self.run('Get Element Count',result,'==',1)
             self.select('Retrieval','Text');self.select('Scoring','Off')
             self.run('Get Text','main','contains','text')
-            self.run('Click','main a:text-is("Independent authored claims")')
+            self.run('Click',result)
             self.run('Wait For Elements State','article','visible','timeout=30s')
+            self.run('Get Text','article','contains','Independent authored claims')
             self.read_only()
             self.run('Go Back')
             self.run('Get Property',self.role('textbox','Search knowledge'),'value','==','independent authored')
@@ -422,23 +430,33 @@ class NativeWebsite:
         self.run('Get Property',self.role('textbox','Interval in seconds'),'value','==','7200')
         self.accessible('admin',role)
 
+    def key_status(self, secret):
+        # Keep the one-time secret out of Robot keyword arguments and logs.
+        check='async () => (await fetch("/api/v1/me", {credentials:"omit",cache:"no-store",headers:{Authorization:"Bearer "+'+json.dumps(secret)+'}})).status'
+        return self.browser.evaluate_javascript(None,check)
+
     def keys(self, role):
-        self.click('Create API key');self.fill('Name','Native disposable key')
+        name='Native disposable key '+secrets.token_hex(4)
+        row='main li:has-text('+json.dumps(name)+') '
+        self.click('Create API key');self.fill('Name',name)
         self.checked('Shared');self.click('Create API key','[role="dialog"] ')
         secret_control=self.role('textbox','Copy this key now. It will not be shown again.')
         self.run('Wait For Elements State',secret_control,'visible','timeout=30s')
         secret=self.browser.get_property(secret_control,'value');assert secret.startswith('c0k_')
         self.click('I saved the key')
         self.run('Get Element Count',secret_control,'==',0)
-        self.run('Wait For Elements State',self.button('Revoke API key'),'visible','timeout=30s')
+        self.run('Wait For Elements State',self.button('Revoke API key',row),'visible','timeout=30s')
         self.accessible('account',role)
-        # The one-time secret stays in this private Python frame, never a Robot argument.
-        check='async () => (await fetch("/api/v1/me", {headers:{Authorization:"Bearer "+'+json.dumps(secret)+'}})).status'
-        assert self.browser.evaluate_javascript(None,check)==200
-        self.click('Revoke API key');self.click('Revoke API key','[role="dialog"] ')
+        status=self.key_status(secret);assert status==200,'Created key returned HTTP '+str(status)
+        self.click('Revoke API key',row);self.click('Revoke API key','[role="dialog"] ')
         self.run('Wait For Elements State','[role="dialog"]','hidden','timeout=30s')
-        assert self.browser.evaluate_javascript(None,check)==401
-        secret=None;check=None
+        self.run('Wait For Elements State',self.button('Revoke API key',row),'hidden','timeout=30s')
+        saved=next(item for item in self.api('api-keys')['api_keys'] if item['name']==name)
+        assert saved['revoked_at'],'Selected key revocation was not saved'
+        status=self.key_status(secret)
+        self.builtin.log_to_console('C0 key revocation: '+json.dumps({'role':role,'saved':True,'http_status':status}))
+        assert status==401,'Revoked key returned HTTP '+str(status)
+        secret=None
 
     def oauth(self, module_id):
         for role in ('admin','reader','editor'):

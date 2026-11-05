@@ -246,6 +246,8 @@ def test_search_browser_keeps_credentials_out_of_robot_arguments(monkeypatch, ac
     invocations=[]; filled=[]; commands=[]; secret='private-search-fixture-value'
     def execute(command, **kwargs):
         commands.append(command)
+        if command.endswith('/expected-identities.json'):
+            return json.dumps({'knowledge':{'page':{'title':'Synthetic Wiki'}}})
         return json.dumps({'password':secret}) if command.startswith('cat ') else ('', '', 0)
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),

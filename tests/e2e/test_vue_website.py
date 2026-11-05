@@ -2,6 +2,7 @@
 """Vue candidate against genuine HTTPS, cookies, Core, database and extraction."""
 from pathlib import Path
 import runpy
+from types import SimpleNamespace
 from urllib.parse import urlencode
 import pytest
 from playwright.sync_api import expect, sync_playwright
@@ -51,12 +52,15 @@ def test_vue_native_signin_form_and_owner_key_lifecycle(live,vue_browser):
     NativeWebsite=runpy.run_path(str(Path(__file__).resolve().parents[1]/'vue_native_browser.py'))['NativeWebsite']
     native=NativeWebsite.__new__(NativeWebsite)
     page=vue_browser
+    native.browser=SimpleNamespace(evaluate_javascript=lambda _,code:page.evaluate(code))
     page.context.clear_cookies()
     page.goto(live.origin+'/auth/sign-in')
     expect(page.get_by_role('checkbox',name='Remember this device',exact=True)).not_to_be_checked()
     expect(page.locator(native.button('Continue with NethServer'))).to_be_visible()
     page.locator(native.button('Continue with NethServer')).click()
     expect(page.get_by_role('link',name='Administration',exact=True)).to_be_visible()
+    shared=next(item for item in native.api('spaces')['spaces'] if item['shared'])
+    other=native.api('api-keys',{'name':'Preserved disposable key','scopes':['c0:read'],'space_ids':[shared['id']],'lifetime_days':1},status=201)
     page.goto(live.origin+'/account')
     expect(page.locator(native.button('Create API key'))).to_be_visible()
     def count(name,selector,operator,value):
@@ -76,18 +80,43 @@ def test_vue_native_signin_form_and_owner_key_lifecycle(live,vue_browser):
     key=page.get_by_role('textbox',name='Copy this key now. It will not be shown again.',exact=True).input_value()
     assert key.startswith('c0k_')
     assert live.rest.get('/api/v1/me',headers={'Authorization':'Bearer '+key}).status_code==200
+    assert native.key_status(key)==200
     page.locator(native.button('I saved the key')).click()
     expect(page.get_by_role('textbox',name='Copy this key now. It will not be shown again.',exact=True)).to_have_count(0)
-    expect(page.get_by_role('button',name='Revoke API key',exact=True)).to_be_visible()
+    row='main li:has-text("Disposable workflow") '
+    expect(page.locator(native.button('Revoke API key',row))).to_be_visible()
     assert_accessibility(page)
-    page.locator(native.button('Revoke API key')).click()
+    page.locator(native.button('Revoke API key',row)).click()
     page.locator(native.button('Revoke API key','[role="dialog"] ')).click()
     expect(page.get_by_role('dialog')).to_have_count(0)
+    expect(page.locator(native.button('Revoke API key',row))).to_have_count(0)
     assert live.rest.get('/api/v1/me',headers={'Authorization':'Bearer '+key}).status_code==401
+    assert native.key_status(key)==401
+    assert native.key_status(other['key'])==200
     assert key not in page.content()
     page.goto(live.origin+'/wiki')
     expect(page.get_by_role('heading',name='Wiki',exact=True)).to_be_visible()
     native.read_only()
+
+
+def test_vue_native_wiki_fixture_and_search_title(live,vue_browser):
+    NativeWebsite=runpy.run_path(str(Path(__file__).resolve().parents[1]/'vue_native_browser.py'))['NativeWebsite']
+    native=NativeWebsite.__new__(NativeWebsite)
+    page=vue_browser
+    native.browser=SimpleNamespace(evaluate_javascript=lambda _,code:page.evaluate(code))
+    page.context.clear_cookies()
+    page.goto(live.origin+'/auth/login')
+    expect(page.get_by_role('link',name='Administration',exact=True)).to_be_visible()
+    stored=native.create_wiki_fixture()
+    assert stored['revision']==2
+    assert native.api('wiki/pages/'+stored['id']+'?revision=1',status=410)['detail']=='content_superseded'
+    page.goto(live.origin+'/search?'+urlencode({'query':'Revised browser content','kind':'wiki'}))
+    result=page.locator('main').locator(native.role('link',stored['title']))
+    expect(result).to_have_count(1)
+    expect(page.locator('main')).to_contain_text('Revised browser content')
+    result.click()
+    expect(page.locator('article')).to_contain_text('Revised browser content')
+    expect(page.locator('main img')).to_have_count(0)
 
 
 def test_vue_protected_denial_and_late_response(live,vue_browser):
