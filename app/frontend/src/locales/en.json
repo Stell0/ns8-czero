@@ -124,12 +124,13 @@
       "processing": "Processing",
       "retrying": "Retrying",
       "ready": "Ready",
+      "incomplete": "Not ready",
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
     "units": "{completed} of {total} units complete",
     "expired": "Saved extraction results expired. Retry processing to restart the full extraction.",
-    "failedHelp": "Processing failed. The previous published document remains available. An Editor can retry retained evidence."
+    "failedHelp": "Processing failed. An Editor can retry available source files."
   },
   "account": {
     "signin": "Sign in",

@@ -32,7 +32,7 @@ def test_real_crawl_publish_read_replace_and_unchanged(live,browser,documentatio
             for part in publication_parts(live.client,item)]
         if show_pending:
             browser.goto(live.origin+'/sources/'+receipts[0]['source_id']+'?'+urlencode({'space_id':live.space}))
-            expect(browser.locator('main')).to_contain_text('incomplete',timeout=20000)
+            expect(browser.locator('main')).to_contain_text('Not ready',timeout=20000)
             expect(browser.get_by_role('article')).to_have_count(0)
         saved=save_snapshot(live.client,item,receipts)
         if show_pending:

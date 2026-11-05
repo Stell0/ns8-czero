@@ -124,12 +124,13 @@
       "processing": "Elaborazione",
       "retrying": "Nuovo tentativo",
       "ready": "Pronto",
+      "incomplete": "Non pronto",
       "failed": "Non riuscito",
       "cancelled": "Annullato"
     },
     "units": "{completed} unità completate su {total}",
     "expired": "I risultati di estrazione salvati sono scaduti. Riprova per riavviare l’estrazione completa.",
-    "failedHelp": "Elaborazione non riuscita. Il documento pubblicato rimane disponibile. Un Editor può riprovare le fonti conservate."
+    "failedHelp": "Elaborazione non riuscita. Un Editor può riprovare l’elaborazione dei file disponibili."
   },
   "account": {
     "signin": "Accedi",

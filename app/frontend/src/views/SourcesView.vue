@@ -271,7 +271,10 @@ async function uploaded(version: Version) {
                   entry.title
                 }}</RouterLink></NeTableCell
               ><NeTableCell :data-label="t('common.status')">{{
-                entry.state
+                t(
+                  `sources.states.${entry.state}`,
+                  t('sources.states.incomplete'),
+                )
               }}</NeTableCell></NeTableRow
             ></NeTableBody
           >
@@ -313,7 +316,7 @@ async function uploaded(version: Version) {
             {{
               t(
                 `sources.states.${progress.data.value.state}`,
-                progress.data.value.state,
+                t('sources.states.incomplete'),
               )
             }}
           </p>
