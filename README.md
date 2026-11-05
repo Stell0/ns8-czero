@@ -408,4 +408,6 @@ compiled assets require no external service. Knowledge views are read-only;
 authorized source upload/replacement/recovery, account and administration remain
 available. Assistants retain existing REST/MCP knowledge operations. Native NS8
 settings remain Vue 2/Carbon. [Source and publication acceptance](PLAN.md#vue-3-website-remake--source-and-publication-accepted)
-records the exact tests and immutable images; the live installation is unchanged.
+records the exact tests and immutable images. The explicitly authorized
+[dedicated installation](PLAN.md#vue-website--dedicated-installation-accepted)
+now runs app0.59/Core0.38/schema0032 after verified backup, update and live checks.

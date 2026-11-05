@@ -1,5 +1,12 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+The current accepted dedicated installation is app **0.59.0**, released Core
+**0.38.0**, schema **0032**, source `c011a0b9b9eb57b9a0f545f21e129e8732eb65e4`.
+Its supported backup/update, manager restart, preservation, live browser/connector
+and root-journal acceptance are recorded in
+[PLAN](PLAN.md#vue-website--dedicated-installation-accepted). Freeze its installed
+CI tag/digests as the next genuine predecessor and preserve older evidence.
+
 ## Product purpose
 
 C0 is a self-hosted, shared second brain for people and AI assistants, and a foundation for applications built around that knowledge. Read [README](README.md) for the product story and [PLAN](PLAN.md#roadmap) for the current roadmap and acceptance order.
@@ -190,8 +197,8 @@ or mock API test alone is insufficient. See [the contract](docs/vue-website.md).
 PR75's app0.59/Core0.38/schema0032 source and actual main `c011a0b`
 pass full/native/artifact/promotion and canonical publication. Preserve the exact
 [accepted image identities](PLAN.md#vue-3-website-remake--source-and-publication-accepted).
-The installed app0.57 baseline remains unchanged; live updates need explicit
-authorization and their own acceptance.
+The dedicated app0.59 installation is accepted as recorded in PLAN; subsequent
+live updates need explicit authorization and their own acceptance.
 
 ## Contracts to preserve
 
