@@ -1,28 +1,42 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiURL } from '../api/client'
-import type { FullDocument } from '../api/knowledge'
+import type { FullDocument, Version } from '../api/knowledge'
 import { safeURL } from './markdown'
 import DocumentReader from './DocumentReader.vue'
-defineProps<{ document: FullDocument }>()
+const props = defineProps<{ document: FullDocument; versions?: Version[] }>()
 const { t } = useI18n()
+// Failed staging remains available to the API for recovery without retention.
+const originals = computed(() =>
+  props.document.original_version_ids.filter(
+    (id) =>
+      props.document.state === 'ready' ||
+      props.versions?.some(
+        (version) => version.id === id && version.retain_original,
+      ),
+  ),
+)
 </script>
 <template>
   <div class="space-y-6">
     <div class="flex flex-wrap gap-4">
       <a
-        v-for="version in document.original_version_ids"
+        v-for="version in originals"
         :key="version"
         :href="apiURL(`source-versions/${version}/original`)"
         class="text-link"
         >{{ t('reader.original') }}</a
       >
     </div>
-    <p
-      v-if="!document.original_version_ids.length"
-      class="text-sm text-text-secondary"
-    >
-      {{ t('reader.unretained') }}
+    <p v-if="!originals.length" class="text-sm text-text-secondary">
+      {{
+        t(
+          document.state === 'ready'
+            ? 'reader.unretained'
+            : 'reader.unavailable',
+        )
+      }}
     </p>
     <DocumentReader
       v-if="document.body !== null && document.media_type === 'text/markdown'"

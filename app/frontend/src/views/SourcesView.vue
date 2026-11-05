@@ -401,7 +401,10 @@ async function uploaded(version: Version) {
           v-if="recovery.error.value"
           :error="recovery.error.value"
         />
-        <SourceDocument :document="document.data.value" />
+        <SourceDocument
+          :document="document.data.value"
+          :versions="versions.data.value?.versions"
+        />
       </template>
     </ResourceState>
     <SourceUpload

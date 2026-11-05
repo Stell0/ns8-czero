@@ -4,6 +4,7 @@ from collections import Counter
 from urllib.parse import urlencode
 from uuid import UUID
 from pathlib import Path
+import pytest
 from playwright.sync_api import expect
 from czero_core.extraction import ExtractionError
 from czero_core.extraction_queue import ExtractionQueue,ExtractionPool
@@ -129,7 +130,8 @@ def test_source_tools_reindex_retains_current_until_complete_and_retires_citatio
     assert retired.status_code==410 and retired.json()=={'detail':'content_superseded'}
 
 
-def test_source_failed_original_retry_and_queued_extraction_cancel(live,browser):
+@pytest.mark.parametrize('retain_original', [False, True])
+def test_source_failed_original_retry_and_queued_extraction_cancel(live,browser,retain_original):
     """Recovery buttons use actual revisions and retain Reader boundaries."""
     import os
     from sqlalchemy import text
@@ -140,12 +142,36 @@ def test_source_failed_original_retry_and_queued_extraction_cancel(live,browser)
     browser.context.add_cookies([{'name':'fixture_persona','value':'owner','url':live.origin}])
     browser.goto(live.origin+'/auth/login')
     response=live.rest.post('/api/v1/sources/upload',params=params,
-        data={'title':'Unreadable original','media_type':'text/plain','retain_original':'true'},
+        data={'title':'Unreadable original','media_type':'text/plain','retain_original':str(retain_original).lower()},
         files={'file':('invalid.txt',b'\xff\xfeinvalid')})
     assert response.status_code==202
     version=response.json()
     browser.goto(live.origin+'/sources/'+version['source_id']+'?'+urlencode(params))
     expect(browser.locator('main div[role=status]')).to_contain_text('Failed',timeout=15000)
+    # The API preserves failed staging for recovery, independently of the user's
+    # original-retention choice. Browser downloads honor that explicit choice.
+    original='/api/v1/source-versions/'+version['id']+'/original'
+    assert live.rest.get(original,params=params).status_code==200
+    for persona in ('reader','owner'):
+        browser.context.add_cookies([{'name':'fixture_persona','value':persona,'url':live.origin}])
+        browser.goto(live.origin+'/auth/login')
+        browser.goto(live.origin+'/sources/'+version['source_id']+'?'+urlencode(params))
+        expect(browser.locator('main div[role=status]')).to_contain_text('Failed')
+        link=browser.get_by_role('link',name='Download original',exact=True)
+        if retain_original and persona=='owner':
+            expect(link).to_be_visible()
+            response=browser.request.get(live.origin+link.get_attribute('href'))
+            assert response.status==200 and response.body()==b'\xff\xfeinvalid'
+        else:
+            expect(link).to_have_count(0)
+            expect(browser.get_by_text('The original file is unavailable.',exact=True)).to_be_visible()
+        expect(browser.get_by_role('article')).to_have_count(0)
+        if persona=='reader':
+            # Unpublished staging versions are private to writers, including
+            # retained originals. Never advertise a download the API denies.
+            assert browser.request.get(live.origin+original+'?'+urlencode(params)).status==404
+            expect(browser.get_by_role('button',name='Retry processing',exact=True)).to_have_count(0)
+            expect(browser.get_by_role('button',name='Upload replacement',exact=True)).to_have_count(0)
     expect(browser.get_by_role('article')).to_have_count(0)
     live.pause_worker()
     try:

@@ -41,6 +41,11 @@ Original retention is unchecked by default. Replacement processing never hides
 the published complete document. No source collector, agent runtime or schedule
 is added by visiting the website.
 
+Original download links honor explicit retention. Failed staging remains
+available to authorized API recovery without becoming a retained browser
+download; unpublished versions stay private to writers. Reader pages never
+advertise a staging download that the API denies.
+
 ## Acceptance matrix
 
 | Surface | Required proof |

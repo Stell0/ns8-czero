@@ -201,6 +201,7 @@ class NativeWebsite:
         self.run('Get Text','details[open]','contains',chunk['id'])
         self.accessible('sources','reader')
         self.goto('/sources/'+failed_id)
+        self.extracted('main div[role=status]','Failed')
         self.run('Get Element Count','[role="article"], main a:has-text("Download original")','==',0)
         self.run('Get Element Count',self.button('Retry processing','main'),'==',0)
         self.fresh();self.login();self.api('sources/'+source_id+'?expected_revision=2',method='DELETE')

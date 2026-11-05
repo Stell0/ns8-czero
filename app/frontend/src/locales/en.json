@@ -96,6 +96,7 @@
     "renderError": "Cannot render this document",
     "original": "Download original",
     "unretained": "The original was not retained. Download and reprocessing are unavailable.",
+    "unavailable": "The original file is unavailable.",
     "replacement": "A replacement is processing. The published document stays available until validation completes.",
     "citationId": "Citation ID",
     "contentHash": "Content hash"

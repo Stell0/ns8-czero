@@ -29,6 +29,7 @@ export interface Version {
   number: number
   state: string
   original_present: boolean
+  retain_original: boolean
   generation: number
   error_code: string | null
 }

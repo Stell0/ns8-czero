@@ -96,6 +96,7 @@
     "renderError": "Impossibile visualizzare il documento",
     "original": "Scarica originale",
     "unretained": "L’originale non è stato conservato. Download e rielaborazione non sono disponibili.",
+    "unavailable": "Il file originale non è disponibile.",
     "replacement": "Una sostituzione è in elaborazione. Il documento pubblicato resta disponibile fino al completamento della verifica.",
     "citationId": "ID citazione",
     "contentHash": "Hash del contenuto"
