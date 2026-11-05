@@ -110,6 +110,10 @@ export async function request<T>(
 
 export function errorKey(error: unknown) {
   if (error instanceof ApiError) {
+    if (
+      ['connection_request_unavailable', 'invalid_consent'].includes(error.code)
+    )
+      return 'consent.unavailable'
     if (error.code === 'key_permissions') return 'account.keyPermissions'
     if (error.status === 410) return 'errors.superseded'
     if (error.status === 409) return 'errors.conflict'

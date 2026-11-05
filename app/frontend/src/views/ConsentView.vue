@@ -273,6 +273,9 @@ const submit = useMutation({
       </div>
     </form></ResourceState
   >
+  <RouterLink to="/agents" class="text-link">{{
+    t('consent.back')
+  }}</RouterLink>
   <NeModal
     :visible="!!reviewed"
     :title="t('admin.approve')"

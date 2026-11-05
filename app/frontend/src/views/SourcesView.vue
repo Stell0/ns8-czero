@@ -17,7 +17,7 @@ import {
   NeTableCell,
 } from '@nethesis/vue-components'
 import { ReplayIdentity } from '../api/replay'
-import { request } from '../api/client'
+import { ApiError, request } from '../api/client'
 import {
   knowledge,
   type FullDocument,
@@ -69,8 +69,18 @@ function search() {
 const document = useResource(
   () =>
     `document:${id.value}:${route.query.version || ''}:${route.query.reference || ''}:${route.query.revision_id || ''}`,
-  async () =>
-    route.query.reference === 'document'
+  async () => {
+    const { reference, version, revision_id: revision } = route.query
+    const selectors = [reference, version, revision].filter(
+      (value) => value !== undefined,
+    )
+    if (
+      selectors.length > 1 ||
+      selectors.some((value) => typeof value !== 'string' || !value) ||
+      (reference !== undefined && reference !== 'document')
+    )
+      throw new ApiError(422)
+    return reference === 'document'
       ? request<FullDocument>(
           `source-versions/${(await request<{ data: { version_id: string } }>(`references/document/${encodeURIComponent(id.value)}`)).data.version_id}/full-document`,
         )
@@ -83,7 +93,8 @@ const document = useResource(
             typeof route.query.revision_id === 'string'
               ? route.query.revision_id
               : undefined,
-          ),
+          )
+  },
   () => !!id.value,
 )
 const sourceId = computed(() =>

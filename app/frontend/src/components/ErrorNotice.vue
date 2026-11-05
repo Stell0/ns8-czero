@@ -7,6 +7,7 @@ const { t } = useI18n()
 </script>
 <template>
   <NeInlineNotification
+    role="alert"
     kind="error"
     :title="t('errors.title')"
     :description="t(errorKey(error))"

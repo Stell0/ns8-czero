@@ -229,6 +229,8 @@
     "rules": "Working with C0"
   },
   "consent": {
+    "unavailable": "This connection request is unavailable or expired. Start Connect again in your assistant, then review the new request.",
+    "back": "Back to setup",
     "title": "Authorize application",
     "authorize": "Authorize",
     "deny": "Deny",

@@ -22,13 +22,12 @@ const list = useResource(
 )
 const page = useResource(
   () => `page:${id.value}:${route.query.revision || ''}`,
-  () =>
-    knowledge.page(
-      id.value,
-      typeof route.query.revision === 'string'
-        ? route.query.revision
-        : undefined,
-    ),
+  () => {
+    const revision = route.query.revision
+    if (revision !== undefined && (typeof revision !== 'string' || !revision))
+      throw new ApiError(422)
+    return knowledge.page(id.value, revision)
+  },
   () => !!id.value,
 )
 const factsOffset = computed(() =>

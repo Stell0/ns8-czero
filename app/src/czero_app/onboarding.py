@@ -37,7 +37,9 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
             if not request.cookies.get('c0_session'):
                 return RedirectResponse('/auth/login', status_code=302,
                     headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
-        return app.state.website.render()
+        response = app.state.website.render()
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
 
     @app.post('/oauth/connect/request', include_in_schema=False)
     def submit(request: Request, context=Depends(write_context)):

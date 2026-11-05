@@ -247,3 +247,51 @@ test('mobile navigation returns keyboard focus to its trigger', async ({
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(trigger).toBeFocused()
 })
+
+test('an expired connection explains how to restart setup', async ({
+  page,
+}) => {
+  await api(page)
+  await page.route('**/oauth/connect/request', (route) =>
+    route.fulfill({
+      status: 410,
+      json: { detail: 'connection_request_unavailable' },
+    }),
+  )
+  await page.goto('/oauth/connect')
+  await expect(page.getByRole('alert')).toContainText(
+    'Start Connect again in your assistant',
+  )
+  await expect(
+    page.getByRole('link', { name: 'Back to setup', exact: true }),
+  ).toHaveAttribute('href', '/agents')
+  await expect(page.locator('main')).not.toContainText(
+    'evidence has been superseded',
+  )
+})
+
+test('ambiguous exact evidence selectors never fetch current content', async ({
+  page,
+}) => {
+  await api(page)
+  const bodies: string[] = []
+  page.on('request', (request) => {
+    if (
+      /\/api\/v1\/(wiki\/pages\/|source-documents\/|source-versions\/)/.test(
+        request.url(),
+      )
+    )
+      bodies.push(request.url())
+  })
+  for (const route of [
+    `/wiki/${article}?revision=1&revision=2`,
+    `/wiki/${article}?revision=`,
+    `/sources/${source}?version=${version}&version=${version}`,
+    `/sources/${source}?revision_id=${version}&version=${version}`,
+  ]) {
+    await page.goto(route)
+    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.getByRole('article')).toHaveCount(0)
+  }
+  expect(bodies).toEqual([])
+})
