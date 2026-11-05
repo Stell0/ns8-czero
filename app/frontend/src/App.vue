@@ -20,10 +20,19 @@ const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const menu = ref(false)
+function openMenu() {
+  document.getElementById('navigation-toggle')?.focus()
+  menu.value = true
+}
 async function closeMenu() {
+  const path = route.fullPath
   menu.value = false
   await nextTick()
-  document.getElementById('navigation-toggle')?.focus()
+  // Let the focus trap finish unmounting; navigation owns any new page focus.
+  requestAnimationFrame(() => {
+    if (!menu.value && route.fullPath === path)
+      document.getElementById('navigation-toggle')?.focus()
+  })
 }
 const query = ref('')
 const main = ref<HTMLElement>()
@@ -64,11 +73,13 @@ watch(
 watch(
   () => route.fullPath,
   async (to, from) => {
-    menu.value = false
     query.value = String(route.query.query || '')
-    if (to.split('#')[0] !== from.split('#')[0] && !route.hash) {
-      await nextTick()
-      main.value?.focus()
+    if (to.split('#')[0] !== from.split('#')[0]) {
+      menu.value = false
+      if (!route.hash) {
+        await nextTick()
+        main.value?.focus()
+      }
     }
   },
 )
@@ -165,7 +176,7 @@ function search() {
             kind="tertiary"
             :aria-expanded="menu"
             aria-controls="mobile-navigation"
-            @click="menu = true"
+            @click="openMenu"
             >{{ t('nav.menu') }}</NeButton
           >
         </div>

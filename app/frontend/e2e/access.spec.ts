@@ -33,6 +33,46 @@ async function access(page: Page) {
   )
 }
 
+test('long client names and details stay within the phone layout', async ({
+  page,
+}) => {
+  await api(page, 'admin')
+  const name = 'client' + 'abcdef0123456789'.repeat(10)
+  await page.route('**/oauth/clients', (route) =>
+    route.fulfill({
+      json: {
+        clients: [
+          {
+            client_id: 'fixture-client',
+            client_name: name,
+            allowed_scopes: ['c0:read'],
+            redirect_uris: ['https://client.example.test/callback'],
+            enabled: true,
+            revision: 1,
+          },
+        ],
+      },
+    }),
+  )
+  await page.route('**/oauth/cimd', (route) =>
+    route.fulfill({ json: { clients: [], enabled: false } }),
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/advanced')
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+  await page.locator('summary').click()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+})
+
 test('Reader and Editor never request administrator lists or expose controls', async ({
   page,
 }) => {

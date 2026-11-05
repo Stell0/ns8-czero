@@ -60,6 +60,7 @@
 @layer base {
   body {
     font-synthesis: none;
+    overflow-wrap: anywhere;
     @apply bg-elevation-0 text-text-primary font-sans font-normal;
   }
   h2,

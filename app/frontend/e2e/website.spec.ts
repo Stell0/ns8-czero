@@ -238,15 +238,31 @@ test('mobile navigation returns keyboard focus to its trigger', async ({
 }) => {
   await api(page)
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/wiki')
   const trigger = page.getByRole('button', { name: 'Navigation', exact: true })
-  await trigger.click()
-  await expect(
-    page.getByRole('dialog').getByRole('link', { name: 'Home', exact: true }),
-  ).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(trigger).toBeFocused()
+  for (const route of ['/wiki', '/search', '/sources']) {
+    await page.goto(route)
+    await page.locator('.skip-link').focus()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('main')).toBeFocused()
+    for (let repeat = 0; repeat < 3; repeat++) {
+      await trigger.click()
+      await expect(
+        page
+          .getByRole('dialog')
+          .getByRole('link', { name: 'Home', exact: true }),
+      ).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+    }
+    await trigger.click()
+    await page
+      .getByRole('dialog')
+      .getByRole('link', { name: 'Home', exact: true })
+      .click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.locator('main')).toBeFocused()
+  }
 })
 
 test('an expired connection explains how to restart setup', async ({

@@ -56,6 +56,8 @@ def test_vue_native_signin_form_and_owner_key_lifecycle(live,vue_browser):
     page.goto(live.origin+'/account')
     page.get_by_role('button',name='Create API key',exact=True).click()
     dialog=page.get_by_role('dialog')
+    from test_nebula_theme import assert_accessibility
+    assert_accessibility(page)
     dialog.get_by_role('textbox',name='Name',exact=True).fill('Disposable workflow')
     dialog.get_by_role('checkbox',name='Shared',exact=True).check()
     dialog.get_by_role('button',name='Create API key',exact=True).click()
@@ -65,6 +67,8 @@ def test_vue_native_signin_form_and_owner_key_lifecycle(live,vue_browser):
     assert live.rest.get('/api/v1/me',headers={'Authorization':'Bearer '+key}).status_code==200
     page.get_by_role('button',name='I saved the key',exact=True).click()
     expect(page.get_by_role('textbox',name='Copy this key now. It will not be shown again.',exact=True)).to_have_count(0)
+    expect(page.get_by_role('button',name='Revoke API key',exact=True)).to_be_visible()
+    assert_accessibility(page)
     page.get_by_role('button',name='Revoke API key',exact=True).click()
     page.get_by_role('dialog').get_by_role('button',name='Revoke API key',exact=True).click()
     expect(page.get_by_role('dialog')).to_have_count(0)

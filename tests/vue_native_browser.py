@@ -422,13 +422,14 @@ class NativeWebsite:
 
     def keys(self, role):
         self.click('Create API key');self.fill('Name','Native disposable key')
-        self.accessible('account',role)
         self.checked('Shared');self.click('Create API key','[role="dialog"] ')
         secret_control=self.role('textbox','Copy this key now. It will not be shown again.')
         self.run('Wait For Elements State',secret_control,'visible','timeout=30s')
         secret=self.browser.get_property(secret_control,'value');assert secret.startswith('c0k_')
         self.click('I saved the key')
         self.run('Get Element Count',secret_control,'==',0)
+        self.run('Wait For Elements State',self.button('Revoke API key'),'visible','timeout=30s')
+        self.accessible('account',role)
         # The one-time secret stays in this private Python frame, never a Robot argument.
         check='async () => (await fetch("/api/v1/me", {headers:{Authorization:"Bearer "+'+json.dumps(secret)+'}})).status'
         assert self.browser.evaluate_javascript(None,check)==200

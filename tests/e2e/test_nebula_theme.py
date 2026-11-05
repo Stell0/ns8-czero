@@ -94,7 +94,9 @@ def test_nebula_admin_keyboard_and_nested_skip_links(live,browser):
                 browser.goto(url)
                 expect(browser.locator('header').get_by_role('button',name=re.compile(r'^Knowledge space '))).to_be_visible()
                 expect(browser.locator('h1')).to_be_visible()
-                check_layout(browser,'en',theme,width)
-                browser.locator('.skip-link').focus();browser.keyboard.press('Enter')
+                browser.locator('body').press('Tab')
+                expect(browser.locator('.skip-link')).to_be_focused()
+                browser.keyboard.press('Enter')
                 expect(browser.locator('main')).to_be_focused()
                 assert browser.url==url+'#main'
+                check_layout(browser,'en',theme,width)
