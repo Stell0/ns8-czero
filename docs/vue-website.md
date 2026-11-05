@@ -109,25 +109,40 @@ runtime input or development skill. Native test helper code stays outside images
 
 ## Development evidence
 
-Original `b317619` passes 2775 backend/database/packaging cases in a fresh
-disposable database with English/Italian OCR. Frozen npm installation, lint,
-formatting, types, 27 Vitest cases, production build and production dependency
-audit pass. All 10 controlled browser cases and 1038 Python unit cases pass.
-The full HTTPS browser run passes 32 of 33 cases; the crawl case encounters an
-MCP timeout and then passes independently. A further actual failed-original
-retry and queued-extraction cancellation case passes. These separate results
-do not claim a complete final-source browser acceptance.
+Original `b317619` passes 2,775 backend/database/packaging cases in a fresh
+disposable database with English/Italian OCR. Reviewed source
+`172b31901076dbf2082c98544cb250a8b3ddbb99` passes [full acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42096335384):
+2,799 backend/database/packaging cases, 39 actual HTTPS browser cases, frozen npm
+installation, lint/format/types, 28 Vitest cases, 17 controlled browser cases and
+production build. English/Italian have 260 matching keys. All 27 Node tests,
+schema/shell checks and 21 Robot dry runs pass; the actual native workflows
+independently pass as well.
 
-The built runtime passes the closed asset/license inventory and immutable
-released-Core probe. Slim-runtime checks expose missing system WOFF2 MIME
-information; the server now supplies explicit JS/CSS/font content types.
-Earlier candidate runs also expose a duplicate Python test name, version
-constant mismatch and stale legacy harness expectations. Their logs and images
-remain private and preserved; they do not count as candidate acceptance.
+Independent artifact grading verifies Debian upgrade 21 passed and Rocky
+installation 26 passed/three expected skips, eight browser workflows, 30 numeric
+accessibility contexts, ten access phases, eight privacy guards and five
+scan/report pairs. Three OAuth-query artifacts contain zero candidates. Reader,
+Editor and Admin API-key revocation proves both saved state and HTTP 401 readback.
+The actual published image passes the closed runtime/license inventory, released
+Core Git/schema identity and compiled HTTP asset/font/CSP/route probes.
 
-Complete final-source candidate checks, a final packaged image and full
-Debian/Rocky native acceptance remain required on the draft upstream candidate.
-Schema/shell/documentation checks, 27 native UI/controller checks and 21 non-UI
-Robot dry runs pass. The real native workflows remain mandatory; dry runs do
-not establish their acceptance. Final source and acceptance results belong
-here and in PLAN before promotion.
+PR75 regularly merges as `c011a0b9b9eb57b9a0f545f21e129e8732eb65e4`. Actual
+[merged-main full acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42106339803)
+passes the same complete local/native suites, independent artifact/image audits,
+current-source full promotion and canonical publication. Six fresh registry reads
+verify the three images' main/latest aliases and source labels. Exact immutable
+tags/digests are recorded in [PLAN](../PLAN.md#vue-3-website-remake--source-and-publication-accepted).
+
+Failed evidence remains private and preserved. Earlier runs exposed missing WOFF2
+MIME metadata in slim images, stale native selectors, initial filter events that
+rewrote focus/pagination, premature dialog completion, search details remounts
+and failed staging downloads advertised without accessible retained originals.
+Negative controls reproduce the dialog, filter and retention failures; corrected
+regressions pass. Eight actual failed-source English/Italian, light/dark and
+desktop/phone contexts verify translated status, keyboard access and download
+visibility. Failed candidates and separate targeted passes are not represented
+as complete acceptance. No frozen run or image was removed.
+
+App 0.59.0 retains Core 0.38.0/schema 0032. This is source/publication acceptance;
+the installed app0.57 baseline remains unchanged. No live upgrade, stable module
+release, Core publication or external schedule is included.

@@ -187,6 +187,11 @@ form and escaped inert boot data. Website routes have no legacy aliases.
 Run frontend checks, real `tests/e2e` browser workflows and affected native
 workflows. This rewrite requires full Debian/Rocky acceptance; a component build
 or mock API test alone is insufficient. See [the contract](docs/vue-website.md).
+PR75's app0.59/Core0.38/schema0032 source and actual main `c011a0b`
+pass full/native/artifact/promotion and canonical publication. Preserve the exact
+[accepted image identities](PLAN.md#vue-3-website-remake--source-and-publication-accepted).
+The installed app0.57 baseline remains unchanged; live updates need explicit
+authorization and their own acceptance.
 
 ## Contracts to preserve
 
@@ -758,9 +763,11 @@ Released consumer `00ffd370c0f9c9241eed26c91d7725078cea86e7` passes
 full/native41840958720, independent artifact grading and exact-source full
 promotion; PR73 regularly merges as `1a92b7aebbec3c5ad217f03e84f2b57a250f9d18`.
 Actual merged-main41851447750 passes full/native, independent artifact grading,
-canonical publication and six registry identity reads. Its separate promotion
-verifier rejects an optional skipped screenshot job; preserve that failed check
-and resolve it before selecting main for release/deployment. The exact consumer
+canonical publication and six registry identity reads. Preserve its original
+promotion-verifier failure on an optional skipped screenshot publisher. PR75
+corrects selection to require both actual native suites exactly once; 155 policy
+checks, including 12 new regressions, and the corrected historical main full
+command pass. Current-source promotion remains mandatory. The exact consumer
 candidate's full promotion check passes. Preserve immutable runtime identities
 in PLAN; documentation commits do not replace them. The installed
 app0.57/Core0.37/schema0030 baseline is unchanged.

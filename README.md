@@ -386,8 +386,8 @@ record the approved dedicated-instance update, retained sessions/data/connection
 real-provider remembered sign-in and successful manager restart. Existing logins
 remain ordinary; choose the option at your next sign-in to remember that device.
 
-The full-document Knowledge Explorer candidate on `feat/full-document-explorer`
-adds All knowledge, Articles and Sources. Imported Markdown opens as a complete
+Earlier full-document Knowledge Explorer work on `feat/full-document-explorer`
+added All knowledge, Articles and Sources. Imported Markdown opens as a complete
 formatted article with a table of contents, provenance and current content.
 Verified multipart originals appear as one document; Wiki pages remain separate.
 See [full-document contracts, limits and browser instructions](docs/full-documents.md).
@@ -398,12 +398,14 @@ gates. That app generation adopts its released Git tag and frozen lock. Developm
 includes 2,320 Core cases, 2,322 released-Core consumer cases, 207 controller
 cases and six real Playwright workflows
 using HTTPS, PostgreSQL and a standalone extraction worker. Final application
-consumer/native acceptance is recorded in the PR checks and PLAN. This candidate
-has not been merged or deployed; the accepted production image trio is unchanged.
+consumer/native acceptance is recorded in the PR checks and PLAN. At that
+checkpoint, the candidate was not yet merged or deployed and the accepted
+production image trio was unchanged.
 
-The reference knowledge website uses Nebula's Poppins typography, semantic
-light/dark colors and responsive navigation while retaining its local HTML/JavaScript
-reader stack. It follows the device's color preference; fonts ship with the app
-and require no external font service. Native NS8 settings continue to use Carbon.
-The redesign candidate preserves existing space, permission and editing flows;
-source acceptance and deployment remain subject to the recorded CI gates.
+The reference knowledge website uses Vue 3 and Nebula with English/Italian,
+light/dark/system themes and responsive navigation. Local Poppins fonts and
+compiled assets require no external service. Knowledge views are read-only;
+authorized source upload/replacement/recovery, account and administration remain
+available. Assistants retain existing REST/MCP knowledge operations. Native NS8
+settings remain Vue 2/Carbon. [Source and publication acceptance](PLAN.md#vue-3-website-remake--source-and-publication-accepted)
+records the exact tests and immutable images; the live installation is unchanged.
