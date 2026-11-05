@@ -40,7 +40,7 @@ def test_exact_recovery_helpers_keep_null_expiry_and_reject_previous_native_bind
         sessions=SessionService(f['access'],native,authority=authority,now=lambda:f['current'][0])
         provider=SimpleNamespace(config=OidcConfig(f['access'].issuer,native,secret,'https://c0.example.test'),close=lambda:None)
         auth=AppAuth(f['access'],sessions,provider)
-        app=create_app('czero901',root/'app/static','',f['database'],auth=auth)
+        app=create_app('czero901',root/'app/frontend/dist','',f['database'],auth=auth)
         app.state.delegated_grants._now=lambda:f['current'][0]
         http=TestClient(app,base_url='https://c0.example.test');opened.append(http)
         cookie=sessions.create(f['identity'],renewal=RenewalResult(f['identity'],'offline-fixture',offline=True),

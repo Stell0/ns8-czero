@@ -29,8 +29,9 @@ def test_signed_discovery_and_direct_operations_match_rest_and_recheck_roles(app
             assert anonymous.json()['interfaces']['mcp'] is True
             assert anonymous.json()['mcp_url'] == ORIGIN + '/mcp'
             assert anonymous.json()['oauth']['authorization_server'] == ORIGIN + '/oauth'
-            assert (await client.get('/agents?view=tools')).text.count('Remote MCP Streamable HTTP is available') == 1
-            assert 'data-copy-target="agent-mcp-url"' in (await client.get('/agents')).text
+            connection=(await client.get('/agents/connection.json')).json()
+            assert connection['available'] is True and connection['mcp_url']==ORIGIN+'/mcp'
+            assert 'id="app"' in (await client.get('/agents')).text
             assert (await client.get('/agents/capabilities.json', headers={'Authorization':'Bearer invalid'})).status_code == 401
             client.headers['Authorization'] = 'Bearer ' + owner_token
             try:

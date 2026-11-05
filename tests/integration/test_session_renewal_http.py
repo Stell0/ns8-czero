@@ -104,7 +104,7 @@ def renewing_app(monkeypatch, request):
     auth = AppAuth.from_env(database, '')
     assert auth is not None and auth.sessions.authority is not None
     auth.sessions._now = auth.sessions.authority._now = lambda:clock[0]
-    app = create_app('czero901', Path(__file__).resolve().parents[2]/'app/static', '', database, auth=auth)
+    app = create_app('czero901', Path(__file__).resolve().parents[2]/'app/frontend/dist', '', database, auth=auth)
     app.state.delegated_grants._now = app.state.oauth_consent._now = lambda:clock[0]
     actor = auth.access.resolve(VerifiedIdentity(issuer,'owner',str(owner),'owner','Owner',clock[0]+300))
     saved = app.state.oauth_clients.register(actor, 'Renewable HTTP '+uuid4().hex, [CALLBACK], scopes=['c0:read','c0:write'])

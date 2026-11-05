@@ -18,7 +18,7 @@ DOCS = frozenset({
     'docs/m14-release-notes.md', 'docs/retrieval-benchmark.md',
     'docs/installation-candidate.md', 'docs/index.md', 'docs/user-guide.md', 'docs/administration.md',
     'docs/chatgpt.md', 'docs/plugin.md', 'docs/development.md',
-    'docs/reference.md', 'docs/release-readiness.md', 'docs/tool-evaluations.md',
+    'docs/reference.md', 'docs/vue-website.md', 'docs/release-readiness.md', 'docs/tool-evaluations.md',
     'docs/history/README.md', 'docs/history/AGENTS.md', 'docs/history/PLAN.md',
     '.agents/references/development.md',
     *('.agents/skills/'+name+'/SKILL.md' for name in (
@@ -31,10 +31,9 @@ POLICY_VERSION = 2
 # Authentication/admin pages, executable application code, vendors and all unknown
 # paths deliberately stay native-required. File additions/deletions/modes broaden.
 OPTIONAL_NATIVE_UI = frozenset({
-    'app/static/app.css', 'app/static/wiki.html', 'app/static/sources.html',
-    'app/static/search.html', 'app/static/projects.html',
+    'app/frontend/src/style.css',
 })
-FAST_TESTS = ['app/tests/test_app.py', 'packages/czero-core/tests', 'tests/unit']
+FAST_TESTS = ['app/tests/test_app.py', 'app/tests/test_compiled_website.py', 'packages/czero-core/tests', 'tests/unit']
 APP_TESTS = {
     'sources.py': ['tests/integration/test_sources_http.py', 'tests/integration/test_source_text_http.py'],
     'knowledge.py': ['tests/integration/test_knowledge_http.py', 'tests/integration/test_wiki_memory_http.py'],

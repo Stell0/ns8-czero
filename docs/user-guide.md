@@ -38,12 +38,16 @@ The assistant should ask when the target or intended change is ambiguous. Retrie
 
 ## Read complete original documents
 
-Open **Knowledge** and choose **All knowledge**, **Articles**, or **Sources**.
-Articles are authored Wiki knowledge. Sources are imported original evidence;
-importing a document does not create a duplicate Wiki article. Sources group by
-explicit product/version/path metadata where available; older documents appear
-under Other sources. Each page loads a bounded set of titles; use Next/Previous
-for additional sources. Navigation does not download their document bodies.
+Use **Home** for search and available Wiki sections, **Wiki** for the article tree,
+and **Sources** for the searchable source library. Importing a document does not
+create a duplicate Wiki article. Use Next/Previous for additional sources and
+Load more for additional Wiki titles. Browsing titles does not download bodies.
+**Projects** shows the selected protected project; **Explore** contains entities,
+claims, relationships, annotations and structured records.
+
+Account offers English/Italian and light/dark/system preferences. The selected
+space and search filters stay in the URL, including direct links and browser
+Back/Forward navigation.
 
 Click a source title to read the complete retained document. Markdown headings,
 lists, tables and code render safely; use **On this page** to navigate headings.
@@ -57,13 +61,25 @@ open as one document. An incomplete import cannot replace the last verified
 snapshot. Search opens the containing full document and identifies its exact
 cited passage; expired exact links report unavailable evidence without rebinding it.
 
-## Edit and upload
+## Upload sources and maintain knowledge
 
-Authorized edits publish immediately and retain only current content. There is no separate approval queue. Open Tools on the relevant page for manual editing. New article slugs such as `product/install` form the navigation tree; existing slugs are fixed.
+The website reads knowledge. It has no Wiki, entity, claim, annotation or record
+creation, editing, archive or deletion forms. Authorized assistants and REST
+clients maintain those resources. Authorized Wiki changes publish immediately
+and retain only current content. Article slugs such as `product/install` form
+the navigation tree; existing slugs are fixed.
+
+Editors can use **Sources → Upload source** for TXT, Markdown, PDF or DOCX, with
+a title and optional provenance. **Retain the original file** starts unchecked.
+Original download and reprocessing require retention. On a source, **Upload
+replacement** keeps its current complete document readable while extraction and
+whole-document validation run. **Reprocess original**, **Retry processing** and
+**Cancel processing** appear when supported and authorized. Reload only refreshes
+the displayed state. External collectors remain assistant/script workflows.
 
 Before changing a page, read its current revision. A conflict means another change occurred: reload, reconcile both observations and retry with the new revision. An unchanged request with an idempotency key keeps that key after an uncertain reply. Not every mutation has replay protection; inspect saved results before repeating an ordinary create.
 
-Editors can ingest selected plain text/Markdown through MCP, up to 128 KiB of UTF-8 bytes. Files use Source tools or the multipart REST upload interface, not an MCP file-upload tool. Wait for successful extraction and inspect actual chunks before citing newly submitted evidence.
+Editors can ingest selected plain text/Markdown through MCP, up to 128 KiB of UTF-8 bytes. Files use Sources or the multipart REST upload interface, not an MCP file-upload tool. Wait for successful extraction and inspect actual chunks before citing newly submitted evidence.
 
 Keep secrets, unrelated personal information and unselected private conversation out of stored material. See the [interface reference](reference.md) for exact limits and the [administrator guide](administration.md) for access, revocation and recovery.
 
@@ -72,16 +88,16 @@ Keep secrets, unrelated personal information and unselected private conversation
 Use your owner/Editor account and choose the intended authorized space. This small example creates visible test knowledge, so use an owned space and a unique slug if the example already exists.
 
 1. Create a local UTF-8 text file named `c0-first-read.txt` containing only: `The demonstration gauge limit is 37 kilopascals. This is synthetic onboarding data.`
-2. Open **Tools → Upload and manage sources**, expand **Upload document**, select that file, give the source a recognizable title and upload. Keep the original if you want to test downloading it. Wait for successful extraction; an accepted upload alone is insufficient.
+2. Open **Sources → Upload source**, select that file, give the source a recognizable title and upload. Opt into retention if you want to test downloading it. Wait for successful extraction; an accepted upload alone is insufficient.
 3. Browse the saved source, select its extracted document and read the passage. Retain its source/version/document/chunk identity or copy the source reader's link. Stop and inspect the fixed error/status if extraction fails.
-4. Open **Tools → Articles and knowledge model → New page**. Use slug `quickstart/first-read`, title `First C0 read`, and Markdown describing the synthetic 37-kilopascal observation with a link to that original source. Save, then open the normal article reader and check the saved result. A normal Markdown link is a navigational reference; it does not create a structured sourced claim.
+4. Ask an authorized assistant to create a Wiki page in this same space with slug `quickstart/first-read`, title `First C0 read`, and Markdown describing the synthetic 37-kilopascal observation with a link to that original source. Have it read back the saved revision, then open Wiki and check the article. A normal Markdown link is a navigational reference; it does not create a structured sourced claim.
 5. After [connecting ChatGPT](chatgpt.md), ask it to read that article, find the original demonstration-gauge passage in the same space and cite its immutable evidence. Make no changes. Confirm the answer says that this is synthetic data and includes the actual source identity.
 
-For a maintenance test, explicitly request one small edit to this owned page after the Admin approves write scope and you consent. Read it back and check its new revision/history. A Reader connection should explain denial and leave content unchanged. Keep the fixture available for repeat/renewal tests; archive the test page through its normal controls when finished rather than deleting retained evidence.
+For a maintenance test, explicitly request one small edit to this owned page after the Admin approves write scope and you consent. Read it back and check its new current revision. A Reader connection should explain denial and leave content unchanged. Keep the fixture available for repeat/renewal tests; ask the authorized assistant to archive the test page when finished.
 
 Administrators use [Workspace access](workspace-access.md) for people, application requests and individual connections. Application approval does not give a user extra permissions; they must still consent.
 
-## Remember this device (upcoming candidate)
+## Remember this device
 
 Website sign-in offers an unchecked **Remember this device** option. Select it
 only on a device you trust. Once your sign-in provider authorizes remembered

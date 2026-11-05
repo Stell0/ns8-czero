@@ -10,6 +10,7 @@ import pytest
 def test_image_audit_rejects_extension_build_sources(tmp_path, monkeypatch, suffix):
     module = runpy.run_path(str(Path(__file__).parents[1] / 'audit_runtime.py'))
     monkeypatch.setattr(module['importlib'].util, 'find_spec', lambda name: None)
+    website_fixture(tmp_path / 'frontend')
     (tmp_path / ('extension' + suffix)).write_text('build-only')
     with pytest.raises(SystemExit, match='Development files'):
         module['audit'](tmp_path)
@@ -36,6 +37,7 @@ def test_image_audit_requires_declared_core_license(tmp_path,state):
 def test_product_workflows_are_a_closed_runtime_allowlist(tmp_path, monkeypatch, change):
     module = runpy.run_path(str(Path(__file__).parents[1] / 'audit_runtime.py'))
     monkeypatch.setattr(module['importlib'].util, 'find_spec', lambda name: None)
+    website_fixture(tmp_path / 'frontend')
     source = Path(__file__).parents[2] / 'plugins/c0-knowledge'
     product = tmp_path / 'agent-packages'
     paths = ['plugin.json', 'memory-skill.md', 'LICENSE',
@@ -62,3 +64,40 @@ def test_product_workflows_are_a_closed_runtime_allowlist(tmp_path, monkeypatch,
     else:
         with pytest.raises(SystemExit, match='allowlist|Development files'):
             module['audit'](tmp_path)
+
+
+@pytest.mark.parametrize('change', ['valid', 'missing', 'source', 'traversal', 'symlink'])
+def test_compiled_website_inventory_is_closed(tmp_path, change):
+    import json
+    module=runpy.run_path(str(Path(__file__).parents[1]/'audit_runtime.py'))
+    root=tmp_path/'frontend'
+    manifest=website_fixture(root)
+    if change=='missing':(root/'vendor/poppins-LICENSE').unlink()
+    elif change=='source':(root/'assets/App.vue').write_text('<template>source</template>')
+    elif change=='traversal':manifest['index.html']['file']='../unexpected.js'
+    elif change=='symlink':
+        (root/'assets/index-fixture.js').unlink()
+        (root/'assets/index-fixture.js').symlink_to(root/'index.html')
+    (root/'.vite/manifest.json').write_text(json.dumps(manifest))
+    if change=='valid':module['audit_website'](root)
+    else:
+        with pytest.raises(SystemExit,match='allowlist'):module['audit_website'](root)
+
+
+def website_fixture(root):
+    import json
+    paths=['index.html','.vite/manifest.json','markdown-worker.js','vendor/markdown-it-15.0.2.min.js',
+           'vendor/markdown-it-LICENSE','vendor/poppins-LICENSE','vendor/poppins-latin-400-normal.woff2',
+           'vendor/poppins-latin-500-normal.woff2','vendor/third-party-notices.txt','assets/index-fixture.js','assets/index-fixture.css']
+    for name in paths:
+        path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('fixture')
+    manifest={'index.html':{'file':'assets/index-fixture.js','isEntry':True,'css':['assets/index-fixture.css']}}
+    (root/'.vite/manifest.json').write_text(json.dumps(manifest))
+    return manifest
+
+
+def test_runtime_requires_compiled_website(tmp_path, monkeypatch):
+    module=runpy.run_path(str(Path(__file__).parents[1]/'audit_runtime.py'))
+    monkeypatch.setattr(module['importlib'].util, 'find_spec', lambda name: None)
+    with pytest.raises(SystemExit,match='Compiled website assets are missing'):
+        module['audit'](tmp_path)

@@ -330,8 +330,7 @@ def test_broad_feedback_rejects_a_syntax_error_in_the_second_shell_file(tmp_path
 
 
 @pytest.mark.parametrize('path', [
-    'app/static/app.css', 'app/static/wiki.html', 'app/static/sources.html',
-    'app/static/search.html', 'app/static/projects.html', 'ui/src/assets/theme.scss',
+    'app/frontend/src/style.css', 'ui/src/assets/theme.scss',
     'tests/ui/test_navigation.cjs', 'tests/e2e/test_nebula_theme.py',
 ])
 def test_presentation_changes_can_merge_after_fast_checks(path):
@@ -351,7 +350,9 @@ def test_presentation_changes_can_merge_after_fast_checks(path):
 @pytest.mark.parametrize('path', [
     'imageroot/actions/configure-module/80start_services', 'ui/src/views/Settings.vue',
     'containers/czero-app/Containerfile', 'build-images.sh', 'app/uv.lock',
-    'ui/package.json', 'ui/yarn.lock', 'app/static/vendor/new-font.woff2',
+    'ui/package.json', 'ui/yarn.lock', 'app/frontend/public/vendor/new-font.woff2',
+    'app/frontend/package-lock.json', 'app/frontend/vite.config.ts',
+    'app/frontend/src/views/WikiView.vue', 'app/frontend/src/App.vue',
     'packages/czero-core/src/czero_core/migrations/versions/0024.py',
     'app/src/czero_app/auth.py', 'app/static/auth.js', 'app/static/consent.html',
     'app/static/connect.js', 'app/static/workspace-access.js', 'app/static/admin.html',
@@ -360,7 +361,7 @@ def test_presentation_changes_can_merge_after_fast_checks(path):
 ])
 def test_sensitive_or_uncertain_change_cannot_hide_in_a_ui_diff(path):
     p = policy()
-    selection = p['classify']([change('app/static/app.css'), change(path)])
+    selection = p['classify']([change('app/frontend/src/style.css'), change(path)])
     assert selection['native_required'] is True
     for draft in (False, True):
         assert p['validation_mode']('runtime', selection['feedback'], 'pull_request', draft,
@@ -372,12 +373,12 @@ def test_sensitive_or_uncertain_change_cannot_hide_in_a_ui_diff(path):
 
 
 @pytest.mark.parametrize('record', [
-    change('app/static/app.css', 'A', old_mode='000000'),
-    change('app/static/app.css', 'D', mode='000000'),
+    change('app/frontend/src/style.css', 'A', old_mode='000000'),
+    change('app/frontend/src/style.css', 'D', mode='000000'),
     change('app/static/wiki.html', 'R100', old='app/static/consent.html'),
     change('app/static/wiki.html', 'R100', old='app/static/search.html'),
-    change('app/static/app.css', mode='100755'),
-    change('app/static/app.css', mode='120000'),
+    change('app/frontend/src/style.css', mode='100755'),
+    change('app/frontend/src/style.css', mode='120000'),
 ])
 def test_presentation_addition_deletion_rename_and_mode_require_native(record):
     assert policy()['classify']([record])['native_required'] is True
@@ -446,10 +447,10 @@ def test_fast_runner_remains_bounded_for_broad_changes(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('path,event,ref,expected', [
-    ('app/static/app.css','pull_request','refs/pull/14/merge','fast'),
+    ('app/frontend/src/style.css','pull_request','refs/pull/14/merge','fast'),
     ('app/static/consent.html','pull_request','refs/pull/14/merge','full'),
     ('README.md','pull_request','refs/pull/14/merge','docs'),
-    ('app/static/app.css','workflow_dispatch','refs/heads/ui','full'),
+    ('app/frontend/src/style.css','workflow_dispatch','refs/heads/ui','full'),
     ('README.md','push','refs/tags/0.58.0','full'),
 ])
 def test_event_selection_binds_risk_and_forces_manual_and_release_native(tmp_path, monkeypatch, path,event,ref,expected):
@@ -498,10 +499,10 @@ def test_event_selection_binds_risk_and_forces_manual_and_release_native(tmp_pat
 
 
 @pytest.mark.parametrize('path,body,required', [
-    ('app/static/app.css', ':root { color: var(--ink); }', False),
-    ('app/static/app.css', '@import url("https://example.org/theme.css");', True),
-    ('app/static/app.css', '[hidden] { display: block; }', True),
-    ('app/static/wiki.html', '<h1>Knowledge</h1>', False),
+    ('app/frontend/src/style.css', ':root { color: var(--ink); }', False),
+    ('app/frontend/src/style.css', '@import url("https://example.org/theme.css");', True),
+    ('app/frontend/src/style.css', '[hidden] { display: block; }', True),
+    ('app/frontend/src/views/WikiView.vue', '<template><h1>Knowledge</h1></template>', True),
     ('app/static/wiki.html', '<script src="./auth.js"></script>', True),
     ('app/static/wiki.html', '++<script src="./auth.js"></script>', True),
     ('app/static/wiki.html', '<link href="https://example.org/theme.css" rel="stylesheet">', True),
@@ -520,7 +521,8 @@ def test_ui_content_review_cannot_hide_dependencies_or_executable_wiring(tmp_pat
     git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','candidate')
     selected=policy()['classify_source'](base,git('rev-parse','HEAD'),cwd=tmp_path)
     assert selected['native_required'] is required
-    assert selected['native_reason']==('ui_behavior_or_dependency' if required else 'ui_allowlist')
+    expected_reason = 'risk_or_unknown' if path != 'app/frontend/src/style.css' else 'ui_behavior_or_dependency' if required else 'ui_allowlist'
+    assert selected['native_reason']==expected_reason
     # The content audit does not rewrite identities of already-frozen proofs.
     assert selected['diff_hash']==policy()['classify'](policy()['git_changes'](base,git('rev-parse','HEAD'),cwd=tmp_path))['diff_hash']
 
@@ -536,7 +538,7 @@ def test_fast_workflow_starts_no_database_or_browser_and_full_retains_them():
         'Install pinned disposable browser','Full document browser acceptance'}]
     assert len(browser_steps)==2
     assert all(step['if']=='${{ !inputs.feedback }}' for step in browser_steps)
-    assert policy()['FAST_TESTS']==['app/tests/test_app.py','packages/czero-core/tests','tests/unit']
+    assert policy()['FAST_TESTS']==['app/tests/test_app.py','app/tests/test_compiled_website.py','packages/czero-core/tests','tests/unit']
 
 
 def test_fast_runner_rejects_slow_or_incomplete_selection(tmp_path,monkeypatch):

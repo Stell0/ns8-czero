@@ -12,6 +12,13 @@ You can use C0 as your team's second brain, or fork it as the foundation of your
 
 [Use C0](#use-c0) · [Connect an assistant](#connect-your-ai-assistant) · [How it works](#how-c0-works) · [Build your own application](#fork-c0-and-build-your-own-application) · [Roadmap](PLAN.md)
 
+The reference website uses Vue 3 and Nebula, with English/Italian, responsive
+layouts and light/dark/system themes. Home, Wiki, Sources, Projects and Explore
+focus on reading knowledge. Authorized assistants maintain Wiki and structured
+knowledge; the website retains source upload/replacement/recovery, Account and
+Administration. Native NS8 settings remain Vue 2/Carbon. See the
+[website implementation and acceptance](docs/vue-website.md).
+
 ## What can C0 do for you?
 
 | You want to… | C0 gives you… |
@@ -66,7 +73,7 @@ Measurements, released-consumer acceptance and live deployment remain separate.
 1. Open your organization's C0 HTTPS address and sign in with your own account.
 2. Choose Shared or a protected space you have access to.
 3. Read the Wiki, browse Sources or search for what you need.
-4. If you have Write access, use the page's Tools or an authorized assistant to maintain it. Add supported files through Source tools, or ingest selected text through MCP.
+4. Ask an authorized assistant to maintain Wiki or structured knowledge. With Write access, add supported files through Sources, or ingest selected text through MCP.
 5. Read back saved changes and follow citations to the original evidence.
 
 New verified users normally receive **Read** access to Shared. An administrator can grant **Write** or **Manage**, give access to protected spaces, or persistently block a user. Application approval, a person's permissions and disconnecting one connection are separate controls. See [Workspace access](docs/workspace-access.md).

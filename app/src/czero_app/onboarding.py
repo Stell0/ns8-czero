@@ -6,7 +6,7 @@ import re
 
 from anyio import to_thread
 from fastapi import Depends, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from czero_core.client_onboarding import OnboardingRejected
@@ -26,7 +26,7 @@ class ConnectionScopes(BaseModel):
 
 
 def install_onboarding_routes(app, service, cimd, auth, read_context, write_context,
-                              browser_session, static_dir):
+                              browser_session):
     @app.get('/oauth/connect', include_in_schema=False)
     def page(request: Request):
         try:
@@ -37,12 +37,9 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
             if not request.cookies.get('c0_session'):
                 return RedirectResponse('/auth/login', status_code=302,
                     headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
-        return FileResponse(static_dir / 'connect.html', media_type='text/html',
-            headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
-
-    @app.get('/oauth/connect.js', include_in_schema=False)
-    def script():
-        return FileResponse(static_dir / 'connect.js', media_type='text/javascript')
+        response = app.state.website.render()
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
 
     @app.post('/oauth/connect/request', include_in_schema=False)
     def submit(request: Request, context=Depends(write_context)):

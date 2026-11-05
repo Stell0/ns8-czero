@@ -202,8 +202,8 @@ def test_rest_text_errors_limits_unicode_and_logs_do_not_echo_evidence(knowledge
             schema=(await http.get('/openapi.json')).json()
             error=schema['paths'][PATH]['post']['responses']['422']['content']['application/json']['schema']
             assert error['$ref'].endswith('/TextRequestError')
-            guide=(await http.get('/agents?view=tools')).text
-            assert 'sources_ingest_text' in guide and '128 KiB' in guide
+            guide=(await http.get('/agents/capabilities.json')).text
+            assert 'sources_ingest_text' in guide and '131072 UTF-8 bytes maximum' in guide
             # Existing endpoint validation retains its original contract.
             old=await http.post('/api/v1/source-versions/not-a-uuid/retry',json={'expected_generation':'invalid'})
             assert old.status_code==422 and isinstance(old.json()['detail'],list)

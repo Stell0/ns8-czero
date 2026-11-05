@@ -153,7 +153,8 @@ def test_handoff_policy_change_binding_and_expired_page_are_human_readable(cimd_
             registry.sync_policy(False); registry.sync_policy(True)
             assert (await user.post('/oauth/connect/request', json={}, headers=headers(profile))).status_code == 410
             page = await user.get('/oauth/connect')
-            assert page.status_code == 200 and 'Back to setup' in page.text
+            assert page.status_code == 200 and 'id="app"' in page.text
+            assert 'type="application/json">{}</script>' in page.text
             assert page.headers['cache-control'] == 'no-store' and page.headers['referrer-policy'] == 'no-referrer'
     asyncio.run(check())
 

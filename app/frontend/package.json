@@ -1,0 +1,54 @@
+{
+  "name": "c0-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit && vite build",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run format && npm run type-check && npm test && npm run build"
+  },
+  "dependencies": {
+    "vue": "3.5.43",
+    "vue-router": "4.5.1",
+    "pinia": "3.0.4",
+    "@pinia/colada": "1.4.7",
+    "axios": "1.20.0",
+    "vue-i18n": "11.4.14",
+    "valibot": "1.4.2",
+    "@vueuse/core": "13.9.0",
+    "@nethesis/vue-components": "3.15.1",
+    "@fortawesome/fontawesome-svg-core": "6.7.2",
+    "@fortawesome/free-solid-svg-icons": "6.7.2",
+    "@fortawesome/vue-fontawesome": "3.3.3"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "6.4.5",
+    "@vitejs/plugin-vue": "5.2.4",
+    "tailwindcss": "4.3.3",
+    "@tailwindcss/vite": "4.3.3",
+    "eslint": "9.39.5",
+    "eslint-plugin-vue": "10.12.0",
+    "@vue/eslint-config-typescript": "14.9.0",
+    "@vue/eslint-config-prettier": "10.2.0",
+    "prettier": "3.9.10",
+    "vue-tsc": "2.2.12",
+    "vitest": "4.1.12",
+    "@vue/test-utils": "2.5.1",
+    "jsdom": "26.1.0",
+    "@types/node": "24.13.6",
+    "@playwright/test": "1.63.0"
+  },
+  "license": "GPL-3.0-or-later"
+}

@@ -296,14 +296,14 @@ def test_metadata_cache_and_authority_survive_restart_and_missing_sso_revokes(ci
                 finally:
                     await fresh.fetcher.aclose()
                 monkeypatch.setenv('CZERO_CIMD_ENABLED', 'true')
-                restarted = create_app('czero900', Path(__file__).resolve().parents[2]/'app/static', '',
+                restarted = create_app('czero900', Path(__file__).resolve().parents[2]/'app/frontend/dist', '',
                     registry.access.database, auth=app.state.auth)
                 async with restarted.router.lifespan_context(restarted):
                     assert registry.enabled()
                     assert app.state.delegated_grants.verify(tokens['access_token'], resource=RESOURCE)
                 # Authentication is absent even though the native switch remains
                 # true. Startup still applies effective-off policy through DB.
-                without_sso = create_app('czero900', Path(__file__).resolve().parents[2]/'app/static', '', registry.access.database)
+                without_sso = create_app('czero900', Path(__file__).resolve().parents[2]/'app/frontend/dist', '', registry.access.database)
                 assert without_sso.state.auth is None
                 async with without_sso.router.lifespan_context(without_sso):
                     assert not registry.enabled()

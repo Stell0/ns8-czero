@@ -26,8 +26,9 @@ receive checks but cannot pass the merge gate.
 ## Merge acceptance
 
 The classifier's conservative presentation allowlist makes native acceptance
-optional for modifications to the shared website CSS, Wiki/Source/Search/Project
-reader templates and native CSS/SCSS assets, plus their browser/controller tests.
+optional for modifications to `app/frontend/src/style.css` and native CSS/SCSS
+assets, plus their browser/controller tests. Vue components contain executable
+code and require native acceptance even when an edit appears presentational.
 New/deleted/renamed presentation files and mode changes broaden validation.
 Changed script/form/identity wiring, hidden guards and CSS resource imports
 also require native acceptance, even inside an allowlisted presentation file.

@@ -80,9 +80,9 @@ def native(module,cookie,operation):
 
 def sign_in(browser,password):
     status,body,_=browser.request('/auth/sign-in');assert status==200
-    form=Form('website-sign-in');form.feed(body.decode());assert form.action
-    assert b'name="remember" value="yes"' in body and b' checked' not in body
-    status,body,url=browser.request(form.action,urlencode({**form.fields,'remember':'yes'}).encode(),'POST',
+    boot=json.loads(body.decode().split('<script id="c0-boot" type="application/json">')[1].split('</script>')[0])
+    assert boot['intent'] and set(boot)=={'intent','return_to'}
+    status,body,url=browser.request('/auth/sign-in',urlencode({**boot,'remember':'yes'}).encode(),'POST',
         {'Origin':browser.origin,'Content-Type':'application/x-www-form-urlencoded'})
     assert status==200
     form=Form('kc-form-login');form.feed(body.decode());assert form.action

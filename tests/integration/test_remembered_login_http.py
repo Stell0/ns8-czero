@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """First-party intents, signed offline issuance and successful-browser-only renewal."""
 import asyncio
-from html.parser import HTMLParser
+import json
 from urllib.parse import parse_qs, urlsplit
 
 from httpx import ASGITransport, AsyncClient
@@ -14,23 +14,14 @@ from test_auth_http import ORIGIN, application
 from czero_core.sessions import REMEMBER_SECONDS
 
 
-class SignInForm(HTMLParser):
-    def __init__(self):
-        super().__init__();self.intent=None;self.remember=None
-    def handle_starttag(self,tag,attrs):
-        attrs=dict(attrs)
-        if tag=='input' and attrs.get('name')=='intent':self.intent=attrs['value']
-        if tag=='input' and attrs.get('name')=='remember':self.remember=attrs
-
-
 async def form(client):
     page=await client.get('/auth/sign-in?remember=yes')
     assert page.status_code==200 and page.headers['cache-control']=='no-store'
     assert page.headers['referrer-policy']=='strict-origin'
-    parsed=SignInForm();parsed.feed(page.text)
-    assert parsed.intent and parsed.remember is not None and 'checked' not in parsed.remember
+    boot=json.loads(page.text.split('<script id="c0-boot" type="application/json">')[1].split('</script>')[0])
+    assert boot['intent'] and set(boot)=={'intent','return_to'}
     assert all(flag in page.headers['set-cookie'] for flag in ('Secure','HttpOnly','SameSite=lax','Max-Age=300'))
-    return {'intent':parsed.intent,'return_to':''}
+    return {'intent':boot['intent'],'return_to':''}
 
 
 async def remembered_login(client,state):
@@ -120,7 +111,7 @@ def test_offline_failure_explains_ordinary_signin_and_never_sets_remembered_cook
             elif failure=='code':pass
             else:state['nonce']='wrong-nonce'
             response=await client.get('/auth/callback',params={'code':'' if failure=='code' else 'private-code','state':fields['state'][0]})
-            assert response.status_code==403 and 'ordinary sign-in' in response.text
+            assert response.status_code==403 and 'remembered_unavailable' in response.text
             assert 'Max-Age=604800' not in response.headers.get('set-cookie','')
             assert (await client.get('/api/v1/me')).status_code==401
             assert (await client.get('/auth/callback',params={'code':'private-code','state':fields['state'][0]})).status_code==400
@@ -177,7 +168,7 @@ def test_unavailable_offline_support_offers_ordinary_signin(application):
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             data=await form(client)
             response=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':ORIGIN})
-            assert response.status_code==403 and 'ordinary sign-in' in response.text
+            assert response.status_code==403 and 'remembered_unavailable' in response.text
             assert 'Max-Age=604800' not in response.headers.get('set-cookie','')
     asyncio.run(check())
 

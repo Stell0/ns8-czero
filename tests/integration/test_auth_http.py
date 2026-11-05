@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 import asyncio
+import json
 import os
 from pathlib import Path
 import time
@@ -61,7 +62,7 @@ def application(monkeypatch):
             pass
     access = AccessService(database, issuer, owner_key)
     auth = AppAuth(access, SessionService(access, "czero900"), Provider())
-    app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/static", "", database, auth=auth)
+    app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/frontend/dist", "", database, auth=auth)
     yield PrivateFixture((app, token(owner_key, "owner"), token(member_key, "member", role="admin"), token(owner_key, "owner", "ID"), database, issuer))
     with database.engine.begin() as connection:
         connection.execute(text("DELETE FROM c0_login_states WHERE issuer = :issuer"), {"issuer": issuer})
@@ -150,7 +151,7 @@ def test_forbidden_browser_login_can_retry_with_another_account(application, bas
         app, owner, member, _, database, _ = application
         auth = app.state.auth
         if base_path:
-            app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/static",
+            app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/frontend/dist",
                              base_path, database, auth=app.state.auth)
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             old_session = None
@@ -169,8 +170,9 @@ def test_forbidden_browser_login_can_retry_with_another_account(application, bas
             assert denied.headers["content-type"].startswith("text/html")
             assert denied.headers["cache-control"] == "no-store"
             assert denied.headers["referrer-policy"] == "no-referrer"
-            assert 'href="' + base_path + '/auth/login?switch_account=true"' in denied.text
-            assert "Sign in with another account" in denied.text
+            boot=json.loads(denied.text.split('id="c0-boot" type="application/json">')[1].split('</script>')[0])
+            assert boot=={'error':'access_denied'}
+            assert '<base href="'+base_path+'/"' in denied.text
             assert state not in denied.text and "unit-only-forbidden-code" not in denied.text
             binding_present = "c0_login" in client.cookies
             session_present = "c0_session" in client.cookies

@@ -151,7 +151,7 @@ def test_legacy_access_ui_keeps_role_management_without_exposing_oauth_or_mcp(ap
         from czero_app.main import create_app
         app,owner,member,*_=application
         auth=app.state.auth;db=application[4];prefix='/czero/czero900'
-        legacy=create_app('czero900',Path(__file__).resolve().parents[2]/'app/static',prefix,db,auth=auth)
+        legacy=create_app('czero900',Path(__file__).resolve().parents[2]/'app/frontend/dist',prefix,db,auth=auth)
         identity=auth.oidc.verify_access_token(owner)
         cookie=auth.sessions.create(identity)
         try:

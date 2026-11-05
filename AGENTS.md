@@ -175,13 +175,18 @@ The normal browser pages are readers. Keep mutation tools, technical client cont
 
 ## Reference website presentation
 
-`app/static` retains native HTML/JavaScript controls and local assets. Its Nebula
-foundation tokens live in `app.css`, including the emerald primary palette,
-light/dark surfaces and Poppins weights 400/500. Keep the explicit local font
-routes and OFL notice together. Preserve DOM IDs, hidden/access guards, selected
-spaces and the subpage skip-link/base-URL contract when changing presentation.
-NS8 `ui` remains Vue 2/Carbon. Run the real browser theme/layout/keyboard checks
-in `tests/e2e/test_nebula_theme.py` alongside existing reader workflows.
+`app/frontend` is the Vue 3/TypeScript/Nebula reference website; NS8 `ui`
+remains Vue 2/Carbon. Use the frozen npm lock, Composition API and local compiled
+assets. Preserve emerald semantic colors, local Poppins 400/500 and their notices.
+English and Italian must have matching keys. Knowledge views are read-only;
+source upload/replacement/reprocessing/recovery are the explicit exception.
+Cookies, X-C0-CSRF, account/space query identities, cancellation, draft guards and
+410 supersession remain mandatory. Never put knowledge or credentials in browser
+storage or enable stored HTML/remote images. Sign-in uses its server-bound native
+form and escaped inert boot data. Website routes have no legacy aliases.
+Run frontend checks, real `tests/e2e` browser workflows and affected native
+workflows. This rewrite requires full Debian/Rocky acceptance; a component build
+or mock API test alone is insufficient. See [the contract](docs/vue-website.md).
 
 ## Contracts to preserve
 

@@ -51,6 +51,13 @@ def accepted_source(repo, source, *, pr_number=None, require_full=False):
         assert any(j['name'] == 'C0 merge gate' and j['conclusion'] == 'success' for j in jobs)
         for name in required_jobs(proof['kind'], proof['mode'], version=proof.get('policy_version', 1)):
             matches = [j for j in jobs if j['name'] == name or j['name'].startswith(name+' /')]
+            if name == 'native':
+                # Reusable native workflows also expose optional screenshot
+                # publishing jobs. Require each actual suite exactly once.
+                suites = {'native / debian / update debian13', 'native / rocky / install rocky9'}
+                matches = [j for j in matches if j['name'] in suites]
+                if len(matches) != len(suites) or {j['name'] for j in matches} != suites:
+                    raise ValueError('actual_required_jobs_missing')
             if not matches or any(j['status'] != 'completed' or j['conclusion'] != 'success' for j in matches):
                 raise ValueError('actual_required_jobs_missing')
         return proof
