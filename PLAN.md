@@ -1,29 +1,85 @@
 # C0 roadmap
 
-## Vue 3 website remake — implementation candidate
+## Vue 3 website remake — source and publication accepted
 
-The operator's accepted plan replaces the entire website with Vue 3, TypeScript
-and Nebula, English/Italian, light/dark/system and phone/desktop layouts. Source
-is isolated from original main `b317619322ab0a59af038186db8e55e749f94ff6`.
-App 0.59.0 retains released Core 0.38.0 and schema 0032. Native NS8 settings stay
-Vue 2/Carbon. Existing installation identities and deployment authority remain
-unchanged.
+[PR75](https://github.com/Stell0/ns8-czero/pull/75) replaces the reference
+website with Vue 3, TypeScript and Nebula: English/Italian, light/dark/system,
+phone/desktop layouts, persistent space selection and search. App 0.59.0 keeps
+released Core 0.38.0 from `2eb0b453f329f2f1044ff6151854298aac1b7e88`
+and schema 0032 unchanged. Native NS8 settings remain Vue 2/Carbon.
 
-The candidate contains the shell/router, read-only Home/Wiki/Sources/Projects/
-Explore, source upload/replacement/recovery, Account/API keys, people/application
-access, protected spaces, technical clients, jobs/schedules and server-gated
-sign-in/consent presentation. It serves compiled local assets, removes legacy
-controllers and moves their retained behavioral coverage to Vue/browser tests.
-See [contracts, coverage mapping and checks](docs/vue-website.md).
+Home, Wiki, Sources, Projects and Explore are read-only knowledge views.
+Source upload/replacement/reprocessing/recovery, Account/API keys, connections
+and administration retain their existing authority. Original retention is opt-in;
+download links require retained, accessible versions. Replacements preserve the
+published document until whole-document validation. Authentication presentation
+uses the existing server-gated cookie/CSRF/consent flows. Assets and fonts are
+local; legacy website controllers are removed. See
+[contracts and coverage mapping](docs/vue-website.md).
 
-The original baseline passes 2775 backend/database/packaging cases with local
-English/Italian OCR. Frontend checks, 27 Vitest cases, 10 controlled browser cases
-and 1038 Python unit cases pass. Actual runtime inventory/license and released
-Core identity probes pass. Failed candidate and full-browser evidence remains
-preserved; targeted corrections are not complete final-source acceptance.
-Complete candidate checks, final packaged image, full Debian/Rocky native
-acceptance and the reviewed upstream regular-merge PR remain required.
-No deployment or stable release is implied by this candidate.
+Original baseline `b317619322ab0a59af038186db8e55e749f94ff6` passes 2,775
+backend/database/packaging cases with English/Italian OCR. Exact reviewed source
+`172b31901076dbf2082c98544cb250a8b3ddbb99` passes
+[full/native 42096335384](https://github.com/Stell0/ns8-czero/actions/runs/42096335384),
+including 2,799 backend/database/packaging cases, 39 real HTTPS browser cases,
+28 Vitest cases, 17 controlled browser cases, 27 Node tests, lint/format/types/build,
+schema/shell checks and 21 Robot dry runs. English/Italian have 260 matching keys.
+Targeted negative controls and eight failed-source language/theme/layout/keyboard
+contexts also pass after the corresponding corrections.
+
+Independent downloaded-artifact grading verifies Debian upgrade 21 passed and
+Rocky installation 26 passed/three expected skips, all eight browser workflows,
+30 numeric accessibility contexts, ten access phases, eight privacy guards,
+three OAuth-query artifacts with zero candidates and five scan/report pairs.
+All three role workflows prove saved API-key revocation with HTTP 401 readback.
+Native evidence also covers provider sign-in/consent, remembered and background
+authority, renewal/revocation, source recovery and backup/update/restore.
+The actual immutable app image independently passes runtime/license inventory,
+released-Core Git/schema, compiled asset/font/CSP/route and source-label probes.
+The current-base/diff/full promotion verifier and actual C0 merge gate pass.
+
+PR75 regularly merges as `c011a0b9b9eb57b9a0f545f21e129e8732eb65e4`.
+Actual merged-main [full/native 42106339803](https://github.com/Stell0/ns8-czero/actions/runs/42106339803)
+passes the same complete local/native checks, independent artifact and actual
+image audits, full promotion verification and canonical publication. Six fresh
+registry reads at 21:48 UTC on 5 November 2026 verify each `main` and `latest`
+alias against the accepted digests
+and exact source labels. These identities remain frozen when documentation main
+advances.
+
+### Reviewed candidate images
+
+Frozen tag: `ci-172b31901076dbf2082c98544cb250a8b3ddbb99-42096335384-1`.
+
+| Image | Immutable digest |
+| --- | --- |
+| `czero` | `sha256:de85ba5258bd828b58495948a2f1a53a3ff84a57287328a31adb6820959299f2` |
+| `czero-app` | `sha256:2dfadb38c1f494d9a5d9ad5fb98268ad2fc2cf9d3ff5bcea5a1328c5472b7cda` |
+| `czero-postgres` | `sha256:0c1c1b4eee164ac3661c239c52c9f375f6bd5a863c08b5fd2d711f289fd37a39` |
+
+### Accepted merged-main images
+
+Frozen tag: `ci-c011a0b9b9eb57b9a0f545f21e129e8732eb65e4-42106339803-1`.
+
+| Image | Immutable digest |
+| --- | --- |
+| `czero` | `sha256:1f53ce284c85b6b8fe2738095c1a0e8d9a48e239f6b0891c4eca3602e169ffcc` |
+| `czero-app` | `sha256:fd46e0e53f427d90737463e32e6dbcd7243d572f4b6b5858a8d95650c9718d9c` |
+| `czero-postgres` | `sha256:827a93a604708e15c79101e1e015817e0d832523955f70ec3ead42bb8743adaf` |
+
+Earlier failed runs remain preserved: explicit font MIME packaging, obsolete
+native selectors, initial filter URL/focus/pagination, dialog completion and
+search-details remounts, saved key revocation and failed-source retention/Reader
+boundaries were corrected and exercised. The preceding `0309338` passes full
+local/native/artifact checks but its gate correctly rejects the superseded PR
+head. The original final-source run `42081177164` is retained; the fresh complete
+run above provides the selected proof. Separate targeted passes never substitute
+for an unsuccessful candidate's full acceptance. No frozen run was cancelled.
+
+This is source/publication acceptance. The installed app0.57/Core0.37/schema0030
+baseline at `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` is unchanged. No live
+update, stable module tag, Core release, import or external schedule is included.
+Both operator waivers and all private/failed evidence remain preserved.
 
 ## Personal API keys — released consumer accepted
 
@@ -44,9 +100,9 @@ schema/shell checks and 21 Robot dry runs. Independently downloaded native repor
 scan reports and exact-source full promotion pass. Actual merged-main
 [41851447750](https://github.com/Stell0/ns8-czero/actions/runs/41851447750) passes
 full/native acceptance and canonical publication, with independent artifact
-grading and six fresh registry identity reads. The promotion verifier's separate
-optional-screenshot limitation is recorded below; no main promotion check is
-claimed to pass.
+grading and six fresh registry identity reads. The original promotion verifier's
+optional-screenshot failure is preserved below; PR75 corrects its actual-suite
+selection and verifies this historical main with the full command.
 
 See [API key contracts](docs/api-keys.md) and the evidence below. The installed
 app0.57/Core0.37/schema0030 baseline stays unchanged. No live update or stable
@@ -2340,14 +2396,16 @@ each image's `main` and `latest` tag against these independently accepted digest
 This is source/publication acceptance, not a live installation or stable module
 release. Keep these immutable identities when documentation main advances.
 
-**Promotion-tool limitation:** the separate `verify-promotion.py --source
-1a92b7aebbec3c5ad217f03e84f2b57a250f9d18 --full` check rejects
-`actual_required_jobs_missing`: its broad `native /` match includes the optional
-skipped `native / debian / screenshots` publishing job. Both actual native suites,
-artifact grading and the Actions-owned gate pass. Preserve this failed check;
-do not claim main's command passes or bypass it for deployment. The exact
-consumer candidate's full promotion check passes. Future selection of merged-main
-for release/deployment needs the promotion-tool issue resolved and verified.
+**Historical promotion-tool failure, resolved by PR75:** the original
+`verify-promotion.py --source 1a92b7aebbec3c5ad217f03e84f2b57a250f9d18 --full`
+check rejected `actual_required_jobs_missing`: its broad `native /` match included
+the optional skipped Debian screenshot publisher. Both actual native suites,
+artifact grading and the Actions-owned gate passed. Preserve that failed check.
+PR75 commit `bd0ffc28cf6f400e3730e82880b3a436c8de25b1` requires both actual
+native suites exactly once and excludes optional screenshot publishing jobs.
+All 155 policy/promotion checks pass, including 12 new regression cases; the
+corrected full command verifies historical main run `41851447750`. This repair
+does not replace current-source acceptance or grant deployment authority.
 
 The installed app0.57/Core0.37/schema0030 runtime at
 `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` remains the live baseline.
