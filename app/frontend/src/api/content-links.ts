@@ -15,6 +15,12 @@ export function contentLink(href: string, website: string, space?: string) {
       : null
   }
   if (url.pathname === prefix + '/wiki') {
+    if (
+      url.searchParams.getAll('page').length +
+        url.searchParams.getAll('page_id').length >
+      1
+    )
+      return href
     const page = id('page') || id('page_id')
     if (page) {
       url.pathname = prefix + '/wiki/' + page
@@ -22,6 +28,12 @@ export function contentLink(href: string, website: string, space?: string) {
       url.searchParams.delete('page_id')
     }
   } else if (url.pathname === prefix + '/sources') {
+    if (
+      ['chunk', 'document', 'source'].some(
+        (name) => url.searchParams.has(name) && !id(name),
+      )
+    )
+      return href
     const chunk = id('chunk'),
       document = id('document'),
       source = id('source')
@@ -31,8 +43,9 @@ export function contentLink(href: string, website: string, space?: string) {
     if (chunk || document || source) {
       for (const key of ['chunk', 'document', 'source'])
         url.searchParams.delete(key)
-      if (id('snapshot')) {
-        url.searchParams.set('revision_id', id('snapshot')!)
+      if (url.searchParams.has('snapshot')) {
+        for (const snapshot of url.searchParams.getAll('snapshot'))
+          url.searchParams.append('revision_id', snapshot)
         url.searchParams.delete('snapshot')
       }
     }

@@ -25,6 +25,26 @@ it('leaves external, different mount and ambiguous links unchanged', () => {
     `https://evidence.example.test/wiki?page=${id}`,
     `https://c0.example.test/other/wiki?page=${id}`,
     `${base}wiki?page=${id}&page=${id}`,
+    `${base}wiki?page=${id}&page_id=${id}`,
+    `${base}wiki?page=invalid&page_id=${id}`,
+    `${base}sources?chunk=invalid&source=${id}`,
+    `${base}sources?document=${id}&document=${id}&source=${id}`,
   ])
     expect(contentLink(link, base)).toBe(link)
+})
+it('preserves invalid and duplicate snapshots for exact-selector rejection', () => {
+  for (const snapshots of [
+    'snapshot=',
+    'snapshot=invalid',
+    `snapshot=${id}&snapshot=${id}`,
+    `revision_id=${id}&snapshot=${id}`,
+  ]) {
+    const before = new URL(`${base}sources?document=${id}&${snapshots}`)
+    const after = new URL(contentLink(before.href, base))
+    expect(after.pathname).toBe(`/czero/czero17/sources/${id}`)
+    expect(after.searchParams.getAll('revision_id')).toEqual([
+      ...before.searchParams.getAll('revision_id'),
+      ...before.searchParams.getAll('snapshot'),
+    ])
+  }
 })

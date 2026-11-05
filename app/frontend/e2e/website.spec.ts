@@ -295,4 +295,24 @@ test('ambiguous exact evidence selectors never fetch current content', async ({
     await expect(page.getByRole('article')).toHaveCount(0)
   }
   expect(bodies).toEqual([])
+  await page.route(`**/api/v1/wiki/pages/${article}?**`, (route) =>
+    route.fulfill({
+      json: {
+        ...fixturePage,
+        content: {
+          number: 1,
+          title: fixturePage.title,
+          body: `[Saved evidence](./sources?document=${source}&snapshot=${version}&snapshot=${version})`,
+        },
+      },
+    }),
+  )
+  await page.goto(`/wiki/${article}`)
+  const saved = page.getByRole('link', { name: 'Saved evidence', exact: true })
+  await expect(saved).toBeVisible()
+  bodies.length = 0
+  await saved.click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('article')).toHaveCount(0)
+  expect(bodies).toEqual([])
 })

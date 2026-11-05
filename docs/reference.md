@@ -6,9 +6,11 @@ Use the installed `/openapi.json` and authenticated `/agents/capabilities.json` 
 
 | Interface | Purpose |
 | --- | --- |
-| `/`, `/wiki`, `/sources`, `/search` | Knowledge readers; manual mutation controls under the relevant `?view=tools` page |
-| `/?view=account`, `/admin` | Account/sharing and authorized application administration |
-| `/agents`, `/agents?view=tools` | Human Use with AI guide and technical discovery |
+| `/`, `/wiki`, `/sources`, `/search` | Knowledge readers; authorized source upload, replacement and recovery on Sources |
+| `/wiki/{id}`, `/sources/{id}`, `/evidence/{id}` | Complete articles/documents and exact cited evidence |
+| `/explore` | Read-only entities, claims, relationships, annotations and structured records |
+| `/account`, `/admin` | Personal preferences, connections/API keys and authorized people/application administration |
+| `/agents`, `/agents/capabilities.json` | Use with AI setup/downloads and caller-aware technical discovery |
 | `/mcp` | OAuth-protected Streamable HTTP on configured hostname-root instances |
 | `/oauth/authorize`, `/oauth/consent`, `/oauth/token`, `/oauth/revoke` | Explicit SSO consent, S256, short tokens, rotating refresh and revocation |
 | `/api/v1/profile`, MCP `get_profile` | Stable opaque account identity and supported profile labels |
@@ -19,6 +21,12 @@ Use the installed `/openapi.json` and authenticated `/agents/capabilities.json` 
 | `/docs`, `/openapi.json` | Interactive REST documentation and machine-readable schemas |
 
 Legacy NS8-prefix installations retain REST compatibility but do not advertise MCP until configured on a hostname root.
+
+The website does not create, edit, annotate, archive or delete knowledge.
+Authorized assistants retain these REST/MCP operations. Source file controls are
+the exception; original retention is opt-in, and replacements keep the published
+document readable until complete validation. The Vue website uses explicit routes
+without legacy page aliases; see [the website contract](vue-website.md).
 
 ## Roles, scopes and selectors
 
