@@ -232,12 +232,12 @@ def browser(live,request,tmp_path):
         if response.status!=200:pytest.fail('Browser sign-in failed at '+urlsplit(page.url).path+' with HTTP '+str(response.status),pytrace=False)
         if urlsplit(page.url).path!='/':pytest.fail('Browser sign-in ended at '+urlsplit(page.url).path,pytrace=False)
         page.wait_for_url(live.origin+'/')
-        page.locator('#sign-out').wait_for(state='visible')
+        page.get_by_role('button',name='Knowledge space Shared',exact=True).wait_for(state='visible')
         context.tracing.start(screenshots=False,snapshots=True,sources=False)
         yield page
         if getattr(request.node,'rep_call',None) and request.node.rep_call.failed:
             directory=Path(os.getenv('CZERO_BROWSER_ARTIFACTS',str(tmp_path/'failure')));directory.mkdir(mode=0o700,parents=True,exist_ok=True)
-            page.screenshot(path=str(directory/(request.node.name+'.png')),full_page=False,mask=[page.locator('#api-key-secret')])
+            page.screenshot(path=str(directory/(request.node.name+'.png')),full_page=False,mask=[page.locator('[data-c0-secret]')])
             raw=tmp_path/'private-trace.zip';context.tracing.stop(path=str(raw))
             # Keep actions/DOM snapshots only. Network events/resources can contain
             # cookies, CSRF values and OAuth responses and are never uploaded.

@@ -1,0 +1,136 @@
+/* Nebula setup adapted from My Nethesis 6a212ca, GPL-3.0-or-later. */
+@import '@fortawesome/fontawesome-svg-core/styles.css' layer(fontawesome);
+@import 'tailwindcss';
+@import '@nethesis/vue-components/theme.css';
+@source '../node_modules/@nethesis/vue-components';
+@custom-variant dark (&:where(.dark, .dark *));
+@font-face {
+  font-family: Poppins;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/vendor/poppins-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: Poppins;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/vendor/poppins-latin-500-normal.woff2') format('woff2');
+}
+@theme {
+  --font-sans: Poppins, sans-serif;
+  --color-primary-50: var(--color-emerald-50);
+  --color-primary-100: var(--color-emerald-100);
+  --color-primary-200: var(--color-emerald-200);
+  --color-primary-300: var(--color-emerald-300);
+  --color-primary-400: var(--color-emerald-400);
+  --color-primary-500: var(--color-emerald-500);
+  --color-primary-600: var(--color-emerald-600);
+  --color-primary-700: var(--color-emerald-700);
+  --color-primary-800: var(--color-emerald-800);
+  --color-primary-900: var(--color-emerald-900);
+  --color-primary-950: var(--color-emerald-950);
+}
+:root {
+  --elevation-0: var(--color-white);
+  --elevation-1: var(--color-gray-50);
+  --elevation-2: var(--color-gray-100);
+  --text-primary: var(--color-gray-900);
+  --text-secondary: var(--color-gray-700);
+  --border-default: var(--color-gray-300);
+}
+.dark {
+  color-scheme: dark;
+  --elevation-0: var(--color-gray-950);
+  --elevation-1: var(--color-gray-900);
+  --elevation-2: var(--color-gray-800);
+  --text-primary: var(--color-gray-50);
+  --text-secondary: var(--color-gray-200);
+  --border-default: var(--color-gray-700);
+}
+@theme inline {
+  --color-elevation-0: var(--elevation-0);
+  --color-elevation-1: var(--elevation-1);
+  --color-elevation-2: var(--elevation-2);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-default: var(--border-default);
+}
+@layer base {
+  body {
+    font-synthesis: none;
+    @apply bg-elevation-0 text-text-primary font-sans font-normal;
+  }
+  h2,
+  h3,
+  strong,
+  b {
+    @apply font-medium;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-4 outline-primary-600;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+@layer components {
+  .nav-link {
+    @apply block rounded-lg px-3 py-2 text-text-secondary hover:bg-elevation-2;
+  }
+  .nav-link.router-link-active {
+    @apply bg-elevation-2 font-medium text-primary-700 dark:text-primary-400;
+  }
+  .text-link {
+    @apply text-primary-700 underline underline-offset-4 dark:text-primary-400;
+  }
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-elevation-0 focus:p-4;
+  }
+  .reader {
+    @apply min-w-0 space-y-4 break-words leading-7;
+    overflow-wrap: anywhere;
+  }
+  .reader h2 {
+    @apply mt-8 text-xl font-medium;
+  }
+  .reader h3 {
+    @apply mt-6 text-lg font-medium;
+  }
+  .reader strong,
+  .reader h4,
+  .reader h5,
+  .reader h6 {
+    @apply font-medium;
+  }
+  .reader ul {
+    @apply list-disc space-y-2 pl-6;
+  }
+  .reader ol {
+    @apply list-decimal space-y-2 pl-6;
+  }
+  .reader a {
+    @apply text-primary-700 underline dark:text-primary-400;
+  }
+  .reader pre {
+    @apply max-w-full overflow-auto rounded-lg bg-elevation-2 p-4 text-sm;
+  }
+  .reader code {
+    @apply font-mono text-sm;
+  }
+  .reader blockquote {
+    @apply border-l-4 border-default pl-4 text-text-secondary;
+  }
+  .reader table {
+    @apply block max-w-full overflow-auto border-collapse;
+  }
+  .reader td,
+  .reader th {
+    @apply border border-default p-3;
+  }
+  .reader [id] {
+    @apply scroll-mt-72 lg:scroll-mt-32;
+  }
+}

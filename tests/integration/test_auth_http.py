@@ -61,7 +61,7 @@ def application(monkeypatch):
             pass
     access = AccessService(database, issuer, owner_key)
     auth = AppAuth(access, SessionService(access, "czero900"), Provider())
-    app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/static", "", database, auth=auth)
+    app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/frontend/dist", "", database, auth=auth)
     yield PrivateFixture((app, token(owner_key, "owner"), token(member_key, "member", role="admin"), token(owner_key, "owner", "ID"), database, issuer))
     with database.engine.begin() as connection:
         connection.execute(text("DELETE FROM c0_login_states WHERE issuer = :issuer"), {"issuer": issuer})
@@ -150,7 +150,7 @@ def test_forbidden_browser_login_can_retry_with_another_account(application, bas
         app, owner, member, _, database, _ = application
         auth = app.state.auth
         if base_path:
-            app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/static",
+            app = create_app("czero900", Path(__file__).resolve().parents[2] / "app/frontend/dist",
                              base_path, database, auth=app.state.auth)
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             old_session = None

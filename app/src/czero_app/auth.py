@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """FastAPI transport for shared Core authentication and membership services."""
 from dataclasses import dataclass, field
-from html import escape
 import logging
 import os
 import re
@@ -10,7 +9,7 @@ from uuid import UUID
 from urllib.parse import parse_qsl
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import APIKeyCookie, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import SQLAlchemyError
@@ -223,12 +222,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
 
     def remembered_unavailable(request):
         configured().sessions.destroy(request.cookies.get('c0_session'))
-        response = HTMLResponse('<!doctype html><html lang="en"><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            '<title>Remembered sign-in unavailable</title><main><h1>Remembered sign-in unavailable</h1>'
-            '<p>Your sign-in provider could not authorize remembered access. Try ordinary sign-in with the option unchecked.</p>'
-            f'<a href="{escape(base_path, quote=True)}/auth/sign-in">Return to sign-in</a></main></html>',
-            status_code=403, headers={'Referrer-Policy':'no-referrer'})
+        response = app.state.website.render({'error': 'remembered_unavailable'}, status_code=403)
         for name in ('c0_login', 'c0_session', 'c0_login_return'):
             response.delete_cookie(name, path=cookie_path, secure=True, httponly=True, samesite='lax')
         return response
@@ -246,26 +240,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     def sign_in(request: Request):
         active = configured()
         intent, browser = active.sessions.begin_sign_in()
-        action = escape(base_path+'/auth/sign-in', quote=True)
         target = request.query_params.get('return_to', '')
         target = target if target in ('agents', 'admin') else ''
-        response = HTMLResponse(
-            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            '<title>Sign in to C0</title>'
-            f'<link rel="stylesheet" href="{escape(base_path, quote=True)}/app.css"></head>'
-            '<body><main><h1>Sign in to C0</h1>'
-            f'<form id="website-sign-in" method="post" action="{action}">'
-            f'<input type="hidden" name="intent" value="{intent}">'
-            f'<input type="hidden" name="return_to" value="{target}">'
-            '<label><input type="checkbox" name="remember" value="yes"> Remember this device</label>'
-            '<p>Stay signed in until you have not used this website for seven days. '
-            'Use this only on a device you trust. Otherwise, sign-in uses the normal session limits.</p>'
-            '<p>AI assistant connections have their own permission and sign-in choices.</p>'
-            '<button type="submit">Continue with NethServer</button></form></main></body></html>',
-            # A no-referrer navigation form sends Origin:null in Chromium.
-            # Send only the origin so the same-origin POST remains verifiable.
-            headers={'Referrer-Policy': 'strict-origin', 'Content-Security-Policy': "default-src 'none'; style-src 'self'; frame-ancestors 'none'"})
+        response = app.state.website.render({'intent': intent, 'return_to': target})
         response.set_cookie('c0_signin', browser, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
         return response
 
@@ -355,18 +332,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             active.sessions.destroy(request.cookies.get("c0_session"))
             # Admission failure does not clear the provider's SSO session.
             # Retry must explicitly reauthenticate instead of reusing it.
-            retry = escape(base_path + "/auth/login?switch_account=true", quote=True)
-            response = HTMLResponse(
-                '<!doctype html><html lang="en"><meta charset="utf-8">'
-                '<meta name="viewport" content="width=device-width, initial-scale=1">'
-                '<title>C0 access denied</title><main><h1>Access denied</h1>'
-                '<p>This account does not have access to C0. '
-                'Sign in with an authorized account or ask an administrator for access.</p>'
-                '<p>If the sign-in provider keeps your current name, use its '
-                'restart or switch-account control to choose another account.</p>'
-                f'<p><a href="{retry}">Sign in with another account</a></p>'
-                '</main></html>', status_code=403,
-                headers={"Referrer-Policy": "no-referrer"})
+            response = app.state.website.render({'error': 'access_denied'}, status_code=403)
             response.delete_cookie("c0_login", path=cookie_path,
                                    secure=True, httponly=True, samesite="lax")
             response.delete_cookie("c0_session", path=cookie_path,

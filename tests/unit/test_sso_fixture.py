@@ -190,30 +190,25 @@ def test_identity_backup_reuses_existing_encryption_repository(monkeypatch):
 
 
 def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monkeypatch, accessibility_measurement):
+    from vue_native_browser import NativeWebsite
     invocations=[]; filled=[]; commands=[]; secret='private-browser-fixture-value'
-    selection_pending=[False]
-    identities=iter(['00000000-0000-4000-8000-000000000001 · revision 3',
-        '00000000-0000-4000-8000-000000000002 · revision 1'])
     def execute(command,**kwargs):
         commands.append(command)
         if command.startswith('cat '): return json.dumps({'password':secret})
         return '', '', 0
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
-        get_text=lambda selector:next(identities),get_element_count=lambda selector:0,
+        get_element_count=lambda selector:0,
         evaluate_javascript=accessibility_measurement)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
-    def keyword(self,name,*args):
-        invocations.append((name,args))
-        if name=='Browser.Click' and args[0].startswith('#record-list button:text-is('):
-            selection_pending[0]=True
-        if name=='Browser.Get Text' and args==('#record-identity','==',
-                '00000000-0000-4000-8000-000000000001 · revision 3'):
-            selection_pending[0]=False
-        if name=='Browser.Click' and args[0]=='#browse-relation-targets':
-            assert not selection_pending[0], 'Relation browsing raced the selected detail reply'
-    monkeypatch.setattr(BuiltIn,'run_keyword',keyword)
+    monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))
+    # Public REST fixture writes are independently exercised against PostgreSQL.
+    # This harness test isolates the credentials/Robot reporting boundary.
+    def api(self,path,data=None,method=None,**options):
+        if path=='me':return {'browser_session':{'remembered':True}}
+        return {'id':'00000000-0000-4000-8000-000000000001','revision':2 if method=='PUT' else 1}
+    monkeypatch.setattr(NativeWebsite,'api',api)
     library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
     library.verify_disposable_objects_browser('czero7.test')
     assert filled.count(('input[name="password"]',secret))==2
@@ -227,7 +222,7 @@ def test_search_browser_keeps_credentials_out_of_robot_arguments(monkeypatch, ac
         return json.dumps({'password':secret}) if command.startswith('cat ') else ('', '', 0)
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
-        evaluate_javascript=accessibility_measurement)
+        evaluate_javascript=accessibility_measurement,get_element_count=lambda selector:0)
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda self,name:ssh if name=='SSHLibrary' else browser)
     monkeypatch.setattr(BuiltIn,'set_log_level',lambda self,level:'INFO')
     monkeypatch.setattr(BuiltIn,'run_keyword',lambda self,name,*args:invocations.append((name,args)))
@@ -252,7 +247,7 @@ def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeyp
     calls=[];filled=[];private='private-switch-fixture-value'
     def execute(command,**kwargs):
         if command.startswith('cat '): return json.dumps({'password':private})
-        return '',0
+        return '','',0
     ssh=SimpleNamespace(execute_command=execute)
     browser=SimpleNamespace(fill_text=lambda selector,value:filled.append((selector,value)),
         get_element_count=lambda selector:1 if selector=='#reset-login' else 0)
@@ -267,18 +262,26 @@ def test_account_switch_uses_provider_restart_and_keeps_password_private(monkeyp
 
 
 def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatch, accessibility_measurement):
+    from vue_native_browser import NativeWebsite
     calls=[]
-    browser=SimpleNamespace(get_text=lambda selector:json.dumps({'id':'00000000-0000-4000-8000-000000000001','state':'succeeded'}),
-        evaluate_javascript=accessibility_measurement,get_url=lambda:'https://czero7.test/admin/work')
-    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
-    library._verify_admin_controls(browser,lambda name,*args:calls.append((name,args)),'admin','czero7.test')
-    assert ('Select Options By',('#job-handler','value','health')) in calls
-    assert ('Uncheck Checkbox',('#schedule-enabled',)) in calls
+    app=NativeWebsite.__new__(NativeWebsite)
+    app.origin='https://c0.example.test';app.host='c0.example.test'
+    app.browser=SimpleNamespace(fill_text=lambda *args:calls.append(('Fill Text',args)),
+        evaluate_javascript=accessibility_measurement,get_url=lambda:app.origin+'/admin/work')
+    app.ssh=SimpleNamespace(execute_command=lambda *args,**kwargs:(json.dumps({'cimd_enabled':False}),0))
+    app.run=lambda name,*args:calls.append((name,args))
+    app.people_access=lambda *args:None
+    app.discovery=lambda *args:None
+    app.api=lambda path:{'jobs':[{'id':'fixture-job','handler':'health'}]} if path=='jobs' else {'state':'succeeded'}
+    app.admin('admin','czero7')
+    assert ('Click',('role=option[name="health"]',)) in calls
+    assert ('Uncheck Checkbox',('role=checkbox[name="Enabled"]',)) in calls
     assert ('Reload',()) in calls
     for role in ('reader','editor'):
         denied=[]
-        library._verify_admin_controls(browser,lambda name,*args:denied.append((name,args)),role,'czero7.test')
-        assert ('Wait For Elements State',('#access-workspace','hidden')) in denied
+        app.run=lambda name,*args:denied.append((name,args))
+        app.admin(role,'czero7')
+        assert ('Get Element Count',('[role="grid"], aside a:text-is("Administration")','==',0)) in denied
         assert all(name not in ('Click','Fill Text') for name,_ in denied)
 
 
@@ -353,6 +356,7 @@ def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,st
 
 @pytest.mark.parametrize('original', [False, True])
 def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, original):
+    from vue_native_browser import NativeWebsite
     import shlex
     changed=[]
     def execute(command, **options):
@@ -361,22 +365,27 @@ def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, or
         if '/configure-module' in command:
             args=shlex.split(command)
             changed.append(json.loads(args[args.index('--data')+1])['cimd_enabled'])
-            return '',0
+            return '','',0
         assert command == 'python3 /tmp/access_fixture.py czero7 prepare'
         return 'C0 workspace access: '+json.dumps({'phase':'prepare','fresh_reader':True,'pending_request':True}),'',0
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda *args:SimpleNamespace(execute_command=execute))
     monkeypatch.setattr(BuiltIn,'log_to_console',lambda *args:None)
-    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    app=NativeWebsite.__new__(NativeWebsite)
+    app.host='c0.example.test';app.builtin=BuiltIn()
+    app.ssh=SimpleNamespace(execute_command=execute)
     def fail_browser(*args):raise AssertionError('Forced browser stop')
+    app.run=fail_browser
     with pytest.raises(AssertionError,match='Forced browser stop'):
-        library._verify_people_access(None,fail_browser,'czero7.test','czero7')
+        app.people_access('czero7')
     assert changed == [True,original]
 
 
 @pytest.mark.parametrize('after', ['https://c0.test/?space_id=selected#main-content',
     'https://c0.test/admin/spaces?space_id=other#main-content'])
 def test_native_skip_guard_rejects_page_or_space_changes(after):
+    from vue_native_browser import NativeWebsite
     urls=iter(['https://c0.test/admin/spaces?space_id=selected',after])
-    library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
+    app=NativeWebsite.__new__(NativeWebsite)
+    app.browser=SimpleNamespace(get_url=lambda:next(urls));app.run=lambda *args:None
     with pytest.raises(AssertionError,match='Skip link changed page or selected space'):
-        library._verify_skip_link(SimpleNamespace(get_url=lambda:next(urls)),lambda *args:None)
+        app.skip()

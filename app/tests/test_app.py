@@ -12,7 +12,7 @@ from czero_core import core_version
 
 from czero_app.main import create_app
 
-STATIC = Path(__file__).resolve().parents[1] / "static"
+FRONTEND = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 APP_VERSION = version('czero-app')
 DATABASE_READY = {"status": "ok", "schema_revision": "0017_session_renewal", "vector_version": "0.8.7"}
 
@@ -20,26 +20,16 @@ DATABASE_READY = {"status": "ok", "schema_revision": "0017_session_renewal", "ve
 def ready_database():
     return SimpleNamespace(health=lambda: DATABASE_READY, close=lambda: None)
 
-
-
 @pytest.fixture
 def client():
     async def get(path):
         async with AsyncClient(
-            transport=ASGITransport(app=create_app("czero17", STATIC, database=ready_database())),
+            transport=ASGITransport(app=create_app("czero17", FRONTEND, database=ready_database())),
             base_url="http://testserver",
         ) as session:
             return await session.get(path)
 
     return lambda path: asyncio.run(get(path))
-
-
-def test_instance_landing_page_and_links(client):
-    response = client("/czero/czero17/")
-    assert response.status_code == 200
-    assert "A place to find what we know." in response.text
-    assert "./api/v1/health" in response.text
-
 
 def test_health_contract_is_mounted_under_only_this_instance(client):
     response = client("/czero/czero17/api/v1/health")
@@ -54,36 +44,6 @@ def test_health_contract_is_mounted_under_only_this_instance(client):
     }
     assert client("/czero/czero18/api/v1/health").status_code == 404
 
-
-def test_agents_page_describes_only_available_capabilities(client):
-    response = client("/czero/czero17/agents?view=tools")
-    assert response.status_code == 200
-    assert "search source text" in response.text
-    assert "sourced claims and bounded graph queries are available" in response.text
-    assert "MCP is unavailable until NS8 sign-in and hostname-root routing are configured" in response.text
-    assert "text fallback" in response.text
-    assert '/api/v1/wiki/pages' in client('/czero/czero17/openapi.json').json()['paths']
-    assert '/api/v1/sources/search' in client('/czero/czero17/openapi.json').json()['paths']
-    assert "./docs" in response.text
-    assert "A native timer wakes" in response.text
-    assert "pending milestone slice" not in response.text
-    capabilities = client('/czero/czero17/agents/capabilities.json')
-    assert capabilities.status_code == 200 and capabilities.headers['cache-control'] == 'no-store'
-    assert capabilities.json()['operations'] == [] and capabilities.json()['interfaces']['mcp'] is False
-    assert capabilities.json()['rest_base'] == '/czero/czero17/api/v1'
-    assert capabilities.json()['mcp_url'] is None and capabilities.json()['oauth'] is None
-    assert client('/czero/czero17/openapi.json').json()['x-c0-interfaces']['interfaces']['mcp'] is False
-
-
-def test_search_page_uses_local_assets_and_no_privileged_mutation(client):
-    page = client('/czero/czero17/search')
-    assert page.status_code == 200 and 'Knowledge search' in page.text
-    assert 'src="./search.js"' in page.text
-    script = client('/czero/czero17/search.js')
-    assert script.status_code == 200 and 'knowledge/search?' in script.text
-    assert 'innerHTML' not in script.text and 'method:' not in script.text
-
-
 def test_openapi_documents_the_health_endpoint(client):
     response = client("/czero/czero17/openapi.json")
     assert response.status_code == 200
@@ -92,15 +52,13 @@ def test_openapi_documents_the_health_endpoint(client):
     assert document["info"]["version"] == APP_VERSION
     assert document["servers"][0]["url"] == "/czero/czero17"
 
-
 def test_invalid_module_id_is_rejected():
     with pytest.raises(ValueError, match="assigned Czero module id"):
-        create_app("other1", STATIC)
-
+        create_app("other1", FRONTEND)
 
 def test_hostname_root_endpoints_and_openapi():
     async def check():
-        async with AsyncClient(transport=ASGITransport(app=create_app("czero17", STATIC, "", database=ready_database())),
+        async with AsyncClient(transport=ASGITransport(app=create_app("czero17", FRONTEND, "", database=ready_database())),
                                base_url="https://c0.example.test") as session:
             for path in ("/", "/agents", "/api/v1/health", "/openapi.json", "/docs"):
                 assert (await session.get(path)).status_code == 200
@@ -110,17 +68,15 @@ def test_hostname_root_endpoints_and_openapi():
             assert (await session.get("/czero/czero17/api/v1/health")).status_code == 404
     asyncio.run(check())
 
-
 @pytest.mark.parametrize("path", ["/arbitrary", "/czero/czero18", "/", "https://other.test"])
 def test_invalid_base_path_is_rejected(path):
     with pytest.raises(ValueError, match="CZERO_BASE_PATH"):
-        create_app("czero17", STATIC, path)
-
+        create_app("czero17", FRONTEND, path)
 
 def test_database_unavailable_is_a_safe_503():
     unavailable = {"status": "unavailable", "reason": "database_unavailable"}
     async def check():
-        app = create_app("czero17", STATIC, "", database=SimpleNamespace(
+        app = create_app("czero17", FRONTEND, "", database=SimpleNamespace(
             health=lambda: unavailable, close=lambda: None))
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as session:
             response = await session.get("/api/v1/health")
@@ -131,148 +87,19 @@ def test_database_unavailable_is_a_safe_503():
             assert (await session.get("/")).status_code == 200
     asyncio.run(check())
 
-
-def test_objects_page_uses_local_assets_and_accessible_editor(client):
-    response=client('/czero/czero17/objects')
-    assert response.status_code==200
-    assert 'for="record-data"' in response.text and 'aria-live="polite"' in response.text
-    assert './objects.js' in response.text
-    script=client('/czero/czero17/objects.js')
-    assert script.status_code==200 and 'expected_revision' in script.text
-    assert 'innerHTML' not in script.text
-
-
-@pytest.mark.parametrize('page', ['', 'objects', 'sources', 'wiki', 'search', 'agents', 'admin'])
-def test_user_pages_share_local_navigation_and_keyboard_focus(client, page):
-    response=client('/czero/czero17/'+page)
-    assert response.status_code==200
-    assert 'href="./app.css"' in response.text and './navigation.js' in response.text
-    assert 'aria-label="C0 navigation"' in response.text and 'Skip to content' in response.text
-    assert 'id="main-content"' in response.text
-    css=client('/czero/czero17/app.css')
-    assert css.status_code==200 and css.headers['content-type'].startswith('text/css')
-    assert ':focus-visible' in css.text and '[hidden]' in css.text
-    script=client('/czero/czero17/navigation.js')
-    assert script.status_code==200 and 'innerHTML' not in script.text
-
-
-
-def test_records_offer_schema_fields_and_explicit_json_editor(client):
-    page=client('/czero/czero17/objects')
-    assert 'id="record-fields"' in page.text and 'Advanced JSON editor' in page.text
-    assert 'src="./record-fields.js"' in page.text
-    script=client('/czero/czero17/record-fields.js')
-    assert script.status_code==200 and 'Object.defineProperty' in script.text
-    assert 'innerHTML' not in script.text and 'fetch(' not in script.text
-
-
-def test_access_page_has_one_people_table_and_no_background_work(client):
-    page=client('/czero/czero17/admin')
-    assert page.status_code==200 and 'id="access-workspace" hidden' in page.text
-    assert './workspace-access.js' in page.text and 'Username' in page.text and 'Full name' in page.text
-    assert all(label in page.text for label in ('Read','Write','Manage','Status','Actions'))
-    assert page.text.count('<table')==1
-    assert all(value not in page.text for value in ('id="job-form"','id="schedule-form"','./admin.js','./cimd.js'))
-    script=client('/czero/czero17/workspace-access.js')
-    assert script.status_code==200 and 'innerHTML' not in script.text
-    assert 'expected_revision' in script.text and 'X-C0-CSRF' in script.text
-    for name in ('advanced','spaces','work'):
-        separate=client('/czero/czero17/admin/'+name)
-        assert separate.status_code==200 and '<base href="../">' in separate.text
-        assert 'id="access-people"' not in separate.text
-    assert 'id="job-form"' in client('/czero/czero17/admin/work').text
-    assert 'id="client-form"' in client('/czero/czero17/admin/advanced').text
-    assert 'id="space-administration"' in client('/czero/czero17/admin/spaces').text
-
-
-def test_wiki_graph_offers_readable_nodes_edges_and_references(client):
-    page=client('/czero/czero17/wiki')
-    assert page.status_code==200
-    for element in ('graph-nodes','graph-edges','graph-references'):
-        assert 'id="'+element+'"' in page.text
-    assert '<summary>Graph JSON</summary>' in page.text
-
-
-@pytest.mark.parametrize('asset', ['site.js', 'reader.js', 'markdown-worker.js', 'spaces.js', 'space-admin.js', 'vendor/markdown-it-15.0.2.min.js'])
-def test_reader_assets_are_local_and_work_under_the_instance_prefix(client, asset):
-    response = client('/czero/czero17/' + asset)
-    assert response.status_code == 200
-    assert response.headers['content-type'].startswith('text/javascript')
-    assert client('/czero/czero18/' + asset).status_code == 404
-
-
 @pytest.mark.parametrize('weight', [400, 500])
 def test_nebula_fonts_are_local_and_bound_to_the_instance_prefix(client, weight):
     asset = f'vendor/poppins-latin-{weight}-normal.woff2'
     response = client('/czero/czero17/' + asset)
     assert response.status_code == 200
     assert response.headers['content-type'] == 'font/woff2'
-    assert response.content == (STATIC / asset).read_bytes()
+    assert response.content == (FRONTEND / asset).read_bytes()
     assert response.content.startswith(b'wOF2')
     assert client('/czero/czero18/' + asset).status_code == 404
     assert client('/czero/czero17/vendor/poppins-latin-700-normal.woff2').status_code == 404
     assert not any('poppins' in path for path in client('/czero/czero17/openapi.json').json()['paths'])
 
-
-def test_reader_assets_do_not_expand_the_domain_api(client):
-    paths = client('/czero/czero17/openapi.json').json()['paths']
-    assert not any(path.endswith(('.js', '.html')) for path in paths)
-    for script in ('site.js', 'reader.js'):
-        source = client('/czero/czero17/' + script).text
-        assert 'innerHTML' not in source
-        assert "method:'POST'" not in source and "method:'PUT'" not in source
-
-
-@pytest.mark.parametrize('page', ['', 'wiki', 'sources', 'search', 'agents', 'objects', 'admin'])
-def test_reader_templates_have_unique_ids_and_one_page_heading(client, page):
-    from html.parser import HTMLParser
-
-    class Structure(HTMLParser):
-        def __init__(self):
-            super().__init__()
-            self.ids = []
-            self.headings = 0
-
-        def handle_starttag(self, tag, attrs):
-            attributes = dict(attrs)
-            if 'id' in attributes:
-                self.ids.append(attributes['id'])
-            if tag == 'h1':
-                self.headings += 1
-
-    structure = Structure()
-    structure.feed(client('/czero/czero17/' + page).text)
-    assert len(structure.ids) == len(set(structure.ids))
-    assert structure.headings == 1
-
-
-@pytest.mark.parametrize('page,form', [('wiki', 'wiki-form'), ('sources', 'upload-form')])
-def test_manual_contribution_forms_belong_to_the_tools_view(client, page, form):
-    from html.parser import HTMLParser
-
-    class Ancestors(HTMLParser):
-        def __init__(self):
-            super().__init__()
-            self.stack = []
-            self.tools = False
-
-        def handle_starttag(self, tag, attrs):
-            attributes = dict(attrs)
-            if attributes.get('id') == form:
-                self.tools = any('data-tools-only' in ancestor for ancestor in self.stack)
-            if tag not in {'input', 'br', 'hr', 'meta', 'link', 'img'}:
-                self.stack.append(attributes)
-
-        def handle_endtag(self, tag):
-            if self.stack:
-                self.stack.pop()
-
-    structure = Ancestors()
-    structure.feed(client('/czero/czero17/' + page).text)
-    assert structure.tools
-
-
-@pytest.mark.parametrize('page', ['', 'wiki', 'sources', 'search', 'agents', 'objects', 'admin'])
+@pytest.mark.parametrize('page', ['', 'wiki', 'sources', 'search', 'agents', 'explore', 'admin'])
 def test_user_templates_have_balanced_elements_and_no_duplicate_attributes(client, page):
     from html.parser import HTMLParser
 
@@ -292,6 +119,11 @@ def test_user_templates_have_balanced_elements_and_no_duplicate_attributes(clien
             if tag not in self.void:
                 self.stack.append(tag)
 
+        def handle_startendtag(self, tag, attrs):
+            self.handle_starttag(tag, attrs)
+            if tag not in self.void:
+                self.handle_endtag(tag)
+
         def handle_endtag(self, tag):
             if not self.stack or self.stack[-1] != tag:
                 self.errors.append(('unbalanced element', tag))
@@ -302,3 +134,54 @@ def test_user_templates_have_balanced_elements_and_no_duplicate_attributes(clien
     markup.feed(client('/czero/czero17/' + page).text)
     assert not markup.errors
     assert not markup.stack
+
+
+@pytest.mark.parametrize('page', ['', 'search', 'wiki', 'wiki/id', 'sources', 'sources/id',
+    'evidence/id', 'projects', 'explore', 'explore/entities/id', 'account', 'agents',
+    'admin', 'admin/spaces', 'admin/work', 'admin/advanced'])
+def test_compiled_website_routes_preserve_mount_and_local_csp(client, page):
+    from html.parser import HTMLParser
+    class Assets(HTMLParser):
+        def __init__(self):super().__init__();self.urls=[];self.base=None
+        def handle_starttag(self,tag,attrs):
+            attrs=dict(attrs)
+            if tag=='base':self.base=attrs['href']
+            if tag=='script' and attrs.get('src'):self.urls.append(attrs['src'])
+            if tag=='link' and attrs.get('rel') in ('stylesheet','modulepreload'):self.urls.append(attrs['href'])
+    response=client('/czero/czero17/'+page)
+    assert response.status_code==200 and response.headers['cache-control']=='no-store'
+    assert "script-src 'self'" in response.headers['content-security-policy']
+    assert 'unsafe-inline' not in response.headers['content-security-policy']
+    markup=Assets();markup.feed(response.text)
+    assert markup.base=='/czero/czero17/' and markup.urls
+    for url in markup.urls:
+        assert url.startswith('./assets/')
+        assert client('/czero/czero17/'+url[2:]).status_code==200
+    assert 'id="app"' in response.text and 'id="c0-boot"' in response.text
+
+
+@pytest.mark.parametrize('asset', ['markdown-worker.js', 'vendor/markdown-it-15.0.2.min.js',
+    'vendor/markdown-it-LICENSE', 'vendor/poppins-LICENSE', 'vendor/third-party-notices.txt'])
+def test_local_runtime_assets_and_notices(client, asset):
+    response=client('/czero/czero17/'+asset)
+    assert response.status_code==200 and response.content
+    assert client('/czero/czero18/'+asset).status_code==404
+    assert not any(path.endswith(('.js','.html','.css','.woff2')) for path in client('/czero/czero17/openapi.json').json()['paths'])
+
+
+@pytest.mark.parametrize('path', ['objects', 'wiki.js', 'sources.js', 'site.js', 'reader.js',
+    'app.css', 'auth.js', 'oauth/consent.js', 'assets/missing.js', 'api/v1/missing'])
+def test_missing_and_removed_routes_never_return_the_spa(client, path):
+    assert client('/czero/czero17/'+path).status_code==404
+
+
+def test_public_agents_uses_unchanged_caller_aware_capabilities(client):
+    capabilities=client('/czero/czero17/agents/capabilities.json')
+    assert capabilities.status_code==200 and capabilities.headers['cache-control']=='no-store'
+    data=capabilities.json()
+    assert data['operations']==[] and data['interfaces']['mcp'] is False
+    assert data['rest_base']=='/czero/czero17/api/v1'
+    assert data['mcp_url'] is None and data['oauth'] is None
+    document=client('/czero/czero17/openapi.json').json()
+    assert document['x-c0-interfaces']['interfaces']['mcp'] is False
+    assert '/api/v1/wiki/pages' in document['paths'] and '/api/v1/sources/search' in document['paths']

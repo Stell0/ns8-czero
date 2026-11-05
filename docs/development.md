@@ -8,6 +8,30 @@ Install the maintained [NethServer skills](https://github.com/NethServer/agents)
 
 Use the active dependency manifests and `app/uv.lock` for current versions. The independently published Core README retains generation-specific historical examples; its old source tags/ranges are not the current app's dependency selection. Never edit or replace published Core artifacts as part of a documentation cleanup.
 
+## Website development
+
+The reference website lives in `app/frontend`, separately from NS8's `ui`.
+Use Node 24 and npm 11 with the committed lock:
+
+```sh
+npm --prefix app/frontend ci --ignore-scripts
+npm --prefix app/frontend run check
+npm --prefix app/frontend run test:e2e
+```
+
+Build **before** Python application and browser tests. FastAPI serves the compiled
+`app/frontend/dist` by default; `CZERO_FRONTEND_DIR` selects another compiled
+asset directory. The production Node build stage ships only compiled local
+assets/fonts/notices, without Node or development dependencies. There is one
+website, with no legacy route/controller compatibility layer.
+
+Follow the [website contracts and acceptance mapping](vue-website.md) and the
+installed Nebula skill. Keep knowledge views read-only; preserve source controls,
+server-managed cookies, exact CSRF, scoped query identities and the bounded
+Markdown worker. Translations, accessibility, late replies, cancellation and
+permission loss are part of each affected flow. Existing REST/MCP schemas and
+Core authority remain unchanged by presentation work.
+
 ## Local verification
 
 Use Python 3.12–3.14 and a fresh virtual environment. The following installs producer-development dependencies; it does not change the released runtime source selection:
@@ -27,7 +51,7 @@ Provide `CZERO_TEST_DATABASE_URL` privately for a **disposable** PostgreSQL/pgve
 
 ```sh
 .venv/bin/python -m pytest -q app/tests packages/czero-core/tests tests/unit tests/integration tests/packaging
-node --test tests/ui/*.cjs
+node --test tests/ui/*.cjs # Native NS8 settings and accessibility probe
 go run tests/check_schemas.go
 .venv/bin/python scripts/documentation.py
 ```

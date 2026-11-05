@@ -3,14 +3,12 @@
 
 import os
 import re
-from html import escape
 from pathlib import Path
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Literal
 
 from fastapi import FastAPI, Request, Response
 from pydantic import BaseModel
-from fastapi.responses import FileResponse, HTMLResponse
 
 from czero_core import core_health, Database
 from czero_app import __version__
@@ -50,7 +48,7 @@ class HealthResponse(BaseModel):
     database: DatabaseHealth
 
 
-def create_app(module_id: str | None = None, static_dir: Path | None = None,
+def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
                base_path: str | None = None, database: Database | None = None,
                *, auth: AppAuth | None = None) -> FastAPI:
     """Create a hostname-root application or preserve a legacy NS8 path."""
@@ -63,10 +61,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     if base_path not in ("", legacy_path):
         raise ValueError("CZERO_BASE_PATH must be empty or the assigned instance path")
 
-    if static_dir is None:
-        default_static_dir = Path(__file__).resolve().parents[2] / "static"
-        static_dir = Path(os.getenv("CZERO_STATIC_DIR", default_static_dir))
-    home_page = static_dir / "index.html"
+    if frontend_dir is None:
+        frontend_dir = Path(os.getenv('CZERO_FRONTEND_DIR',
+            Path(__file__).resolve().parents[2] / 'frontend' / 'dist'))
 
     database = database if database is not None else Database()
     auth = auth if auth is not None else AppAuth.from_env(database, base_path)
@@ -100,6 +97,9 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         lifespan=lifespan,
     )
     instance_app.state.auth = auth
+    from czero_app.website import Website
+    instance_app.state.website = Website(frontend_dir, base_path)
+    instance_app.state.website.install(instance_app)
     instance_app.add_middleware(ExactSpaceSelector)
     # Keep the body guard inside the existing response-header middleware;
     # multipart errors are handled before crossing its task-group boundary.
@@ -130,151 +130,6 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
     install_oauth_routes(instance_app, auth, read_context, write_context)
     catalog.annotate_openapi(instance_app)
-
-    @instance_app.get("/", include_in_schema=False)
-    async def home() -> FileResponse:
-        return FileResponse(home_page, media_type="text/html")
-
-    @instance_app.get('/projects', include_in_schema=False)
-    def project_reader():
-        return FileResponse(static_dir / 'projects.html', media_type='text/html')
-
-    @instance_app.get('/projects.js', include_in_schema=False)
-    def project_script():
-        return FileResponse(static_dir / 'projects.js', media_type='text/javascript')
-
-    @instance_app.get('/app.css', include_in_schema=False)
-    async def shared_style() -> FileResponse:
-        return FileResponse(static_dir / 'app.css', media_type='text/css')
-
-    @instance_app.get('/vendor/poppins-latin-400-normal.woff2', include_in_schema=False)
-    async def regular_font() -> FileResponse:
-        return FileResponse(static_dir / 'vendor' / 'poppins-latin-400-normal.woff2', media_type='font/woff2')
-
-    @instance_app.get('/vendor/poppins-latin-500-normal.woff2', include_in_schema=False)
-    async def medium_font() -> FileResponse:
-        return FileResponse(static_dir / 'vendor' / 'poppins-latin-500-normal.woff2', media_type='font/woff2')
-
-    @instance_app.get('/navigation.js', include_in_schema=False)
-    async def shared_navigation() -> FileResponse:
-        return FileResponse(static_dir / 'navigation.js', media_type='text/javascript')
-
-    @instance_app.get('/spaces.js', include_in_schema=False)
-    async def space_script() -> FileResponse:
-        return FileResponse(static_dir / 'spaces.js', media_type='text/javascript')
-
-    @instance_app.get('/space-admin.js', include_in_schema=False)
-    async def space_admin_script() -> FileResponse:
-        return FileResponse(static_dir / 'space-admin.js', media_type='text/javascript')
-
-    # Presentation assets only; the domain REST/MCP interfaces stay unchanged.
-    @instance_app.get('/site.js', include_in_schema=False)
-    async def site_script() -> FileResponse:
-        return FileResponse(static_dir / 'site.js', media_type='text/javascript')
-
-    @instance_app.get('/markdown-worker.js', include_in_schema=False)
-    def markdown_worker():
-        return FileResponse(static_dir / 'markdown-worker.js', media_type='text/javascript')
-
-    @instance_app.get('/reader.js', include_in_schema=False)
-    async def reader_script() -> FileResponse:
-        return FileResponse(static_dir / 'reader.js', media_type='text/javascript')
-
-    @instance_app.get('/api-keys.js', include_in_schema=False)
-    async def api_key_script() -> FileResponse:
-        return FileResponse(static_dir / 'api-keys.js', media_type='text/javascript')
-
-    @instance_app.get('/connections.js', include_in_schema=False)
-    async def connections_script() -> FileResponse:
-        return FileResponse(static_dir / 'connections.js', media_type='text/javascript')
-
-    @instance_app.get('/agents.js', include_in_schema=False)
-    async def agents_script() -> FileResponse:
-        return FileResponse(static_dir / 'agents.js', media_type='text/javascript')
-
-    @instance_app.get('/vendor/markdown-it-15.0.2.min.js', include_in_schema=False)
-    async def markdown_script() -> FileResponse:
-        return FileResponse(static_dir / 'vendor' / 'markdown-it-15.0.2.min.js', media_type='text/javascript')
-
-    @instance_app.get('/admin', include_in_schema=False)
-    async def admin_page() -> FileResponse:
-        return FileResponse(static_dir / 'admin.html', media_type='text/html')
-
-    @instance_app.get('/admin/advanced', include_in_schema=False)
-    async def advanced_page() -> FileResponse:
-        return FileResponse(static_dir / 'admin-advanced.html', media_type='text/html')
-
-    @instance_app.get('/admin/work', include_in_schema=False)
-    async def background_work_page() -> FileResponse:
-        return FileResponse(static_dir / 'admin-work.html', media_type='text/html')
-
-    @instance_app.get('/admin/spaces', include_in_schema=False)
-    async def protected_spaces_page() -> FileResponse:
-        return FileResponse(static_dir / 'admin-spaces.html', media_type='text/html')
-
-    @instance_app.get('/workspace-access.js', include_in_schema=False)
-    async def workspace_access_script() -> FileResponse:
-        return FileResponse(static_dir / 'workspace-access.js', media_type='text/javascript')
-
-    @instance_app.get('/cimd.js', include_in_schema=False)
-    def cimd_script():
-        return FileResponse(static_dir / 'cimd.js', media_type='text/javascript')
-
-    @instance_app.get('/connection-requests.js', include_in_schema=False)
-    def connection_requests_script():
-        return FileResponse(static_dir / 'connection-requests.js', media_type='text/javascript')
-
-    @instance_app.get('/admin.js', include_in_schema=False)
-    async def admin_script() -> FileResponse:
-        return FileResponse(static_dir / 'admin.js', media_type='text/javascript')
-
-    @instance_app.get('/extraction-work.js', include_in_schema=False)
-    async def extraction_work_script() -> FileResponse:
-        return FileResponse(static_dir / 'extraction-work.js', media_type='text/javascript')
-
-    @instance_app.get("/objects", include_in_schema=False)
-    async def objects_page() -> FileResponse:
-        return FileResponse(static_dir / "objects.html", media_type="text/html")
-
-    @instance_app.get('/search', include_in_schema=False)
-    async def search_page() -> FileResponse:
-        return FileResponse(static_dir / 'search.html', media_type='text/html')
-
-    @instance_app.get('/search.js', include_in_schema=False)
-    async def search_script() -> FileResponse:
-        return FileResponse(static_dir / 'search.js', media_type='text/javascript')
-
-    @instance_app.get('/record-fields.js', include_in_schema=False)
-    async def record_fields_script() -> FileResponse:
-        return FileResponse(static_dir / 'record-fields.js', media_type='text/javascript')
-
-    @instance_app.get("/objects.js", include_in_schema=False)
-    async def objects_script() -> FileResponse:
-        return FileResponse(static_dir / "objects.js", media_type="text/javascript")
-
-    @instance_app.get("/status.js", include_in_schema=False)
-    async def status_script() -> FileResponse:
-        return FileResponse(static_dir / "status.js", media_type="text/javascript")
-
-    @instance_app.get('/sources', include_in_schema=False)
-    async def sources_page() -> FileResponse:
-        return FileResponse(static_dir / 'sources.html', media_type='text/html')
-
-    @instance_app.get('/sources.js', include_in_schema=False)
-    async def sources_script() -> FileResponse:
-        return FileResponse(static_dir / 'sources.js', media_type='text/javascript')
-
-    @instance_app.get('/wiki', include_in_schema=False)
-    async def wiki_page() -> FileResponse:
-        return FileResponse(static_dir / 'wiki.html', media_type='text/html')
-
-    @instance_app.get('/wiki.js', include_in_schema=False)
-    async def wiki_script() -> FileResponse:
-        return FileResponse(static_dir / 'wiki.js', media_type='text/javascript')
-
-    @instance_app.get("/auth.js", include_in_schema=False)
-    async def auth_script() -> FileResponse:
-        return FileResponse(static_dir / "auth.js", media_type="text/javascript")
 
     def connection_metadata():
         available = mcp_child is not None
@@ -309,44 +164,6 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
         response.headers['Cache-Control'] = 'no-store'
         return capabilities(request)
 
-    @instance_app.get("/agents", response_class=HTMLResponse, include_in_schema=False)
-    def agents(request: Request, response: Response) -> str:
-        response.headers['Cache-Control'] = 'no-store'
-        if request.query_params.get('view') != 'tools':
-            # Public onboarding stays usable after a session expires or an
-            # instance is recreated. Caller-specific details load separately.
-            return (static_dir / 'agents.html').read_text().replace('<!--CAPABILITIES-->', '')
-        current = capabilities(request)
-        available = ''.join('<li><code>' + escape(operation['name']) + '</code>: '
-            + escape(operation['description']) + ' (' + escape(operation['required_scope']) + ')</li>'
-            for operation in current['operations'])
-        caller = ('Current role: ' + current['role']) if current['authenticated'] else 'Sign in to inspect your available operations.'
-        connection = (
-            '<h2>Connect an MCP client</h2><p>Remote MCP Streamable HTTP is available at '
-            '<code>' + escape(current['mcp_url']) + '</code>. Ask an application Admin to approve '
-            'your public client ID and exact callback, then sign in and explicitly consent. '
-            'Use S256 and the exact server URL as the resource; no client secret or dynamic registration.</p>'
-            '<p>Scopes: <code>c0:read</code>, <code>c0:write</code>, <code>c0:admin</code>. '
-            'Your current role also limits every operation.</p>'
-            '<label for="technical-mcp-url">Server URL</label><input id="technical-mcp-url" readonly value="' + escape(current['mcp_url'], quote=True) + '"><button type="button" data-copy-target="technical-mcp-url" data-copy-status="technical-copy-status">Copy server URL</button><p id="technical-copy-status" role="status" aria-live="polite"></p>'
-            '<ul><li><a href="' + escape(current['oauth']['protected_resource_metadata'], quote=True) + '">Protected-resource metadata</a></li>'
-            '<li><a href="' + escape(current['oauth']['authorization_metadata'], quote=True) + '">OAuth authorization metadata</a></li></ul>'
-        ) if current['interfaces']['mcp'] else (
-            '<p>MCP is unavailable until NS8 sign-in and hostname-root routing are configured.</p>')
-        guidance = '<h2>Agent workflows</h2>' + ''.join('<h3>' + escape(flow['title']) + '</h3><ol>' + ''.join('<li>' + escape(step) + '</li>' for step in flow['steps']) + '</ol>' for flow in current['guidance']['workflows'])
-        reference = (
-            "<p>This reference runtime exposes a health endpoint and OpenAPI. "
-            "Database readiness is available. Configured NS8 OIDC protects identity and membership endpoints. "
-            "Admins can inspect/enqueue registered jobs and configure UTC interval schedules. "
-            "A native timer wakes the standalone worker about once a minute; jobs survive restarts. "
-            "Readers can inspect typed objects, sources, extracted documents and citations, and search source text. Current Wiki pages and generations, entity aliases, sourced claims and bounded graph queries are available. Editors can author knowledge, write records/relations and upload or retry evidence. Admins register schemas. Knowledge retrieval supports optional configured embeddings, hybrid ranking and bounded System One scoring, with text fallback. Opt-in structured search applies exact applicability filters and returns observed typed references; structured records use deterministic text. Applicability and verification bind to exact current content identities. Expired evidence is explicitly unavailable; historical bodies are removed. Missing annotations mean unknown; changed content never inherits verification. </p>"
-            "<ul><li><a href='./api/v1/health'>GET api/v1/health</a></li>"
-            "<li><a href='./docs'>OpenAPI documentation</a></li>"
-            "<li><a href='./agents/capabilities.json'>Caller-aware capability JSON</a></li></ul>"
-            + connection + guidance + "<h2>Available operations</h2><p>" + escape(caller) + "</p><ul>" + available + "</ul>"
-        )
-        return (static_dir / 'agents.html').read_text().replace('<!--CAPABILITIES-->', reference)
-
     @instance_app.get("/api/v1/health", name="health", response_model=HealthResponse,
                       response_model_exclude_none=True,
                       responses={503: {"description": "Database unavailable"}})
@@ -361,7 +178,7 @@ def create_app(module_id: str | None = None, static_dir: Path | None = None,
     if auth is not None and not base_path:
         from czero_app.oauth_server import install_oauth_server
         from czero_app.mcp_transport import create_mcp_app
-        grants, _ = install_oauth_server(instance_app, auth, read_context, write_context, static_dir)
+        grants, _ = install_oauth_server(instance_app, auth, read_context, write_context)
         mcp_child = create_mcp_app(catalog.registry, grants,
             issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth', api_keys=getattr(instance_app.state, 'api_keys', None))
         instance_app.state.mcp_app = mcp_child

@@ -1,5 +1,30 @@
 # C0 roadmap
 
+## Vue 3 website remake — implementation candidate
+
+The operator's accepted plan replaces the entire website with Vue 3, TypeScript
+and Nebula, English/Italian, light/dark/system and phone/desktop layouts. Source
+is isolated from original main `b317619322ab0a59af038186db8e55e749f94ff6`.
+App 0.59.0 retains released Core 0.38.0 and schema 0032. Native NS8 settings stay
+Vue 2/Carbon. Existing installation identities and deployment authority remain
+unchanged.
+
+The candidate contains the shell/router, read-only Home/Wiki/Sources/Projects/
+Explore, source upload/replacement/recovery, Account/API keys, people/application
+access, protected spaces, technical clients, jobs/schedules and server-gated
+sign-in/consent presentation. It serves compiled local assets, removes legacy
+controllers and moves their retained behavioral coverage to Vue/browser tests.
+See [contracts, coverage mapping and checks](docs/vue-website.md).
+
+The original baseline passes 2775 backend/database/packaging cases with local
+English/Italian OCR. Frontend checks, 27 Vitest cases, 10 controlled browser cases
+and 1038 Python unit cases pass. Actual runtime inventory/license and released
+Core identity probes pass. Failed candidate and full-browser evidence remains
+preserved; targeted corrections are not complete final-source acceptance.
+Complete candidate checks, final packaged image, full Debian/Rocky native
+acceptance and the reviewed upstream regular-merge PR remain required.
+No deployment or stable release is implied by this candidate.
+
 ## Personal API keys — released consumer accepted
 
 App0.58.0 adopts independently published Core0.38.0 and schema0032. Personal

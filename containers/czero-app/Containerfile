@@ -1,6 +1,16 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+FROM docker.io/library/node:24.22.2-bookworm-slim AS website
+WORKDIR /build/frontend
+COPY app/frontend/package.json app/frontend/package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY app/frontend/index.html app/frontend/vite.config.ts app/frontend/tsconfig.json ./
+COPY app/frontend/src ./src
+COPY app/frontend/public ./public
+COPY app/frontend/licenses ./licenses
+RUN npm run build
+
 FROM docker.io/library/python:3.13.16-slim-trixie AS builder
 
 ENV UV_LINK_MODE=copy \
@@ -36,7 +46,7 @@ FROM docker.io/library/python:3.13.16-slim-trixie AS runtime
 ENV PATH="/opt/czero/.venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    CZERO_STATIC_DIR=/opt/czero/static \
+    CZERO_FRONTEND_DIR=/opt/czero/frontend \
     CZERO_AGENT_PACKAGE_DIR=/opt/czero/agent-packages
 
 # Dependencies are already installed by the builder; keep package installers
@@ -49,7 +59,7 @@ RUN apt-get update \
     && install -d -o 10001 -g 10001 /var/lib/czero/sources
 WORKDIR /opt/czero
 COPY --from=builder --chown=10001:10001 /opt/czero/.venv /opt/czero/.venv
-COPY --chown=10001:10001 app/static /opt/czero/static
+COPY --from=website --chown=10001:10001 /build/frontend/dist /opt/czero/frontend
 # Product workflow templates only; never repository development instructions.
 COPY --chown=10001:10001 plugins/c0-knowledge/plugin.json plugins/c0-knowledge/memory-skill.md LICENSE /opt/czero/agent-packages/
 COPY --chown=10001:10001 plugins/c0-knowledge/skills/c0-setup/SKILL.md /opt/czero/agent-packages/skills/c0-setup/SKILL.md

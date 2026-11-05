@@ -44,7 +44,7 @@
     missing_language: document.documentElement.lang.trim() ? 0 : 1,
     missing_main: document.querySelector('main') ? 0 : 1,
     missing_h1: document.querySelectorAll('h1').length === 1 ? 0 : 1,
-    missing_navigation: document.querySelector('nav[aria-label="C0 navigation"]') ? 0 : 1,
+    missing_navigation: document.querySelector('nav[aria-label="C0 navigation"], nav[data-c0-navigation][aria-label]') ? 0 : 1,
     missing_skip_target: localSkipTarget ? 0 : 1,
   };
 }

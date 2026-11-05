@@ -3,7 +3,6 @@
 """Bounded app adapter around official OAuth handlers and verified NS8 SSO."""
 from functools import partial
 import logging
-from pathlib import Path
 import re
 from urllib.parse import urlencode, urlsplit
 from uuid import UUID
@@ -11,7 +10,7 @@ from uuid import UUID
 from anyio import to_thread
 from fastapi import Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from mcp.server.auth.handlers.authorize import AuthorizationHandler
 from mcp.server.auth.handlers.token import TokenHandler
 from mcp.server.auth.handlers.revoke import RevocationHandler
@@ -70,7 +69,7 @@ class PublicRevocationRequest:
         return self.data
 
 
-def install_oauth_server(app, auth, read_context, write_context, static_dir: Path):
+def install_oauth_server(app, auth, read_context, write_context):
     previous_validation = app.exception_handlers[RequestValidationError]
 
     @app.exception_handler(RequestValidationError)
@@ -226,11 +225,7 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
             response.delete_cookie('c0_session', path='/', secure=True,
                 httponly=True, samesite='lax')
             return response
-        return FileResponse(static_dir / 'consent.html', media_type='text/html', headers={'Cache-Control':'no-store'})
-
-    @app.get('/oauth/consent.js', include_in_schema=False)
-    def consent_script():
-        return FileResponse(static_dir / 'consent.js', media_type='text/javascript')
+        return app.state.website.render()
 
     @app.get('/oauth/consent/request', include_in_schema=False)
     def consent_request(request: Request):
@@ -299,5 +294,5 @@ def install_oauth_server(app, auth, read_context, write_context, static_dir: Pat
     install_workspace_routes(app, grants, read_context, write_context, cimd)
 
     install_onboarding_routes(app, onboarding, cimd, auth, read_context, write_context,
-                              browser_session, static_dir)
+                              browser_session)
     return grants, consent

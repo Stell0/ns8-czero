@@ -58,7 +58,21 @@ jobs:
           uv pip install --system --override /tmp/c0-producer-requirement.txt pytest robotframework robotframework-sshlibrary -e packages/czero-core -e 'app[test]' -e samples/ingestion
       - uses: actions/setup-node@v6
         with:
-          node-version: "24.21.0"
+          node-version: "24.22.2"
+          cache: npm
+          cache-dependency-path: app/frontend/package-lock.json
+      - name: Frozen Vue website checks
+        working-directory: app/frontend
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run check
+          npm audit --omit=dev --audit-level=moderate
+      - name: Vue interaction checks
+        if: ${{ !inputs.feedback }}
+        working-directory: app/frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - if: inputs.feedback
         run: python scripts/run-ci-feedback.py ci-selection.json
       - name: Install local OCR for full acceptance
