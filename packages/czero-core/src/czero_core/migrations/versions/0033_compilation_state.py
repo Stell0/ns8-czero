@@ -41,6 +41,8 @@ def upgrade():
           OR (state<>'budget' AND window_start IS NULL AND window_end IS NULL
           AND lease_expiry IS NOT NULL AND invocation_deadline IS NOT NULL
           AND isfinite(lease_expiry) AND isfinite(invocation_deadline) AND lease_expiry<=invocation_deadline)))''')
+    op.execute("CREATE INDEX c0_compilation_runs_recent ON c0_compilation_runs(space_id,updated_at DESC,id) WHERE state<>'budget'")
+    op.execute("CREATE INDEX c0_compilation_runs_budget_recent ON c0_compilation_runs(space_id,window_end DESC) WHERE state='budget'")
     op.execute('CREATE INDEX c0_compilation_runs_active ON c0_compilation_runs(space_id,state,lease_expiry)')
     op.execute('CREATE INDEX c0_compilation_runs_windows ON c0_compilation_runs(space_id,kind,window_end) WHERE state=\'budget\'')
     op.execute('''CREATE TABLE c0_compilation_tasks (
@@ -63,6 +65,7 @@ def upgrade():
         FOREIGN KEY(space_id,run_id) REFERENCES c0_compilation_runs(space_id,id),
         FOREIGN KEY(space_id,predecessor_id) REFERENCES c0_compilation_tasks(space_id,id))''')
     op.execute("CREATE UNIQUE INDEX c0_compilation_tasks_family ON c0_compilation_tasks(space_id,family_key) WHERE state IN ('queued','leased','planned','needs_review','deferred','uncertain')")
+    op.execute('CREATE INDEX c0_compilation_tasks_lineage ON c0_compilation_tasks(space_id,family_key,created_at DESC,id DESC)')
     op.execute("CREATE INDEX c0_compilation_tasks_pending ON c0_compilation_tasks(space_id,not_before,id) WHERE state IN ('queued','deferred')")
     op.execute('CREATE INDEX c0_compilation_tasks_state ON c0_compilation_tasks(space_id,state,id)')
     op.execute('CREATE INDEX c0_compilation_tasks_topic ON c0_compilation_tasks(space_id,topic_key,profile_id)')
@@ -99,7 +102,7 @@ def upgrade():
         CHECK ((start_offset IS NULL AND end_offset IS NULL) OR (start_offset>=0 AND end_offset>start_offset)))''')
     op.execute('CREATE INDEX c0_compilation_dependencies_task ON c0_compilation_dependencies(space_id,task_id)')
     op.execute('CREATE INDEX c0_compilation_dependencies_source ON c0_compilation_dependencies(space_id,logical_document_id,source_revision,target_kind,target_id)')
-    op.execute('CREATE INDEX c0_compilation_dependencies_target ON c0_compilation_dependencies(space_id,target_kind,target_id,id)')
+    op.execute('CREATE INDEX c0_compilation_dependencies_target ON c0_compilation_dependencies(space_id,target_id,id)')
     op.execute('CREATE INDEX c0_compilation_dependencies_stale ON c0_compilation_dependencies(space_id,state,target_kind,target_id)')
     op.execute('''CREATE TABLE c0_compilation_events (
         id uuid PRIMARY KEY, space_id uuid NOT NULL REFERENCES c0_compilation_policies(space_id) ON DELETE CASCADE,
@@ -114,6 +117,7 @@ def upgrade():
         FOREIGN KEY(space_id,task_id) REFERENCES c0_compilation_tasks(space_id,id),
         FOREIGN KEY(space_id,day_budget_id) REFERENCES c0_compilation_runs(space_id,id),
         FOREIGN KEY(space_id,week_budget_id) REFERENCES c0_compilation_runs(space_id,id))''')
+    op.execute('CREATE INDEX c0_compilation_events_task ON c0_compilation_events(space_id,task_id,created_at,id)')
     op.execute('CREATE INDEX c0_compilation_events_run ON c0_compilation_events(space_id,run_id,created_at,id)')
     op.execute('CREATE INDEX c0_compilation_events_day ON c0_compilation_events(space_id,day_budget_id,kind)')
     op.execute('CREATE INDEX c0_compilation_events_week ON c0_compilation_events(space_id,week_budget_id,kind)')

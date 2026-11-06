@@ -126,7 +126,7 @@ class CompilationRuns:
         return (len(documents) <= min(budget['data']['caps']['documents'], policy[prefix + 'documents'])
             and len(targets) <= min(budget['data']['caps']['pages'], policy[prefix + 'pages']))
 
-    def _reserve_tasks(self, connection, actor, run, policy, request_key, limit):
+    def _reserve_tasks(self, connection, actor, run, policy, limit):
         # Reattach already reserved work before selecting new tasks; consumed debits survive.
         owned = list(connection.execute(text('''SELECT * FROM c0_compilation_tasks WHERE space_id=:space
             AND run_id=:run AND state IN ('leased','planned','uncertain') ORDER BY created_at,id'''),
@@ -143,6 +143,7 @@ class CompilationRuns:
                 {'space': self._space_id, 'now': self.clock(), 'attempts': policy['max_attempts'],
                  'profile': policy['profile_id'], 'version': policy['profile_version'], 'limit': room, 'known': run['data']['task_ids']}).mappings()]
         reserved = []
+        retry_at = None
         for task in candidates:
             held = str(task['id']) in run['data']['task_ids']
             if not held and len(reserved) >= limit:
@@ -158,10 +159,14 @@ class CompilationRuns:
             budgets = [self._budget(connection, run['day_budget_id'])]
             if run['week_budget_id'] is not None:
                 budgets.append(self._budget(connection, run['week_budget_id']))
-            if not all(self._reservation_fits(connection, b, task, policy) for b in budgets):
+            exhausted = [b for b in budgets if not self._reservation_fits(connection, b, task, policy)]
+            if exhausted:
+                deadline = max(self.clock(), *(b['window_end'] for b in exhausted))
+                retry_at = max(retry_at, deadline) if retry_at else deadline
                 continue
             # One task reservation observation per run fence and budget window.
-            identity = digest([request_key, 'task_reserve', str(task['id']), run['fencing_generation'], str(run['day_budget_id'])])
+            identity = digest(['task_reserve', str(run['id']), str(task['id']), run['fencing_generation'],
+                str(run['day_budget_id']), str(run['week_budget_id'])])
             uncertain = any(c['task_id'] == str(task['id']) and c['state'] == 'uncertain' for c in run['data']['calls'].values())
             changed = (task['fencing_generation'] != run['fencing_generation'] or task['run_id'] != run['id'] or task['state'] == 'deferred' or not held)
             next_state = 'uncertain' if uncertain else task['state'] if held and task['state'] in ('planned','leased') else 'leased'
@@ -177,11 +182,14 @@ class CompilationRuns:
                      'fence': run['fencing_generation'], 'policy': run['policy_revision'], 'now': self.clock()}).mappings().one())
             if not held:
                 run['data']['task_ids'].append(str(task['id']))
-            self._event(connection, actor, identity, identity, 'task_reserve', 'reserved', run=run, task=task,
-                kind='task_reserve', metrics={'document_ids': [s['logical_document_id'] for s in task['source_bindings']],
-                    'target_keys': [task['target_key']]})
+            recorded = connection.execute(text('SELECT 1 FROM c0_compilation_events WHERE space_id=:space AND actor_id=:actor AND request_key=:key'),
+                {'space': self._space_id, 'actor': actor.user_id, 'key': identity}).scalar_one_or_none()
+            if not recorded:
+                self._event(connection, actor, identity, identity, 'task_reserve', 'reserved', run=run, task=task,
+                    kind='task_reserve', metrics={'document_ids': [s['logical_document_id'] for s in task['source_bindings']],
+                        'target_keys': [task['target_key']]})
             reserved.append(snapshot(task))
-        return reserved
+        return reserved, retry_at
 
     def claim_run(self, actor, data, *, idempotency_key):
         data = checked(CLAIM, data)
@@ -208,14 +216,15 @@ class CompilationRuns:
                 if data['kind'] in ('daily', 'weekly') and (data['cycle_key'] != today or date.fromisoformat(data['cycle_key']).isoformat() != today):
                     raise ValueError('current_compilation_cycle_required')
                 run = None; live = False
-            active = connection.execute(text("""SELECT count(*) FROM c0_compilation_runs
+            active = connection.execute(text("""SELECT count(*) AS count,
+                    min(LEAST(lease_expiry,invocation_deadline)) AS next_eligible_at FROM c0_compilation_runs
                 WHERE space_id=:space AND state='running' AND lease_expiry>:now
                   AND invocation_deadline>:now AND policy_revision=:policy AND database_epoch=:epoch
                   AND (CAST(:current AS uuid) IS NULL OR id<>CAST(:current AS uuid))"""),
                 {'space': self._space_id, 'now': now, 'policy': policy['revision'], 'epoch': epoch,
-                 'current': run['id'] if run else None}).scalar_one()
-            if not live and active >= config['concurrency']:
-                return {'outcome': 'deferred_concurrency'}
+                 'current': run['id'] if run else None}).mappings().one()
+            if not live and active['count'] >= config['concurrency']:
+                return {'outcome': 'deferred_concurrency', 'next_eligible_at': snapshot(active['next_eligible_at']), 'retryable': True}
             day, week = self._budgets(connection, current, policy, data['kind'])
             if run is None:
                 run = dict(connection.execute(text('''INSERT INTO c0_compilation_runs(id,space_id,kind,cycle_key,
@@ -241,10 +250,14 @@ class CompilationRuns:
                     week_budget_id=week['id'] if week else None,
                     lease_expiry=min(now + timedelta(seconds=config['lease_seconds']), run['invocation_deadline']))
                 run['data']['policy'] = config
-            tasks = self._reserve_tasks(connection, current, run, config, idempotency_key, data['task_limit'])
+            tasks, retry_at = self._reserve_tasks(connection, current, run, config, data['task_limit'])
             run = self._save_run(connection, run)
             lease = {'run_id': str(run['id']), 'lease_owner': run['lease_owner'], 'fencing_generation': run['fencing_generation']}
-            return {'outcome': 'claimed', 'run': snapshot(run), 'lease': lease, 'tasks': tasks}
+            result = {'outcome': 'deferred_budget' if not tasks and retry_at else 'claimed',
+                'run': snapshot(run), 'lease': lease, 'tasks': tasks}
+            if retry_at:
+                result.update(next_eligible_at=snapshot(retry_at), retryable=True)
+            return result
         return self._mutate(actor, 'run_claim', data, idempotency_key, execute)
 
     def _leased_task(self, connection, run, data, *, support=True):
@@ -266,12 +279,15 @@ class CompilationRuns:
         if run['week_budget_id'] is not None:
             budgets.append(self._budget(connection, run['week_budget_id']))
         if observed is None:
+            exhausted = []
             for budget in budgets:
                 prefix = 'daily_' if budget['kind'] == 'budget_day' else 'weekly_'
                 caps = budget['data']['caps']
                 if (budget['window_end'] <= self.clock() or budget['data']['requests'] + 1 > min(caps['requests'], policy[prefix + 'model_requests'])
                         or budget['data']['charged_tokens'] + reserved > min(caps['tokens'], policy[prefix + 'model_tokens'])):
-                    return False
+                    exhausted.append(budget['window_end'])
+            if exhausted:
+                return max(self.clock(), *exhausted)
             for budget in budgets:
                 budget['data']['requests'] += 1; budget['data']['charged_tokens'] += reserved
                 budget['data']['unknown_requests'] += 1
@@ -327,9 +343,12 @@ class CompilationRuns:
                     raise self.conflict()
                 if run['kind'] == 'retrieval' and (len(calls) >= run['data']['policy']['retrieval_model_requests']
                         or data['reserved_tokens'] > run['data']['policy']['retrieval_model_tokens']):
-                    return {'outcome': 'deferred_budget', 'run': snapshot(run), 'task': snapshot(task)}
-                if not self._charge_model(connection, run, data['reserved_tokens']):
-                    return {'outcome': 'deferred_budget', 'run': snapshot(run), 'task': snapshot(task)}
+                    return {'outcome': 'deferred_budget', 'run': snapshot(run), 'task': snapshot(task),
+                        'next_eligible_at': None, 'retryable': False}
+                allowance = self._charge_model(connection, run, data['reserved_tokens'])
+                if allowance is not True:
+                    return {'outcome': 'deferred_budget', 'run': snapshot(run), 'task': snapshot(task),
+                        'next_eligible_at': snapshot(allowance), 'retryable': True}
                 calls[data['request_id']] = {'state': 'reserved', 'task_id': str(task['id']),
                     'reserved_tokens': data['reserved_tokens'], 'observed_tokens': None,
                     'day_budget_id': str(run['day_budget_id']),

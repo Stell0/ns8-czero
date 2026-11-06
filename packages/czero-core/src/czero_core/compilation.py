@@ -1,6 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Metadata-only compilation coordination. Reasoning and publication are external/M2."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import unicodedata
 from uuid import uuid4
@@ -393,7 +393,7 @@ class CompilationService(CompilationRuns, SpaceBound):
             count = connection.execute(text('SELECT count(*) FROM c0_compilation_tasks WHERE space_id=:space AND state=ANY(:states)'),
                 {'space': self._space_id, 'states': list(ACTIVE)}).scalar_one()
             if count >= config['max_outstanding_tasks'] and not (old and old['state'] in ACTIVE):
-                return {'outcome': 'deferred_capacity'}
+                return {'outcome': 'deferred_capacity', 'next_eligible_at': snapshot(self.clock() + timedelta(seconds=60)), 'retryable': True}
             if old and old['state'] in ACTIVE:
                 connection.execute(text("UPDATE c0_compilation_tasks SET state='superseded',revision=revision+1,updated_at=:now WHERE space_id=:space AND id=:id"),
                     {'space': self._space_id, 'id': old['id'], 'now': self.clock()})

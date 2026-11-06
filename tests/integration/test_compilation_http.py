@@ -54,3 +54,19 @@ def test_rest_and_both_mcp_modes_use_core_policy_and_fixed_errors(knowledge_http
         with database.engine.begin() as c:
             c.execute(text('DELETE FROM c0_compilation_events'))
             c.execute(text('DELETE FROM c0_compilation_policies'))
+
+
+def test_legacy_mount_sanitizes_invalid_inputs(knowledge_http):
+    from pathlib import Path
+    from czero_app.main import create_app
+    app, owner, _, _, database, _ = knowledge_http
+    legacy = create_app('czero900', Path(__file__).parents[2]/'app/frontend/dist',
+        '/czero/czero900', database, auth=app.state.auth)
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=legacy), base_url=ORIGIN,
+                headers={'Authorization': 'Bearer '+owner}) as http:
+            response = await http.put('/czero/czero900/api/v1/compilation/policy',
+                params={'space_id': str(uuid4())}, json={'unrecognized': 'PRIVATE-DO-NOT-ECHO'})
+            assert response.status_code == 422
+            assert response.json() == {'detail': 'invalid_compilation_request'}
+    asyncio.run(check())

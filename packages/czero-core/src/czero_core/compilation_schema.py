@@ -70,14 +70,14 @@ SOURCE_SELECTION = record({'logical_document_id': UUID, 'revision_id': UUID,
 TARGET = record({'kind': {'const': 'page'}, 'id': UUID, 'revision': integer(1, 2147483646),
     'content_id': UUID, 'content_hash': HASH})
 LEASE = record({'run_id': UUID, 'lease_owner': KEY, 'fencing_generation': integer(1, 9223372036854775806)})
-PROPOSAL = record({'policy_revision': integer(1, 2147483646), 'origin': {'enum': ORIGINS},
+PROPOSAL = record({'policy_revision': integer(0, 2147483646), 'origin': {'enum': ORIGINS},
     'reason': {'enum': REASONS}, 'topic_key': {'type': 'string', 'pattern': '^[a-z0-9][a-z0-9_.:/-]{0,95}$'},
     'source_bindings': {'type': 'array', 'minItems': 1, 'maxItems': 3, 'items': SOURCE},
     'target': {'anyOf': [TARGET, {'type': 'null'}]},
     'source_label': {'type': 'string', 'maxLength': 160}},
     ['policy_revision', 'origin', 'reason', 'topic_key', 'source_bindings'])
 CLAIM = record({'kind': {'enum': ORIGINS}, 'cycle_key': KEY, 'lease_owner': KEY,
-    'policy_revision': integer(1, 2147483646), 'task_limit': integer(1, 20)},
+    'policy_revision': integer(0, 2147483646), 'task_limit': integer(1, 20)},
     ['kind', 'cycle_key', 'lease_owner', 'policy_revision'])
 CHECKPOINT = record({'lease': LEASE, 'expected_revision': integer(1, 2147483646),
     'action': {'enum': ['planned', 'no_change', 'defer', 'fail', 'reserve_model', 'start_model',

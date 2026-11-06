@@ -88,7 +88,7 @@ def test_disabled_defaults_and_reads_do_not_initialize(compiler):
     assert service.policy(owner) == before
     bindings, _ = support(compiler)
     with pytest.raises(CompilationDisabled):
-        propose(compiler, bindings, policy_revision=1)
+        propose(compiler, bindings)
     with service.database.engine.connect() as connection:
         assert connection.execute(text('SELECT count(*) FROM c0_compilation_policies')).scalar_one() == 0
     with pytest.raises(ValueError, match='explicit_compilation_space'):
@@ -392,12 +392,14 @@ def test_natural_indexes_at_representative_coordination_cardinality(compiler, re
             FROM c0_compilation_dependencies template CROSS JOIN generate_series(1,10000) g
             CROSS JOIN LATERAL jsonb_populate_record(NULL::c0_compilation_dependencies,to_jsonb(template)||jsonb_build_object(
               'id',md5(:salt||'dependency'||template.id||g)::uuid,
-              'logical_document_id',md5(:salt||'source'||g)::uuid)) expanded WHERE template.logical_document_id=:id'''),
+              'logical_document_id',md5(:salt||'source'||g)::uuid,
+              'target_id',md5(:salt||'target'||g)::uuid)) expanded WHERE template.logical_document_id=:id'''),
             {'salt': salt, 'id': bindings[0]['logical_document_id']})
         for table in ('tasks', 'sources', 'dependencies'):
             c.execute(text('ANALYZE c0_compilation_' + table))
         c.execute(text("SET LOCAL statement_timeout='5s'"))
-        queries = [('source', 'SELECT * FROM c0_compilation_dependencies WHERE space_id=:space AND logical_document_id=:logical',
+        queries = [('target', 'SELECT * FROM c0_compilation_dependencies WHERE space_id=:space AND target_id=:target ORDER BY id LIMIT 50',
+            'c0_compilation_dependencies_target'), ('source', 'SELECT * FROM c0_compilation_dependencies WHERE space_id=:space AND logical_document_id=:logical',
             'c0_compilation_dependencies_source'),
             ('queue', "SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND state='queued' ORDER BY not_before,id LIMIT 20",
              ('c0_compilation_tasks_pending', 'c0_compilation_tasks_state')),
@@ -405,7 +407,7 @@ def test_natural_indexes_at_representative_coordination_cardinality(compiler, re
              'c0_compilation_tasks_topic')]
         for name, query, index in queries:
             plan = c.execute(text('EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) '+query),
-                {'space': service._space_id, 'logical': bindings[0]['logical_document_id']}).scalar_one()[0]
+                {'space': service._space_id, 'logical': bindings[0]['logical_document_id'], 'target': page['id']}).scalar_one()[0]
             choices = (index,) if isinstance(index, str) else index
             assert any(value in json.dumps(plan) for value in choices), plan
             record_property('compilation_sql_'+name, json.dumps(plan))
@@ -496,3 +498,51 @@ def test_external_request_identity_cannot_be_reused_across_runs(compiler):
     with pytest.raises(CompilationConflict):
         checkpoint(compiler, second, 'reserve_model', second['tasks'][0], request_id=call, reserved_tokens=100)
     assert service.status(owner)['budgets'][0]['data']['requests'] == 1
+
+
+def test_concurrent_model_reservations_share_day_and_week_ceilings(compiler):
+    service, owner, *_ = compiler
+    enable(compiler, concurrency=2, daily_model_requests=1, weekly_model_requests=1)
+    bindings, _ = support(compiler)
+    propose(compiler, bindings)
+    propose(compiler, bindings, topic_key='other-procedure')
+    weekly = claim(compiler, kind='weekly', cycle_key='2026-10-25')
+    manual = claim(compiler, cycle_key='manual-budget-race')
+    def reserve(run):
+        return checkpoint(compiler, run, 'reserve_model', run['tasks'][0],
+            request_id=str(uuid4()), reserved_tokens=100)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(reserve, [weekly, manual]))
+    assert sorted(r['outcome'] for r in results) == ['deferred_budget', 'reserve_model']
+    budgets = {b['kind']: b['data'] for b in service.status(owner)['budgets']}
+    assert budgets['budget_day']['requests'] == 1
+    assert budgets['budget_week']['requests'] == int(results[0]['outcome'] == 'reserve_model')
+
+
+def test_document_quota_hold_reports_retry_time_and_preserves_pending_task(compiler):
+    service, owner, now, *_ = compiler
+    enable(compiler, concurrency=2, daily_documents=1)
+    first, _ = support(compiler)
+    second, _ = support(compiler, data=b'Other original evidence')
+    propose(compiler, first)
+    propose(compiler, second, topic_key='other-source')
+    assert claim(compiler, cycle_key='initial')['tasks']
+    held = claim(compiler, cycle_key='quota-held')
+    assert held['outcome'] == 'deferred_budget' and held['tasks'] == []
+    assert held['retryable'] and datetime.fromisoformat(held['next_eligible_at']) > now[0]
+    pending = service.list_tasks(owner, state='queued')['tasks']
+    assert len(pending) == 1 and pending[0]['attempts'] == 0
+
+
+def test_renewal_keeps_one_task_debit_per_fence_and_window(compiler):
+    service, owner, *_ = compiler
+    enable(compiler)
+    propose(compiler)
+    first = claim(compiler)
+    for _ in range(3):
+        renewed = claim(compiler)
+        assert renewed['lease'] == first['lease']
+    with service.database.engine.connect() as c:
+        assert c.execute(text("SELECT count(*) FROM c0_compilation_events WHERE space_id=:space AND kind='task_reserve'"),
+            {'space': service._space_id}).scalar_one() == 1
+    assert renewed['tasks'][0]['attempts'] == 1

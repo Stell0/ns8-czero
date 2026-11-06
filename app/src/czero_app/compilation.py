@@ -78,7 +78,7 @@ def install(app, database, auth, read_context, write_context):
     previous_validation = app.exception_handlers[RequestValidationError]
     @app.exception_handler(RequestValidationError)
     async def validation(request, error):
-        if request.url.path.startswith('/api/v1/compilation'):
+        if '/api/v1/compilation/' in request.url.path:
             return JSONResponse({'detail': 'invalid_compilation_request'}, status_code=422)
         return await previous_validation(request, error)
 
