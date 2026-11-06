@@ -1,0 +1,18 @@
+[
+  {
+    "query": "socket",
+    "expected_source_keys": []
+  },
+  {
+    "query": "7443",
+    "expected_source_keys": [
+      "listener"
+    ]
+  },
+  {
+    "query": "certificato",
+    "expected_source_keys": [
+      "italian"
+    ]
+  }
+]

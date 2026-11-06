@@ -1,0 +1,49 @@
+{
+  "namespace": "kc-m0",
+  "records": [
+    {
+      "key": "listener",
+      "title": "Orion socket settings",
+      "synthesis": "Navigation inference: socket configuration may be found in the listener manual. Read the exact original port and certificate prerequisites.",
+      "classification": "inferred",
+      "support": [
+        {
+          "key": "listener",
+          "quote": "uses TCP port 7443"
+        }
+      ]
+    },
+    {
+      "key": "access",
+      "title": "Orion connection prerequisites",
+      "synthesis": "Read both the operator-account prerequisite and certificate-validation requirement before connecting.",
+      "classification": "extracted",
+      "support": [
+        {
+          "key": "identity",
+          "quote": "Create an operator account before connecting"
+        },
+        {
+          "key": "listener",
+          "quote": "Enable certificate validation before connecting."
+        }
+      ]
+    },
+    {
+      "key": "disagreement",
+      "title": "Orion unresolved listener contradiction",
+      "synthesis": "The two current sources disagree on the listener port. Applicability remains unresolved; retain both observations.",
+      "classification": "uncertain",
+      "support": [
+        {
+          "key": "listener",
+          "quote": "uses TCP port 7443"
+        },
+        {
+          "key": "conflict",
+          "quote": "uses TCP port 8443"
+        }
+      ]
+    }
+  ]
+}
