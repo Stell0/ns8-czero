@@ -102,20 +102,38 @@ reviewed upload adapter, not a smaller corpus passed off as standard BEIR. Queri
 above the deployed API's 512-character bound also fail before searching.
 
 Manifests bind URL, account, exact protected space, dataset and split. They save
-source/version/document/chunk identities, revisions, hashes and offsets. Writes
-use shared deterministic idempotency keys; a pending intent is fsynced atomically
-before I/O. After interruption, rerun **the identical** `benchmark ingest` command:
-completed items are verified with zero writes; a pending item is reconciled against
-remote metadata and whole-body readback. If absent after a successful inventory,
+source/version/document/chunk identities, revisions, hashes and offsets. Ingestion
+first submits all missing documents to C0’s existing background extraction queue,
+without waiting for each document to finish. It then verifies every original body
+and chunk before marking the corpus complete. Submission requests remain sequential;
+there is no new server bulk endpoint or concurrent upload pool.
+
+Writes use shared deterministic idempotency keys; a pending intent is fsynced
+atomically before I/O. Each successful reply saves an acknowledged submission
+receipt before the next request. `submitted` counts queued or not-yet-verified
+items; `documents` contains only fully verified items. Neither queued nor
+acknowledged means extracted or searchable. After interruption, rerun **the
+identical** `benchmark ingest` command:
+completed items are verified with zero writes; acknowledged submissions retain
+their exact source/version/hash identities and are never resubmitted. The one
+uncertain pending intent is reconciled against remote metadata, then its whole
+body is verified after processing. If absent after a successful inventory,
 only its identical idempotent submission can be replayed. There is no blind retry
 loop. Unrelated sources or Wiki pages, missing completed items, changed metadata,
 versions or bodies stop ingestion without overwriting or deleting anything.
+Existing manifests from the earlier one-document-at-a-time runner can resume
+with this updated runner. Keep using the updated runner once submission receipts
+exist; the earlier version does not understand that queue.
 The process lock serializes use of the same local state directory. Keep that
 manifest: this tool refuses to adopt an existing remote corpus without receipts.
 
 Calls are sequential (concurrency one), the shared HTTP client has a 60-second
 request timeout, and extraction/index polling has explicit bounded attempts and
-intervals. A transient failure can be resumed by rerunning ingestion. No source
+intervals. Progress distinguishes submitted and verified documents. The unchanged
+`benchmark ingest` command submits the full corpus, waits for background processing
+and verifies it; `benchmark evaluate` still refuses an incomplete corpus. A large
+queue may outlast a bounded wait: rerun the identical ingest command to continue
+verification without submitting acknowledged items again. No source
 retry/reindex/delete/update operation is called. Failed extraction requires separate
 operator diagnosis. The ingestion manifest retains cumulative ingestion/readback
 and subsequent indexing-wait durations across invocations.

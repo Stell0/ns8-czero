@@ -264,8 +264,9 @@ Synthetic question labels, derived
 knowledge and original evidence remain distinct; model traces stay private.
 
 For standard dataset retrieval measurements against an existing C0 instance, use
-the repository-only [BEIR benchmark](benchmarks/retrieval/README.md). It separates
-resumable ingestion from read-only evaluation of SciFact, NFCorpus, FiQA or a
+the repository-only [BEIR benchmark](benchmarks/retrieval/README.md). It submits
+originals to background extraction, verifies the complete corpus, then performs
+read-only evaluation of SciFact, NFCorpus, FiQA or a
 compatible local dataset; no runtime installation or provider changes are needed.
 
 ## Roadmap and project status
