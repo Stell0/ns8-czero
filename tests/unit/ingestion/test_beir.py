@@ -194,7 +194,10 @@ def test_resume_after_extraction_wait(dataset_path, tmp_path):
     api = client(); api.transport.queued = True; dataset = load(dataset_path); path = tmp_path / 'resume.json'
     with pytest.raises(C0Error): ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)
     api.transport.queued = False
-    api.transport.versions['source-a']['state'] = 'ready'
+    assert set(read(path)['submitted']) == {'a', 'b', 'c'}
+    assert not read(path)['documents'] and read(path)['pending'] is None
+    for version in api.transport.versions.values():
+        version['state'] = 'ready'
     assert ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)['complete']
     assert api.transport.write_calls == 3
 
@@ -323,7 +326,7 @@ def test_cli_default_commands_and_private_config(prepared, tmp_path, monkeypatch
     assert main(['evaluate', '--mode', 'semantic', '--limit', '51']) == 1
 
 
-def test_recovery_after_completed_prefix(dataset_path, tmp_path):
+def test_recovery_after_acknowledged_prefix(dataset_path, tmp_path):
     dataset = load(dataset_path); api = client(); path = tmp_path / 'resume.json'
     original = api.transport.dispatch
     def interrupt(name, arguments):
@@ -332,7 +335,8 @@ def test_recovery_after_completed_prefix(dataset_path, tmp_path):
         return original(name, arguments)
     api.transport.dispatch = interrupt
     with pytest.raises(C0Error): ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)
-    assert len(read(path)['documents']) == 2 and read(path)['pending'] == 'c'
+    assert set(read(path)['submitted']) == {'a', 'b'} and not read(path)['documents']
+    assert read(path)['pending'] == 'c'
     api.transport.dispatch = original
     assert ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)['complete']
     assert api.transport.write_calls == 3
@@ -383,3 +387,58 @@ def test_long_queries_are_not_silently_truncated(prepared, tmp_path):
     searches = sum(name == 'knowledge_search' for name, _ in api.transport.calls)
     with pytest.raises(ValueError): evaluate(api, dataset, manifest, tmp_path / 'runs')
     assert sum(name == 'knowledge_search' for name, _ in api.transport.calls) == searches
+
+
+def test_all_submissions_precede_extraction_reads(dataset_path, tmp_path):
+    dataset = load(dataset_path); api = client(); path = tmp_path / 'queue.json'
+    api.transport.queued = True
+    original = api.transport.dispatch
+    def background(name, arguments):
+        if name in ('source_versions_list', 'documents_get'):
+            assert api.transport.write_calls == 3, 'Do not wait for extraction before submitting the corpus'
+            for version in api.transport.versions.values():
+                version['state'] = 'ready'
+        return original(name, arguments)
+    api.transport.dispatch = background
+    manifest = ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)
+    assert manifest['complete'] and len(manifest['documents']) == 3
+    assert not manifest['submitted'] and manifest['pending'] is None
+
+
+@pytest.mark.parametrize('drift', ['missing', 'version', 'hash', 'failed'])
+def test_acknowledged_queue_drift_stops_without_more_writes(dataset_path, tmp_path, drift):
+    dataset = load(dataset_path); api = client(); path = tmp_path / 'queue.json'
+    api.transport.queued = True
+    with pytest.raises(C0Error): ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)
+    if drift == 'missing': del api.transport.sources['source-a']
+    if drift == 'version': api.transport.versions['source-a']['id'] = 'replacement'
+    if drift == 'hash': api.transport.versions['source-a']['content_hash'] = 'replacement'
+    if drift == 'failed': api.transport.versions['source-a']['state'] = 'failed'
+    with pytest.raises(C0Error): ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)
+    assert api.transport.write_calls == 3
+    assert not read(path)['complete'] and len(read(path)['submitted']) == 3
+
+
+def test_legacy_pending_manifest_resumes_without_duplicate(dataset_path, tmp_path):
+    from c0_beir.corpus import binding, metadata, title, verify_source
+    from c0_ingest.sources import submit_text
+    from c0_ingest.state import atomic
+    dataset = load(dataset_path); api = client(); path = tmp_path / 'legacy.json'
+    for key in ('a', 'b'):
+        submit_text(api, body=dataset.body(key), title=title(dataset, key), metadata=metadata(dataset, key),
+                    external_key=['beir-v1', dataset.fingerprint, key])
+    record = verify_source(api, dataset, 'a', api.transport.sources['source-a'])
+    # Exact prior format: one completed receipt, one uncertain committed item,
+    # and one item which has never been submitted.
+    atomic(path, {'binding': binding(api, dataset), 'documents': {'a': record}, 'pending': 'b',
+                  'complete': False, 'timings': {'ingestion_seconds': 0., 'indexing_seconds': 0.}})
+    manifest = ingest(api, dataset, path, attempts=1, seconds=0, index_attempts=1)
+    assert manifest['complete'] and manifest['documents']['a'] == record
+    assert api.transport.write_calls == 3
+
+
+def test_evaluation_rejects_unverified_submission_receipts(prepared, tmp_path):
+    dataset, api, path, manifest = prepared
+    manifest['submitted'] = {'a': {'id': 'source-a'}}
+    with pytest.raises(C0Error): evaluate(api, dataset, manifest, tmp_path / 'incomplete')
+    assert not any(name == 'knowledge_search' for name, _ in api.transport.calls)

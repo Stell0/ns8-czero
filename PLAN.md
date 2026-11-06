@@ -9,6 +9,20 @@ readback, atomic state and ranking normalization reuse the ingestion samples.
 No Core, transport, schema, runtime dependency, provider configuration or
 production packaging changes are part of this candidate.
 
+Queued-ingestion correction: the original runner waited for each extraction before
+submitting the next original. The updated runner submits the complete missing
+corpus first, saves each acknowledgement separately from the one uncertain write
+intent, then verifies extracted bodies/chunks. Existing manifests resume without
+rewriting completed sources. Evaluation still requires complete verified receipts;
+acknowledged queue entries do not count as evidence. Commands and provider/runtime
+configuration remain unchanged. Regression acceptance covers submission-before-read
+ordering, queued resume, lost replies, missing/replaced/failed submissions, legacy
+manifest compatibility and the existing corpus/authorization/evaluation guards.
+The unchanged original-main baseline passes 206 ingestion unit cases; this
+correction passes 255 ingestion unit cases plus five `pytrec_eval` reference
+comparisons (260 total). Live submission/extraction/evaluation remain separately
+reported operator evidence; these checks do not establish completed live ingestion.
+
 The accepted local contracts require explicit account/protected-space binding,
 validated standard BEIR files and graded qrels, deterministic dataset fingerprints,
 a durable pending-write journal and exact source/version/chunk receipts. Complete

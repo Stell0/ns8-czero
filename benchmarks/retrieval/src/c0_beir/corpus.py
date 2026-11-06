@@ -69,7 +69,7 @@ def load_manifest(path, client, dataset):
 
 def check(client, dataset, manifest, *, full=True):
     if (manifest.get('binding') != binding(client, dataset) or not manifest.get('complete')
-            or set(manifest['documents']) != set(dataset.corpus) or manifest.get('pending')):
+            or set(manifest['documents']) != set(dataset.corpus) or manifest.get('pending') or manifest.get('submitted')):
         raise C0Error('Incomplete or incompatible ingestion manifest; run benchmark ingest')
     found = inventory(client, dataset)
     if set(found) != set(dataset.corpus):
@@ -100,22 +100,39 @@ def ingest(client, dataset, path, *, attempts=20, seconds=3, index_attempts=20):
     manifest = read(path)
     expected = binding(client, dataset)
     if manifest is None:
-        manifest = {'binding': expected, 'documents': {}, 'pending': None, 'complete': False,
+        manifest = {'binding': expected, 'documents': {}, 'submitted': {}, 'pending': None, 'complete': False,
                     'timings': {'ingestion_seconds': 0., 'indexing_seconds': 0.}}
     elif not isinstance(manifest, dict) or manifest.get('binding') != expected:
         raise C0Error('Dataset fingerprint or target changed; refusing incompatible state')
+    # Older single-document manifests resume through the same pending intent.
+    submitted = manifest.setdefault('submitted', {})
+    if (not isinstance(submitted, dict) or set(submitted) - set(dataset.corpus)
+            or set(submitted) & set(manifest['documents'])
+            or manifest.get('pending') in set(submitted) | set(manifest['documents'])):
+        raise C0Error('Invalid submission journal; inspect manifest')
     found = inventory(client, dataset)
     for key, record in manifest['documents'].items():
         if key not in found or verify_source(client, dataset, key, found[key]) != record:
             raise C0Error('Completed ingestion has drifted; refusing to overwrite content')
-    # Only the one durably pending item may be recovered after a lost response.
-    if set(found) - set(manifest['documents']) - {manifest.get('pending')}:
+    for key, receipt in submitted.items():
+        if key not in found or found[key]['id'] != receipt['id']:
+            raise C0Error('Acknowledged submission missing or changed; refusing to overwrite content')
+        versions = client.listing('source_versions_list', 'versions', source_id=found[key]['id'])
+        if (len(versions) != 1 or versions[0]['id'] != receipt['version_id']
+                or versions[0]['content_hash'] != receipt['content_hash']
+                or receipt['content_hash'] != metadata(dataset, key)['content_sha256']):
+            raise C0Error('Acknowledged source generation changed; refusing to overwrite content')
+        if versions[0]['state'] == 'failed':
+            raise C0Error('Source extraction failed; inspect source status before retrying')
+    # Acknowledged submissions and the one uncertain intent are the only
+    # unverified remote items which this manifest can legitimately own.
+    if set(found) - set(manifest['documents']) - set(submitted) - {manifest.get('pending')}:
         raise C0Error('Remote documents have no local receipt; refusing to adopt unrelated content')
     started = time.perf_counter()
     atomic(path, manifest)
     try:
         for number, key in enumerate(sorted(dataset.corpus), 1):
-            if key in manifest['documents']:
+            if key in manifest['documents'] or key in submitted:
                 continue
             if manifest.get('pending') not in (None, key):
                 raise C0Error('Pending ingestion order differs; inspect manifest')
@@ -127,10 +144,32 @@ def ingest(client, dataset, path, *, attempts=20, seconds=3, index_attempts=20):
                 # identical idempotency key cannot duplicate a late committed write.
                 receipt = submit_text(client, body=dataset.body(key), title=title(dataset, key), metadata=metadata(dataset, key),
                             external_key=['beir-v1', dataset.fingerprint, key])
-                found[key] = client.call('sources_get', source_id=receipt['source_id'])
-            manifest['documents'][key] = verify_source(client, dataset, key, found[key], attempts=attempts, seconds=seconds)
+                found[key] = {'id': receipt['source_id']}
+            else:
+                # An uncertain submission may have committed before interruption.
+                versions = client.listing('source_versions_list', 'versions', source_id=found[key]['id'])
+                if len(versions) != 1:
+                    raise C0Error('Ambiguous pending source generation')
+                receipt = versions[0]
+            if (receipt['source_id'] != found[key]['id']
+                    or receipt['content_hash'] != metadata(dataset, key)['content_sha256']):
+                raise C0Error('Submission identity/hash differs from the original dataset')
+            submitted[key] = {'id': receipt['source_id'], 'version_id': receipt['id'],
+                              'content_hash': receipt['content_hash']}
             manifest['pending'] = None
+            atomic(path, manifest)  # Save acknowledgement before submitting the next document.
+            if number % 25 == 0 or number == len(dataset.corpus):
+                print(f'Submitted {number}/{len(dataset.corpus)} documents; extraction continues in the background', flush=True)
+        # Submission never waits for extraction. Only verified originals earn
+        # document receipts, and evaluation still requires the complete corpus.
+        for key in sorted(list(submitted)):
+            record = verify_source(client, dataset, key, found[key], attempts=attempts, seconds=seconds)
+            if any(record[field] != submitted[key][field] for field in ('id', 'version_id', 'content_hash')):
+                raise C0Error('Acknowledged source generation changed before verification')
+            manifest['documents'][key] = record
+            del submitted[key]
             atomic(path, manifest)
+            number = len(manifest['documents'])
             if number % 25 == 0 or number == len(dataset.corpus):
                 print(f'Ingested and verified {number}/{len(dataset.corpus)} documents', flush=True)
         manifest['complete'] = True
