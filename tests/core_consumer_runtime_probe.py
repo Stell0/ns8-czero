@@ -6,7 +6,6 @@ import importlib.util
 import json
 import re
 import sys
-from types import SimpleNamespace
 from czero_core import core_version
 from czero_core.database import SCHEMA_REVISION
 from czero_core.current_content import ContentSuperseded
@@ -25,14 +24,20 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0032_api_key_revisions'
+assert SCHEMA_REVISION == '0033_compilation_state'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
-assert importlib.util.find_spec('czero_core.compilation') is None
+assert importlib.util.find_spec('czero_core.compilation') is not None
+from fastapi import FastAPI
+from czero_core.compilation import CompilationService
+from czero_app.operations import OperationCatalog
 from czero_app.compilation import install as install_compilation
-unsupported = SimpleNamespace(state=SimpleNamespace())
-# Actual installed old Core must return before accessing any router/catalog/database.
-install_compilation(unsupported, None, None, None, None)
-assert unsupported.state.compilation is None
+application = FastAPI()
+application.state.operation_catalog = OperationCatalog(None)
+# Binding the released API must require neither a database nor model execution.
+install_compilation(application, None, None, lambda: None, lambda: None)
+assert isinstance(application.state.compilation, CompilationService)
+assert len([route for route in application.routes
+            if route.path.startswith('/api/v1/compilation/')]) == 10
 print('Released image Core matches immutable Git lock and latest-only schema/contracts; no NS8 SDK')
