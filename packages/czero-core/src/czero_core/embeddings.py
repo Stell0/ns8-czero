@@ -3,11 +3,11 @@
 """Derivative embeddings retain immutable raw evidence and Wiki revisions."""
 import hashlib
 import json
-from uuid import UUID,uuid5,NAMESPACE_URL
+from uuid import UUID,uuid4,uuid5,NAMESPACE_URL
 from sqlalchemy import text
 from .identity import PermissionDenied,Role
 from .spaces import SpaceBound
-from .jobs import Handler,empty_payload
+from .jobs import Handler,JobService,empty_payload
 from .providers import normalized_vector
 from .wiki import KnowledgeConflict,_view
 
@@ -116,10 +116,14 @@ class EmbeddingStore(SpaceBound):
         with self.database.engine.connect() as connection:
             self._space_authorize(connection,actor)
             profile=self._profile(connection) if self.client else None
-            if profile is None:return {'configured':self.client is not None,'profile_id':None,'generation':None,'indexed':0}
+            if profile is None:return {'configured':self.client is not None,'profile_id':None,'generation':None,'indexed':0,'source_indexed':0,'wiki_indexed':0}
             count=connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE space_id=:space AND profile_id=:id AND generation=:generation'),
                 {'space':self._space(connection),'id':self.profile_id,'generation':profile['generation']}).scalar_one()
-            return _view({'configured':True,'profile_id':self.profile_id,'generation':profile['generation'],
+            counts={}
+            for kind in ('source','wiki'):
+                eligibility,parameters=self._eligibility(connection,profile,kind)
+                counts[kind+'_indexed']=connection.execute(text('SELECT count(*) '+eligibility),parameters).scalar_one()
+            return _view({**counts,'configured':True,'profile_id':self.profile_id,'generation':profile['generation'],
                           'model':profile['model'],'dimensions':profile['dimensions'],'indexed':count})
 
     def _ready(self,connection,profile):
@@ -175,5 +179,16 @@ def reindex_payload(value):
 
 
 def register_embedding_handlers(registry,store):
-    registry.register(Handler('embedding.index',lambda c,p:store._index_batch(c),empty_payload,timeout_seconds=15))
+    def index(connection,payload):
+        result=store._index_batch(connection)
+        # Continue only enabled automatic indexing, with at most one successor.
+        enabled=connection.execute(text('SELECT enabled FROM c0_scheduled_tasks WHERE id=:id'),
+                                   {'id':SCHEDULE_ID}).scalar_one_or_none()
+        if result['indexed'] and enabled:
+            pending=connection.execute(text("SELECT 1 FROM c0_jobs WHERE handler='embedding.index' AND state='queued' LIMIT 1")).scalar_one_or_none()
+            if pending is None:
+                JobService(store.database,registry)._enqueue(connection,'embedding.index',{},
+                    'embedding-continuation:'+str(store.profile_id)+':'+uuid4().hex)
+        return result
+    registry.register(Handler('embedding.index',index,empty_payload,timeout_seconds=15))
     registry.register(Handler('embedding.reindex',store._reindex,reindex_payload,timeout_seconds=10))

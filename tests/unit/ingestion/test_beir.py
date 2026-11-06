@@ -442,3 +442,37 @@ def test_evaluation_rejects_unverified_submission_receipts(prepared, tmp_path):
     manifest['submitted'] = {'a': {'id': 'source-a'}}
     with pytest.raises(C0Error): evaluate(api, dataset, manifest, tmp_path / 'incomplete')
     assert not any(name == 'knowledge_search' for name, _ in api.transport.calls)
+
+
+def test_only_exact_pinned_reports_can_be_excluded(prepared, monkeypatch):
+    from c0_beir.corpus import inventory, index_status
+    dataset, api, _, manifest = prepared
+    page = {'page_id': 'report', 'revision': 1, 'content_hash': 'a'*64}
+    api.excluded_wiki_pages = [page]
+    api.transport.wiki = [{'id': 'report'}]
+    original = api.transport.dispatch
+    def dispatch(name, args):
+        if name == 'wiki_pages_get':
+            return {'revision': 1, 'content': {'content_hash': 'a'*64}}
+        if name == 'knowledge_index_status':
+            return {**original(name,args), 'indexed': len(api.transport.chunks)+4,
+                    'source_indexed': len(api.transport.chunks)}
+        return original(name,args)
+    monkeypatch.setattr(api.transport, 'dispatch', dispatch)
+    api.operations['wiki_pages_get'] = {'read_only': True, 'input_schema': {'properties': {'space_id': {}}}}
+    assert len(inventory(api,dataset)) == len(dataset.corpus)
+    assert index_status(api,manifest)['coverage_ready']
+    page['content_hash'] = 'b'*64
+    with pytest.raises(C0Error,match='report changed'):
+        inventory(api,dataset)
+    page['content_hash'] = 'a'*64
+    api.transport.wiki.append({'id': 'unrelated'})
+    with pytest.raises(C0Error):
+        inventory(api,dataset)
+
+
+def test_report_exclusion_requires_source_specific_coverage(prepared):
+    from c0_beir.corpus import index_status
+    _, api, _, manifest = prepared
+    api.excluded_wiki_pages = [{'page_id': 'report', 'revision': 1, 'content_hash': 'a'*64}]
+    assert not index_status(api, manifest)['coverage_ready']

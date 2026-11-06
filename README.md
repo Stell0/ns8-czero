@@ -417,3 +417,7 @@ settings remain Vue 2/Carbon. [Source and publication acceptance](PLAN.md#vue-3-
 records the exact tests and immutable images. The explicitly authorized
 [dedicated installation](PLAN.md#vue-website--dedicated-installation-accepted)
 now runs app0.59/Core0.38/schema0032 after verified backup, update and live checks.
+
+Embedding refresh uses bounded batches and resumes automatically while its ten-minute
+schedule remains enabled. Pausing the schedule stops further continuations after
+already queued work; disabling the provider makes indexing a no-op.

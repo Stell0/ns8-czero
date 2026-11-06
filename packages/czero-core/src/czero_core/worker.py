@@ -77,10 +77,11 @@ class Worker:
         for row in rows:
             self._fail(connection,row,"interrupted",now)
 
-    def _claim(self, connection, now):
+    def _claim(self, connection, now, *, prefer_embedding=False):
         row = connection.execute(text("""SELECT id FROM c0_jobs
             WHERE state = 'queued' AND available_at <= :now AND attempts < max_attempts
-            ORDER BY available_at,created_at,id LIMIT 1 FOR UPDATE SKIP LOCKED"""), {"now":now}).scalar_one_or_none()
+            ORDER BY CASE WHEN (handler='embedding.index')=:prefer_embedding THEN 0 ELSE 1 END,
+                available_at,created_at,id LIMIT 1 FOR UPDATE SKIP LOCKED"""), {"now":now,"prefer_embedding":prefer_embedding}).scalar_one_or_none()
         if row is None:
             return None
         job = connection.execute(text("""UPDATE c0_jobs SET state = 'running',
@@ -141,7 +142,7 @@ class Worker:
                             cleanup.execute(connection,{'version_id':'00000000-0000-0000-0000-000000000000'})
                 while processed < max_jobs and time.monotonic() - started < budget_seconds:
                     with connection.begin():
-                        job = self._claim(connection,datetime.now(timezone.utc))
+                        job = self._claim(connection,datetime.now(timezone.utc),prefer_embedding=processed % 2 == 0)
                     if job is None:
                         break
                     self._execute(connection,job)
