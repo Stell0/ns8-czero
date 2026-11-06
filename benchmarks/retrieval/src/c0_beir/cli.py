@@ -117,8 +117,6 @@ def main(argv=None):
             space = client.select_space(connection['space_id'], writable=args.command == 'ingest')
             if space['shared']:
                 raise C0Error('Benchmark requires an explicitly selected protected space, never Shared')
-            if args.command == 'ingest' and config['excluded_wiki_pages']:
-                raise ValueError('Wiki report exclusions are evaluation-only')
             if args.command == 'ingest':
                 operation = client.operations.get('sources_ingest_text', {})
                 if not operation or operation.get('read_only'):

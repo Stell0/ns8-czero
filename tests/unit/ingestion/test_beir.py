@@ -476,3 +476,13 @@ def test_report_exclusion_requires_source_specific_coverage(prepared):
     _, api, _, manifest = prepared
     api.excluded_wiki_pages = [{'page_id': 'report', 'revision': 1, 'content_hash': 'a'*64}]
     assert not index_status(api, manifest)['coverage_ready']
+
+
+
+def test_ingestion_helper_rejects_report_exclusions_before_writes(prepared):
+    dataset, api, path, _ = prepared
+    api.excluded_wiki_pages = [{'page_id': 'report', 'revision': 1, 'content_hash': 'a'*64}]
+    before = api.transport.write_calls
+    with pytest.raises(C0Error, match='evaluation-only'):
+        ingest(api, dataset, path)
+    assert api.transport.write_calls == before

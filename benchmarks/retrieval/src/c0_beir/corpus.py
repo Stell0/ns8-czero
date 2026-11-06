@@ -106,6 +106,8 @@ def index_status(client, manifest):
 
 
 def ingest(client, dataset, path, *, attempts=20, seconds=3, index_attempts=20):
+    if getattr(client,'excluded_wiki_pages',[]):
+        raise C0Error('Wiki report exclusions are evaluation-only')
     dataset.validate_ingestion()  # Fail oversized items before the first write.
     manifest = read(path)
     expected = binding(client, dataset)
