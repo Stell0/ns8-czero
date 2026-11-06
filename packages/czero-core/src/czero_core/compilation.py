@@ -121,6 +121,12 @@ class CompilationService(CompilationRuns, SpaceBound):
                 self._enabled(connection, payload.get('policy_revision'))
             if lease is not None:
                 self._lease(connection, current, lease, replay_key=request_hash)
+            if admin:
+                previous_policy = connection.execute(text('''SELECT policy_revision FROM c0_compilation_events
+                    WHERE space_id=:space AND actor_id=:actor AND request_key=:key AND operation='policy_set' '''),
+                    {'space': self._space_id, 'actor': current.user_id, 'key': request_hash}).scalar_one_or_none()
+                if previous_policy is not None and previous_policy != self._policy(connection)['revision']:
+                    raise CompilationConflict()
             # A claim receipt cannot revive its expired/transferred fence.
             previous = connection.execute(text('''SELECT run_id,fencing_generation,metrics FROM c0_compilation_events
                 WHERE space_id=:space AND actor_id=:actor AND request_key=:key AND operation='run_claim' '''),

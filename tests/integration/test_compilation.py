@@ -236,6 +236,12 @@ def test_current_persisted_roles_and_scopes(compiler):
         service.propose(restricted, data, idempotency_key='no-write')
     with pytest.raises(ScopeDenied):
         service.configure(restricted, defaults(), expected_revision=1, idempotency_key='no-admin')
+    write_token = keys.create(owner, name='Write only', scopes={'c0:write'}, space_ids=[str(service._space_id)])['key']
+    write_only = keys.verify(write_token, resource=keys.resource).actor
+    with pytest.raises(ScopeDenied):
+        service.propose(write_only, data, idempotency_key='no-read')
+    with pytest.raises(ScopeDenied):
+        service.status(write_only)
     service.access.set_role(owner, reader.user_id, None)
     with pytest.raises(PermissionDenied):
         service.status(reader)
@@ -440,3 +446,17 @@ def test_proposal_race_retains_one_identity_and_cross_space_fk(compiler):
             c.execute(text('UPDATE c0_compilation_sources SET task_id=:foreign WHERE space_id=:space'),
                 {'space': service._space_id, 'foreign': uuid4()})
     assert service.get_task(owner, task['id'])['state'] == 'queued'
+
+
+def test_superseded_policy_receipt_cannot_report_old_enablement(compiler):
+    service, owner, *_ = compiler
+    initial = {**defaults(), 'enabled': True}
+    saved = service.configure(owner, initial, expected_revision=0,
+        authorization_ref='synthetic:approval', idempotency_key='initial-policy')
+    assert service.configure(owner, initial, expected_revision=0,
+        authorization_ref='synthetic:approval', idempotency_key='initial-policy') == saved
+    service.configure(owner, defaults(), expected_revision=1, idempotency_key='disabled-policy')
+    with pytest.raises(CompilationConflict):
+        service.configure(owner, initial, expected_revision=0,
+            authorization_ref='synthetic:approval', idempotency_key='initial-policy')
+    assert not service.policy(owner)['data']['enabled']
