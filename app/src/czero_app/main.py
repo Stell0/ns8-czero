@@ -128,6 +128,8 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     install_bundle_routes(instance_app, database, auth, write_context)
     install_object_routes(instance_app, database, auth, read_context, write_context,
         reference_resolvers={**sources.reference_resolvers(), **knowledge.reference_resolvers()})
+    from czero_app.compilation import install as install_compilation
+    install_compilation(instance_app, database, auth, read_context, write_context)
     install_oauth_routes(instance_app, auth, read_context, write_context)
     catalog.annotate_openapi(instance_app)
 

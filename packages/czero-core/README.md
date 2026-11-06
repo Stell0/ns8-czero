@@ -23,6 +23,28 @@ scripts outside this package. Optional providers do not determine authorization;
 text search remains independent of inference. Generative operations stay outside
 the runtime.
 
+## Compilation coordination (0.39.0 producer)
+
+Schema 0033 adds six empty, space-scoped coordination tables. The trusted
+`czero_core.compilation.CompilationService` reads disabled defaults without
+creating rows. Select an exact space with `in_space(space_id)` before every
+operation. Admin policy configuration is independent of research projects;
+Editor proposals and checkpoints require explicitly enabled policy and actual
+Read+Write authority. API keys cannot configure policy.
+
+The coordinator validates current original source/chunk and Wiki revision
+identities, deduplicates metadata-only proposals, tracks observed dependencies,
+and persists actor-bound run fences, retry history and shared daily/weekly
+budget reservations. A database restart/restore invalidates captured leases.
+Status reads compute staleness without writing. Missing external usage retains
+reserved debits and reports unknown usage. It does not run a model, sweep a
+corpus, schedule work, publish knowledge or mark generated facts verified.
+
+See the [M1 contracts and recovery guide](https://github.com/Stell0/ns8-czero/blob/main/docs/knowledge-compilation/M1.md)
+for ten REST/MCP adapters and bounded inputs. M2 publication is intentionally
+unavailable. Producer acceptance does not publish this Core version or adopt it
+in the app's released dependency/lock; old consumers omit unsupported tools.
+
 ## Private extraction units (0.37.0)
 
 Version 0.37.0 adds private extraction staging and schema 0030.

@@ -94,3 +94,13 @@ def test_trusted_operation_policy_denial_precedes_scope_challenge():
         registry.execute('edit', actor, {'space_id':'denied'}, scopes={'c0:read'})
     assert not isinstance(denied.value, ScopeDenied) and calls == ['denied']
     assert registry.describe(actor, scopes={'c0:read','c0:write'})[0]['name'] == 'edit'
+
+
+def test_finite_registry_capacity_accommodates_compilation_without_unbounding():
+    from czero_core.operations import MAX_OPERATIONS
+    assert MAX_OPERATIONS == 160
+    registry = OperationRegistry(lambda actor, role: actor)
+    for index in range(MAX_OPERATIONS):
+        registry.register(Operation('read_' + str(index), 'Read', Role.READER, 'c0:read', {}, {}, lambda actor, arguments: {}))
+    with pytest.raises(ValueError, match='duplicate_or_excess_operation'):
+        registry.register(Operation('overflow', 'Read', Role.READER, 'c0:read', {}, {}, lambda actor, arguments: {}))

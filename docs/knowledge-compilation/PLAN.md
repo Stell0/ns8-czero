@@ -1,6 +1,10 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 review candidate; M1–M6 are not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 implementation candidate. M2–M6 are not implemented.**
+
+[M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
+coordination milestone against its accepted predecessor. No publication,
+deployment, production enablement or scheduler installation is authorized.
 This plan targets original C0 main `13f0b94a06e6a6f7d4b74e8ddd3fe6ae6eea6aac`
 (6 November 2026). App 0.59.0 consumes released Core 0.38.0 through its committed
 `app/uv.lock`; schema is 0032 and plugin templates are 1.4.0. These identities
@@ -379,7 +383,7 @@ milestone. Re-fetch original main, preserve frozen candidates on successor branc
 review the complete diff, verify the actual C0 merge gate and required checks,
 and use protected regular auto-merge only on the reviewed exact head. No deployment.
 
-### M0 — architecture and baseline (this session)
+### M0 — architecture and baseline (accepted predecessor)
 
 - Dependency: latest original main and existing read-only capability inspection.
 - Scope/contracts: this plan, normative lifecycle/policy/API/SQL contracts, fabricated
@@ -394,7 +398,8 @@ and use protected regular auto-merge only on the reviewed exact head. No deploym
   retain failed private test evidence. No destructive migration or production writes.
 - Deliverables: reviewable M0 PR, actual local/CI evidence and M1 handoff prompt.
 - Stop: missing real baseline, unresolved security contract or failed required gate;
-  M1 remains unstarted even after M0 acceptance in this session.
+  the M0 session ended without starting M1. The explicitly authorized M1 follow-up
+  and its source-bound acceptance are recorded in [M1](M1.md).
 
 ### M1 — durable compilation state
 

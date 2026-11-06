@@ -123,7 +123,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0032_api_key_revisions'
+        assert results[0]==results[1] and results[0][1]=='0033_compilation_state'
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,
@@ -134,6 +134,12 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
         scoped=command([str(python),'-I',str(spaces_probe)],cwd=directory,
                        env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
         assert all(json.loads(scoped).values())
+        compiler_probe=directory/'core_compilation_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_compilation_probe.py',compiler_probe)
+        coordinated=command([str(python),'-I',str(compiler_probe)],cwd=directory,
+            env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1',
+                'CZERO_COMPILATION_STATE':str(directory/'compiler-state.json')})
+        assert json.loads(coordinated)['six_tables']
         shutil.copyfile(ROOT/'tests/integration/ocr_original.py',directory/'ocr_original.py')
         extraction_probe=directory/'core_extraction_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_extraction_probe.py',extraction_probe)

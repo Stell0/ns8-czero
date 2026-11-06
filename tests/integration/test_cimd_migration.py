@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 import czero_core.migrate
+from czero_core.database import SCHEMA_REVISION
 from czero_core.access import AccessService
 from czero_core.cimd import CimdService
 from czero_core.identity import VerifiedIdentity
@@ -83,7 +84,7 @@ def test_0017_upgrade_preserves_all_old_rows_and_new_policy_defaults_off():
             migrate_database(database)
             with database.engine.connect() as c:
                 assert snapshot(c) == before
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0032_api_key_revisions'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == SCHEMA_REVISION
                 assert c.execute(text('SELECT count(*) FROM c0_cimd_clients')).scalar_one() == 0
                 assert tuple(c.execute(text('SELECT id,enabled,revision FROM c0_cimd_policy')).one()) == (1, False, 1)
             registry.sync_policy(False)
