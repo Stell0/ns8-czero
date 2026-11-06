@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "c0-beir-benchmark"
+version = "0.1.0"
+description = "Repository-only BEIR retrieval measurements over public C0 APIs"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = "GPL-3.0-or-later"
+dependencies = ["c0-ingestion-samples==0.3.1"]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2", "pytrec-eval-terrier==0.5.11"]
+
+[project.scripts]
+benchmark = "c0_beir.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -113,3 +113,6 @@ __pycache__/
 .local/ingestion/
 .venv-ingestion/
 .playwright-mcp/
+.local/benchmark/
+
+.venv-benchmark/

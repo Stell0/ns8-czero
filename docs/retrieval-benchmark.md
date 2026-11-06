@@ -42,6 +42,16 @@ quality/latency targets and record actual strategy/provider use. The real-HTTP
 regressions, independent wheel/archive probes and HTTPS worker/Chromium tests
 exercise the same Core behavior. See [development](development.md) for commands.
 
+## Standard BEIR datasets
+
+The local [BEIR benchmark](../benchmarks/retrieval/README.md) evaluates document
+rankings against standard graded qrels through public authenticated C0 APIs.
+Install its separate development environment, configure a dedicated protected
+space and API key, run `benchmark ingest` once, then repeat `benchmark evaluate`
+while testing retrieval changes. Corpus drift, incomplete vector coverage and
+lexical fallbacks cannot silently count as successful semantic/hybrid results.
+This does not replace the current-corpus documentation or agentic benchmarks.
+
 ## Historical provider fixture
 
 The measurements below are retained historical evidence, not a comparison with

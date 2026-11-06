@@ -214,6 +214,17 @@ That absolute bound remains unchanged for existing/interactive grants. Newly con
 
 Reader pages render stored knowledge with local assets and allowlisted DOM text/tokens; raw HTML/images remain inactive. Preserve response-generation/access-loss/draft/replay guards, template IDs and unique attributes. Ordinary readers do not initialize mutation controllers or fetch Admin lists. Use existing space and API selectors; files remain REST uploads.
 
+## Repository-only BEIR benchmark
+
+`benchmarks/retrieval` is a local developer tool over public authenticated APIs.
+Keep its dependencies, downloaded datasets, manifests and reports out of runtime
+packages and images. Reuse `c0_ingest` authentication, source readback and atomic
+state helpers; keep evaluation read-only and require the exact dedicated protected
+space and complete verified corpus. See [setup and metric contracts](benchmarks/retrieval/README.md).
+Synthetic tests run in the ingestion unit suite; the optional local test extra
+checks metric compatibility with BEIR's `pytrec_eval` reference dependency.
+Do not run real ingestion/evaluation or change providers without explicit authority.
+
 ## Verification and delivery
 
 Provider-free question recovery belongs in the shared Core lexical helper, not

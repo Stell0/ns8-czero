@@ -1,0 +1,23 @@
+# Copy to .local/benchmark/config.toml; all paths are relative to that file.
+# Create the protected space and scoped Read/Write API key in C0 first.
+# Supply the credential externally in C0_API_KEY; never put it in this file.
+[connection]
+url = "https://c0.example.org/mcp"
+account_id = "00000000-0000-4000-8000-000000000001"
+identity = "Alice"
+space_id = "00000000-0000-4000-8000-000000000002"
+
+[benchmark]
+dataset = "scifact"
+split = "test"
+modes = ["text", "semantic", "hybrid"]
+rerank = "off"
+limit = 50
+repetitions = 1
+data_dir = "data"
+state_dir = "manifests"
+results_dir = "results"
+poll_attempts = 20
+poll_seconds = 3
+index_attempts = 20
+# dataset_path = "/path/to/compatible/beir-directory"
