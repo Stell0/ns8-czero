@@ -1,6 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Fenced, budgeted metadata observations; no external invocation or publication."""
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 import json
 from uuid import uuid4
 from zoneinfo import ZoneInfo
@@ -208,9 +208,12 @@ class CompilationRuns:
                 if data['kind'] in ('daily', 'weekly') and (data['cycle_key'] != today or date.fromisoformat(data['cycle_key']).isoformat() != today):
                     raise ValueError('current_compilation_cycle_required')
                 run = None; live = False
-            live_rows = connection.execute(text("SELECT * FROM c0_compilation_runs WHERE space_id=:space AND state='running'"),
-                {'space': self._space_id}).mappings()
-            active = sum(self._live(r, policy, epoch) and (run is None or r['id'] != run['id']) for r in live_rows)
+            active = connection.execute(text("""SELECT count(*) FROM c0_compilation_runs
+                WHERE space_id=:space AND state='running' AND lease_expiry>:now
+                  AND invocation_deadline>:now AND policy_revision=:policy AND database_epoch=:epoch
+                  AND (CAST(:current AS uuid) IS NULL OR id<>CAST(:current AS uuid))"""),
+                {'space': self._space_id, 'now': now, 'policy': policy['revision'], 'epoch': epoch,
+                 'current': run['id'] if run else None}).scalar_one()
             if not live and active >= config['concurrency']:
                 return {'outcome': 'deferred_concurrency'}
             day, week = self._budgets(connection, current, policy, data['kind'])
@@ -318,6 +321,9 @@ class CompilationRuns:
                 if task['state'] == 'uncertain' or len(calls) >= 100 or data['request_id'] in calls:
                     raise self.conflict()
                 if any(c['task_id'] == str(task['id']) and c['state'] in ('reserved','started','uncertain') for c in calls.values()):
+                    raise self.conflict()
+                if connection.execute(text("SELECT 1 FROM c0_compilation_events WHERE space_id=:space AND call_id=:call AND kind='model_reserve'"),
+                        {'space': self._space_id, 'call': _uuid(data['request_id'])}).scalar_one_or_none():
                     raise self.conflict()
                 if run['kind'] == 'retrieval' and (len(calls) >= run['data']['policy']['retrieval_model_requests']
                         or data['reserved_tokens'] > run['data']['policy']['retrieval_model_tokens']):

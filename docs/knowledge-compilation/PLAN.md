@@ -383,7 +383,7 @@ milestone. Re-fetch original main, preserve frozen candidates on successor branc
 review the complete diff, verify the actual C0 merge gate and required checks,
 and use protected regular auto-merge only on the reviewed exact head. No deployment.
 
-### M0 — architecture and baseline (this session)
+### M0 — architecture and baseline (accepted predecessor)
 
 - Dependency: latest original main and existing read-only capability inspection.
 - Scope/contracts: this plan, normative lifecycle/policy/API/SQL contracts, fabricated
@@ -398,7 +398,8 @@ and use protected regular auto-merge only on the reviewed exact head. No deploym
   retain failed private test evidence. No destructive migration or production writes.
 - Deliverables: reviewable M0 PR, actual local/CI evidence and M1 handoff prompt.
 - Stop: missing real baseline, unresolved security contract or failed required gate;
-  M1 remains unstarted even after M0 acceptance in this session.
+  the M0 session ended without starting M1. The explicitly authorized M1 follow-up
+  and its source-bound acceptance are recorded in [M1](M1.md).
 
 ### M1 — durable compilation state
 

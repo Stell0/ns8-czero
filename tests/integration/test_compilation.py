@@ -460,3 +460,39 @@ def test_superseded_policy_receipt_cannot_report_old_enablement(compiler):
         service.configure(owner, initial, expected_revision=0,
             authorization_ref='synthetic:approval', idempotency_key='initial-policy')
     assert not service.policy(owner)['data']['enabled']
+
+
+def test_dependency_requires_exact_live_chunk_and_original_slice(compiler):
+    from czero_core.compilation import CompilationNotFound
+    service, owner, _, _, wiki_fixture = compiler
+    enable(compiler)
+    bindings, _ = support(compiler)
+    page = create_page(wiki_fixture)
+    target = {'kind': 'page', 'id': page['id'], 'revision': page['revision'],
+        'content_id': page['content']['id'], 'content_hash': page['content']['content_hash']}
+    propose(compiler, bindings, target=target)
+    chunk = bindings[0]['chunks'][0]
+    with service.database.engine.begin() as c:
+        c.execute(text("UPDATE c0_chunks SET body=repeat('x',end_offset-start_offset),content_hash=encode(sha256(convert_to(repeat('x',end_offset-start_offset),'UTF8')),'hex') WHERE id=:id"), {'id': chunk['chunk_id']})
+    with pytest.raises(CompilationNotFound):
+        propose(compiler, bindings, target=target)
+    with service.database.engine.begin() as c:
+        c.execute(text('DELETE FROM c0_chunks WHERE id=:id'), {'id': chunk['chunk_id']})
+    deps = service.list_dependencies(owner, target_id=page['id'])['dependencies']
+    assert len(deps) == 2
+    assert any(not d['identities_current'] for d in deps if d['chunk_id'])
+
+
+def test_external_request_identity_cannot_be_reused_across_runs(compiler):
+    service, owner, *_ = compiler
+    enable(compiler, concurrency=2)
+    bindings, _ = support(compiler)
+    propose(compiler, bindings)
+    propose(compiler, bindings, topic_key='second-concept')
+    first = claim(compiler, cycle_key='first')
+    second = claim(compiler, cycle_key='second')
+    call = str(uuid4())
+    reserved = checkpoint(compiler, first, 'reserve_model', first['tasks'][0], request_id=call, reserved_tokens=100)
+    with pytest.raises(CompilationConflict):
+        checkpoint(compiler, second, 'reserve_model', second['tasks'][0], request_id=call, reserved_tokens=100)
+    assert service.status(owner)['budgets'][0]['data']['requests'] == 1

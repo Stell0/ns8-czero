@@ -4,6 +4,7 @@
 import importlib.metadata
 import importlib.util
 import json
+import os
 import re
 import sys
 from czero_core import core_version
@@ -29,6 +30,7 @@ assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
 assert importlib.util.find_spec('czero_core.compilation') is None
+os.environ['CZERO_MODULE_ID'] = 'czero900'
 from czero_app.main import app
 assert app.state.compilation is None
 assert not any(name.startswith('compilation_') for name in app.state.operations._operations)

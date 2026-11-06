@@ -12,7 +12,7 @@ from sqlalchemy import create_engine,text
 from sqlalchemy.engine import make_url
 
 import czero_core.migrate
-from czero_core.database import Database
+from czero_core.database import Database, SCHEMA_REVISION
 from czero_core.migrate import migrate_database
 
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='disposable PostgreSQL required')
@@ -45,7 +45,7 @@ def test_real_0020_repeated_upgrade_preserves_old_rows_and_adds_safe_ids():
                 assert c.execute(text('SELECT access_revision FROM c0_accounts')).scalar_one()==1
                 current=c.execute(text('SELECT id FROM c0_client_onboarding')).scalar_one()
                 assert current and (identifier is None or current==identifier);identifier=current
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0032_api_key_revisions'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()==SCHEMA_REVISION
         from czero_core.access import AccessService
         from czero_core.identity import Actor,Role
         from czero_core.oauth_grants import OAuthGrantService

@@ -3,11 +3,11 @@
 from datetime import datetime, timezone
 import json
 import unicodedata
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from sqlalchemy import text
 
-from .compilation_schema import (ACTIVE, CLAIM, PROPOSAL, SOURCE_SELECTION, checked,
+from .compilation_schema import (ACTIVE, PROPOSAL, SOURCE_SELECTION, checked,
     defaults, digest, key, policy as normalize_policy)
 from .compilation_runs import CompilationRuns
 from .current_content import ContentSuperseded
@@ -64,7 +64,10 @@ _DEP_FRESH = """cs.observed_revision=dep.source_revision AND cs.text_hash=dep.te
     AND EXISTS(SELECT 1 FROM c0_wiki_pages p JOIN c0_wiki_revisions r
       ON r.space_id=p.space_id AND r.page_id=p.id AND r.number=p.revision
       WHERE p.space_id=dep.space_id AND dep.target_kind='page' AND p.id=dep.target_id AND NOT p.deleted
-        AND p.revision=dep.target_revision AND r.id=dep.target_content_id AND r.content_hash=dep.target_hash)"""
+        AND p.revision=dep.target_revision AND r.id=dep.target_content_id AND r.content_hash=dep.target_hash)
+    AND (dep.chunk_id IS NULL OR EXISTS(SELECT 1 FROM c0_chunks c
+      WHERE c.space_id=dep.space_id AND c.id=dep.chunk_id AND c.document_id=dep.document_id
+        AND c.content_hash=dep.chunk_hash AND c.start_offset=dep.start_offset AND c.end_offset=dep.end_offset))"""
 
 
 def _json(value):
@@ -78,11 +81,11 @@ def _paging(limit, after):
 
 
 class CompilationService(CompilationRuns, SpaceBound):
+    """Explicit selected space and current persisted authority on every operation."""
     conflict = CompilationConflict
     notfound = CompilationNotFound
     disabled = CompilationDisabled
     notready = CompilationNotReady
-    """Shared/protected spaces require explicit selection and current persisted authority."""
     def __init__(self, database, access, *, clock=None):
         self.database, self.access = database, access
         self.clock = clock or (lambda: datetime.now(timezone.utc))
@@ -232,7 +235,9 @@ class CompilationService(CompilationRuns, SpaceBound):
             c.start_offset,c.end_offset,d.version_id,v.source_id,v.content_hash AS source_hash
             FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id AND d.space_id=c.space_id
             JOIN c0_source_versions v ON v.id=d.version_id AND v.space_id=d.space_id
-            WHERE c.space_id=:space AND c.id=ANY(CAST(:ids AS uuid[]))'''),
+            WHERE c.space_id=:space AND c.id=ANY(CAST(:ids AS uuid[]))
+              AND c.body=substring(d.body FROM c.start_offset+1 FOR c.end_offset-c.start_offset)
+              AND c.content_hash=encode(sha256(convert_to(c.body,'UTF8')),'hex')'''),
             {'space': self._space_id, 'ids': selection['chunk_ids']}).mappings())
         by_id = {str(row['chunk_id']): snapshot(dict(row)) for row in rows}
         if len(by_id) != len(selection['chunk_ids']):

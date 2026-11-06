@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import text
 
+from czero_core.database import SCHEMA_REVISION
 from czero_core.objects import ObjectService, ObjectConflict, ObjectNotFound
 from czero_core.identity import Actor, PermissionDenied, Role
 from czero_core.migrate import migrate_database
@@ -131,7 +132,7 @@ def test_repeat_migration_preserves_types_records_relations_and_events(objects):
     assert svc.relations(owner,source['id'])[0]['id']==relation['id']
     events=svc.events(owner); after=events[0]['id']
     assert all(e['id']>after for e in svc.events(owner,after=after))
-    assert svc.database.health()['schema_revision']=='0032_api_key_revisions'
+    assert svc.database.health()['schema_revision']==SCHEMA_REVISION
 
 
 def test_event_cursor_cannot_skip_an_uncommitted_earlier_write(objects,monkeypatch):
