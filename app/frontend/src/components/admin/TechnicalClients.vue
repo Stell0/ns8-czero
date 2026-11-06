@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import {
@@ -23,6 +23,8 @@ interface Client {
   enabled: boolean
   revision: number
   metadata_url?: string
+  metadata_digest?: string
+  review_required?: boolean
 }
 interface Review {
   descriptor: {
@@ -42,6 +44,10 @@ const { t } = useI18n(),
   selected = ref<Client>(),
   reviewed = ref<Review>(),
   scopes = ref<Record<string, boolean>>({ 'c0:read': true })
+const notice = ref('')
+const allowed = computed(() =>
+  Object.keys(scopes.value).filter((scope) => scopes.value[scope]),
+)
 const clients = useResource(
   () => 'clients',
   () => request<{ clients: Client[] }>('oauth/clients', {}, false),
@@ -54,9 +60,10 @@ const cimd = useResource(
 watch([url, mode], () => {
   reviewed.value = undefined
 })
-const draft = useDraftGuard([drawer, url, mode, selected])
+const draft = useDraftGuard([drawer, url, mode, selected, scopes])
 const preview = useMutation({
   mutation: async () => {
+    reviewed.value = undefined
     const current = draft.start()
     const result = await request<Review>(
       'oauth/cimd/preview',
@@ -64,22 +71,22 @@ const preview = useMutation({
       false,
     )
     if (current()) {
-      reviewed.value = result
       if (result.descriptor.scope_ceiling)
         scopes.value = Object.fromEntries(
           Object.entries(scopes.value).filter(([scope]) =>
             result.descriptor.scope_ceiling!.includes(scope),
           ),
         )
+      reviewed.value = result
     }
   },
 })
 const save = useMutation({
   mutation: async () => {
     const current = draft.current()
-    const allowed_scopes = Object.keys(scopes.value).filter(
-      (scope) => scopes.value[scope],
-    )
+    const allowed_scopes = [...allowed.value]
+    if (!allowed_scopes.length) return
+    notice.value = ''
     if (mode.value === 'uuid')
       await request(
         'oauth/clients',
@@ -99,6 +106,17 @@ const save = useMutation({
     else {
       if (!reviewed.value) return
       const existing = selected.value
+      if (
+        existing?.enabled &&
+        !existing.review_required &&
+        existing.metadata_digest === reviewed.value.metadata_digest &&
+        JSON.stringify([...existing.allowed_scopes].sort()) ===
+          JSON.stringify([...allowed_scopes].sort())
+      ) {
+        drawer.value = false
+        notice.value = t('admin.unchangedApproval')
+        return
+      }
       await request(
         `oauth/cimd/clients${existing ? `/${existing.client_id}` : ''}`,
         {
@@ -117,6 +135,7 @@ const save = useMutation({
     if (current()) {
       drawer.value = false
       reviewed.value = undefined
+      notice.value = t('admin.approvalSaved')
     }
     await Promise.all([clients.refetch(), cimd.refetch()])
   },
@@ -155,10 +174,12 @@ function review(client: Client) {
   )
   reviewed.value = undefined
   drawer.value = true
+  preview.mutate()
 }
 </script>
 <template>
   <div class="space-y-6">
+    <p v-if="notice" role="status">{{ notice }}</p>
     <NeButton kind="primary" @click="create">{{
       t('admin.createClient')
     }}</NeButton
@@ -213,12 +234,18 @@ function review(client: Client) {
     >
     <NeSideDrawer
       :is-shown="drawer"
-      :title="t('admin.createClient')"
+      :title="t(selected ? 'admin.approve' : 'admin.createClient')"
       :close-aria-label="t('common.close')"
       @close="drawer = false"
       ><form
         class="space-y-5"
-        @submit.prevent="!save.isLoading.value && save.mutate()"
+        @submit.prevent="
+          !save.isLoading.value &&
+          !preview.isLoading.value &&
+          allowed.length &&
+          (mode === 'uuid' || reviewed) &&
+          save.mutate()
+        "
       >
         <ErrorNotice
           v-if="save.error.value || preview.error.value"
@@ -255,15 +282,22 @@ function review(client: Client) {
               !!selected || save.isLoading.value || preview.isLoading.value
             "
           /><NeButton
+            v-if="!selected || preview.error.value"
             kind="secondary"
             :loading="preview.isLoading.value"
             :disabled="preview.isLoading.value || save.isLoading.value"
             @click="preview.mutate()"
-            >{{ t('common.details') }}</NeButton
+            >{{ t('admin.loadApplication') }}</NeButton
           >
-          <pre v-if="reviewed" class="overflow-auto text-sm">{{
-            JSON.stringify(reviewed.descriptor, null, 2)
-          }}</pre></template
+          <div v-if="reviewed" class="space-y-3">
+            <p>{{ reviewed.descriptor.client_name }}</p>
+            <details>
+              <summary>{{ t('common.details') }}</summary>
+              <pre class="overflow-auto text-sm">{{
+                JSON.stringify(reviewed.descriptor, null, 2)
+              }}</pre>
+            </details>
+          </div></template
         ><NeCheckbox
           v-for="scope in ['c0:read', 'c0:write', 'c0:admin']"
           :key="scope"
@@ -273,14 +307,24 @@ function review(client: Client) {
           "
           :disabled="
             save.isLoading.value ||
+            preview.isLoading.value ||
             (!!reviewed?.descriptor.scope_ceiling &&
               !reviewed.descriptor.scope_ceiling.includes(scope))
           "
-        /><NeButton
+        />
+        <p v-if="selected" class="text-sm text-text-secondary">
+          {{ t('admin.approvalHelp') }}
+        </p>
+        <NeButton
           kind="primary"
           type="submit"
           :loading="save.isLoading.value"
-          :disabled="save.isLoading.value || (mode === 'metadata' && !reviewed)"
+          :disabled="
+            save.isLoading.value ||
+            preview.isLoading.value ||
+            !allowed.length ||
+            (mode === 'metadata' && !reviewed)
+          "
           >{{ t('admin.approve') }}</NeButton
         >
       </form></NeSideDrawer

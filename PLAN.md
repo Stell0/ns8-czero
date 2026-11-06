@@ -1,5 +1,33 @@
 # C0 roadmap
 
+## OAuth connection usability — implementation candidate
+
+Based on original main `df1108aa1b4774cfbc124164ec86a8d0d6b38124`.
+This application-only change keeps released Core0.38/schema0032, OAuth endpoints,
+metadata verification, role checks, selected scopes and background consent intact.
+Sign-in/consent use a focused responsive layout. Application metadata loads when
+an administrator opens a pending connection or existing technical-client review;
+Details is optional. An administrator explicitly approves and continues in one
+step before personal consent. Technical approval confirms its result and explains
+that the assistant must reconnect. Unchanged reviews skip the reapproval write,
+preserving existing grant authority and client revisions.
+
+Acceptance covers base/candidate frontend checks, PostgreSQL onboarding/consent,
+real HTTPS browser code exchange and unchanged-review token survival, metadata
+callback/scope boundaries, denied saves, ordinary-user approval waiting, late
+drafts, light/dark desktop/phone layout and keyboard navigation. Seven added
+browser regressions fail on the original UI before implementation; the ordinary
+user negative control already passes. Full automatic Debian/Rocky native and
+current-source C0 merge gates remain required. Base checks pass 28 unit cases,
+17 controlled browsers, 30 PostgreSQL cases and two real OAuth browser cases.
+Candidate checks pass 28 unit cases and 27 controlled browsers; all thirteen
+real website/theme cases pass across the full run and focused recheck. The full
+run retains one disposable fixture setup/teardown failure before UI execution;
+its focused recheck and the real new OAuth/token-preservation case both pass.
+Lint, formatting, types, production build and 372 documentation links pass.
+No deployment or Grok-provider
+end-to-end acceptance is claimed; the installed baseline below stays frozen.
+
 ## Vue website — dedicated installation accepted
 
 The operator authorized the supported C0-only update on 5 November 2026.

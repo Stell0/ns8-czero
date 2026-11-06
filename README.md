@@ -118,7 +118,7 @@ Open `https://c0.example.org/agents` on your own instance. It provides the conne
 - **A plugin `.zip`** that references your registered ChatGPT C0 app and includes setup, research, knowledge maintenance and protected-project discovery skills. Repeated daily/weekly project work uses a separate project-bound package; downloading either package does not install a scheduled task.
 - **The MCP URL** for clients with their own connector configuration.
 
-Installing instructions does not connect an account or grant access. Sign in through OAuth, review the requested permissions and complete any C0 application approval. Read, Write and Manage scopes remain independent. Short access tokens renew through refresh; explicitly consented background connections use an inactivity deadline and can be disconnected or revoked.
+Installing instructions does not connect an account or grant access. Sign in through OAuth, review the requested permissions and complete any C0 application approval. Application approval and personal authorization are separate: administrators can approve and continue from the connection page, then authorize their own connection. Technical client approval alone does not connect an assistant. Read, Write and Manage scopes remain independent. Short access tokens renew through refresh; explicitly consented background connections use an inactivity deadline and can be disconnected or revoked.
 
 | Client | Connection route | C0-specific evidence |
 | --- | --- | --- |

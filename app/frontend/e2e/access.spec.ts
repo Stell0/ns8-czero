@@ -281,7 +281,9 @@ test('closing a metadata preview cannot populate a newly opened client form', as
   await dialog
     .getByRole('textbox', { name: 'Client metadata URL', exact: true })
     .fill(descriptor.client_id)
-  await dialog.getByRole('button', { name: 'Details', exact: true }).click()
+  await dialog
+    .getByRole('button', { name: 'Load application', exact: true })
+    .click()
   await expect.poll(() => started).toBe(true)
   await dialog.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)

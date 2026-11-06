@@ -240,7 +240,11 @@
     "backgroundHelp": "Questa connessione non ha una scadenza fissa durante l’uso. Termina dopo {days} giorni di inattività o alla revoca dell’accesso.",
     "continue": "Continua con l’accesso in background",
     "callback": "Callback",
-    "pending": "Questa connessione richiede l’approvazione di un amministratore. Contatta l’amministratore di C0, poi ricarica lo stato di approvazione."
+    "pending": "Questa connessione richiede l’approvazione di un amministratore. Contatta l’amministratore di C0, poi ricarica lo stato di approvazione.",
+    "permissions": "Scegli cosa può fare questa applicazione con il tuo account C0.",
+    "adminApproval": "Approva questa applicazione per i permessi selezionati, poi continua per autorizzare la connessione.",
+    "approveContinue": "Approva e continua",
+    "signedIn": "Accesso effettuato come {name}"
   },
   "admin": {
     "people": "Persone e applicazioni",
@@ -287,6 +291,9 @@
       "waiting_for_consent": "In attesa del consenso",
       "needs_permissions": "Approvazione aggiuntiva richiesta",
       "needs_approval": "Approvazione richiesta"
-    }
+    },
+    "loadApplication": "Carica applicazione",
+    "approvalSaved": "L’applicazione è stata approvata. Torna al tuo assistente e connettiti di nuovo per completare l’autorizzazione.",
+    "approvalHelp": "La modifica dei permessi dell’applicazione interrompe le connessioni esistenti. Torna al tuo assistente per autorizzare una nuova connessione."
   }
 }

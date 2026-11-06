@@ -19,6 +19,7 @@ const preferences = usePreferences()
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const authFlow = computed(() => /^\/(auth|oauth)\//.test(route.path))
 const menu = ref(false)
 function openMenu() {
   document.getElementById('navigation-toggle')?.focus()
@@ -129,8 +130,9 @@ function search() {
     :href="`${localURL(route.fullPath.split('#')[0])}#main`"
     >{{ t('nav.skip') }}</a
   >
-  <div class="min-h-screen lg:grid lg:grid-cols-5">
+  <div class="min-h-screen" :class="!authFlow && 'lg:grid lg:grid-cols-5'">
     <aside
+      v-if="!authFlow"
       class="sticky top-0 hidden h-screen overflow-auto border-r border-default bg-elevation-1 p-6 lg:col-span-1 lg:block"
     >
       <div class="flex items-center justify-between gap-4">
@@ -162,17 +164,21 @@ function search() {
         </ul>
       </nav>
     </aside>
-    <div class="min-w-0 lg:col-span-4">
+    <div class="min-w-0" :class="!authFlow && 'lg:col-span-4'">
       <header
         class="sticky top-0 z-20 flex flex-wrap items-end gap-4 border-b border-default bg-elevation-0 p-4 lg:px-8"
       >
-        <div class="flex w-full items-center justify-between lg:hidden">
+        <div
+          class="flex w-full items-center justify-between"
+          :class="!authFlow && 'lg:hidden'"
+        >
           <RouterLink
             to="/"
             class="text-xl font-medium text-primary-700 dark:text-primary-400"
             >C0</RouterLink
           >
           <NeButton
+            v-if="!authFlow"
             id="navigation-toggle"
             kind="tertiary"
             :aria-expanded="menu"
@@ -181,7 +187,7 @@ function search() {
             >{{ t('nav.menu') }}</NeButton
           >
         </div>
-        <template v-if="session.profile">
+        <template v-if="session.profile && !authFlow">
           <NeListbox
             class="w-full sm:w-64"
             :model-value="selected"
@@ -208,7 +214,11 @@ function search() {
             }}</NeButton>
           </form></template
         >
-        <template v-else-if="route.meta.public && !route.meta.optionalSession">
+        <template
+          v-else-if="
+            authFlow || (route.meta.public && !route.meta.optionalSession)
+          "
+        >
           <NeListbox
             v-model="preferences.language"
             :label="t('account.language')"
@@ -237,9 +247,16 @@ function search() {
         id="main"
         ref="main"
         tabindex="-1"
-        class="mx-auto max-w-screen-2xl scroll-mt-72 space-y-6 p-4 outline-none sm:p-6 lg:scroll-mt-32 lg:p-8"
+        class="mx-auto scroll-mt-72 space-y-6 p-4 outline-none sm:p-6 lg:scroll-mt-32 lg:p-8"
+        :class="authFlow ? 'max-w-2xl' : 'max-w-screen-2xl'"
       >
         <h1 class="text-2xl font-medium">{{ title }}</h1>
+        <p
+          v-if="authFlow && session.profile"
+          class="text-sm text-text-secondary"
+        >
+          {{ t('consent.signedIn', { name: session.profile.username }) }}
+        </p>
         <NeSkeleton
           v-if="session.loading && !route.meta.public"
           class="h-24"
