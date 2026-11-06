@@ -168,6 +168,33 @@ def test_managed_rerun_preserves_authored_verification(tmp_path):
     asyncio.run(check())
 
 
+def test_managed_rerun_with_multiple_quotes_from_one_chunk(tmp_path):
+    from czero_core.annotations import annotation_value
+    corpus,_,plan=fixture();state=tmp_path/'state.json'
+    chunk_id='00000000-0000-4000-8000-000000000001'
+    corpus[0]['chunks'][0]['chunk_id']=chunk_id
+    evidence=plan['records'][0]['evidence'];evidence[0]['chunk_id']=chunk_id
+    evidence.append({**evidence[0],'quote':'Orion 2'})
+
+    class CanonicalAPI(LayerAPI):
+        async def __call__(self,name,args):
+            if name=='knowledge_annotations_update':
+                args=deepcopy(args)
+                args['data']['value']=annotation_value('verification',args['data']['value'])
+            return await super().__call__(name,args)
+
+    api=CanonicalAPI()
+    async def check():
+        await maintain(api,'space',corpus,plan,state,apply=True)
+        before=deepcopy(api.pages);writes=api.writes
+        assert len(api.pages['page']['content']['metadata']['source_bindings'])==2
+        assert api.annotations['source_references']==[{'kind':'chunk','id':chunk_id}]
+        result=await maintain(api,'space',corpus,plan,state,apply=True)
+        assert result['records'][0]['action']=='unchanged'
+        assert api.writes==writes and api.pages==before
+    asyncio.run(check())
+
+
 @pytest.mark.parametrize('limit,kwargs,match',[
     ('model',{'require_model':True},'model'),('context',{'max_context_bytes':1},'context'),
     ('calls',{'max_calls':0},'call budget')])

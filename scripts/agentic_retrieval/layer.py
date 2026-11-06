@@ -95,7 +95,7 @@ async def maintain(call,space,corpus,plan,state_path,*,apply=False,max_operation
         target={'kind':'wiki_revision','target_id':current['content']['id'],
                 'content_revision':current['revision'],'namespace':'verification'}
         annotation=await invoke('knowledge_annotations_get',target)
-        refs=[{'kind':'chunk','id':e['chunk_id']} for e in record['evidence']]
+        refs=[{'kind':'chunk','id':chunk_id} for chunk_id in dict.fromkeys(e['chunk_id'] for e in record['evidence'])]
         value={'status':'unverified','source_references':refs,'extensions':{'managed_by':plan['namespace']}}
         if annotation['value']!=value:
             if annotation['revision']!=0:

@@ -103,6 +103,11 @@ references make records stale; C0 annotations retain unavailable references with
 old bodies. Access loss stops the workflow. A new current source needs a reviewed
 new plan; never silently rebind an expired reference.
 
+Several quoted passages may share one exact chunk. Keep every supported quote in
+the page bindings, but reference that chunk only once in its verification
+annotation, preserving first occurrence order. This matches Core normalization
+and lets an unchanged rerun preserve the page and annotation revisions.
+
 ## Commands and private inputs
 
 Run with the producer development Python environment from `docs/development.md`.

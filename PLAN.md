@@ -562,6 +562,12 @@ a substitute for a released consumer dependency; preserve failed/frozen evidence
 
 ## Agentic retrieval workflow (development)
 
+Maintenance recovery follow-up: multiple quotes from one current chunk retain
+their distinct page bindings and use one verification reference. The regression
+uses Core's actual annotation normalization and checks that a repeated unchanged
+run performs no writes. Authored verification conflicts remain protected. No Core,
+runtime, migration, policy, schedule or compiler milestone change is included.
+
 Build three source-grounded skills and a bounded external comparison runner,
 reusing real disposable C0 MCP and the existing isolated model driver. Freeze
 question partitions, corpus hashes, model/budgets and numerical targets before
