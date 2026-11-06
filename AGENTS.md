@@ -220,7 +220,9 @@ Reader pages render stored knowledge with local assets and allowlisted DOM text/
 Keep its dependencies, downloaded datasets, manifests and reports out of runtime
 packages and images. Reuse `c0_ingest` authentication, source readback and atomic
 state helpers; keep evaluation read-only and require the exact dedicated protected
-space and complete verified corpus. See [setup and metric contracts](benchmarks/retrieval/README.md).
+space and complete verified corpus. Submit missing originals to the existing
+background queue before verifying extraction; preserve acknowledged source/version/hash
+receipts and the single uncertain write intent across resumes. See [setup and metric contracts](benchmarks/retrieval/README.md).
 Synthetic tests run in the ingestion unit suite; the optional local test extra
 checks metric compatibility with BEIR's `pytrec_eval` reference dependency.
 Do not run real ingestion/evaluation or change providers without explicit authority.
