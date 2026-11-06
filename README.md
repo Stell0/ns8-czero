@@ -421,3 +421,10 @@ now runs app0.59/Core0.38/schema0032 after verified backup, update and live chec
 Embedding refresh uses bounded batches and resumes automatically while its ten-minute
 schedule remains enabled. Pausing the schedule stops further continuations after
 already queued work; disabling the provider makes indexing a no-op.
+
+
+[Core 0.39.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.39.0)
+adds resumable missing-embedding indexing while preserving worker bounds and
+progress for other jobs. App0.60 targets its immutable released tag and lock;
+consumer/native and live adoption remain separate gates in PLAN. The current
+installed baseline is unchanged until its supported update passes acceptance.
