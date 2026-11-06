@@ -263,6 +263,11 @@ before label audit; completed benchmarks report unmet targets as results.
 Synthetic question labels, derived
 knowledge and original evidence remain distinct; model traces stay private.
 
+For standard dataset retrieval measurements against an existing C0 instance, use
+the repository-only [BEIR benchmark](benchmarks/retrieval/README.md). It separates
+resumable ingestion from read-only evaluation of SciFact, NFCorpus, FiQA or a
+compatible local dataset; no runtime installation or provider changes are needed.
+
 ## Roadmap and project status
 
 The knowledge service, browser readers, protected spaces, OAuth/MCP access, persistent background connections and people-first administration are implemented and accepted under the recorded development gates. This remains a **development candidate**, with no stable NS8 release or public plugin-directory listing claimed.
