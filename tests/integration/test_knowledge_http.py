@@ -292,7 +292,10 @@ def test_signed_hybrid_and_scorer_transport_use_core_caps_and_provenance(knowled
                 status=await transport.get('/api/v1/knowledge/index/status')
                 assert status.status_code==200 and status.json()['configured'] is True
                 assert status.json()['indexed']==2 and status.json()['dimensions']==3
+                assert status.json()['source_indexed']==0 and status.json()['wiki_indexed']==2
                 assert status.json()['profile_id']==str(store.profile_id)
+                schema=app.state.operation_catalog.registry.definition('knowledge_index_status')['output_schema']
+                assert {'source_indexed','wiki_indexed'} <= set(schema['properties'])
                 assert 'endpoint' not in status.text and 'api_key' not in status.text
                 response=await transport.get('/api/v1/knowledge/search',params={'query':'Hybrid transport','mode':'hybrid','rerank':'filter'})
                 assert response.status_code==200;result=response.json()

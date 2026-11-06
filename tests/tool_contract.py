@@ -51,6 +51,17 @@ def legacy_search_output(schema):
     return projected
 
 
+def legacy_index_status_output(schema):
+    """Check additive optional coverage counts before frozen-schema comparison."""
+    projected = deepcopy(schema)
+    for name in ('source_indexed', 'wiki_indexed'):
+        assert name not in projected.get('required', [])
+        field = projected['properties'].pop(name)
+        assert structural_schema(field) == {'anyOf':[
+            {'type':'integer'}, {'type':'null'}], 'default':None}
+    return projected
+
+
 def operation_contract(operation):
     return {**{key: operation[key] for key in
         ('name', 'minimum_role', 'required_scope', 'read_only')},

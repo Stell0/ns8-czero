@@ -28,6 +28,17 @@ New fixtures restore scheduler state and remove only their own continuations.
 Fresh released-Git consumer validation passes105 focused PostgreSQL/worker/BEIR/
 retrieval-protocol cases; pinned Node24/Renovate API version bounds pass.
 
+Transport review of frozen consumer966d799 reproduced dropped source/Wiki counts:
+the shared response DTO omitted Core's additive fields. The correction exposes
+optional counts through REST and MCP, retaining unknown counts for older Core.
+Signed nonempty HTTP and official current/legacy SDK checks cover the boundary;
+frozen authority schemas explicitly validate the two additions before comparison.
+The released-Git consumer passes104 catalog/Wiki/annotation cases,64 HTTP/space/
+BEIR cases and11 SDK/guidance/contract checks after the correction. The HTTP
+regression first fails on missing fields, then passes with the response DTO fix.
+The earlier consumer/full run remains uncancelled evidence, not a deployment
+candidate. The published Core tree and immutable release remain unchanged.
+
 Consumer full/native/image/main gates and authorized backup/update/live acceptance
 remain pending. No compilation workflow is initialized or scheduled.
 The installed app0.59/Core0.38/schema0032 baseline stays frozen until actual update.

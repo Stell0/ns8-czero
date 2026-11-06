@@ -85,6 +85,8 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
             response = await rest.get('/api/v1/object-types')
             assert response.status_code == 200
             expected_types = response.json()
+            expected_index = (await rest.get('/api/v1/knowledge/index/status')).json()
+            assert expected_index['source_indexed']==0 and expected_index['wiki_indexed']==0
             payload = {'slug':'mcp-' + uuid4().hex, 'title':'MCP parity', 'body':'Authored exact body.',
                        'idempotency_key':'mcp-' + uuid4().hex}
             page = await rest.post('/api/v1/wiki/pages', json=payload)
@@ -101,6 +103,8 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                         result = await client.call_tool('object_types_list', {})
                         assert not result.is_error and result.structured_content == expected_types
                         assert json.loads(result.content[0].text) == expected_types
+                        index_result = await client.call_tool('knowledge_index_status', {})
+                        assert not index_result.is_error and index_result.structured_content == expected_index
                         page_result = await client.call_tool('wiki_pages_get', {'page_id':expected_page['id']})
                         assert page_result.structured_content == expected_page
                         assert str((await client.list_resources()).resources[0].uri) == 'c0://capabilities'

@@ -56,6 +56,8 @@ class IndexStatus(BaseModel):
     profile_id: UUID | None
     generation: int | None
     indexed: int
+    source_indexed: int | None = None
+    wiki_indexed: int | None = None
     model: str | None = None
     dimensions: int | None = None
 
