@@ -30,6 +30,7 @@ def indexed(search):
         schedule=dict(c.execute(text('SELECT enabled,interval_seconds,next_run_at FROM c0_scheduled_tasks WHERE id=:id'),{'id':SCHEDULE_ID}).mappings().one())
     yield store,search,calls
     with service.database.engine.begin() as c:
+        c.execute(text("DELETE FROM c0_jobs WHERE idempotency_key LIKE :prefix"),{'prefix':'embedding-continuation:'+str(store.profile_id)+':%'})
         c.execute(text('DELETE FROM c0_embedding_profiles WHERE id=:id'),{'id':store.profile_id})
         c.execute(text('UPDATE c0_scheduled_tasks SET enabled=:enabled,interval_seconds=:interval_seconds,next_run_at=:next_run_at WHERE id=:id'),{**schedule,'id':SCHEDULE_ID})
 
@@ -344,3 +345,90 @@ def test_native_timer_progress_does_not_require_five_shared_vectors(indexed,monk
         with store.database.engine.begin() as c:
             created.extend(key for key in c.execute(text('SELECT job_id FROM c0_task_runs WHERE schedule_id=:id'),{'id':SCHEDULE_ID}).scalars() if key not in previous)
             for key in created:c.execute(text('DELETE FROM c0_jobs WHERE id=:id'),{'id':key})
+
+
+def test_enabled_indexing_drains_across_worker_ticks_and_stops(indexed):
+    from czero_core.jobs import JobService, default_registry
+    from czero_core.worker import Worker
+    store, fixtures, calls = indexed
+    _, wiki, sources = fixtures
+    for number in range(18):
+        version = upload(sources, data=('alpha '+str(number)).encode())
+        execute(sources, 'source.extract', version['id'])
+    registry = default_registry()
+    register_embedding_handlers(registry, store)
+    jobs = JobService(store.database, registry, wiki[0].access)
+    with store.database.engine.begin() as connection:
+        store._activate(connection)
+        connection.execute(text("UPDATE c0_scheduled_tasks SET next_run_at=now()+interval '1 day'"))
+    first = jobs.enqueue(wiki[1], 'embedding.index', {}, 'drain-'+uuid4().hex)
+    try:
+        worker = Worker(store.database, registry)
+        assert worker.tick(max_jobs=1) == 1
+        assert jobs.get_job(wiki[1], first['id'])['result']['indexed'] == 8
+        assert worker.tick(max_jobs=1) == 1
+        assert worker.tick(max_jobs=1) == 1
+        assert worker.tick(max_jobs=1) == 1  # terminal no-op
+        with store.database.engine.connect() as connection:
+            assert not connection.execute(text("SELECT EXISTS(SELECT 1 FROM c0_jobs WHERE handler='embedding.index' AND state='queued')")).scalar_one()
+        assert len(calls) == 3
+        status = store.status(wiki[1])
+        assert status['source_indexed'] == 18 and status['wiki_indexed'] == 0
+        assert status['indexed'] == 18
+    finally:
+        with store.database.engine.begin() as connection:
+            connection.execute(text("DELETE FROM c0_jobs WHERE id=:id OR idempotency_key LIKE 'embedding-continuation:%'"), {'id':first['id']})
+
+
+def test_paused_indexing_does_not_chain(indexed):
+    from czero_core.jobs import JobService, default_registry
+    from czero_core.worker import Worker
+    store, fixtures, _ = indexed
+    _, wiki, _ = fixtures
+    create_page(wiki, body='alpha')
+    registry = default_registry()
+    register_embedding_handlers(registry, store)
+    jobs = JobService(store.database, registry, wiki[0].access)
+    with store.database.engine.begin() as connection:
+        connection.execute(text('UPDATE c0_scheduled_tasks SET enabled=false'))
+    job = jobs.enqueue(wiki[1], 'embedding.index', {}, 'paused-'+uuid4().hex)
+    try:
+        worker = Worker(store.database, registry)
+        assert worker.tick(max_jobs=1) == 1
+        assert worker.tick(max_jobs=1) == 0
+    finally:
+        with store.database.engine.begin() as connection:
+            connection.execute(text('DELETE FROM c0_jobs WHERE id=:id'), {'id':job['id']})
+
+
+def test_continuation_coalesces_pending_jobs_and_rolls_back_on_failure(indexed):
+    from czero_core.jobs import JobService, default_registry
+    store, fixtures, _ = indexed
+    _, wiki, _ = fixtures
+    create_page(wiki, body='alpha')
+    registry = default_registry()
+    register_embedding_handlers(registry, store)
+    jobs = JobService(store.database, registry, wiki[0].access)
+    with store.database.engine.begin() as connection:
+        store._activate(connection)
+    pending = jobs.enqueue(wiki[1], 'embedding.index', {}, 'existing-'+uuid4().hex)
+    try:
+        with pytest.raises(RuntimeError):
+            with store.database.engine.begin() as connection:
+                registry.get('embedding.index').execute(connection,{})
+                assert connection.execute(text("SELECT count(*) FROM c0_jobs WHERE handler='embedding.index' AND state='queued'")).scalar_one() == 1
+                raise RuntimeError('rollback')
+        assert store.status(wiki[1])['indexed'] == 0
+        with store.database.engine.begin() as connection:
+            connection.execute(text('DELETE FROM c0_jobs WHERE id=:id'), {'id':pending['id']})
+        with pytest.raises(RuntimeError):
+            with store.database.engine.begin() as connection:
+                registry.get('embedding.index').execute(connection,{})
+                assert connection.execute(text("SELECT count(*) FROM c0_jobs WHERE handler='embedding.index' AND state='queued'")).scalar_one() == 1
+                raise RuntimeError('rollback continuation')
+        with store.database.engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM c0_jobs WHERE handler='embedding.index' AND state='queued'")).scalar_one() == 0
+        assert store.status(wiki[1])['indexed'] == 0
+    finally:
+        with store.database.engine.begin() as connection:
+            connection.execute(text('DELETE FROM c0_jobs WHERE id=:id'), {'id':pending['id']})

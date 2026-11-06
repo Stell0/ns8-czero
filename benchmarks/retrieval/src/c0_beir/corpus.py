@@ -24,8 +24,15 @@ def title(dataset, key):
 
 
 def inventory(client, dataset):
-    if client.listing('wiki_pages_list', 'pages'):
+    excluded=getattr(client,'excluded_wiki_pages',[])
+    pages=client.listing('wiki_pages_list','pages')
+    if {page['id'] for page in pages}!={page['page_id'] for page in excluded}:
         raise C0Error('Benchmark space contains unrelated Wiki content; use a dedicated empty protected space')
+    for expected in excluded:
+        page=client.call('wiki_pages_get',page_id=expected['page_id'])
+        if (page['revision']!=expected['revision']
+                or page['content']['content_hash']!=expected['content_hash']):
+            raise C0Error('Excluded Wiki report changed; benchmark invalid')
     found = {}
     for source in client.listing('sources_list', 'sources'):
         key = source.get('metadata', {}).get('beir_id')
@@ -86,13 +93,16 @@ def check(client, dataset, manifest, *, full=True):
 
 def index_status(client, manifest):
     status = client.call('knowledge_index_status')
+    indexed=status.get('source_indexed')
+    if indexed is None and not getattr(client,'excluded_wiki_pages',[]):
+        indexed=status.get('indexed')
     expected = sum(len(row['chunks']) for row in manifest['documents'].values())
     # Current public API exposes counts, not per-chunk embedding receipts. In an
     # exclusively verified source space, require matching complete coverage.
     return {**status, 'expected_chunks': expected,
             'coverage_ready': bool(status.get('configured') and status.get('profile_id')
-                                   and expected and status.get('indexed') == expected),
-            'readiness_basis': 'space/profile generation count equals verified current chunk count; connectivity checked by searches'}
+                                   and expected and indexed == expected),
+            'readiness_basis': 'source/profile generation count equals verified current chunk count; connectivity checked by searches'}
 
 
 def ingest(client, dataset, path, *, attempts=20, seconds=3, index_attempts=20):

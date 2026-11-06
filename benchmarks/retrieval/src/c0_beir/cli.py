@@ -3,6 +3,8 @@
 import argparse
 import json
 import os
+import re
+from uuid import UUID
 from pathlib import Path
 import sys
 import tomllib
@@ -31,7 +33,7 @@ def settings(args):
     destination(connection)
     options = {'dataset': 'scifact', 'split': 'test', 'modes': ['text', 'semantic', 'hybrid'],
                'rerank': 'off', 'limit': 50, 'repetitions': 1, 'data_dir': 'data', 'state_dir': 'manifests',
-               'results_dir': 'results', 'poll_attempts': 20, 'poll_seconds': 3, 'index_attempts': 20}
+               'results_dir': 'results', 'poll_attempts': 20, 'poll_seconds': 3, 'index_attempts': 20, 'excluded_wiki_pages': []}
     custom = config.get('benchmark', {})
     if not isinstance(custom, dict) or set(custom) - set(options) - {'dataset_path'}:
         raise ValueError('Unknown benchmark setting')
@@ -57,6 +59,21 @@ def settings(args):
             or any(type(options[key]) is not int or not 1 <= options[key] <= 100 for key in ('poll_attempts', 'index_attempts'))
             or not isinstance(options['poll_seconds'], (int, float)) or not 0 <= options['poll_seconds'] <= 30):
         raise ValueError('Invalid retrieval configuration or bounded polling budget')
+    exclusions=options['excluded_wiki_pages']
+    if not isinstance(exclusions,list) or len(exclusions)>100:
+        raise ValueError('Invalid excluded Wiki reports')
+    seen=set()
+    for page in exclusions:
+        if (not isinstance(page,dict) or set(page)!={'page_id','revision','content_hash'}
+                or type(page['revision']) is not int or page['revision']<1
+                or not isinstance(page['content_hash'],str)
+                or not re.fullmatch('[0-9a-f]{64}',page['content_hash'])):
+            raise ValueError('Invalid excluded Wiki reports')
+        try: key=str(UUID(page['page_id']))
+        except (ValueError,TypeError,AttributeError): raise ValueError('Invalid excluded Wiki reports') from None
+        if key!=page['page_id'] or key in seen:
+            raise ValueError('Invalid excluded Wiki reports')
+        seen.add(key)
     return connection, options
 
 
@@ -96,9 +113,12 @@ def main(argv=None):
             dataset = load(path, config['dataset'], config['split'])
             print(f'Validated {dataset.name}: {len(dataset.corpus)} documents, {len(dataset.qrels)} eligible queries; {dataset.fingerprint}', flush=True)
             client = C0(connection)
+            client.excluded_wiki_pages = config['excluded_wiki_pages']
             space = client.select_space(connection['space_id'], writable=args.command == 'ingest')
             if space['shared']:
                 raise C0Error('Benchmark requires an explicitly selected protected space, never Shared')
+            if args.command == 'ingest' and config['excluded_wiki_pages']:
+                raise ValueError('Wiki report exclusions are evaluation-only')
             if args.command == 'ingest':
                 operation = client.operations.get('sources_ingest_text', {})
                 if not operation or operation.get('read_only'):
