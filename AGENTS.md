@@ -1,11 +1,11 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-The current accepted dedicated installation is app **0.59.0**, released Core
-**0.38.0**, schema **0032**, source `c011a0b9b9eb57b9a0f545f21e129e8732eb65e4`.
-Its supported backup/update, manager restart, preservation, live browser/connector
+The current accepted dedicated installation is app **0.60.0**, released Core
+**0.39.0**, schema **0033**, source `a8bb2e8eb15906440835ebc94b1b300d083a0f6a`.
+Its supported C0-only backup/update, manager restart, preservation, live HTTP/MCP
 and root-journal acceptance are recorded in
-[PLAN](PLAN.md#vue-website--dedicated-installation-accepted). Freeze its installed
-CI tag/digests as the next genuine predecessor and preserve older evidence.
+[PLAN](PLAN.md#embedding-backlog-drain). Freeze its installed CI tag/digests as
+the next genuine predecessor; retain the prior `c011a0b` installation and evidence.
 
 ## Product purpose
 
@@ -803,6 +803,10 @@ revision/hash pins, evaluation-only, and never relax source/citation verificatio
 
 Core0.39.0 is immutably published from b05ebe46 after full42264181476,
 independent native/artifact audit and publisher42273069369. Schema0033 is inherited;
-no new embedding migration is added. App0.60 stages released tag/lock adoption with
-matching patch-only updater bounds. Consumer/full/native/main and live gates remain
-separate. Preserve the app0.59/Core0.38 installed predecessor until actual update.
+no new embedding migration is added. App0.60 adopts the released tag/lock with
+matching patch-only updater bounds. Consumer a8bb2e8 passes full42284156460,
+independent native/artifact grading and exact-source promotion; PR87 regularly
+merges as fe9e8e8. The installed app image uses the released Git Core source.
+Supported backup/update, unchanged original tables/settings/schedules/credentials,
+ten unrelated instances, manager restart and real HTTP/MCP/journal checks pass.
+Main/publication and benchmark acceptance remain separately recorded in PLAN.

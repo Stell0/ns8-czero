@@ -1,6 +1,6 @@
 # C0 roadmap
 
-## Embedding backlog drain — Core published; consumer candidate
+## Embedding backlog drain
 
 [PR86](https://github.com/Stell0/ns8-czero/pull/86) regularly merges as
 `5245dbf2417d7a89b8c8bcf9a07ac16c69025e32`. Tested source
@@ -39,12 +39,66 @@ regression first fails on missing fields, then passes with the response DTO fix.
 The earlier consumer/full run remains uncancelled evidence, not a deployment
 candidate. The published Core tree and immutable release remain unchanged.
 
-Consumer full/native/image/main gates and authorized backup/update/live acceptance
-remain pending. No compilation workflow is initialized or scheduled.
-The installed app0.59/Core0.38/schema0032 baseline stays frozen until actual update.
-The existing ten-minute embedding schedule is retained; no nightly cron is added.
-Live full backfill and BEIR rerun are not claimed by this source candidate.
-Private benchmark artifacts and operational evidence stay outside Git.
+Consumer `a8bb2e8eb15906440835ebc94b1b300d083a0f6a` passes
+[full/native acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42284156460),
+the actual C0 merge gate, independent downloaded native/scan grading and full
+exact-source promotion. [PR87](https://github.com/Stell0/ns8-czero/pull/87)
+regularly merges as `fe9e8e8d068c81df1da775fb9c78e968ac2f0201` with the same
+tracked tree. Its [merged-main full run](https://github.com/Stell0/ns8-czero/actions/runs/42293129204)
+passes required checks, independent native/scan grading, exact-source full
+promotion and canonical publication. Six fresh registry reads match all
+main/latest digests, source revisions and immutable sibling references. Earlier consumer
+966d799 passes native/artifact checks but its gate correctly rejects the advanced
+PR head. Optional screenshot publishing failures and other failed/private evidence
+remain preserved. No full run was cancelled.
+
+The authorized dedicated installation is now app0.60.0 / released Core0.39.0 /
+schema0033 at the tested consumer source. Both the published app-image probe and
+the installed app's package metadata verify the Git source at `b05ebe46` and its
+immutable tag. C0-only backup and full stored-data integrity checks pass, with all
+backup plans restored. Released-Core read-only retention preflight is unblocked.
+Supported update preserves every row hash in the 54 existing tables; the six new
+compilation tables are empty. No compilation workflow is initialized or scheduled.
+
+Current source generations, original-store state, settings, schedules, profiles,
+credentials and ten unrelated instances are preserved. The live originals store
+is empty; nonempty retained-file recovery remains disposable native evidence.
+Supported manager restart changes its invocation and preserves all 60 table hashes.
+Fresh official MCP discovery and the existing Codex connection return the new
+source/Wiki counts for the intended account. Real semantic retrieval has no
+fallback; HTTPS health, profile, guide and text reads pass. Bounded positive-control
+root journald audits after update/restart find zero credential/query candidates;
+four actual credential fingerprints match. Interactive browser and CPU-quota
+waivers remain unchanged; automated native browsers pass.
+
+Installed immutable tag:
+`ci-a8bb2e8eb15906440835ebc94b1b300d083a0f6a-42284156460-1`.
+
+| Image | Installed digest |
+| --- | --- |
+| Module | `sha256:709faff9f7ba8bf8a4c8af1f0b88fe9dc6a86e312c5644d4518ea9c30b9a004e` |
+| App | `sha256:f2386824b38ad1b8a84f1fc46db5f685f6bfdd5c9e554652327168981a274356` |
+| PostgreSQL | `sha256:a4128fa5ede2e33cb4077e240f79c833663f28bcf33a10e1773b0744dfe24903` |
+
+Freeze these identities as the next genuine upgrade predecessor. Retain the prior
+app0.59/Core0.38/schema0032 installation at `c011a0b` and its immutable identities
+in the [website acceptance](#vue-website--dedicated-installation-accepted).
+Documentation commits never replace the installed images.
+
+The existing ten-minute embedding schedule remains enabled. The initial backfill
+uses bounded continuations and a one-off native worker drain; no recurring schedule
+is added. The initial drain completes successfully with zero missing current
+source/Wiki embeddings across all authorized spaces; public status readback agrees
+with independent per-chunk coverage. The files-only SciFact rerun starts only
+after that zero-coverage checkpoint and completes successfully. Both complete
+5,183-document corpus checks pass, along with the unchanged profile/index checks.
+All 300 eligible test queries run in each of text, semantic and hybrid modes;
+all 900 responses use the requested mode with zero errors or fallbacks. The
+comparison is valid and global source/Wiki coverage remains complete afterward.
+The Markdown report, JSON summary, query log, full rankings and runtime provenance
+are saved privately on the instance and locally with matching SHA-256 checksums.
+Private benchmark artifacts and operational evidence stay outside Git. No new
+Wiki report is created and no stable NS8 module release is claimed.
 
 
 ## Local BEIR retrieval benchmark — implementation candidate
