@@ -404,7 +404,7 @@ class NativeWebsite:
             self.discovery(module_id,True);self.run('Reload');self.click('Register client')
             self.select('Clients','HTTPS')
             for url in ('https://127.0.0.1/client.json','https://localhost/client.json'):
-                self.fill('Client metadata URL',url);self.click('Details','[role="dialog"] ')
+                self.fill('Client metadata URL',url);self.click('Load application','[role="dialog"] ')
                 self.run('Wait For Elements State','[role="dialog"] [role="alert"]','visible','timeout=30s')
                 self.run('Wait For Elements State',self.button('Approve application','[role="dialog"] '),'disabled')
             self.run('Click',self.role('button','Close'))

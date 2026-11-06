@@ -304,6 +304,7 @@ def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatc
     app.discovery=lambda *args:None
     app.api=lambda path:{'jobs':[{'id':'fixture-job','handler':'health'}]} if path=='jobs' else {'state':'succeeded'}
     app.admin('admin','czero7')
+    assert ('Click',(app.button('Load application','[role="dialog"] '),)) in calls
     assert ('Click',('role=option[name="health"]',)) in calls
     assert ('Uncheck Checkbox',('role=checkbox[name="Enabled"]',)) in calls
     assert ('Reload',()) in calls
