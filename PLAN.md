@@ -1,5 +1,74 @@
 # C0 roadmap
 
+## Local BEIR retrieval benchmark — implementation candidate
+
+Current successor is based on original main
+`6279846c27efe2a1fd0c2c7fa25d9ed7b3773ead`, preserving PR79 OAuth presentation
+and PR80 knowledge-compilation M0 contracts/tests. All milestone sections remain
+separate. Previous-base PR81 source `be912ff98da16a1d17d428bc9f416a1ad3fef3f9`
+and its uncancelled full run42201822129 remain frozen evidence; they do not
+substitute for acceptance on this new base.
+Frozen PR78 source `cd7c99fe81b1d860e1c6f67741ed3e145b8d8adb` and full acceptance
+[42193208055](https://github.com/Stell0/ns8-czero/actions/runs/42193208055) remain
+previous-base evidence; its required native/artifact/merge gates and source proof
+pass, while optional screenshot publishing retains its HTTP403 failure. Those
+results do not establish acceptance on this new base. The benchmark package and
+feature tests are byte-identical; runtime files, dependency locks, migrations and
+managed-file state are unchanged from current main. New exact-source automatic
+full/native acceptance and merge gates remain required.
+
+Scope: repository-only CLI in `benchmarks/retrieval`, with editable local install
+and separate `benchmark ingest` / strictly read-only `benchmark evaluate`.
+Public MCP/API-key authentication, deterministic submissions, whole-source
+readback, atomic state and ranking normalization reuse the ingestion samples.
+No Core, transport, schema, runtime dependency, provider configuration or
+production packaging changes are part of this candidate.
+
+Queued-ingestion correction: the original runner waited for each extraction before
+submitting the next original. The updated runner submits the complete missing
+corpus first, saves each acknowledgement separately from the one uncertain write
+intent, then verifies extracted bodies/chunks. Existing manifests resume without
+rewriting completed sources. Evaluation still requires complete verified receipts;
+acknowledged queue entries do not count as evidence. Commands and provider/runtime
+configuration remain unchanged. Regression acceptance covers submission-before-read
+ordering, queued resume, lost replies, missing/replaced/failed submissions, legacy
+manifest compatibility and the existing corpus/authorization/evaluation guards.
+The unchanged original-main baseline passes 206 ingestion unit cases; this
+correction passes 255 ingestion unit cases plus five `pytrec_eval` reference
+comparisons (260 total). Live submission/extraction/evaluation remain separately
+reported operator evidence; these checks do not establish completed live ingestion.
+
+The accepted local contracts require explicit account/protected-space binding,
+validated standard BEIR files and graded qrels, deterministic dataset fingerprints,
+a durable pending-write journal and exact source/version/chunk receipts. Complete
+corpus readback precedes/follows evaluation; source inventory/revisions are checked
+between modes. Space/profile embedding counts must match verified current chunks
+for semantic/hybrid availability. Effective-method mismatches/fallbacks invalidate
+the entire requested mode. Repeated requests measure latency without changing
+quality denominators. Every run retains unique local reports and diagnostic rows.
+
+One source per corpus item uses the existing 128 KiB text API. Oversized combined
+title/body items fail whole-corpus preflight; no item is truncated, omitted or split.
+Public index counts infer coverage, not connectivity or per-chunk embedding proof;
+actual searches must report the requested method. See [usage and limitations](benchmarks/retrieval/README.md).
+
+Acceptance uses synthetic datasets and the shared C0 client over a fake transport,
+reference metric parity and production COPY/package exclusion checks. Live SciFact
+ingestion, full instance benchmarks, deployment and provider changes are expressly
+left to the operator after review. Existing documentation/agentic benchmarks and
+installed runtime evidence remain unchanged.
+
+Local executed evidence: verified original main `df1108aa1b4774cfbc124164ec86a8d0d6b38124`
+passes all 206 existing ingestion unit cases. The candidate passes 248 ingestion
+unit cases plus five independently executed `pytrec_eval` reference parity cases
+(253 total), including three actual production package/COPY exclusion checks.
+Maintained documentation passes 376 local links. A public SciFact download into
+`/tmp` validates 5,183 documents, 1,109 query records and 300 test queries; maximum
+combined body is 10,128 UTF-8 bytes and longest test query is 204 characters.
+A second cache lookup performs no download. No C0 instance is contacted.
+Normal risk classification and selected upstream CI remain separate PR gates;
+these local results do not claim native/release/deployment acceptance.
+
 ## Knowledge compilation — M0 architecture candidate
 
 The [knowledge-compilation plan](docs/knowledge-compilation/PLAN.md) defines a
