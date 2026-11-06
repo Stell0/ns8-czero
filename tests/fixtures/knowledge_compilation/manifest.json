@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "source_sha256": {
+    "listener": "4824f779a74bac489e64520da56f838b7228190584c4176f7c92a3f05a8a1231",
+    "identity": "9fe559689a22f93bc4d07e0bdfc058563d0898738ec45328a6050436fa14e1ee",
+    "conflict": "861a2c77aa28336f7e336f74bfb49c6a528ecf7409d43137752b85c1b73a663f",
+    "italian": "453686ae4925fdd7c9557d4988c08e28f62532d4876172a828e54c31b5dd1e71",
+    "injection": "59b6edfbcb074c755019757b5d82be62da398aa564b6464d88997db1e4429769"
+  },
+  "files": {
+    "sources.json": "2c46729ce8b56d898ccc27bc9355a10cb15fedaca36d12c35260bdf564f90482",
+    "model-response.json": "fa1d8aad1b345ae59e30a1dfd33ad04a42f7c76e937dad7f111139e91d18b198",
+    "retrieval-baseline.json": "fa57febbc3b9ea0c635f7424b268f11a4dbe57e1eb3896d1a1cb8b1638a7c93c"
+  }
+}

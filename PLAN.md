@@ -1,5 +1,13 @@
 # C0 roadmap
 
+## Knowledge compilation — M0 architecture candidate
+
+The [knowledge-compilation plan](docs/knowledge-compilation/PLAN.md) defines a
+SQL-backed external-agent compiler for any authorized space, disabled by default.
+This M0 candidate adds frozen contracts, synthetic baseline controls and an
+acceptance checklist only. M1–M6, production enrichment, scheduling and deployment
+remain unstarted. See the [actual baseline evidence](docs/knowledge-compilation/BASELINE.md).
+
 ## OAuth connection usability — implementation candidate
 
 Based on original main `df1108aa1b4774cfbc124164ec86a8d0d6b38124`.
