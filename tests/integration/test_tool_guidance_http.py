@@ -46,6 +46,8 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
         else:expected.append(row)
     projected=[{**item,'output_schema':contract.legacy_search_output(item['output_schema'])}
         if item['name'] in ('knowledge_search','knowledge_search_structured') else item for item in original]
+    projected=[{**item,'output_schema':contract.legacy_index_status_output(item['output_schema'])}
+        if item['name']=='knowledge_index_status' else item for item in projected]
     assert [contract.operation_contract(item) for item in projected]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()

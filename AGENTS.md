@@ -799,3 +799,10 @@ app0.57/Core0.37/schema0030 baseline is unchanged.
 Embedding drain candidates must preserve transactional continuation/completion,
 worker bounds and progress for other jobs. BEIR report exclusions are exact
 revision/hash pins, evaluation-only, and never relax source/citation verification.
+
+
+Core0.39.0 is immutably published from b05ebe46 after full42264181476,
+independent native/artifact audit and publisher42273069369. Schema0033 is inherited;
+no new embedding migration is added. App0.60 stages released tag/lock adoption with
+matching patch-only updater bounds. Consumer/full/native/main and live gates remain
+separate. Preserve the app0.59/Core0.38 installed predecessor until actual update.

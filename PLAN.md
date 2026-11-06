@@ -1,19 +1,50 @@
 # C0 roadmap
 
-## Embedding backlog drain — implementation candidate
+## Embedding backlog drain — Core published; consumer candidate
 
-Keep the existing 600-second schedule and drain current missing embeddings with
-transactional bounded continuation jobs. Alternate embeddings and other due work
-within existing worker limits. Add selected-space source/Wiki vector counts and
-explicit pinned report exclusions for source-only BEIR evaluation.
+[PR86](https://github.com/Stell0/ns8-czero/pull/86) regularly merges as
+`5245dbf2417d7a89b8c8bcf9a07ac16c69025e32`. Tested source
+`b05ebe46e1857d7889b30e798005f7c2957a3a76` passes exact-source
+[full/native acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42264181476),
+the required artifact/merge gates, downloaded independent native/scan grading,
+and full promotion verification. Optional screenshot publication remains failed
+evidence, separate from the passing required checks. Frozen PR85 sources/runs are
+retained; no full run was cancelled.
 
-Core producer acceptance, immutable publication, consumer adoption/full native
-acceptance and authorized deployment remain separate gates. No live completion or
-benchmark rerun is claimed by this candidate. Preserve existing result artifacts.
-Original-main focused baseline passes 69 cases. Candidate Core/configuration/BEIR
-unit checks pass 412 cases, independent metric references pass five, and the
-expanded BEIR unit set passes 48. Broader database/native acceptance is pending.
-Local failed dependency-install/quota attempts remain unaccepted evidence.
+[Core 0.39.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.39.0)
+is immutably published from that tested source after
+[publisher acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42273069369).
+Downloaded wheel/archive checksums match. It includes the previously merged
+schema0033 compilation state and bounded embedding continuations, alternating
+indexing with other due work within unchanged worker limits. Pausing prevents
+further continuations. Source/Wiki current counts and exact report exclusions
+support source-only BEIR comparisons; ingestion rejects exclusions before writes.
+
+App0.60 adopts the immutable tag and frozen lock with `>=0.39.0,<0.40.0`
+and matching patch-only updater bounds. The committed Core tree equals the tag's
+tree; no local runtime override or other dependency update is introduced.
+The existing managed-file registry/comparison state remains unchanged.
+New fixtures restore scheduler state and remove only their own continuations.
+Fresh released-Git consumer validation passes105 focused PostgreSQL/worker/BEIR/
+retrieval-protocol cases; pinned Node24/Renovate API version bounds pass.
+
+Transport review of frozen consumer966d799 reproduced dropped source/Wiki counts:
+the shared response DTO omitted Core's additive fields. The correction exposes
+optional counts through REST and MCP, retaining unknown counts for older Core.
+Signed nonempty HTTP and official current/legacy SDK checks cover the boundary;
+frozen authority schemas explicitly validate the two additions before comparison.
+The released-Git consumer passes104 catalog/Wiki/annotation cases,64 HTTP/space/
+BEIR cases and11 SDK/guidance/contract checks after the correction. The HTTP
+regression first fails on missing fields, then passes with the response DTO fix.
+The earlier consumer/full run remains uncancelled evidence, not a deployment
+candidate. The published Core tree and immutable release remain unchanged.
+
+Consumer full/native/image/main gates and authorized backup/update/live acceptance
+remain pending. No compilation workflow is initialized or scheduled.
+The installed app0.59/Core0.38/schema0032 baseline stays frozen until actual update.
+The existing ten-minute embedding schedule is retained; no nightly cron is added.
+Live full backfill and BEIR rerun are not claimed by this source candidate.
+Private benchmark artifacts and operational evidence stay outside Git.
 
 
 ## Local BEIR retrieval benchmark — implementation candidate

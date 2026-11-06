@@ -359,6 +359,8 @@ def test_enabled_indexing_drains_across_worker_ticks_and_stops(indexed):
     register_embedding_handlers(registry, store)
     jobs = JobService(store.database, registry, wiki[0].access)
     with store.database.engine.begin() as connection:
+        schedules=[dict(row) for row in connection.execute(text(
+            'SELECT id,enabled,next_run_at FROM c0_scheduled_tasks')).mappings()]
         store._activate(connection)
         connection.execute(text("UPDATE c0_scheduled_tasks SET next_run_at=now()+interval '1 day'"))
     first = jobs.enqueue(wiki[1], 'embedding.index', {}, 'drain-'+uuid4().hex)
@@ -377,7 +379,10 @@ def test_enabled_indexing_drains_across_worker_ticks_and_stops(indexed):
         assert status['indexed'] == 18
     finally:
         with store.database.engine.begin() as connection:
-            connection.execute(text("DELETE FROM c0_jobs WHERE id=:id OR idempotency_key LIKE 'embedding-continuation:%'"), {'id':first['id']})
+            connection.execute(text("DELETE FROM c0_jobs WHERE id=:id OR idempotency_key LIKE :prefix"),
+                {'id':first['id'],'prefix':'embedding-continuation:'+str(store.profile_id)+':%'})
+            for row in schedules:
+                connection.execute(text('UPDATE c0_scheduled_tasks SET enabled=:enabled,next_run_at=:next_run_at WHERE id=:id'),row)
 
 
 def test_paused_indexing_does_not_chain(indexed):
@@ -390,6 +395,8 @@ def test_paused_indexing_does_not_chain(indexed):
     register_embedding_handlers(registry, store)
     jobs = JobService(store.database, registry, wiki[0].access)
     with store.database.engine.begin() as connection:
+        schedules=[dict(row) for row in connection.execute(text(
+            'SELECT id,enabled,next_run_at FROM c0_scheduled_tasks')).mappings()]
         connection.execute(text('UPDATE c0_scheduled_tasks SET enabled=false'))
     job = jobs.enqueue(wiki[1], 'embedding.index', {}, 'paused-'+uuid4().hex)
     try:
@@ -399,6 +406,8 @@ def test_paused_indexing_does_not_chain(indexed):
     finally:
         with store.database.engine.begin() as connection:
             connection.execute(text('DELETE FROM c0_jobs WHERE id=:id'), {'id':job['id']})
+            for row in schedules:
+                connection.execute(text('UPDATE c0_scheduled_tasks SET enabled=:enabled,next_run_at=:next_run_at WHERE id=:id'),row)
 
 
 def test_continuation_coalesces_pending_jobs_and_rolls_back_on_failure(indexed):
