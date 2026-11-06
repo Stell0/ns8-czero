@@ -28,4 +28,8 @@ assert SCHEMA_REVISION == '0032_api_key_revisions'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
+assert importlib.util.find_spec('czero_core.compilation') is None
+from czero_app.main import app
+assert app.state.compilation is None
+assert not any(name.startswith('compilation_') for name in app.state.operations._operations)
 print('Released image Core matches immutable Git lock and latest-only schema/contracts; no NS8 SDK')

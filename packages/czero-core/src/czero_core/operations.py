@@ -15,6 +15,7 @@ from .identity import Actor, PermissionDenied, Role
 
 SCOPES = frozenset(('c0:read', 'c0:write', 'c0:admin'))
 MAX_ARGUMENT_BYTES = 1024 * 1024
+MAX_OPERATIONS = 160
 
 
 class OperationRejected(ValueError):
@@ -63,7 +64,7 @@ class OperationRegistry:
         for schema in (operation.input_schema, operation.output_schema):
             if len(json.dumps(schema, allow_nan=False).encode()) > 65536:
                 raise ValueError('operation_schema_too_large')
-        if operation.name in self._operations or len(self._operations) >= 128:
+        if operation.name in self._operations or len(self._operations) >= MAX_OPERATIONS:
             raise ValueError('duplicate_or_excess_operation')
         # Metadata returned to a transport must not mutate trusted definitions.
         self._operations[operation.name] = Operation(

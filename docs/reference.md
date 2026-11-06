@@ -151,3 +151,13 @@ REST and MCP accept personal API keys through the existing Bearer header. Keys
 carry explicit Read/Write scope ceilings and selected spaces; they never grant
 administration. Create, list and revoke keys only from a browser session on the
 Account page. See [the API-key interface and workflow guide](api-keys.md).
+
+## Compilation coordination (producer capability)
+
+[Knowledge compilation M1](knowledge-compilation/M1.md) specifies the ten
+metadata-only REST/MCP operations under `/api/v1/compilation`. Policies default
+to disabled independently of research projects. Reads never initialize or
+process work. Current originals and target revisions remain authoritative;
+observed dependencies and bounded completion do not imply verified compilation.
+The app advertises these operations only when installed Core supports them.
+Released Core adoption and M2 publication require their separate acceptance.

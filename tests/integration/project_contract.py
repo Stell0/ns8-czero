@@ -17,7 +17,11 @@ PROJECT_OPERATIONS = frozenset({
 })
 DOCUMENT_OPERATIONS = frozenset({'source_documents_list','source_documents_get','source_version_document_get','source_document_outline_get','source_document_sections_get',
     'source_document_references_get','context_bundle_get'})
-TOOL_COUNT = 75 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
+COMPILATION_OPERATIONS = frozenset({'compilation_policy_get', 'compilation_policy_set',
+    'compilation_source_bindings_get', 'compilation_propose', 'compilation_tasks_list',
+    'compilation_tasks_get', 'compilation_run_claim', 'compilation_run_checkpoint',
+    'compilation_status_get', 'compilation_dependencies_list'})
+TOOL_COUNT = len(COMPILATION_OPERATIONS) + 75 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
 
 REMOVED_HISTORY_OPERATIONS=frozenset({'wiki_revisions_list','knowledge_annotations_history','source_document_history'})
 CHANGED_VALIDATION_CONTRACTS=frozenset({'claims_annotate','claims_create','claims_get','claims_list','claims_retract','knowledge_bundle_apply','sources_list'})
