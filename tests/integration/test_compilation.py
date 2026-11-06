@@ -578,3 +578,24 @@ def test_review_hold_refreshes_current_target_without_overwriting_authored_page(
     assert refreshed['id'] == held['id'] and refreshed['state'] == 'needs_review'
     assert refreshed['target'] == target(updated) and refreshed['reason'] == 'contradiction'
     assert wiki_fixture[0].get_page(owner, page['id']) == updated
+
+
+def test_integral_json_numbers_preserve_replay_and_sql_budget_types(compiler):
+    service, owner, *_ = compiler
+    policy = enable(compiler, daily_model_tokens=100.0, daily_model_requests=1.0)
+    assert type(policy['data']['daily_model_tokens']) is int
+    bindings, _ = support(compiler)
+    data = {'policy_revision': 1, 'origin': 'manual', 'reason': 'missing_concept',
+        'topic_key': 'numeric', 'source_bindings': bindings}
+    first = service.propose(owner, data, idempotency_key='numeric-proposal')
+    equivalent = deepcopy(data)
+    equivalent['policy_revision'] = 1.0
+    for chunk in equivalent['source_bindings'][0]['chunks']:
+        chunk['start_offset'] = float(chunk['start_offset'])
+        chunk['end_offset'] = float(chunk['end_offset'])
+    assert service.propose(owner, equivalent, idempotency_key='numeric-proposal') == first
+    run = claim(compiler, task_limit=1.0)
+    result = checkpoint(compiler, run, 'reserve_model', run['tasks'][0],
+        request_id=str(uuid4()), reserved_tokens=100.0)
+    assert result['outcome'] == 'reserve_model'
+    assert service.status(owner)['budgets'][0]['data']['charged_tokens'] == 100

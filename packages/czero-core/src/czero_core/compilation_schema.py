@@ -98,6 +98,8 @@ def _canonical(schema, value):
         return None
     if 'anyOf' in schema:
         schema = next((s for s in schema['anyOf'] if s.get('type') != 'null'), schema)
+    if schema.get('type') == 'integer':
+        return int(value)  # JSON Schema also accepts integral JSON numbers such as 1.0.
     if schema.get('format') == 'uuid':
         return str(UUIDValue(value))
     if isinstance(value, dict):
