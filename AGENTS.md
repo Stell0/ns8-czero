@@ -795,3 +795,7 @@ command pass. Current-source promotion remains mandatory. The exact consumer
 candidate's full promotion check passes. Preserve immutable runtime identities
 in PLAN; documentation commits do not replace them. The installed
 app0.57/Core0.37/schema0030 baseline is unchanged.
+
+Embedding drain candidates must preserve transactional continuation/completion,
+worker bounds and progress for other jobs. BEIR report exclusions are exact
+revision/hash pins, evaluation-only, and never relax source/citation verification.

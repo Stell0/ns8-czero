@@ -637,3 +637,13 @@ issuance revisions cannot be reconstructed. Trusted applications must preserve
 transactions; API-key credentials are never native extraction authority.
 See [the API-key contracts](../../docs/api-keys.md). The app consumer tag/lock
 remains frozen pending independent publication and released-consumer acceptance.
+
+## Resumable embedding indexing
+
+Enabled automatic embedding indexing queues one bounded successor after progress
+unless another indexing job is already pending. Empty batches terminate the chain;
+pausing the embedding schedule prevents further continuations. Existing job
+retry/backoff, transaction completion and worker limits remain authoritative.
+The worker alternates indexing with other eligible jobs to preserve progress.
+Selected-space index status retains `indexed` and adds current eligible
+`source_indexed` and `wiki_indexed` counts. No new migration is introduced.

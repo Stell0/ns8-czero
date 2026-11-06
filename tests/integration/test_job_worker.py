@@ -180,3 +180,24 @@ def test_due_schedule_executes_once_with_persisted_completion(service):
     runs=queue.task_runs(owner,task['id'])
     assert len(runs)==1 and runs[0]['state']=='succeeded' and runs[0]['attempts']==1
     assert len(queue.job_runs(owner,runs[0]['job_id']))==1
+
+
+def test_embedding_and_other_work_both_progress_under_backlog(service):
+    queue, owner = service
+    from czero_core.jobs import Handler
+    queue.registry.register(Handler('embedding.index', lambda c,p: {'indexed': 0}))
+    created = []
+    try:
+        for number in range(6):
+            created.append(queue.enqueue(owner, 'health', {}, 'older-'+str(number)))
+        embedding = queue.enqueue(owner, 'embedding.index', {}, 'newer-embedding')
+        created.append(embedding)
+        worker = Worker(queue.database, queue.registry)
+        assert worker.tick(max_jobs=2) == 2
+        assert queue.get_job(owner, embedding['id'])['state'] == 'succeeded'
+        assert queue.get_job(owner, created[0]['id'])['state'] == 'succeeded'
+        assert queue.get_job(owner, created[1]['id'])['state'] == 'queued'
+    finally:
+        with queue.database.engine.begin() as connection:
+            for job in created:
+                connection.execute(text('DELETE FROM c0_jobs WHERE id=:id'), {'id':job['id']})

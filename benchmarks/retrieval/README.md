@@ -224,3 +224,21 @@ suite uses frozen reference values without adding numerical/BEIR dependencies to
 C0 or its CI environment. Live ingestion/evaluation is explicitly opt-in through
 the CLI and is never part of automated tests. No live benchmark has been run as
 part of implementing this tool.
+
+## Saved report exclusions
+
+Evaluation may explicitly exclude existing Wiki reports while keeping retrieval
+source-only. The default still rejects all Wiki content. Pin every excluded page
+in the private configuration; missing, changed or additional pages invalidate the
+run. Ingestion does not accept exclusions.
+
+```toml
+[[benchmark.excluded_wiki_pages]]
+page_id = "00000000-0000-4000-8000-000000000003"
+revision = 1
+content_hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+```
+
+With exclusions, the server must advertise the source-specific `source_indexed`
+count. Total source-plus-Wiki counts cannot establish source coverage.
+Reports record exclusions and retain exact corpus/citation checks.

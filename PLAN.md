@@ -1,5 +1,21 @@
 # C0 roadmap
 
+## Embedding backlog drain — implementation candidate
+
+Keep the existing 600-second schedule and drain current missing embeddings with
+transactional bounded continuation jobs. Alternate embeddings and other due work
+within existing worker limits. Add selected-space source/Wiki vector counts and
+explicit pinned report exclusions for source-only BEIR evaluation.
+
+Core producer acceptance, immutable publication, consumer adoption/full native
+acceptance and authorized deployment remain separate gates. No live completion or
+benchmark rerun is claimed by this candidate. Preserve existing result artifacts.
+Original-main focused baseline passes 69 cases. Candidate Core/configuration/BEIR
+unit checks pass 412 cases, independent metric references pass five, and the
+expanded BEIR unit set passes 48. Broader database/native acceptance is pending.
+Local failed dependency-install/quota attempts remain unaccepted evidence.
+
+
 ## Local BEIR retrieval benchmark — implementation candidate
 
 Current successor is based on original main
