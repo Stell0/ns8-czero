@@ -240,7 +240,11 @@
     "backgroundHelp": "This connection has no fixed end date while used. It ends after {days} days without activity or when access is revoked.",
     "continue": "Continue to background sign-in",
     "callback": "Callback",
-    "pending": "This connection needs administrator approval. Ask your C0 administrator, then reload its approval status."
+    "pending": "This connection needs administrator approval. Ask your C0 administrator, then reload its approval status.",
+    "permissions": "Choose what this application can do with your C0 account.",
+    "adminApproval": "Approve this application for the selected permissions, then continue to authorize your connection.",
+    "approveContinue": "Approve and continue",
+    "signedIn": "Signed in as {name}"
   },
   "admin": {
     "people": "People and applications",
@@ -287,6 +291,9 @@
       "waiting_for_consent": "Waiting for consent",
       "needs_permissions": "Additional approval required",
       "needs_approval": "Approval required"
-    }
+    },
+    "loadApplication": "Load application",
+    "approvalSaved": "Application approval saved. Return to your assistant and connect again to finish authorization.",
+    "approvalHelp": "Changing application permissions disconnects existing connections. Return to your assistant to authorize a new connection."
   }
 }

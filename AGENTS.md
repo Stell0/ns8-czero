@@ -191,6 +191,10 @@ Cookies, X-C0-CSRF, account/space query identities, cancellation, draft guards a
 410 supersession remain mandatory. Never put knowledge or credentials in browser
 storage or enable stored HTML/remote images. Sign-in uses its server-bound native
 form and escaped inert boot data. Website routes have no legacy aliases.
+OAuth setup loads reviewed application metadata without requiring Details.
+Keep application approval explicit and separate from personal consent; failed or
+stale previews cannot advance the connection. Unchanged technical-client reviews
+must preserve existing grants and revisions.
 Run frontend checks, real `tests/e2e` browser workflows and affected native
 workflows. This rewrite requires full Debian/Rocky acceptance; a component build
 or mock API test alone is insufficient. See [the contract](docs/vue-website.md).

@@ -403,3 +403,66 @@ def test_vue_admin_can_identify_and_inspect_each_queued_job(live,vue_browser):
         expect(row).to_be_visible()
         row.get_by_role('button',name='Details',exact=True).click()
         expect(page.locator('main pre')).to_contain_text(job['id'])
+
+
+def test_vue_admin_approves_and_connects_without_details_then_preserves_grant(live,request,monkeypatch):
+    import json
+    import secrets
+    import time
+    from urllib.parse import urlsplit,parse_qs
+    from czero_app.cimd_fetch import FetchedMetadata
+    from czero_core.cimd_metadata import parse_metadata
+    from czero_core.oauth_grants import pkce_challenge
+    app=request.getfixturevalue('transport')[0]
+    registry=app.state.delegated_grants.cimd
+    registry.sync_policy(True)
+    identity='https://client.example.test/simple-approval.json'
+    callback='https://client.example.test/callback'
+    metadata=parse_metadata(identity,json.dumps({'client_id':identity,'client_name':'Grok fixture',
+        'redirect_uris':[callback],'scope':'c0:read c0:write','token_endpoint_auth_method':'none',
+        'grant_types':['authorization_code','refresh_token']}).encode())
+    async def fetch(url,**_):
+        assert url==identity
+        return FetchedMetadata(metadata,time.monotonic()+60)
+    monkeypatch.setattr(app.state.cimd.fetcher,'fetch',fetch)
+    with sync_playwright() as playwright:
+        browser=playwright.chromium.launch(headless=True)
+        context=browser.new_context(ignore_https_errors=True)
+        page=context.new_page()
+        try:
+            page.goto(live.origin+'/auth/login')
+            verifier=secrets.token_urlsafe(32)
+            page.route(callback+'**',lambda route:route.fulfill(status=200,body='<h1>Client connected</h1>',content_type='text/html'))
+            page.goto(live.origin+'/oauth/authorize?'+urlencode({'client_id':identity,'redirect_uri':callback,
+                'response_type':'code','code_challenge':pkce_challenge(verifier),'code_challenge_method':'S256',
+                'state':'browser-fixture','scope':'c0:read c0:write','resource':live.origin+'/mcp'}))
+            expect(page.get_by_role('heading',name='Grok fixture',exact=True)).to_be_visible()
+            expect(page.get_by_role('checkbox',name='Read',exact=True)).to_be_checked()
+            expect(page.get_by_role('checkbox',name='Write',exact=True)).not_to_be_checked()
+            page.get_by_role('button',name='Approve and continue',exact=True).click()
+            expect(page.get_by_role('button',name='Authorize',exact=True)).to_be_enabled()
+            expect(page.get_by_role('checkbox',name='Write',exact=True)).to_have_count(0)
+            page.get_by_role('button',name='Authorize',exact=True).click()
+            expect(page.get_by_role('heading',name='Client connected',exact=True)).to_be_visible()
+            result=parse_qs(urlsplit(page.url).query)
+            assert result['state']==['browser-fixture']
+            response=page.request.post(live.origin+'/oauth/token',form={'grant_type':'authorization_code',
+                'client_id':identity,'redirect_uri':callback,'code':result['code'][0],
+                'code_verifier':verifier,'resource':live.origin+'/mcp'})
+            assert response.status==200
+            token=response.json()
+            assert token['scope']=='c0:read'
+            before=next(client for client in page.request.get(live.origin+'/api/v1/oauth/cimd').json()['clients'] if client['metadata_url']==identity)
+            page.goto(live.origin+'/admin/advanced')
+            row=page.locator('li').filter(has=page.get_by_role('heading',name='Grok fixture',exact=True))
+            row.get_by_role('button',name='Approve application',exact=True).click()
+            dialog=page.get_by_role('dialog')
+            expect(dialog.get_by_text('Grok fixture',exact=True)).to_be_visible()
+            dialog.get_by_role('button',name='Approve application',exact=True).click()
+            expect(dialog).to_have_count(0)
+            expect(page.get_by_role('status')).to_contain_text('No application permissions changed')
+            after=next(client for client in page.request.get(live.origin+'/api/v1/oauth/cimd').json()['clients'] if client['metadata_url']==identity)
+            assert after['revision']==before['revision']
+            assert page.request.get(live.origin+'/api/v1/me',headers={'Authorization':'Bearer '+token['access_token']}).status==200
+        finally:
+            context.close();browser.close();registry.sync_policy(False)

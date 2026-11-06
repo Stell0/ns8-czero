@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
-import { NeButton, NeCheckbox, NeModal } from '@nethesis/vue-components'
+import { NeButton, NeCheckbox } from '@nethesis/vue-components'
 import { useDraftGuard } from '../composables/draft'
 import { useSession } from '../stores/session'
 import { ApiError, localURL, request } from '../api/client'
@@ -39,8 +39,12 @@ const { data, error, isPending, refetch } = useResource(
     ),
 )
 const eligible = computed(() =>
-  connecting.value && session.isAdmin
-    ? data.value?.scopes || []
+  connecting.value && session.isAdmin && !data.value?.approved
+    ? (data.value?.scopes || []).filter(
+        (scope) =>
+          !reviewed.value?.value.descriptor.scope_ceiling ||
+          reviewed.value.value.descriptor.scope_ceiling.includes(scope),
+      )
     : data.value?.eligible_scopes || data.value?.allowed_scopes || [],
 )
 interface Review {
@@ -62,7 +66,7 @@ const reviewed = ref<{ value: Review; existing?: Existing }>()
 const choices = ref<Record<string, boolean>>({}),
   background = ref(false)
 let initialized = false
-watch(data, (value) => {
+watch([data, eligible], ([value]) => {
   if (!value) return
   choices.value = Object.fromEntries(
     eligible.value.map((scope) => [
@@ -79,13 +83,7 @@ watch(data, (value) => {
 const selected = computed(() =>
   Object.keys(choices.value).filter((scope) => choices.value[scope]),
 )
-watch(
-  () => selected.value.join(','),
-  () => {
-    reviewed.value = undefined
-  },
-)
-const draft = useDraftGuard([selected, background, reviewed])
+const draft = useDraftGuard([data, selected, background])
 const preview = useMutation({
   mutation: async () => {
     if (!session.isAdmin || !data.value?.metadata_url) return
@@ -115,44 +113,60 @@ const preview = useMutation({
     if (current()) reviewed.value = { value, existing }
   },
 })
-const approval = useMutation({
-  mutation: async () => {
-    const current = draft.current()
-    const review = reviewed.value
-    if (!review || !data.value || !selected.value.length) return
-    if (
-      review.value.descriptor.scope_ceiling &&
-      selected.value.some(
-        (scope) => !review.value.descriptor.scope_ceiling!.includes(scope),
-      )
-    )
-      throw new ApiError(422)
-    const path = `oauth/cimd/clients${review.existing ? '/' + review.existing.client_id : ''}`
-    await request(
-      path,
-      {
-        method: review.existing ? 'PUT' : 'POST',
-        data: {
-          metadata_digest: review.value.metadata_digest,
-          allowed_scopes: [...selected.value],
-          ...(review.existing
-            ? { expected_revision: review.existing.revision }
-            : { metadata_url: data.value.metadata_url }),
-        },
-      },
-      false,
-    )
-    if (current()) {
-      reviewed.value = undefined
-      await refetch()
-    }
+watch(
+  () =>
+    connecting.value && !data.value?.approved && session.isAdmin
+      ? `${data.value?.metadata_url || ''}:${data.value?.callback || ''}`
+      : '',
+  (identity) => {
+    if (identity && data.value?.metadata_url) preview.mutate()
   },
-})
+  { immediate: true },
+)
+async function approveApplication() {
+  const review = reviewed.value
+  if (!review || !data.value || !selected.value.length) throw new ApiError(409)
+  if (
+    review.value.descriptor.scope_ceiling &&
+    selected.value.some(
+      (scope) => !review.value.descriptor.scope_ceiling!.includes(scope),
+    )
+  )
+    throw new ApiError(422)
+  await request(
+    `oauth/cimd/clients${review.existing ? '/' + review.existing.client_id : ''}`,
+    {
+      method: review.existing ? 'PUT' : 'POST',
+      data: {
+        metadata_digest: review.value.metadata_digest,
+        allowed_scopes: [...selected.value],
+        ...(review.existing
+          ? { expected_revision: review.existing.revision }
+          : { metadata_url: data.value.metadata_url }),
+      },
+    },
+    false,
+  )
+}
+const canSubmit = computed(
+  () =>
+    !!data.value &&
+    !!selected.value.length &&
+    !submit.isLoading.value &&
+    !preview.isLoading.value &&
+    (!connecting.value ||
+      data.value.approved ||
+      (session.isAdmin && !!reviewed.value)),
+)
 const submit = useMutation({
   mutation: async (approve: boolean) => {
     const current = draft.current()
     const value = data.value
     if (!value) return
+    if (approve && connecting.value && !value.approved) {
+      await approveApplication()
+      if (!current()) return
+    }
     const signIn =
       approve &&
       background.value &&
@@ -190,17 +204,30 @@ const submit = useMutation({
 })
 </script>
 <template>
-  <ResourceState :error="error" :loading="isPending"
-    ><form
+  <ResourceState :error="error" :loading="isPending">
+    <form
       v-if="data"
-      class="max-w-2xl space-y-6"
-      @submit.prevent="!submit.isLoading.value && submit.mutate(true)"
+      class="min-w-0 space-y-6"
+      @submit.prevent="canSubmit && submit.mutate(true)"
     >
-      <h2 class="text-xl font-medium">
-        {{ data.client_name || data.metadata_url }}
-      </h2>
-      <p class="break-all">{{ t('consent.callback') }}: {{ data.callback }}</p>
-      <fieldset class="space-y-3">
+      <div class="space-y-3">
+        <h2 class="text-xl font-medium">
+          {{
+            data.client_name ||
+            reviewed?.value.descriptor.client_name ||
+            data.metadata_url
+          }}
+        </h2>
+        <p
+          v-if="data.metadata_url"
+          class="break-all text-sm text-text-secondary"
+        >
+          {{ data.metadata_url }}
+        </p>
+        <p>{{ t('consent.permissions') }}</p>
+      </div>
+      <fieldset class="min-w-0 space-y-3" :disabled="submit.isLoading.value">
+        <legend class="sr-only">{{ t('consent.permissions') }}</legend>
         <NeCheckbox
           v-for="scope in data.scopes"
           :key="scope"
@@ -208,62 +235,75 @@ const submit = useMutation({
           :label="
             t(`account.${scope === 'c0:admin' ? 'manage' : scope.slice(3)}`)
           "
-          :disabled="submit.isLoading.value || !eligible.includes(scope)"
+          :disabled="
+            submit.isLoading.value ||
+            preview.isLoading.value ||
+            !eligible.includes(scope)
+          "
         />
       </fieldset>
-      <template v-if="data.background_supported"
-        ><NeCheckbox
+      <div v-if="data.background_supported" class="space-y-3">
+        <NeCheckbox
           v-model="background"
           :label="t('consent.background')"
           :disabled="submit.isLoading.value"
         />
-        <p>
+        <p class="text-sm text-text-secondary">
           {{
             t('consent.backgroundHelp', {
               days: (data.connection_idle_seconds || 0) / 86400,
             })
           }}
-        </p></template
-      ><ErrorNotice v-if="submit.error.value" :error="submit.error.value" />
+        </p>
+      </div>
+      <details>
+        <summary class="cursor-pointer text-link">
+          {{ t('common.details') }}
+        </summary>
+        <p class="mt-3 break-all text-sm">
+          {{ t('consent.callback') }}: {{ data.callback }}
+        </p>
+      </details>
       <ErrorNotice
-        v-if="preview.error.value || approval.error.value"
-        :error="preview.error.value || approval.error.value"
+        v-if="submit.error.value || preview.error.value"
+        :error="submit.error.value || preview.error.value"
       />
-      <template v-if="connecting && !data.approved">
-        <p>{{ t('consent.pending') }}</p>
+      <div v-if="connecting && !data.approved" class="space-y-3">
+        <p>
+          {{ t(session.isAdmin ? 'consent.adminApproval' : 'consent.pending') }}
+        </p>
         <NeButton
-          v-if="session.isAdmin"
+          v-if="session.isAdmin && preview.error.value"
           kind="secondary"
-          :loading="preview.isLoading.value"
-          :disabled="preview.isLoading.value || approval.isLoading.value"
+          :disabled="preview.isLoading.value || submit.isLoading.value"
           @click="preview.mutate()"
-          >{{ t('common.details') }}</NeButton
+          >{{ t('common.reload') }}</NeButton
         >
-        <RouterLink v-if="session.isAdmin" to="/admin" class="text-link">{{
-          t('nav.admin')
-        }}</RouterLink
-        ><NeButton kind="secondary" @click="refetch()">{{
-          t('common.reload')
-        }}</NeButton></template
-      >
-      <div class="flex gap-4">
+        <NeButton
+          v-else-if="!session.isAdmin"
+          kind="secondary"
+          @click="refetch()"
+          >{{ t('common.reload') }}</NeButton
+        >
+      </div>
+      <div class="flex flex-wrap gap-4">
         <NeButton
           kind="primary"
           type="submit"
-          :disabled="
-            submit.isLoading.value ||
-            !selected.length ||
-            (connecting && !data.approved)
-          "
-          :loading="submit.isLoading.value"
-          >{{
+          :disabled="!canSubmit"
+          :loading="submit.isLoading.value || preview.isLoading.value"
+        >
+          {{
             t(
-              background && !data.background_ready
-                ? 'consent.continue'
-                : 'consent.authorize',
+              connecting && !data.approved && session.isAdmin
+                ? 'consent.approveContinue'
+                : background && !data.background_ready
+                  ? 'consent.continue'
+                  : 'consent.authorize',
             )
-          }}</NeButton
-        ><NeButton
+          }}
+        </NeButton>
+        <NeButton
           v-if="!connecting"
           kind="secondary"
           :disabled="submit.isLoading.value"
@@ -271,36 +311,9 @@ const submit = useMutation({
           >{{ t('consent.deny') }}</NeButton
         >
       </div>
-    </form></ResourceState
-  >
+    </form>
+  </ResourceState>
   <RouterLink to="/agents" class="text-link">{{
     t('consent.back')
   }}</RouterLink>
-  <NeModal
-    :visible="!!reviewed"
-    :title="t('admin.approve')"
-    :primary-label="t('admin.approve')"
-    :cancel-label="t('common.cancel')"
-    :close-aria-label="t('common.close')"
-    :primary-button-loading="approval.isLoading.value"
-    :primary-button-disabled="approval.isLoading.value"
-    @close="reviewed = undefined"
-    @primary-click="approval.mutate()"
-  >
-    <div v-if="reviewed" class="space-y-3">
-      <p>{{ reviewed.value.descriptor.client_name }}</p>
-      <p class="break-all">{{ reviewed.value.descriptor.client_id }}</p>
-      <ul>
-        <li
-          v-for="callback in reviewed.value.descriptor.redirect_uris"
-          :key="callback"
-          class="break-all"
-        >
-          {{ callback }}
-        </li>
-      </ul>
-      <p>{{ selected.join(', ') }}</p>
-      <ErrorNotice v-if="approval.error.value" :error="approval.error.value" />
-    </div>
-  </NeModal>
 </template>
