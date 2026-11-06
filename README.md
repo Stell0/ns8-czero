@@ -415,8 +415,9 @@ authorized source upload/replacement/recovery, account and administration remain
 available. Assistants retain existing REST/MCP knowledge operations. Native NS8
 settings remain Vue 2/Carbon. [Source and publication acceptance](PLAN.md#vue-3-website-remake--source-and-publication-accepted)
 records the exact tests and immutable images. The explicitly authorized
-[dedicated installation](PLAN.md#vue-website--dedicated-installation-accepted)
-now runs app0.59/Core0.38/schema0032 after verified backup, update and live checks.
+[dedicated installation](PLAN.md#embedding-backlog-drain)
+now runs app0.60/Core0.39/schema0033 after verified backup, update, manager restart
+and live HTTP/MCP checks. Its prior app0.59 installation remains frozen evidence.
 
 Embedding refresh uses bounded batches and resumes automatically while its ten-minute
 schedule remains enabled. Pausing the schedule stops further continuations after
@@ -425,6 +426,7 @@ already queued work; disabling the provider makes indexing a no-op.
 
 [Core 0.39.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.39.0)
 adds resumable missing-embedding indexing while preserving worker bounds and
-progress for other jobs. App0.60 targets its immutable released tag and lock;
-consumer/native and live adoption remain separate gates in PLAN. The current
-installed baseline is unchanged until its supported update passes acceptance.
+progress for other jobs. App0.60 uses its immutable released tag and lock. Exact
+consumer/native and dedicated live acceptance pass; source/Wiki coverage counts
+are exposed through REST/MCP. Main publication and the private BEIR rerun are
+recorded separately in [PLAN](PLAN.md#embedding-backlog-drain).
