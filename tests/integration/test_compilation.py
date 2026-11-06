@@ -546,3 +546,35 @@ def test_renewal_keeps_one_task_debit_per_fence_and_window(compiler):
         assert c.execute(text("SELECT count(*) FROM c0_compilation_events WHERE space_id=:space AND kind='task_reserve'"),
             {'space': service._space_id}).scalar_one() == 1
     assert renewed['tasks'][0]['attempts'] == 1
+
+
+@pytest.mark.parametrize('initial,next_reason', [('missing_concept','contradiction'), ('contradiction','missing_link'), ('applicability_gap','contradiction')])
+def test_equivalent_proposals_cannot_downgrade_review_holds(compiler, initial, next_reason):
+    service, owner, *_ = compiler
+    enable(compiler)
+    bindings, _ = support(compiler)
+    first = propose(compiler, bindings, reason=initial)['task']
+    held = propose(compiler, bindings, reason=next_reason)
+    assert held['outcome'] == 'needs_review' and held['task']['id'] == first['id']
+    again = propose(compiler, bindings, reason='incomplete_page')
+    assert again['task']['state'] == 'needs_review' and again['task']['id'] == first['id']
+    assert again['task']['reason'] == 'contradiction'
+    assert len(service.list_tasks(owner)['tasks']) == 1
+    assert claim(compiler)['tasks'] == []
+
+
+def test_review_hold_refreshes_current_target_without_overwriting_authored_page(compiler):
+    service, owner, _, _, wiki_fixture = compiler
+    enable(compiler)
+    bindings, _ = support(compiler)
+    page = create_page(wiki_fixture)
+    def target(value):
+        return {'kind': 'page', 'id': value['id'], 'revision': value['revision'],
+            'content_id': value['content']['id'], 'content_hash': value['content']['content_hash']}
+    held = propose(compiler, bindings, reason='contradiction', target=target(page))['task']
+    updated = wiki_fixture[0].update_page(owner, page['id'], 'Authored resolution', '# Keep authored content',
+        expected_revision=1, idempotency_key='authored-resolution')
+    refreshed = propose(compiler, bindings, reason='missing_link', target=target(updated))['task']
+    assert refreshed['id'] == held['id'] and refreshed['state'] == 'needs_review'
+    assert refreshed['target'] == target(updated) and refreshed['reason'] == 'contradiction'
+    assert wiki_fixture[0].get_page(owner, page['id']) == updated

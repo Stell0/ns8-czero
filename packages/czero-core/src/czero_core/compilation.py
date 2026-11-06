@@ -377,19 +377,34 @@ class CompilationService(CompilationRuns, SpaceBound):
             previous = connection.execute(text('SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND dedup_key=:key'),
                 {'space': self._space_id, 'key': identity}).mappings().one_or_none()
             if previous:
-                if previous['target'] != (data['target'] or {}):
+                stronger = data['reason'] == 'contradiction' and previous['reason'] != 'contradiction'
+                if previous['target'] != (data['target'] or {}) or stronger:
                     # A new authored revision is a review hold, not another concept or an overwrite.
                     previous = connection.execute(text("""UPDATE c0_compilation_tasks SET target=CAST(:target AS jsonb),
-                        state='needs_review',plan_hash=NULL,revision=revision+1,error_code='concurrent_edit',updated_at=:now
+                        state='needs_review',reason=:reason,plan_hash=NULL,revision=revision+1,error_code=:error,updated_at=:now
                         WHERE space_id=:space AND id=:id RETURNING *"""),
                         {'space': self._space_id, 'id': previous['id'], 'target': _json(data['target'] or {}),
-                         'now': self.clock()}).mappings().one()
+                         'reason': 'contradiction' if stronger else previous['reason'],
+                         'error': previous['error_code'] if stronger else 'concurrent_edit', 'now': self.clock()}).mappings().one()
                     self._observe(connection, dict(previous), actual)
                     return {'outcome': 'needs_review', 'task': snapshot(dict(previous))}
-                outcome = 'merged' if previous['state'] in ACTIVE else previous['state']
+                outcome = 'merged' if previous['state'] in ACTIVE and previous['state'] != 'needs_review' else previous['state']
                 return {'outcome': outcome, 'task': snapshot(dict(previous))}
             old = connection.execute(text('''SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND family_key=:family
                 ORDER BY created_at DESC,id DESC LIMIT 1'''), {'space': self._space_id, 'family': family}).mappings().one_or_none()
+            same_support = old and old['profile_version'] == config['profile_version'] and old['source_bindings'] == data['source_bindings']
+            if same_support and (old['state'] == 'needs_review' or group == 'review'):
+                # Cosmetic reason changes cannot remove a hold or reset attempts.
+                held_reason = ('contradiction' if 'contradiction' in (old['reason'], data['reason'])
+                    else data['reason'] if group == 'review' else old['reason'])
+                if old['state'] != 'needs_review' or old['target'] != (data['target'] or {}) or held_reason != old['reason']:
+                    old = connection.execute(text("""UPDATE c0_compilation_tasks SET state='needs_review',
+                        reason=:reason,target=CAST(:target AS jsonb),plan_hash=NULL,revision=revision+1,updated_at=:now
+                        WHERE space_id=:space AND id=:id RETURNING *"""),
+                        {'space': self._space_id, 'id': old['id'], 'reason': held_reason,
+                         'target': _json(data['target'] or {}), 'now': self.clock()}).mappings().one()
+                    self._observe(connection, dict(old), actual)
+                return {'outcome': 'needs_review', 'task': snapshot(dict(old))}
             count = connection.execute(text('SELECT count(*) FROM c0_compilation_tasks WHERE space_id=:space AND state=ANY(:states)'),
                 {'space': self._space_id, 'states': list(ACTIVE)}).scalar_one()
             if count >= config['max_outstanding_tasks'] and not (old and old['state'] in ACTIVE):
