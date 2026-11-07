@@ -24,7 +24,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0033_compilation_state'
+assert SCHEMA_REVISION == '0034_compilation_maintenance'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
@@ -39,5 +39,5 @@ application.state.operation_catalog = OperationCatalog(None)
 install_compilation(application, None, None, lambda: None, lambda: None)
 assert isinstance(application.state.compilation, CompilationService)
 assert len([route for route in application.routes
-            if route.path.startswith('/api/v1/compilation/')]) == 10
+            if route.path.startswith('/api/v1/compilation/')]) == 19
 print('Released image Core matches immutable Git lock and latest-only schema/contracts; no NS8 SDK')

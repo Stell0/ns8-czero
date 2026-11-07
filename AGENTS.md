@@ -832,3 +832,12 @@ Producer Core publication, released-consumer validation and dedicated delivery
 remain separate acceptance gates. Run the full nine-way SciFact comparison only
 after the operator saves the OpenAI key; reuse existing corpus receipts and keep
 all instance identities and benchmark artifacts outside Git.
+
+Core 0.42.0 is immutably published at 58cbb823 after full42380719326,
+independent native/privacy/scan grading, promotion and publisher42385896972.
+PR93 regularly merges as 7e637926 with identical tracked bytes. App0.61 adopts
+its released Git tag/lock with >=0.42.0,<0.43.0 and patch-only updater bounds.
+Preserve the published Core subtree and inherited schema0034 migration; consumer
+full/native and dedicated backup/update/live acceptance remain separate gates.
+The current installed baseline at the top of this file remains unchanged until
+live acceptance. The benchmark still waits for operator key configuration.

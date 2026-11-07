@@ -435,9 +435,10 @@ schedule remains enabled. Pausing the schedule stops further continuations after
 already queued work; disabling the provider makes indexing a no-op.
 
 
-[Core 0.39.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.39.0)
-adds resumable missing-embedding indexing while preserving worker bounds and
-progress for other jobs. App0.60 uses its immutable released tag and lock. Exact
-consumer/native and dedicated live acceptance pass; source/Wiki coverage counts
-are exposed through REST/MCP. Main publication and the private BEIR rerun are
-recorded separately in [PLAN](PLAN.md#embedding-backlog-drain).
+[Core 0.42.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.42.0)
+adds OpenAI Decisions scoring and the merged compilation maintenance contracts,
+including schema0034 publication metadata. App0.61 pins its immutable released
+Git source with patch-only updater bounds. Maintenance remains disabled until
+explicitly configured. Consumer and dedicated delivery acceptance are recorded
+separately in [PLAN](PLAN.md#openai-system-one-scoring--current-base-successor);
+the private BEIR comparison follows operator scoring-key configuration.
