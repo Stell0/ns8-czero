@@ -70,22 +70,19 @@ Library publication and application tag/lock adoption have separate acceptance
 gates. Check the repository roadmap for immutable artifacts and actual consumer
 image/native evidence before adoption; a producer test is not consumer proof.
 
-## Bounded lexical recovery (0.36.1)
+## Document BM25 (0.43 producer)
 
-Evidence searches preserve existing strict web-search results and explicit query
-syntax. After an eligible selection has zero matches, plain multiword queries can
-match at least two and at least half of up to 32 meaningful lexemes. PostgreSQL's
-standard English/Italian stop lists supply stop words; remaining words are not
-stemmed or translated. Numeric, uppercase and punctuated identifiers stay
-mandatory. Current source product/version provenance supplies bounded context;
-real chunk matching, current generations, persisted roles and filters still gate
-every candidate. No schema or dependency change is required.
+Ordinary source and Wiki search ranks complete eligible current documents with
+BM25 and English/Italian stem variants. Numbers and identifiers in prose are
+relevance signals; explicit syntax and structured filters remain exact constraints.
+Schema0035 adds body-free transactional lexical derivatives and backfills retained
+content without changing citation identities. Superseded derivatives cascade away.
 
-`SearchService.search` and filtered evidence return `lexical_strategy` separately
-from `retrieval_method`. Relaxed matching remains text retrieval. Source search
-preserves its citation-list API and consistent pagination. Version 0.36.1 is
-independently published; application pins and native acceptance remain separate.
-See the [query and evaluation guide](https://github.com/Stell0/ns8-czero/blob/main/docs/retrieval-benchmark.md).
+Optional `lexical_strategy=bm25` and `lexical_ranker_version` describe the lexical
+ranker separately from provider modes. Hybrid fuses document rankings; source-only
+search preserves its citation-list API. No PostgreSQL extension or new runtime
+dependency is required. Publication and released-consumer acceptance remain
+separate. See the [query and evaluation guide](https://github.com/Stell0/ns8-czero/blob/main/docs/retrieval-benchmark.md).
 
 ## Optional verified-user admission and client onboarding
 

@@ -52,7 +52,7 @@ fallback; they never contribute to successful semantic/reranked quality means.
 No model/provider costs are inferred from request counts. Raw API replies include
 available provider usage, candidate/scored counts and fallback reasons.
 
-When supported, `lexical_strategy` records strict web search or bounded relaxed
+When supported, `lexical_strategy` records strict web search, document BM25 or older bounded relaxed
 lexical matching separately from `retrieval_method`. Relaxed lexical matching is
 still text retrieval. Older servers can omit this optional field; record that as
 unreported, not semantic. Freeze product/version/language metadata along with the
@@ -153,3 +153,7 @@ manifest, including documents never retrieved. The same rankings do not establis
 corpus equality. A broader operational support-bot evaluation is a separate
 experiment with its own corpus coverage. Without approved access, report **not
 run**, preserve this handoff and finish the C0 baseline.
+
+When present, `lexical_ranker_version` freezes the actual normalization/ranking
+implementation alongside corpus and provider provenance. BM25 results are
+relevance candidates; use explicit syntax or structured filters for exact versions.

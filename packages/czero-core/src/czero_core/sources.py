@@ -437,16 +437,21 @@ class SourceService(SpaceBound):
             return self._citation(connection, chunk_id, space_id=self._space(connection))
 
     def search(self, actor, query, *, limit=20, offset=0):
-        from .lexical import SOURCE_CONTEXT,select_lexical
+        from .lexical import select_lexical
+        from .bm25 import search_documents
         self._page(limit, offset)
         query = _label(query, 512)
         with self.database.engine.connect() as connection:
+            connection.execute(text('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ'))
             self._authorize(connection, actor)
+            rows=search_documents(connection,query,space=self._space(connection),limit=limit,offset=offset,kind='source')
+            if rows is not None:
+                return [self._citation(connection,row['id'],space_id=self._space(connection)) for row in rows]
             def fetch(lexical, *, first=False):
                 return connection.execute(text(f'''SELECT c.id FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
                 JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-                WHERE s.space_id=:space AND s.current_version_id=v.id AND NOT s.deleted AND {lexical.match('c.search_vector',context=SOURCE_CONTEXT)}
-                ORDER BY {lexical.rank('c.search_vector',context=SOURCE_CONTEXT)} DESC,c.id
+                WHERE s.space_id=:space AND s.current_version_id=v.id AND NOT s.deleted AND {lexical.match('c.search_vector')}
+                ORDER BY {lexical.rank('c.search_vector')} DESC,c.id
                 LIMIT :limit OFFSET :offset'''), {'space': self._space(connection), **lexical.parameters,
                 'limit':1 if first else limit, 'offset':0 if first else offset}).scalars().all()
             ids,_=select_lexical(connection,query,fetch,offset=offset)
