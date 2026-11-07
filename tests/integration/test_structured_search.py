@@ -172,9 +172,9 @@ def test_filtered_hybrid_and_reranker_never_receive_other_space_or_version(space
     embedding_calls.clear(); scored = []
     def reply(request):
         body = json.loads(request.content); scored.append(body)
-        return httpx2.Response(200, json={'model': 'kev-mock', 'answers': {
-            key: {'type': 'noul', 'noul': .9} for key in body['questions']}})
-    scorer = SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone', 'kev-mock'),
+        return httpx2.Response(200, json={'model': 'gpt-6-luna', 'answers': [
+            {'name': q['name'], 'type': 'predicate', 'probability': .9} for q in body['questions']]})
+    scorer = SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions', 'gpt-6-luna'),
         transport=httpx2.MockTransport(reply))
     service = StructuredSearchService(store.database, wiki[0].access, embedding_client=store.client,
         scorer=scorer, scorer_mode='rerank')
@@ -268,9 +268,9 @@ def test_space_revocation_during_scoring_returns_no_obsolete_authority(spaces, i
         spaces[0].set_grant(wiki[1], private['id'], reader.user_id, None,
             expected_revision=1, idempotency_key=uuid4().hex)
         body = json.loads(request.content)
-        return httpx2.Response(200, json={'model': 'kev-mock', 'answers': {
-            key: {'type': 'noul', 'noul': .9} for key in body['questions']}})
-    scorer = SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone', 'kev-mock'),
+        return httpx2.Response(200, json={'model': 'gpt-6-luna', 'answers': [
+            {'name': q['name'], 'type': 'predicate', 'probability': .9} for q in body['questions']]})
+    scorer = SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions', 'gpt-6-luna'),
         transport=httpx2.MockTransport(reply))
     service = StructuredSearchService(store.database, wiki[0].access,
         scorer=scorer, scorer_mode='rerank').in_space(private['id'])

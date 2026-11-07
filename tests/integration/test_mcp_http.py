@@ -417,3 +417,33 @@ def test_exact_recovery_sdk_preserves_history_and_requires_actual_write_scope(tr
             assert (await owner.get('/api/v1/wiki/pages/'+page['id'])).json()==page
             assert (await owner.get('/api/v1/knowledge/changes',params={'limit':100})).json()==before
     asyncio.run(check())
+
+
+def test_openai_scoring_through_current_and_legacy_sdk(transport):
+    from czero_core.providers import SystemOneClient, ScorerSettings
+    async def check():
+        app, child, _, _, pair, _, owner_token, _ = transport
+        def score(request):
+            body=json.loads(request.content)
+            return httpx2.Response(200,json={'model':body['model'],'answers':[
+                {'name':q['name'],'type':'predicate','probability':.9} for q in body['questions']]})
+        app.state.search.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(score))
+        app.state.search.scorer_mode='filter'
+        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+owner_token}) as rest:
+            page=await rest.post('/api/v1/wiki/pages',json={'slug':'score-'+uuid4().hex,
+                'title':'Scoring evidence','body':'Distinctive relevant evidence.', 'idempotency_key':uuid4().hex})
+            assert page.status_code==201
+        async with child.router.lifespan_context(child):
+            async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app),base_url=ORIGIN,
+                    headers={'Authorization':'Bearer '+pair.access_token}) as http:
+                for mode in ('auto','legacy'):
+                    async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
+                        for selection in ('rerank','filter'):
+                            result=await client.call_tool('knowledge_search',{'options':{
+                                'query':'Distinctive','mode':'text','rerank':selection}})
+                            assert not result.is_error
+                            data=result.structured_content
+                            assert data['retrieval_method']=='text+'+selection and data['fallback_reason'] is None
+                            assert data['scored_count']==1 and data['hits'][0]['relevance_score']==.9
+    asyncio.run(check())

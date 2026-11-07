@@ -1,6 +1,13 @@
 // Copyright (C) 2026 C0 contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 export function retrievalForm(saved = {}) {
+  const savedScorer = saved.scorer || {};
+  const scorerDefaults =
+    !savedScorer.endpoint &&
+    !savedScorer.model &&
+    !savedScorer.api_key_configured
+      ? { endpoint: "https://api.openai.com/v1/decisions", model: "gpt-6-luna" }
+      : {};
   return {
     embedding: {
       enabled: false,
@@ -20,6 +27,7 @@ export function retrievalForm(saved = {}) {
       timeout: 3,
       threshold: 0.7,
       ...saved.scorer,
+      ...scorerDefaults,
       api_key: "",
       clear_api_key: false,
     },

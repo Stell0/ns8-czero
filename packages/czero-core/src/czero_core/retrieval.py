@@ -173,8 +173,9 @@ class SearchService(SpaceBound):
                 except ProviderUnavailable as error:failures.append('embedding_'+error.reason)
                 except SQLAlchemyError:failures.append('embedding_storage_unavailable')
         candidate_count=len(hits)
-        if selected!='off' and hits:
+        if selected!='off':
             if self.scorer is None:failures.append('systemone_not_configured')
+            elif not hits:method+='+'+selected
             else:
                 candidates=hits[:self.limits.scorer_candidates]
                 try:
