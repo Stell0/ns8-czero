@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import text
 
 from czero_core.compilation import CompilationConflict, CompilationDisabled
+from czero_core.compilation_schema import digest
 from test_compilation import compiler, enable, support, claim, checkpoint, propose
 from test_sources import sources, upload, execute
 from test_wiki import wiki, create_page
@@ -415,3 +416,17 @@ def test_public_cutoff_does_not_reveal_unrelated_global_publications(compiler):
     assert run['cursor']['data']['cutoff_id']==before
     public=service.discovery(owner)['cursors'][0]['data']
     assert public['cutoff_id']==before and 'cutoff' not in public and 'marker' not in public
+    assert 'cutoff_salt' not in public
+    with service.database.engine.connect() as c:
+        private=c.execute(text('SELECT data FROM c0_compilation_runs WHERE id=:id'),
+            {'id':run['cursor']['id']}).scalar_one()
+    assert public['cutoff_id']!=digest([str(service._space_id),private['cutoff']])
+    assert public['cutoff_id']!=digest([str(service._space_id),None,private['cutoff']])
+    assert private['cutoff_salt'] not in str(service.discovery(owner))
+    # Existing pre-hardening progress stays readable without revealing its ordinal.
+    with service.database.engine.begin() as c:
+        c.execute(text("UPDATE c0_compilation_runs SET data=data-'cutoff_salt' WHERE id=:id"),
+            {'id':run['cursor']['id']})
+    legacy=service.discovery(owner)['cursors'][0]['data']
+    assert legacy['cutoff_id']==private['sweep']
+    assert 'cutoff' not in legacy and 'marker' not in legacy and 'cutoff_salt' not in legacy

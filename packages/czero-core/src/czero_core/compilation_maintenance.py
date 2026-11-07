@@ -83,7 +83,7 @@ class CompilationMaintenance:
             return dict(row) if row else None
         config = self._enabled(connection)
         data = {'phase':'complete','sweep':None,'marker':0,'after':str(_uuid('00000000-0000-0000-0000-000000000000')),
-            'cutoff':0,'reconcile_after':None,'counts':{},'last_page_id':None,'rounds':0}
+            'cutoff':0,'cutoff_salt':str(uuid4()),'reconcile_after':None,'counts':{},'last_page_id':None,'rounds':0}
         return dict(connection.execute(text('''INSERT INTO c0_compilation_runs(id,space_id,kind,cycle_key,state,
             policy_revision,actor_id,fencing_generation,database_epoch,attempts,started_at,updated_at,data)
             VALUES(:id,:space,:kind,:key,'cursor',:policy,:actor,1,:epoch,0,:now,:now,CAST(:data AS jsonb)) RETURNING *'''),
@@ -103,7 +103,11 @@ class CompilationMaintenance:
         value=snapshot(dict(cursor))
         state=value['data']
         # Global SQL ordinals are private; unrelated spaces must not expose counts.
-        state['cutoff_id']=digest([str(self._space_id),state.pop('cutoff',0)])
+        cutoff=state.pop('cutoff',0)
+        salt=state.pop('cutoff_salt',None)
+        # A public space ID alone cannot hide a small, enumerable SQL ordinal.
+        # Pre-hardening cursors expose only their existing random sweep identity.
+        state['cutoff_id']=digest([str(self._space_id),salt,cutoff]) if salt else state['sweep']
         state.pop('marker',None)
         return value
 
