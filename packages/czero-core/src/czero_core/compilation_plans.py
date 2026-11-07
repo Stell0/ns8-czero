@@ -133,6 +133,8 @@ class CompilationPlans:
 
     def _support_task(self, connection, task):
         self._sources(connection, task['source_bindings'])
+        if task['purpose']=='source_assessment':
+            return
         if task['state'] in ('applied_pending_verify', 'succeeded'):
             publication = self._publication(connection, task['id'])
             if not publication:
@@ -173,6 +175,9 @@ class CompilationPlans:
         policy = self._enabled(connection, plan['policy_revision'])['data']
         run = self._lease(connection, actor, data['lease'])
         task = self._task(connection, plan['task_id'])
+        if task['purpose']!='knowledge':
+            raise ValueError('assessment_cannot_publish')
+        policy = run['data']['policy']
         if (run['revision'] != data['expected_revision'] or task['revision'] != plan['expected_task_revision']
                 or task['run_id'] != run['id'] or task['fencing_generation'] != run['fencing_generation']
                 or task['state'] not in ('leased','planned') or task['profile_id'] != policy['profile_id']
@@ -545,6 +550,15 @@ class CompilationPlans:
             task = dict(connection.execute(text("""UPDATE c0_compilation_tasks SET state='succeeded',revision=revision+1,
                 updated_at=:now WHERE space_id=:space AND id=:id RETURNING *"""),
                 {'space': self._space_id, 'id': task['id'], 'now': self.clock()}).mappings().one())
+            for source in task['source_bindings']:
+                assessment_id=connection.execute(text('''SELECT assessment_task_id FROM c0_compilation_sources
+                    WHERE space_id=:space AND logical_document_id=:id AND profile_id=:profile'''),
+                    {'space':self._space_id,'id':source['logical_document_id'],'profile':task['profile_id']}).scalar_one_or_none()
+                if assessment_id:
+                    assessment=self._task(connection,assessment_id)
+                    if (assessment['state']=='assessed' and str(task['id']) in assessment['assessment']['child_task_ids']
+                            and self._same_original(source,assessment['source_bindings'][0])):
+                        self._complete_assessment(connection,assessment)
             self._lease(connection, current, data['lease'])
             run['data']['phase'] = 'verified'
             run = self._save_run(connection, run)

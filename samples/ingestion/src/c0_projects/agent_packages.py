@@ -45,8 +45,9 @@ def save_package(client,output,*,format='skill',connection=''):
             match=re.search(r'```json\n(.*?)\n```',raw,re.S)
             if match is None:raise ValueError()
             binding=json.loads(match[1]);manifest=current['manifest']
-            if set(binding)!=set(MANIFEST_FIELDS)|{'manifest_version','mcp_url','approved_primary_topics'}:raise ValueError()
-            if any(binding[field]!=manifest[field] for field in MANIFEST_FIELDS):raise ValueError()
+            fields=set(MANIFEST_FIELDS)|({'maintenance'} if 'maintenance' in binding else set())
+            if set(binding)!=fields|{'manifest_version','mcp_url','approved_primary_topics'}:raise ValueError()
+            if any(binding[field]!=manifest[field] for field in fields):raise ValueError()
             if (binding['mcp_url']!=result['mcp_url'] or binding['manifest_version']!=result['manifest_version']
                     or binding['approved_primary_topics']!=sorted(manifest['primary_topic_ids'])):raise ValueError()
     except (ValueError,zipfile.BadZipFile,KeyError,RecursionError):

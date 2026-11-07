@@ -4,7 +4,8 @@ COMPILATION_OPERATIONS = frozenset({'compilation_policy_get', 'compilation_polic
     'compilation_source_bindings_get', 'compilation_propose', 'compilation_tasks_list',
     'compilation_tasks_get', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_status_get', 'compilation_dependencies_list', 'compilation_target_bindings_get', 'compilation_plan_validate',
-    'compilation_apply', 'compilation_verify'})
+    'compilation_apply', 'compilation_verify','compilation_discovery_get','compilation_discover',
+    'compilation_assessment_complete','compilation_semantic_select','compilation_semantic_review'})
 PUBLIC_ERRORS = frozenset({(409, 'compilation_conflict'), (404, 'compilation_not_found'),
     (403, 'compilation_disabled'), (409, 'compilation_source_not_ready'),
     (422, 'invalid_compilation_request'), (503, 'service_unavailable')})

@@ -27,7 +27,7 @@ def project_package(url,stored,topics,*,format='skill',connection='',template=TE
     name='c0-project-'+identifier.hex+'-'+hashlib.sha256(url.encode()).hexdigest()[:8]
     display=' '.join(manifest['name'].replace('<','(').replace('>',')').split()) or identifier.hex
     binding={key:manifest[key] for key in ('schema_version','project_id','space_id','name','description','language','timezone',
-        'purpose','scope','exclusions','research','monitoring','schedule','state')}
+        'purpose','scope','exclusions','research','monitoring','maintenance','schedule','state')}
     binding.update(manifest_version=version,mcp_url=url,approved_primary_topics=sorted(primary))
     skill=asset(template,'project/skill.md').decode()
     description='Research and explicitly requested project work in C0 project '+display+'. Use only when this project is selected.'

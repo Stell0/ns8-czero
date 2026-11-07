@@ -669,3 +669,25 @@ never rebound after 410. `compilation_client.navigation_plan/compile_plan/verify
 are optional external-process helpers, not server/worker callbacks or an LLM runtime.
 See [M2 contracts and acceptance](../../docs/knowledge-compilation/M2.md) and
 [portable agent protocol](../../plugins/c0-knowledge/references/compiler.md).
+
+
+### Incremental maintenance (producer 0.41, schema0034)
+
+`CompilationService.discover` advances a bounded publication/reconciliation cursor
+in the existing coordination store and queues `source_assessment` tasks. Private
+source/snapshot sequence markers order current complete publications. Incomplete
+first extraction never counts as coverage; queued/failed replacement retains the
+last complete generation. Assessment tasks consume document/model budgets and
+cannot publish. `assess` records bounded child proposal identities and findings;
+only fresh support and actual verified children advance successful coverage.
+`discovery` is read-only, including on absent policy.
+
+`semantic_select`/`semantic_review` provide bounded ordinary-space weekly review
+using the same SQL selector as project maintenance. Configured projects retain
+their existing semantic/audit APIs and host task. Daily/weekly compiler claims
+require their actual `project_lease`, preserving scope/configuration and stricter
+caps. No scheduler, project initialization or model execution is installed.
+External hosts may call `compilation_client.maintenance_step` with their own
+reasoning callback and supported authenticated connection. It records model
+reservations/outcomes and returns child work for the existing M2 engine; it is
+not a provider runner or CLI. See the repository knowledge-compilation M3 contract.

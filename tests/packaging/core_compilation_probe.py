@@ -64,7 +64,7 @@ try:
         service = CompilationService(database, access).in_space(space)
         assert service.policy(owner)['revision'] == 0
         assert service.status(owner)['sources']['compiled'] == 0
-        service.configure(owner, {**defaults(), 'enabled': True}, expected_revision=0,
+        service.configure(owner, {**defaults(), 'enabled': True,'concurrency':2}, expected_revision=0,
             authorization_ref='synthetic:disposable-native', idempotency_key='enable-fixture')
         bindings = service.source_bindings(owner, [{'logical_document_id': str(version['source_id']),
             'revision_id': str(version['id']), 'chunk_ids': [str(chunk['id'])]}])['source_bindings']
@@ -84,8 +84,6 @@ try:
         assert published['outcome'] == 'applied_pending_verify'
         state['publication_task_id'] = published['task']['id']
         state['publication_records'] = published['records']
-        service.checkpoint(owner, {'lease':compilation['lease'],'expected_revision':published['run']['revision'],
-            'action':'partial'}, idempotency_key='compile-pending')
         proposal = {'policy_revision': 1, 'origin': 'manual', 'reason': 'incomplete_page', 'topic_key': 'synthetic',
             'source_bindings': bindings, 'target': {'kind': 'page', 'id': page['id'], 'revision': page['revision'],
                 'content_id': page['content']['id'], 'content_hash': page['content']['content_hash']}}
@@ -93,6 +91,11 @@ try:
         assert service.propose(owner, proposal, idempotency_key='duplicate')['task']['id'] == task['id']
         run = service.claim_run(owner, {'kind': 'manual', 'cycle_key': 'native-fixture', 'lease_owner': 'fixture', 'policy_revision': 1}, idempotency_key='claim')
         state['lease'] = run['lease']
+        discovered=service.discover(owner,{'lease':run['lease'],'expected_revision':run['run']['revision'],'limit':1},idempotency_key='inventory')
+        run={**discovered,'lease':state['lease']}
+        state['inventory_cursor_id']=discovered['cursor']['id']
+        state['assessment_task_id']=discovered['assessment_task_ids'][0]
+        assert service.get_task(owner,state['assessment_task_id'])['purpose']=='source_assessment'
         call = str(uuid4())
         for action in ('reserve_model', 'start_model'):
             data = {'lease': run['lease'], 'expected_revision': run['run']['revision'], 'action': action, 'request_id': call}
@@ -137,7 +140,7 @@ try:
         service.checkpoint(owner, {'lease':active['lease'],'expected_revision':active['run']['revision'],
             'action':'partial'}, idempotency_key='metadata-partial')
         compilation = service.claim_run(owner, {'kind':'manual','cycle_key':'native-compiled',
-            'lease_owner':'verification-fixture','policy_revision':1}, idempotency_key='compile-recover')
+            'lease_owner':'verification-fixture' if mode=='verify' else 'compiler-fixture','policy_revision':1}, idempotency_key='compile-recover')
         task = service.get_task(owner,state['publication_task_id'])
         assert task['state'] == 'applied_pending_verify'
         assert task['publication']['records'] == state['publication_records']
@@ -159,7 +162,16 @@ try:
         verified = service.verify_plan(owner, {'lease':compilation['lease'],'expected_revision':compilation['run']['revision'],
             'task_id':task['id'],'expected_task_revision':task['revision'],'policy_revision':1,
             'plan_hash':task['plan_hash'],'observations':proofs,'source_bindings':task['source_bindings']}, idempotency_key='compile-verify')
-        assert verified['task']['state'] == 'succeeded' and service.status(owner)['sources']['compiled'] == 1
+        assert verified['task']['state'] == 'succeeded' and service.status(owner)['sources']['compiled'] == 0
+        service.checkpoint(owner,{'lease':compilation['lease'],'expected_revision':verified['run']['revision'],'action':'partial'},idempotency_key='verified-partial')
+        bootstrap=service.claim_run(owner,{'kind':'bootstrap','cycle_key':'native-bootstrap','lease_owner':'inventory-fixture','policy_revision':1},idempotency_key='bootstrap')
+        selected=next(t for t in bootstrap['tasks'] if t['id']==state['assessment_task_id'])
+        assessment=service.assess(owner,{'lease':bootstrap['lease'],'expected_revision':bootstrap['run']['revision'],
+            'task_id':selected['id'],'expected_task_revision':selected['revision'],
+            'reviewed_source_ids':[s['logical_document_id'] for s in selected['source_bindings']],
+            'child_task_ids':[state['publication_task_id']],'status':'reviewed','findings':[]},idempotency_key='assessment')
+        assert assessment['outcome']=='assessment_verified' and service.status(owner)['sources']['compiled']==1
+        assert any(c['id']==state['inventory_cursor_id'] for c in service.discovery(owner)['cursors'])
         assert wiki_reader.get_page(owner,state['authored_page_id'])['content']['body'] == '# Authored inventory'
         with database.engine.begin() as c:
             for table in ('c0_compilation_events','c0_compilation_dependencies','c0_compilation_sources',
@@ -171,7 +183,7 @@ try:
             c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'), {'issuer': state['issuer']})
         state_path.unlink()
     print(json.dumps({'compilation_state': True, 'six_tables': True, 'publication_disabled': True,
-        'guarded_compilation': True, 'pending_compilation_verified': mode != 'seed',
+        'guarded_compilation': True, 'maintenance_cursor_restored': True, 'assessment_after_actual_child_verification': mode != 'seed', 'pending_compilation_verified': mode != 'seed',
         'restored_fence_invalidated': mode == 'verify', 'stage': mode}))
 finally:
     database.close()

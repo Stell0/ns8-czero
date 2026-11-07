@@ -19,3 +19,9 @@ For requested source-to-Wiki compilation, use [the compiler protocol](../../refe
 when the actual compiler tools are available. It adds policy/fencing and atomic
 source dependencies; ordinary requested edits retain their existing behavior.
 Missing compiler capability never authorizes bypass through ordinary bundle writes.
+
+For requested bootstrap or daily/weekly compilation on a server with discovery
+and assessment tools, use the compiler's maintenance protocol. Source assessments
+are durable work units, not Wiki pages. Retain fixed findings and canonical child
+proposal IDs; only fresh originals and actual verified children establish compiled
+progress. Configured projects share the existing host task and narrower scope.

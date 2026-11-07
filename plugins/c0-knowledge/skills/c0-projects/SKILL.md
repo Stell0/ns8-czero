@@ -17,3 +17,10 @@ For requested source-to-Wiki compilation in the selected project, use
 [the compiler protocol](../../references/compiler.md) only when its actual tools
 are available and the space policy is enabled. It does not initialize the project
 or install another daily/weekly task. Preserve the project's stricter source scope.
+
+When compilation is enabled and the current discovery/assessment capabilities
+exist, include bounded compiler work within the existing daily/weekly host run.
+Pass the actual project lease to the compiler claim, retain configuration/scope
+and stricter budgets, and reuse project_audit_step plus project_semantic_select/
+review. Put compiler IDs and verified outcomes in the saved report, not arbitrary
+checkpoint references. Missing/disabled compilation adds no writes or scheduler.

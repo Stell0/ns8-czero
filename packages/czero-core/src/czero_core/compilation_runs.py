@@ -1,12 +1,14 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Fenced, budgeted metadata observations; no external invocation or publication."""
 from datetime import date, timedelta
+from copy import deepcopy
 import json
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 
+from .current_content import ContentSuperseded
 from .compilation_schema import CLAIM, CHECKPOINT, LEASE, checked, digest
 from .project_schema import occurrence_on_day
 from .receipts import snapshot
@@ -25,7 +27,7 @@ class CompilationRuns:
         return digest(dict(row))
 
     def _run(self, connection, identifier):
-        row = connection.execute(text('SELECT * FROM c0_compilation_runs WHERE space_id=:space AND id=:id AND state<>\'budget\''),
+        row = connection.execute(text('SELECT * FROM c0_compilation_runs WHERE space_id=:space AND id=:id AND state NOT IN (\'budget\',\'cursor\')'),
             {'space': self._space_id, 'id': _uuid(identifier)}).mappings().one_or_none()
         if row is None:
             raise self.notfound()
@@ -53,6 +55,7 @@ class CompilationRuns:
         if (not live or str(run['actor_id']) != str(actor.user_id) or run['lease_owner'] != lease['lease_owner']
                 or run['fencing_generation'] != lease['fencing_generation']):
             raise self.conflict()
+        self._project_binding(connection, actor, run)
         return run
 
     def _save_run(self, connection, run):
@@ -116,12 +119,13 @@ class CompilationRuns:
 
     def _reservation_fits(self, connection, budget, task, policy):
         column = 'day_budget_id' if budget['kind'] == 'budget_day' else 'week_budget_id'
-        rows = connection.execute(text('SELECT metrics FROM c0_compilation_events WHERE space_id=:space AND ' + column + "=:id AND kind='task_reserve'"),
+        rows = connection.execute(text('SELECT metrics FROM c0_compilation_events WHERE space_id=:space AND ' + column + "=:id AND kind IN ('task_reserve','semantic_reserve')"),
             {'space': self._space_id, 'id': budget['id']}).scalars().all()
         documents = {value for metrics in rows for value in metrics['document_ids']}
         targets = {value for metrics in rows for value in metrics['target_keys']}
         documents.update(s['logical_document_id'] for s in task['source_bindings'])
-        targets.add(task['target_key'])
+        if task['purpose']=='knowledge':
+            targets.add(task['target_key'])
         prefix = 'daily_' if column == 'day_budget_id' else 'weekly_'
         return (len(documents) <= min(budget['data']['caps']['documents'], policy[prefix + 'documents'])
             and len(targets) <= min(budget['data']['caps']['pages'], policy[prefix + 'pages']))
@@ -145,15 +149,26 @@ class CompilationRuns:
         room = min(limit, policy['max_tasks_per_run'] - len(run['data']['task_ids']))
         if room > 0 and not review_task_ids:
             candidates += [dict(t) for t in connection.execute(text('''SELECT * FROM c0_compilation_tasks
-                WHERE space_id=:space AND state IN ('queued','deferred') AND not_before<=:now
-                  AND attempts<:attempts AND profile_id=:profile AND profile_version=:version
+                WHERE space_id=:space AND (state IN ('queued','deferred') OR (state IN ('leased','planned','applied_pending_verify')
+                    AND EXISTS(SELECT 1 FROM c0_compilation_runs old WHERE old.space_id=c0_compilation_tasks.space_id
+                      AND old.id=c0_compilation_tasks.run_id AND (old.state<>'running'
+                        OR old.lease_expiry<=:now OR old.invocation_deadline<=:now)
+                      AND NOT EXISTS(SELECT 1 FROM jsonb_each(old.data->'calls') call
+                        WHERE call.value->>'task_id'=c0_compilation_tasks.id::text
+                          AND call.value->>'state' IN ('reserved','started','uncertain')))))
+                  AND not_before<=:now AND attempts<:attempts AND profile_id=:profile AND profile_version=:version
                   AND NOT (id=ANY(CAST(:known AS uuid[])))
                 ORDER BY not_before,id LIMIT :limit FOR UPDATE SKIP LOCKED'''),
                 {'space': self._space_id, 'now': self.clock(), 'attempts': policy['max_attempts'],
                  'profile': policy['profile_id'], 'version': policy['profile_version'], 'limit': room, 'known': run['data']['task_ids']}).mappings()]
         reserved = []
         retry_at = None
+        manifest=self._project_binding(connection,actor,run)
         for task in candidates:
+            if task['profile_id']!=policy['profile_id'] or task['profile_version']!=policy['profile_version']:
+                continue
+            if any(not self._source_in_scope(connection,s['logical_document_id'],manifest) for s in task['source_bindings']):
+                continue
             held = str(task['id']) in run['data']['task_ids']
             if not held and (len(reserved) >= limit or len(run['data']['task_ids']) >= policy['max_tasks_per_run']):
                 break
@@ -161,7 +176,7 @@ class CompilationRuns:
                 continue
             try:
                 self._support_task(connection, task)
-            except (self.conflict, self.notfound, self.notready, ValueError):
+            except (self.conflict, self.notfound, self.notready, ContentSuperseded, ValueError):
                 connection.execute(text("UPDATE c0_compilation_tasks SET state='conflict',error_code='source_unavailable',revision=revision+1,updated_at=:now WHERE space_id=:space AND id=:id"),
                         {'space': self._space_id, 'id': task['id'], 'now': self.clock()})
                 continue
@@ -178,7 +193,7 @@ class CompilationRuns:
                 str(run['day_budget_id']), str(run['week_budget_id'])])
             uncertain = any(c['task_id'] == str(task['id']) and c['state'] == 'uncertain' for c in run['data']['calls'].values())
             changed = (task['fencing_generation'] != run['fencing_generation'] or task['run_id'] != run['id'] or task['state'] in ('deferred','needs_review') or not held)
-            next_state = 'uncertain' if uncertain else task['state'] if held and task['state'] in ('planned','leased','applied_pending_verify') else 'leased'
+            next_state = 'uncertain' if uncertain else task['state'] if task['state'] in ('planned','leased','applied_pending_verify') else 'leased'
             if changed:
                 if task['attempts'] >= policy['max_attempts']:
                     connection.execute(text("UPDATE c0_compilation_tasks SET state='failed',error_code='retry_exhausted',revision=revision+1 WHERE space_id=:space AND id=:id"),
@@ -196,7 +211,7 @@ class CompilationRuns:
             if not recorded:
                 self._event(connection, actor, identity, identity, 'task_reserve', 'reserved', run=run, task=task,
                     kind='task_reserve', metrics={'document_ids': [s['logical_document_id'] for s in task['source_bindings']],
-                        'target_keys': [task['target_key']]})
+                        'target_keys': [task['target_key']] if task['purpose']=='knowledge' else []})
             reserved.append(snapshot(task))
         return reserved, retry_at
 
@@ -207,7 +222,18 @@ class CompilationRuns:
                 data.get('review_task_ids') and (data['kind'] != 'manual' or len(data['review_task_ids']) > data['task_limit'])):
             raise ValueError('explicit_manual_compilation_review_required')
         def execute(connection, current):
-            policy = self._enabled(connection, data['policy_revision']); config = policy['data']; now = self.clock()
+            policy = deepcopy(self._enabled(connection, data['policy_revision'])); config = policy['data']; now = self.clock()
+            project_data = {}
+            if data.get('project_lease'):
+                from .projects import ProjectService
+                manifest=ProjectService(self.database,self.access).in_space(self._space_id)._find(connection,'manifest_v1','manifest',required=False)
+                if manifest is None: raise self.conflict()
+                project_data={'project_lease':data['project_lease'],'project_config_version':manifest['data']['version']}
+            project=self._project_binding(connection,current,{'kind':data['kind'],'data':project_data})
+            if project:
+                config['daily_model_requests']=min(config['daily_model_requests'],project['research']['normal_daily_attempts'])
+                config['weekly_pages']=min(config['weekly_pages'],project['maintenance']['semantic_pages_per_week'])
+                config['max_attempts']=min(config['max_attempts'],project['research']['max_attempts'])
             if data['kind'] == 'retrieval' and not config['retrieval_feedback']:
                 raise self.disabled()
             today = now.astimezone(ZoneInfo(config['timezone'])).date().isoformat()
@@ -217,9 +243,15 @@ class CompilationRuns:
             epoch = self._epoch(connection)
             if row:
                 run = dict(row)
+                if (bool(run['data'].get('project_lease'))!=bool(project_data) or project_data and (
+                        run['data']['project_lease']['run_id']!=project_data['project_lease']['run_id']
+                        or run['data']['project_config_version']!=project_data['project_config_version'])):
+                    raise self.conflict()
                 if run['state'] == 'complete':
                     return {'outcome': 'completed_bounded', 'run': snapshot(run)}
                 live = self._live(run, policy, epoch)
+                if project_data and run['data']['project_lease']!=project_data['project_lease']:
+                    live=False
                 if live and (run['lease_owner'] != data['lease_owner'] or str(run['actor_id']) != str(current.user_id)):
                     raise self.conflict()
                 if not live and run['attempts'] >= config['max_attempts']:
@@ -249,7 +281,7 @@ class CompilationRuns:
                      'expiry': now + timedelta(seconds=min(config['lease_seconds'], config['run_seconds'])),
                      'deadline': now + timedelta(seconds=config['run_seconds']), 'epoch': epoch, 'now': now,
                      'day': day['id'], 'week': week['id'] if week else None,
-                     'data': _json({'policy': config, 'task_ids': [], 'calls': {}, 'phase': 'discover'})}).mappings().one())
+                     'data': _json({'policy': config, 'task_ids': [], 'calls': {}, 'phase': 'discover', **project_data})}).mappings().one())
             else:
                 if not live:
                     run['attempts'] += 1; run['fencing_generation'] += 1
@@ -262,6 +294,7 @@ class CompilationRuns:
                     week_budget_id=week['id'] if week else None,
                     lease_expiry=min(now + timedelta(seconds=config['lease_seconds']), run['invocation_deadline']))
                 run['data']['policy'] = config
+                run['data'].update(project_data)
             tasks, retry_at = self._reserve_tasks(connection, current, run, config, data['task_limit'], data.get('review_task_ids', ()))
             run = self._save_run(connection, run)
             lease = {'run_id': str(run['id']), 'lease_owner': run['lease_owner'], 'fencing_generation': run['fencing_generation']}
@@ -286,7 +319,7 @@ class CompilationRuns:
         return task
 
     def _charge_model(self, connection, run, reserved, *, observed=None):
-        policy = self._enabled(connection)['data']
+        policy = run['data']['policy']
         budgets = [self._budget(connection, run['day_budget_id'])]
         if run['week_budget_id'] is not None:
             budgets.append(self._budget(connection, run['week_budget_id']))
@@ -332,6 +365,8 @@ class CompilationRuns:
                 return
             run = self._run(connection, data['lease']['run_id'])
             identifiers = run['data']['task_ids'] if action == 'finish' else [data['task_id']] if 'task_id' in data else [run['data']['calls'][data['request_id']]['task_id']] if data['request_id'] in run['data']['calls'] else []
+            if action=='finish' and run['data'].get('semantic'):
+                self._semantic_current(connection,run['data']['semantic'])
             for identifier in identifiers:
                 task = self._task(connection, identifier)
                 self._support_task(connection, task)
@@ -404,6 +439,8 @@ class CompilationRuns:
                          'fence': run['fencing_generation'], 'now': self.clock()})
             elif action in ('planned','no_change','defer','fail'):
                 state = {'planned': 'planned', 'no_change': 'no_change', 'defer': 'deferred', 'fail': 'deferred'}[action]
+                if task['purpose']=='source_assessment' and action in ('planned','no_change'):
+                    raise ValueError('explicit_source_assessment_required')
                 if action in ('fail', 'defer') and task['attempts'] >= run['data']['policy']['max_attempts']:
                     state = 'failed'
                 if action == 'fail' and data['error_code'] == 'unsupported_evidence':
@@ -423,10 +460,19 @@ class CompilationRuns:
                             {'space': self._space_id, 'id': _uuid(source['logical_document_id']), 'profile': task['profile_id'],
                              'revision': _uuid(source['revision_id']), 'meta': source['metadata_hash'], 'parts': source['parts_hash'], 'now': self.clock()})
             elif action in ('finish', 'partial'):
-                unfinished = connection.execute(text("SELECT count(*) FROM c0_compilation_tasks WHERE space_id=:space AND run_id=:run AND state NOT IN ('no_change','succeeded')"),
+                for identifier in run['data']['task_ids']:
+                    assessed=self._task(connection,identifier)
+                    if assessed['state']=='assessed' and not self._complete_assessment(connection,assessed) and action=='finish':
+                        raise self.conflict()
+                unfinished = connection.execute(text("""SELECT count(*) FROM c0_compilation_tasks t WHERE t.space_id=:space AND t.run_id=:run
+                    AND t.state NOT IN ('no_change','succeeded','assessed') AND NOT(t.state='superseded'
+                      AND t.purpose='source_assessment' AND EXISTS(SELECT 1 FROM c0_compilation_sources cs
+                        JOIN c0_compilation_tasks done ON done.space_id=cs.space_id AND done.id=cs.assessment_task_id
+                        WHERE cs.space_id=t.space_id AND cs.profile_id=t.profile_id AND done.state='assessed'
+                          AND done.source_bindings=t.source_bindings AND done.assessment ? 'completed_input_hash'))"""),
                     {'space': self._space_id, 'run': run['id']}).scalar_one()
                 unresolved = any(c['state'] in ('reserved','started','uncertain') for c in calls.values())
-                if action == 'finish' and (unfinished or unresolved):
+                if action == 'finish' and (unfinished or unresolved or run['data'].get('semantic',{}).get('state','complete')!='complete'):
                     raise self.conflict()
                 run['state'] = 'complete' if action == 'finish' else 'partial'
             run = self._save_run(connection, run)

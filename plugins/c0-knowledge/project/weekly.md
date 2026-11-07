@@ -13,3 +13,12 @@ Use project_peripheral_archive with topic_id, compact summary, assessment_ref an
 Check available workflow/skill versions as bounded metadata observations. Do not automatically install instructions or upgrade C0. Save a readable maintenance/report artifact in the project language and read it back. Continue incomplete work from saved cursors. Missing maintenance/report capabilities, unresolved evidence or uncompleted phases must remain BLOCKED/PARTIAL. Report actual stored identities, coverage and the next recovery step; external publication and notification remain separate observations.
 
 Use the independently authenticated c0-projects project release-check CLI, or submit project_release_observe only after saving/reading actual ready release metadata. Failed/stale/incomplete retrieval cannot establish up-to-date. Changed known release identity is a security alert requiring review. Version comparison does not prove compatibility or installed commit identity. No download/install/upgrade is authorized by a metadata observation. Read project_diagnostics_get for actual successful runs, pinned report, current connector coverage and bounded errors; no success record means success remains unverified. Save the weekly report with the existing report protocol before its final checkpoint.
+
+When compilation is enabled and supported, run the compiler's bounded incremental
+loop inside this same weekly host task, binding its actual project lease and
+current configuration. Keep project_audit_step and project_semantic_select/review
+as the weekly review authority; do not create an ordinary-space review cursor for
+this project. Apply supported findings through the common compiler plans and
+independent readback. Save actual compiler run IDs/results in the weekly report,
+including held contradictions and incomplete coverage. No duplicate schedule,
+automatic policy enablement, tracking expansion or authored-content deletion.

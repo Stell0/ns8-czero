@@ -41,3 +41,11 @@ apply response means pending verification. On interruption, reconcile saved task
 outcomes and uncertain model calls before another write or inference request.
 Report actual IDs/revisions/hashes, deferred findings, conflicts and unknown cost.
 Bounded completion does not establish corpus coverage, semantic truth or a schedule.
+
+For bootstrap or daily/weekly work, follow the maintenance loop in the compiler
+protocol. Require its actual discovery/assessment tools, preserve durable cursors,
+and keep source assessments separate from canonical knowledge proposals. Existing
+projects share their host task, lease, scope and report; ordinary spaces use the
+same compiler without project initialization. Weekly projects reuse their semantic
+review APIs; ordinary spaces require the compiler semantic tools. Never turn a
+completed inventory or selected review batch into a claim of corpus coverage.

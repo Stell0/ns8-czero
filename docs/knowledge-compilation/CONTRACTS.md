@@ -257,3 +257,31 @@ No test that asserts a fixture's desired future state counts as testing that
 future server behavior. M0 deterministic responses are selected by source key,
 never evaluation questions. Real model improvements, production mutation and
 unattended host scheduling remain separately measured gates.
+
+
+## M3 additive maintenance contract
+
+See [M3](M3.md). Private SQL publication sequence markers implement C3's trusted
+publication ordering without relying on historical ingestion timestamps. The
+six-table coordination store retains inventory/semantic cursors as non-executable
+run rows. Sources and verified Wiki/entity/claim/relationship records remain the
+only knowledge authorities. No source bodies or giant index are stored here.
+
+`source_assessment` tasks cannot publish and use document/model budgets rather
+than page budget. Their canonical child proposals use the unchanged M2 engine.
+`assessed` means external analysis was recorded; only fresh originals, fully read
+context, no unresolved findings and independently verified current children may
+advance successful source coverage. Exact stale dependencies stay stale until
+actual M2 revalidation. Discovery/assessment acknowledgement is not compilation.
+
+Additional MCP operations: compilation_discovery_get (read-only GET /discovery),
+compilation_discover (POST /discover), compilation_assessment_complete (POST
+/assess), compilation_semantic_select (POST /semantic/select) and
+compilation_semantic_review (POST /semantic/review), under /api/v1/compilation.
+Writes retain enabled policy, current Read+Write/Editor, exact selected space,
+expected run/task revisions, live actor/owner/fence, replay identities and shared
+budgets. Daily/weekly project claims additionally carry the actual project_lease;
+project expiry/configuration changes fence compiler work too. Existing project
+semantic APIs and phases remain unchanged. Ordinary-space review uses their
+shared bounded rotating/risk-prioritized SQL selector, with its own durable cursor.
+A completed selected batch never establishes full-corpus coverage.

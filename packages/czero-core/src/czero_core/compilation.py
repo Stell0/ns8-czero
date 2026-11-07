@@ -10,6 +10,7 @@ from sqlalchemy import text
 from .compilation_schema import (ACTIVE, PROPOSAL, SOURCE_SELECTION, checked,
     defaults, digest, key, policy as normalize_policy)
 from .compilation_runs import CompilationRuns
+from .compilation_maintenance import CompilationMaintenance
 from .compilation_plans import CompilationPlans, managed_slug
 from .current_content import ContentSuperseded
 from .documents import DocumentService, SNAPSHOT, RECEIPT
@@ -42,7 +43,7 @@ _META = """encode(sha256(convert_to(jsonb_build_object(
     'original_url',COALESCE(s.metadata->'original_url','null'::jsonb),
     'provenance',COALESCE(s.metadata->'provenance','{}'::jsonb))::text,'UTF8')),'hex')"""
 # Identity-only freshness: body integrity is rechecked by the trusted reader on writes.
-_SOURCE_FRESH = """true
+_SOURCE_FRESH = """cs.state<>'unavailable'
     AND ((NOT cs.multipart AND cs.logical_document_id=CAST(cs.parts->0->>'source_id' AS uuid)
         AND cs.observed_revision=CAST(cs.parts->0->>'version_id' AS uuid))
       OR (cs.multipart AND EXISTS(SELECT 1 FROM c0_objects parent WHERE parent.space_id=cs.space_id
@@ -91,7 +92,7 @@ def _paging(limit, after):
     return _uuid(after) if after is not None else None
 
 
-class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
+class CompilationService(CompilationMaintenance, CompilationPlans, CompilationRuns, SpaceBound):
     """Explicit selected space and current persisted authority on every operation."""
     conflict = CompilationConflict
     notfound = CompilationNotFound
@@ -124,7 +125,7 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
             raise CompilationConflict()
         return result
 
-    def _mutate(self, actor, operation, payload, request_key, execute, *, admin=False, lease=None, guard=None):
+    def _mutate(self, actor, operation, payload, request_key, execute, *, admin=False, lease=None, guard=None, final_lease=False):
         bounded_json(payload, maximum=65536)
         request_hash = digest(key(request_key))
         fingerprint = digest([operation, payload])
@@ -157,6 +158,8 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
             return current
         def checked_execute(connection, current):
             value = execute(connection, current)
+            if final_lease:
+                self._lease(connection,current,lease)
             self._event(connection, current, request_hash, fingerprint, operation, value['outcome'],
                 run=value.get('run'), task=value.get('task'), metrics={'lease_issued': bool(value.get('lease')), **value.pop('_event_metrics', {})})
             return value
@@ -490,7 +493,7 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
             task = self._task(connection, task_id)
             publication = self._publication(connection, task_id)
             return snapshot({**task, 'publication': publication,
-                'managed_slug':managed_slug(self._space_id,task['profile_id'],task['topic_key'])})
+                'managed_slug':managed_slug(self._space_id,task['profile_id'],task['topic_key']) if task['purpose']=='knowledge' else None})
 
     def list_tasks(self, actor, *, state=None, topic_key=None, limit=50, after=None):
         from .compilation_schema import STATES
@@ -536,14 +539,16 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
                 count(*) FILTER(WHERE state='no_change' AND (''' + _SOURCE_FRESH + ''')) AS assessed_no_change,
                 count(*) FILTER(WHERE last_compiled_revision=observed_revision AND last_compiled_hash=text_hash
                   AND last_metadata_hash=metadata_hash AND last_parts_hash=parts_hash
-                  AND state<>'partial' AND (''' + _SOURCE_FRESH + ''')) AS compiled,
+                  AND state IN ('observed','no_change') AND (cs.assessment_task_id IS NULL OR EXISTS(
+                    SELECT 1 FROM c0_compilation_tasks a WHERE a.space_id=cs.space_id AND a.id=cs.assessment_task_id
+                      AND a.state='assessed' AND a.assessment ? 'completed_input_hash')) AND (''' + _SOURCE_FRESH + ''')) AS compiled,
                 count(*) FILTER(WHERE NOT (''' + _SOURCE_FRESH + ''')) AS stale
                 FROM c0_compilation_sources cs WHERE cs.space_id=:space'''), {'space': self._space_id}).mappings().one()
             dependencies = connection.execute(text('''SELECT count(*) AS observed,
                 count(*) FILTER(WHERE NOT (''' + _DEP_FRESH + ''')) AS stale FROM c0_compilation_dependencies dep
                 JOIN c0_compilation_sources cs ON cs.space_id=dep.space_id AND cs.logical_document_id=dep.logical_document_id
                   AND cs.profile_id=dep.profile_id WHERE dep.space_id=:space'''), {'space': self._space_id}).mappings().one()
-            runs = connection.execute(text('''SELECT * FROM c0_compilation_runs WHERE space_id=:space AND state<>'budget'
+            runs = connection.execute(text('''SELECT * FROM c0_compilation_runs WHERE space_id=:space AND state NOT IN ('budget','cursor')
                 AND (CAST(:id AS uuid) IS NULL OR id=CAST(:id AS uuid)) ORDER BY updated_at DESC,id LIMIT :limit'''),
                 {'space': self._space_id, 'id': _uuid(run_id) if run_id is not None else None, 'limit': limit}).mappings().all()
             if run_id is not None and not runs:

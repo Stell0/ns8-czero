@@ -79,7 +79,7 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
             {'space': self._space_id, 'type': PREFIX + kind, 'key': json.dumps(logical_key(kind, identity))}).mappings().one_or_none()
         if row is None and required:
             raise ProjectNotFound()
-        return dict(row) if row else None
+        return {k:v for k,v in row.items() if k!='compilation_publication'} if row else None
 
     def _save(self, connection, actor, kind, identity, data, *, previous=None):
         values = {'key': logical_key(kind, identity), **data}
