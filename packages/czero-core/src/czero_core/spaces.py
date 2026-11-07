@@ -20,7 +20,7 @@ _RANK = {Role.READER: 1, Role.EDITOR: 2, Role.ADMIN: 3}
 
 def content_row(row):
     """Remove storage ownership only at the SQL row boundary, never in payloads."""
-    return {key: value for key, value in row.items() if key != 'space_id'}
+    return {key: value for key, value in row.items() if key not in ('space_id', 'compilation_publication')}
 
 
 def hold_authority(connection):

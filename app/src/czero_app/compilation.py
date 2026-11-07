@@ -71,6 +71,29 @@ class BindingSelections(StrictRequest):
         json_schema_extra={'items': schema('SOURCE_SELECTION')})
 
 
+def maintenance_schema(name):
+    if importlib.util.find_spec('czero_core.compilation_maintenance_schema') is None:
+        return {}
+    from czero_core import compilation_maintenance_schema
+    return deepcopy(getattr(compilation_maintenance_schema, name))
+
+
+class MaintenanceDiscover(Proposal):
+    data: dict = Field(json_schema_extra=maintenance_schema('DISCOVER'))
+
+
+class MaintenanceAssess(Proposal):
+    data: dict = Field(json_schema_extra=maintenance_schema('ASSESS'))
+
+
+class MaintenanceSemanticSelect(Proposal):
+    data: dict = Field(json_schema_extra=maintenance_schema('SEMANTIC_SELECT'))
+
+
+class MaintenanceSemanticReview(Proposal):
+    data: dict = Field(json_schema_extra=maintenance_schema('SEMANTIC_REVIEW'))
+
+
 def install(app, database, auth, read_context, write_context):
     app.state.compilation = None
     if importlib.util.find_spec('czero_core.compilation') is None:
@@ -186,3 +209,31 @@ def install(app, database, auth, read_context, write_context):
     @operation('compilation_verify', 'Editor: record fresh target/annotation/original readback matching an actual applied outcome at the live fence. Completes matching work only; does not promote verification status or establish complete corpus coverage. Reconcile edits, expired citations and lost fences.', Role.EDITOR, dict, read_only=False, space_field='space_id')
     def plan_verify(data: PlanVerify, space_id: UUID, context: RequestAccess = Depends(write_context)):
         return invoke(space_id, 'verify_plan', context.actor, **data.model_dump())
+
+    if not hasattr(service, 'discover'):
+        return
+
+    @app.get('/api/v1/compilation/discovery', response_model=dict)
+    @operation('compilation_discovery_get', 'Read bounded selected-space inventory and semantic cursors. Creates no state. Completed inventory is not semantic corpus coverage.', Role.READER, dict, space_field='space_id')
+    def discovery(space_id: UUID, context: RequestAccess = Depends(read_context)):
+        return invoke(space_id, 'discovery', context.actor)
+
+    @app.post('/api/v1/compilation/discover', response_model=dict)
+    @operation('compilation_discover', 'Editor: advance bounded current-publication inventory and exact disappearance reconciliation under a live compiler fence. Queue source assessments, invalidate stale dependencies and reserve bounded work; no inference or publication. Configured daily/weekly projects require their existing host-task lease.', Role.EDITOR, dict, read_only=False, space_field='space_id')
+    def discover(data: MaintenanceDiscover, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'discover', context.actor, **data.model_dump())
+
+    @app.post('/api/v1/compilation/assess', response_model=dict)
+    @operation('compilation_assessment_complete', 'Editor: acknowledge a bounded external assessment of current whole originals, canonical child proposal identities and fixed unresolved findings. Pending, partial or unverified children never count as compiled. Cannot publish.', Role.EDITOR, dict, read_only=False, space_field='space_id')
+    def assess(data: MaintenanceAssess, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'assess', context.actor, **data.model_dump())
+
+    @app.post('/api/v1/compilation/semantic/select', response_model=dict)
+    @operation('compilation_semantic_select', 'Editor: select a bounded rotating/risk-prioritized Wiki batch in an ordinary space under weekly fence and shared page budgets. Configured projects use project_semantic_select instead. No model execution or Wiki changes.', Role.EDITOR, dict, read_only=False, space_field='space_id')
+    def semantic_select(data: MaintenanceSemanticSelect, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'semantic_select', context.actor, **data.model_dump())
+
+    @app.post('/api/v1/compilation/semantic/review', response_model=dict)
+    @operation('compilation_semantic_review', 'Editor: save actual current Wiki/original-evidence review and verified child identities. Partial reviews retain the rotation cursor; complete selected batch never means complete corpus coverage. Projects use their existing semantic review.', Role.EDITOR, dict, read_only=False, space_field='space_id')
+    def semantic_review(data: MaintenanceSemanticReview, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'semantic_review', context.actor, **data.model_dump())

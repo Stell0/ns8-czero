@@ -563,7 +563,7 @@ async def check(value):
                 capability_response = await http.get('/agents/capabilities.json')
                 assert capability_response.status_code == 200, 'Installed capabilities unavailable'
                 capability = capability_response.json()
-                assert capability['guidance']['version'] == 3, 'Installed tool guidance version mismatch'
+                assert capability['guidance']['version'] == 4, 'Installed tool guidance version mismatch'
                 available = {item['name']:item for item in capability['operations']}
                 expected_hints = {'get_profile':(True,False,True,False),
                     **{name:(True,False,True,False) for name in ('source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get')},

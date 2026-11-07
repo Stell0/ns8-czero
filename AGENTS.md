@@ -172,6 +172,14 @@ schedules or broaden authority as a side effect of an ingestion request.
 
 ## Knowledge and product contracts
 
+Knowledge-compilation M3 is a producer candidate: Core0.41/schema0034 extends the
+six coordination tables with private publication/cursor/assessment metadata.
+App0.60 keeps its released Core0.39 lock. Discover actual maintenance capabilities;
+older consumers retain their existing supported operations. Projects share the
+host lease, scope, caps and semantic review; ordinary spaces need no project.
+Publication, consumer adoption, policy enablement and schedules are separate gates.
+See [M3](docs/knowledge-compilation/M3.md) for recovery and acceptance.
+
 Source documents and Wiki pages retain only their current complete content generation. This latest-only contract replaces the previous content-history guarantee. Keep stable logical IDs, monotonic concurrency counters, current hashes/provenance and payload-free retry/change identities. Stage replacements privately and publish whole documents atomically; delete superseded bodies, originals, derivatives and indirect receipt copies. Exact expired evidence returns authorized `content_superseded` (410), never rebound text. Preserve authored knowledge and mark invalidated evidence stale. See [migration and preflight](docs/latest-only-migration.md).
 
 The connected assistant performs reasoning and synthesis. C0 serves knowledge and deterministic registered operations. Its worker extracts/indexes content and runs registered jobs; adding arbitrary model execution or shell commands to a request handler is outside the current product boundary. Optional retrieval providers cannot decide authorization or make ordinary text search depend on a model API.

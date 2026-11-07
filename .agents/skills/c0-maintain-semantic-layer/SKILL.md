@@ -38,3 +38,9 @@ compilation_apply and compilation_verify, use the packaged c0-knowledge-compiler
 workflow and its [protocol](https://github.com/Stell0/ns8-czero/blob/main/plugins/c0-knowledge/references/compiler.md).
 The evaluator's local ledger remains an experimental profile, not a substitute
 for enabled policy, SQL coordination, atomic dependencies or fenced verification.
+
+On M3-capable servers, production bootstrap/incremental work uses the compiler's
+SQL publication cursor and source assessments. The experimental local ledger must
+not replace those checkpoints. Configured projects keep their existing host lease,
+audit and semantic review; ordinary spaces require the advertised compiler review
+operations. Unchanged input suppresses inference, not citation validation on apply.

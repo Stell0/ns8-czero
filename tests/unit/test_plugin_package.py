@@ -33,6 +33,8 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
         payload = {n: archive.read(n) for n in archive.namelist()}
         assert list(payload) == sorted(payload)
         assert all(i.date_time == (1980,1,1,0,0,0) and i.external_attr >> 16 == 0o100644 for i in archive.infolist())
+    assert b'compilation_assessment_complete' in payload['references/compiler.md']
+    assert b'Bootstrap, daily and weekly' in payload['references/compiler.md']
     prefix='plugins/acme-knowledge/'
     assert payload == {n.removeprefix(prefix):v for n,v in files(a).items() if n.startswith(prefix)}
     assert 'plugin.json' in payload and '.app.json' in payload
@@ -54,7 +56,7 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
         'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
         'skills/c0-knowledge-compiler/SKILL.md'}
     assert b'project_get' in payload['skills/c0-projects/SKILL.md']
-    assert manifest['version']=='1.5.0'
+    assert manifest['version']=='1.6.0'
     research=payload['skills/c0-research/SKILL.md']
     assert all(name.encode() in research for name in ('source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'))
     assert b'project_run_claim' in payload['references/projects.md']

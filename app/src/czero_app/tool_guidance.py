@@ -7,6 +7,12 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'compilation_discovery_get': 'Read selected-space durable inventory/review cursors without creating state. Inventory completion is not semantic corpus coverage.',
+    'compilation_discover': 'Editor: advance a bounded current-publication inventory/reconciliation batch under enabled policy, live fence and current revision. Queue source assessments, reserve work and invalidate stale dependencies; no inference or publication. Configured daily/weekly projects require their actual host-task lease.',
+    'compilation_assessment_complete': 'Editor: save a current whole-original assessment with canonical child proposal identities and fixed unresolved findings. Only actual verified children and fresh support count as compiled. Cannot publish; partial/unread/contrary work remains visible.',
+    'compilation_semantic_select': 'Editor: select a bounded rotating/risk-prioritized Wiki review batch in an ordinary space under weekly fence and shared page budgets. Resume saved selection; explicitly refresh changed revisions. Projects use project_semantic_select instead.',
+    'compilation_semantic_review': 'Editor: record current Wiki/original-evidence review and verified child changes. Only a fully reviewed current selected batch advances rotation; never establishes full-corpus coverage. Projects use their existing semantic review.',
+
     'compilation_target_bindings_get': 'Read current selected-space target identity hashes and compiler ownership for a bounded selection. Metadata only; read actual content separately and compare revisions. No local hashing tool or policy enablement required. No writes.',
     'compilation_plan_validate': 'Editor: dry-run one closed source-backed plan under enabled policy and a live fence. Persists no content or progress. Returns plan hash and review eligibility; does not prove semantic truth or grant publication authority.',
     'compilation_apply': 'Editor: atomically publish a validated exact plan and source dependencies under current policy, revisions and fence. Queue-only, authored edits and uncertain/contrary plans require exact-plan approval. Returns applied_pending_verify, never verified truth. Preserve replay key after uncertain response.',
@@ -153,6 +159,7 @@ DESCRIPTIONS = {
 REPLAY_SAFE = frozenset({
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_apply', 'compilation_verify',
+    'compilation_discover','compilation_assessment_complete','compilation_semantic_select','compilation_semantic_review',
     'project_event_set','project_audit_step','project_semantic_select','project_semantic_review','project_peripheral_archive','project_release_observe',
     'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',
@@ -170,6 +177,7 @@ REPLAY_SAFE = frozenset({
 DESTRUCTIVE = frozenset({
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_apply', 'compilation_verify',
+    'compilation_discover','compilation_assessment_complete','compilation_semantic_select','compilation_semantic_review',
     'project_event_set','project_audit_step','project_semantic_select','project_semantic_review','project_peripheral_archive','project_release_observe',
     'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',

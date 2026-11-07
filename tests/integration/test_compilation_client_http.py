@@ -35,7 +35,7 @@ def test_installed_skill_multiple_source_only_concepts_apply_and_read_back_over_
     with zipfile.ZipFile(BytesIO(zip_bytes(payload))) as archive:
         archive.extractall(directory)
     instructions, package = load_plugin(directory)
-    assert package['version'] == '1.5.0'
+    assert package['version'] == '1.6.0'
     assert 'skills/c0-knowledge-compiler/SKILL.md' in package['files']
     assert 'references/compiler.md' in package['files'] and 'compilation_verify' in instructions
     async def check():
@@ -153,4 +153,52 @@ def test_installed_skill_multiple_source_only_concepts_apply_and_read_back_over_
                 assert c.execute(text('SELECT count(*) FROM c0_wiki_pages WHERE space_id=:space'),{'space':fixture.space}).scalar_one() == 3
                 assert c.execute(text("SELECT count(*) FROM c0_annotations WHERE space_id=:space AND namespace='verification'"),{'space':fixture.space}).scalar_one() == 3
             assert await control.corpus() == await fixture.corpus() == corpus
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('mode',['auto','legacy'])
+def test_installed_maintenance_skill_uses_actual_discovery_and_budgeted_external_step(tmp_path,mode):
+    from czero_core.compilation_client import maintenance_step
+    directory=tmp_path/'installed-maintenance';directory.mkdir()
+    with zipfile.ZipFile(BytesIO(zip_bytes(plugin_payload(ORIGIN+'/mcp','asdk_app_fixture','maintenance-fixture')))) as archive:
+        archive.extractall(directory)
+    instructions,package=load_plugin(directory)
+    assert 'compilation_assessment_complete' in instructions and 'reviewed_ranges' in instructions
+    async def check():
+        originals=json.loads((ROOT/'tests/fixtures/knowledge_compilation/sources.json').read_text())
+        async with paired_fixture(os.environ['CZERO_TEST_DATABASE_URL'],tmp_path/'databases',originals) as (_,fixture,corpus):
+            await fixture.request('PUT','/api/v1/compilation/policy',{'data':{**defaults(),'enabled':True},
+                'expected_revision':0,'authorization_ref':'synthetic:operator','idempotency_key':'policy'},fixture.space)
+            fixture.refresh_native();token=fixture.token('cited-research')
+            async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=fixture.app),base_url=ORIGIN,
+                    headers={'Authorization':'Bearer '+token.access_token}) as http:
+                async with Client(streamable_http_client(ORIGIN+'/mcp',http_client=http),mode=mode) as client:
+                    names={t.name:t for t in (await client.list_tools()).tools}
+                    for name in ('compilation_discover','compilation_assessment_complete','compilation_semantic_select','compilation_semantic_review'):
+                        assert names[name].annotations.idempotent_hint and not names[name].annotations.open_world_hint
+                    calls=[]
+                    async def call(name,arguments):
+                        calls.append(name)
+                        if name=='knowledge_search': assert arguments['options']['space_id']==fixture.space
+                        result=await client.call_tool(name,arguments)
+                        return C0.decode(name,result.model_dump(mode='json',by_alias=True,exclude_none=True))
+                    async def analyze(task,read):
+                        binding=task['source_bindings'][0]
+                        original=await read('source_documents_get',{'logical_document_id':binding['logical_document_id'],
+                            'revision_id':binding['revision_id']})
+                        assert original['body'] and original['text_hash']==binding['text_hash']
+                        from uuid import uuid4
+                        found=await read('knowledge_search',{'options':{'space_id':str(uuid4()),
+                            'query':original['title'],'kind':'wiki','mode':'text','rerank':'off'}})
+                        assert found['hits']==[]
+                        return {'proposals':[],'status':'reviewed','findings':[],
+                            'reviewed_source_ids':[binding['logical_document_id']],
+                            'observed_tokens':99,'external_reference_hash':'b'*64}
+                    result=await maintenance_step(call,fixture.space,{'kind':'bootstrap','cycle_key':'installed-maintenance',
+                        'lease_owner':'external-fixture','policy_revision':1},analyze,reserved_tokens=200,idempotency_key='external-step')
+                    assert result['outcome']=='assessment_verified'
+                    status=await call('compilation_status_get',{'space_id':fixture.space})
+                    assert status['sources']['compiled']==1 and not status['complete_corpus_coverage']
+                    assert status['budgets'][0]['data']['requests']==1 and status['budgets'][0]['data']['observed_tokens']==99
+                    assert 'compilation_apply' not in calls and 'source_documents_get' in calls
     asyncio.run(check())

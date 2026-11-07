@@ -4,7 +4,7 @@
 from copy import deepcopy
 
 GUIDANCE = {
-    'version': 3,
+    'version': 4,
     'rules': [
         'Discover current operations and authorized spaces before reading or writing. Membership, space grants and actual OAuth scopes remain authoritative on every request.',
         'Choose an explicit space_id for all content. Never silently fall back to Shared after an invalid selector, denial or revoked access. Private investigations need an existing authorized protected space; ask an Admin to create or grant one.',
@@ -31,6 +31,7 @@ GUIDANCE = {
             'steps': [
                 'Use the compiler skill for requested bounded compilation in an explicitly selected space with enabled policy and current Read+Write. Missing tools or disabled policy block compilation; do not substitute ordinary bundles.',
                 'Read original current passages, resolve existing concepts and prepare a closed plan. Dry-run under a live fence; queue-only, authored or uncertain/contrary changes need exact-plan approval. Model output is never verified truth.',
+                'When current discovery/assessment tools exist, bootstrap and maintenance resume SQL cursors and source assessments; configured projects share the host lease and narrower scope. Weekly projects retain project semantic review; ordinary spaces use advertised compiler semantic tools. No scheduling or policy enablement is implied.',
                 'Apply atomically, then independently read every changed record and original citation before compilation_verify. Reconcile saved publication after a lost response or lease transfer; bounded completion is not complete corpus coverage.',
             ],
         },

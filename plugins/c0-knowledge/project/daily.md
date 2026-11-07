@@ -11,3 +11,13 @@ Failed, uncertain or uninspected checks are partial/blocked. No material update 
 After mandatory monitoring, select queued work through C0 reservations. Default slots one through five allow ordinary or urgent work; slots six through ten are exclusively eligible priority-zero work. Use actual configured bounds. Persist invocation start/outcome separately, retain uncertain execution and bounded retry state, and never reset expansion depth by changing urgency or an ID. At most three children inherit causal expansion plus 20 by default; over 100 is rejected.
 
 Review evidence and bounded counter-checks, preserve contradictions, merge supported Wiki/claim changes and verify exact revisions. Publish a human-readable report in the project's language with substantive entries/appendices for all completed results and explicit deferred/failed coverage. Save/read back before reporting completion. Publish the saved result externally only through the configured host; record publication, notification and reading separately. Finish only phases whose actual required resources and coverage are verified. Missing capabilities or permission produce BLOCKED/PARTIAL, not a fabricated success.
+
+When selected-space compilation policy is enabled and the M3 tools are present,
+use the compiler protocol inside this daily host run. Bind its actual project
+lease in compilation_run_claim.project_lease. Process bounded current-publication
+changes, stale dependencies and queued proposals through source assessment and
+M2 verified child publication. Disabled policy means no compiler writes. Preserve
+stricter project scope/caps and resume saved cursors; do not add a second host task.
+Include actual compiler IDs, verified changes, no-change and unresolved work in
+the saved daily report. Compiler IDs belong in report content/metadata, not the
+project checkpoint resource-reference list.

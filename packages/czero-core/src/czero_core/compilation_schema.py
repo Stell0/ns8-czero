@@ -20,7 +20,7 @@ REASONS = ['missing_concept', 'incomplete_page', 'stale_support', 'distributed_e
     'missing_link', 'source_changed', 'initial_compilation']
 ORIGINS = ['manual', 'bootstrap', 'retrieval', 'daily', 'weekly']
 STATES = ['queued', 'leased', 'planned', 'needs_review', 'deferred', 'conflict', 'failed',
-    'uncertain', 'superseded', 'no_change', 'applied_pending_verify', 'succeeded']
+    'uncertain', 'superseded', 'assessed', 'no_change', 'applied_pending_verify', 'succeeded']
 ACTIVE = ('queued', 'leased', 'planned', 'needs_review', 'deferred', 'uncertain', 'applied_pending_verify')
 ERRORS = ['external_failed', 'unsupported_evidence', 'source_unavailable', 'source_incomplete',
     'concurrent_edit', 'retry_exhausted', 'budget_exhausted', 'model_usage_unknown']
@@ -76,7 +76,9 @@ PROPOSAL = record({'policy_revision': integer(0, 2147483646), 'origin': {'enum':
     'target': {'anyOf': [TARGET, {'type': 'null'}]},
     'source_label': {'type': 'string', 'maxLength': 160}},
     ['policy_revision', 'origin', 'reason', 'topic_key', 'source_bindings'])
-CLAIM = record({'kind': {'enum': ORIGINS}, 'cycle_key': KEY, 'lease_owner': KEY,
+from .project_schema import LEASE as PROJECT_LEASE
+
+CLAIM = record({'project_lease': PROJECT_LEASE,'kind': {'enum': ORIGINS}, 'cycle_key': KEY, 'lease_owner': KEY,
     'policy_revision': integer(0, 2147483646), 'task_limit': integer(1, 20),
     'review_task_ids': {'type': 'array', 'minItems': 1, 'maxItems': 20, 'items': UUID, 'uniqueItems': True},
     'review_authorization_ref': KEY},
