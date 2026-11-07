@@ -1,5 +1,33 @@
 # C0 roadmap
 
+## OpenAI System One scoring — current-base successor
+
+Based on original main `c16eb49f0cfa3fb428d96dfff42222862f809289`, preserving
+accepted M3 contracts/tests, schema0034 and managed-file/dependency-lock state.
+The frozen previous-base candidate `c5809e3dd4a2558953880d17ce1c7639823e35b3`
+and full42375273513 remain previous-base evidence:2959 Python/PostgreSQL/packaging,
+40 document-browser,27 website-browser cases and Debian native21 pass. Its full
+run remains uncancelled. It does not establish acceptance on this new base.
+
+Replace JEV/Kev with OpenAI Decisions named predicate probabilities, retaining
+search interfaces, configuration format, authorization, provider bounds and
+ordinary-ranking fallback. Empty candidates complete scoring without I/O.
+Producer Core0.42 reserves a separate immutable release from M3's0.41 candidate.
+Scoring adds no migration or runtime dependency; the base's schema0034 publication
+metadata migration still requires genuine upgrade/restore and consumer acceptance.
+Existing scorer descriptors require explicit endpoint/model/key replacement;
+empty native forms suggest OpenAI. Maintenance stays disabled and no project,
+compiler, ingestion or external schedule is initialized.
+
+Acceptance covers complete named answers, malformed/refused responses, bounds,
+TLS/deadlines, rerank/filter/empty results, in-flight revocation, REST/MCP, native
+settings and disposable HTTPS/update/restore/browser fixtures. Exact current-base
+baseline/candidate and full/native/artifact gates remain required. Publication,
+released consumer tag/range/lock adoption and dedicated deployment are separate.
+After operator key configuration, reuse the existing full SciFact corpus for
+text/semantic/hybrid with off/rerank/filter:300 queries per cell, limit50,
+graph0, source-only, one repetition and a frozen threshold. Reports stay private.
+
 ## Knowledge compilation — M3 candidate
 
 M2 is accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89), original main

@@ -43,13 +43,13 @@ def test_fixture_quality_cost_and_latency(indexed):
         scorer_calls = []
         def scores(request):
             body = json.loads(request.content); scorer_calls.append(body)
-            meaning = 'engine maintenance' if body['state']['query'] == 'automobile' else 'cash transfer'
+            meaning = 'engine maintenance' if json.loads(body['input'])['query'] == 'automobile' else 'cash transfer'
             helpful = strategy == 'hybrid_helpful'
-            return httpx2.Response(200, json={'model': body['model'], 'answers': {'r' + str(i): {'type': 'noul',
-                'noul': .9 if ((meaning in candidate['text']) == helpful) else .1}
-                for i, candidate in enumerate(body['state']['candidates'])}})
+            return httpx2.Response(200, json={'model': body['model'], 'answers': [{'name': 'r' + str(i), 'type': 'predicate',
+                'probability': .9 if ((meaning in candidate['text']) == helpful) else .1}
+                for i, candidate in enumerate(json.loads(body['input'])['candidates'])]})
         service.scorer_mode = 'rerank' if strategy.startswith('hybrid_') else 'off'
-        service.scorer = SystemOneClient(ScorerSettings('https://scorer.example.test/v1/systemone', 'kev-mock'),
+        service.scorer = SystemOneClient(ScorerSettings('https://scorer.example.test/v1/decisions', 'gpt-6-luna'),
                                         transport=httpx2.MockTransport(scores)) if service.scorer_mode != 'off' else None
         recalls, precisions, evidence, timings, candidates, scored, bytes_sent = [], [], [], [], [], [], []
         for query in relevant:

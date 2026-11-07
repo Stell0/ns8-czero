@@ -263,6 +263,17 @@ before label audit; completed benchmarks report unmet targets as results.
 Synthetic question labels, derived
 knowledge and original evidence remain distinct; model traces stay private.
 
+Optional System One scoring uses the [OpenAI Decisions API](https://developers.openai.com/api/docs/guides/decisions).
+In native settings, configure `https://api.openai.com/v1/decisions`, model
+`gpt-6-luna` and a dedicated OpenAI API key. Select **Filter** to permit both
+filter and rerank requests, or **Rerank** to permit reranking only. Scoring stays
+off by default. Requests score at most sixteen candidate excerpts of 2 KiB each;
+reranking preserves the unscored tail, while filtering returns only scored hits
+at or above the configured threshold (default 0.7). Calibrate with your corpus.
+Provider failures disclose fallback and preserve ordinary ranking. JEV/Kev's
+former protocol is removed: explicitly replace its endpoint, model and key.
+Changing an endpoint clears its saved key unless a replacement is supplied.
+
 For standard dataset retrieval measurements against an existing C0 instance, use
 the repository-only [BEIR benchmark](benchmarks/retrieval/README.md). It submits
 originals to background extraction, verifies the complete corpus, then performs

@@ -48,17 +48,17 @@ def test_embedding_missing_rate_limit_and_model_mismatch_preserve_text_results(i
         assert fallback['hits']==before and fallback['retrieval_method']=='text' and fallback['fallback_reason']==reason
 
 
-@pytest.mark.parametrize('model',['jev-1.13','kev-mock'])
+@pytest.mark.parametrize('model',['gpt-6-luna'])
 def test_scorer_rerank_filter_and_outage_keep_ordinary_ranking(indexed,model):
     service,wiki=configured(indexed)
     create_page(wiki,title='Low',body='alpha')
     wanted=create_page(wiki,title='Wanted',body='alpha useful context')
-    settings=ScorerSettings('https://score.example.test/v1/systemone',model,threshold=.7)
+    settings=ScorerSettings('https://score.example.test/v1/decisions',model,threshold=.7)
     def reply(request):
         body=json.loads(request.content)
-        return httpx2.Response(200,json={'model':model,'answers':{
-            'r'+str(i):{'type':'noul','noul':.9 if 'Wanted' in c['text'] else .1}
-            for i,c in enumerate(body['state']['candidates'])}})
+        return httpx2.Response(200,json={'model':model,'answers':[
+            {'name':'r'+str(i),'type':'predicate','probability':.9 if 'Wanted' in c['text'] else .1}
+            for i,c in enumerate(json.loads(body['input'])['candidates'])]})
     service.scorer=SystemOneClient(settings,transport=httpx2.MockTransport(reply));service.scorer_mode='filter'
     ordinary=service.search(wiki[1],'alpha',mode='text',rerank='off')['hits']
     reranked=service.search(wiki[1],'alpha',mode='text',rerank='rerank')
@@ -108,8 +108,8 @@ def test_revocation_during_scoring_is_denied_and_network_has_no_held_db_connecti
         assert service.database.engine.pool.checkedout()==0
         acl.set_role(wiki[1],member['id'],None)
         body=json.loads(request.content)
-        return httpx2.Response(200,json={'model':'kev-mock','answers':{key:{'type':'noul','noul':.9} for key in body['questions']}})
-    service.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone','kev-mock'),transport=httpx2.MockTransport(reply))
+        return httpx2.Response(200,json={'model':'gpt-6-luna','answers':[{'name':q['name'],'type':'predicate','probability':.9} for q in body['questions']]})
+    service.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(reply))
     service.scorer_mode='rerank'
     with pytest.raises(PermissionDenied):service.search(Actor(member['id'],Role.READER),'alpha',mode='text')
 
@@ -120,3 +120,13 @@ def test_graph_label_match_with_no_evidence_hits_handles_empty_uuid_filters(inde
     result=service.search(wiki[1],'Unique graph entity',mode='text',graph_depth=1)
     assert result['hits']==[] and result['fallback_reason'] is None
     assert result['graphs'][0]['root']==root['id']
+
+@pytest.mark.parametrize('selection',['rerank','filter'])
+def test_empty_candidates_complete_scoring_without_network(indexed,selection):
+    service,wiki=configured(indexed)
+    def unexpected(_):pytest.fail('Empty retrieval must not call the scorer')
+    service.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(unexpected))
+    service.scorer_mode='filter'
+    result=service.search(wiki[1],'nonexistentuniqueterm',mode='text',rerank=selection)
+    assert result['hits']==[] and result['retrieval_method']=='text+'+selection
+    assert result['scored_count']==0 and result['fallback_reason'] is None
