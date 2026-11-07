@@ -34,7 +34,7 @@ def test_provider_free_search_sources_and_current_wiki_have_exact_stable_citatio
     assert chunk['citation']['source_hash']==version['content_hash']
     assert chunk['id']==chunk['citation']['chunk_id'] and chunk['content_hash']==chunk['citation']['content_hash']
     assert service.search(wiki[1],query)==result
-    assert service.search(wiki[1],query,kind='wiki')['hits']==[page_hit]
+    assert [{k:v for k,v in h.items() if k!='score'} for h in service.search(wiki[1],query,kind='wiki')['hits']]==[{k:v for k,v in page_hit.items() if k!='score'}]
     assert service.search(wiki[1],query,limit=1)['hits']==result['hits'][:1]
     for mode in ('semantic','hybrid'):
         fallback=service.search(wiki[1],query,mode=mode)

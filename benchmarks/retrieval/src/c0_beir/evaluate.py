@@ -41,12 +41,14 @@ class ReadOnly:
 
 def table(summary):
     keys = ('ndcg_at_10', 'recall_at_10', 'mrr_at_10', 'recall_at_5', 'precision_at_10',
-            'hit_at_1', 'hit_at_5', 'hit_at_10', 'map_at_10', 'duplicate_chunk_rate')
-    labels = ('nDCG@10', 'Recall@10', 'MRR@10', 'Recall@5', 'P@10', 'Hit@1', 'Hit@5', 'Hit@10', 'MAP@10', 'Duplicates')
+            'hit_at_1', 'hit_at_5', 'hit_at_10', 'map_at_10', 'duplicate_chunk_rate',
+            'empty_result_rate', 'returned_candidate_recall', 'oracle_ndcg_at_10', 'distinct_document_count')
+    labels = ('nDCG@10', 'Recall@10', 'MRR@10', 'Recall@5', 'P@10', 'Hit@1', 'Hit@5', 'Hit@10', 'MAP@10', 'Duplicates',
+              'Empty rate', 'Returned recall', 'Oracle nDCG@10', 'Distinct docs')
     lines = ['| Requested | Status | Effective | ' + ' | '.join(labels) + ' | P50 ms | P95 ms | Errors | Fallbacks |',
              '|---|---|---|' + '---:|' * (len(keys) + 4)]
     for name, mode in summary['modes'].items():
-        values = [f'{mode["metrics"][key]:.4f}' if mode.get('metrics') else '—' for key in keys]
+        values = [f'{mode["metrics"][key]:.4f}' if mode.get('metrics') and key in mode['metrics'] else '—' for key in keys]
         times = [f'{mode[key]:.1f}' if mode.get(key) is not None else '—' for key in ('p50_ms', 'p95_ms')]
         lines.append('| ' + ' | '.join([name, mode['status'], ', '.join(mode.get('effective_modes', {})) or '—',
                                        *values, *times, str(mode.get('errors', 0)), str(mode.get('fallbacks', 0))]) + ' |')
@@ -59,7 +61,7 @@ def report(summary, queries):
              f"{summary['query_count']} eligible queries ({summary['all_query_count']} query records).",
              f"Dataset fingerprint: `{summary['dataset_fingerprint']}`. Corpus receipt: `{summary.get('corpus_hash', '')}`.",
              '', table(summary), '', '## Configuration and availability', '',
-             '```json', json.dumps({key: summary[key] for key in ('instance', 'config', 'index_before', 'index_after', 'modes')},
+             '```json', json.dumps({key: summary[key] for key in ('instance', 'config', 'index_before', 'index_after', 'modes', 'ingestion_timings', 'lexical_index_bytes', 'lexical_index_size_status')},
                                    indent=2, sort_keys=True), '```', '', '## Worst queries', '']
     first = [q for q in queries if q.get('repetition') == 0 and q.get('metrics')]
     for mode in summary['modes']:
@@ -92,6 +94,9 @@ def evaluate(client, dataset, manifest, output, *, modes=('text', 'semantic', 'h
                             'account_id': client.config['account_id'], 'capabilities': client.capabilities,
                             'version': getattr(client, 'benchmark_version', {'status': 'unreported'})},
                'index_before': None, 'index_after': None, 'modes': {}, 'issues': [],
+               'ingestion_timings': manifest.get('timings'),
+               'lexical_index_bytes': None,  # Not exposed by the read-only public API.
+               'lexical_index_size_status': 'unreported',
                'environment': {'python': platform.python_version(), 'benchmark': '0.1.0',
                                'ingestion': version('c0-ingestion-samples'),
                                'mcp': version('mcp'), 'httpx2': version('httpx2'),
@@ -163,7 +168,8 @@ def evaluate(client, dataset, manifest, output, *, modes=('text', 'semantic', 'h
                             for key, value in counters.items():
                                 usage[provider + '.' + key] += value
                         row.update(status='measured' if valid else 'fallback', effective_mode=result['retrieval_method'],
-                                   lexical_strategy=result.get('lexical_strategy'), fallback_reason=result.get('fallback_reason'),
+                                   lexical_strategy=result.get('lexical_strategy'),
+                                   lexical_ranker_version=result.get('lexical_ranker_version'), fallback_reason=result.get('fallback_reason'),
                                    fallback_reasons=result.get('fallback_reasons', []), candidate_count=result.get('candidate_count'),
                                    scored_count=result.get('scored_count'), scorer_truncated_candidates=result.get('scorer_truncated_candidates'),
                                    provider_usage=result.get('provider_usage', {}), documents=ranking,

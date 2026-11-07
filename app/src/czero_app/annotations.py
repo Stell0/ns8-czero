@@ -206,7 +206,8 @@ class StructuredResult(BaseModel):
     scored_count: int
     scorer_truncated_candidates: int
     provider_usage: dict[str, dict[str,int]]
-    lexical_strategy: Literal['websearch','relaxed'] | None = None
+    lexical_ranker_version: str | None = None
+    lexical_strategy: Literal['websearch','relaxed','bm25'] | None = None
 
 
 _PREFIX = '/api/v1/knowledge/annotations/'

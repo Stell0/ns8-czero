@@ -30,7 +30,7 @@ def test_question_search_opens_complete_current_document_and_loses_access(live,b
     version=live.upload(body,title='Complete mail backup manual')
     query='How can I enable scheduled backup in Example Mail 8?'
     result=live.client.call('knowledge_search',options={'query':query,'mode':'text','rerank':'off','kind':'source'})
-    assert result['lexical_strategy']=='relaxed' and result['retrieval_method']=='text'
+    assert result['lexical_strategy']=='bm25' and result['retrieval_method']=='text'
     citation=result['hits'][0]['citation']
     browser.goto(live.origin+'/search?'+urlencode({'space_id':live.space}))
     browser.get_by_role('search').get_by_role('textbox').fill(query)

@@ -13,7 +13,8 @@ from .wiki import _view,KnowledgeNotFound
 from .embeddings import EmbeddingStore
 from .knowledge import KnowledgeService
 from .providers import ProviderUnavailable
-from .lexical import SOURCE_CONTEXT,select_lexical
+from .lexical import select_lexical
+from .bm25 import RANKER_VERSION,search_documents
 
 
 def excerpt(body,query,*,origin=0):
@@ -43,12 +44,16 @@ def hit_key(hit):
     return hit['kind']+':'+str(hit['id'])
 
 
-def reciprocal_rank_fusion(*rankings):
+def document_key(hit):
+    return ('source:' if hit['kind']=='chunk' else 'wiki:')+str(hit['resource_id'])
+
+
+def reciprocal_rank_fusion(*rankings, document_level=False):
     hits={};scores={}
     for ranking in rankings:
         seen=set();rank=0
         for hit in ranking:
-            key=hit_key(hit)
+            key=document_key(hit) if document_level else hit_key(hit)
             if key in seen:continue
             seen.add(key);rank+=1;hits.setdefault(key,hit);scores[key]=scores.get(key,0.)+1./(60+rank)
     return [{**hits[key],'score':scores[key]} for key in sorted(hits,key=lambda k:(-scores[k],k))]
@@ -87,12 +92,17 @@ class SearchService(SpaceBound):
                 'revision':data['number'],'slug':data['slug'],'content_hash':data['content_hash']}}
 
     def _text(self,connection,query,*,limit,kind):
+        rows=search_documents(connection,query,space=self._space(connection),limit=limit,kind=kind)
+        if rows is not None:
+            return [{**(self._source_hit(connection,row['id'],query) if row['kind']=='chunk'
+                        else self._wiki_hit(connection,row['id'],query)),
+                     'score':float(row['rank'])} for row in rows],'bm25'
         def fetch(lexical):
             return connection.execute(text(f'''SELECT * FROM (
-            SELECT c.id,'chunk' AS kind,{lexical.rank('c.search_vector',context=SOURCE_CONTEXT)} AS rank
+            SELECT c.id,'chunk' AS kind,{lexical.rank('c.search_vector')} AS rank
             FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND {lexical.match('c.search_vector',context=SOURCE_CONTEXT)}
+            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND {lexical.match('c.search_vector')}
             UNION ALL
             SELECT r.id,'wiki_revision' AS kind,{lexical.rank('r.search_vector')} AS rank
             FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
@@ -167,7 +177,7 @@ class SearchService(SpaceBound):
                         self._authorize(connection,actor)
                         semantic=self._semantic(connection,embedded['vectors'][0],query,kind)
                     if semantic:
-                        hits=semantic if desired=='semantic' else reciprocal_rank_fusion(ordinary,semantic)
+                        hits=semantic if desired=='semantic' else reciprocal_rank_fusion(ordinary,semantic,document_level=True)
                         method=desired
                     else:failures.append('embedding_no_candidates')
                 except ProviderUnavailable as error:failures.append('embedding_'+error.reason)
@@ -210,4 +220,5 @@ class SearchService(SpaceBound):
         return _view({'hits':hits[:limit],'retrieval_method':method,'fallback_reason':failures[0] if failures else None,
             'fallback_reasons':failures,'requested_mode':mode,'candidate_count':candidate_count,'scored_count':scored_count,
             'scorer_truncated_candidates':truncated,'provider_usage':usage,'graphs':graphs,
-            'lexical_strategy':lexical_strategy if method.startswith(('text','hybrid')) else None})
+            'lexical_strategy':lexical_strategy if method.startswith(('text','hybrid')) else None,
+            'lexical_ranker_version':RANKER_VERSION if lexical_strategy=='bm25' and method.startswith(('text','hybrid')) else None})

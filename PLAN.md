@@ -1,5 +1,43 @@
 # C0 roadmap
 
+## Document BM25 — producer candidate
+
+The successor starts from original main `7e6379260098eb80b0818a5ddcb1d80704ef289e`,
+retaining OpenAI scoring, M3, the released app/Core lock and managed-file state.
+The earlier development checkpoint `ddb9421` and its private diagnostic runs
+remain preserved. Core0.43/schema0035 adds transactional body-free document
+lengths and term frequencies, English/Italian normalization and document BM25.
+Exact phrases/operators and structured selection retain their constraints.
+Source-only responses preserve their citation-list shape; hybrid fuses document
+rankings before returning original chunk evidence. Plugin1.6.1 describes the
+optional ranker metadata without changing connection identity or scopes.
+
+SciFact's already-inspected 300 questions are development evidence. Acceptance
+requires nDCG@10≥0.60, Recall@10≥0.65, empty≤10%, and text P95≤1.5× a matched
+contemporaneous baseline. Freeze a candidate before untouched NFCorpus queries;
+require no aggregate quality regression. Hybrid must remain within0.01 nDCG@10
+of both baseline hybrid and semantic-only. Existing documentation and bilingual
+technical fixtures remain required. Preserve failed measurements and thresholds.
+
+Local development measurement on all 5,183 SciFact documents and 300 queries
+passes the text thresholds: nDCG@10 0.6782, Recall@10 0.8073, six empty results,
+and P95 166.2ms against a matched baseline 166.8ms. The baseline scores
+0.3098/0.3372 with156 empty results; fresh citation UUID tie order accounts for
+its small nDCG difference from the original0.3101 run. Returned-document recall
+is0.8802 and oracle nDCG@10 is0.8819 at limit50. Schema backfill takes33.68s;
+lexical tables/indexes occupy104,652,800 bytes. These are local Core measurements,
+not public HTTP/native or production acceptance. Earlier slow candidates and
+original evidence remain private and frozen. Query-plan/JIT corrections preserve
+quality and runtime deadlines. Untouched-base testing also reproduces a scale
+fixture cleanup timeout; bounded test-only deletion batches retain every row
+check and the five-second deadline.
+
+Quality, exact-source full PostgreSQL/packaging/browser/native acceptance,
+upstream merge gate, immutable Core publication and separate released-consumer
+adoption are pending. Production deployment remains separately authorized;
+installed images, private datasets, credentials and schedules are unchanged.
+See [retrieval contracts](docs/retrieval-benchmark.md).
+
 ## OpenAI System One scoring — current-base successor
 
 Based on original main `c16eb49f0cfa3fb428d96dfff42222862f809289`, preserving
