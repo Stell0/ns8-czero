@@ -28,6 +28,36 @@ After operator key configuration, reuse the existing full SciFact corpus for
 text/semantic/hybrid with off/rerank/filter:300 queries per cell, limit50,
 graph0, source-only, one repetition and a frozen threshold. Reports stay private.
 
+The current-base implementation `58cbb82301dcbd6814cac22db2e4abb646f3acc8`
+passes [full/native acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42380719326):
+2992 Python/PostgreSQL/packaging, 40 document-browser, 27 website-browser and 28
+website unit cases. Independent downloaded grading passes Debian 21, Rocky 26 with
+three expected skips, eight native browser/privacy workflows, 30 accessibility
+contexts and five security scans. The optional Rocky screenshot publication
+failure remains preserved. Full exact-source promotion passes; [PR93](https://github.com/Stell0/ns8-czero/pull/93)
+regularly merges as `7e6379260098eb80b0818a5ddcb1d80704ef289e` with the same tree.
+
+[Core 0.42.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.42.0)
+is immutably published from that tested source after
+[publisher 42385896972](https://github.com/Stell0/ns8-czero/actions/runs/42385896972).
+Downloaded SHA256SUMS matches: wheel
+`27be1db04b68f06f1211a49474a42a5a53e8b2423736429347f0e7d53dfd711a`,
+archive `10d903961937221f1dbb33575e479e4cba104c90966e85ddb5bd505bfea051e3`.
+Fresh external wheel/archive installs verify independence, packaged schema0034 and
+the Decisions protocol; rebuilds with the publisher's umask reproduce both bytes.
+The earlier host-umask mismatch is retained as diagnostic evidence.
+
+App0.61 adopts the immutable released tag and frozen Git lock with
+`>=0.42.0,<0.43.0` and matching patch-only updater bounds. No other dependency,
+Core package byte or managed-file comparison changes. The consumer runtime probe
+checks the actual released Git source, schema0034 and all 19 compilation routes.
+Released-Git validation passes 140 scoring/PostgreSQL/REST/current and legacy
+MCP SDK/maintenance/migration cases. Pinned Node24/Renovate bounds,28 native
+controllers,schemas,21 Robot dry runs and390 documentation links pass.
+Consumer/full/native/main publication and dedicated backup/update/live acceptance
+remain required before declaring delivery. The accepted dedicated baseline below
+remains installed; scoring and the private benchmark wait for operator key setup.
+
 ## Knowledge compilation — M3 candidate
 
 M2 is accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89), original main
