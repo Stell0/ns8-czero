@@ -30,11 +30,54 @@ immutably published at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea` by
 after exact-source full promotion verification. Downloaded release checksums pass:
 wheel `91bf421a1cdc713504063835a8582923c168163f9727f19fc170fc40b8780f5d`,
 archive `5efcfdc45894b5a26a9489d549db5ffde23ca40eca71fb9c1db78149fb4e9352`.
-App0.62 adopts its immutable tag/lock with patch-only updater bounds in a
-separate consumer change. Core package bytes remain identical to the release.
-Consumer/full/native/main gates remain pending. Native upgrade uses the recorded
+App0.62 adopts its immutable tag/lock with patch-only updater bounds through
+[PR100](https://github.com/Stell0/ns8-czero/pull/100), regularly merged as
+`59fcc3cf6b89799ba121a50e5721ac45a3e36df5`. Its tracked tree exactly matches
+accepted consumer `694deda39285028a0af16d4aea474af5f9099f76`. Core package bytes
+remain identical to the release. Native upgrade uses the recorded
 app0.61/Core0.42/schema0034 predecessor at827fbde; producer native evidence
 retains the older 0.54 history-to-latest-only migration proof.
+
+Consumer [full42408184499](https://github.com/Stell0/ns8-czero/actions/runs/42408184499),
+actual C0 merge gate, exact-source full promotion proof and independent downloaded
+artifact audit pass. Both local and CI runs pass all 3,058 Python/PostgreSQL/packaging
+cases and 40 document-browser cases. Debian 21 and Rocky 26/three expected skips,
+eight reader workflows, 30 accessibility contexts, five scan/SBOM pairs and all
+three installed image identities pass with zero OAuth-query candidates. Optional
+screenshot publication failed; required native/artifact checks and the overall
+workflow passed. The actual published app image verifies Core's released Git
+commit/schema, and independent registry reads verify all three digests and
+module sibling references. No database tests were skipped.
+
+Freeze consumer tag
+`ci-694deda39285028a0af16d4aea474af5f9099f76-42408184499-1`:
+
+| Image | Accepted consumer digest |
+| --- | --- |
+| Module | `sha256:5c5c817347ad453e2ef09bbbf6d96e64602b2c47d9fc52be1df1b7ce6eb6412d` |
+| App | `sha256:6189f4121443feac6b747b2d13bc9fc0442e9d6e542397fbcce481a1af8922dc` |
+| PostgreSQL | `sha256:64ee9785eb58ea9e6f4dd0334970c6d1b08d9c5c962a8a78eda2a1efba53c494` |
+
+Producer-main [42407246728](https://github.com/Stell0/ns8-czero/actions/runs/42407246728)
+passes full/native/browser/artifact gates, canonical publication, independent
+artifact audit, exact-source promotion and six fresh registry alias reads.
+Consumer-main [42413222963](https://github.com/Stell0/ns8-czero/actions/runs/42413222963)
+also passes full/native/browser/artifact gates and canonical publication.
+Independent downloaded reports confirm Debian 21, Rocky 26/three expected skips,
+eight reader workflows, 30 accessibility contexts, five scan/SBOM pairs, all
+three installed identities and zero OAuth-query candidates. Actual main passes
+3,058 Python/PostgreSQL/packaging and 40 browser cases; the published app image
+verifies the released Git Core. Exact-source full promotion proof and six fresh
+`main`/`latest` registry reads pass. Freeze the accepted main tag and identities;
+this documentation closeout does not replace or deploy production images.
+
+`ci-59fcc3cf6b89799ba121a50e5721ac45a3e36df5-42413222963-1`:
+
+| Image | Accepted main digest |
+| --- | --- |
+| Module | `sha256:94c341a2cd9217cbe6c7a2637000d4a8f58c14e5a42f0b313bfdd0a8b0b8e13e` |
+| App | `sha256:92222434751765ad020bb06f4e7093d514474b033e4192e153260f5d02b872cd` |
+| PostgreSQL | `sha256:4629070c3acba1995bfb42af1db253011efc9266648d0bf4723469fc15de3f1a` |
 
 Final matched current-base measurements freeze lexical, retrieval and citation
 helpers from b8ec5bf for the baseline. SciFact's 5,183 documents/300 queries score
