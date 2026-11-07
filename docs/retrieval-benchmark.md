@@ -1,8 +1,9 @@
 # Provider-free document retrieval
 
-Core 0.44 is a producer candidate using schema0036. Its publication, released
-consumer adoption and deployment gates are separate; existing installed images
-remain unchanged. The measured SciFact baseline below remains development evidence.
+Core 0.44.0 is immutably released at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea`
+using schema0036. Producer full/native/browser/packaging acceptance passes;
+app0.62 released-consumer acceptance remains separate from deployment. Existing
+installed images remain unchanged. The measured SciFact baseline below remains development evidence.
 
 Ordinary source/Wiki queries use OR eligibility with English and Italian stem
 variants and literal terms. `Bcl2`/`BCL-2` and `Tetraspanin-3`/`Tetraspanin 3`
@@ -111,11 +112,26 @@ Current-base candidate `fbae9a2` reproduces the quality scores but fails the
 SciFact latency gate: P95 286.0ms against149.4ms, exceeding1.5×. Its raw run
 remains frozen. The next candidate batches citation loading and generation
 checks; SQL count and exact citation regressions accompany that optimization.
-It requires new matched measurements without changing acceptance thresholds.
+The accepted successor passes new matched measurements without changing thresholds.
 
-Exact successor full/native acceptance,
-immutable publication and released-consumer adoption remain required. No
-production deployment is authorized by these measurements.
+The accepted producer `bb88250` preserves all document rankings and citation
+payloads while batching citation reads and final generation checks. Its exact
+current-base comparison freezes lexical, retrieval and citation modules from
+`b8ec5bf`; earlier batch timings with a shared citation helper remain diagnostic.
+
+| Final matched dataset | Baseline P95 ms | BM25 P95 ms | BM25 nDCG@10 | BM25 Recall@10 |
+| --- | ---: | ---: | ---: | ---: |
+| SciFact | 149.0 | 91.6 | 0.6782 | 0.8073 |
+| NFCorpus | 128.7 | 56.8 | 0.3206 | 0.1538 |
+| Documentation | 148.0 | 115.9 | 0.6631 | 0.8407 |
+
+The final migration check is idempotent, not a new indexing-time measurement.
+Documentation's mean wrong-product candidate count rises from 0.6 to 20.575;
+exact-version wrong hits remain zero. This tradeoff accompanies the unchanged
+evidence-coverage figures above. Current-source producer full/native acceptance
+and immutable publication pass; released-consumer gates remain separate. See
+[acceptance evidence](../PLAN.md#document-bm25--released-core-consumer-adoption).
+No production deployment is authorized by these measurements.
 
 ## Standard BEIR datasets
 

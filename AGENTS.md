@@ -8,6 +8,13 @@ and root-journal acceptance are recorded in
 CI tag/digests as the next genuine predecessor. Retain the prior `a8bb2e8`
 installation, immutable Core release and all earlier evidence.
 
+Core0.44.0 is immutably published at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea`
+after PR99's regular merge, full PostgreSQL/native/browser/artifact gates and
+publisher42407305955. It adds schema0036 document BM25 and preserves exact
+citations. App0.62 stages released tag/lock adoption; consumer/full/native/main
+gates remain separate. Production remains app0.61/Core0.42 as recorded above.
+See [BM25 acceptance](PLAN.md#document-bm25--released-core-consumer-adoption).
+
 ## Product purpose
 
 C0 is a self-hosted, shared second brain for people and AI assistants, and a foundation for applications built around that knowledge. Read [README](README.md) for the product story and [PLAN](PLAN.md#roadmap) for the current roadmap and acceptance order.

@@ -1,81 +1,82 @@
 # C0 roadmap
 
-## Document BM25 — producer candidate
+## Document BM25 — released Core, consumer adoption
 
-The successor starts from original main `b8ec5bfe8883168234535c4113f2e52c1b1d887e`,
-retaining app0.61/released Core0.42, M4 and managed-file state. Frozen candidate
-`4595054` and its full/native run remain preserved; its ranker and normalizer remain unchanged. M4 takes Core0.43/schema0035,
-so BM25 now follows as Core0.44/schema0036. Exact-retirement queries now quote their markers;
-the bilingual fixture retains an exact Italian control beside broader stemming.
-The earlier development checkpoint `ddb9421` and its private diagnostic runs
-remain preserved. Core0.44/schema0036 adds transactional body-free document
-lengths and term frequencies, English/Italian normalization and document BM25.
-Exact phrases/operators and structured selection retain their constraints.
-Source-only responses preserve their citation-list shape; hybrid fuses document
-rankings before returning original chunk evidence. Plugin1.7.1 describes the
-optional ranker metadata without changing connection identity or scopes.
+[PR99](https://github.com/Stell0/ns8-czero/pull/99) regularly merged as
+`1783cf6a1ad92edb1016488a87bd1e9769f90198`. Accepted producer
+`bb882504fb5ab3b94f10bd1d286b06fa81b004ea` is based on original main
+`b8ec5bfe8883168234535c4113f2e52c1b1d887e`, preserving M4. Core0.44/schema0036
+adds body-free document lengths/term frequencies, English/Italian normalization,
+ordinary OR matching and document BM25. Exact phrases/operators and structured
+filters remain constrained. Citations retain their bodies, hashes and offsets;
+source-only responses retain their citation-list shape. Hybrid fuses document
+rankings. Plugin1.7.1 documents optional ranker metadata without changing scopes.
 
-SciFact's already-inspected 300 questions are development evidence. Acceptance
-requires nDCG@10≥0.60, Recall@10≥0.65, empty≤10%, and text P95≤1.5× a matched
-contemporaneous baseline. Freeze a candidate before untouched NFCorpus queries;
-require no aggregate quality regression. Hybrid must remain within0.01 nDCG@10
-of both baseline hybrid and semantic-only. Existing documentation and bilingual
-technical fixtures remain required. Preserve failed measurements and thresholds.
+Exact producer full runs
+[42402100986](https://github.com/Stell0/ns8-czero/actions/runs/42402100986) and
+[42402272499](https://github.com/Stell0/ns8-czero/actions/runs/42402272499)
+pass, including the actual C0 merge gate: 3,058 Python/PostgreSQL/packaging,
+40 document-browser, 27 website-browser,28 Vue and 28 Node cases. Independent
+native/artifact audit passes Debian 21, Rocky 26/three expected skips, eight
+reader workflows, 30 accessibility contexts, five scan/SBOM pairs and all three
+installed image identities. Optional screenshot publication failed with 403;
+required native evidence and workflows passed. The local full run started
+before compiled website assets existed and failed 18 route/font cases; after
+building assets all 141 app cases pass. Clean CI supplies the full-suite proof.
 
-Frozen Core measurement on all 5,183 SciFact documents and 300 queries
-passes the text thresholds: nDCG@10 0.6782, Recall@10 0.8073, six empty results,
-and P95 175.6ms against a matched baseline 168.8ms. The baseline scores
-0.3098/0.3372 with156 empty results; fresh citation UUID tie order accounts for
-its small nDCG difference from the original0.3101 run. Returned-document recall
-is 0.8802 and oracle nDCG@10 is 0.8819 at limit 50. Schema backfill takes 33.68s;
-lexical tables/indexes occupy104,652,800 bytes. These are local Core measurements,
-not public HTTP/native or production acceptance. Earlier slow candidates and
-original evidence remain private and frozen. Query-plan/JIT corrections preserve
-quality and runtime deadlines. Untouched-base testing also reproduces a scale
-fixture cleanup timeout; bounded test-only deletion batches retain every row
-check and the five-second deadline.
+[Core0.44.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.44.0) is
+immutably published at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea` by
+[publisher42407305955](https://github.com/Stell0/ns8-czero/actions/runs/42407305955)
+after exact-source full promotion verification. Downloaded release checksums pass:
+wheel `91bf421a1cdc713504063835a8582923c168163f9727f19fc170fc40b8780f5d`,
+archive `5efcfdc45894b5a26a9489d549db5ffde23ca40eca71fb9c1db78149fb4e9352`.
+App0.62 adopts its immutable tag/lock with patch-only updater bounds in a
+separate consumer change. Core package bytes remain identical to the release.
+Consumer/full/native/main gates remain pending. Native upgrade uses the recorded
+app0.61/Core0.42/schema0034 predecessor at827fbde; producer native evidence
+retains the older 0.54 history-to-latest-only migration proof.
 
-The frozen candidate passes the first NFCorpus evaluation: all 3,633 documents
-and 323 queries score 0.3206 nDCG@10 /0.1538 Recall@10 versus 0.2365/0.1024,
-with 18 versus 82 empty results. That query set is now exposed; successor tests
-retain this evidence because the ranker and normalizer remain unchanged; full M4 integration
-acceptance is repeated.
-A matched fusion audit uses the same real 64 semantic candidates per SciFact
-query for all comparators: candidate hybrid 0.7388 versus baseline hybrid 0.7198
-and semantic-only 0.7133 nDCG@10. Recall is 0.8536/0.8592/0.8559 respectively.
-The capture completed all 300 queries and both corpus checks before a cleanup-only
-client error. A later incomplete probe is excluded. This is a ranking audit,
-not candidate end-to-end provider latency or production acceptance.
+Final matched current-base measurements freeze lexical, retrieval and citation
+helpers from b8ec5bf for the baseline. SciFact's 5,183 documents/300 queries score
+nDCG@10 0.6782 and Recall@10 0.8073 against 0.3098/0.3372; empty results fall
+from 156 to 6. P95 falls from 149.0ms to 91.6ms, passing the unchanged 1.5× ceiling.
+Returned-document recall is 0.8802, oracle nDCG@10 is 0.8819 and mean distinct
+documents is 48.68. Initial backfill takes 33.68s and occupies 104,652,800 bytes;
+final reruns' idempotent migration timing is not indexing time. SciFact was
+already development evidence. The original 0.3101 differs slightly because of
+fresh UUID ties in the recreated baseline.
 
-The original frozen full suite records 3,008 passes and seven failures. The
-successor quotes the deliberately exact retirement markers, updates the bilingual
-fixture, and scopes evaluator index allowances to requested content generations.
-The approved private copy now contains all251 current bodies and source
-metadata; its matched documentation comparison is running. Old label bindings
-remain retained and every passage must validate before a current binding is
-used. No queries, relevance labels, thresholds or access grants are changed.
+NFCorpus's 3,633 documents/323 queries score 0.3206/0.1538 against 0.2365/0.1024;
+empty results fall 82→18 and P95 128.7→56.8ms. Its first holdout run froze 4595054
+before evaluation; subsequent runs are exposed-set checks. Frozen semantic
+candidate arrays give hybrid nDCG 0.7388 against baseline 0.7198 and semantic-only
+0.7133, passing the 0.01 guardrail. Recall is 0.8536/0.8592/0.8559. All 300 queries
+and before/after corpus checks completed before a cleanup-only client error;
+an incomplete later probe is excluded. This ranking audit does not establish
+candidate provider latency or provider-profile stability throughout capture.
 
-The prior-base documentation comparison completes on all251 current documents
-and50 frozen questions. Fourteen document bindings changed; every original
-labelled passage still matches. Across45 queries with positive relevance labels,
-nDCG@10 rises from0.5250 to0.6631 and Recall@10 from0.6444 to0.8407. Empty
-results across all50 fall from11 to0. Existing answerable-query evidence coverage
-moves from0.7000 to0.6875, with complete evidence unchanged at0.6750. P95 moves
-from91.8ms to146.9ms; weak candidates increase, so neither empty results nor
-returned relevance proves answerability. Current M4 validation remains separate.
+The approved documentation copy contains 251 current bodies and metadata with 50
+unchanged questions. Fourteen bindings changed; every original labelled passage
+validates. For 45 positive-label queries nDCG rises 0.5250→0.6631 and Recall
+0.6444→0.8407; all 50 empty results fall 11→0 and P95 148.0→115.9ms. Answerable
+query evidence coverage moves 0.7000→0.6875; complete evidence stays 0.6750.
+Broader weak candidates increase wrong-product results, so relevance does not
+establish answerability. Labels, queries, thresholds and grants are unchanged.
 
-Current-base candidate `fbae9a2` retains identical quality, but fails the
-SciFact latency gate: P95 286.0ms versus149.4ms (1.91×). NFCorpus remains
-0.3206/0.1538 against0.2365/0.1024. Preserve that failed measurement. A successor
-batches citation loading and final current-generation checks, retaining exact
-citation payloads, order and post-provider authorization. Its measurements
-and full acceptance must pass independently; thresholds are unchanged.
+Preserve earlier candidates ddb9421, 4595054, 8090ab6, f1c4796, fbae9a2 and all failed
+runs. In particular fbae9a2 fails SciFact latency 286.0ms versus 149.4ms (1.91×).
+The accepted successor batches citations and current-generation checks, reducing
+round trips without changing document ranks or citation payloads. Early batch
+timings that shared its citation helper with the baseline remain diagnostic;
+the final comparison freezes all three baseline modules. See
+[retrieval contracts and measurements](docs/retrieval-benchmark.md).
 
-Quality, exact-source full PostgreSQL/packaging/browser/native acceptance,
-upstream merge gate, immutable Core publication and separate released-consumer
-adoption are pending. Production deployment remains separately authorized;
-installed images, private datasets, credentials and schedules are unchanged.
-See [retrieval contracts](docs/retrieval-benchmark.md).
+The owned private plugin received a content-only patch preserving its connection
+identity, scopes and other files. Refreshed account/space discovery, authorized
+search and exact citation reads pass against the installed runtime, which still
+reports its existing lexical strategy. This does not claim live BM25 acceptance.
+Production deployment remains separately authorized; this task leaves installed
+images, credentials, access grants and schedules unchanged.
 
 
 <a id="openai-system-one-scoring--current-base-successor"></a>

@@ -90,7 +90,9 @@ def main():
     try:
         if stage=='seed':
             assert not path.exists(),'Predecessor seed already exists; inspect its phase before retrying'
-            expected=seed(browser,profile,require_history=True)
+            expected=seed(browser,profile)
+            # The accepted predecessor already uses latest-only storage.
+            verify(browser,profile,expected)
             old=os.umask(0o077)
             try:path.write_text(json.dumps(expected))
             finally:os.umask(old)

@@ -24,11 +24,12 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0034_compilation_maintenance'
+assert SCHEMA_REVISION == '0036_document_bm25'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
 assert importlib.util.find_spec('czero_core.compilation') is not None
+assert importlib.util.find_spec('czero_core.bm25') is not None
 from fastapi import FastAPI
 from czero_core.compilation import CompilationService
 from czero_app.operations import OperationCatalog
