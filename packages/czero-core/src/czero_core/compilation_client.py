@@ -175,3 +175,120 @@ async def maintenance_step(call, space_id, claim, analyze, *, reserved_tokens, i
         'reviewed_source_ids':analysis['reviewed_source_ids'],'child_task_ids':children,
         'status':analysis['status'],'findings':analysis['findings'],
         **({'reviewed_ranges':analysis['reviewed_ranges']} if 'reviewed_ranges' in analysis else {})},'assessed')
+
+
+FEEDBACK_TOOLS = frozenset({'spaces_get','compilation_policy_get','compilation_source_bindings_get',
+    'compilation_propose','compilation_tasks_list','compilation_tasks_get',
+    'knowledge_search','wiki_pages_get'})
+
+
+async def feedback_after_answer(call, space_id, observation=None, *, answer_delivered=False,
+                                read_only=False, operation_names=(), idempotency_key=None,
+                                timeout_seconds=5):
+    """Optional, bounded external handoff after the host has delivered its answer.
+
+    Pass names from actual-scope c0://capabilities, not scope-upgrade tool discovery.
+    The host retains its opaque request key before I/O. No query/answer parameter,
+    model callback, publication, logging or automatic retry. Tool errors must raise.
+    A host without post-answer continuation skips this step.
+    """
+    import asyncio
+    import math
+    from uuid import UUID as UUIDValue
+    from .compilation_schema import PROPOSAL, SOURCE_SELECTION, TARGET, checked, key, record
+
+    if observation is None:
+        return {'outcome':'no_change','compiled':False}
+    if answer_delivered is not True or read_only is not False:
+        return {'outcome':'skipped','reason':'read_only_or_answer_not_delivered','compiled':False}
+    submitted=False; saved_id=None; calls=0
+    try:
+        if not FEEDBACK_TOOLS <= set(operation_names):
+            return {'outcome':'skipped','reason':'capability_unavailable','compiled':False}
+        if type(timeout_seconds) not in (int,float) or not math.isfinite(timeout_seconds) or not 0<timeout_seconds<=5:
+            raise ValueError('invalid_feedback_budget')
+        deadline=asyncio.get_running_loop().time()+timeout_seconds
+        schema=record({'reason':{'enum':PROPOSAL['properties']['reason']['enum'][:9]},
+            'topic_key':PROPOSAL['properties']['topic_key'],
+            'source_label':{'type':'string','minLength':1,'maxLength':160},
+            'selections':{'type':'array','minItems':1,'maxItems':3,'items':SOURCE_SELECTION},
+            'target':{'anyOf':[TARGET,{'type':'null'}]}},
+            ['reason','topic_key','source_label','selections'])
+        candidate=checked(schema,observation)
+        request_key=key(idempotency_key)
+        space_id=str(UUIDValue(str(space_id)))
+        if sum(len(s['chunk_ids']) for s in candidate['selections'])>32:
+            raise ValueError('feedback_evidence_budget')
+        target=candidate.get('target')
+        async def invoke(name,arguments):
+            nonlocal calls
+            if calls>=7: raise ValueError('feedback_call_budget')
+            calls+=1
+            return await call(name,{**arguments,'space_id':str(space_id)})
+        async with asyncio.timeout_at(deadline):
+            selected=await invoke('spaces_get',{})
+            if selected['id']!=space_id or selected['role'] not in ('editor','admin'):
+                return {'outcome':'skipped','reason':'space_not_writable','compiled':False}
+            policy=await invoke('compilation_policy_get',{})
+            config=policy['data']
+            if not config['enabled'] or not config['retrieval_feedback'] or 'page' not in config['allowed_target_kinds']:
+                return {'outcome':'skipped','reason':'feedback_disabled','compiled':False}
+            packet=await invoke('compilation_source_bindings_get',{'data':{'selections':candidate['selections']}})
+            bindings=sorted([{**s,'chunks':sorted(s['chunks'],key=lambda c:c['chunk_id'])}
+                for s in packet['source_bindings']],key=lambda s:s['logical_document_id'])
+            def matches(task):
+                return (task.get('purpose','knowledge')=='knowledge' and task['source_bindings']==bindings
+                    and task['profile_id']==config['profile_id'] and task['profile_version']==config['profile_version']
+                    and task['reason']==candidate['reason'] and task['target']==(target or {}))
+            async def inspect_wiki(task=None):
+                reference=target
+                if not reference and task:
+                    reference=next((r for r in (task.get('publication') or {}).get('records',[]) if r['kind']=='page'),None)
+                if reference:
+                    page=await invoke('wiki_pages_get',{'page_id':reference['id']})
+                    observed={'kind':'page','id':page['id'],'revision':page['revision'],
+                        'content_id':page['content']['id'],'content_hash':page['content']['content_hash']}
+                    if observed!={k:reference[k] for k in observed}:
+                        return 'target_changed'
+                else:
+                    nonlocal calls
+                    if calls>=7: raise ValueError('feedback_call_budget')
+                    calls+=1
+                    result=await call('knowledge_search',{'options':{'space_id':str(space_id),
+                        'query':candidate['source_label'],'kind':'wiki','limit':3,'mode':'text','rerank':'off','graph_depth':0}})
+                    if result['hits']: return 'wiki_resolution_required'
+                return None
+            listed=await invoke('compilation_tasks_list',{'topic_key':candidate['topic_key'],'limit':5})
+            if len(listed['tasks'])>5: raise ValueError('feedback_task_budget')
+            previous=next((t for t in listed['tasks'] if matches(t)),None)
+            if previous:
+                actual=await invoke('compilation_tasks_get',{'task_id':previous['id']})
+                if not matches(actual):
+                    return {'outcome':'deferred','reason':'task_changed','compiled':False}
+                issue=await inspect_wiki(actual)
+                if issue: return {'outcome':'deferred','reason':issue,'compiled':False}
+                return {'outcome':'existing','task_id':actual['id'],'task_revision':actual['revision'],
+                    'state':actual['state'],'compiled':False}
+            if listed.get('next_cursor'):
+                return {'outcome':'deferred','reason':'task_comparison_incomplete','compiled':False}
+            issue=await inspect_wiki()
+            if issue: return {'outcome':'deferred','reason':issue,'compiled':False}
+            proposal={'policy_revision':policy['revision'],'origin':'retrieval',
+                'reason':candidate['reason'],'topic_key':candidate['topic_key'],
+                'source_label':candidate['source_label'],'source_bindings':bindings,'target':target}
+            submitted=True
+            saved=await invoke('compilation_propose',{'data':{'data':proposal,'idempotency_key':request_key}})
+            if saved.get('outcome')=='deferred_capacity' and 'task' not in saved:
+                return {'outcome':'deferred','reason':'queue_capacity','compiled':False}
+            saved_id=saved['task']['id']
+            actual=await invoke('compilation_tasks_get',{'task_id':saved_id})
+            if (actual['id']!=saved_id or actual.get('purpose','knowledge')!='knowledge'
+                    or actual['source_bindings']!=bindings):
+                raise ValueError('feedback_readback_mismatch')
+            return {'outcome':'proposed','task_id':actual['id'],'task_revision':actual['revision'],
+                'state':actual['state'],'proposal_outcome':saved['outcome'],'compiled':False}
+    except Exception:
+        # The answer is already delivered; never leak an exception or retry a write.
+        return {'outcome':'uncertain' if submitted else 'deferred',
+            'reason':'feedback_reconciliation_required' if submitted else 'feedback_unavailable',
+            'task_id':saved_id,'compiled':False}

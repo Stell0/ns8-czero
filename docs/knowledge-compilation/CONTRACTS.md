@@ -2,8 +2,9 @@
 
 These are normative design and acceptance contracts. M0 froze existing behavior;
 [M1](M1.md) implements coordination and [M2](M2.md) refines guarded publication.
-Later discovery, feedback and scheduling milestones remain unimplemented. Changes require a reviewed contract/version
-update. See [PLAN](PLAN.md) for ownership, SQL schema, budgets and milestone scope.
+[M3](M3.md) implements bounded discovery/maintenance; [M4](M4.md) adds the
+external after-answer proposal path. Scheduling remains a later milestone.
+Refinements require reviewed contract/version updates. See [PLAN](PLAN.md) for ownership, SQL schema, budgets and milestone scope.
 
 ## C1 — Authority and learning
 
@@ -285,3 +286,26 @@ project expiry/configuration changes fence compiler work too. Existing project
 semantic APIs and phases remain unchanged. Ordinary-space review uses their
 shared bounded rotating/risk-prioritized SQL selector, with its own durable cursor.
 A completed selected batch never establishes full-corpus coverage.
+
+
+## M4 additive feedback contract
+
+See [M4](M4.md). Search and its GET/MCP read annotations remain unchanged. The
+external `compilation_client.feedback_after_answer` accepts only a bounded
+source-backed observation after host-attested answer delivery. No query/answer/
+conversation/benchmark parameter, model callback or server hook is introduced.
+Missing actual Read+Write capabilities, explicit read-only tasks and disabled
+selected-space feedback skip learning. Current Wiki/source/task comparisons gate
+at most one existing `compilation_propose` and independent saved-task readback.
+
+A stable source-derived topic and current exact identities retain M1 deduplication.
+The seven-call/five-second handoff makes no publication or new model request, even
+under automatic-supported policy. Existing M2/M3 maintenance processes queued
+work under its own current policy, classification and budgets. Uncertain writes
+retain the caller's opaque replay identity; no retry or exception text is emitted.
+A saved proposal is pending work, never a compiled or verified factual assertion.
+Hosts unable to continue after the answer skip feedback rather than claiming
+background execution. No table, API operation, scope or connection ID
+is added. Schema0035 adds only a partial assessment-key index to repair an
+inherited M3 foreign-key/maintenance lookup;0034 is preserved and migrations
+retain all existing rows and authority. Older servers require only the actual operations used by queueing.

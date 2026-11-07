@@ -25,3 +25,8 @@ and assessment tools, use the compiler's maintenance protocol. Source assessment
 are durable work units, not Wiki pages. Retain fixed findings and canonical child
 proposal IDs; only fresh originals and actual verified children establish compiled
 progress. Configured projects share the existing host task and narrower scope.
+
+Operator-enabled after-answer retrieval feedback uses
+[the bounded proposal path](../../references/compiler.md#retrieval-feedback),
+not ordinary Wiki edits. Process those durable tasks through the common compiler
+under current policy and budgets; a queued observation is not compiled knowledge.
