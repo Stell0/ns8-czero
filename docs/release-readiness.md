@@ -4,7 +4,9 @@
 
 M21 implementation is in progress. **Documentation and skills release readiness is not yet accepted.** M19 runtime passes its recorded acceptance; reviewed closeout PR30 is merged as `0a9bbb3` and main39643655916 passes. The entry gate is complete. No stable NS8 release or public OpenAI listing is claimed.
 
-The end-user plugin template is version 1.1.0. The self-service follow-up targets app0.50.0 with published Core0.31.1/schema0019: default Shared Reader admission, persistent blocking, bounded connection approval and generated instance-specific downloads. The dedicated installation still runs the accepted predecessor until final candidate validation and deployment. Use [PLAN](../PLAN.md) for actual verified sources/digests, not an untested version number in this checklist.
+Current package inventory follows the source manifest and [installation guide](plugin.md). [M2 compiler acceptance](knowledge-compilation/M2.md) is separate from the outstanding web installation and rollout gates below.
+
+Historical M21 checkpoint: plugin template 1.1.0. The self-service follow-up targeted app0.50.0 with published Core0.31.1/schema0019: default Shared Reader admission, persistent blocking, bounded connection approval and generated instance-specific downloads. The dedicated installation still runs the accepted predecessor until final candidate validation and deployment. Use [PLAN](../PLAN.md) for actual verified sources/digests, not an untested version number in this checklist.
 
 ## Required evidence
 
