@@ -17,6 +17,11 @@ def measure(qrels, documents, chunk_count):
     dcg = sum(grade / math.log2(rank + 1) for rank, grade in enumerate(gains, 1))
     ideal = sum(grade / math.log2(rank + 1) for rank, grade in enumerate(sorted(qrels.values(), reverse=True)[:10], 1))
     hits = [key in positive for key in documents[:10]]
-    output.update(ndcg_at_10=dcg / ideal, precision_at_10=sum(hits) / 10,
+    returned = set(documents)
+    oracle = sorted((qrels.get(key, 0) for key in returned), reverse=True)[:10]
+    output.update(empty_result_rate=float(not documents), distinct_document_count=len(returned),
+                  returned_candidate_recall=len(positive & returned) / len(positive),
+                  oracle_ndcg_at_10=sum(grade / math.log2(rank + 1) for rank, grade in enumerate(oracle, 1)) / ideal,
+                  ndcg_at_10=dcg / ideal, precision_at_10=sum(hits) / 10,
                   map_at_10=sum(sum(hits[:rank]) / rank for rank, hit in enumerate(hits, 1) if hit) / len(positive))
     return output

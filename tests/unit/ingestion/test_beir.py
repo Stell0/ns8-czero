@@ -486,3 +486,16 @@ def test_ingestion_helper_rejects_report_exclusions_before_writes(prepared):
     with pytest.raises(C0Error, match='evaluation-only'):
         ingest(api, dataset, path)
     assert api.transport.write_calls == before
+
+
+def test_returned_candidate_recall_and_oracle_ceiling_include_below_top_ten():
+    from c0_beir.metrics import measure
+    ranking = ['irrelevant'+str(i) for i in range(10)] + ['relevant']
+    result = measure({'relevant':2,'missing':1}, ranking, 14)
+    assert result['ndcg_at_10'] == 0
+    assert result['returned_candidate_recall'] == .5
+    assert result['empty_result_rate'] == 0
+    assert result['distinct_document_count'] == 11
+    assert result['oracle_ndcg_at_10'] == pytest.approx(2/(2+1/__import__('math').log2(3)))
+    empty = measure({'relevant':1}, [], 0)
+    assert empty['empty_result_rate'] == 1 and empty['oracle_ndcg_at_10'] == 0

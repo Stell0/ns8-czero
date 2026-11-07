@@ -242,3 +242,15 @@ content_hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 With exclusions, the server must advertise the source-specific `source_indexed`
 count. Total source-plus-Wiki counts cannot establish source coverage.
 Reports record exclusions and retain exact corpus/citation checks.
+
+## Document lexical ranker provenance
+
+Reports record optional `lexical_strategy` and `lexical_ranker_version` per query.
+Ordinary BM25 source results provide one original chunk per ranked document;
+explicit queries and older servers can still return multiple chunks per source.
+The public response limit remains unchanged. Returned-candidate recall and oracle
+nDCG@10 use only distinct documents actually returned within that limit, not the
+server's larger internal candidate count. Empty-result rate and distinct-document
+counts accompany the existing quality/latency metrics. Ingestion timings come from
+the frozen receipt; index byte size is explicitly unreported by the public API
+and requires separately saved, authorized operator evidence.

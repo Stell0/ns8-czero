@@ -56,8 +56,8 @@ def test_real_publisher_staged_retired_and_unchanged_vectors(logical):
         with documents.database.engine.begin() as connection:
             assert connection.execute(text('SELECT count(*) FROM c0_embeddings WHERE source_chunk_id=ANY(CAST(:ids AS uuid[]))'),{'ids':list(old_ids)}).scalar_one()==0
             store._index_batch(connection)
-        assert client.call('sources_search',query='OLD-ONLY-EVIDENCE')['citations']==[]
-        assert search.search(actor,'OLD-ONLY-EVIDENCE',mode='text')['hits']==[]
+        assert client.call('sources_search',query='"OLD-ONLY-EVIDENCE"')['citations']==[]
+        assert search.search(actor,'"OLD-ONLY-EVIDENCE"',mode='text')['hits']==[]
         for mode in ('text','semantic','hybrid'):
             hits=search.search(actor,'NEW-ONLY-EVIDENCE',mode=mode,rerank='off')['hits']
             assert hits and old_ids.isdisjoint(hit['id'] for hit in hits)

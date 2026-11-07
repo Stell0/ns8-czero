@@ -1,46 +1,53 @@
-# Provider-free question matching
+# Provider-free document retrieval
 
-Core 0.36.1 is independently published from merged source `8dbb746` after exact
-full/native acceptance and supplied wheel/archive tests. The app 0.57 consumer
-candidate selects its immutable tag and lock; consumer image/native acceptance
-and guarded deployment remain separate gates.
+Core 0.43 is a producer candidate using schema0035. Its publication, released
+consumer adoption and deployment gates are separate; existing installed images
+remain unchanged. The measured SciFact baseline below remains development evidence.
 
-Ordinary, filtered and source evidence search first run the existing PostgreSQL
-`simple` web-search query. Existing matches retain their ranking. If the eligible
-selection has no strict matches, an unquoted plain query with at least four
-lexemes can use bounded lexical recovery:
+Ordinary source/Wiki queries use OR eligibility with English and Italian stem
+variants and literal terms. `Bcl2`/`BCL-2` and `Tetraspanin-3`/`Tetraspanin 3`
+share ordered alphanumeric variants; different numbers remain distinct. Repeated
+query terms and stem aliases contribute once. Stop-only queries return no hits.
+The 512-character input bound remains; no query is silently truncated. Numbers,
+uppercase identifiers and weak matches in prose are relevance signals. Exact
+selection uses quoted phrases, explicit operators or existing structured filters.
+Explicit syntax retains PostgreSQL's existing strict interpretation.
 
-- Words on either standard PostgreSQL English/Italian stop list are omitted from
-  coverage. Remaining lexemes are neither stemmed nor translated.
-- Two to 32 distinct remaining terms are required; longer selections stay strict
-  without truncation. A candidate must match at least two and at least half.
-- Numeric terms, uppercase identifiers and punctuated technical names remain
-  mandatory. Current source provenance's declared product/version can supply
-  context, while candidate discovery still requires a real chunk match with a
-  GIN-indexable predicate. Annotation filters and space/current-generation predicates stay
-  mandatory.
-- Quoted phrases, `OR` and exclusions retain their original interpretation.
-  Forms containing `&`, `|`, `!`, uppercase `AND` or `NOT` also remain strict;
-  no SQL-style operator parser is added. Inline diagnostic punctuation such as
-  `Check(flag)` does not itself mean Boolean grouping.
+BM25 (`k1=1.2`, `b=0.75`) scores complete current source documents and Wiki
+revisions. Space, category, archive and annotation predicates restrict both
+candidates and corpus statistics before ranking. The top 64 documents supply
+existing source chunks, selected by query-term contribution with deterministic
+ID ties. Citation bytes, hashes and offsets are unchanged. Source-only pagination
+uses the same document ordering and retains its citation-list response. Multipart
+sources retain their existing identities. Hybrid uses document-level RRF with
+constant 60; semantic-only retrieval keeps its existing ranking.
 
-`knowledge_search` and its structured counterpart expose optional
-`lexical_strategy=websearch|relaxed`. Null means unreported or unused. Relaxation
-is still `retrieval_method=text`; semantic/hybrid provider fallbacks keep their
-separate reasons. Source-only search keeps its existing citation-list shape and
-chooses its strategy independently of pagination offset.
+Schema0035 stores document lengths and term frequencies with no additional body
+copies. A numbered PostgreSQL normalizer is shared by writes, queries and migration
+backfill. Derivatives follow complete-source publication and Wiki/title edits in
+one transaction. Foreign-key cascades retire old derivatives. Migration preserves
+all original document/chunk/revision identities and backfills retained bodies in
+bounded statements within its existing atomic migration transaction.
 
-This corrects zero-result lexical eligibility, not synonymy, translation or
-answer generation. Read the actual evidence. Missing metadata, acronyms absent
-from a body, separated chunk terms and incomplete relevance labels can still
-limit retrieval. Returned results do not establish abstention or clarification.
+Optional `lexical_strategy=websearch|relaxed|bm25` and
+`lexical_ranker_version` describe actual lexical behavior independently of provider
+modes. `bm25` remains text retrieval, without synonym expansion, translation or
+answer generation. A relevant document may contradict the query. Read its exact
+original evidence; relevance does not establish truth or a supported version.
+
+Acceptance requires SciFact nDCG@10 ≥0.60, Recall@10 ≥0.65, empty results ≤10%,
+and text P95 ≤1.5× a contemporaneous matched baseline. Previously inspected
+SciFact queries are development evidence. Freeze the candidate before untouched
+NFCorpus evaluation and require no aggregate nDCG/Recall regression. Hybrid must
+remain within 0.01 nDCG@10 of both its baseline and semantic-only comparator.
+Retain failing runs and revise candidates without changing these thresholds.
+Record returned-candidate recall, oracle nDCG ceiling, distinct documents,
+indexing time, index bytes and latency alongside corpus/provider provenance.
+Private selectors, labels, raw rankings and operational evidence stay outside Git.
 
 Use the [current-corpus runner](../samples/ingestion/examples/website/BENCHMARK.md)
-with private labels, matched budgets and corpus guards. Preserve original
-baselines, reserve fresh held-out questions before implementation, predeclare
-quality/latency targets and record actual strategy/provider use. The real-HTTP
-regressions, independent wheel/archive probes and HTTPS worker/Chromium tests
-exercise the same Core behavior. See [development](development.md) for commands.
+for the existing documentation corpus and private labels, plus the real HTTP,
+standalone wheel/archive and browser regressions. See [development](development.md).
 
 ## Standard BEIR datasets
 

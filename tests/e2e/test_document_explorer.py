@@ -176,7 +176,7 @@ def test_updates_shrink_retire_history_and_expire_part_citation(live,browser):
     expect(browser.get_by_role('article')).to_have_count(0)
     open_document(browser,live,second['id'])
     expect(browser.get_by_role('article')).to_contain_text('CHANGED-CONTENT-MARKER',timeout=20000)
-    assert live.client.call('sources_search',query='LAST-PART-MARKER')['citations']==[]
+    assert live.client.call('sources_search',query='"LAST-PART-MARKER"')['citations']==[]
     for receipt in receipts:
         response=live.rest.get('/api/v1/source-versions/'+receipt['version_id']+'/document',params={'space_id':live.space})
         assert response.status_code==410
@@ -274,7 +274,7 @@ def test_held_multipart_growth_keeps_previous_complete_generation(live,browser):
             open_document(browser,live,first['id'])
             expect(browser.get_by_role('article')).to_contain_text('BEGIN-DOCUMENT-MARKER')
             expect(browser.get_by_role('article')).not_to_contain_text('NEW-GROWTH-MARKER')
-            assert live.client.call('sources_search',query='NEW-GROWTH-MARKER')['citations']==[]
+            assert live.client.call('sources_search',query='"NEW-GROWTH-MARKER"')['citations']==[]
             live.resume_worker()
             second,new_parts=pending.result(timeout=45)
         assert second['id']==first['id'] and len(new_parts)>len(old_parts)

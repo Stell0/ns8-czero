@@ -71,7 +71,7 @@ def test_real_crawl_publish_read_replace_and_unchanged(live,browser,documentatio
     assert old.status_code==410 and old.json()['detail']=='content_superseded'
     retired=live.rest.get('/api/v1/source-versions/'+citation['version_id']+'/document',params={'space_id':live.space})
     assert retired.status_code==410
-    assert live.client.call('sources_search',query='OLD-ONLY-CRAWLER-MARKER')['citations']==[]
+    assert live.client.call('sources_search',query='"OLD-ONLY-CRAWLER-MARKER"')['citations']==[]
     assert live.client.call('sources_search',query='NEW-ONLY-CRAWLER-MARKER')['citations']
     browser.goto(live.origin+'/search?'+urlencode({'space_id':live.space}))
     browser.get_by_role('search').get_by_role('textbox').fill('OLD-ONLY-CRAWLER-MARKER')

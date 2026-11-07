@@ -63,7 +63,8 @@ def test_question_finds_verified_evidence_through_each_caller(knowledge_http, sp
                     **({'mode':'text','rerank':'off','kind':'source'} if caller=='ordinary' else {})})
             assert response.status_code == 200
             if caller!='source':
-                assert response.json()['lexical_strategy']=='relaxed'
+                assert response.json()['lexical_strategy']=='bm25'
+                assert response.json()['lexical_ranker_version']=='bm25-v1-en-it-k1-1.2-b-0.75'
                 assert response.json()['retrieval_method']=='text'
                 assert response.json()['provider_usage']=={}
             hits=response.json()['citations' if caller=='source' else 'hits']
@@ -75,7 +76,7 @@ def test_question_finds_verified_evidence_through_each_caller(knowledge_http, sp
                     fallback=await http.get('/api/v1/knowledge/search',params={**params,'query':query,
                         'mode':mode,'rerank':'off','kind':'source'})
                     assert fallback.json()['retrieval_method']=='text'
-                    assert fallback.json()['lexical_strategy']=='relaxed'
+                    assert fallback.json()['lexical_strategy']=='bm25'
                     assert fallback.json()['fallback_reason']=='embeddings_not_configured'
                     assert fallback.json()['hits']==hits
     asyncio.run(check())
@@ -90,19 +91,20 @@ def test_relaxation_obeys_the_filtered_selection_and_source_pagination(knowledge
             params={'space_id':space['id'],'query':'How can I enable scheduled backup in Example Mail 8?'}
             # A strict match in another version must not suppress filtered matching.
             ordinary=await http.get('/api/v1/knowledge/search',params={**params,'kind':'source','mode':'text','rerank':'off'})
-            assert ordinary.json()['hits'][0]['citation']['source_id']==rows[1]['source_id']
+            assert {h['citation']['source_id'] for h in ordinary.json()['hits']}=={r['source_id'] for r in rows}
             selected=await http.post('/api/v1/knowledge/search/structured',json={**params,'mode':'text',
                 'rerank':'off','filters':{'categories':['source'],'version_tags':['8']}})
             assert selected.status_code==200
             assert {h['citation']['source_id'] for h in selected.json()['hits']}=={rows[0]['source_id']}
-            # An empty later strict page must not switch to a different ranking.
+            # Every page follows the same document ordering.
             first=await http.get('/api/v1/sources/search',params={**params,'limit':1})
             later=await http.get('/api/v1/sources/search',params={**params,'limit':1,'offset':1})
-            assert len(first.json()['citations'])==1 and later.json()['citations']==[]
+            assert len(first.json()['citations'])==1 and len(later.json()['citations'])==1
+            assert first.json()['citations'][0]['source_id']!=later.json()['citations'][0]['source_id']
     asyncio.run(check())
 
 
-def test_questions_cannot_drop_versions_or_match_a_single_generic_word(knowledge_http, space_http):
+def test_ordinary_prose_keeps_weak_matches_as_candidates(knowledge_http, space_http):
     async def check():
         app, token, *_ = knowledge_http
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,
@@ -116,7 +118,7 @@ def test_questions_cannot_drop_versions_or_match_a_single_generic_word(knowledge
                           'How can I enable scheduled backup with XYZZY?'):
                 response=await http.get('/api/v1/knowledge/search',params={'space_id':space['id'],
                     'query':query,'kind':'source','mode':'text','rerank':'off'})
-                assert response.status_code==200 and response.json()['hits']==[]
+                assert response.status_code==200 and response.json()['hits']
     asyncio.run(check())
 
 
@@ -150,7 +152,7 @@ def test_relaxed_queries_recheck_reader_grants_without_shared_fallback(knowledge
 
 
 @pytest.mark.parametrize('query,versions', [
-    ('scheduled backup', {'8'}),
+    ('scheduled backup', {'8','7'}),
     ('"scheduled backup"', {'8'}),
     ('scheduled OR manual', {'8','7'}),
     ('(scheduled OR manual)', {'8','7'}),
@@ -158,7 +160,7 @@ def test_relaxed_queries_recheck_reader_grants_without_shared_fallback(knowledge
     ('scheduled AND teleportation', set()),
     ('"How can I enable scheduled backup?"', set()),
     ('net.ipv4.ip_forward', {'7'}),
-    ('Example Mail 7', {'7'}),
+    ('Example Mail 7', {'8','7'}),
     ('quantum teleportation', set()),
 ])
 def test_explicit_syntax_and_identifier_controls(knowledge_http, space_http, query, versions):
@@ -212,13 +214,13 @@ def test_parent_product_version_context_and_inline_diagnostic(knowledge_http,spa
                         params={**params,**({'mode':'text','rerank':'off','kind':'source'} if caller=='ordinary' else {})})
                 assert response.status_code==200
                 hits=response.json()['citations' if caller=='source' else 'hits']
-                assert {h['source_id'] if caller=='source' else h['citation']['source_id'] for h in hits}=={rows[0]['source_id']}
+                assert {h['source_id'] if caller=='source' else h['citation']['source_id'] for h in hits}=={r['source_id'] for r in rows}
     asyncio.run(check())
 
 
-def test_relaxation_keeps_gin_discovery_and_does_not_truncate_long_queries(knowledge_http,space_http):
+def test_bm25_keeps_gin_discovery_and_does_not_truncate_long_queries(knowledge_http,space_http):
     from sqlalchemy import text
-    from czero_core.lexical import relaxed_query
+    from czero_core.bm25 import query_groups
     async def check():
         app,token,*_=knowledge_http
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,
@@ -226,17 +228,15 @@ def test_relaxation_keeps_gin_discovery_and_does_not_truncate_long_queries(knowl
             space,_=await corpus(http,knowledge_http,space_http)
             query='How can I enable scheduled backup in Example Mail 8?'
             with knowledge_http[4].engine.begin() as connection:
-                lexical=relaxed_query(connection,query);assert lexical is not None
+                groups=query_groups(connection,query);assert groups
                 connection.execute(text('SET LOCAL enable_seqscan=off'))
-                # A tiny joined fixture can correctly prefer its selective B-tree.
-                # Prove the shared chunk predicate remains GIN-indexable itself.
-                sql='EXPLAIN SELECT c.id FROM c0_chunks c WHERE '
-                plan=' '.join(r[0] for r in connection.execute(text(sql+lexical.match('c.search_vector')),
-                    lexical.parameters))
-                assert 'c0_chunks_search' in plan
+                plan=' '.join(r[0] for r in connection.execute(text(
+                    'EXPLAIN SELECT document_id FROM c0_lexical_terms WHERE variants && CAST(:variants AS text[])'),
+                    {'variants':groups[0]}))
+                assert 'c0_lexical_terms_variants' in plan
             words=['opaqueword'+chr(97+i//26)+chr(97+i%26) for i in range(33)]
             response=await http.get('/api/v1/knowledge/search',params={'space_id':space['id'],
                 'query':query+' '+' '.join(words),'kind':'source','mode':'text','rerank':'off'})
-            assert response.status_code==200 and response.json()['hits']==[]
-            assert response.json()['lexical_strategy']=='websearch'
+            assert response.status_code==200 and response.json()['hits']
+            assert response.json()['lexical_strategy']=='bm25'
     asyncio.run(check())
