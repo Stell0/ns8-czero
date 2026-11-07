@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = Path(os.getenv('CZERO_AGENT_PACKAGE_DIR', ROOT / 'plugins/c0-knowledge'))
 ASSETS = ('plugin.json', 'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
           'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
-          'skills/c0-knowledge-compiler/SKILL.md', 'references/compiler.md',
+          'skills/c0-knowledge-compiler/SKILL.md', 'references/compiler.md', 'references/scheduling.md',
           'references/connection.md', 'references/maintenance.md', 'references/projects.md')
 
 def mcp_url(value):
@@ -131,6 +131,7 @@ def skill_payload(url, *, template=TEMPLATE, license_file=None):
         '      transport: "streamable_http"\n      url: ' + json.dumps(url) + '\n')
     return {'SKILL.md': skill.encode(), 'agents/openai.yaml': metadata.encode(),
             'references/compiler.md': asset(template, 'references/compiler.md'),
+            'references/scheduling.md': asset(template, 'references/scheduling.md'),
             'LICENSE': license_bytes(template, license_file)}
 
 

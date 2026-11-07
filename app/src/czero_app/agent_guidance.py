@@ -4,8 +4,9 @@
 from copy import deepcopy
 
 GUIDANCE = {
-    'version': 5,
+    'version': 6,
     'rules': [
+        'Use the installed compiler scheduling reference for explicitly requested recurrence. Generated prompts/packages install no task. Verify exact selected space/project, current capabilities/policy, IANA occurrences, saved host IDs and actual C0 result readback; unavailable unattended connector/skill/authentication means BLOCKED.',
         'Discover current operations and authorized spaces before reading or writing. Membership, space grants and actual OAuth scopes remain authoritative on every request.',
         'Choose an explicit space_id for all content. Never silently fall back to Shared after an invalid selector, denial or revoked access. Private investigations need an existing authorized protected space; ask an Admin to create or grant one.',
         'Clarify the intended space, resource and change when ambiguous. Do not guess a write target or make extra changes during a read-only task.',

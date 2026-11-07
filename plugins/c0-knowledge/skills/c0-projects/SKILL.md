@@ -24,3 +24,5 @@ Pass the actual project lease to the compiler claim, retain configuration/scope
 and stricter budgets, and reuse project_audit_step plus project_semantic_select/
 review. Put compiler IDs and verified outcomes in the saved report, not arbitrary
 checkpoint references. Missing/disabled compilation adds no writes or scheduler.
+
+For explicitly requested recurring maintenance or external setup, read [scheduling and recovery](../../references/scheduling.md). Package generation installs no host task.

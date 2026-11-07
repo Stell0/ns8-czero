@@ -226,7 +226,7 @@ wheels = [
 
 [[package]]
 name = "czero-app"
-version = "0.61.0"
+version = "0.62.0"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },

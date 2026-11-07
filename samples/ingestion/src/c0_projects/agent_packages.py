@@ -35,7 +35,7 @@ def save_package(client,output,*,format='skill',connection=''):
             'plugin.json','.app.json','LICENSE','references/instance.md',root+'SKILL.md'}
         with zipfile.ZipFile(BytesIO(archive)) as package:
             entries=package.infolist()
-            if len(entries)!=result['file_count'] or len(entries)>16 or {e.filename for e in entries}!=expected or len(entries)!=len(expected):raise ValueError()
+            if len(entries)!=result['file_count'] or len(entries)>16 or {e.filename for e in entries} not in (expected,expected|{root+'references/scheduling.md'}) or len(entries)!=len({e.filename for e in entries}):raise ValueError()
             if sum(e.file_size for e in entries)>262144:raise ValueError()
             for entry in entries:
                 if (entry.orig_filename!=entry.filename or entry.compress_type!=zipfile.ZIP_STORED or entry.file_size>131072

@@ -720,3 +720,13 @@ Scoring remains bounded to sixteen 2 KiB excerpts and the existing absolute
 five-second maximum deadline. Rerank retains the unscored tail; filter returns
 only evaluated candidates above the configured threshold. Empty candidate sets
 complete the requested search stage without contacting the provider.
+
+
+Core0.45 extends the existing metadata-only reserve_model checkpoint for a pending
+ordinary-space weekly semantic page: semantic_page_id +current source_bindings
+alternatively replace task_id +expected_task_revision. The same actor/space/fence,
+source/target guards, shared budgets and unknown-usage recovery apply. No table,
+operation or migration is added; schema0036 and all existing task/publication
+contracts remain. External callers detect the optional input from actual server
+capabilities. See [M5](../../docs/knowledge-compilation/M5.md). This producer source
+is not a published release or permission to change a consumer/deployment.

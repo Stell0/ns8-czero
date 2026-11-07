@@ -184,6 +184,16 @@ coordinator and M2/M3 engine retain authority; a queued task is not compilation.
 App0.61 keeps the released Core0.42 lock inherited from PR94. No Core publication, consumer
 adoption, live activation/deployment or schedules follow from this source work.
 See [M4](docs/knowledge-compilation/M4.md) for bounds and recovery.
+M4 exact-head/main acceptance now passes (42392187969/42397304098, PR95/main52e84a3).
+M5 producer work is tracked in [M5](docs/knowledge-compilation/M5.md): App0.62,
+Core0.45/schema0036, plugin1.8 and the independent external c0-compile runner.
+The optional weekly selected-page model reservation reuses all six tables,
+current source/page guards and shared budgets; never reopen a terminal task to
+account for inference. Detect that alternative in actual checkpoint schemas.
+Keep the released Core0.42 consumer lock and registered app identity. Generated
+prompts/packages install no tasks. No Core publication, deployment, production
+learning/knowledge/schedules or M6 is implied by M5 implementation.
+
 
 Source documents and Wiki pages retain only their current complete content generation. This latest-only contract replaces the previous content-history guarantee. Keep stable logical IDs, monotonic concurrency counters, current hashes/provenance and payload-free retry/change identities. Stage replacements privately and publish whole documents atomically; delete superseded bodies, originals, derivatives and indirect receipt copies. Exact expired evidence returns authorized `content_superseded` (410), never rebound text. Preserve authored knowledge and mark invalidated evidence stale. See [migration and preflight](docs/latest-only-migration.md).
 

@@ -48,7 +48,7 @@ def test_stale_cookie_keeps_simple_guide_and_canonical_skill_download_available(
             two = await http.get('/agents/c0-memory.skill')
             assert one.content == two.content
             payload = unpack(one, '.skill')
-            assert set(payload) == {'SKILL.md', 'agents/openai.yaml', 'LICENSE', 'references/compiler.md'}
+            assert set(payload) == {'SKILL.md', 'agents/openai.yaml', 'LICENSE', 'references/compiler.md', 'references/scheduling.md'}
             assert ORIGIN.encode() in payload['SKILL.md'] and (ORIGIN + '/mcp').encode() in payload['agents/openai.yaml']
             assert b'{{' not in payload['SKILL.md'] and b'untrusted.example.test' not in one.content
             assert b'PRIVATE_DOWNLOAD_CANARY' not in one.content
@@ -68,7 +68,7 @@ def test_browser_plugin_is_instance_bound_and_identical_to_offline_archive(appli
                 'references/connection.md', 'references/maintenance.md', 'references/projects.md',
                 'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
                 'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
-        'skills/c0-knowledge-compiler/SKILL.md', 'references/compiler.md'}
+        'skills/c0-knowledge-compiler/SKILL.md', 'references/compiler.md', 'references/scheduling.md'}
             assert json.loads(payload['.app.json']) == {'apps': {'c0': {'id': 'asdk_app_fixture', 'required': True}}}
             assert b'c0.example.test' in payload['references/instance.md']
             assert profile['csrf_token'].encode() not in response.content and profile['id'].encode() not in response.content
