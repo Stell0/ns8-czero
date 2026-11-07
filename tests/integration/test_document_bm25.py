@@ -264,3 +264,50 @@ def test_alias_groups_merge_transitively():
         def execute(self, *args):
             return [(['a', 'b'],), (['c', 'd'],), (['d', 'e'],), (['b', 'e'],)]
     assert query_groups(Connection(), 'synthetic') == [['a', 'b', 'c', 'd', 'e']]
+
+
+def test_document_evidence_loading_is_batched_and_keeps_exact_citations(search):
+    from sqlalchemy import event
+    from uuid import UUID
+    service, wiki, source = search
+    for n in range(8):
+        ingest(source, 'Batched evidence '+str(n), title='Document '+str(n))
+    statements = []
+    def capture(connection, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+    event.listen(service.database.engine, 'before_cursor_execute', capture)
+    try:
+        hits = service.search(wiki[1], 'batched evidence', kind='source')['hits']
+    finally:
+        event.remove(service.database.engine, 'before_cursor_execute', capture)
+    assert len(hits) == 8
+    assert sum('c.id AS chunk_id' in sql for sql in statements) == 1
+    assert sum('SELECT id,current_version_id FROM c0_sources' in sql for sql in statements) == 1
+    for hit in hits:
+        citation = source[0].citation(source[1], UUID(hit['id']))
+        assert hit['citation'] == {key: str(value) if isinstance(value, UUID) else value
+                                   for key, value in citation.items()}
+
+
+@pytest.mark.parametrize('kind', ['source', 'wiki'])
+def test_batched_final_check_rejects_replacement_during_scoring(search, kind):
+    from czero_core.current_content import ContentSuperseded
+    service, wiki, source = search
+    if kind == 'source':
+        key = ingest(source, 'original evidence')
+        def replace():
+            ingest(source, 'replacement evidence', source_id=key, expected_revision=1)
+    else:
+        page = create_page(wiki, body='original evidence')
+        def replace():
+            wiki[0].update_page(wiki[1], page['id'], 'Replacement', 'replacement evidence',
+                               expected_revision=1, idempotency_key=uuid4().hex)
+    class Scorer:
+        def score(self, query, candidates):
+            replace()
+            return {'usage': {}, 'truncated_candidates': 0,
+                    'scores': {candidate['id']: 1.0 for candidate in candidates}}
+    service.scorer = Scorer()
+    service.scorer_mode = 'rerank'
+    with pytest.raises(ContentSuperseded):
+        service.search(wiki[1], 'original evidence', kind=kind, rerank='rerank')

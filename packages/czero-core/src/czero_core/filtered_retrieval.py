@@ -77,10 +77,8 @@ class FilteredEvidenceSearch(SearchService):
     def _text(self, connection, query, *, limit, kind):
         rows=search_documents(connection,query,space=self._space(connection),limit=limit,kind=kind,filters=self.filters)
         if rows is not None:
-            return [self._decorate(connection,
-                {**(self._source_hit(connection,row['id'],query) if row['kind']=='chunk'
-                    else self._wiki_hit(connection,row['id'],query)),
-                 'score':float(row['rank'])},row) for row in rows],'bm25'
+            return [self._decorate(connection,hit,row)
+                for hit,row in zip(self._document_hits(connection,rows,query),rows)],'bm25'
         def fetch(lexical):
             sql = 'SELECT * FROM (' + self._source_candidate(lexical) + ' UNION ALL ' + self._wiki_candidate(lexical)
             sql += ') matches ORDER BY rank DESC,kind,id LIMIT :limit'

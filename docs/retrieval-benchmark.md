@@ -107,6 +107,12 @@ all bodies were validated before Core's normal publication operation completed
 in the disposable fixture. Indexing time is unreported for that resumed run.
 The current M4 successor requires its own integration validation.
 
+Current-base candidate `fbae9a2` reproduces the quality scores but fails the
+SciFact latency gate: P95 286.0ms against149.4ms, exceeding1.5×. Its raw run
+remains frozen. The next candidate batches citation loading and generation
+checks; SQL count and exact citation regressions accompany that optimization.
+It requires new matched measurements without changing acceptance thresholds.
+
 Exact successor full/native acceptance,
 immutable publication and released-consumer adoption remain required. No
 production deployment is authorized by these measurements.

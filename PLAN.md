@@ -64,6 +64,13 @@ moves from0.7000 to0.6875, with complete evidence unchanged at0.6750. P95 moves
 from91.8ms to146.9ms; weak candidates increase, so neither empty results nor
 returned relevance proves answerability. Current M4 validation remains separate.
 
+Current-base candidate `fbae9a2` retains identical quality, but fails the
+SciFact latency gate: P95 286.0ms versus149.4ms (1.91×). NFCorpus remains
+0.3206/0.1538 against0.2365/0.1024. Preserve that failed measurement. A successor
+batches citation loading and final current-generation checks, retaining exact
+citation payloads, order and post-provider authorization. Its measurements
+and full acceptance must pass independently; thresholds are unchanged.
+
 Quality, exact-source full PostgreSQL/packaging/browser/native acceptance,
 upstream merge gate, immutable Core publication and separate released-consumer
 adoption are pending. Production deployment remains separately authorized;

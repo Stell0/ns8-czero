@@ -419,17 +419,28 @@ class SourceService(SpaceBound):
                 {'space': self._space(connection), 'id': _uuid(document_id), 'limit': limit, 'offset': offset}).mappings()]
 
     @staticmethod
-    def _citation(connection, chunk_id, *, space_id=None):
-        row = connection.execute(text('''SELECT c.id AS chunk_id,c.document_id,c.start_offset,c.end_offset,
+    def _citations(connection, chunk_ids, *, space_id=None):
+        identifiers = [_uuid(key) for key in chunk_ids]
+        if not identifiers:
+            return []
+        space = SpaceService.shared_id(connection) if space_id is None else space_id
+        rows = connection.execute(text('''SELECT c.id AS chunk_id,c.document_id,c.start_offset,c.end_offset,
             c.body,c.content_hash,c.locations,d.version_id,d.text_hash,v.source_id,v.number AS version,
             v.filename,v.media_type,v.content_hash AS source_hash,s.title,s.deleted FROM c0_chunks c
             JOIN c0_documents d ON d.id=c.document_id JOIN c0_source_versions v ON v.id=d.version_id
-            JOIN c0_sources s ON s.id=v.source_id WHERE s.space_id=:space AND s.current_version_id=v.id AND c.id=:id'''), {'space': SpaceService.shared_id(connection) if space_id is None else space_id, 'id': _uuid(chunk_id)}).mappings().one_or_none()
-        if row is None:
-            from .current_content import check_retired
-            check_retired(connection,SpaceService.shared_id(connection) if space_id is None else space_id,'chunk',_uuid(chunk_id))
-            raise SourceNotFound()
-        return content_row(row)
+            JOIN c0_sources s ON s.id=v.source_id WHERE s.space_id=:space AND s.current_version_id=v.id
+            AND c.id=ANY(CAST(:ids AS uuid[]))'''), {'space': space, 'ids': identifiers}).mappings()
+        citations = {row['chunk_id']: content_row(row) for row in rows}
+        for key in identifiers:
+            if key not in citations:
+                from .current_content import check_retired
+                check_retired(connection, space, 'chunk', key)
+                raise SourceNotFound()
+        return [citations[key] for key in identifiers]
+
+    @staticmethod
+    def _citation(connection, chunk_id, *, space_id=None):
+        return SourceService._citations(connection, [chunk_id], space_id=space_id)[0]
 
     def citation(self, actor, chunk_id):
         with self.database.engine.connect() as connection:
@@ -446,7 +457,7 @@ class SourceService(SpaceBound):
             self._authorize(connection, actor)
             rows=search_documents(connection,query,space=self._space(connection),limit=limit,offset=offset,kind='source')
             if rows is not None:
-                return [self._citation(connection,row['id'],space_id=self._space(connection)) for row in rows]
+                return self._citations(connection,[row['id'] for row in rows],space_id=self._space(connection))
             def fetch(lexical, *, first=False):
                 return connection.execute(text(f'''SELECT c.id FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
                 JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id

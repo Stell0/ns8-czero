@@ -73,8 +73,9 @@ class SearchService(SpaceBound):
     def _authorize(self,connection,actor):
         return self._space_authorize(connection,actor)
 
-    def _source_hit(self,connection,key,query):
-        citation=SourceService._citation(connection,key,space_id=self._space(connection))
+    def _source_hit(self,connection,key,query,*,citation=None):
+        if citation is None:
+            citation=SourceService._citation(connection,key,space_id=self._space(connection))
         return {'id':citation['chunk_id'],'kind':'chunk','resource_id':citation['source_id'],
             'revision':citation['version'],'title':citation['title'],'content_hash':citation['content_hash'],
             **excerpt(citation['body'],query,origin=citation['start_offset']),'citation':citation,'wiki':None}
@@ -91,12 +92,17 @@ class SearchService(SpaceBound):
             **window,'citation':None,'wiki':{'page_id':data['page_id'],'revision_id':data['id'],
                 'revision':data['number'],'slug':data['slug'],'content_hash':data['content_hash']}}
 
+    def _document_hits(self,connection,rows,query):
+        keys=[row['id'] for row in rows if row['kind']=='chunk']
+        citations=iter(SourceService._citations(connection,keys,space_id=self._space(connection)))
+        return [{**(self._source_hit(connection,row['id'],query,citation=next(citations))
+                    if row['kind']=='chunk' else self._wiki_hit(connection,row['id'],query)),
+                 'score':float(row['rank'])} for row in rows]
+
     def _text(self,connection,query,*,limit,kind):
         rows=search_documents(connection,query,space=self._space(connection),limit=limit,kind=kind)
         if rows is not None:
-            return [{**(self._source_hit(connection,row['id'],query) if row['kind']=='chunk'
-                        else self._wiki_hit(connection,row['id'],query)),
-                     'score':float(row['rank'])} for row in rows],'bm25'
+            return self._document_hits(connection,rows,query),'bm25'
         def fetch(lexical):
             return connection.execute(text(f'''SELECT * FROM (
             SELECT c.id,'chunk' AS kind,{lexical.rank('c.search_vector')} AS rank
@@ -208,15 +214,20 @@ class SearchService(SpaceBound):
         with self.database.engine.connect() as connection:
             self._authorize(connection,actor)
             from .current_content import ContentSuperseded
+            space=self._space(connection)
+            source_ids=[hit['resource_id'] for hit in hits if hit['kind']=='chunk']
+            wiki_ids=[hit['resource_id'] for hit in hits if hit['kind']=='wiki_revision']
+            sources=dict(connection.execute(text('''SELECT id,current_version_id FROM c0_sources
+                WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'''),
+                {'space':space,'ids':source_ids}).all()) if source_ids else {}
+            wikis=dict(connection.execute(text('''SELECT id,revision FROM c0_wiki_pages
+                WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'''),
+                {'space':space,'ids':wiki_ids}).all()) if wiki_ids else {}
             for hit in hits:
-                if hit['kind']=='chunk':
-                    current=connection.execute(text('SELECT current_version_id FROM c0_sources WHERE space_id=:space AND id=:id'),
-                        {'space':self._space(connection),'id':hit['resource_id']}).scalar_one_or_none()
-                    if current!=hit['citation']['version_id']:raise ContentSuperseded()
-                elif hit['kind']=='wiki_revision':
-                    current=connection.execute(text('SELECT revision FROM c0_wiki_pages WHERE space_id=:space AND id=:id'),
-                        {'space':self._space(connection),'id':hit['resource_id']}).scalar_one_or_none()
-                    if current!=hit['revision']:raise ContentSuperseded()
+                if hit['kind']=='chunk' and sources.get(hit['resource_id'])!=hit['citation']['version_id']:
+                    raise ContentSuperseded()
+                if hit['kind']=='wiki_revision' and wikis.get(hit['resource_id'])!=hit['revision']:
+                    raise ContentSuperseded()
         return _view({'hits':hits[:limit],'retrieval_method':method,'fallback_reason':failures[0] if failures else None,
             'fallback_reasons':failures,'requested_mode':mode,'candidate_count':candidate_count,'scored_count':scored_count,
             'scorer_truncated_candidates':truncated,'provider_usage':usage,'graphs':graphs,
