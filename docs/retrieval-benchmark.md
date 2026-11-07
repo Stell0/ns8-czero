@@ -52,6 +52,74 @@ while testing retrieval changes. Corpus drift, incomplete vector coverage and
 lexical fallbacks cannot silently count as successful semantic/hybrid results.
 This does not replace the current-corpus documentation or agentic benchmarks.
 
+## Measured SciFact results
+
+A complete run on 6 November 2026 (UTC) measured real text, semantic and hybrid
+retrieval through the authenticated public MCP API. All **300 eligible test
+queries per mode** completed: **900 searches, zero errors, zero fallbacks and
+zero effective-mode mismatches**. Both complete corpus checks passed, and the
+embedding profile and coverage stayed unchanged. The comparison is valid.
+
+| Mode | nDCG@10 | Recall@10 | MRR@10 | P50 ms | P95 ms | Errors | Fallbacks |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Text | 0.3101 | 0.3372 | 0.3037 | 375.5 | 667.9 | 0 | 0 |
+| Semantic | 0.7133 | 0.8559 | 0.6747 | 840.6 | 1199.9 | 0 | 0 |
+| Hybrid | 0.7198 | 0.8592 | 0.6814 | 817.5 | 1151.7 | 0 | 0 |
+
+Additional quality metrics use the same 300-query denominator:
+
+| Mode | Recall@5 | Precision@10 | MAP@10 | Hit@1 | Hit@5 | Hit@10 | Duplicate chunk rate |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Text | 0.3356 | 0.0363 | 0.2991 | 0.2767 | 0.3433 | 0.3433 | 0.0505 |
+| Semantic | 0.7723 | 0.0973 | 0.6638 | 0.5967 | 0.7867 | 0.8633 | 0.2388 |
+| Hybrid | 0.7818 | 0.0977 | 0.6709 | 0.6000 | 0.7967 | 0.8667 | 0.2327 |
+
+### Data and configuration
+
+- **Dataset:** BEIR SciFact, test split; all 5,183 documents, 9,130 verified source
+  chunks and 300 queries with test relevance judgments, from 1,109 query records.
+  No document or eligible-query sampling was applied. Dataset fingerprint:
+  `fcf803d2c4101b2faa5d88f1152b6b1815d2d46d8cb9c92e7670b616dcb0894c`.
+- **Server:** app 0.60.0 at `a8bb2e8eb15906440835ebc94b1b300d083a0f6a`, released
+  Core 0.39.0 at `b05ebe46e1857d7889b30e798005f7c2957a3a76`, schema 0033.
+  Embedding model: `text-embedding-3-small`, 1,536 dimensions. All 9,130 source
+  chunks had current embeddings before and after evaluation; actual semantic and
+  hybrid searches established provider availability.
+- **Search:** `kind=source`, `graph_depth=0`, limit 50 chunks, reranking off,
+  one request per query per mode, sequential calls. An existing Wiki report was
+  explicitly excluded with a revision/hash pin; only source-specific coverage
+  counted toward readiness. No Wiki content contributed to the rankings.
+- **Client:** Python 3.12.13, benchmark 0.1.0, ingestion 0.3.1, MCP 2.3.0 and
+  httpx2 2.13.1. The benchmark/shared-client source came from the Core source
+  above. Use the [runner instructions](../benchmarks/retrieval/README.md) with
+  the same dataset and settings for a new evaluation in an authorized space.
+
+The evaluator verified every document's current generation, body, chunk hashes
+and offsets before and after searching, checked corpus metadata between modes,
+and matched returned citations to verified chunks. Source-specific indexed
+counts equaled the verified chunk count throughout. Changes restored entirely
+between verification calls cannot be ruled out through the public APIs.
+
+### Interpretation and limits
+
+Semantic and hybrid retrieval score higher than text retrieval in this run.
+Hybrid's nDCG@10 is slightly higher than semantic's; a single pass does not
+establish statistical significance or an improvement on other corpora. Text has
+the lowest measured median latency. P50/P95 are end-to-end client observations,
+including network and provider time, with nearest-rank percentiles; cold caches
+and controlled deployment load were not established.
+
+Quality is a macro average over all eligible queries; empty rankings score zero.
+The [metric definitions](../benchmarks/retrieval/README.md#valid-comparisons-and-reports)
+follow BEIR/trec_eval conventions. Multiple returned chunks from one document count
+once at its first rank; a 50-chunk limit can yield fewer than ten documents.
+This measures retrieval rather than generated-answer quality, and relevance
+labels can be incomplete.
+
+This section publishes aggregate measurements, public software/data identities
+and experiment settings. Raw reports, per-query rankings and operational receipts
+remain private because they contain deployment and account selectors.
+
 ## Historical provider fixture
 
 The measurements below are retained historical evidence, not a comparison with

@@ -97,7 +97,9 @@ all 900 responses use the requested mode with zero errors or fallbacks. The
 comparison is valid and global source/Wiki coverage remains complete afterward.
 The Markdown report, JSON summary, query log, full rankings and runtime provenance
 are saved privately on the instance and locally with matching SHA-256 checksums.
-Private benchmark artifacts and operational evidence stay outside Git. No new
+Aggregate results, settings and limits are published in the
+[SciFact measurements](docs/retrieval-benchmark.md#measured-scifact-results).
+Private raw benchmark artifacts and operational evidence stay outside Git. No new
 Wiki report is created and no stable NS8 module release is claimed.
 
 
