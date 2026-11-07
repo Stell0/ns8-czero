@@ -1439,7 +1439,7 @@ Acceptance requires full latest-main baseline and candidate checks, GitHub and
 OAuth/state/identity/space/retry privacy regressions, actual disposable MCP/DB
 read/write/conflict/denial/index/readback tests, independent package installation,
 full image/both-native CI and inspected artifacts. No Core/schema/runtime changes,
-makako deployment, live reingestion or installed schedule is part of this phase.
+production deployment, live reingestion or installed schedule is part of this phase.
 Record completed evidence and limitations before claiming acceptance.
 
 Implementation checkpoint: the generic package is 0.1.0 and runs independently
