@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0035_compilation_assessment"
+SCHEMA_REVISION = "0036_document_bm25"
 
 
 class Database:

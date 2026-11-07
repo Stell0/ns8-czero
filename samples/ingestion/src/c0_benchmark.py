@@ -180,6 +180,7 @@ def experiment(client,config,questions,expected,output):
                     row={'question_id':q['id'],'split':q['split'],'answerability':q['answerability'],
                         'repetition':repetition,'requested':selection,'effective_method':result['retrieval_method'],
                         'lexical_strategy':result.get('lexical_strategy'),
+                        'lexical_ranker_version':result.get('lexical_ranker_version'),
                         'status':'measured' if effective(result,mode,rerank) else 'fallback',
                         'fallback_reason':result.get('fallback_reason'),'latency_ms':elapsed,
                         'chunks':chunks,'documents':documents,'metrics':metrics(q,chunks,documents),'raw':result}

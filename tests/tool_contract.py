@@ -45,9 +45,12 @@ def legacy_search_output(schema):
     """Validate the one additive field before comparing frozen authority schemas."""
     projected = deepcopy(schema)
     assert 'lexical_strategy' not in projected.get('required', [])
+    assert 'lexical_ranker_version' not in projected.get('required', [])
+    version = projected['properties'].pop('lexical_ranker_version')
+    assert structural_schema(version) == {'anyOf':[{'type':'string'},{'type':'null'}], 'default':None}
     field = projected['properties'].pop('lexical_strategy')
     assert structural_schema(field) == {'anyOf':[
-        {'enum':['websearch','relaxed'],'type':'string'},{'type':'null'}], 'default':None}
+        {'enum':['websearch','relaxed','bm25'],'type':'string'},{'type':'null'}], 'default':None}
     return projected
 
 

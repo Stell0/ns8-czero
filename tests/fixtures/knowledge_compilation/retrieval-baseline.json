@@ -12,6 +12,13 @@
   {
     "query": "certificato",
     "expected_source_keys": [
+      "listener",
+      "italian"
+    ]
+  },
+  {
+    "query": "\"certificato\"",
+    "expected_source_keys": [
       "italian"
     ]
   }

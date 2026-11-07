@@ -35,7 +35,7 @@ def test_installed_skill_multiple_source_only_concepts_apply_and_read_back_over_
     with zipfile.ZipFile(BytesIO(zip_bytes(payload))) as archive:
         archive.extractall(directory)
     instructions, package = load_plugin(directory)
-    assert package['version'] == '1.7.0'
+    assert package['version'] == '1.7.1'
     assert 'skills/c0-knowledge-compiler/SKILL.md' in package['files']
     assert 'references/compiler.md' in package['files'] and 'compilation_verify' in instructions
     async def check():

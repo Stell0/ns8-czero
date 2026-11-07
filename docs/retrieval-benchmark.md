@@ -1,46 +1,121 @@
-# Provider-free question matching
+# Provider-free document retrieval
 
-Core 0.36.1 is independently published from merged source `8dbb746` after exact
-full/native acceptance and supplied wheel/archive tests. The app 0.57 consumer
-candidate selects its immutable tag and lock; consumer image/native acceptance
-and guarded deployment remain separate gates.
+Core 0.44 is a producer candidate using schema0036. Its publication, released
+consumer adoption and deployment gates are separate; existing installed images
+remain unchanged. The measured SciFact baseline below remains development evidence.
 
-Ordinary, filtered and source evidence search first run the existing PostgreSQL
-`simple` web-search query. Existing matches retain their ranking. If the eligible
-selection has no strict matches, an unquoted plain query with at least four
-lexemes can use bounded lexical recovery:
+Ordinary source/Wiki queries use OR eligibility with English and Italian stem
+variants and literal terms. `Bcl2`/`BCL-2` and `Tetraspanin-3`/`Tetraspanin 3`
+share ordered alphanumeric variants; different numbers remain distinct. Repeated
+query terms and stem aliases contribute once. Stop-only queries return no hits.
+The 512-character input bound remains; no query is silently truncated. Numbers,
+uppercase identifiers and weak matches in prose are relevance signals. Exact
+selection uses quoted phrases, explicit operators or existing structured filters.
+Explicit syntax retains PostgreSQL's existing strict interpretation.
 
-- Words on either standard PostgreSQL English/Italian stop list are omitted from
-  coverage. Remaining lexemes are neither stemmed nor translated.
-- Two to 32 distinct remaining terms are required; longer selections stay strict
-  without truncation. A candidate must match at least two and at least half.
-- Numeric terms, uppercase identifiers and punctuated technical names remain
-  mandatory. Current source provenance's declared product/version can supply
-  context, while candidate discovery still requires a real chunk match with a
-  GIN-indexable predicate. Annotation filters and space/current-generation predicates stay
-  mandatory.
-- Quoted phrases, `OR` and exclusions retain their original interpretation.
-  Forms containing `&`, `|`, `!`, uppercase `AND` or `NOT` also remain strict;
-  no SQL-style operator parser is added. Inline diagnostic punctuation such as
-  `Check(flag)` does not itself mean Boolean grouping.
+BM25 (`k1=1.2`, `b=0.75`) scores complete current source documents and Wiki
+revisions. Space, category, archive and annotation predicates restrict both
+candidates and corpus statistics before ranking. The top 64 documents supply
+existing source chunks, selected by query-term contribution with deterministic
+ID ties. Citation bytes, hashes and offsets are unchanged. Source-only pagination
+uses the same document ordering and retains its citation-list response. Multipart
+sources retain their existing identities. Hybrid uses document-level RRF with
+constant 60; semantic-only retrieval keeps its existing ranking.
 
-`knowledge_search` and its structured counterpart expose optional
-`lexical_strategy=websearch|relaxed`. Null means unreported or unused. Relaxation
-is still `retrieval_method=text`; semantic/hybrid provider fallbacks keep their
-separate reasons. Source-only search keeps its existing citation-list shape and
-chooses its strategy independently of pagination offset.
+Schema0036 stores document lengths and term frequencies with no additional body
+copies. A numbered PostgreSQL normalizer is shared by writes, queries and migration
+backfill. Derivatives follow complete-source publication and Wiki/title edits in
+one transaction. Foreign-key cascades retire old derivatives. Migration preserves
+all original document/chunk/revision identities and backfills retained bodies in
+bounded statements within its existing atomic migration transaction.
 
-This corrects zero-result lexical eligibility, not synonymy, translation or
-answer generation. Read the actual evidence. Missing metadata, acronyms absent
-from a body, separated chunk terms and incomplete relevance labels can still
-limit retrieval. Returned results do not establish abstention or clarification.
+Optional `lexical_strategy=websearch|relaxed|bm25` and
+`lexical_ranker_version` describe actual lexical behavior independently of provider
+modes. `bm25` remains text retrieval, without synonym expansion, translation or
+answer generation. A relevant document may contradict the query. Read its exact
+original evidence; relevance does not establish truth or a supported version.
+
+Acceptance requires SciFact nDCG@10 ≥0.60, Recall@10 ≥0.65, empty results ≤10%,
+and text P95 ≤1.5× a contemporaneous matched baseline. Previously inspected
+SciFact queries are development evidence. Freeze the candidate before untouched
+NFCorpus evaluation and require no aggregate nDCG/Recall regression. Hybrid must
+remain within 0.01 nDCG@10 of both its baseline and semantic-only comparator.
+Retain failing runs and revise candidates without changing these thresholds.
+Record returned-candidate recall, oracle nDCG ceiling, distinct documents,
+indexing time, index bytes and latency alongside corpus/provider provenance.
+Private selectors, labels, raw rankings and operational evidence stay outside Git.
 
 Use the [current-corpus runner](../samples/ingestion/examples/website/BENCHMARK.md)
-with private labels, matched budgets and corpus guards. Preserve original
-baselines, reserve fresh held-out questions before implementation, predeclare
-quality/latency targets and record actual strategy/provider use. The real-HTTP
-regressions, independent wheel/archive probes and HTTPS worker/Chromium tests
-exercise the same Core behavior. See [development](development.md) for commands.
+for the existing documentation corpus and private labels, plus the real HTTP,
+standalone wheel/archive and browser regressions. See [development](development.md).
+
+## Frozen producer measurements
+
+Candidate `4595054b35c20be276d4df7c1a0360b5ac340ab5` freezes Core package tree
+`9f1009b6f50a52bf1ec8c10515f5d587a24008f5`. The M4 successor retains the same ranker and normalizer, with a new
+Core version and migration identity; the package tree now includes M4.
+Provider-free local PostgreSQL measurements use complete official corpora,
+`kind=source`, limit 50 and reranking off, with identical query/corpus settings
+for the contemporaneous baseline and candidate. Citation hashes and corpus
+bodies are checked. These timings cover Core calls on the same host; they are
+not public HTTP or deployed acceptance.
+
+| Dataset and method | nDCG@10 | Recall@10 | Empty queries | P95 ms |
+| --- | ---: | ---: | ---: | ---: |
+| SciFact baseline | 0.3098 | 0.3372 | 156/300 | 168.8 |
+| SciFact document BM25 | 0.6782 | 0.8073 | 6/300 | 175.6 |
+| NFCorpus baseline | 0.2365 | 0.1024 | 82/323 | 142.6 |
+| NFCorpus document BM25 | 0.3206 | 0.1538 | 18/323 | 133.6 |
+
+SciFact was already development evidence. NFCorpus's 3,633 documents and 323
+queries were first evaluated after the candidate was frozen; those questions
+are now exposed. Fresh local citation IDs account for the small baseline
+SciFact nDCG difference from the historical public run. SciFact returned-document
+recall is 0.8802, oracle nDCG@10 is 0.8819, and mean distinct returned documents
+is 48.68. Backfilling 5,183 complete documents takes 33.68s; derivative tables and
+indexes occupy104,652,800 bytes.
+
+Separate diagnostic ablations retain the explicit-syntax branch. Broader literal
+chunk eligibility with summed term frequencies scores 0.4172 nDCG@10 /0.5694
+Recall@10; adding normalization gives 0.4388/0.5786; chunk BM25 gives 0.6795/0.8043;
+the selected document BM25 gives 0.6782/0.8073. These diagnostic variants are not
+new public search options.
+
+A matched fusion audit captures 64 actual semantic candidates per SciFact query,
+uses the same arrays for all comparators, and applies Core's RRF implementation.
+Candidate document hybrid scores 0.7388 nDCG@10 /0.8536 Recall@10, against baseline
+hybrid 0.7198/0.8592 and semantic-only 0.7133/0.8559. It passes the declared nDCG
+guardrail, with slightly lower recall. Model and dimensions match the historical
+run below. All 300 queries and both source/version/body checks completed before
+a client cleanup error; a separate incomplete probe is excluded. Twelve raw
+rankings differ from the historical archive while aggregate comparator metrics
+match. This audit does not establish candidate provider latency or controlled
+provider-profile stability throughout capture. Raw evidence and failed probes
+remain private.
+
+The existing documentation benchmark was also run on251 approved current
+originals and50 unchanged frozen questions. Fourteen source bindings changed;
+all frozen evidence passages remain present, and both rankers use the same
+copied corpus and metadata. Across45 queries with positive labels, nDCG@10
+moves from0.5250 to0.6631 and Recall@10 from0.6444 to0.8407; empty results
+across all50 move from11 to0. For the40 answerable questions, evidence coverage
+moves from0.7000 to0.6875 and complete evidence remains0.6750. P95 moves from
+91.8ms to146.9ms. Broad matching returns more weak candidates, including for
+unanswerable questions; relevance is not an answerability test. The initial
+local setup stopped before scoring because managed sources remained staged;
+all bodies were validated before Core's normal publication operation completed
+in the disposable fixture. Indexing time is unreported for that resumed run.
+The current M4 successor requires its own integration validation.
+
+Current-base candidate `fbae9a2` reproduces the quality scores but fails the
+SciFact latency gate: P95 286.0ms against149.4ms, exceeding1.5×. Its raw run
+remains frozen. The next candidate batches citation loading and generation
+checks; SQL count and exact citation regressions accompany that optimization.
+It requires new matched measurements without changing acceptance thresholds.
+
+Exact successor full/native acceptance,
+immutable publication and released-consumer adoption remain required. No
+production deployment is authorized by these measurements.
 
 ## Standard BEIR datasets
 

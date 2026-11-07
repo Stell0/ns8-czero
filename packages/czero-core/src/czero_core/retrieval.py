@@ -13,7 +13,8 @@ from .wiki import _view,KnowledgeNotFound
 from .embeddings import EmbeddingStore
 from .knowledge import KnowledgeService
 from .providers import ProviderUnavailable
-from .lexical import SOURCE_CONTEXT,select_lexical
+from .lexical import select_lexical
+from .bm25 import RANKER_VERSION,search_documents
 
 
 def excerpt(body,query,*,origin=0):
@@ -43,12 +44,16 @@ def hit_key(hit):
     return hit['kind']+':'+str(hit['id'])
 
 
-def reciprocal_rank_fusion(*rankings):
+def document_key(hit):
+    return ('source:' if hit['kind']=='chunk' else 'wiki:')+str(hit['resource_id'])
+
+
+def reciprocal_rank_fusion(*rankings, document_level=False):
     hits={};scores={}
     for ranking in rankings:
         seen=set();rank=0
         for hit in ranking:
-            key=hit_key(hit)
+            key=document_key(hit) if document_level else hit_key(hit)
             if key in seen:continue
             seen.add(key);rank+=1;hits.setdefault(key,hit);scores[key]=scores.get(key,0.)+1./(60+rank)
     return [{**hits[key],'score':scores[key]} for key in sorted(hits,key=lambda k:(-scores[k],k))]
@@ -68,8 +73,9 @@ class SearchService(SpaceBound):
     def _authorize(self,connection,actor):
         return self._space_authorize(connection,actor)
 
-    def _source_hit(self,connection,key,query):
-        citation=SourceService._citation(connection,key,space_id=self._space(connection))
+    def _source_hit(self,connection,key,query,*,citation=None):
+        if citation is None:
+            citation=SourceService._citation(connection,key,space_id=self._space(connection))
         return {'id':citation['chunk_id'],'kind':'chunk','resource_id':citation['source_id'],
             'revision':citation['version'],'title':citation['title'],'content_hash':citation['content_hash'],
             **excerpt(citation['body'],query,origin=citation['start_offset']),'citation':citation,'wiki':None}
@@ -86,13 +92,23 @@ class SearchService(SpaceBound):
             **window,'citation':None,'wiki':{'page_id':data['page_id'],'revision_id':data['id'],
                 'revision':data['number'],'slug':data['slug'],'content_hash':data['content_hash']}}
 
+    def _document_hits(self,connection,rows,query):
+        keys=[row['id'] for row in rows if row['kind']=='chunk']
+        citations=iter(SourceService._citations(connection,keys,space_id=self._space(connection)))
+        return [{**(self._source_hit(connection,row['id'],query,citation=next(citations))
+                    if row['kind']=='chunk' else self._wiki_hit(connection,row['id'],query)),
+                 'score':float(row['rank'])} for row in rows]
+
     def _text(self,connection,query,*,limit,kind):
+        rows=search_documents(connection,query,space=self._space(connection),limit=limit,kind=kind)
+        if rows is not None:
+            return self._document_hits(connection,rows,query),'bm25'
         def fetch(lexical):
             return connection.execute(text(f'''SELECT * FROM (
-            SELECT c.id,'chunk' AS kind,{lexical.rank('c.search_vector',context=SOURCE_CONTEXT)} AS rank
+            SELECT c.id,'chunk' AS kind,{lexical.rank('c.search_vector')} AS rank
             FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
-            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND {lexical.match('c.search_vector',context=SOURCE_CONTEXT)}
+            WHERE s.space_id=:space AND s.current_version_id=v.id AND :chunks AND NOT s.deleted AND {lexical.match('c.search_vector')}
             UNION ALL
             SELECT r.id,'wiki_revision' AS kind,{lexical.rank('r.search_vector')} AS rank
             FROM c0_wiki_revisions r JOIN c0_wiki_pages p ON p.id=r.page_id
@@ -167,7 +183,7 @@ class SearchService(SpaceBound):
                         self._authorize(connection,actor)
                         semantic=self._semantic(connection,embedded['vectors'][0],query,kind)
                     if semantic:
-                        hits=semantic if desired=='semantic' else reciprocal_rank_fusion(ordinary,semantic)
+                        hits=semantic if desired=='semantic' else reciprocal_rank_fusion(ordinary,semantic,document_level=True)
                         method=desired
                     else:failures.append('embedding_no_candidates')
                 except ProviderUnavailable as error:failures.append('embedding_'+error.reason)
@@ -198,16 +214,22 @@ class SearchService(SpaceBound):
         with self.database.engine.connect() as connection:
             self._authorize(connection,actor)
             from .current_content import ContentSuperseded
+            space=self._space(connection)
+            source_ids=[hit['resource_id'] for hit in hits if hit['kind']=='chunk']
+            wiki_ids=[hit['resource_id'] for hit in hits if hit['kind']=='wiki_revision']
+            sources=dict(connection.execute(text('''SELECT id,current_version_id FROM c0_sources
+                WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'''),
+                {'space':space,'ids':source_ids}).all()) if source_ids else {}
+            wikis=dict(connection.execute(text('''SELECT id,revision FROM c0_wiki_pages
+                WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'''),
+                {'space':space,'ids':wiki_ids}).all()) if wiki_ids else {}
             for hit in hits:
-                if hit['kind']=='chunk':
-                    current=connection.execute(text('SELECT current_version_id FROM c0_sources WHERE space_id=:space AND id=:id'),
-                        {'space':self._space(connection),'id':hit['resource_id']}).scalar_one_or_none()
-                    if current!=hit['citation']['version_id']:raise ContentSuperseded()
-                elif hit['kind']=='wiki_revision':
-                    current=connection.execute(text('SELECT revision FROM c0_wiki_pages WHERE space_id=:space AND id=:id'),
-                        {'space':self._space(connection),'id':hit['resource_id']}).scalar_one_or_none()
-                    if current!=hit['revision']:raise ContentSuperseded()
+                if hit['kind']=='chunk' and sources.get(hit['resource_id'])!=hit['citation']['version_id']:
+                    raise ContentSuperseded()
+                if hit['kind']=='wiki_revision' and wikis.get(hit['resource_id'])!=hit['revision']:
+                    raise ContentSuperseded()
         return _view({'hits':hits[:limit],'retrieval_method':method,'fallback_reason':failures[0] if failures else None,
             'fallback_reasons':failures,'requested_mode':mode,'candidate_count':candidate_count,'scored_count':scored_count,
             'scorer_truncated_candidates':truncated,'provider_usage':usage,'graphs':graphs,
-            'lexical_strategy':lexical_strategy if method.startswith(('text','hybrid')) else None})
+            'lexical_strategy':lexical_strategy if method.startswith(('text','hybrid')) else None,
+            'lexical_ranker_version':RANKER_VERSION if lexical_strategy=='bm25' and method.startswith(('text','hybrid')) else None})

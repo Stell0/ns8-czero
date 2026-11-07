@@ -140,13 +140,38 @@ def grade(case, runner, calls, before, after, ground, read_only):
     if case in ('typed-create','wiki-conflict','uncertain-replay'):
         allowed_tables = allowed_tables | {'c0_space_cursors','c0_content_identities'}
     if case=='queued-evidence':allowed_tables=allowed_tables|{'c0_content_identities'}
+    # Index writes are derivatives of the requested evidence mutation. Permit
+    # only those exact generations; unrelated index changes still fail grading.
+    lexical_ids = set()
+    if case in ('wiki-conflict','uncertain-replay'):
+        pages = ({ground['page']['id']} if case=='wiki-conflict' else
+            {r['id'] for r in stored_rows(after,'c0_wiki_pages')
+             if r not in stored_rows(before,'c0_wiki_pages')})
+        lexical_ids = {r['id'] for state in (before,after)
+            for r in stored_rows(state,'c0_wiki_revisions') if r.get('page_id') in pages}
+    elif case=='queued-evidence':
+        sources = {r['id'] for r in stored_rows(after,'c0_sources')
+            if r not in stored_rows(before,'c0_sources')}
+        versions = {r['id'] for r in stored_rows(after,'c0_source_versions')
+            if r.get('source_id') in sources}
+        lexical_ids = {r['id'] for r in stored_rows(after,'c0_documents')
+            if r.get('version_id') in versions}
+    lexical_tables = {'c0_lexical_documents':'id','c0_lexical_terms':'document_id'}
+    if lexical_ids:
+        allowed_tables = allowed_tables | set(lexical_tables)
+    check('unrelated_lexical_rows_preserved',all(
+        [r for r in stored_rows(before,t) if r.get(key) not in lexical_ids] ==
+        [r for r in stored_rows(after,t) if r.get(key) not in lexical_ids]
+        for t,key in lexical_tables.items()))
     check('unrelated_content_unchanged',set(before)==set(after) and all(
         before[t]==after[t] for t in before if t not in allowed_tables))
     # Even in changed tables, no existing unrelated row may disappear/change.
     rows=stored_rows
     changed_page = ground['page']['id'] if case=='wiki-conflict' else None
     check('existing_rows_preserved',all(
-        row in rows(after,table) or (table=='c0_wiki_pages' and row.get('id')==changed_page) or
+        row in rows(after,table) or
+        (table in lexical_tables and row.get(lexical_tables[table]) in lexical_ids) or
+        (table=='c0_wiki_pages' and row.get('id')==changed_page) or
         (case=='wiki-conflict' and table=='c0_wiki_revisions' and row.get('page_id')==changed_page and row['number']<3) or
         (table=='c0_space_cursors' and row.get('space_id')==ground['Operations']['id'] and
          row.get('kind')==('object' if case=='typed-create' else 'knowledge'))

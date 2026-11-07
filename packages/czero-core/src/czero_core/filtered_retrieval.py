@@ -5,7 +5,8 @@ from sqlalchemy import text
 
 from .embeddings import EmbeddingStore
 from .retrieval import SearchService, hit_key
-from .lexical import SOURCE_CONTEXT,select_lexical
+from .lexical import select_lexical
+from .bm25 import search_documents
 
 
 class FilteredEmbeddingStore(EmbeddingStore):
@@ -55,12 +56,12 @@ class FilteredEvidenceSearch(SearchService):
     def _source_candidate(self, lexical):
         filters = self.filters
         return f'''SELECT c.id,'chunk' AS kind,v.id AS target_id,v.number AS target_revision,
-            {lexical.rank('c.search_vector',context=SOURCE_CONTEXT)} AS rank,
+            {lexical.rank('c.search_vector')} AS rank,
             ''' + filters._columns() + ''' FROM c0_chunks c JOIN c0_documents d ON d.id=c.document_id
             JOIN c0_source_versions v ON v.id=d.version_id JOIN c0_sources s ON s.id=v.source_id
             ''' + filters._joins('source_version', 'v.id', 'v.number') + f'''
             WHERE c.space_id=:space AND s.space_id=:space AND s.current_version_id=v.id AND v.state='ready' AND :chunks
-            AND {lexical.match('c.search_vector',context=SOURCE_CONTEXT)}
+            AND {lexical.match('c.search_vector')}
             AND ''' + filters._predicate('v.created_at', 's.deleted')
 
     def _wiki_candidate(self, lexical):
@@ -74,6 +75,10 @@ class FilteredEvidenceSearch(SearchService):
             AND ''' + filters._predicate('r.created_at', 'p.deleted')
 
     def _text(self, connection, query, *, limit, kind):
+        rows=search_documents(connection,query,space=self._space(connection),limit=limit,kind=kind,filters=self.filters)
+        if rows is not None:
+            return [self._decorate(connection,hit,row)
+                for hit,row in zip(self._document_hits(connection,rows,query),rows)],'bm25'
         def fetch(lexical):
             sql = 'SELECT * FROM (' + self._source_candidate(lexical) + ' UNION ALL ' + self._wiki_candidate(lexical)
             sql += ') matches ORDER BY rank DESC,kind,id LIMIT :limit'

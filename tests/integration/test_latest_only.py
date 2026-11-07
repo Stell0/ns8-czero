@@ -34,7 +34,7 @@ def test_source_atomic_failure_replacement_and_a_b_a(sources):
     assert documents.read_document(actor,current['id'])['body']=='OLD-ONLY-MARKER current A'
     execute(sources,'source.extract',second['id'])
     assert documents.read_document(actor,current['id'])['body']=='NEW-ONLY-MARKER current B'
-    assert service.search(actor,'OLD-ONLY-MARKER')==[]
+    assert service.search(actor,'"OLD-ONLY-MARKER"')==[]
     with pytest.raises(ContentSuperseded):service.citation(actor,citation['id'])
     with pytest.raises(ContentSuperseded):service.document(actor,first['id'])
     current=service.get(actor,current['id'])
