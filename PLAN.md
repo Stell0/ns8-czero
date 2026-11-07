@@ -1,6 +1,8 @@
 # C0 roadmap
 
-## OpenAI System One scoring — current-base successor
+<a id="openai-system-one-scoring--current-base-successor"></a>
+
+## OpenAI System One scoring — accepted delivery
 
 Based on original main `c16eb49f0cfa3fb428d96dfff42222862f809289`, preserving
 accepted M3 contracts/tests, schema0034 and managed-file/dependency-lock state.
@@ -12,11 +14,11 @@ run remains uncancelled. It does not establish acceptance on this new base.
 Replace JEV/Kev with OpenAI Decisions named predicate probabilities, retaining
 search interfaces, configuration format, authorization, provider bounds and
 ordinary-ranking fallback. Empty candidates complete scoring without I/O.
-Producer Core0.42 reserves a separate immutable release from M3's0.41 candidate.
+Core0.42 uses a separate immutable release identity from M3's0.41 candidate.
 Scoring adds no migration or runtime dependency; the base's schema0034 publication
-metadata migration still requires genuine upgrade/restore and consumer acceptance.
+metadata migration is covered by genuine upgrade/restore and consumer acceptance.
 Existing scorer descriptors require explicit endpoint/model/key replacement;
-empty native forms suggest OpenAI. Maintenance stays disabled and no project,
+empty native forms suggest OpenAI. Compilation maintenance stays off and no project,
 compiler, ingestion or external schedule is initialized.
 
 Acceptance covers complete named answers, malformed/refused responses, bounds,
@@ -54,9 +56,71 @@ checks the actual released Git source, schema0034 and all 19 compilation routes.
 Released-Git validation passes 140 scoring/PostgreSQL/REST/current and legacy
 MCP SDK/maintenance/migration cases. Pinned Node24/Renovate bounds,28 native
 controllers,schemas,21 Robot dry runs and390 documentation links pass.
-Consumer/full/native/main publication and dedicated backup/update/live acceptance
-remain required before declaring delivery. The accepted dedicated baseline below
-remains installed; scoring and the private benchmark wait for operator key setup.
+Consumer `827fbde711325a2f67b08ca7fee3d9ac5e950b67` passes
+[full/native acceptance](https://github.com/Stell0/ns8-czero/actions/runs/42387325979),
+independent downloaded native/privacy/scan grading and exact-source full promotion.
+Actual checks pass 2992 Python/PostgreSQL/packaging cases without database skips,
+40 document-browser cases and 21 Robot dry runs. Debian passes 21; Rocky passes 26
+with three expected skips, all eight native browser/privacy workflows and 30
+accessibility contexts. All five scan/SBOM pairs pass. [PR94](https://github.com/Stell0/ns8-czero/pull/94)
+regularly merges as `39c4059374d70d1ceb1604f0b29999876bee9374` with identical
+tracked bytes. Actual published and installed app-image probes verify released
+Core0.42 at `58cbb823` and its immutable tag, not a local producer substitution.
+
+The actual merged consumer main passes
+[full/native 42391601033](https://github.com/Stell0/ns8-czero/actions/runs/42391601033),
+independent downloaded grading, exact-source full promotion and canonical image
+publication. Six fresh main/latest registry reads match every digest, source
+revision and immutable sibling reference; the published main app also verifies
+released Git Core0.42 at 58cbb823. The source run passes 2992 actual backend cases,
+40 document-browser cases and 21 Robot dry runs. Registry verification uses fresh
+reads from the local and verified deployment nodes. Frozen full/native runs were
+never cancelled.
+
+The explicitly authorized dedicated installation now runs this accepted consumer.
+Supported C0-only backup and full stored-data integrity pass; all 15 backup-plan
+configurations are restored. Candidate released-Core database/originals preflight
+is unblocked. Update preserves all 61 existing domain-table row sets, source/Wiki
+bodies and identities, credentials, settings, cursors and knowledge events; only
+the intended schema revision changes. Six compilation tables remain empty. The
+originals store is empty; nonempty retained-file recovery remains native evidence.
+
+Supported manager restart changes the actual app invocation and preserves content,
+settings, existing schedules and ten unrelated instances. Fifty-eight table row
+sets remain identical across restart; four job/schedule tracking tables advance
+for successful executions of the existing health and embedding schedules. Their
+exact definitions match the frozen accepted predecessor. Existing weekly
+housekeeping remains enabled; compilation maintenance is not initialized.
+
+The original ordinary owner session, current profile/space grants and five stored
+Wiki reads survive update/restart. Fresh current/legacy official SDK discovery and
+the existing Codex connection verify the intended account and selected index.
+Bounded root application journals contain 95/44 actual entries after update/restart,
+with real health, profile, guide, native-callback and MCP positive controls; query,
+credential, JWT and traceback candidates are zero, including exact current-secret
+fingerprint checks. External unit definitions and all unrelated module records
+are preserved; unordered NS8 flags are compared as sets. Interactive-browser and
+CPU-quota waivers remain unchanged; automated native browsers pass.
+
+Freeze installed immutable tag
+`ci-827fbde711325a2f67b08ca7fee3d9ac5e950b67-42387325979-1`:
+
+| Image | Installed digest |
+| --- | --- |
+| Module | `sha256:e422c9f4e544e343e90a493c7da0baf055adb92044b2e6e03959ce2db56cefbc` |
+| App | `sha256:7c7615d50a35ce4ec9467ba52dedded0e5a5a55f029f0ef222250272363b02f0` |
+| PostgreSQL | `sha256:8f2e046dd6f0697efe6f625e199a846c9a073dab22096ba5170c5a2d035fdf0e` |
+
+These images are the next genuine predecessor. The previous app0.60/Core0.39
+installation and its immutable tags/digests below remain retained and freshly
+registry-verified. Documentation-marker images never replace installed images.
+After operator key configuration, real nonempty text rerank and filter calls each
+score 16 candidates through OpenAI Decisions without fallback. The full nine-way
+SciFact evaluation runs as a separate private one-shot with all 300 test queries
+per cell, a frozen threshold/configuration and the accepted corpus receipts and
+report exclusions. No benchmark quality is claimed before all cells validate.
+The original importer is not restarted; no external recurring schedule or Wiki
+publication is added.
 
 ## Knowledge compilation — M4 producer candidate
 
@@ -65,6 +129,8 @@ merge `c16eb49f0cfa3fb428d96dfff42222862f809289`. Exact-head full42373737405 and
 actual-main [42378485191](https://github.com/Stell0/ns8-czero/actions/runs/42378485191)
 pass full/native, independent artifact grading and exact-source promotion proof;
 see [M3 acceptance](docs/knowledge-compilation/M3.md#accepted-source-and-post-merge-verification).
+Merged M3 services and schema0034 are included in the released Core0.42/app0.61
+installation accepted above, with compilation policies still uninitialized.
 The [M4 contract](docs/knowledge-compilation/M4.md) adds a bounded external
 post-answer observation and source-backed durable proposal using the existing
 six-table coordinator and M2/M3 compiler. Search stays read-only; most episodes,
@@ -132,7 +198,7 @@ main/latest digests, source revisions and immutable sibling references. Earlier 
 PR head. Optional screenshot publishing failures and other failed/private evidence
 remain preserved. No full run was cancelled.
 
-The authorized dedicated installation is now app0.60.0 / released Core0.39.0 /
+The preceding accepted dedicated installation was app0.60.0 / released Core0.39.0 /
 schema0033 at the tested consumer source. Both the published app-image probe and
 the installed app's package metadata verify the Git source at `b05ebe46` and its
 immutable tag. C0-only backup and full stored-data integrity checks pass, with all

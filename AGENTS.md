@@ -1,11 +1,12 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-The current accepted dedicated installation is app **0.60.0**, released Core
-**0.39.0**, schema **0033**, source `a8bb2e8eb15906440835ebc94b1b300d083a0f6a`.
+The current accepted dedicated installation is app **0.61.0**, released Core
+**0.42.0**, schema **0034**, source `827fbde711325a2f67b08ca7fee3d9ac5e950b67`.
 Its supported C0-only backup/update, manager restart, preservation, live HTTP/MCP
 and root-journal acceptance are recorded in
-[PLAN](PLAN.md#embedding-backlog-drain). Freeze its installed CI tag/digests as
-the next genuine predecessor; retain the prior `c011a0b` installation and evidence.
+[PLAN](PLAN.md#openai-system-one-scoring--accepted-delivery). Freeze its installed
+CI tag/digests as the next genuine predecessor. Retain the prior `a8bb2e8`
+installation, immutable Core release and all earlier evidence.
 
 ## Product purpose
 
@@ -823,10 +824,10 @@ Supported backup/update, unchanged original tables/settings/schedules/credential
 ten unrelated instances, manager restart and real HTTP/MCP/journal checks pass.
 Main/publication and benchmark acceptance remain separately recorded in PLAN.
 
-## OpenAI System One candidate
+## OpenAI System One accepted delivery
 
 The current-base successor preserves M3/schema0034 and targets producer Core0.42.
-Do not publish over M3's0.41 identity or initialize maintenance during delivery.
+Do not publish over M3's0.41 identity or initialize compilation maintenance.
 
 The System One adapter now targets OpenAI Decisions named predicate answers.
 Preserve its public search metadata, five-second deadline, sixteen-candidate
@@ -841,7 +842,16 @@ Core 0.42.0 is immutably published at 58cbb823 after full42380719326,
 independent native/privacy/scan grading, promotion and publisher42385896972.
 PR93 regularly merges as 7e637926 with identical tracked bytes. App0.61 adopts
 its released Git tag/lock with >=0.42.0,<0.43.0 and patch-only updater bounds.
-Preserve the published Core subtree and inherited schema0034 migration; consumer
-full/native and dedicated backup/update/live acceptance remain separate gates.
-The current installed baseline at the top of this file remains unchanged until
-live acceptance. The benchmark still waits for operator key configuration.
+Consumer 827fbde passes full42387325979, independent native/privacy/scan grading
+and full promotion. PR94 regularly merges as 39c40593 with identical tracked bytes.
+The installed app verifies the released Git tag and commit. Supported backup,
+read-data integrity, update and manager restart preserve content, settings,
+credentials, existing schedules and ten unrelated instances. Fresh HTTP/current
+and legacy SDK/connected-tool reads and positive-control root journal audits pass.
+Compilation tables remain empty; existing housekeeping schedules stay unchanged.
+Actual consumer main 39c40593 passes full42391601033, independent artifact grading,
+promotion, canonical publication and six fresh registry identity reads. Preserve
+the published Core bytes and installed CI images. After operator key setup, real
+nonempty OpenAI rerank/filter reads pass without fallback; the full nine-way
+benchmark remains a separate private evaluation. Do not claim its quality before
+all cells validate or change the frozen threshold from test labels.
