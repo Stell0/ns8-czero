@@ -5,6 +5,112 @@ using schema0036. Producer full/native/browser/packaging acceptance passes;
 app0.62 released-consumer full/native/browser/image acceptance passes. Existing
 installed images remain unchanged. The measured SciFact baseline below remains development evidence.
 
+## Published results
+
+The final matched comparison below evaluates the released Core 0.44.0 document
+BM25 ranker against the preceding lexical implementation. It improves document
+ranking on SciFact, NFCorpus and a private documentation corpus. These are
+retrieval measurements, not generated-answer accuracy or production latency.
+The historical runs below remain available with their original settings and
+limitations; their timings should not be mixed with this comparison.
+
+### Provider-free text retrieval
+
+| Corpus | Documents | Queries | Method | nDCG@10 ↑ | Recall@10 ↑ | Empty results ↓ | Core-call P95 ms ↓ |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: |
+| SciFact | 5,183 | 300 | Baseline | 0.3098 | 0.3372 | 156/300 (52.00%) | 149.0 |
+| SciFact | 5,183 | 300 | Document BM25 | **0.6782** | **0.8073** | **6/300 (2.00%)** | **91.6** |
+| NFCorpus | 3,633 | 323 | Baseline | 0.2365 | 0.1024 | 82/323 (25.39%) | 128.7 |
+| NFCorpus | 3,633 | 323 | Document BM25 | **0.3206** | **0.1538** | **18/323 (5.57%)** | **56.8** |
+| Private documentation | 251 | 50 | Baseline | 0.5250 | 0.6444 | 11/50 (22.00%) | 148.0 |
+| Private documentation | 251 | 50 | Document BM25 | **0.6631** | **0.8407** | **0/50 (0.00%)** | **115.9** |
+
+Higher nDCG means relevant documents appear nearer the top; Recall@10 measures
+the fraction of labelled relevant documents found in the first ten distinct
+documents. Empty results count queries returning no candidates. Quality scores
+are macro averages; empty rankings score zero. Documentation quality uses the
+45 queries with positive relevance labels, while empty-result counts cover all
+50 questions. See the [metric definitions](../benchmarks/retrieval/README.md#valid-comparisons-and-reports).
+
+The two methods use the same complete corpus and metadata, source-only selection,
+response limit 50 and reranking off. Neither text method calls an embedding or
+scoring provider. P95 covers Core calls on the same host with a contemporaneous
+baseline; it excludes public HTTP/network/provider overhead and does not establish
+cold-cache performance, statistical significance or performance on other hardware.
+Baseline lexical, retrieval and citation helpers are all frozen at
+`b8ec5bfe8883168234535c4113f2e52c1b1d887e`; the accepted ranker is
+`bb882504fb5ab3b94f10bd1d286b06fa81b004ea`, published as
+[Core 0.44.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.44.0).
+
+| SciFact acceptance condition | Required | Observed | Result |
+| --- | ---: | ---: | --- |
+| nDCG@10 | ≥0.60 | 0.6782 | Pass |
+| Recall@10 | ≥0.65 | 0.8073 | Pass |
+| Empty-result rate | ≤10% | 2% | Pass |
+| P95 / matched baseline P95 | ≤1.5× | 0.61× | Pass |
+
+SciFact queries had already been inspected and are development evidence.
+NFCorpus was first evaluated after candidate `4595054` was frozen; its final
+rerun is an exposed-set confirmation, not a new holdout. Both NFCorpus quality
+metrics improve against the baseline. No thresholds or relevance labels were
+relaxed to obtain these results.
+
+### Candidate recovery and hybrid ranking
+
+The following SciFact values measure the distinct documents actually returned
+within the response limit, not all indexed documents or internal candidates.
+Oracle nDCG is the best possible ordering of those returned documents using the
+known relevance labels; it is a diagnostic ceiling, not an achieved ranker score.
+
+| SciFact diagnostic | Baseline | Document BM25 |
+| --- | ---: | ---: |
+| Returned-candidate recall | 0.3483 | 0.8802 |
+| Oracle nDCG@10 | 0.3495 | 0.8819 |
+| Mean distinct returned documents | 3.19 | 48.68 |
+
+A separate fusion audit uses the same frozen arrays of 64 real semantic
+candidates per SciFact query for every comparator, with reranking off:
+
+| Ranking | nDCG@10 | Recall@10 |
+| --- | ---: | ---: |
+| Semantic-only | 0.7133 | 0.8559 |
+| Baseline hybrid | 0.7198 | 0.8592 |
+| Document BM25 hybrid | **0.7388** | 0.8536 |
+
+Hybrid passes the requirement to stay within 0.01 nDCG@10 of both comparators,
+with slightly lower recall. This audit measures fusion quality; it does not
+measure candidate provider latency or prove provider-profile stability throughout
+capture. The [frozen-run details](#frozen-producer-measurements) retain the capture
+checks, cleanup error and excluded incomplete probe.
+
+### Costs, tradeoffs and publication scope
+
+The initial SciFact backfill of 5,183 complete documents took **33.68 seconds**;
+derivative tables and indexes occupied **104,652,800 bytes**. Final reruns only
+checked an already indexed corpus, so their migration timing is not indexing time.
+
+On the 40 answerable documentation questions, passage evidence coverage changed
+from **0.7000 to 0.6875**, while complete evidence stayed **0.6750**. Mean
+wrong-product candidates increased from **0.6 to 20.575** within the returned
+limit. Broader matching can recover relevant documents while also returning weak
+candidates, including for unanswerable questions. Read the cited evidence and
+use explicit syntax or structured filters for exact version selection.
+
+This public report contains aggregate measurements, experiment settings and
+public software/data provenance. Private deployment names and URLs, IP addresses,
+account/space/source identifiers, credentials, document titles/bodies, private
+questions/labels, raw rankings and operational paths are excluded. Raw evidence
+is retained privately; the documentation corpus cannot be independently reproduced
+from these aggregates. Public-corpus evaluations can be repeated with the
+[BEIR runner](../benchmarks/retrieval/README.md), an authorized disposable instance
+and the stated settings, but identical timing is not guaranteed.
+
+See [release and acceptance evidence](../PLAN.md#document-bm25--released-core-consumer-adoption)
+for the full PostgreSQL, packaging, HTTP/MCP, browser and native checks. Publication
+of these measurements does not change or authorize a production deployment.
+
+## Retrieval behavior
+
 Ordinary source/Wiki queries use OR eligibility with English and Italian stem
 variants and literal terms. `Bcl2`/`BCL-2` and `Tetraspanin-3`/`Tetraspanin 3`
 share ordered alphanumeric variants; different numbers remain distinct. Repeated
