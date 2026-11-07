@@ -25,7 +25,7 @@ GUIDANCE = {
     'workflows': [
         {
             'id': 'knowledge-compiler', 'title': 'Compile source-backed knowledge',
-            'tools': ['compilation_policy_get','compilation_source_bindings_get','compilation_propose',
+            'tools': ['compilation_policy_get','compilation_source_bindings_get','compilation_target_bindings_get','compilation_propose',
                 'compilation_tasks_get','compilation_run_claim','compilation_run_checkpoint',
                 'compilation_plan_validate','compilation_apply','compilation_verify'],
             'steps': [

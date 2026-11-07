@@ -75,11 +75,12 @@ def test_installed_skill_multiple_source_only_concepts_apply_and_read_back_over_
                         run = await call('compilation_run_claim',{'space_id':fixture.space,'data':{'data':{
                             'kind':'manual','cycle_key':'frozen-sources','lease_owner':'external-fixture','policy_revision':1},
                             'idempotency_key':'claim-'+str(index)}})
-                        task = next(t for t in run['tasks'] if t['id'] == task['task']['id'])
+                        task = await call('compilation_tasks_get',{'space_id':fixture.space,'task_id':task['task']['id']})
                         citations = [(await call('citations_get',{'space_id':fixture.space,'chunk_id':e['chunk_id']}),e['quote']) for e in record['evidence']]
                         plan = navigation_plan(fixture.space,task,record['title'],record['synthesis'],citations,
                             classification='uncertain' if record['classification'] == 'uncertain' else 'supported_synthesis',
                             reviewed_source_ids=[s['logical_document_id'] for s in task['source_bindings']])
+                        plan['operations'][0]['arguments']['slug']=task['managed_slug']
                         if index == 2:
                             # Deterministic source-only graph output, including contradictory values.
                             evidence = plan['target_bindings'][0]['evidence']
@@ -103,7 +104,27 @@ def test_installed_skill_multiple_source_only_concepts_apply_and_read_back_over_
                         request = {'lease':run['lease'],'expected_revision':run['run']['revision'],'plan':plan}
                         preview = await compile_plan(call,fixture.space,request)
                         assert preview['outcome'] == 'needs_review'
-                        if index == 1:
+                        if index == 0:
+                            # Tool-only workflow: genuine content reads plus server hashes, no local digest helper.
+                            saved=await call('compilation_apply',{'space_id':fixture.space,'data':{'data':{
+                                **request,'plan_hash':preview['plan_hash'],'approval':{'plan_hash':preview['plan_hash'],
+                                'reference':'synthetic:exact-plan-review'}},'idempotency_key':'apply-'+record['key']}})
+                            page=await call('wiki_pages_get',{'space_id':fixture.space,'page_id':saved['records'][0]['id']})
+                            annotation=await call('knowledge_annotations_get',{'space_id':fixture.space,'kind':'wiki_revision',
+                                'target_id':page['content']['id'],'content_revision':page['revision'],'namespace':'verification'})
+                            packet=await call('compilation_target_bindings_get',{'space_id':fixture.space,'data':{'targets':[
+                                {'kind':b['kind'],'id':b['id']} for b in saved['records']]}})
+                            observed=[{k:v for k,v in b.items() if k!='managed'} for b in packet['target_bindings']]
+                            assert (page['id'],page['revision'],page['content']['content_hash'])==tuple(observed[0][k] for k in ('id','revision','content_hash'))
+                            assert (annotation['id'],annotation['revision'])==tuple(observed[1][k] for k in ('id','revision'))
+                            for evidence in record['evidence']:
+                                assert (await call('citations_get',{'space_id':fixture.space,'chunk_id':evidence['chunk_id']}))['body']
+                            bindings=await call('compilation_source_bindings_get',{'space_id':fixture.space,'data':{'selections':selections}})
+                            actual=await call('compilation_verify',{'space_id':fixture.space,'data':{'data':{
+                                'lease':run['lease'],'expected_revision':saved['run']['revision'],'task_id':task['id'],
+                                'expected_task_revision':saved['task']['revision'],'policy_revision':1,'plan_hash':preview['plan_hash'],
+                                'observations':observed,'source_bindings':bindings['source_bindings']},'idempotency_key':'verify-tool-only'}})
+                        elif index == 1:
                             # Simulate a lost response after the actual server commit; recover from SQL outcome.
                             saved = await call('compilation_apply',{'space_id':fixture.space,'data':{'data':{
                                 **request,'plan_hash':preview['plan_hash'], 'approval':{

@@ -20,7 +20,7 @@ def navigation_plan(space_id, task, title, synthesis, citations, *, classificati
     body = navigation_body(synthesis, evidence, classification)
     binding = (record_binding('page', current) if current else {'kind':'page','id':None,'revision':0,
         'content_id':None,'content_hash':None,'record_hash':None})
-    slug = current['slug'] if current else managed_slug(space_id, task['profile_id'], task['topic_key'])
+    slug = current['slug'] if current else task.get('managed_slug') or managed_slug(space_id, task['profile_id'], task['topic_key'])
     arguments = {'slug':slug,'title':title,'body':body}
     if current:
         arguments.update(expected_revision=current['revision'], metadata=current['content']['metadata'])

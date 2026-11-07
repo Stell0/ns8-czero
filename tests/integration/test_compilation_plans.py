@@ -12,7 +12,7 @@ from czero_core.compilation import CompilationConflict, CompilationDisabled
 from czero_core.compilation_content import passage, record_binding
 from czero_core.compilation_plans import managed_slug, plan_hash
 from czero_core.current_content import ContentSuperseded
-from czero_core.wiki import WikiService
+from czero_core.wiki import WikiService, KnowledgeNotFound
 from czero_core.spaces import SpaceService
 from test_compilation import compiler as coordinator_fixture, enable, support, propose, claim, checkpoint
 from test_sources import sources, upload, execute
@@ -607,3 +607,39 @@ def test_three_source_generations_retain_latest_predecessor(compiler,monkeypatch
     third=propose(compiler,bindings)['task']
     assert third['predecessor_id']==second['id']
     assert third['prior_attempts']==2
+
+
+def test_target_binding_reads_need_no_local_hashing_or_enabled_learning(compiler):
+    from czero_core.api_keys import ApiKeyService
+    from czero_core.operations import ScopeDenied
+    from czero_core.identity import PermissionDenied
+    service,owner,_,_,_=compiler
+    request,_=candidate(compiler)
+    saved=apply(compiler,request)
+    assert service.get_task(owner,saved['task']['id'])['managed_slug']==request['plan']['operations'][0]['arguments']['slug']
+    selections=[{'kind':b['kind'],'id':b['id']} for b in saved['records']]
+    before=counts(compiler)
+    observed=service.target_bindings(owner,selections)['target_bindings']
+    assert [{k:v for k,v in b.items() if k!='managed'} for b in observed]==saved['records']
+    assert counts(compiler)==before and 'body' not in str(observed)
+    verify(compiler,request,saved)
+    observed=service.target_bindings(owner,selections)['target_bindings']
+    assert observed[0]['managed'] and not observed[1]['managed']
+    keys=ApiKeyService(service.access,client_id='binding-fixture',client_secret='synthetic',resource='https://example.test/mcp')
+    def actor(scopes,spaces):
+        token=keys.create(owner,name='Binding read',scopes=scopes,space_ids=spaces)['key']
+        return keys.verify(token,resource=keys.resource).actor
+    read=actor({'c0:read'},[str(service._space_id)])
+    service.configure(owner,{**service.policy(owner)['data'],'enabled':False},expected_revision=1,idempotency_key='disable-read-fixture')
+    before=counts(compiler)
+    assert service.target_bindings(read,selections)['target_bindings']==observed
+    assert counts(compiler)==before
+    with pytest.raises(ScopeDenied):service.target_bindings(actor({'c0:write'},[str(service._space_id)]),selections)
+    foreign=SpaceService(service.database,service.access).create(owner,'Binding isolation',idempotency_key=uuid4().hex)['id']
+    try:
+        with pytest.raises(PermissionDenied):service.in_space(foreign).target_bindings(read,selections)
+        with pytest.raises(KnowledgeNotFound):service.in_space(foreign).target_bindings(owner,selections)
+    finally:
+        with service.database.engine.begin() as c:c.execute(text('DELETE FROM c0_spaces WHERE id=:id'),{'id':foreign})
+    with pytest.raises(ValueError):service.target_bindings(owner,[{'kind':'sql','id':str(uuid4())}])
+    with pytest.raises(ValueError):service.target_bindings(owner,selections*26)

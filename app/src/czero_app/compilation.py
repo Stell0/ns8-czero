@@ -28,6 +28,11 @@ def publication_schema(name):
     return deepcopy(getattr(compilation_plan_schema, name))
 
 
+class TargetSelections(StrictRequest):
+    targets: list[dict] = Field(min_length=1,max_length=25,
+        json_schema_extra={'items':publication_schema('TARGET_SELECTION')})
+
+
 class PlanValidate(StrictRequest):
     data: dict = Field(json_schema_extra=publication_schema('VALIDATE'))
 
@@ -161,6 +166,11 @@ def install(app, database, auth, read_context, write_context):
 
     if importlib.util.find_spec('czero_core.compilation_plans') is None:
         return  # M1 Core remains a fully supported coordination-only consumer.
+
+    @app.post('/api/v1/compilation/target-bindings', response_model=dict)
+    @operation('compilation_target_bindings_get', 'Read current selected-space target identity hashes and compiler ownership for a bounded selection. Metadata only; read actual content separately and compare revisions. No local hashing tool or policy enablement required. No writes.', Role.READER, dict, space_field='space_id')
+    def target_bindings(data: TargetSelections, space_id: UUID, context: RequestAccess = Depends(read_context)):
+        return invoke(space_id, 'target_bindings', context.actor, **data.model_dump())
 
     @app.post('/api/v1/compilation/plans/validate', response_model=dict)
     @operation('compilation_plan_validate', 'Editor: dry-run one closed source-backed plan under enabled policy and a live fence. Persists no content or progress. Returns plan hash and review eligibility; does not prove semantic truth or grant publication authority.', Role.EDITOR, dict, space_field='space_id', required_scope='c0:write')

@@ -7,6 +7,7 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'compilation_target_bindings_get': 'Read current selected-space target identity hashes and compiler ownership for a bounded selection. Metadata only; read actual content separately and compare revisions. No local hashing tool or policy enablement required. No writes.',
     'compilation_plan_validate': 'Editor: dry-run one closed source-backed plan under enabled policy and a live fence. Persists no content or progress. Returns plan hash and review eligibility; does not prove semantic truth or grant publication authority.',
     'compilation_apply': 'Editor: atomically publish a validated exact plan and source dependencies under current policy, revisions and fence. Queue-only, authored edits and uncertain/contrary plans require exact-plan approval. Returns applied_pending_verify, never verified truth. Preserve replay key after uncertain response.',
     'compilation_verify': 'Editor: record fresh target/annotation/original readback matching an actual applied outcome at the live fence. Completes matching work only; does not promote verification status or establish complete corpus coverage. Reconcile edits, expired citations and lost fences.',

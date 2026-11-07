@@ -10,7 +10,7 @@ from sqlalchemy import text
 from .compilation_schema import (ACTIVE, PROPOSAL, SOURCE_SELECTION, checked,
     defaults, digest, key, policy as normalize_policy)
 from .compilation_runs import CompilationRuns
-from .compilation_plans import CompilationPlans
+from .compilation_plans import CompilationPlans, managed_slug
 from .current_content import ContentSuperseded
 from .documents import DocumentService, SNAPSHOT, RECEIPT
 from .identity import PermissionDenied, Role
@@ -489,7 +489,8 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
             self._authorize(connection, actor)
             task = self._task(connection, task_id)
             publication = self._publication(connection, task_id)
-            return snapshot({**task, 'publication': publication})
+            return snapshot({**task, 'publication': publication,
+                'managed_slug':managed_slug(self._space_id,task['profile_id'],task['topic_key'])})
 
     def list_tasks(self, actor, *, state=None, topic_key=None, limit=50, after=None):
         from .compilation_schema import STATES

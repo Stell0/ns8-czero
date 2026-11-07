@@ -29,7 +29,7 @@ def test_compiler_guidance_needs_all_actual_publication_capabilities():
     flow = next(f for f in agent_guidance()['workflows'] if f['id'] == 'knowledge-compiler')
     operations = [{'name':name} for name in flow['tools']]
     assert any(f['id'] == 'knowledge-compiler' for f in agent_guidance(operations)['workflows'])
-    for missing in ('compilation_plan_validate','compilation_apply','compilation_verify'):
+    for missing in ('compilation_target_bindings_get','compilation_plan_validate','compilation_apply','compilation_verify'):
         assert not any(f['id'] == 'knowledge-compiler' for f in agent_guidance([o for o in operations if o['name'] != missing])['workflows'])
 
 

@@ -41,3 +41,7 @@ VERIFY = record({'lease': LEASE, 'expected_revision': integer(1, 2147483646),
     'policy_revision': integer(1, 2147483646), 'plan_hash': HASH,
     'observations': {'type': 'array', 'minItems': 1, 'maxItems': 25, 'items': BINDING},
     'source_bindings': PLAN['properties']['source_bindings']})
+
+TARGET_SELECTION = record({'kind': {'enum': KINDS + ['annotation','link']}, 'id': UUID})
+TARGET_READ = record({'targets': {'type':'array','minItems':1,'maxItems':25,
+    'uniqueItems':True,'items':TARGET_SELECTION}})

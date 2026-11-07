@@ -5,9 +5,9 @@ automatic workflow authorizes it. Ordinary research remains read-only. Discover
 `compilation_policy_get`, `compilation_source_bindings_get`, `compilation_propose`,
 `compilation_tasks_list/get`, `compilation_run_claim/checkpoint`,
 `compilation_status_get`, `compilation_dependencies_list`,
-`compilation_plan_validate`, `compilation_apply` and `compilation_verify` in the
+`compilation_target_bindings_get`, `compilation_plan_validate`, `compilation_apply` and `compilation_verify` in the
 actual selected connection. Core 0.39 supplies coordination only; publication
-requires the three newer tools. Do not assume availability from a package version.
+requires the three publication tools and the read-only target-binding tool. Do not assume availability from a package version.
 
 All compiler tools select top-level `space_id`; REST selects its query parameter.
 Mutation adapters carry their domain input in `data` and a sibling replay key when
@@ -69,11 +69,19 @@ profile additionally permits entity create/update/alias/link, sourced claim
 create/update and relation create/update. No delete/archive/unlink/schema/object,
 source, access, job or schedule operations. Claims retain contrary immutable values.
 
+No local code or hash utility is required. Read the claimed task with tasks_get;
+its `managed_slug` supplies the exact new-page slug. For current targets and dedup
+candidates, first read their actual content, then call target_bindings_get with
+`targets:[{kind,id}]`. It returns current identity hashes and a `managed` ownership
+flag. Compare IDs, revisions and page content identities with the actual reads;
+on a mismatch reload and reconcile. This metadata read works with Reader+Read
+even when learning is disabled and performs no writes.
+
 Each content create/update has a target binding: operation_index, kind,
 canonical_key, id, revision, content_id, content_hash, record_hash, managed and
 evidence. Creates have null IDs/hashes, revision zero and managed=false. The
 primary canonical_key equals the task topic_key. For a new primary page its stable
-slug is `c0-` plus the first 32 hexadecimal characters of SHA256 of canonical JSON
+slug is the task's server-provided managed_slug. For clients implementing it locally, it is `c0-` plus the first 32 hexadecimal characters of SHA256 of canonical JSON
 `[space_id, profile_id, topic_key]`. Updates bind current actual record/revision and
 expected_revision. Managed ownership comes from SQL dependency hashes, not a model
 assertion or metadata marker. Authored edits require exact-plan review.
@@ -130,6 +138,12 @@ original references; entity_relations_list and entity_references_list supply the
 saved graph rows (typed links are in the references response list); knowledge_annotations_get selects the actual content revision.
 Do not claim complete readback if a bounded list omitted a saved row.
 
+After the content reads, call target_bindings_get for every output. Compare its
+IDs/revisions/content identities with those reads, then remove `managed` to form
+the observations. Use these server-generated hashes; do not invent SHA256 values
+or require an unavailable execution tool. Binding metadata alone never proves
+content was examined. The optional Python helper can compute the same hashes.
+
 `record_hash` is SHA256 of sorted-key, compact UTF-8 finite JSON over these stable
 fields (UUIDs and timezone-aware datetimes use ordinary API strings):
 
@@ -137,7 +151,8 @@ fields (UUIDs and timezone-aware datetimes use ordinary API strings):
 - Entity: id,kind,label,metadata,revision,deleted; aliases sorted by normalized,
   each containing normalized,label.
 - Claim: id,entity_id,page_id,predicate,value,metadata,revision,deleted,valid_from,
-  valid_to,evidence_stale; evidence sorted by chunk_id, each with chunk_id and
+  valid_to,evidence_stale; normalize nonnull times to UTC with +00:00 suffix
+  and six fractional digits only when microseconds are nonzero; evidence sorted by chunk_id, each with chunk_id and
   unavailable (true for a superseded reference).
 - Relation: id,source_id,target_id,kind,metadata,revision,deleted.
 - Link: id,entity_id,target_kind,target_id; missing targets fail readback.
@@ -146,8 +161,8 @@ fields (UUIDs and timezone-aware datetimes use ordinary API strings):
 
 Each observed binding is `{kind,id,revision,content_id,content_hash,record_hash}`;
 nonpage content IDs/hashes are null, link revision is 1. The optional Python Core
-client helpers implement these projections; agents on other hosts use equivalent
-JSON. Compare actual reads with saved bindings rather than repeating the response
+client helpers implement these projections; tool-only agents use the binding
+read instead. Compare actual reads with saved bindings rather than repeating the response
 as evidence of reading it. Original source_bindings_get must still match the plan.
 
 Call compilation_verify with lease, expected run/task revisions, policy revision,

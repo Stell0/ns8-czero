@@ -6,7 +6,7 @@ description: Compile current original evidence into connected C0 Wiki knowledge 
 Read [the instance binding](../../references/instance.md) and
 [the compiler protocol](../../references/compiler.md). Discover current tools,
 account, authorized space and compilation policy. Require all three publication
-tools plus the M1 coordination tools before attempting this workflow. A missing
+tools, compilation_target_bindings_get and the M1 coordination tools before attempting this workflow. A missing
 capability blocks compilation; do not substitute ordinary Wiki/bundle writes or
 another connection. Policy enablement requires separate operator authority.
 
@@ -23,7 +23,9 @@ inference and contrary observations. Keep contradictions visible and unknown
 applicability unknown. Every proposed target needs exact source support; defer
 unsupported assertions. Generated text never receives verified status.
 
-Dry-run first. Present review-required changes with their exact plan hash and
+Use tasks_get.managed_slug and target_bindings_get for server-derived slugs and
+current identity hashes. Read actual content separately and compare revisions;
+no local code or hash utility is required. Dry-run first. Present review-required changes with their exact plan hash and
 current source/target binding. Use an approval reference only when the user/operator
 has approved that exact plan; queue-only policy, authored edits and uncertain or
 contrary plans require it. Already authorized automatic low-risk navigation may

@@ -651,13 +651,15 @@ Selected-space index status retains `indexed` and adds current eligible
 
 ## Guarded external knowledge compilation (0.40 producer)
 
-`CompilationService.in_space(space_id)` adds `validate_plan`, `apply_plan` and
+`CompilationService.in_space(space_id)` adds read-only `target_bindings`, `validate_plan`, `apply_plan` and
 `verify_plan` over the six schema0033 coordination tables and existing atomic
 knowledge services. Reasoning and model invocation remain external. Policies
 remain disabled by default; no migration, backfill, provider or schedule runs.
 The released consumer lock remains separate from this unreleased producer.
 
-Plans bind exact original passages/hashes, current targets, dedup decisions,
+Task metadata supplies the managed slug; bounded target bindings supply identity
+hashes and ownership for tool-only agents without a local hashing utility. Actual
+content must still be read separately and compared. Plans bind exact original passages/hashes, current targets, dedup decisions,
 classification, profile and live run fence. Dry-run rolls back its bundle. Apply
 commits content, dependencies and metadata-only outcome together; only separate
 matching readback completes a task. Queue-only, authored, uncertain/contrary and

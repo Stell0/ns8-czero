@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from .annotations import AnnotationService, ContentTarget
 from .bundles import KnowledgeBundleService, _operations, _references
 from .compilation_content import passage, record_binding
-from .compilation_plan_schema import VALIDATE, APPLY, VERIFY
+from .compilation_plan_schema import VALIDATE, APPLY, VERIFY, TARGET_READ
 from .compilation_schema import checked, digest
 from .identity import Role
 from .receipts import MUTATION_LOCK, snapshot
@@ -44,6 +44,16 @@ def _json(value):
 
 
 class CompilationPlans:
+    def target_bindings(self, actor, targets):
+        data = checked(TARGET_READ, {'targets':targets}, maximum=8192)
+        with self.database.engine.connect() as connection:
+            self._authorize(connection, actor, Role.READER)
+            bindings = []
+            for target in data['targets']:
+                binding = record_binding(target['kind'],self._read_record(connection,target['kind'],target['id']))
+                bindings.append({**binding,'managed':self._owned_target(connection,binding)})
+            return {'target_bindings':bindings}
+
     def _publication(self, connection, task_id):
         return connection.execute(text("""SELECT metrics FROM c0_compilation_events WHERE space_id=:space
             AND task_id=:task AND operation='apply' ORDER BY COALESCE((metrics->>'task_revision')::integer,0) DESC,created_at DESC,id DESC LIMIT 1"""),
