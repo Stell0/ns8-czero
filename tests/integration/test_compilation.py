@@ -32,13 +32,7 @@ def compiler(sources, wiki):
         connection.execute(text('DELETE FROM c0_compilation_dependencies WHERE space_id=:space'), {'space': space})
         connection.execute(text('DELETE FROM c0_compilation_sources WHERE space_id=:space'), {'space': space})
         connection.execute(text('UPDATE c0_compilation_tasks SET predecessor_id=NULL WHERE space_id=:space'), {'space': space})
-        # The scale fixture creates 10,000 tasks. Bound cleanup statements too:
-        # FK checks on retired assessment references otherwise exceed the normal
-        # five-second deadline on slower hosts. Keep every row and runtime test.
-        while connection.execute(text('DELETE FROM c0_compilation_tasks WHERE id IN '
-                '(SELECT id FROM c0_compilation_tasks WHERE space_id=:space LIMIT 250)'),
-                {'space': space}).rowcount:
-            pass
+        connection.execute(text('DELETE FROM c0_compilation_tasks WHERE space_id=:space'), {'space': space})
         connection.execute(text('DELETE FROM c0_compilation_runs WHERE space_id=:space'), {'space': space})
         connection.execute(text('DELETE FROM c0_compilation_policies WHERE space_id=:space'), {'space': space})
 

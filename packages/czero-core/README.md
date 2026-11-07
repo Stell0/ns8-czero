@@ -70,12 +70,12 @@ Library publication and application tag/lock adoption have separate acceptance
 gates. Check the repository roadmap for immutable artifacts and actual consumer
 image/native evidence before adoption; a producer test is not consumer proof.
 
-## Document BM25 (0.43 producer)
+## Document BM25 (0.44 producer)
 
 Ordinary source and Wiki search ranks complete eligible current documents with
 BM25 and English/Italian stem variants. Numbers and identifiers in prose are
 relevance signals; explicit syntax and structured filters remain exact constraints.
-Schema0035 adds body-free transactional lexical derivatives and backfills retained
+Schema0036 adds body-free transactional lexical derivatives and backfills retained
 content without changing citation identities. Superseded derivatives cascade away.
 
 Optional `lexical_strategy=bm25` and `lexical_ranker_version` describe the lexical

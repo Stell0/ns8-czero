@@ -1,6 +1,6 @@
 # Provider-free document retrieval
 
-Core 0.43 is a producer candidate using schema0035. Its publication, released
+Core 0.44 is a producer candidate using schema0036. Its publication, released
 consumer adoption and deployment gates are separate; existing installed images
 remain unchanged. The measured SciFact baseline below remains development evidence.
 
@@ -22,7 +22,7 @@ uses the same document ordering and retains its citation-list response. Multipar
 sources retain their existing identities. Hybrid uses document-level RRF with
 constant 60; semantic-only retrieval keeps its existing ranking.
 
-Schema0035 stores document lengths and term frequencies with no additional body
+Schema0036 stores document lengths and term frequencies with no additional body
 copies. A numbered PostgreSQL normalizer is shared by writes, queries and migration
 backfill. Derivatives follow complete-source publication and Wiki/title edits in
 one transaction. Foreign-key cascades retire old derivatives. Migration preserves
@@ -52,7 +52,8 @@ standalone wheel/archive and browser regressions. See [development](development.
 ## Frozen producer measurements
 
 Candidate `4595054b35c20be276d4df7c1a0360b5ac340ab5` freezes Core package tree
-`9f1009b6f50a52bf1ec8c10515f5d587a24008f5`. Its successor preserves that tree.
+`9f1009b6f50a52bf1ec8c10515f5d587a24008f5`. The M4 successor retains the same ranker and normalizer, with a new
+Core version and migration identity; the package tree now includes M4.
 Provider-free local PostgreSQL measurements use complete official corpora,
 `kind=source`, limit 50 and reranking off, with identical query/corpus settings
 for the contemporaneous baseline and candidate. Citation hashes and corpus
@@ -92,7 +93,21 @@ match. This audit does not establish candidate provider latency or controlled
 provider-profile stability throughout capture. Raw evidence and failed probes
 remain private.
 
-The existing documentation benchmark, exact successor full/native acceptance,
+The existing documentation benchmark was also run on251 approved current
+originals and50 unchanged frozen questions. Fourteen source bindings changed;
+all frozen evidence passages remain present, and both rankers use the same
+copied corpus and metadata. Across45 queries with positive labels, nDCG@10
+moves from0.5250 to0.6631 and Recall@10 from0.6444 to0.8407; empty results
+across all50 move from11 to0. For the40 answerable questions, evidence coverage
+moves from0.7000 to0.6875 and complete evidence remains0.6750. P95 moves from
+91.8ms to146.9ms. Broad matching returns more weak candidates, including for
+unanswerable questions; relevance is not an answerability test. The initial
+local setup stopped before scoring because managed sources remained staged;
+all bodies were validated before Core's normal publication operation completed
+in the disposable fixture. Indexing time is unreported for that resumed run.
+The current M4 successor requires its own integration validation.
+
+Exact successor full/native acceptance,
 immutable publication and released-consumer adoption remain required. No
 production deployment is authorized by these measurements.
 

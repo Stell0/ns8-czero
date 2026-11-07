@@ -210,7 +210,7 @@ def test_retained_generations_backfill_without_replacing_citation_ids(tmp_path):
         config.set_main_option('script_location', str(Path(czero_core.migrate.__file__).with_name('migrations')))
         with database.engine.begin() as c:
             config.attributes['connection'] = c
-            command.upgrade(config, '0034_compilation_maintenance')
+            command.upgrade(config, '0035_compilation_assessment')
         key = uuid4()
         issuer = 'https://migration.example.test'
         acl = AccessService(database, issuer, key)

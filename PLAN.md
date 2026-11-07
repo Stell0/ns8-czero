@@ -2,17 +2,17 @@
 
 ## Document BM25 — producer candidate
 
-The successor starts from original main `39c4059374d70d1ceb1604f0b29999876bee9374`,
-retaining app0.61/released Core0.42, M3 and managed-file state. Frozen candidate
-`4595054` and its full/native run remain preserved; its complete Core package tree
-is unchanged in this successor. Exact-retirement queries now quote their markers;
+The successor starts from original main `b8ec5bfe8883168234535c4113f2e52c1b1d887e`,
+retaining app0.61/released Core0.42, M4 and managed-file state. Frozen candidate
+`4595054` and its full/native run remain preserved; its ranker and normalizer remain unchanged. M4 takes Core0.43/schema0035,
+so BM25 now follows as Core0.44/schema0036. Exact-retirement queries now quote their markers;
 the bilingual fixture retains an exact Italian control beside broader stemming.
 The earlier development checkpoint `ddb9421` and its private diagnostic runs
-remain preserved. Core0.43/schema0035 adds transactional body-free document
+remain preserved. Core0.44/schema0036 adds transactional body-free document
 lengths and term frequencies, English/Italian normalization and document BM25.
 Exact phrases/operators and structured selection retain their constraints.
 Source-only responses preserve their citation-list shape; hybrid fuses document
-rankings before returning original chunk evidence. Plugin1.6.1 describes the
+rankings before returning original chunk evidence. Plugin1.7.1 describes the
 optional ranker metadata without changing connection identity or scopes.
 
 SciFact's already-inspected 300 questions are development evidence. Acceptance
@@ -38,7 +38,8 @@ check and the five-second deadline.
 The frozen candidate passes the first NFCorpus evaluation: all 3,633 documents
 and 323 queries score 0.3206 nDCG@10 /0.1538 Recall@10 versus 0.2365/0.1024,
 with 18 versus 82 empty results. That query set is now exposed; successor tests
-retain this evidence because the complete Core package tree is unchanged.
+retain this evidence because the ranker and normalizer remain unchanged; full M4 integration
+acceptance is repeated.
 A matched fusion audit uses the same real 64 semantic candidates per SciFact
 query for all comparators: candidate hybrid 0.7388 versus baseline hybrid 0.7198
 and semantic-only 0.7133 nDCG@10. Recall is 0.8536/0.8592/0.8559 respectively.
@@ -49,9 +50,19 @@ not candidate end-to-end provider latency or production acceptance.
 The original frozen full suite records 3,008 passes and seven failures. The
 successor quotes the deliberately exact retirement markers, updates the bilingual
 fixture, and scopes evaluator index allowances to requested content generations.
-The existing private documentation benchmark remains pending: current-copy
-permission is explicit, but credential recovery and a denied document block
-complete corpus validation. No labels, thresholds or access grants are changed.
+The approved private copy now contains all251 current bodies and source
+metadata; its matched documentation comparison is running. Old label bindings
+remain retained and every passage must validate before a current binding is
+used. No queries, relevance labels, thresholds or access grants are changed.
+
+The prior-base documentation comparison completes on all251 current documents
+and50 frozen questions. Fourteen document bindings changed; every original
+labelled passage still matches. Across45 queries with positive relevance labels,
+nDCG@10 rises from0.5250 to0.6631 and Recall@10 from0.6444 to0.8407. Empty
+results across all50 fall from11 to0. Existing answerable-query evidence coverage
+moves from0.7000 to0.6875, with complete evidence unchanged at0.6750. P95 moves
+from91.8ms to146.9ms; weak candidates increase, so neither empty results nor
+returned relevance proves answerability. Current M4 validation remains separate.
 
 Quality, exact-source full PostgreSQL/packaging/browser/native acceptance,
 upstream merge gate, immutable Core publication and separate released-consumer
