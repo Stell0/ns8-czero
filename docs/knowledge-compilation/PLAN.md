@@ -1,6 +1,6 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 implementation candidate. M4–M6 are not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91); M4 implementation candidate. M5–M6 are not implemented.**
 
 [M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
 coordination milestone against its accepted predecessor. [M2](M2.md) records the
@@ -470,6 +470,8 @@ Detailed accepted implementation contract and candidate evidence: [M3](M3.md).
   based on a sample, duplicate project scheduler or unchanged content repeatedly inferred.
 
 ### M4 — retrieval feedback
+
+Refined producer contract and acceptance: [M4](M4.md).
 
 - Dependency: accepted M3 and compiler tools present in real capability catalog.
 - Scope/contracts: bounded after-answer observation, current Wiki/task checks,

@@ -47,3 +47,18 @@ def test_m1_consumer_omits_only_unavailable_publication_adapters(monkeypatch):
     paths = [r.path for r in app.routes if r.path.startswith('/api/v1/compilation/')]
     assert len(paths) == 10 and '/api/v1/compilation/status' in paths
     assert '/api/v1/compilation/apply' not in paths
+
+
+def test_feedback_guidance_requires_every_actual_read_and_write_capability():
+    from czero_app.agent_guidance import FEEDBACK_TOOLS, FEEDBACK_STEP
+    from czero_core.compilation_client import FEEDBACK_TOOLS as CLIENT_TOOLS
+    assert FEEDBACK_TOOLS==CLIENT_TOOLS
+    research=next(f for f in agent_guidance()['workflows'] if f['id']=='research')
+    allowed=set(research['tools'])|FEEDBACK_TOOLS
+    def steps(names):
+        return next(f['steps'] for f in agent_guidance([{'name':n} for n in names])['workflows'] if f['id']=='research')
+    assert FEEDBACK_STEP in steps(allowed)
+    for absent in FEEDBACK_TOOLS-set(research['tools']):
+        assert FEEDBACK_STEP not in steps(allowed-{absent})
+    assert FEEDBACK_STEP not in steps(research['tools'])
+    assert 'compilation_propose' not in str(steps(research['tools']))

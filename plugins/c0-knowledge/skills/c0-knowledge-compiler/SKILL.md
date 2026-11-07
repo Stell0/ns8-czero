@@ -49,3 +49,7 @@ projects share their host task, lease, scope and report; ordinary spaces use the
 same compiler without project initialization. Weekly projects reuse their semantic
 review APIs; ordinary spaces require the compiler semantic tools. Never turn a
 completed inventory or selected review batch into a claim of corpus coverage.
+
+Retrieval feedback queues bounded source-backed gaps after the answer, following
+the separate protocol section. It does not run this full compilation loop on every
+search. Daily/weekly work may process those tasks through the same validated engine.

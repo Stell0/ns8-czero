@@ -172,13 +172,16 @@ schedules or broaden authority as a side effect of an ingestion request.
 
 ## Knowledge and product contracts
 
-Knowledge-compilation M3 is a producer candidate: Core0.41/schema0034 extends the
-six coordination tables with private publication/cursor/assessment metadata.
-App0.60 keeps its released Core0.39 lock. Discover actual maintenance capabilities;
-older consumers retain their existing supported operations. Projects share the
-host lease, scope, caps and semantic review; ordinary spaces need no project.
-Publication, consumer adoption, policy enablement and schedules are separate gates.
-See [M3](docs/knowledge-compilation/M3.md) for recovery and acceptance.
+Knowledge-compilation M3 is accepted as PR91/mainc16eb49 after full/native and
+independent artifact/promotion proof (42373737405/42378485191). M4 producer
+Core0.43/schema0034 adds only bounded external after-answer proposal handling.
+Search remains read-only and policy defaults stay disabled. Readers, explicit
+read-only tasks and missing actual Write skip feedback. Never pass queries,
+answers, conversations or benchmark labels into compiler metadata. The six-table
+coordinator and M2/M3 engine retain authority; a queued task is not compilation.
+App0.60 keeps released Core0.39 and its lock. No Core publication, consumer
+adoption, live activation/deployment or schedules follow from this source work.
+See [M4](docs/knowledge-compilation/M4.md) for bounds and recovery.
 
 Source documents and Wiki pages retain only their current complete content generation. This latest-only contract replaces the previous content-history guarantee. Keep stable logical IDs, monotonic concurrency counters, current hashes/provenance and payload-free retry/change identities. Stage replacements privately and publish whole documents atomically; delete superseded bodies, originals, derivatives and indirect receipt copies. Exact expired evidence returns authorized `content_superseded` (410), never rebound text. Preserve authored knowledge and mark invalidated evidence stale. See [migration and preflight](docs/latest-only-migration.md).
 

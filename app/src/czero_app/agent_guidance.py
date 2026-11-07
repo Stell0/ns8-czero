@@ -4,7 +4,7 @@
 from copy import deepcopy
 
 GUIDANCE = {
-    'version': 4,
+    'version': 5,
     'rules': [
         'Discover current operations and authorized spaces before reading or writing. Membership, space grants and actual OAuth scopes remain authoritative on every request.',
         'Choose an explicit space_id for all content. Never silently fall back to Shared after an invalid selector, denial or revoked access. Private investigations need an existing authorized protected space; ask an Admin to create or grant one.',
@@ -103,6 +103,12 @@ GUIDANCE = {
 }
 
 
+FEEDBACK_TOOLS = frozenset({'spaces_get','compilation_policy_get','compilation_source_bindings_get',
+    'compilation_propose','compilation_tasks_list','compilation_tasks_get',
+    'knowledge_search','wiki_pages_get'})
+FEEDBACK_STEP = ('After delivering the answer, an effective Editor/Admin in the selected space with actual Read+Write may assess a material source-backed gap only when the selected space has compilation and retrieval_feedback enabled and the task is not explicitly read-only. Most episodes need no action. Use at most one bounded metadata-only compilation_propose after current Wiki/task checks; keep queries, answers, conversations and evaluation labels out. Queue through the compiler, never through search. Skip when the host cannot continue after the answer; failure must not delay or replace it. A proposal is not compiled knowledge.')
+
+
 SERVER_INSTRUCTIONS = 'Read c0://capabilities for workflows available under your actual scopes. ' + ' '.join(GUIDANCE['rules'])
 
 def agent_guidance(operations=None):
@@ -115,4 +121,7 @@ def agent_guidance(operations=None):
     if operations is not None:
         names = {operation['name'] for operation in operations}
         value['workflows'] = [flow for flow in value['workflows'] if set(flow['tools']) <= names]
+    if operations is None or FEEDBACK_TOOLS <= names:
+        for flow in value['workflows']:
+            if flow['id']=='research': flow['steps'].append(FEEDBACK_STEP)
     return value

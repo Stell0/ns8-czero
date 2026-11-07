@@ -88,7 +88,7 @@ def test_all_sdk_wire_capability_and_openapi_hints_match_actual_behavior(transpo
                 headers={'Authorization':'Bearer '+owner_token}) as http:
             rest = (await http.get('/agents/capabilities.json')).json()
             rest_by_name = {item['name']:item for item in rest['operations']}
-            assert len(rest_by_name) == TOOL_COUNT and rest['guidance']['version'] == 4
+            assert len(rest_by_name) == TOOL_COUNT and rest['guidance']['version'] == 5
             guidance=json.dumps(rest['guidance'])
             assert 'content_superseded (410)' in guidance
             assert 'preserve revision history' not in guidance
