@@ -336,7 +336,7 @@ def test_corrupt_staged_replacement_never_displaces_current_generation(logical):
         connection.execute(text("UPDATE c0_documents SET body=body||'CORRUPTED-PART' WHERE version_id=CAST(:id AS uuid)"),{'id':pending['version_id']})
     with pytest.raises(C0Error):save_snapshot(client,changed,[pending])
     assert service.read_document(actor,first['id'])==before
-    assert client.call('sources_search',query='CORRUPTED-PART')['citations']==[]
+    assert client.call('sources_search',query='"CORRUPTED-PART"')['citations']==[]
     with service.database.engine.begin() as connection:
         connection.execute(text('UPDATE c0_documents SET body=:body WHERE version_id=CAST(:id AS uuid)'),{'id':pending['version_id'],'body':changed.content.decode()})
     current=save_snapshot(client,changed,[pending])

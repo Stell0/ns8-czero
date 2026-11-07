@@ -70,7 +70,7 @@ def test_m0_source_baseline_and_multiple_relational_records(tmp_path, record_pro
                     'query': case['query'], 'mode': 'text', 'rerank': 'off', 'limit': 10}})
                 expected = {s['url'] for s in sources if s['key'] in case['expected_source_keys']}
                 ids = {hit['resource_id'] for hit in result['hits']}
-                assert ids == {d['id'] for d in corpus if d['url'] in expected}
+                assert ids == {d['id'] for d in corpus if d['url'] in expected}, case['query']
                 measurements.append({'query': case['query'], 'seconds': time.perf_counter() - started,
                                      'hits': len(ids), 'expected_documents': len(expected)})
             assert sql_state(a) == initial  # Search did not create coordination/knowledge work.

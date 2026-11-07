@@ -2,8 +2,11 @@
 
 ## Document BM25 — producer candidate
 
-The successor starts from original main `7e6379260098eb80b0818a5ddcb1d80704ef289e`,
-retaining OpenAI scoring, M3, the released app/Core lock and managed-file state.
+The successor starts from original main `39c4059374d70d1ceb1604f0b29999876bee9374`,
+retaining app0.61/released Core0.42, M3 and managed-file state. Frozen candidate
+`4595054` and its full/native run remain preserved; its complete Core package tree
+is unchanged in this successor. Exact-retirement queries now quote their markers;
+the bilingual fixture retains an exact Italian control beside broader stemming.
 The earlier development checkpoint `ddb9421` and its private diagnostic runs
 remain preserved. Core0.43/schema0035 adds transactional body-free document
 lengths and term frequencies, English/Italian normalization and document BM25.
@@ -19,18 +22,36 @@ require no aggregate quality regression. Hybrid must remain within0.01 nDCG@10
 of both baseline hybrid and semantic-only. Existing documentation and bilingual
 technical fixtures remain required. Preserve failed measurements and thresholds.
 
-Local development measurement on all 5,183 SciFact documents and 300 queries
+Frozen Core measurement on all 5,183 SciFact documents and 300 queries
 passes the text thresholds: nDCG@10 0.6782, Recall@10 0.8073, six empty results,
-and P95 166.2ms against a matched baseline 166.8ms. The baseline scores
+and P95 175.6ms against a matched baseline 168.8ms. The baseline scores
 0.3098/0.3372 with156 empty results; fresh citation UUID tie order accounts for
 its small nDCG difference from the original0.3101 run. Returned-document recall
-is0.8802 and oracle nDCG@10 is0.8819 at limit50. Schema backfill takes33.68s;
+is 0.8802 and oracle nDCG@10 is 0.8819 at limit 50. Schema backfill takes 33.68s;
 lexical tables/indexes occupy104,652,800 bytes. These are local Core measurements,
 not public HTTP/native or production acceptance. Earlier slow candidates and
 original evidence remain private and frozen. Query-plan/JIT corrections preserve
 quality and runtime deadlines. Untouched-base testing also reproduces a scale
 fixture cleanup timeout; bounded test-only deletion batches retain every row
 check and the five-second deadline.
+
+The frozen candidate passes the first NFCorpus evaluation: all 3,633 documents
+and 323 queries score 0.3206 nDCG@10 /0.1538 Recall@10 versus 0.2365/0.1024,
+with 18 versus 82 empty results. That query set is now exposed; successor tests
+retain this evidence because the complete Core package tree is unchanged.
+A matched fusion audit uses the same real 64 semantic candidates per SciFact
+query for all comparators: candidate hybrid 0.7388 versus baseline hybrid 0.7198
+and semantic-only 0.7133 nDCG@10. Recall is 0.8536/0.8592/0.8559 respectively.
+The capture completed all 300 queries and both corpus checks before a cleanup-only
+client error. A later incomplete probe is excluded. This is a ranking audit,
+not candidate end-to-end provider latency or production acceptance.
+
+The original frozen full suite records 3,008 passes and seven failures. The
+successor quotes the deliberately exact retirement markers, updates the bilingual
+fixture, and scopes evaluator index allowances to requested content generations.
+The existing private documentation benchmark remains pending: current-copy
+permission is explicit, but credential recovery and a denied document block
+complete corpus validation. No labels, thresholds or access grants are changed.
 
 Quality, exact-source full PostgreSQL/packaging/browser/native acceptance,
 upstream merge gate, immutable Core publication and separate released-consumer
@@ -66,7 +87,7 @@ settings and disposable HTTPS/update/restore/browser fixtures. Exact current-bas
 baseline/candidate and full/native/artifact gates remain required. Publication,
 released consumer tag/range/lock adoption and dedicated deployment are separate.
 After operator key configuration, reuse the existing full SciFact corpus for
-text/semantic/hybrid with off/rerank/filter:300 queries per cell, limit50,
+text/semantic/hybrid with off/rerank/filter:300 queries per cell, limit 50,
 graph0, source-only, one repetition and a frozen threshold. Reports stay private.
 
 The current-base implementation `58cbb82301dcbd6814cac22db2e4abb646f3acc8`
