@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "url": "https://knowledge.example.org/mcp",
+  "account_id": "00000000-0000-4000-8000-000000000001",
+  "identity": "alice",
+  "space_id": "00000000-0000-4000-8000-000000000002",
+  "space_name": "Operations",
+  "c0_key_file": "/srv/c0-compiler/c0.key",
+  "model_key_file": "/srv/c0-compiler/model.key",
+  "model": "gpt-6.1-sol",
+  "protocol_file": "/srv/c0-compiler/compiler.md",
+  "state_dir": "/srv/c0-compiler/state",
+  "timezone": "UTC",
+  "daily_local_time": "06:00",
+  "weekly_local_time": "07:00",
+  "weekly_day": "sunday",
+  "max_model_calls": 3,
+  "max_output_tokens": 2048,
+  "max_input_bytes": 65536,
+  "timeout_seconds": 45,
+  "adapter": "codex"
+}

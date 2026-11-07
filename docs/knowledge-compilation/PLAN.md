@@ -1,6 +1,6 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91); M4 implementation candidate. M5–M6 are not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91); M4 accepted in [PR95](https://github.com/Stell0/ns8-czero/pull/95); M5 implementation candidate. M6 is not implemented.**
 
 [M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
 coordination milestone against its accepted predecessor. [M2](M2.md) records the
@@ -491,6 +491,8 @@ Refined producer contract and acceptance: [M4](M4.md).
 - Stop: learning failure prevents answer, raw queries/labels stored, or implicit writes.
 
 ### M5 — packaging, UI and external scheduling
+
+Refined implementation and executed acceptance: [M5](M5.md).
 
 - Dependency: accepted M4; current host/model capability verification.
 - Scope/contracts: all generic/project archives, runtime inventories, eight selected

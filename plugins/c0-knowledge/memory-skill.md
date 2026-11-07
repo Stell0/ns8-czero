@@ -37,3 +37,5 @@ current Wiki/tasks and queue at most one metadata-only proposal; never store the
 query, answer, conversation or evaluation labels. An explicitly read-only request
 wins. If post-answer continuation or its budget is unavailable, skip it. A learning
 failure cannot delay or replace the answer, and a proposal is not compilation.
+
+For explicitly requested recurring maintenance or external setup, read [scheduling and recovery](references/scheduling.md). Package generation installs no host task.

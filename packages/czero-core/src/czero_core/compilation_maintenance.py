@@ -528,8 +528,15 @@ class CompilationMaintenance:
             if usage:
                 call=run['data']['calls'].get(usage)
                 if not call or call['state']!='returned': raise self.conflict()
-                task=self._task(connection,call['task_id'])
-                if not all(s in task['source_bindings'] for s in data['source_bindings']): raise self.conflict()
+                semantic=call.get('semantic')
+                if semantic:
+                    target=semantic['target']
+                    if (target['id']!=data['page_id'] or (target['revision'],target['content_id'],target['content_hash'])!=selected
+                            or semantic['source_hash']!=digest(data['source_bindings'])):
+                        raise self.conflict()
+                else:
+                    task=self._task(connection,call['task_id'])
+                    if not all(s in task['source_bindings'] for s in data['source_bindings']): raise self.conflict()
             for identifier in data['child_task_ids']:
                 child=self._task(connection,identifier)
                 if child['purpose']!='knowledge' or not child['target'] or child['target']['id']!=data['page_id']:
