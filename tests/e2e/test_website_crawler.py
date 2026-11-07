@@ -74,7 +74,7 @@ def test_real_crawl_publish_read_replace_and_unchanged(live,browser,documentatio
     assert live.client.call('sources_search',query='"OLD-ONLY-CRAWLER-MARKER"')['citations']==[]
     assert live.client.call('sources_search',query='NEW-ONLY-CRAWLER-MARKER')['citations']
     browser.goto(live.origin+'/search?'+urlencode({'space_id':live.space}))
-    browser.get_by_role('search').get_by_role('textbox').fill('OLD-ONLY-CRAWLER-MARKER')
+    browser.get_by_role('search').get_by_role('textbox').fill('"OLD-ONLY-CRAWLER-MARKER"')
     browser.get_by_role('search').get_by_role('button',name='Search',exact=True).click()
     expect(browser.get_by_text('No items found',exact=True)).to_be_visible(timeout=20000)
     expect(browser.locator('main').get_by_role('link',name='Controlled firewall manual',exact=True)).to_have_count(0)
