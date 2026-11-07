@@ -32,3 +32,14 @@ test('numeric fields serialize as numbers and clear keys is explicit', async () 
   assert.equal(form.scorer.api_key,'');assert.equal(form.embedding.clear_api_key,false);
   assert.equal(payload.scorer.api_key,'private-fixture-key');
 });
+
+test('empty scorer forms suggest OpenAI without replacing a saved descriptor', async () => {
+  const { retrievalForm } = await helpers;
+  assert.equal(retrievalForm({scorer:{endpoint:'',model:''}}).scorer.endpoint, 'https://api.openai.com/v1/decisions');
+  assert.equal(retrievalForm().scorer.model, 'gpt-6-luna');
+  const saved = {endpoint:'https://legacy.example.test/v1/systemone',model:'legacy',api_key_configured:true};
+  assert.equal(retrievalForm({scorer:saved}).scorer.endpoint, saved.endpoint);
+  assert.equal(retrievalForm({scorer:saved}).scorer.model, 'legacy');
+  assert.equal(retrievalForm({scorer:saved}).scorer.api_key, '');
+  assert.equal(retrievalForm().scorer.mode, 'off');
+});

@@ -70,7 +70,7 @@
         "retrieval_privacy": "Embedding providers receive extracted text and search queries. Relevance scorers receive queries and bounded evidence excerpts. Keep disabled until the provider and data handling are approved. Text search works without them.",
         "embedding_enable": "Enable embeddings",
         "embedding": "Embeddings",
-        "scorer": "System One relevance",
+        "scorer": "System One relevance (OpenAI Decisions)",
         "scorer_mode": "Scoring mode",
         "scorer_off": "Off",
         "scorer_rerank": "Rerank",

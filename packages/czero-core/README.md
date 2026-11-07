@@ -691,3 +691,18 @@ External hosts may call `compilation_client.maintenance_step` with their own
 reasoning callback and supported authenticated connection. It records model
 reservations/outcomes and returns child work for the existing M2 engine; it is
 not a provider runner or CLI. See the repository knowledge-compilation M3 contract.
+
+## System One relevance scoring (producer 0.42)
+
+`SystemOneClient` uses the [OpenAI Decisions API](https://developers.openai.com/api/docs/guides/decisions)
+with named predicate questions and complete finite 0–1 probability answers.
+Configure the full HTTPS endpoint and `gpt-6-luna` model with an administrator-owned
+key. The former JEV/Kev protocol is removed; replace legacy descriptors explicitly.
+The public `score(query, candidates)` result, search modes and configuration format
+are unchanged. Refusals, incomplete answers and provider failures preserve ordinary
+ranking with a disclosed fallback; they never decide authorization.
+
+Scoring remains bounded to sixteen 2 KiB excerpts and the existing absolute
+five-second maximum deadline. Rerank retains the unscored tail; filter returns
+only evaluated candidates above the configured threshold. Empty candidate sets
+complete the requested search stage without contacting the provider.

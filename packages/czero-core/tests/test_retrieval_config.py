@@ -14,10 +14,10 @@ def test_defaults_are_provider_free_and_never_construct_a_network_client(monkeyp
 def test_instance_settings_decode_only_private_environment_and_mask_keys(monkeypatch):
     value=default_config()
     value['embedding'].update(enabled=True,endpoint='https://embed.example.test/v1/embeddings',model='fixture',dimensions=3,api_key='unit-only-key')
-    value['scorer'].update(mode='rerank',endpoint='https://score.example.test/v1/systemone',model='kev-mock',api_key='unit-only-score-key')
+    value['scorer'].update(mode='rerank',endpoint='https://score.example.test/v1/decisions',model='gpt-6-luna',api_key='unit-only-score-key')
     monkeypatch.setenv('CZERO_RETRIEVAL_CONFIG_B64',base64.b64encode(json.dumps(value).encode()).decode())
     settings=load_settings()
-    assert settings.embedding.model=='fixture' and settings.scorer.model=='kev-mock'
+    assert settings.embedding.model=='fixture' and settings.scorer.model=='gpt-6-luna'
     assert 'unit-only' not in repr(settings)
     assert settings.clients()[0].settings.dimensions==3
 

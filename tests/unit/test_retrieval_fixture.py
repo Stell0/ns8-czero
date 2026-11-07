@@ -19,7 +19,7 @@ def test_disposable_provider_wire_format_matches_both_runtime_adapters(monkeypat
                              transport=httpx2.MockTransport(transport))
     result = client.embed(['Independent authored claims', 'other'])
     assert len(result['vectors']) == 2 and len(result['vectors'][0]) == 3
-    scorer = SystemOneClient(ScorerSettings('https://fixture.example.test/v1/systemone', 'kev-mock'),
+    scorer = SystemOneClient(ScorerSettings('https://fixture.example.test/v1/decisions', 'gpt-6-luna'),
                             transport=httpx2.MockTransport(transport))
     result = scorer.score('independent', [{'id':'wiki_revision:fixture','text':'Independent authored claims'},
                                           {'id':'wiki_revision:other','text':'other evidence'}])
@@ -73,7 +73,7 @@ def test_disposable_https_server_checks_credentials_models_and_failures(tmp_path
     try:
         origin='https://127.0.0.1:'+str(server.server_port)
         embedding=EmbeddingClient(EmbeddingSettings(origin+'/v1/embeddings','fixture',api_key='private-fixture-key',dimensions=3,timeout=1))
-        scorer=SystemOneClient(ScorerSettings(origin+'/v1/systemone','kev-mock',api_key='private-fixture-key',timeout=1))
+        scorer=SystemOneClient(ScorerSettings(origin+'/v1/decisions','gpt-6-luna',api_key='private-fixture-key',timeout=1))
         assert len(embedding.embed(['fixture'])['vectors'])==1
         assert scorer.score('query',[{'id':'fixture','text':'Independent authored claims'}])['scores']['fixture']==.9
         for mode,reason in [('rate_limited','rate_limited'),('mismatch','invalid_response'),('unavailable','unavailable')]:

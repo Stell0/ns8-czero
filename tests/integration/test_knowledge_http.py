@@ -282,8 +282,8 @@ def test_signed_hybrid_and_scorer_transport_use_core_caps_and_provenance(knowled
     app.state.search.embeddings=store;app.state.search.limits=SearchLimits(max_limit=3,candidates=4,graph_depth=0,scorer_candidates=2)
     def score_reply(request):
         body=json.loads(request.content)
-        return httpx2.Response(200,json={'model':'kev-mock','answers':{'r'+str(i):{'type':'noul','noul':.9 if 'Wanted' in c['text'] else .1} for i,c in enumerate(body['state']['candidates'])}})
-    app.state.search.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone','kev-mock'),transport=httpx2.MockTransport(score_reply))
+        return httpx2.Response(200,json={'model':'gpt-6-luna','answers':[{'name':'r'+str(i),'type':'predicate','probability':.9 if 'Wanted' in c['text'] else .1} for i,c in enumerate(json.loads(body['input'])['candidates'])]})
+    app.state.search.scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(score_reply))
     app.state.search.scorer_mode='filter'
     try:
         with knowledge_http[4].engine.begin() as c:store._index_batch(c)

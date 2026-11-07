@@ -818,3 +818,17 @@ merges as fe9e8e8. The installed app image uses the released Git Core source.
 Supported backup/update, unchanged original tables/settings/schedules/credentials,
 ten unrelated instances, manager restart and real HTTP/MCP/journal checks pass.
 Main/publication and benchmark acceptance remain separately recorded in PLAN.
+
+## OpenAI System One candidate
+
+The current-base successor preserves M3/schema0034 and targets producer Core0.42.
+Do not publish over M3's0.41 identity or initialize maintenance during delivery.
+
+The System One adapter now targets OpenAI Decisions named predicate answers.
+Preserve its public search metadata, five-second deadline, sixteen-candidate
+limit, 2 KiB excerpts and authorization rechecks. JEV/Kev configurations require
+explicit endpoint/model/key replacement; do not transfer credentials.
+Producer Core publication, released-consumer validation and dedicated delivery
+remain separate acceptance gates. Run the full nine-way SciFact comparison only
+after the operator saves the OpenAI key; reuse existing corpus receipts and keep
+all instance identities and benchmark artifacts outside Git.

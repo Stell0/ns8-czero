@@ -20,10 +20,10 @@ def response(path, body):
         vectors = [[1., .2 if 'independent' in text.lower() else .8, .1] for text in inputs]
         return {'model': body['model'], 'data': [{'index': i, 'embedding': vector} for i, vector in enumerate(vectors)],
                 'usage': {'prompt_tokens': len(inputs) * 4, 'total_tokens': len(inputs) * 4}}
-    if path == '/v1/systemone':
-        return {'model': body['model'], 'answers': {'r' + str(i): {'type': 'noul',
-                'noul': .9 if 'Independent authored' in candidate['text'] else .2}
-                for i, candidate in enumerate(body['state']['candidates'])}}
+    if path == '/v1/decisions':
+        return {'model': body['model'], 'answers': [{'name': 'r' + str(i), 'type': 'predicate',
+                'probability': .9 if 'Independent authored' in candidate['text'] else .2}
+                for i, candidate in enumerate(json.loads(body['input'])['candidates'])]}
     raise ValueError('unsupported_fixture_endpoint')
 
 
@@ -94,7 +94,7 @@ def prepare(module_id):
     request = {key: current[key] for key in ('host', 'lets_encrypt', 'idp', 'user_domain', 'owner')}
     request['retrieval'] = {'embedding': {'enabled': True, 'endpoint': 'https://10.0.2.2:18443/v1/embeddings',
         'model': 'fixture-embedding', 'dimensions': 3, 'api_key': key_file.read_text()},
-        'scorer': {'mode': 'filter', 'endpoint': 'https://10.0.2.2:18443/v1/systemone', 'model': 'kev-mock',
+        'scorer': {'mode': 'filter', 'endpoint': 'https://10.0.2.2:18443/v1/decisions', 'model': 'gpt-6-luna',
                    'api_key': key_file.read_text(), 'threshold': .7}}
     task('module/' + module_id + '/configure-module', request)
     configured = task('module/' + module_id + '/get-configuration', {})
