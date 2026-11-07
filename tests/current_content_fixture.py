@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import sys
 import time
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 CURRENT_SOURCE='CURRENT-PREDECESSOR-SOURCE-B café 東京'
 OLD_SOURCE='RETIRED-PREDECESSOR-SOURCE-A'
@@ -78,7 +78,7 @@ def verify(browser,profile,expected):
     claim=request(browser,profile,'claims/'+expected['claim_id'])
     assert claim['value']=={'authored':'Preserve this assertion'} and claim['evidence_stale']
     assert claim['evidence'][0]['status']=='superseded' and claim['evidence'][0]['body'] is None
-    assert request(browser,profile,'sources/search?query='+OLD_SOURCE)['citations']==[]
+    assert request(browser,profile,'sources/search?query='+quote('"'+OLD_SOURCE+'"'))['citations']==[]
 
 
 def main():

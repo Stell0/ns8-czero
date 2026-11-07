@@ -112,6 +112,19 @@ def test_real_fixture_faults_and_cleanup_are_observable(tmp_path,case):
                         evaluated=grade('uncertain-replay',{'valid':True,'final':final},calls,fixture.before,
                             fixture.snapshot(),fixture.ground,readonly)
                         assert evaluated['passed'],evaluated
+                        # Derivative writes for this revision are expected, but
+                        # an unrelated source index change must still fail.
+                        from copy import deepcopy
+                        for table in ('c0_lexical_documents','c0_lexical_terms'):
+                            altered=deepcopy(fixture.snapshot())
+                            unrelated=json.loads(fixture.before[table][0])
+                            key='id' if table=='c0_lexical_documents' else 'document_id'
+                            altered[table]=[v for v in altered[table]
+                                if json.loads(v)[key]!=unrelated[key]]
+                            rejected=grade('uncertain-replay',{'valid':True,'final':final},calls,
+                                fixture.before,altered,fixture.ground,readonly)
+                            assert not rejected['checks']['unrelated_lexical_rows_preserved']
+                            assert not rejected['passed']
 
                     elif case=='queued-evidence':
                         result=await call('sources_ingest_text',{'space_id':fixture.space,'data':{

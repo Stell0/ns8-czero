@@ -49,6 +49,53 @@ Use the [current-corpus runner](../samples/ingestion/examples/website/BENCHMARK.
 for the existing documentation corpus and private labels, plus the real HTTP,
 standalone wheel/archive and browser regressions. See [development](development.md).
 
+## Frozen producer measurements
+
+Candidate `4595054b35c20be276d4df7c1a0360b5ac340ab5` freezes Core package tree
+`9f1009b6f50a52bf1ec8c10515f5d587a24008f5`. Its successor preserves that tree.
+Provider-free local PostgreSQL measurements use complete official corpora,
+`kind=source`, limit 50 and reranking off, with identical query/corpus settings
+for the contemporaneous baseline and candidate. Citation hashes and corpus
+bodies are checked. These timings cover Core calls on the same host; they are
+not public HTTP or deployed acceptance.
+
+| Dataset and method | nDCG@10 | Recall@10 | Empty queries | P95 ms |
+| --- | ---: | ---: | ---: | ---: |
+| SciFact baseline | 0.3098 | 0.3372 | 156/300 | 168.8 |
+| SciFact document BM25 | 0.6782 | 0.8073 | 6/300 | 175.6 |
+| NFCorpus baseline | 0.2365 | 0.1024 | 82/323 | 142.6 |
+| NFCorpus document BM25 | 0.3206 | 0.1538 | 18/323 | 133.6 |
+
+SciFact was already development evidence. NFCorpus's 3,633 documents and 323
+queries were first evaluated after the candidate was frozen; those questions
+are now exposed. Fresh local citation IDs account for the small baseline
+SciFact nDCG difference from the historical public run. SciFact returned-document
+recall is 0.8802, oracle nDCG@10 is 0.8819, and mean distinct returned documents
+is 48.68. Backfilling 5,183 complete documents takes 33.68s; derivative tables and
+indexes occupy104,652,800 bytes.
+
+Separate diagnostic ablations retain the explicit-syntax branch. Broader literal
+chunk eligibility with summed term frequencies scores 0.4172 nDCG@10 /0.5694
+Recall@10; adding normalization gives 0.4388/0.5786; chunk BM25 gives 0.6795/0.8043;
+the selected document BM25 gives 0.6782/0.8073. These diagnostic variants are not
+new public search options.
+
+A matched fusion audit captures 64 actual semantic candidates per SciFact query,
+uses the same arrays for all comparators, and applies Core's RRF implementation.
+Candidate document hybrid scores 0.7388 nDCG@10 /0.8536 Recall@10, against baseline
+hybrid 0.7198/0.8592 and semantic-only 0.7133/0.8559. It passes the declared nDCG
+guardrail, with slightly lower recall. Model and dimensions match the historical
+run below. All 300 queries and both source/version/body checks completed before
+a client cleanup error; a separate incomplete probe is excluded. Twelve raw
+rankings differ from the historical archive while aggregate comparator metrics
+match. This audit does not establish candidate provider latency or controlled
+provider-profile stability throughout capture. Raw evidence and failed probes
+remain private.
+
+The existing documentation benchmark, exact successor full/native acceptance,
+immutable publication and released-consumer adoption remain required. No
+production deployment is authorized by these measurements.
+
 ## Standard BEIR datasets
 
 The local [BEIR benchmark](../benchmarks/retrieval/README.md) evaluates document
