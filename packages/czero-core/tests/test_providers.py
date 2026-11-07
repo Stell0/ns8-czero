@@ -48,20 +48,24 @@ def test_embedding_model_dimension_index_and_nonfinite_zero_validation(data):
     with pytest.raises(ProviderUnavailable,match='invalid_response'):client.embed(['fixture'])
 
 
-@pytest.mark.parametrize('model',['jev-1.13','kev-mock'])
-def test_both_jev_and_kev_common_systemone_noul_contract_and_bounded_candidates(model):
+@pytest.mark.parametrize('model',['gpt-6-luna'])
+def test_openai_decisions_predicates_and_bounded_candidates(model,caplog):
     def handler(request):
-        body=json.loads(request.content);assert str(request.url).endswith('/v1/systemone')
-        assert body['model']==model and body['state']['query']=='inventory'
-        assert len(body['state']['candidates'][0]['text'].encode())<=2048
-        assert body['questions']['r0']['type']=='noul' and 'candidate-a' in body['questions']['r0']['instructions']
-        return httpx2.Response(200,json={'model':model,'answers':{'r0':{'type':'noul','noul':.9},'r1':{'type':'noul','noul':.1}},'usage':{'input_tokens':12,'output_tokens':2}})
-    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone',model),transport=httpx2.MockTransport(handler))
+        body=json.loads(request.content);assert str(request.url).endswith('/v1/decisions')
+        assert set(body)=={'model','input','questions'}
+        assert request.headers['Authorization']=='Bearer private-scorer-fixture-key'
+        assert body['model']==model and json.loads(body['input'])['query']=='inventory'
+        assert len(json.loads(body['input'])['candidates'][0]['text'].encode())<=2048
+        assert body['questions'][0]['type']=='predicate' and body['questions'][0]['name']=='r0' and 'candidate-a' in body['questions'][0]['instructions']
+        return httpx2.Response(200,json={'model':model,'answers':[{'name':'r1','type':'predicate','probability':.1},{'name':'r0','type':'predicate','probability':.9}],'usage':{'input_tokens':12,'output_tokens':2}})
+    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions',model,api_key='private-scorer-fixture-key'),transport=httpx2.MockTransport(handler))
     result=client.score('inventory',[{'id':'candidate-a','text':'東京'*2000},{'id':'candidate-b','text':'Other'}])
     assert result['scores']=={'candidate-a':.9,'candidate-b':.1} and result['truncated_candidates']==1
+    assert result['usage']=={'input_tokens':12,'output_tokens':2}
+    assert 'private-scorer-fixture-key' not in repr(client.settings)+caplog.text
 
 
-@pytest.mark.parametrize('status,reason',[(429,'rate_limited'),(503,'unavailable'),(302,'unavailable')])
+@pytest.mark.parametrize('status,reason',[(401,'unavailable'),(403,'unavailable'),(429,'rate_limited'),(503,'unavailable'),(302,'unavailable')])
 def test_http_errors_fall_back_without_following_redirects_or_echoing_body(status,reason):
     calls=[]
     def handler(request):
@@ -91,11 +95,11 @@ def test_response_byte_limit_and_compression_are_rejected_before_json():
             EmbeddingClient(embedding(),transport=httpx2.MockTransport(lambda _:response)).embed(['fixture'])
 
 
-@pytest.mark.parametrize('answer',[{'type':'score','noul':.5},{'type':'noul','noul':True},{'type':'noul','noul':2},{'type':'noul','noul':float('nan')}])
+@pytest.mark.parametrize('answer',[{'type':'score','score':.5},{'type':'predicate','probability':True},{'type':'predicate','probability':2},{'type':'predicate','probability':float('nan')}])
 def test_systemone_scores_are_exact_finite_probabilities(answer):
-    response={'model':'kev-mock','answers':{'r0':answer}}
+    response={'model':'gpt-6-luna','answers':[{'name':'r0',**answer}]}
     # Encode NaN as raw malformed JSON; json serializer deliberately permits it.
-    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone','kev-mock'),transport=httpx2.MockTransport(lambda _:httpx2.Response(200,content=json.dumps(response).encode())))
+    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(lambda _:httpx2.Response(200,content=json.dumps(response).encode())))
     with pytest.raises(ProviderUnavailable,match='invalid_response'):client.score('query',[{'id':'candidate','text':'evidence'}])
 
 
@@ -124,14 +128,25 @@ def test_embedding_missing_and_duplicate_batch_indexes_never_partial_success(res
 
 
 @pytest.mark.parametrize('response',[
-    {'model':'kev-mock','answers':{}},
-    {'model':'kev-mock','answers':{'r0':{'type':'noul','noul':.7},'extra':{'type':'noul','noul':.9}}},
-    {'model':'other-model','answers':{'r0':{'type':'noul','noul':.7}}},
-    {'model':'kev-mock','answers':{'r0':{'type':'noul','noul':.7}},'usage':{'input_tokens':True}},
+    {'model':'gpt-6-luna','answers':[]},
+    {'model':'gpt-6-luna','answers':{'r0':{'type':'predicate','probability':.7}}},
+    {'model':'gpt-6-luna','answers':[{'name':'extra','type':'predicate','probability':.9}]},
+    {'model':'gpt-6-luna','answers':[{'name':None,'type':'predicate','probability':.9}]},
+    {'model':'gpt-6-luna','answers':[{'name':'r0','type':'refusal'}]},
+    {'model':'other-model','answers':[{'name':'r0','type':'predicate','probability':.7}]},
+    {'model':'gpt-6-luna','answers':[{'name':'r0','type':'predicate','probability':.7}],'usage':{'input_tokens':True}},
 ])
 def test_scorer_missing_extra_model_or_usage_mismatches_fail_closed(response):
-    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone','kev-mock'),transport=httpx2.MockTransport(lambda _:httpx2.Response(200,json=response)))
+    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(lambda _:httpx2.Response(200,json=response)))
     with pytest.raises(ProviderUnavailable,match='invalid_response'):client.score('query',[{'id':'fixture','text':'evidence'}])
+
+
+def test_duplicate_answer_names_never_partial_success():
+    answer={'name':'r0','type':'predicate','probability':.9}
+    response={'model':'gpt-6-luna','answers':[answer,answer]}
+    client=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(lambda _:httpx2.Response(200,json=response)))
+    with pytest.raises(ProviderUnavailable,match='invalid_response'):
+        client.score('query',[{'id':'first','text':'evidence'},{'id':'second','text':'evidence'}])
 
 
 def test_provider_input_limits_reject_before_any_network_call():
@@ -139,7 +154,7 @@ def test_provider_input_limits_reject_before_any_network_call():
     client=EmbeddingClient(embedding(),transport=httpx2.MockTransport(network))
     for texts in ([],['x']*9,['x'*4097],[''],['\0']):
         with pytest.raises(ValueError):client.embed(texts)
-    scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/systemone','kev-mock'),transport=httpx2.MockTransport(network))
+    scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1/decisions','gpt-6-luna'),transport=httpx2.MockTransport(network))
     for rows in ([],[{'id':'a','text':'evidence'}]*17,[{'id':'a','text':'x'},{'id':'a','text':'y'}],[{'id':'bad id','text':'x'}]):
         with pytest.raises(ValueError):scorer.score('query',rows)
 

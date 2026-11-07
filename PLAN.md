@@ -1,5 +1,32 @@
 # C0 roadmap
 
+## OpenAI System One scoring — implementation candidate
+
+Based on original main `6110301ae974448f26cf97f0ca1776a142bcb1ac`.
+Replace the JEV/Kev wire protocol with OpenAI Decisions named predicate
+probabilities, retaining current search interfaces, configuration format,
+authorization, provider bounds and disclosed ordinary-ranking fallback. Empty
+candidate sets complete scoring without outbound I/O. No new schema migration
+or runtime dependency is introduced. Existing scorer configurations require
+explicit endpoint/model/key replacement; empty native forms suggest OpenAI.
+
+Acceptance covers complete named answers, malformed/refused responses, bounds,
+TLS/deadlines, rerank/filter/empty results, in-flight revocation, REST/MCP, native
+settings and disposable HTTPS/update/restore/browser fixtures. Core producer
+publication, released-consumer pin/lock acceptance and dedicated deployment
+remain separate gates. No deployment or real-provider quality is claimed here.
+After operator key configuration, reuse the existing full SciFact corpus and
+run text/semantic/hybrid with scoring off/rerank/filter: 300 queries per cell,
+limit50, graph0, source-only, one repetition and a frozen configured threshold.
+Retain private reports and exact runtime/configuration provenance.
+
+Local focused acceptance passes152 actual Python/PostgreSQL/REST/current+legacy
+SDK cases,28 Node controller cases,Go schema checks and388 maintained links.
+The website and frozen native UI builds pass. Initial broad local runs retain
+missing-asset,fixture-import and temporary-quota failures; these are not passing
+acceptance. Complete clean baseline/candidate and exact-source upstream
+full/native/artifact gates remain required before publication or deployment.
+
 ## Embedding backlog drain
 
 [PR86](https://github.com/Stell0/ns8-czero/pull/86) regularly merges as

@@ -669,3 +669,18 @@ never rebound after 410. `compilation_client.navigation_plan/compile_plan/verify
 are optional external-process helpers, not server/worker callbacks or an LLM runtime.
 See [M2 contracts and acceptance](../../docs/knowledge-compilation/M2.md) and
 [portable agent protocol](../../plugins/c0-knowledge/references/compiler.md).
+
+## System One relevance scoring
+
+`SystemOneClient` uses the [OpenAI Decisions API](https://developers.openai.com/api/docs/guides/decisions)
+with named predicate questions and complete finite 0–1 probability answers.
+Configure the full HTTPS endpoint and `gpt-6-luna` model with an administrator-owned
+key. The former JEV/Kev protocol is removed; replace legacy descriptors explicitly.
+The public `score(query, candidates)` result, search modes and configuration format
+are unchanged. Refusals, incomplete answers and provider failures preserve ordinary
+ranking with a disclosed fallback; they never decide authorization.
+
+Scoring remains bounded to sixteen 2 KiB excerpts and the existing absolute
+five-second maximum deadline. Rerank retains the unscored tail; filter returns
+only evaluated candidates above the configured threshold. Empty candidate sets
+complete the requested search stage without contacting the provider.
