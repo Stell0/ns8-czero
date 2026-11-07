@@ -424,8 +424,13 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
                     return {'outcome': 'needs_review', 'task': snapshot(dict(previous))}
                 outcome = 'merged' if previous['state'] in ACTIVE and previous['state'] != 'needs_review' else previous['state']
                 return {'outcome': outcome, 'task': snapshot(dict(previous))}
-            old = connection.execute(text('''SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND family_key=:family
-                ORDER BY created_at DESC,id DESC LIMIT 1'''), {'space': self._space_id, 'family': family}).mappings().one_or_none()
+            # Logical lineage, not wall-clock/UUID order, identifies the current family head.
+            old = connection.execute(text('''SELECT t.* FROM c0_compilation_tasks t
+                WHERE t.space_id=:space AND t.family_key=:family AND NOT EXISTS(
+                    SELECT 1 FROM c0_compilation_tasks successor
+                    WHERE successor.space_id=t.space_id AND successor.predecessor_id=t.id)
+                ORDER BY t.created_at DESC,t.id DESC LIMIT 1'''),
+                {'space': self._space_id, 'family': family}).mappings().one_or_none()
             normalized_target = data['target'] or {}
             if not normalized_target and old:
                 publication = self._publication(connection, old['id'])

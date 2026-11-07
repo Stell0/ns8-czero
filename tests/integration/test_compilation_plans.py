@@ -586,3 +586,24 @@ def test_relation_update_cannot_smuggle_an_archive_through_an_approved_profile(c
     with pytest.raises(ValueError,match='unapproved_compilation_delete'): service.validate_plan(owner,data)
     with pytest.raises(ValueError,match='unapproved_compilation_delete'): apply(compiler,data)
     assert counts(compiler)==before
+
+
+def test_three_source_generations_retain_latest_predecessor(compiler,monkeypatch):
+    from itertools import count
+    from uuid import UUID
+    import czero_core.compilation as implementation
+    enable(compiler)
+    # Keep the fixture clock equal and deliberately reverse UUID order.
+    counter=count(2**120,-1)
+    monkeypatch.setattr(implementation,'uuid4',lambda:UUID(int=next(counter)))
+    bindings,row=support(compiler,data=b'Original first inventory.')
+    first=propose(compiler,bindings)['task']
+    claim(compiler)
+    bindings,_=support(compiler,data=b'Original second inventory.',source_id=row['source_id'],expected_revision=1)
+    second=propose(compiler,bindings)['task']
+    assert second['predecessor_id']==first['id']
+    claim(compiler)
+    bindings,_=support(compiler,data=b'Original third inventory.',source_id=row['source_id'],expected_revision=2)
+    third=propose(compiler,bindings)['task']
+    assert third['predecessor_id']==second['id']
+    assert third['prior_attempts']==2
