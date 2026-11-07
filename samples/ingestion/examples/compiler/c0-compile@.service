@@ -1,0 +1,22 @@
+[Unit]
+Description=C0 external %i knowledge maintenance
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=c0compiler
+Group=c0compiler
+WorkingDirectory=/srv/c0-compiler
+UMask=0077
+Environment=CODEX_HOME=/srv/c0-compiler/codex
+Environment=PATH=/opt/c0-compiler/agent/node_modules/.bin:/opt/c0-compiler/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/c0-compiler/bin/c0-compile %i --config /srv/c0-compiler/config.json --apply --tick
+LoadCredential=c0-key:/srv/c0-compiler/c0.key
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/c0-compiler/state /srv/c0-compiler/codex
+TimeoutStartSec=240
+Restart=no

@@ -26,3 +26,5 @@ and policy permit it; an explicitly read-only question forbids it. Read the
 retrieval-feedback section in {{COMPILER_LINK}}. Preserve approved source/tracking
 scope and existing project configuration; no new host run, source collection or
 publication is implied. Skip if post-answer continuation is unavailable.
+
+For explicitly requested recurring maintenance or external setup, read {{SCHEDULING_LINK}}. Package generation installs no host task.

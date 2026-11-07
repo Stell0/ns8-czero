@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import { NeButton, NeTextInput, NeTextArea } from '@nethesis/vue-components'
@@ -32,11 +32,10 @@ interface Workflow {
 const capabilities = useResource(
   () => 'agent-capabilities',
   () =>
-    request<{ guidance: { rules: string[]; workflows: Workflow[] } }>(
-      '/agents/capabilities.json',
-      {},
-      false,
-    ),
+    request<{
+      operations: { name: string }[]
+      guidance: { rules: string[]; workflows: Workflow[] }
+    }>('/agents/capabilities.json', {}, false),
 )
 const workflows = computed(
   () =>
@@ -48,7 +47,142 @@ const workflows = computed(
         ),
     ) || [],
 )
+const operationNames = computed(
+  () => new Set(capabilities.data.value?.operations.map((op) => op.name)),
+)
+const compilerAvailable = computed(() =>
+  ['compilation_policy_get', 'compilation_status_get'].every((name) =>
+    operationNames.value.has(name),
+  ),
+)
+const compilerContext = useResource(
+  () => 'compiler-prompt-context',
+  async () => {
+    const policy = await request<{
+      space_id: string
+      revision: number
+      data: { enabled: boolean; timezone: string; publication_mode: string }
+    }>('compilation/policy')
+    if (policy.space_id !== session.space?.id) throw new ApiError(409)
+    let project = null
+    if (!session.space.shared && operationNames.value.has('project_get')) {
+      try {
+        const stored = await request<{
+          data: {
+            version: number
+            manifest: {
+              project_id: string
+              space_id: string
+              timezone: string
+              schedule: Record<string, unknown>
+            }
+          }
+        }>('project')
+        if (
+          stored.data.manifest.space_id !== session.space.id ||
+          stored.data.manifest.project_id !== session.space.id
+        )
+          throw new ApiError(409)
+        project = {
+          manifest_version: stored.data.version,
+          ...stored.data.manifest,
+        }
+      } catch (cause) {
+        if (!(cause instanceof ApiError && cause.status === 404)) throw cause
+      }
+    }
+    return {
+      space_id: session.space.id,
+      account_id: session.account,
+      policy_revision: policy.revision,
+      policy: policy.data,
+      project,
+    }
+  },
+  () => compilerAvailable.value,
+)
+const compilerTasks = computed(() => {
+  if (
+    !compilerContext.data.value ||
+    compilerContext.data.value.space_id !== session.space?.id ||
+    compilerContext.data.value.account_id !== session.account
+  )
+    return []
+  const kinds = session.canWrite
+    ? [
+        'compile',
+        'bootstrap',
+        'feedback',
+        'daily',
+        'weekly',
+        'chatgpt',
+        'external',
+        'status',
+      ]
+    : ['status']
+  const required: Record<string, string[]> = {
+    compile: [
+      'compilation_plan_validate',
+      'compilation_apply',
+      'compilation_verify',
+    ],
+    bootstrap: ['compilation_discover', 'compilation_assessment_complete'],
+    feedback: [
+      'compilation_propose',
+      'compilation_source_bindings_get',
+      'compilation_tasks_list',
+      'compilation_tasks_get',
+      'knowledge_search',
+      'wiki_pages_get',
+      'spaces_get',
+    ],
+    daily: [
+      'compilation_discover',
+      'compilation_assessment_complete',
+      'compilation_verify',
+    ],
+    weekly: ['compilation_semantic_select', 'compilation_semantic_review'],
+    chatgpt: [
+      'compilation_discover',
+      'compilation_assessment_complete',
+      'compilation_verify',
+    ],
+    external: [
+      'compilation_discover',
+      'compilation_assessment_complete',
+      'compilation_verify',
+    ],
+    status: ['compilation_status_get'],
+  }
+  return kinds
+    .filter((id) =>
+      required[id].every((name) => operationNames.value.has(name)),
+    )
+    .map((id) => ({
+      id,
+      title: t(`agents.compiler.${id}Title`),
+      body:
+        t('agents.compiler.binding') +
+        '\n' +
+        JSON.stringify(
+          { connection: data.value?.mcp_url, ...compilerContext.data.value },
+          null,
+          2,
+        ) +
+        '\n\n' +
+        t(`agents.compiler.${id}`) +
+        (id === 'chatgpt'
+          ? '\n\n' +
+            t('agents.compiler.daily') +
+            '\n\n' +
+            t('agents.compiler.weekly')
+          : '') +
+        '\n\n' +
+        t('agents.compiler.rules'),
+    }))
+})
 const tasks = computed(() => [
+  ...compilerTasks.value,
   { id: 'read', title: t('agents.read'), body: t('agents.readTask') },
   ...(session.canWrite
     ? ['create', 'update', 'ingest'].map((id) => ({
@@ -80,11 +214,18 @@ function instructions(body: string) {
   )
 }
 const copied = ref(false)
+watch(
+  () => [session.space?.id, session.account, session.generation],
+  () => {
+    copied.value = false
+  },
+)
 async function copy(body: string, task = true) {
   copied.value = false
+  const current = draft.current()
   try {
     await navigator.clipboard.writeText(task ? instructions(body) : body)
-    copied.value = true
+    if (current()) copied.value = true
   } catch {
     /* The read-only field remains selectable. */
   }
@@ -154,6 +295,7 @@ const download = useMutation({
       ></template>
       <p v-else>{{ t('agents.unavailable') }}</p></ResourceState
     >
+    <p>{{ t('agents.compiler.install') }}</p>
     <a
       v-if="!session.ready"
       :href="localURL('auth/sign-in?return_to=agents')"
@@ -192,6 +334,18 @@ const download = useMutation({
           </ol>
         </details>
       </section>
+      <p
+        v-if="
+          !compilerAvailable || (session.canWrite && compilerTasks.length < 8)
+        "
+      >
+        {{ t('agents.compiler.upgrade') }}
+      </p>
+      <ResourceState
+        v-else
+        :error="compilerContext.error.value"
+        :loading="compilerContext.isPending.value"
+      />
       <section class="space-y-4">
         <h2 class="text-xl font-medium">{{ t('agents.tasks') }}</h2>
         <details

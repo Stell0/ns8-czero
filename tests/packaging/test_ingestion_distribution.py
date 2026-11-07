@@ -29,6 +29,7 @@ def artifacts(tmp_path_factory):
     with zipfile.ZipFile(wheel) as zipped:
         names = zipped.namelist()
         assert any(n.endswith('/c0_ingest/client.py') or n == 'c0_ingest/client.py' for n in names)
+        assert 'c0_compiler/cli.py' in names and 'c0_compiler/model.py' in names and 'c0_compiler/runner.py' in names
         assert 'c0_projects/adapters.py' in names and 'c0_projects/publish.py' in names
         assert 'github_vault/scrape.py' in names and 'github_vault/sync.py' in names
         licenses = [n for n in names if '.dist-info/licenses/' in n]
@@ -60,6 +61,11 @@ def test_sample_installs_and_initializes_without_core_or_checkout(artifacts, kin
     assert (work / 'job/.env').stat().st_mode & 0o777 == 0o600
     help_text = command([str(python), str(work / 'job/run.py'), '--help'], cwd=work, env=env)
     assert 'sync' in help_text and 'login' in help_text
+
+    compiler_help=command([str(venv/'bin/c0-compile'),'--help'],cwd=work,env=env)
+    assert all(word in compiler_help for word in ('dry-run','daily','weekly','status','recover','--project-lease-file'))
+    command([str(python),'-I','-c',
+        "import c0_compiler;from pathlib import Path;import sys;assert Path(c0_compiler.__file__).is_relative_to(Path(sys.prefix))"],cwd=work,env=env)
 
     project_help=command([str(venv/'bin/c0-projects'),'--help'],cwd=work,env=env)
     assert 'resume' in project_help and 'verify' in project_help

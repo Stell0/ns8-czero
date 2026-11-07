@@ -30,3 +30,5 @@ Operator-enabled after-answer retrieval feedback uses
 [the bounded proposal path](../../references/compiler.md#retrieval-feedback),
 not ordinary Wiki edits. Process those durable tasks through the common compiler
 under current policy and budgets; a queued observation is not compiled knowledge.
+
+For explicitly requested recurring maintenance or external setup, read [scheduling and recovery](../../references/scheduling.md). Package generation installs no host task.

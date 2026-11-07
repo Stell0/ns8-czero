@@ -84,6 +84,8 @@ CLAIM = record({'project_lease': PROJECT_LEASE,'kind': {'enum': ORIGINS}, 'cycle
     'review_authorization_ref': KEY},
     ['kind', 'cycle_key', 'lease_owner', 'policy_revision'])
 CHECKPOINT = record({'lease': LEASE, 'expected_revision': integer(1, 2147483646),
+    'semantic_page_id': UUID,
+    'source_bindings': {'type': 'array', 'minItems': 1, 'maxItems': 3, 'items': SOURCE},
     'action': {'enum': ['planned', 'no_change', 'defer', 'fail', 'reserve_model', 'start_model',
         'return_model', 'fail_model', 'uncertain_model', 'reconcile_returned', 'reconcile_failed', 'finish', 'partial']},
     'task_id': UUID, 'expected_task_revision': integer(1, 2147483646), 'plan_hash': HASH,

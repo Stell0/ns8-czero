@@ -309,3 +309,20 @@ background execution. No table, API operation, scope or connection ID
 is added. Schema0035 adds only a partial assessment-key index to repair an
 inherited M3 foreign-key/maintenance lookup;0034 is preserved and migrations
 retain all existing rows and authority. Older servers require only the actual operations used by queueing.
+
+
+## M5 additive host and weekly reservation contract
+
+See [M5](M5.md). Downloadable scheduling references and selected-space prompts
+never install tasks or grant access. The external c0-compile package uses current
+API-key authority, actual capabilities and common compiler helpers; neither Core
+nor its server/worker imports or invokes the model adapter. Private minimal
+journals retain request identities before I/O and stop automatic uncertain replay.
+
+reserve_model optionally accepts semantic_page_id +current source_bindings
+instead of leased task identity. Only a pending ordinary-space weekly selection
+qualifies; current original/page identities, actor/fence, shared document/page/model
+budgets and unresolved-call exclusion remain authoritative. Returned semantic
+usage can prove that exact selected review, never a child task's inference or
+publication. Existing task inputs and all SQL schema remain compatible. Older
+capabilities omit the alternative and the host reports pending/blocked review.

@@ -347,6 +347,39 @@ class CompilationRuns:
             self._save_budget(connection, budget)
         return True
 
+    def _semantic_call_support(self, connection, run, semantic):
+        """Exact selected-page/original identity, independent of terminal task dedup."""
+        selection = run['data'].get('semantic')
+        if (run['kind'] != 'weekly' or run['data'].get('project_lease') or not selection
+                or selection['state'] == 'complete'):
+            raise self.conflict()
+        selected = next((row for row in selection['items'] if row['page_id'] == semantic['target']['id']), None)
+        if (selected is None or selection['reviews'].get(semantic['target']['id'], {}).get('status') == 'reviewed'
+                or (selected['revision'], selected['wiki_revision_id'], selected['content_hash']) != (
+                semantic['target']['revision'], semantic['target']['content_id'], semantic['target']['content_hash'])):
+            raise self.conflict()
+        if 'page' not in self._enabled(connection)['data']['allowed_target_kinds']:
+            raise self.disabled()
+        self._target(connection, semantic['target'])
+        bindings = [self._source(connection, source)[0] for source in semantic['source_selections']]
+        if digest(bindings) != semantic['source_hash']:
+            raise self.conflict()
+        return bindings
+
+    def _semantic_call(self, connection, run, data):
+        selection = run['data'].get('semantic') or {}
+        selected = next((row for row in selection.get('items', []) if row['page_id'] == data['semantic_page_id']), None)
+        if selected is None:
+            raise self.conflict()
+        self._sources(connection, data['source_bindings'])
+        semantic = {'target': {'kind':'page', 'id':selected['page_id'], 'revision':selected['revision'],
+            'content_id':selected['wiki_revision_id'], 'content_hash':selected['content_hash']},
+            'source_hash':digest(data['source_bindings']),
+            'source_selections':[{'logical_document_id':source['logical_document_id'], 'revision_id':source['revision_id'],
+                'chunk_ids':[chunk['chunk_id'] for chunk in source['chunks']]} for source in data['source_bindings']]}
+        self._semantic_call_support(connection, run, semantic)
+        return semantic
+
     def checkpoint(self, actor, data, *, idempotency_key):
         data = checked(CHECKPOINT, data)
         action = data['action']
@@ -358,13 +391,22 @@ class CompilationRuns:
             'fail_model': {'request_id'}, 'uncertain_model': {'request_id'},
             'reconcile_returned': {'request_id', 'observed_tokens', 'external_reference_hash'},
             'reconcile_failed': {'request_id'}, 'finish': set(), 'partial': set()}
+        semantic_reservation = action == 'reserve_model' and 'semantic_page_id' in data
+        if semantic_reservation:
+            fields[action] = {'semantic_page_id', 'source_bindings', 'request_id', 'reserved_tokens'}
         if set(data) != common | fields[action]:
             raise ValueError('invalid_compilation_checkpoint')
         def guard(connection, current):
             if action not in ('planned', 'no_change', 'reserve_model', 'start_model', 'finish'):
                 return
             run = self._run(connection, data['lease']['run_id'])
-            identifiers = run['data']['task_ids'] if action == 'finish' else [data['task_id']] if 'task_id' in data else [run['data']['calls'][data['request_id']]['task_id']] if data['request_id'] in run['data']['calls'] else []
+            call = run['data']['calls'].get(data.get('request_id'))
+            if semantic_reservation:
+                self._semantic_call(connection, run, data)
+            elif action == 'start_model' and call and call.get('semantic'):
+                self._semantic_call_support(connection, run, call['semantic'])
+            identifiers = (run['data']['task_ids'] if action == 'finish' else [data['task_id']] if 'task_id' in data
+                else [call['task_id']] if call and call['task_id'] else [])
             if action=='finish' and run['data'].get('semantic'):
                 self._semantic_current(connection,run['data']['semantic'])
             for identifier in identifiers:
@@ -375,15 +417,17 @@ class CompilationRuns:
             if run['revision'] != data['expected_revision']:
                 raise self.conflict()
             task = None
-            if action in ('planned', 'no_change', 'defer', 'fail', 'reserve_model'):
+            if action in ('planned', 'no_change', 'defer', 'fail') or action == 'reserve_model' and not semantic_reservation:
                 task = self._leased_task(connection, run, data, support=action not in ('defer', 'fail'))
             calls = run['data']['calls']
             if task and action != 'reserve_model' and any(c['task_id'] == str(task['id']) and c['state'] in ('reserved','started','uncertain') for c in calls.values()):
                 raise self.conflict()
             if action == 'reserve_model':
-                if task['state'] == 'uncertain' or len(calls) >= 100 or data['request_id'] in calls:
+                semantic = self._semantic_call(connection, run, data) if semantic_reservation else None
+                if (task and task['state'] == 'uncertain') or len(calls) >= 100 or data['request_id'] in calls:
                     raise self.conflict()
-                if any(c['task_id'] == str(task['id']) and c['state'] in ('reserved','started','uncertain') for c in calls.values()):
+                if any((c['task_id'] == str(task['id']) if task else c.get('semantic', {}).get('target', {}).get('id') == data['semantic_page_id'])
+                        and c['state'] in ('reserved','started','uncertain') for c in calls.values()):
                     raise self.conflict()
                 if connection.execute(text("SELECT 1 FROM c0_compilation_events WHERE space_id=:space AND call_id=:call AND kind='model_reserve'"),
                         {'space': self._space_id, 'call': _uuid(data['request_id'])}).scalar_one_or_none():
@@ -392,14 +436,33 @@ class CompilationRuns:
                         or data['reserved_tokens'] > run['data']['policy']['retrieval_model_tokens']):
                     return {'outcome': 'deferred_budget', 'run': snapshot(run), 'task': snapshot(task),
                         'next_eligible_at': None, 'retryable': False}
+                if semantic:
+                    support = {'purpose':'knowledge', 'target_key':'page:'+data['semantic_page_id'],
+                        'source_bindings':data['source_bindings']}
+                    budgets = [self._budget(connection, identifier) for identifier in (run['day_budget_id'], run['week_budget_id']) if identifier is not None]
+                    exhausted = [budget for budget in budgets if not self._reservation_fits(connection,budget,support,run['data']['policy'])]
+                    if exhausted:
+                        return {'outcome':'deferred_budget', 'run':snapshot(run),
+                            'next_eligible_at':snapshot(max(self.clock(), *(budget['window_end'] for budget in exhausted))), 'retryable':True}
                 allowance = self._charge_model(connection, run, data['reserved_tokens'])
                 if allowance is not True:
-                    return {'outcome': 'deferred_budget', 'run': snapshot(run), 'task': snapshot(task),
+                    return {'outcome': 'deferred_budget', 'run': snapshot(run),
+                        **({'task':snapshot(task)} if task else {}),
                         'next_eligible_at': snapshot(allowance), 'retryable': True}
-                calls[data['request_id']] = {'state': 'reserved', 'task_id': str(task['id']),
+                calls[data['request_id']] = {'state': 'reserved', 'task_id': str(task['id']) if task else None,
                     'reserved_tokens': data['reserved_tokens'], 'observed_tokens': None,
                     'day_budget_id': str(run['day_budget_id']),
                     'week_budget_id': str(run['week_budget_id']) if run['week_budget_id'] else None}
+                if semantic:
+                    calls[data['request_id']]['semantic'] = semantic
+                    # Source debits share the selected page reservation and survive lease/window changes.
+                    support_key = digest(['semantic_support',str(run['id']),data['semantic_page_id'],semantic['source_hash'],
+                        str(run['day_budget_id']),str(run['week_budget_id'])])
+                    if not connection.execute(text('SELECT 1 FROM c0_compilation_events WHERE space_id=:space AND actor_id=:actor AND request_key=:key'),
+                            {'space':self._space_id,'actor':current.user_id,'key':support_key}).scalar_one_or_none():
+                        self._event(connection,current,support_key,support_key,'reserve_model','reserved',run=run,kind='semantic_reserve',
+                            metrics={'document_ids':[source['logical_document_id'] for source in data['source_bindings']],
+                                'target_keys':[support['target_key']]})
                 unique = digest([idempotency_key, 'call'])
                 self._event(connection, current, unique, unique, 'reserve_model', 'reserved', run=run, task=task,
                     kind='model_reserve', call_id=_uuid(data['request_id']), metrics={'reserved_tokens': data['reserved_tokens']})
@@ -433,7 +496,8 @@ class CompilationRuns:
                         self._charge_model(connection, run, call['reserved_tokens'], observed=0)
                         run['day_budget_id'], run['week_budget_id'] = original_budgets
                     # Reconciliation frees only its matching uncertain task, never another run.
-                    connection.execute(text("""UPDATE c0_compilation_tasks SET state='leased',revision=revision+1,updated_at=:now
+                    if call['task_id'] is not None:
+                        connection.execute(text("""UPDATE c0_compilation_tasks SET state='leased',revision=revision+1,updated_at=:now
                         WHERE space_id=:space AND id=:id AND run_id=:run AND fencing_generation=:fence AND state='uncertain'"""),
                         {'space': self._space_id, 'id': _uuid(call['task_id']), 'run': run['id'],
                          'fence': run['fencing_generation'], 'now': self.clock()})
@@ -475,6 +539,8 @@ class CompilationRuns:
                 if action == 'finish' and (unfinished or unresolved or run['data'].get('semantic',{}).get('state','complete')!='complete'):
                     raise self.conflict()
                 run['state'] = 'complete' if action == 'finish' else 'partial'
+            if semantic_reservation and len(json.dumps(snapshot(run['data']), ensure_ascii=False).encode()) > 262144:
+                raise ValueError('compilation_run_metadata_budget_exhausted')
             run = self._save_run(connection, run)
             result = {'outcome': 'completed_bounded' if action == 'finish' else action, 'run': snapshot(run)}
             if task:

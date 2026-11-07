@@ -475,13 +475,13 @@ class CzeroSso:
         from zipfile import ZipFile
         with ZipFile(path) as archive:
             names = set(archive.namelist())
-            expected = {'SKILL.md', 'agents/openai.yaml', 'LICENSE', 'references/compiler.md'}
+            expected = {'SKILL.md', 'agents/openai.yaml', 'LICENSE', 'references/compiler.md', 'references/scheduling.md'}
             if plugin:
                 expected = {'plugin.json', '.app.json', 'LICENSE', 'references/instance.md',
                     'references/connection.md', 'references/maintenance.md', 'references/projects.md',
                     'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
                     'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
-        'skills/c0-knowledge-compiler/SKILL.md', 'references/compiler.md'}
+        'skills/c0-knowledge-compiler/SKILL.md', 'references/compiler.md', 'references/scheduling.md'}
             assert names == expected and len(archive.namelist()) == len(names), 'Unexpected generated archive contents'
             assert 'LICENSE' in names and not names.intersection({'AGENTS.md', 'PLAN.md', 'mcp.json', '.mcp.json'})
             binding = archive.read('references/instance.md' if plugin else 'SKILL.md').decode()
