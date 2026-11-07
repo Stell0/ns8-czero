@@ -53,3 +53,5 @@ completed inventory or selected review batch into a claim of corpus coverage.
 Retrieval feedback queues bounded source-backed gaps after the answer, following
 the separate protocol section. It does not run this full compilation loop on every
 search. Daily/weekly work may process those tasks through the same validated engine.
+
+For explicitly requested recurring maintenance or external setup, read [scheduling and recovery](../../references/scheduling.md). Package generation installs no host task.

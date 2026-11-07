@@ -327,3 +327,21 @@ It calls no model and queues no more than one proposal, with independent task
 readback. This does not measure the host's prior reasoning cost, establish ChatGPT
 post-answer continuation or install a schedule. The common daily/weekly compiler
 processes saved proposals under current policy and its existing run budgets.
+
+
+## Weekly selected-page model reservations
+
+On servers whose actual compilation_run_checkpoint input schema includes
+semantic_page_id, an ordinary-space weekly reviewer can reserve_model with
+semantic_page_id and current source_bindings instead of task_id and its revision.
+The page must already belong to the pending bounded semantic selection. Core
+checks the exact selected current page and originals, shares document/page/model
+budgets, and retains metadata-only call identity with task_id=null. Start/replay
+rechecks support; uncertainty remains charged and recoverable. Record the actual
+returned usage ID in compilation_semantic_review for that exact page/bindings.
+Do not reopen a terminal task merely to run inference or fabricate a contradiction.
+A no-change review still reads originals and checks overlap/applicability. Changes
+need genuine canonical child tasks, separate task-model usage and the normal M2
+publication engine; semantic usage cannot masquerade as child inference. If this
+alternative is absent, report the limitation and leave selected pages pending.
+For explicitly requested external hosts and scheduling, read [scheduling](scheduling.md).

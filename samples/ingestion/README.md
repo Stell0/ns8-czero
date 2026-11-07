@@ -259,3 +259,5 @@ snapshot. Unchanged originals retain their logical revision; shrinking imports
 exclude stale parts while preserving old evidence. Read the full original using
 `source_documents_get` or resolve its cited version with
 `source_version_document_get`; never join overlapping search chunks.
+
+For bounded external knowledge compilation and scheduling, see the [compiler runner](examples/compiler/README.md). It is not part of the C0 runtime and does not activate schedules.

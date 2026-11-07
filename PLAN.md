@@ -244,6 +244,28 @@ report exclusions. No benchmark quality is claimed before all cells validate.
 The original importer is not restarted; no external recurring schedule or Wiki
 publication is added.
 
+## Knowledge compilation — M5 implementation candidate
+
+M4 is accepted in [PR95](https://github.com/Stell0/ns8-czero/pull/95), regular
+merge52e84a368ec6371d3eee8f546d9b3f22f53ca1d5. Its exact-head full42392187969
+and actual-main [42397304098](https://github.com/Stell0/ns8-czero/actions/runs/42397304098)
+pass required full/native checks and exact-source promotion verification. Source
+acceptance does not change the dedicated installation or release Core0.43.
+
+[M5](docs/knowledge-compilation/M5.md) adds selected-space English/Italian Use
+with AI prompts, shared scheduling references in generated/installed archives,
+and the independent c0-compile external host. It uses current scoped API keys,
+Codex or Responses reasoning, durable minimal intents, source-backed publication
+and independent readback. No server model execution or schedule is installed.
+Core0.45 adds one alternative selected-page weekly model reservation under the
+same authorization/fences/budgets; schema0036 and all six tables remain unchanged.
+App0.63 retains the immutable released Core0.44 consumer lock. Plugin1.8 retains
+its five skills and registered app identity. Core publication/adoption, deployment,
+policy enablement, production knowledge and schedule activation remain separate.
+M6 is not started. Exact final tests, native acceptance and one focused PR remain
+required; actual hosted ChatGPT scheduling and quality are not inferred from a
+prompt, package, mock or successful interactive connection.
+
 ## Knowledge compilation — M4 producer candidate
 
 M3 is accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91), regular
@@ -264,7 +286,8 @@ Producer Core0.43 adds only schema0035’s assessment-key index to the six exist
 connection; optional feedback guidance is filtered by actual capabilities.
 App0.61 retains the released Core0.42 consumer lock inherited from PR94. No Core library
 publication/adoption, deployment, policy activation, production knowledge or
-schedule mutation is included. M5/M6 remain unstarted. Exact-source full/native
+schedule mutation is included. This frozen M4 record predates the separately
+authorized M5 work above; M6 remains unstarted. Exact-source full/native
 acceptance and one focused PR remain required for this producer candidate.
 
 
