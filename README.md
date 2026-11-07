@@ -31,6 +31,13 @@ Administration. Native NS8 settings remain Vue 2/Carbon. See the
 | Connect your existing assistant | An MCP server, instance-specific skills and a generated ChatGPT plugin package |
 | Build a specialized AI application | A reusable Python Core, reference web application, REST/MCP interfaces, tests and NS8 deployment machinery |
 
+[Published retrieval benchmarks](docs/retrieval-benchmark.md#published-results)
+compare the previous text search with Core 0.44 document BM25 on SciFact,
+NFCorpus and a private documentation corpus. SciFact reaches **0.6782
+nDCG@10**, **0.8073 Recall@10** and **2% empty results**. The report includes
+matched latency, hybrid results, methodology and limitations; it measures
+retrieval rather than generated-answer quality.
+
 For example, a support team can retain troubleshooting procedures and the evidence behind them. A researcher can connect findings across papers while retaining the original passages. A product team can keep decisions, systems and structured records in one place, then use different assistants against the same authorized knowledge.
 
 The useful loop is **collect → connect → ask → improve**. Your assistant can research, summarize and propose or make authorized changes; C0 keeps the resulting current knowledge and evidence available for the next person or conversation.
