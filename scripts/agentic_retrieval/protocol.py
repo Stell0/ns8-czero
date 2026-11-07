@@ -227,6 +227,9 @@ def summary(rows):
         vals=[r['grade']['disposition_correct'] for r in valid if r['answerability']==kind]
         out[kind]={'mean':sum(vals)/len(vals) if vals else None,'n':len(vals)}
     out['invalid_citations']=sum(r['grade']['invalid_citations'] for r in valid)
+    out['submitted_citations']=sum(len(r['runner'].get('final',{}).get('citations',[])) for r in valid)
+    out['citation_validity']=(1-out['invalid_citations']/out['submitted_citations']) if out['submitted_citations'] else None
+    out['model_usage_events']=sum(r['runner'].get('usage_events',0) for r in timed)
     out['product_version_errors']=sum(r['grade']['product_errors']+r['grade']['version_errors'] for r in valid)
     for name in ('calls','context_bytes','elapsed_seconds'):
         vals=sorted(r['runner'][name] for r in timed)

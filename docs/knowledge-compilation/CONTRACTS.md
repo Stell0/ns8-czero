@@ -326,3 +326,17 @@ budgets and unresolved-call exclusion remain authoritative. Returned semantic
 usage can prove that exact selected review, never a child task's inference or
 publication. Existing task inputs and all SQL schema remain compatible. Older
 capabilities omit the alternative and the host reports pending/blocked review.
+
+
+## M6 additive measurement contract
+
+See [M6](M6.md) and [operational gates](OPERATIONS.md). The benchmark's optional
+compiler publisher uses production Core validation/publication/readback only in
+owned disposable SQL fixtures. Source-only proposals require an exact corpus/plan
+review before queue-only apply. The existing semantic publisher remains default;
+no Core/API/schema/scope/runtime behavior changes. Builder usage and reviewed
+manual publication remain separate from unattended server-reserved inference.
+Independent answer audits bind frozen inputs and actual episodes, retain unknown,
+unreviewed and runner-failure denominators, and never equate quotation matching
+with answer correctness. Failed quality targets and missing live authority remain
+open acceptance gates rather than inferred success.

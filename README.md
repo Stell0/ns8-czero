@@ -145,6 +145,7 @@ For maintenance:
 > In the protected Operations space, read the existing procedure and the selected new evidence. Update only the requested section, preserve authored text and current citations, mark expired evidence stale, then read back the saved revision.
 
 For bounded external knowledge compilation, see the [M5 design and acceptance](docs/knowledge-compilation/M5.md)
+[M6 measurement and operational gates](docs/knowledge-compilation/M6.md)
 and [independent runner](samples/ingestion/examples/compiler/README.md). Use with AI
 generates prompts for your selected space; packages and prompts do not activate
 learning or install schedules. Server capability and released-consumer acceptance

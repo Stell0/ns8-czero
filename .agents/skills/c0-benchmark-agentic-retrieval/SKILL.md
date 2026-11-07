@@ -36,3 +36,10 @@ with provisional labels before audit, marks exposure, and cannot claim acceptanc
 after those outcomes. Missing access/model support blocks real results, not the
 deterministic preparation. Publish sanitized aggregates only. No production corpus,
 provider, scheduler, deployment or merge change is authorized by this workflow.
+
+For production-compiler acceptance, use `loop --publisher compiler` with the same
+owned paired fixture and the exact source-plan review in
+[the M6 operational guide](https://github.com/Stell0/ns8-czero/blob/main/docs/knowledge-compilation/OPERATIONS.md).
+Run `answer-audit` with independent source-based judgments after measurement;
+report unreviewed/unknown answers and failed quality targets explicitly. Never
+copy private originals into a disposable study without its separate authorization.
