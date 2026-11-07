@@ -692,6 +692,23 @@ reasoning callback and supported authenticated connection. It records model
 reservations/outcomes and returns child work for the existing M2 engine; it is
 not a provider runner or CLI. See the repository knowledge-compilation M3 contract.
 
+### Bounded retrieval feedback (producer 0.43, schema0035)
+
+`compilation_client.feedback_after_answer` is an optional external-process step.
+The host must first deliver its answer and supply actual-scope capability names.
+Explicit read-only tasks, missing Write, absent material signal and disabled policy
+skip learning. The exact space
+effective role and current originals/Wiki/tasks are checked before at most one
+metadata-only retrieval proposal and independent task readback. The seven-call,
+five-second bound has no model call, publication, server hook or automatic retry.
+Uncertain writes retain the caller's recovery identity; exceptions never replace
+the already delivered answer. Queries, answers and conversation/benchmark text
+are not inputs. Canonical topic/label metadata must derive from original evidence.
+Both queue-only and automatic-supported policies can defer actual compilation to
+the common engine. No new API/table or released consumer adoption. Schema0035 adds only the partial
+assessment-key index omitted by0034; original rows and bounded SQL checks remain
+unchanged.
+
 ## System One relevance scoring (producer 0.42)
 
 `SystemOneClient` uses the [OpenAI Decisions API](https://developers.openai.com/api/docs/guides/decisions)

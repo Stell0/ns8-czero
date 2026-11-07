@@ -58,20 +58,26 @@ Consumer/full/native/main publication and dedicated backup/update/live acceptanc
 remain required before declaring delivery. The accepted dedicated baseline below
 remains installed; scoring and the private benchmark wait for operator key setup.
 
-## Knowledge compilation — M3 candidate
+## Knowledge compilation — M4 producer candidate
 
-M2 is accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89), original main
-`317249e60e10d506758ba5343fb9393eb587b622`; actual main
-[42339498941](https://github.com/Stell0/ns8-czero/actions/runs/42339498941) passes
-full/native acceptance. The [M3 contract](docs/knowledge-compilation/M3.md)
-extends the same compiler with resumable current-publication discovery, partial
-original review ranges, exact dependency revalidation and bounded weekly review.
-Configured projects keep their existing host run, scope, limits and reports;
-ordinary spaces need no project initialization. Existing six coordination tables
-remain metadata-only. Producer Core0.41/schema0034 is not published or adopted;
-app0.60 retains released Core0.39 and its consumer lock. Policy, live knowledge,
-production schedules and the installed baseline remain unchanged. M4–M6 are not
-started. Final candidate acceptance is recorded in the focused PR and M3 checklist.
+M3 is accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91), regular
+merge `c16eb49f0cfa3fb428d96dfff42222862f809289`. Exact-head full42373737405 and
+actual-main [42378485191](https://github.com/Stell0/ns8-czero/actions/runs/42378485191)
+pass full/native, independent artifact grading and exact-source promotion proof;
+see [M3 acceptance](docs/knowledge-compilation/M3.md#accepted-source-and-post-merge-verification).
+The [M4 contract](docs/knowledge-compilation/M4.md) adds a bounded external
+post-answer observation and source-backed durable proposal using the existing
+six-table coordinator and M2/M3 compiler. Search stays read-only; most episodes,
+Readers, explicit read-only tasks and disabled feedback do nothing. Current
+Wiki/tasks and exact originals are checked before at most one queue write and
+independent task readback. Failure cannot block the already delivered answer.
+
+Producer Core0.43 adds only schema0035’s assessment-key index to the six existing tables. Plugin1.7 retains its five skills and registered
+connection; optional feedback guidance is filtered by actual capabilities.
+App0.61 retains the released Core0.42 consumer lock inherited from PR94. No Core library
+publication/adoption, deployment, policy activation, production knowledge or
+schedule mutation is included. M5/M6 remain unstarted. Exact-source full/native
+acceptance and one focused PR remain required for this producer candidate.
 
 
 ## Embedding backlog drain

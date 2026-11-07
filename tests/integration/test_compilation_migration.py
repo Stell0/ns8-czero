@@ -20,7 +20,7 @@ from czero_core.spaces import SpaceService
 from czero_core.wiki import WikiService
 
 
-@pytest.mark.parametrize('predecessor',['0032_api_key_revisions','0033_compilation_state'])
+@pytest.mark.parametrize('predecessor',['0032_api_key_revisions','0033_compilation_state','0034_compilation_maintenance'])
 def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tmp_path):
     url = make_url(os.environ['CZERO_TEST_DATABASE_URL'])
     name = 'c0_compiler_migration_' + uuid4().hex
@@ -52,7 +52,7 @@ def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tm
         with db.engine.begin() as c:
             registry.get('source.extract').execute(c,{'version_id':original['id']})
         original_view=sources.get(owner,original['source_id'])
-        if predecessor=='0033_compilation_state':
+        if predecessor in ('0033_compilation_state','0034_compilation_maintenance'):
             from czero_core.compilation import CompilationService
             from czero_core.compilation_schema import defaults
             compiler=CompilationService(db,access).in_space(space)
@@ -65,6 +65,9 @@ def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tm
                 'topic_key':'retained','source_bindings':bindings,'target':{'kind':'page','id':page['id'],
                 'revision':page['revision'],'content_id':page['content']['id'],'content_hash':page['content']['content_hash']}},
                 idempotency_key='retained-proposal')
+            if predecessor=='0034_compilation_maintenance':
+                compiler.claim_run(owner,{'kind':'manual','cycle_key':'retained','lease_owner':'migration',
+                    'policy_revision':1},idempotency_key='retained-lease')
         with db.engine.connect() as c:
             names = c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
             before = {table: c.execute(text('SELECT to_jsonb(t) FROM '+table+' t ORDER BY to_jsonb(t)::text')).scalars().all() for table in names}
@@ -75,6 +78,8 @@ def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tm
                 added={'c0_sources':['compilation_publication'],'c0_objects':['compilation_publication'],
                     'c0_compilation_tasks':['purpose','assessment'],
                     'c0_compilation_sources':['assessment_task_id','seen_sweep_id','publication_marker']}
+                if predecessor=='0034_compilation_maintenance':
+                    added={}  # This predecessor already has every maintenance column.
                 after={}
                 for table in names:
                     expression='to_jsonb(t)-CAST(:added AS text[])'

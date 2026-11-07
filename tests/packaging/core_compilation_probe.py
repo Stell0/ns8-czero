@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Installed Core/disposable native backup fixture; never run against real knowledge."""
 from datetime import datetime, timezone
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ from czero_core import Database
 from czero_core.access import AccessService
 from czero_core.compilation import CompilationService, CompilationConflict
 from czero_core.compilation_schema import defaults, digest
-from czero_core.compilation_client import navigation_plan
+from czero_core.compilation_client import navigation_plan, feedback_after_answer, FEEDBACK_TOOLS
 from czero_core.compilation_content import record_binding
 from czero_core.annotations import AnnotationService, ContentTarget
 from czero_core.identity import VerifiedIdentity
@@ -115,6 +116,20 @@ try:
         access, owner = owner_for(state)
         service = CompilationService(database, access).in_space(state['space'])
     assert observed(state['space']) == state['observed']
+    # Installed clients keep feedback disabled even for an authorized native owner.
+    async def policy_only(name,arguments):
+        assert arguments['space_id']==state['space']
+        if name=='spaces_get': return SpaceService(database,access).get(owner,state['space'])
+        assert name=='compilation_policy_get'
+        return service.policy(owner)
+    support=service.get_task(owner,state['publication_task_id'])['source_bindings'][0]
+    feedback=asyncio.run(feedback_after_answer(policy_only,state['space'],{
+        'reason':'missing_link','topic_key':'native/feedback','source_label':'Synthetic source',
+        'selections':[{'logical_document_id':support['logical_document_id'],'revision_id':support['revision_id'],
+            'chunk_ids':[support['chunks'][0]['chunk_id']]}]},answer_delivered=True,
+        operation_names=FEEDBACK_TOOLS,idempotency_key='native-disabled-feedback'))
+    assert feedback['reason']=='feedback_disabled' and not feedback['compiled']
+    assert observed(state['space'])==state['observed']
     current = service.status(owner, run_id=state['lease']['run_id'])
     assert current['sources']['compiled'] == 0 and current['dependencies']['stale'] == 0
     assert current['budgets'][0]['data']['requests'] == 1
@@ -183,7 +198,7 @@ try:
             c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'), {'issuer': state['issuer']})
         state_path.unlink()
     print(json.dumps({'compilation_state': True, 'six_tables': True, 'publication_disabled': True,
-        'guarded_compilation': True, 'maintenance_cursor_restored': True, 'assessment_after_actual_child_verification': mode != 'seed', 'pending_compilation_verified': mode != 'seed',
+        'guarded_compilation': True, 'retrieval_feedback_disabled': True, 'maintenance_cursor_restored': True, 'assessment_after_actual_child_verification': mode != 'seed', 'pending_compilation_verified': mode != 'seed',
         'restored_fence_invalidated': mode == 'verify', 'stage': mode}))
 finally:
     database.close()

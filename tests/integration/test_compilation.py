@@ -404,10 +404,12 @@ def test_natural_indexes_at_representative_coordination_cardinality(compiler, re
             ('queue', "SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND state='queued' ORDER BY not_before,id LIMIT 20",
              ('c0_compilation_tasks_pending', 'c0_compilation_tasks_state')),
             ('topic', "SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND topic_key='inventory'",
-             'c0_compilation_tasks_topic')]
+             'c0_compilation_tasks_topic'),
+            ('assessment', 'SELECT * FROM c0_compilation_sources WHERE space_id=:space AND assessment_task_id=:task',
+             'c0_compilation_sources_assessment')]
         for name, query, index in queries:
             plan = c.execute(text('EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) '+query),
-                {'space': service._space_id, 'logical': bindings[0]['logical_document_id'], 'target': page['id']}).scalar_one()[0]
+                {'space': service._space_id, 'logical': bindings[0]['logical_document_id'], 'target': page['id'], 'task': task['id']}).scalar_one()[0]
             choices = (index,) if isinstance(index, str) else index
             assert any(value in json.dumps(plan) for value in choices), plan
             record_property('compilation_sql_'+name, json.dumps(plan))
