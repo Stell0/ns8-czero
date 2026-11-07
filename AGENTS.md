@@ -11,8 +11,10 @@ installation, immutable Core release and all earlier evidence.
 Core0.44.0 is immutably published at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea`
 after PR99's regular merge, full PostgreSQL/native/browser/artifact gates and
 publisher42407305955. It adds schema0036 document BM25 and preserves exact
-citations. App0.62 stages released tag/lock adoption; consumer/full/native/main
-gates remain separate. Production remains app0.61/Core0.42 as recorded above.
+citations. App0.62 adopts the released tag/lock through regularly merged PR100
+with exact consumer full/native/browser/image acceptance. Main42413222963,
+independent artifact audit, full promotion proof and six registry alias reads
+pass. Production remains app0.61/Core0.42 as recorded above.
 See [BM25 acceptance](PLAN.md#document-bm25--released-core-consumer-adoption).
 
 ## Product purpose

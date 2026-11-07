@@ -2,7 +2,7 @@
 
 Core 0.44.0 is immutably released at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea`
 using schema0036. Producer full/native/browser/packaging acceptance passes;
-app0.62 released-consumer acceptance remains separate from deployment. Existing
+app0.62 released-consumer full/native/browser/image acceptance passes. Existing
 installed images remain unchanged. The measured SciFact baseline below remains development evidence.
 
 Ordinary source/Wiki queries use OR eligibility with English and Italian stem
@@ -106,7 +106,7 @@ unanswerable questions; relevance is not an answerability test. The initial
 local setup stopped before scoring because managed sources remained staged;
 all bodies were validated before Core's normal publication operation completed
 in the disposable fixture. Indexing time is unreported for that resumed run.
-The current M4 successor requires its own integration validation.
+The later M4 successor was validated independently, as recorded below.
 
 Current-base candidate `fbae9a2` reproduces the quality scores but fails the
 SciFact latency gate: P95 286.0ms against149.4ms, exceeding1.5×. Its raw run
@@ -129,7 +129,9 @@ The final migration check is idempotent, not a new indexing-time measurement.
 Documentation's mean wrong-product candidate count rises from 0.6 to 20.575;
 exact-version wrong hits remain zero. This tradeoff accompanies the unchanged
 evidence-coverage figures above. Current-source producer full/native acceptance
-and immutable publication pass; released-consumer gates remain separate. See
+and immutable publication pass; released consumer PR100 also passes full/native
+and image acceptance. Main full/native gates, canonical publication, independent
+artifact audit and registry identity checks also pass. See
 [acceptance evidence](../PLAN.md#document-bm25--released-core-consumer-adoption).
 No production deployment is authorized by these measurements.
 
