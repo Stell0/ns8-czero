@@ -15,7 +15,7 @@ Discover actual current tool schemas. Keep the explicit space in every content c
 
 Return actual saved resource identities and states: SAVED, QUEUED, ACCEPTED_PENDING_MERGE, BLOCKED or PARTIAL. Explain incomplete coverage and pending merges. Persistence, external task publication, notification and human reading are separate observations. Never claim an unobserved external execution or delivery.
 
-For requested bounded knowledge compilation, read [the compiler protocol](references/compiler.md).
+For requested bounded knowledge compilation, read {{COMPILER_LINK}}.
 Require the actual publication tools and enabled selected-space policy. Missing
 capabilities block compilation; ordinary bundles are not a policy bypass. This
 reference does not activate retrieval learning, daily/weekly discovery or schedules.

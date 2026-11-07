@@ -75,7 +75,8 @@ try:
         compilation = service.claim_run(owner, {'kind':'manual','cycle_key':'native-compiled',
             'lease_owner':'compiler-fixture','policy_revision':1}, idempotency_key='compile-claim')
         plan = navigation_plan(space, compilation['tasks'][0], 'Compiled synthetic inventory',
-            'Read the original inventory evidence.', [(sources.citation(owner,chunk['id']),chunk['body'])])
+            'Read the original inventory evidence.', [(sources.citation(owner,chunk['id']),chunk['body'])],
+            reviewed_source_ids=[str(version['source_id'])])
         request = {'lease':compilation['lease'],'expected_revision':compilation['run']['revision'],'plan':plan}
         preview = service.validate_plan(owner, request)
         published = service.apply_plan(owner, {**request,'plan_hash':preview['plan_hash'],

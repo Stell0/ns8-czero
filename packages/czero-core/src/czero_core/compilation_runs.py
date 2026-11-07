@@ -177,7 +177,7 @@ class CompilationRuns:
             identity = digest(['task_reserve', str(run['id']), str(task['id']), run['fencing_generation'],
                 str(run['day_budget_id']), str(run['week_budget_id'])])
             uncertain = any(c['task_id'] == str(task['id']) and c['state'] == 'uncertain' for c in run['data']['calls'].values())
-            changed = (task['fencing_generation'] != run['fencing_generation'] or task['run_id'] != run['id'] or task['state'] == 'deferred' or not held)
+            changed = (task['fencing_generation'] != run['fencing_generation'] or task['run_id'] != run['id'] or task['state'] in ('deferred','needs_review') or not held)
             next_state = 'uncertain' if uncertain else task['state'] if held and task['state'] in ('planned','leased','applied_pending_verify') else 'leased'
             if changed:
                 if task['attempts'] >= policy['max_attempts']:

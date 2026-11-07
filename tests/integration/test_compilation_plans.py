@@ -473,3 +473,116 @@ def test_planned_hash_survives_cas_and_review_hold_cannot_be_reclassified_away(c
     assert service.validate_plan(owner,changed)['outcome'] == 'needs_review'
     with pytest.raises(CompilationDisabled): apply(compiler,changed,approval=False)
     verify(compiler,data,apply(compiler,data))
+
+
+def test_changed_source_invalidates_only_targets_with_actual_support_from_it(compiler):
+    service,owner,_,sources,_ = compiler
+    data = graph_candidate(compiler)
+    saved = apply(compiler,data)
+    verify(compiler,data,saved)
+    with service.database.engine.connect() as c:
+        claims = [dict(r) for r in c.execute(text('SELECT id,value FROM c0_claims WHERE space_id=:space'),{'space':service._space_id}).mappings()]
+    source = next(s for s in data['plan']['source_bindings'] if '8443' in sources[0].citation(owner,s['chunks'][0]['chunk_id'])['body'])
+    direct = service.list_dependencies(owner,logical_document_id=source['logical_document_id'])['dependencies']
+    assert {str(c['id']) for c in claims if c['value']['port'] == 8443} == {d['target_id'] for d in direct if d['target_kind'] == 'claim'}
+    replacement = upload(sources,b'Changed contrary manual now says port 9443.',source_id=source['logical_document_id'],expected_revision=1)
+    execute(sources,'source.extract',replacement['id'])
+    for claim_row in claims:
+        dependencies = service.list_dependencies(owner,target_id=claim_row['id'])['dependencies']
+        assert dependencies and all(d['identities_current'] == (claim_row['value']['port'] == 7443) for d in dependencies)
+
+
+def test_proposals_preserve_managed_support_then_publication_replaces_only_coordination_edges(compiler):
+    from czero_core.compilation_client import navigation_plan
+    service,owner,_,sources,_ = compiler
+    data,_ = candidate(compiler)
+    first = apply(compiler,data); verify(compiler,data,first)
+    page = compiler[4][0].get_page(owner,first['records'][0]['id'])
+    prior = service.list_dependencies(owner,target_id=page['id'])['dependencies']
+    old_support = data['plan']['source_bindings'][0]['logical_document_id']
+    bindings,_ = support(compiler,data=b'Replacement explanation cites another original.')
+    task = propose(compiler,bindings,target={k:v for k,v in record_binding('page',page).items() if k!='record_hash'})['task']
+    observed = service.list_dependencies(owner,target_id=page['id'])['dependencies']
+    assert all(next(d for d in observed if d['id']==old['id']) == old for old in prior)
+    assert any(d['state']=='observed' and d['managed_target_hash'] is None for d in observed)
+    run = claim(compiler,cycle_key='inventory')
+    task = next(t for t in run['tasks'] if t['id']==task['id'])
+    citation = sources[0].citation(owner,bindings[0]['chunks'][0]['chunk_id'])
+    plan = navigation_plan(service._space_id,task,page['title'],'Use this current original.',[(citation,citation['body'])],
+        current=page,managed=True)
+    request = {'lease':run['lease'],'expected_revision':run['run']['revision'],'plan':plan}
+    saved = apply(compiler,request); verify(compiler,request,saved)
+    current = service.list_dependencies(owner,target_id=page['id'])['dependencies']
+    assert current and all(d['logical_document_id']==bindings[0]['logical_document_id'] and d['state']=='current' for d in current)
+    assert service.get_task(owner,first['task']['id'])['publication']['records'] == first['records']
+    assert compiler[4][0].get_page(owner,page['id'])['revision']==2
+    with service.database.engine.connect() as c:
+        assert c.execute(text('SELECT state FROM c0_compilation_sources WHERE space_id=:space AND logical_document_id=:id'),
+            {'space':service._space_id,'id':old_support}).scalar_one()=='partial'
+
+
+def test_changed_generation_resolves_retained_create_topic_to_current_page(compiler):
+    from czero_core.compilation_client import navigation_plan
+    service,owner,_,sources,_ = compiler
+    data,row = candidate(compiler)
+    original = apply(compiler,data); verify(compiler,data,original)
+    replacement = upload(sources,b'Updated original inventory.',source_id=row['source_id'],expected_revision=1)
+    execute(sources,'source.extract',replacement['id'])
+    document = sources[0].document(owner,replacement['id'])
+    chunks = sources[0].chunks(owner,document['id'])
+    bindings = service.source_bindings(owner,[{'logical_document_id':str(row['source_id']),
+        'revision_id':str(replacement['id']),'chunk_ids':[str(chunks[0]['id'])]}])['source_bindings']
+    successor = propose(compiler,bindings)['task']
+    assert successor['target']['id']==original['records'][0]['id'] and successor['predecessor_id']==original['task']['id']
+    assert propose(compiler,bindings)['task']['id']==successor['id']
+    run = claim(compiler,cycle_key='inventory')
+    task = next(t for t in run['tasks'] if t['id']==successor['id'])
+    page = compiler[4][0].get_page(owner,successor['target']['id'])
+    citation = sources[0].citation(owner,bindings[0]['chunks'][0]['chunk_id'])
+    plan = navigation_plan(service._space_id,task,page['title'],'Read the updated original.',[(citation,citation['body'])],current=page,managed=True)
+    request = {'lease':run['lease'],'expected_revision':run['run']['revision'],'plan':plan}
+    saved = apply(compiler,request); verify(compiler,request,saved)
+    assert saved['records'][0]['id']==page['id'] and saved['records'][0]['revision']==2
+    assert propose(compiler,bindings)['outcome']=='succeeded'
+    assert counts(compiler)['c0_wiki_pages']==1
+
+
+def test_authored_revision_can_be_reconciled_but_never_auto_adopted(compiler):
+    from czero_core.compilation_client import navigation_plan
+    service,owner,*_ = compiler
+    data,_ = candidate(compiler,publication_mode='automatic_supported')
+    first = apply(compiler,data,approval=False); verify(compiler,data,first)
+    wiki = compiler[4][0]
+    authored = wiki.update_page(owner,first['records'][0]['id'],'Inventory concept',
+        '# Retain this authored note',expected_revision=1,idempotency_key='authored-after-compile')
+    target = {k:v for k,v in record_binding('page',authored).items() if k!='record_hash'}
+    held = propose(compiler,data['plan']['source_bindings'],target=target)['task']
+    assert held['id']==first['task']['id'] and held['state']=='needs_review'
+    run = claim(compiler,cycle_key='inventory',review_task_ids=[held['id']],review_authorization_ref='synthetic:review-author')
+    task = next(t for t in run['tasks'] if t['id']==held['id'])
+    citation = compiler[3][0].citation(owner,task['source_bindings'][0]['chunks'][0]['chunk_id'])
+    plan = navigation_plan(service._space_id,task,authored['title'],authored['content']['body']+'\n\nRead the original evidence.',
+        [(citation,citation['body'])],current=authored,managed=False)
+    request = {'lease':run['lease'],'expected_revision':run['run']['revision'],'plan':plan}
+    assert service.validate_plan(owner,request)['outcome']=='needs_review'
+    with pytest.raises(CompilationDisabled): apply(compiler,request,approval=False)
+    saved = apply(compiler,request); verify(compiler,request,saved)
+    assert '# Retain this authored note' in wiki.get_page(owner,authored['id'])['content']['body']
+    assert service.get_task(owner,task['id'])['publication']['plan_hash']==saved['plan_hash']
+    assert saved['plan_hash']!=first['plan_hash']
+    with service.database.engine.connect() as c:
+        assert not service._owned_target(c,record_binding('page',wiki.get_page(owner,authored['id'])))
+        assert all(d['managed_target_hash'] is None and d['state']=='current' for d in service.list_dependencies(owner,target_id=authored['id'])['dependencies'])
+        assert c.execute(text("SELECT count(*) FROM c0_compilation_events WHERE space_id=:space AND task_id=:task AND operation='apply'"),
+            {'space':service._space_id,'task':task['id']}).scalar_one()==2
+
+
+def test_relation_update_cannot_smuggle_an_archive_through_an_approved_profile(compiler):
+    service,owner,*_ = compiler
+    data = graph_candidate(compiler)
+    data['plan']['operations'][4] = {'operation':'relation.update','arguments':{
+        'relation_id':str(uuid4()),'expected_revision':1,'metadata':{},'deleted':True}}
+    before = counts(compiler)
+    with pytest.raises(ValueError,match='unapproved_compilation_delete'): service.validate_plan(owner,data)
+    with pytest.raises(ValueError,match='unapproved_compilation_delete'): apply(compiler,data)
+    assert counts(compiler)==before

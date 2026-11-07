@@ -12,6 +12,8 @@ from .compilation_schema import digest
 def navigation_plan(space_id, task, title, synthesis, citations, *, classification='supported_synthesis',
                     current=None, managed=False, usage_reservation_id=None, reviewed_source_ids=()):
     """Promoted extractive profile: original quotes plus source-backed navigation."""
+    if task['target'] and current is None:
+        raise ValueError('compilation_current_target_read_required')
     citations = list(citations)
     evidence = [passage(citation, quote) for citation, quote in citations]
     references = [{'kind':'chunk', 'id': identifier} for identifier in dict.fromkeys(e['chunk_id'] for e in evidence)]
@@ -52,7 +54,7 @@ async def verify_pending(call, space_id, task_id, lease, expected_revision, *, i
     Graph locators are server-generated identifiers, never source instructions.
     """
     async def read(name, arguments):
-        return await call(name, {'space_id':str(space_id), **arguments})
+        return await call(name, {**arguments, 'space_id':str(space_id)})
     task = await read('compilation_tasks_get', {'task_id':task_id})
     publication = task.get('publication')
     if task['state'] not in ('applied_pending_verify','succeeded') or not publication:

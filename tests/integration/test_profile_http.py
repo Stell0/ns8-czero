@@ -169,7 +169,7 @@ def test_independent_database_assigns_distinct_identity_for_same_native_account(
     name='czero_profile_'+uuid4().hex
     with database.engine.connect().execution_options(isolation_level='AUTOCOMMIT') as connection:
         connection.execute(text('CREATE DATABASE '+name))
-    other=Database(str(make_url(os.environ['CZERO_TEST_DATABASE_URL']).set(database=name)))
+    other=Database(make_url(os.environ['CZERO_TEST_DATABASE_URL']).set(database=name).render_as_string(hide_password=False))
     try:
         migrate_database(other)
         service=AccessService(other,access.issuer,access.owner_account_key)

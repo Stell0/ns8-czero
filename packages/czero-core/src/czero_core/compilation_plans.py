@@ -46,7 +46,7 @@ def _json(value):
 class CompilationPlans:
     def _publication(self, connection, task_id):
         return connection.execute(text("""SELECT metrics FROM c0_compilation_events WHERE space_id=:space
-            AND task_id=:task AND operation='apply' ORDER BY created_at DESC,id DESC LIMIT 1"""),
+            AND task_id=:task AND operation='apply' ORDER BY COALESCE((metrics->>'task_revision')::integer,0) DESC,created_at DESC,id DESC LIMIT 1"""),
             {'space': self._space_id, 'task': _uuid(task_id)}).scalar_one_or_none()
 
     def _read_record(self, connection, kind, identifier):
@@ -215,6 +215,8 @@ class CompilationPlans:
         identities = []
         for index, step in enumerate(operations):
             op, args = step['operation'], step['arguments']
+            if op == 'relation.update' and args.get('deleted',False) is not False:
+                raise ValueError('unapproved_compilation_delete')
             kind = KINDS.get(op.split('.')[0], 'annotation')
             if kind not in policy['allowed_target_kinds']:
                 raise self.disabled()
@@ -303,7 +305,10 @@ class CompilationPlans:
                     raise ValueError('invalid_compilation_claim_evidence')
                 if not all(type(value) is str for value in args.get('evidence_chunk_ids') or []):
                     raise ValueError('invalid_compilation_claim_evidence')
-                if not set(args.get('evidence_chunk_ids') or []) <= {e['chunk_id'] for e in binding['evidence']}:
+                claimed = set(args.get('evidence_chunk_ids') or [])
+                if binding['id']:
+                    claimed.update(e['chunk_id'] for e in self._read_record(connection,'claim',binding['id'])['evidence'])
+                if claimed != {e['chunk_id'] for e in binding['evidence']}:
                     raise ValueError('unbound_compilation_claim')
             if op in ('claim.create','relation.create'):
                 def existing_id(value):
@@ -424,7 +429,9 @@ class CompilationPlans:
         def guard(connection, current):
             self._sources(connection, plan['source_bindings'])
             task = self._task(connection, plan['task_id'])
-            saved = self._publication(connection, task['id'])
+            saved = connection.execute(text('''SELECT metrics FROM c0_compilation_events
+                WHERE space_id=:space AND actor_id=:actor AND request_key=:key AND operation='apply' '''),
+                {'space':self._space_id,'actor':current.user_id,'key':digest(idempotency_key)}).scalar_one_or_none()
             if saved:
                 if saved['plan_hash'] != hashed:
                     raise self.conflict()
@@ -441,7 +448,7 @@ class CompilationPlans:
                 raise self.conflict()
             result = KnowledgeBundleService(self.database, self.access).in_space(self._space_id)._apply(connection, current, operations)
             outputs = self._bundle_outputs(connection, plan, result)
-            self._publish_dependencies(connection, task, actual, outputs)
+            self._publish_dependencies(connection, task, actual, outputs, plan, result)
             task = dict(connection.execute(text("""UPDATE c0_compilation_tasks SET state='applied_pending_verify',
                 plan_hash=:hash,revision=revision+1,error_code='',updated_at=:now WHERE space_id=:space AND id=:id RETURNING *"""),
                 {'space': self._space_id, 'id': task['id'], 'hash': hashed, 'now': self.clock()}).mappings().one())
@@ -451,23 +458,45 @@ class CompilationPlans:
             metrics = {'plan_hash': hashed, 'identity_digest': digest([plan['source_bindings'], identities]),
                 'records': outputs, 'locators': self._locators(connection, outputs), 'approval_hash': payload['approval_hash'],
                 'classification': plan['classification'], 'deferred': plan['deferred'], 'usage_reservation_id':plan['usage_reservation_id'],
-                'compiler_version':core_version}
+                'compiler_version':core_version, 'task_revision':task['revision']}
             return {'outcome': 'applied_pending_verify', 'run': snapshot(run), 'task': snapshot(task),
                 'records': outputs, 'plan_hash': hashed, '_event_metrics': metrics}
         return self._mutate(actor, 'apply', payload, idempotency_key, execute, lease=data['lease'], guard=guard)
 
-    def _publish_dependencies(self, connection, task, actual, outputs):
-        # Reuse the exact M1 support writer; only trusted publication can set ownership.
+    def _publish_dependencies(self, connection, task, actual, outputs, plan, result):
+        # Keep only each target's actual support, not every source analyzed in the task.
+        evidence = {(binding['kind'],result['results'][binding['operation_index']]['id']):
+            {e['chunk_id'] for e in binding['evidence']} for binding in plan['target_bindings']}
         for output in outputs:
             if output['kind'] in ('annotation','link'):
                 continue
             target = {'kind': output['kind'], 'id': output['id'], 'revision': output['revision'],
                 'content_id': output['content_id'], 'content_hash': output['content_hash'] or output['record_hash']}
-            self._observe(connection, {**task, 'target': target}, actual)
+            used = evidence[(output['kind'],output['id'])]
+            support = [(dict(source,chunks=[c for c in source['chunks'] if c['chunk_id'] in used]),private,document)
+                for source,private,document in actual if any(c['chunk_id'] in used for c in source['chunks'])]
+            # Previous support belongs to an older publication. Its task/event
+            # identities survive; current dependency queries must not retain false edges.
+            previous = connection.execute(text('''SELECT DISTINCT logical_document_id,profile_id
+                FROM c0_compilation_dependencies WHERE space_id=:space AND target_kind=:kind AND target_id=:id'''),
+                {'space':self._space_id,'kind':output['kind'],'id':_uuid(output['id'])}).mappings()
+            current_support = {(source['logical_document_id'],task['profile_id']) for source,_,_ in support}
+            for old in previous:
+                if (str(old['logical_document_id']),old['profile_id']) not in current_support:
+                    connection.execute(text("""UPDATE c0_compilation_sources SET state='partial',updated_at=:now
+                        WHERE space_id=:space AND logical_document_id=:id AND profile_id=:profile"""),
+                        {'space':self._space_id,'id':old['logical_document_id'],'profile':old['profile_id'],'now':self.clock()})
+            connection.execute(text('''DELETE FROM c0_compilation_dependencies WHERE space_id=:space
+                AND target_kind=:kind AND target_id=:id'''),
+                {'space':self._space_id,'kind':output['kind'],'id':_uuid(output['id'])})
+            self._observe(connection, {**task, 'target': target}, support)
+            binding = next(b for b in plan['target_bindings'] if b['kind']==output['kind']
+                and result['results'][b['operation_index']]['id']==output['id'])
+            ownership_hash = output['record_hash'] if binding['id'] is None or binding['managed'] else None
             connection.execute(text("""UPDATE c0_compilation_dependencies SET managed_target_hash=:hash
                 WHERE space_id=:space AND task_id=:task AND target_kind=:kind AND target_id=:id AND state='observed'"""),
                 {'space': self._space_id, 'task': task['id'], 'kind': output['kind'], 'id': _uuid(output['id']),
-                 'hash': output['record_hash']})
+                 'hash': ownership_hash})
         for source, _, _ in actual:
             connection.execute(text("""UPDATE c0_compilation_sources SET state='partial',updated_at=:now
                 WHERE space_id=:space AND logical_document_id=:id AND profile_id=:profile"""),

@@ -139,7 +139,8 @@ at realistic cardinality; M0 does not claim indexes on nonexistent tables.
 
 ## API and tool contracts
 
-Names below are **proposed**, absent from current runtime. REST prefix is
+M1 names are available in released Core 0.39. M2 names are implemented in the
+producer candidate and omitted on older Core; M3 discovery remains proposed. REST prefix is
 `/api/v1/compilation`; every call requires explicit `space_id`, including Shared.
 MCP uses top-level `space_id` and typed `data` for mutations. No arbitrary SQL,
 imports, expressions, URLs to fetch, commands or model/provider credentials.

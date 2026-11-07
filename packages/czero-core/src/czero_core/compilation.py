@@ -345,7 +345,12 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
                         target_revision=EXCLUDED.target_revision,target_content_id=EXCLUDED.target_content_id,
                         target_hash=EXCLUDED.target_hash,source_revision=EXCLUDED.source_revision,
                         metadata_hash=EXCLUDED.metadata_hash,parts_hash=EXCLUDED.parts_hash,text_hash=EXCLUDED.text_hash,
-                        profile_version=EXCLUDED.profile_version,task_id=EXCLUDED.task_id,state='observed',updated_at=EXCLUDED.updated_at'''),
+                        profile_version=EXCLUDED.profile_version,task_id=EXCLUDED.task_id,state='observed',updated_at=EXCLUDED.updated_at
+                    WHERE c0_compilation_dependencies.managed_target_hash IS NULL
+                      AND c0_compilation_dependencies.state='observed'
+                      AND NOT EXISTS(SELECT 1 FROM c0_compilation_events e
+                        WHERE e.space_id=c0_compilation_dependencies.space_id
+                          AND e.task_id=c0_compilation_dependencies.task_id AND e.operation='apply')'''),
                     {'id': uuid4(), 'space': self._space_id, 'target_kind': target['kind'], 'target': target['id'], 'target_revision': target['revision'],
                      'target_content': target['content_id'], 'target_hash': target['content_hash'],
                      'logical': source['logical_document_id'], 'revision': source['revision_id'], 'meta': source['metadata_hash'],
@@ -404,7 +409,10 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
                     o['kind'] == 'page' and o['id'] == data['target']['id'] and
                     o['revision'] == data['target']['revision'] and o['content_id'] == data['target']['content_id']
                     and o['content_hash'] == data['target']['content_hash'] for o in publication['records']))
-                if (previous['target'] != (data['target'] or {}) and not own_target) or stronger:
+                implicit = data['target'] is None and previous['target_key'].startswith('new:')
+                if implicit:
+                    self._support_task(connection, dict(previous))
+                if (previous['target'] != (data['target'] or {}) and not own_target and not implicit) or stronger:
                     # A new authored revision is a review hold, not another concept or an overwrite.
                     previous = connection.execute(text("""UPDATE c0_compilation_tasks SET target=CAST(:target AS jsonb),
                         state='needs_review',reason=:reason,plan_hash=NULL,revision=revision+1,error_code=:error,updated_at=:now
@@ -418,6 +426,14 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
                 return {'outcome': outcome, 'task': snapshot(dict(previous))}
             old = connection.execute(text('''SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND family_key=:family
                 ORDER BY created_at DESC,id DESC LIMIT 1'''), {'space': self._space_id, 'family': family}).mappings().one_or_none()
+            normalized_target = data['target'] or {}
+            if not normalized_target and old:
+                publication = self._publication(connection, old['id'])
+                if publication:
+                    primary = next(o for o in publication['records'] if o['kind']=='page')
+                    page = self._read_record(connection,'page',primary['id'])
+                    normalized_target = {'kind':'page','id':page['id'],'revision':page['revision'],
+                        'content_id':page['content']['id'],'content_hash':page['content']['content_hash']}
             same_support = old and old['profile_version'] == config['profile_version'] and old['source_bindings'] == data['source_bindings']
             if same_support and (old['state'] == 'needs_review' or group == 'review'):
                 # Cosmetic reason changes cannot remove a hold or reset attempts.
@@ -448,7 +464,7 @@ class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
                 {'id': uuid4(), 'space': self._space_id, 'profile': config['profile_id'], 'version': config['profile_version'],
                  'topic': topic, 'target_key': target_key, 'reason': data['reason'], 'origin': data['origin'],
                  'dedup': identity, 'family': family, 'sources': _json(sorted(data['source_bindings'], key=lambda s: s['logical_document_id'])),
-                 'target': _json(data['target'] or {}), 'label': label, 'state': state, 'policy': data['policy_revision'],
+                 'target': _json(normalized_target), 'label': label, 'state': state, 'policy': data['policy_revision'],
                  'previous': old['id'] if old else None, 'prior': old['attempts'] + old['prior_attempts'] if old else 0,
                  'now': self.clock()}).mappings().one()
             task = dict(row)
