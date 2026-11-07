@@ -174,7 +174,8 @@ schedules or broaden authority as a side effect of an ingestion request.
 
 Knowledge-compilation M3 is accepted as PR91/mainc16eb49 after full/native and
 independent artifact/promotion proof (42373737405/42378485191). M4 producer
-Core0.43/schema0034 adds only bounded external after-answer proposal handling.
+Core0.43/schema0035 adds bounded external after-answer proposals and the missing
+M3 assessment-key index.
 Search remains read-only and policy defaults stay disabled. Readers, explicit
 read-only tasks and missing actual Write skip feedback. Never pass queries,
 answers, conversations or benchmark labels into compiler metadata. The six-table

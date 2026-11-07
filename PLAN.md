@@ -42,7 +42,7 @@ Readers, explicit read-only tasks and disabled feedback do nothing. Current
 Wiki/tasks and exact originals are checked before at most one queue write and
 independent task readback. Failure cannot block the already delivered answer.
 
-Producer Core0.43 keeps schema0034. Plugin1.7 retains its five skills and registered
+Producer Core0.43 adds only schema0035’s assessment-key index to the six existing tables. Plugin1.7 retains its five skills and registered
 connection; optional feedback guidance is filtered by actual capabilities.
 App0.60 retains released Core0.39 and its consumer lock. No Core library
 publication/adoption, deployment, policy activation, production knowledge or

@@ -305,5 +305,7 @@ work under its own current policy, classification and budgets. Uncertain writes
 retain the caller's opaque replay identity; no retry or exception text is emitted.
 A saved proposal is pending work, never a compiled or verified factual assertion.
 Hosts unable to continue after the answer skip feedback rather than claiming
-background execution. No table, migration, API operation, scope or connection ID
-is added. Older servers require only the actual operations used by queueing.
+background execution. No table, API operation, scope or connection ID
+is added. Schema0035 adds only a partial assessment-key index to repair an
+inherited M3 foreign-key/maintenance lookup;0034 is preserved and migrations
+retain all existing rows and authority. Older servers require only the actual operations used by queueing.
