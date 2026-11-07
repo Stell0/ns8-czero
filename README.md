@@ -444,3 +444,14 @@ until explicitly configured; existing housekeeping schedules are preserved.
 Consumer and dedicated delivery acceptance are recorded
 separately in [PLAN](PLAN.md#openai-system-one-scoring--accepted-delivery);
 the private BEIR comparison follows operator scoring-key configuration.
+
+[Core 0.44.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.44.0)
+adds document BM25 for ordinary text search, with English/Italian stemming and
+conservative identifier variants. App0.62 adopts its immutable Git tag and lock.
+Unquoted results are relevance candidates; use explicit phrases/operators or
+structured filters for exact version selection. Source citation bodies and
+source-only response shapes are preserved. Schema0036 backfills derivative
+counts without replacing evidence identities. See the
+[retrieval behavior and measurements](docs/retrieval-benchmark.md) and
+[separate consumer acceptance](PLAN.md#document-bm25--released-core-consumer-adoption).
+Installed production images remain unchanged by this adoption.
