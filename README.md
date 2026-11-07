@@ -426,9 +426,10 @@ authorized source upload/replacement/recovery, account and administration remain
 available. Assistants retain existing REST/MCP knowledge operations. Native NS8
 settings remain Vue 2/Carbon. [Source and publication acceptance](PLAN.md#vue-3-website-remake--source-and-publication-accepted)
 records the exact tests and immutable images. The explicitly authorized
-[dedicated installation](PLAN.md#embedding-backlog-drain)
-now runs app0.60/Core0.39/schema0033 after verified backup, update, manager restart
-and live HTTP/MCP checks. Its prior app0.59 installation remains frozen evidence.
+[dedicated installation](PLAN.md#openai-system-one-scoring--accepted-delivery)
+now runs app0.61/Core0.42/schema0034 after verified backup, update, manager restart
+and live HTTP/MCP/privacy checks. Its prior app0.60 installation remains frozen
+evidence and the genuine upgrade predecessor.
 
 Embedding refresh uses bounded batches and resumes automatically while its ten-minute
 schedule remains enabled. Pausing the schedule stops further continuations after
@@ -438,7 +439,8 @@ already queued work; disabling the provider makes indexing a no-op.
 [Core 0.42.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.42.0)
 adds OpenAI Decisions scoring and the merged compilation maintenance contracts,
 including schema0034 publication metadata. App0.61 pins its immutable released
-Git source with patch-only updater bounds. Maintenance remains disabled until
-explicitly configured. Consumer and dedicated delivery acceptance are recorded
-separately in [PLAN](PLAN.md#openai-system-one-scoring--current-base-successor);
+Git source with patch-only updater bounds. Compilation maintenance stays off
+until explicitly configured; existing housekeeping schedules are preserved.
+Consumer and dedicated delivery acceptance are recorded
+separately in [PLAN](PLAN.md#openai-system-one-scoring--accepted-delivery);
 the private BEIR comparison follows operator scoring-key configuration.
