@@ -11,3 +11,11 @@ For source collection, use the existing private OAuth job and c0-projects source
 On repeated failures, retain bounded retry/blocked state and the last successful watermark. Report the actual resource IDs, static error category and required operator action. A local test, saved report or task-installation report does not prove real unattended execution, delivery or human reading.
 
 For weekly recovery read audit_v1/audit_cursor_v1 and semantic_round_v1/semantic_selection_v1 before continuing. Reuse the logical run and current fence; a completed structural slice or selected batch does not prove full semantic coverage. Changed pages require explicit selection refresh and fresh assessment. Preserve topic/archive histories and concurrent cursor progress. A historical_inventory_requires_review admission retains the question without granting new allowance: inspect exact existing lineage/history, then seek an authorized bound change/reassessment if needed. Never delete completed work to reset capacity. Release metadata failures retain bounded retry state; never install updates as recovery.
+
+For enabled knowledge compilation, inspect compilation_status_get and
+compilation_discovery_get before continuing. Bind the recovered current project
+lease to the compiler run; an expired project/configuration fence also blocks the
+compiler. Reconcile pending publication and uncertain model calls before new
+inference. Resume the saved inventory cutoff/keyset and exact assessment/child
+identities. Partial reads, unavailable originals and unverified children remain
+partial; a source assessment acknowledgement is not a verified Wiki change.

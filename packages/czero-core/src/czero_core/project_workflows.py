@@ -63,7 +63,7 @@ def data_of(row):
 
 def receipt(status,outcome,*rows):
     return {'status':status,'outcome':outcome,'records':snapshot([
-        {key:value for key,value in row.items() if key!='space_id'} for row in rows if row is not None])}
+        {key:value for key,value in row.items() if key not in ('space_id','compilation_publication')} for row in rows if row is not None])}
 
 
 class ProjectWorkflows:

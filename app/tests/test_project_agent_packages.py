@@ -33,6 +33,9 @@ def test_project_archives_are_deterministic_bound_and_contained(format):
     binding=json.loads(payload[root+'references/project-binding.md'].decode().split('```json\n',1)[1].split('\n```',1)[0])
     assert binding['space_id']==stored['data']['manifest']['space_id'] and binding['manifest_version']==2
     assert binding['approved_primary_topics']==['anchor']
+    assert binding['maintenance']==stored['data']['manifest']['maintenance']
+    assert b'compilation_assessment_complete' in payload[root+'references/compiler.md']
+    assert b'project_lease' in payload[root+'references/project-daily.md']
     assert payload['LICENSE'].startswith(b'GNU GENERAL PUBLIC LICENSE') or b'GNU GENERAL PUBLIC LICENSE' in payload['LICENSE']
     assert all(name in payload for name in (root+'references/project-daily.md',root+'references/project-weekly.md'))
     if format=='plugin':

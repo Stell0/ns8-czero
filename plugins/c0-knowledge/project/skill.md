@@ -18,4 +18,4 @@ Return actual saved resource identities and states: SAVED, QUEUED, ACCEPTED_PEND
 For requested bounded knowledge compilation, read {{COMPILER_LINK}}.
 Require the actual publication tools and enabled selected-space policy. Missing
 capabilities block compilation; ordinary bundles are not a policy bypass. This
-reference does not activate retrieval learning, daily/weekly discovery or schedules.
+reference does not enable compilation policy, retrieval learning or schedules. Enabled daily/weekly compilation shares the existing host run and project lease.

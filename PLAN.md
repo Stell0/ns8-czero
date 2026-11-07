@@ -1,5 +1,21 @@
 # C0 roadmap
 
+## Knowledge compilation — M3 candidate
+
+M2 is accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89), original main
+`317249e60e10d506758ba5343fb9393eb587b622`; actual main
+[42339498941](https://github.com/Stell0/ns8-czero/actions/runs/42339498941) passes
+full/native acceptance. The [M3 contract](docs/knowledge-compilation/M3.md)
+extends the same compiler with resumable current-publication discovery, partial
+original review ranges, exact dependency revalidation and bounded weekly review.
+Configured projects keep their existing host run, scope, limits and reports;
+ordinary spaces need no project initialization. Existing six coordination tables
+remain metadata-only. Producer Core0.41/schema0034 is not published or adopted;
+app0.60 retains released Core0.39 and its consumer lock. Policy, live knowledge,
+production schedules and the installed baseline remain unchanged. M4–M6 are not
+started. Final candidate acceptance is recorded in the focused PR and M3 checklist.
+
+
 ## Embedding backlog drain
 
 [PR86](https://github.com/Stell0/ns8-czero/pull/86) regularly merges as

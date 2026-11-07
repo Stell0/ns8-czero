@@ -1,6 +1,6 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 implementation candidate. M3–M6 are not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 implementation candidate. M4–M6 are not implemented.**
 
 [M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
 coordination milestone against its accepted predecessor. [M2](M2.md) records the
@@ -140,7 +140,7 @@ at realistic cardinality; M0 does not claim indexes on nonexistent tables.
 ## API and tool contracts
 
 M1 names are available in released Core 0.39. M2 names are implemented in the
-producer candidate and omitted on older Core; M3 discovery remains proposed. REST prefix is
+producer candidate and omitted on older Core; M3 discovery/assessment and ordinary-space semantic operations are capability-gated producer additions; see [M3](M3.md). REST prefix is
 `/api/v1/compilation`; every call requires explicit `space_id`, including Shared.
 MCP uses top-level `space_id` and typed `data` for mutations. No arbitrary SQL,
 imports, expressions, URLs to fetch, commands or model/provider credentials.
@@ -448,6 +448,8 @@ and use protected regular auto-merge only on the reviewed exact head. No deploym
   duplicate conceptual identity or raw source-body retention in coordination records.
 
 ### M3 — bootstrap and incremental maintenance
+
+Detailed accepted implementation contract and candidate evidence: [M3](M3.md).
 
 - Dependency: accepted M2; policy remains operator-enabled only.
 - Scope/contracts: keyset current-publication discovery, resumable bootstrap/no-change,

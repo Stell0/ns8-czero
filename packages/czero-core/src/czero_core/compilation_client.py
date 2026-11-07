@@ -111,3 +111,67 @@ async def compile_plan(call, space_id, data, *, apply=False, approval=None, idem
         'data':{'data':request, 'idempotency_key':idempotency_key}})
     return await verify_pending(call, space_id, saved['task']['id'], data['lease'],
         saved['run']['revision'], idempotency_key=digest([idempotency_key,'verify']))
+
+
+async def maintenance_step(call, space_id, claim, analyze, *, reserved_tokens, idempotency_key):
+    """One external-agent assessment, with durable discovery and model accounting.
+
+    analyze(task, read) is an external callback. It reads current whole originals,
+    searches existing concepts and returns closed `proposals`, `status`, `findings`,
+    `reviewed_source_ids`, `observed_tokens`, `external_reference_hash`. It must not
+    publish. Save the request key before starting; after interruption inspect C0
+    status rather than replaying a possibly completed model invocation. The helper
+    leaves child plans/review/publication to compile_plan and the policy operator.
+    """
+    from uuid import uuid4
+
+    async def read(name, arguments):
+        # Search uses its established nested selectors; never fall back to Shared.
+        if name in ('knowledge_search','knowledge_search_structured'):
+            field='options' if name=='knowledge_search' else 'data'
+            arguments={**arguments,field:{**arguments.get(field,{}),'space_id':str(space_id)}}
+            return await call(name,arguments)
+        return await call(name, {**arguments, 'space_id':str(space_id)})
+    async def mutation(name, data, step):
+        return await read(name, {'data':{'data':data,'idempotency_key':digest([idempotency_key,step])}})
+    result=await mutation('compilation_run_claim',claim,'claim')
+    if result['outcome']!='claimed':
+        return result
+    lease=result['lease']
+    discovered=await mutation('compilation_discover',{'lease':lease,'expected_revision':result['run']['revision'],'limit':1},'discover')
+    tasks=discovered['tasks']
+    task=next((t for t in tasks if t['purpose']=='source_assessment'),None)
+    if not task:
+        return discovered  # Existing publication/recovery work takes precedence.
+    if discovered['run']['data']['calls']:
+        return {**discovered,'outcome':'reconcile_before_inference'}
+    request_id=str(uuid4())
+    current=discovered
+    async def checkpoint(action, extra, step):
+        return await mutation('compilation_run_checkpoint',{'lease':lease,
+            'expected_revision':current['run']['revision'],'action':action,**extra},step)
+    current=await checkpoint('reserve_model',{'task_id':task['id'],'expected_task_revision':task['revision'],
+        'request_id':request_id,'reserved_tokens':reserved_tokens},'reserve')
+    if current['outcome']=='deferred_budget':
+        return current
+    current=await checkpoint('start_model',{'request_id':request_id},'start')
+    # Exceptions leave the started call uncertain: never manufacture a failed
+    # provider receipt or repeat the invocation merely because the client crashed.
+    analysis=await analyze(task,read)
+    current=await checkpoint('return_model',{'request_id':request_id,
+        'observed_tokens':analysis['observed_tokens'],'external_reference_hash':analysis['external_reference_hash']},'returned')
+    proposals=analysis['proposals']
+    if type(proposals) is not list or len(proposals)>19:
+        raise ValueError('bounded_compilation_children_required')
+    children=[]
+    for index,proposal in enumerate(proposals):
+        saved=await mutation('compilation_propose',proposal,'proposal-'+str(index))
+        if 'task' not in saved:
+            return {**current,'outcome':'assessment_partial','deferred_proposal':index}
+        children.append(saved['task']['id'])
+    task=await read('compilation_tasks_get',{'task_id':task['id']})
+    return await mutation('compilation_assessment_complete',{'lease':lease,'expected_revision':current['run']['revision'],
+        'task_id':task['id'],'expected_task_revision':task['revision'],
+        'reviewed_source_ids':analysis['reviewed_source_ids'],'child_task_ids':children,
+        'status':analysis['status'],'findings':analysis['findings'],
+        **({'reviewed_ranges':analysis['reviewed_ranges']} if 'reviewed_ranges' in analysis else {})},'assessed')
