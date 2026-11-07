@@ -14,3 +14,8 @@ For requested work, read only the applicable section in {{WORKFLOWS_LINK}}. Dail
 Discover actual current tool schemas. Keep the explicit space in every content call, including nested search options/data. Use stored source/version/document/chunk identities, current revisions and stable replay keys. A queued extraction or HTTP success is not ready evidence. Keep Markdown bodies separate from page objects and structured metadata.
 
 Return actual saved resource identities and states: SAVED, QUEUED, ACCEPTED_PENDING_MERGE, BLOCKED or PARTIAL. Explain incomplete coverage and pending merges. Persistence, external task publication, notification and human reading are separate observations. Never claim an unobserved external execution or delivery.
+
+For requested bounded knowledge compilation, read {{COMPILER_LINK}}.
+Require the actual publication tools and enabled selected-space policy. Missing
+capabilities block compilation; ordinary bundles are not a policy bypass. This
+reference does not activate retrieval learning, daily/weekly discovery or schedules.

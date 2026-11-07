@@ -523,7 +523,12 @@ class NativeWebsite:
             self.goto('/');self.accessible('home',role)
             self.goto('/agents')
             self.run('Get Element Count','details[data-task]','==',1 if role=='reader' else 7)
-            self.run('Get Element Count','details[data-workflow]','==',3 if role=='reader' else 7)
+            self.run('Get Element Count','details[data-workflow]','==',3 if role=='reader' else 8)
+            self.run('Get Element Count','details[data-workflow="knowledge-compiler"]','==',0 if role=='reader' else 1)
+            if role!='reader':
+                self.run('Click','details[data-workflow="knowledge-compiler"] summary')
+                self.run('Get Text','details[data-workflow="knowledge-compiler"]','contains','enabled policy')
+                self.run('Get Text','details[data-workflow="knowledge-compiler"]','contains','compilation_verify')
             self.run('Click','details[data-workflow="selective-context"] summary')
             self.run('Get Text','details[data-workflow="selective-context"]','contains','max_tokens is a bytes/3 estimate')
             if role!='reader':

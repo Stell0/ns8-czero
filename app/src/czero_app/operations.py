@@ -24,7 +24,7 @@ class OperationCatalog:
             return auth.access.authorize(actor, role)
         self.registry = OperationRegistry(authorize)
 
-    def bind(self, name, description, role, result_model, *, read_only=True, space_field=None):
+    def bind(self, name, description, role, result_model, *, read_only=True, space_field=None, required_scope=None):
         """Keep FastAPI's signature/CSRF dependencies and reuse its typed handler."""
         def decorate(handler):
             signature = inspect.signature(handler)
@@ -33,7 +33,7 @@ class OperationCatalog:
                       for key, parameter in signature.parameters.items() if key != 'context'}
             model = create_model(name + '_arguments', __config__=ConfigDict(extra='forbid'), **fields)
             output = TypeAdapter(result_model)
-            scope = 'c0:admin' if role is Role.ADMIN else ('c0:read' if read_only else 'c0:write')
+            scope = required_scope or ('c0:admin' if role is Role.ADMIN else ('c0:read' if read_only else 'c0:write'))
 
             def preauthorize(actor, arguments):
                 try:

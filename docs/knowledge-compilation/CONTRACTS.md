@@ -1,7 +1,8 @@
 # Frozen knowledge-compilation contracts v1
 
-These are design and future acceptance contracts, **not implemented APIs**.
-M0 tests only existing C0 behavior. Changes require a reviewed contract/version
+These are normative design and acceptance contracts. M0 froze existing behavior;
+[M1](M1.md) implements coordination and [M2](M2.md) refines guarded publication.
+Later discovery, feedback and scheduling milestones remain unimplemented. Changes require a reviewed contract/version
 update. See [PLAN](PLAN.md) for ownership, SQL schema, budgets and milestone scope.
 
 ## C1 — Authority and learning

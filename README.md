@@ -196,7 +196,7 @@ There are two audiences, with separate instructions:
 
 | Audience | Included skills | Purpose |
 | --- | --- | --- |
-| People and connected assistants | `c0-setup`, `c0-research`, `c0-maintain-knowledge`, plus the instance-bound memory skill | Connect the right account, research with citations, and make authorized knowledge changes with revision/retry safeguards |
+| People and connected assistants | `c0-setup`, `c0-research`, `c0-maintain-knowledge`, `c0-projects`, `c0-knowledge-compiler`, plus the instance-bound memory skill | Connect the right account, research with citations, and make authorized knowledge changes with revision/retry safeguards |
 | Developers and coding agents | `c0-create-feature`, `c0-develop-core`, `c0-contribute-upstream`, `c0-upgrade-from-upstream`, `c0-evaluate-tools`, `c0-ingest-sources` | Extend an application, improve Core, contribute upstream, review upgrades, evaluate tool guidance and maintain repeatable source ingestion |
 
 Skills describe how to work; Core enforces what is allowed. They do not grant permissions or install an autonomous agent in C0. Repository development skills are kept out of runtime images. See [AGENTS.md](AGENTS.md) for the coding-agent entry point.

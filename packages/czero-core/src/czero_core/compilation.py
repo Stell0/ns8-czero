@@ -1,5 +1,5 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
-"""Metadata-only compilation coordination. Reasoning and publication are external/M2."""
+"""Metadata-only compilation coordination. Reasoning is external; publication is guarded and read back."""
 from datetime import datetime, timedelta, timezone
 import json
 import unicodedata
@@ -10,6 +10,7 @@ from sqlalchemy import text
 from .compilation_schema import (ACTIVE, PROPOSAL, SOURCE_SELECTION, checked,
     defaults, digest, key, policy as normalize_policy)
 from .compilation_runs import CompilationRuns
+from .compilation_plans import CompilationPlans, managed_slug
 from .current_content import ContentSuperseded
 from .documents import DocumentService, SNAPSHOT, RECEIPT
 from .identity import PermissionDenied, Role
@@ -61,10 +62,20 @@ _SOURCE_FRESH = """true
 _DEP_FRESH = """cs.observed_revision=dep.source_revision AND cs.text_hash=dep.text_hash
     AND cs.metadata_hash=dep.metadata_hash AND cs.parts_hash=dep.parts_hash
     AND cs.profile_version=dep.profile_version AND (""" + _SOURCE_FRESH + """)
-    AND EXISTS(SELECT 1 FROM c0_wiki_pages p JOIN c0_wiki_revisions r
+    AND (EXISTS(SELECT 1 FROM c0_wiki_pages p JOIN c0_wiki_revisions r
       ON r.space_id=p.space_id AND r.page_id=p.id AND r.number=p.revision
       WHERE p.space_id=dep.space_id AND dep.target_kind='page' AND p.id=dep.target_id AND NOT p.deleted
         AND p.revision=dep.target_revision AND r.id=dep.target_content_id AND r.content_hash=dep.target_hash)
+      OR (dep.target_kind='entity' AND EXISTS(SELECT 1 FROM c0_entities e WHERE e.space_id=dep.space_id
+        AND e.id=dep.target_id AND NOT e.deleted AND e.revision=dep.target_revision))
+      OR (dep.target_kind='claim' AND EXISTS(SELECT 1 FROM c0_claims c WHERE c.space_id=dep.space_id
+        AND c.id=dep.target_id AND NOT c.deleted AND NOT c.evidence_stale AND c.revision=dep.target_revision
+        AND EXISTS(SELECT 1 FROM c0_entities e WHERE e.space_id=c.space_id AND e.id=c.entity_id AND NOT e.deleted)
+        AND (c.page_id IS NULL OR EXISTS(SELECT 1 FROM c0_wiki_pages p WHERE p.space_id=c.space_id AND p.id=c.page_id AND NOT p.deleted))))
+      OR (dep.target_kind='relation' AND EXISTS(SELECT 1 FROM c0_relations r WHERE r.space_id=dep.space_id
+        AND r.id=dep.target_id AND NOT r.deleted AND r.revision=dep.target_revision
+        AND EXISTS(SELECT 1 FROM c0_entities e WHERE e.space_id=r.space_id AND e.id=r.source_id AND NOT e.deleted)
+        AND EXISTS(SELECT 1 FROM c0_entities e WHERE e.space_id=r.space_id AND e.id=r.target_id AND NOT e.deleted))))
     AND (dep.chunk_id IS NULL OR EXISTS(SELECT 1 FROM c0_chunks c
       WHERE c.space_id=dep.space_id AND c.id=dep.chunk_id AND c.document_id=dep.document_id
         AND c.content_hash=dep.chunk_hash AND c.start_offset=dep.start_offset AND c.end_offset=dep.end_offset))"""
@@ -80,7 +91,7 @@ def _paging(limit, after):
     return _uuid(after) if after is not None else None
 
 
-class CompilationService(CompilationRuns, SpaceBound):
+class CompilationService(CompilationPlans, CompilationRuns, SpaceBound):
     """Explicit selected space and current persisted authority on every operation."""
     conflict = CompilationConflict
     notfound = CompilationNotFound
@@ -140,15 +151,14 @@ class CompilationService(CompilationRuns, SpaceBound):
                 run = self._run(connection, previous['run_id'])
                 for task_id in run['data']['task_ids']:
                     task = self._task(connection, task_id)
-                    self._sources(connection, task['source_bindings'])
-                    self._target(connection, task['target'])
+                    self._support_task(connection, task)
             if guard:
                 guard(connection, current)
             return current
         def checked_execute(connection, current):
             value = execute(connection, current)
             self._event(connection, current, request_hash, fingerprint, operation, value['outcome'],
-                run=value.get('run'), task=value.get('task'), metrics={'lease_issued': bool(value.get('lease'))})
+                run=value.get('run'), task=value.get('task'), metrics={'lease_issued': bool(value.get('lease')), **value.pop('_event_metrics', {})})
             return value
         return mutate(self.database, authorize, actor, 'compilation.' + operation, payload,
             'compilation:' + request_hash, checked_execute, conflict=CompilationConflict, lock_objects=True)
@@ -183,7 +193,9 @@ class CompilationService(CompilationRuns, SpaceBound):
                 raise CompilationConflict()
             wider = (data['enabled'] and not old['data']['enabled'] or
                 data['retrieval_feedback'] and not old['data']['retrieval_feedback'] or
-                data['publication_mode'] == 'automatic_supported' and old['data']['publication_mode'] != 'automatic_supported')
+                data['publication_mode'] == 'automatic_supported' and old['data']['publication_mode'] != 'automatic_supported' or
+                data['profile_id'] != old['data']['profile_id'] or
+                bool(set(data['allowed_target_kinds']) - set(old['data']['allowed_target_kinds'])))
             if wider and not authorization_ref:
                 raise ValueError('compilation_enablement_reference_required')
             if old['revision'] and data == old['data']:
@@ -326,15 +338,20 @@ class CompilationService(CompilationRuns, SpaceBound):
                     target_revision,target_content_id,target_hash,logical_document_id,source_revision,metadata_hash,
                     parts_hash,text_hash,source_id,version_id,document_id,chunk_id,evidence_identity,chunk_hash,source_hash,
                     start_offset,end_offset,profile_id,profile_version,task_id,state,updated_at)
-                    VALUES(:id,:space,'page',:target,:target_revision,:target_content,:target_hash,:logical,:revision,
+                    VALUES(:id,:space,:target_kind,:target,:target_revision,:target_content,:target_hash,:logical,:revision,
                         :meta,:parts_hash,:text,:source,:version,:document,:chunk,:evidence,:chunk_hash,:source_hash,
                         :start,:end,:profile,:profile_version,:task,'observed',:now)
                     ON CONFLICT(space_id,target_kind,target_id,logical_document_id,evidence_identity) DO UPDATE SET
                         target_revision=EXCLUDED.target_revision,target_content_id=EXCLUDED.target_content_id,
                         target_hash=EXCLUDED.target_hash,source_revision=EXCLUDED.source_revision,
                         metadata_hash=EXCLUDED.metadata_hash,parts_hash=EXCLUDED.parts_hash,text_hash=EXCLUDED.text_hash,
-                        profile_version=EXCLUDED.profile_version,task_id=EXCLUDED.task_id,state='observed',updated_at=EXCLUDED.updated_at'''),
-                    {'id': uuid4(), 'space': self._space_id, 'target': target['id'], 'target_revision': target['revision'],
+                        profile_version=EXCLUDED.profile_version,task_id=EXCLUDED.task_id,state='observed',updated_at=EXCLUDED.updated_at
+                    WHERE c0_compilation_dependencies.managed_target_hash IS NULL
+                      AND c0_compilation_dependencies.state='observed'
+                      AND NOT EXISTS(SELECT 1 FROM c0_compilation_events e
+                        WHERE e.space_id=c0_compilation_dependencies.space_id
+                          AND e.task_id=c0_compilation_dependencies.task_id AND e.operation='apply')'''),
+                    {'id': uuid4(), 'space': self._space_id, 'target_kind': target['kind'], 'target': target['id'], 'target_revision': target['revision'],
                      'target_content': target['content_id'], 'target_hash': target['content_hash'],
                      'logical': source['logical_document_id'], 'revision': source['revision_id'], 'meta': source['metadata_hash'],
                      'parts_hash': source['parts_hash'], 'text': source['text_hash'], 'source': entry['source_id'],
@@ -371,6 +388,15 @@ class CompilationService(CompilationRuns, SpaceBound):
             topic = 'page:' + data['target']['id'] if data['target'] else data['topic_key']
             group = 'review' if data['reason'] in ('contradiction', 'applicability_gap') else 'improvement'
             target_key = 'page:' + data['target']['id'] if data['target'] else 'new:' + topic
+            if data['target']:
+                creator = connection.execute(text('''SELECT t.topic_key,t.target_key FROM c0_compilation_dependencies d
+                    JOIN c0_compilation_tasks t ON t.space_id=d.space_id AND t.id=d.task_id
+                    WHERE d.space_id=:space AND d.target_kind='page' AND d.target_id=:id
+                      AND t.profile_id=:profile AND t.target_key LIKE 'new:%'
+                    ORDER BY t.created_at,t.id LIMIT 1'''),
+                    {'space': self._space_id, 'id': data['target']['id'], 'profile': config['profile_id']}).mappings().one_or_none()
+                if creator:
+                    topic, target_key = creator['topic_key'], creator['target_key']
             family = digest([str(self._space_id), config['profile_id'], topic, target_key])
             identity = digest([str(self._space_id), config['profile_id'], config['profile_version'], group, topic,
                 sorted(data['source_bindings'], key=lambda s: s['logical_document_id']), target_key])
@@ -378,7 +404,15 @@ class CompilationService(CompilationRuns, SpaceBound):
                 {'space': self._space_id, 'key': identity}).mappings().one_or_none()
             if previous:
                 stronger = data['reason'] == 'contradiction' and previous['reason'] != 'contradiction'
-                if previous['target'] != (data['target'] or {}) or stronger:
+                publication = self._publication(connection, previous['id'])
+                own_target = bool(publication and data['target'] and any(
+                    o['kind'] == 'page' and o['id'] == data['target']['id'] and
+                    o['revision'] == data['target']['revision'] and o['content_id'] == data['target']['content_id']
+                    and o['content_hash'] == data['target']['content_hash'] for o in publication['records']))
+                implicit = data['target'] is None and previous['target_key'].startswith('new:')
+                if implicit:
+                    self._support_task(connection, dict(previous))
+                if (previous['target'] != (data['target'] or {}) and not own_target and not implicit) or stronger:
                     # A new authored revision is a review hold, not another concept or an overwrite.
                     previous = connection.execute(text("""UPDATE c0_compilation_tasks SET target=CAST(:target AS jsonb),
                         state='needs_review',reason=:reason,plan_hash=NULL,revision=revision+1,error_code=:error,updated_at=:now
@@ -390,8 +424,21 @@ class CompilationService(CompilationRuns, SpaceBound):
                     return {'outcome': 'needs_review', 'task': snapshot(dict(previous))}
                 outcome = 'merged' if previous['state'] in ACTIVE and previous['state'] != 'needs_review' else previous['state']
                 return {'outcome': outcome, 'task': snapshot(dict(previous))}
-            old = connection.execute(text('''SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND family_key=:family
-                ORDER BY created_at DESC,id DESC LIMIT 1'''), {'space': self._space_id, 'family': family}).mappings().one_or_none()
+            # Logical lineage, not wall-clock/UUID order, identifies the current family head.
+            old = connection.execute(text('''SELECT t.* FROM c0_compilation_tasks t
+                WHERE t.space_id=:space AND t.family_key=:family AND NOT EXISTS(
+                    SELECT 1 FROM c0_compilation_tasks successor
+                    WHERE successor.space_id=t.space_id AND successor.predecessor_id=t.id)
+                ORDER BY t.created_at DESC,t.id DESC LIMIT 1'''),
+                {'space': self._space_id, 'family': family}).mappings().one_or_none()
+            normalized_target = data['target'] or {}
+            if not normalized_target and old:
+                publication = self._publication(connection, old['id'])
+                if publication:
+                    primary = next(o for o in publication['records'] if o['kind']=='page')
+                    page = self._read_record(connection,'page',primary['id'])
+                    normalized_target = {'kind':'page','id':page['id'],'revision':page['revision'],
+                        'content_id':page['content']['id'],'content_hash':page['content']['content_hash']}
             same_support = old and old['profile_version'] == config['profile_version'] and old['source_bindings'] == data['source_bindings']
             if same_support and (old['state'] == 'needs_review' or group == 'review'):
                 # Cosmetic reason changes cannot remove a hold or reset attempts.
@@ -422,7 +469,7 @@ class CompilationService(CompilationRuns, SpaceBound):
                 {'id': uuid4(), 'space': self._space_id, 'profile': config['profile_id'], 'version': config['profile_version'],
                  'topic': topic, 'target_key': target_key, 'reason': data['reason'], 'origin': data['origin'],
                  'dedup': identity, 'family': family, 'sources': _json(sorted(data['source_bindings'], key=lambda s: s['logical_document_id'])),
-                 'target': _json(data['target'] or {}), 'label': label, 'state': state, 'policy': data['policy_revision'],
+                 'target': _json(normalized_target), 'label': label, 'state': state, 'policy': data['policy_revision'],
                  'previous': old['id'] if old else None, 'prior': old['attempts'] + old['prior_attempts'] if old else 0,
                  'now': self.clock()}).mappings().one()
             task = dict(row)
@@ -440,7 +487,10 @@ class CompilationService(CompilationRuns, SpaceBound):
     def get_task(self, actor, task_id):
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return snapshot(self._task(connection, task_id))
+            task = self._task(connection, task_id)
+            publication = self._publication(connection, task_id)
+            return snapshot({**task, 'publication': publication,
+                'managed_slug':managed_slug(self._space_id,task['profile_id'],task['topic_key'])})
 
     def list_tasks(self, actor, *, state=None, topic_key=None, limit=50, after=None):
         from .compilation_schema import STATES
@@ -484,7 +534,9 @@ class CompilationService(CompilationRuns, SpaceBound):
                 {'space': self._space_id}).all()
             sources = connection.execute(text('''SELECT count(*) AS observed,
                 count(*) FILTER(WHERE state='no_change' AND (''' + _SOURCE_FRESH + ''')) AS assessed_no_change,
-                count(*) FILTER(WHERE last_compiled_revision IS NOT NULL) AS compiled,
+                count(*) FILTER(WHERE last_compiled_revision=observed_revision AND last_compiled_hash=text_hash
+                  AND last_metadata_hash=metadata_hash AND last_parts_hash=parts_hash
+                  AND state<>'partial' AND (''' + _SOURCE_FRESH + ''')) AS compiled,
                 count(*) FILTER(WHERE NOT (''' + _SOURCE_FRESH + ''')) AS stale
                 FROM c0_compilation_sources cs WHERE cs.space_id=:space'''), {'space': self._space_id}).mappings().one()
             dependencies = connection.execute(text('''SELECT count(*) AS observed,
@@ -511,4 +563,4 @@ class CompilationService(CompilationRuns, SpaceBound):
             return snapshot({'space_id': self._space_id, 'policy': current_policy, 'tasks': dict(tasks),
                 'sources': dict(sources), 'dependencies': dict(dependencies), 'runs': values,
                 'budgets': [dict(b) for b in budgets],
-                'complete_corpus_coverage': False, 'publication_supported': False})
+                'complete_corpus_coverage': False, 'publication_supported': True})

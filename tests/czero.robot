@@ -54,7 +54,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.60.0    ${route_host}=${host}    ${expected_core}=0.39.0
+    [Arguments]    ${expected_app}=0.60.0    ${route_host}=${host}    ${expected_core}=0.40.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -121,7 +121,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.60.0    0.39.0
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.60.0    0.40.0
         Predecessor Content    verify
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
@@ -554,6 +554,8 @@ Backup and restore into a clean disposable instance
     Should Be Equal As Integers    ${rc}    0    msg=${output}
     ${compiler} =    Evaluate    json.loads($output)    modules=json
     Should Be True    ${compiler}[restored_fence_invalidated]
+    Should Be True    ${compiler}[guarded_compilation]
+    Should Be True    ${compiler}[pending_compilation_verified]
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
     ...    return_rc=True    timeout=180s
@@ -673,7 +675,7 @@ Check saved settings and application HTTPS in a browser
     Should Be Equal As Integers    ${rc}    0
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.39.0"
+    Get Text    body    contains    "core_version":"0.40.0"
     Get Text    body    contains    "app_version":"0.60.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health

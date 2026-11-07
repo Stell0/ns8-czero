@@ -11,7 +11,7 @@ import tempfile
 import zipfile
 from c0_ingest.errors import C0Error
 
-REFERENCE_NAMES={'project-binding','project-workflows','project-daily','project-weekly','project-recovery','project-scheduler'}
+REFERENCE_NAMES={'project-binding','project-workflows','project-daily','project-weekly','project-recovery','project-scheduler','compiler'}
 MANIFEST_FIELDS=('schema_version','project_id','space_id','name','description','language','timezone',
     'purpose','scope','exclusions','research','monitoring','schedule','state')
 

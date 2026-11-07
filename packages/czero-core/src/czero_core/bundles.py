@@ -155,26 +155,30 @@ def _dispatch(operation, arguments, wiki, knowledge, annotations, objects, conne
 
 class KnowledgeBundleService(WikiService):
     """One space, bounded content work, one receipt and one database commit."""
+    def _apply(self, connection, current, operations):
+        """Trusted connection composition; caller owns locks, authorization and commit."""
+        space = self._space(connection)
+        wiki = _Wiki(self.database, self.access, connection, current, space)
+        knowledge = _Knowledge(self.database, self.access, connection, current, space)
+        annotations = _Annotations(self.database, self.access, connection, current, space)
+        objects = ObjectService(self.database, self.access).in_space(space)
+        results = []
+        for index, step in enumerate(operations):
+            arguments = _references(step['arguments'], index, results)
+            try:
+                result = _dispatch(step['operation'], arguments, wiki, knowledge, annotations,
+                    objects, connection, current)
+            except ObjectConflict:
+                raise KnowledgeConflict() from None
+            except ObjectNotFound:
+                raise KnowledgeNotFound() from None
+            results.append(snapshot(result))
+        return {'space_id': str(space), 'results': results}
+
     def apply(self, actor, operations, *, idempotency_key):
         operations = _operations(operations)
         def execute(connection, current):
-            space = self._space(connection)
-            wiki = _Wiki(self.database, self.access, connection, current, space)
-            knowledge = _Knowledge(self.database, self.access, connection, current, space)
-            annotations = _Annotations(self.database, self.access, connection, current, space)
-            objects = ObjectService(self.database, self.access).in_space(space)
-            results = []
-            for index, step in enumerate(operations):
-                arguments = _references(step['arguments'], index, results)
-                try:
-                    result = _dispatch(step['operation'], arguments, wiki, knowledge, annotations,
-                        objects, connection, current)
-                except ObjectConflict:
-                    raise KnowledgeConflict() from None
-                except ObjectNotFound:
-                    raise KnowledgeNotFound() from None
-                results.append(snapshot(result))
-            return {'space_id': str(space), 'results': results}
+            return self._apply(connection, current, operations)
         return mutate(self.database, self._authorize, actor, 'knowledge.bundle',
             {'operations': operations}, idempotency_key, execute,
             conflict=KnowledgeConflict, lock_objects=True)

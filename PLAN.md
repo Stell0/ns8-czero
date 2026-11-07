@@ -170,13 +170,23 @@ A second cache lookup performs no download. No C0 instance is contacted.
 Normal risk classification and selected upstream CI remain separate PR gates;
 these local results do not claim native/release/deployment acceptance.
 
-## Knowledge compilation — M0 architecture candidate
+## Knowledge compilation — M0 accepted baseline
 
 The [knowledge-compilation plan](docs/knowledge-compilation/PLAN.md) defines a
 SQL-backed external-agent compiler for any authorized space, disabled by default.
-This M0 candidate adds frozen contracts, synthetic baseline controls and an
-acceptance checklist only. M1–M6, production enrichment, scheduling and deployment
-remain unstarted. See the [actual baseline evidence](docs/knowledge-compilation/BASELINE.md).
+M0 in PR80 freezes the contracts, synthetic baseline and acceptance checklist.
+M1 in PR83 adds coordination; its released Core adoption precedes the M2 candidate
+below. M3–M6 remain unstarted. See the [historical baseline evidence](docs/knowledge-compilation/BASELINE.md).
+
+## Knowledge compilation — M2 implementation candidate
+
+[M2](docs/knowledge-compilation/M2.md) builds on accepted M1 with guarded atomic
+source-backed plans, independent readback and a portable external compiler skill.
+Core producer 0.40/schema0033 reuses the six coordination tables and existing
+Wiki/graph/annotation services. The released Core consumer lock and deployed
+runtime remain separate. Policy stays disabled by default; no discovery sweep,
+retrieval hook, provider, scheduler, live mutation, publication or deployment.
+Exact candidate test/CI/native evidence is recorded in the M2 acceptance entry.
 
 ## OAuth connection usability — implementation candidate
 

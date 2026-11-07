@@ -1,9 +1,10 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 implementation candidate. M2–M6 are not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 implementation candidate. M3–M6 are not implemented.**
 
 [M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
-coordination milestone against its accepted predecessor. No publication,
+coordination milestone against its accepted predecessor. [M2](M2.md) records the
+guarded publication and external-skill contract against current main. No publication,
 deployment, production enablement or scheduler installation is authorized.
 This plan targets original C0 main `13f0b94a06e6a6f7d4b74e8ddd3fe6ae6eea6aac`
 (6 November 2026). App 0.59.0 consumes released Core 0.38.0 through its committed
@@ -138,7 +139,8 @@ at realistic cardinality; M0 does not claim indexes on nonexistent tables.
 
 ## API and tool contracts
 
-Names below are **proposed**, absent from current runtime. REST prefix is
+M1 names are available in released Core 0.39. M2 names are implemented in the
+producer candidate and omitted on older Core; M3 discovery remains proposed. REST prefix is
 `/api/v1/compilation`; every call requires explicit `space_id`, including Shared.
 MCP uses top-level `space_id` and typed `data` for mutations. No arbitrary SQL,
 imports, expressions, URLs to fetch, commands or model/provider credentials.
@@ -152,6 +154,7 @@ imports, expressions, URLs to fetch, commands or model/provider credentials.
 | M1 `compilation_propose` | POST `/proposals` | Editor + Write, enabled policy and feedback switch for retrieval origin; validates same-space current references and canonical observation; returns admitted/merged/deferred/needs_review/no_change and task UUID/revision. |
 | M1 `compilation_run_claim` | POST `/runs/claim` | Editor + Write; claim/resume/renew logical run, reserve bounded tasks/model allowances under policy and return actor-bound fence. No inference or knowledge publication. |
 | M1 `compilation_run_checkpoint` | POST `/runs/checkpoint` | Editor + Write; live fence, expected task/run revisions, current phase and fixed outcome; stores recovery/usage observations, never fabricates verified publication. |
+| M2 `compilation_target_bindings_get` | POST `/target-bindings` | Reader + Read; bounded current record hashes/ownership, no content or coordinator writes. Compare with separate actual reads. Task metadata supplies the managed slug. Tool-only agents need no hashing utility. |
 | M2 `compilation_plan_validate` | POST `/plans/validate` | Editor + Write; enabled policy and live run fence; no stored content mutation. Returns normalized plan hash, source/target identity digest, classification, eligibility and explicit errors. Validation is short-lived, not authority to publish later. |
 | M2 `compilation_apply` | POST `/apply` | Editor + Write; same plan/hash/fence/policy, rechecks everything inside publication transaction, atomically commits bundle + dependencies + source outcome + receipt. Returns actual IDs/revisions/hashes, `applied_pending_verify`. |
 | M2 `compilation_verify` | POST `/verify` | Editor + Write; records independently read-back exact current targets and original references, detects intervening edits, completes task only when proofs match. Read-only status never completes work. |

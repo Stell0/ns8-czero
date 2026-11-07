@@ -38,7 +38,7 @@ def test_rest_and_both_mcp_modes_use_core_policy_and_fixed_errors(knowledge_http
                         async with Client(streamable_http_client(ORIGIN + '/mcp', http_client=wire), mode=mode) as client:
                             tools = (await client.list_tools()).tools
                             selected = [t for t in tools if t.name.startswith('compilation_')]
-                            assert len(selected) == 10
+                            assert len(selected) == 14
                             assert all(not t.annotations.open_world_hint for t in selected)
                             result = await client.call_tool('compilation_policy_get', {'space_id': space})
                             assert not result.is_error and result.structured_content['revision'] == 1
