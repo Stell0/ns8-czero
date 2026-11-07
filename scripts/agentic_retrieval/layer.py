@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 
 from c0_ingest.state import atomic
+from czero_core.compilation_content import navigation_body
 from .protocol import body_hash, digest, validate_corpus
 
 
@@ -36,9 +37,7 @@ def validate_plan(plan,corpus,forbidden=()):
 
 
 def record_payload(namespace,record):
-    body='Derived navigation; unverified '+record['classification']+'.\n\n'+record['synthesis']+'\n\nOriginal evidence:\n'
-    for e in record['evidence']:
-        body+='\n> '+e['quote'].replace('\n','\n> ')+'\n\nOriginal chunk: '+e['chunk_id']+'\n'
+    body=navigation_body(record['synthesis'],record['evidence'],record['classification'])
     return {'slug':namespace+'-'+record['key'],'title':record['title'],'body':body,
             'metadata':{'managed_by':namespace,'managed_key':record['key'],
                         'classification':record['classification'],'source_bindings':record['evidence']}}

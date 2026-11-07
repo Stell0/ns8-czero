@@ -7,6 +7,9 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'compilation_plan_validate': 'Editor: dry-run one closed source-backed plan under enabled policy and a live fence. Persists no content or progress. Returns plan hash and review eligibility; does not prove semantic truth or grant publication authority.',
+    'compilation_apply': 'Editor: atomically publish a validated exact plan and source dependencies under current policy, revisions and fence. Queue-only, authored edits and uncertain/contrary plans require exact-plan approval. Returns applied_pending_verify, never verified truth. Preserve replay key after uncertain response.',
+    'compilation_verify': 'Editor: record fresh target/annotation/original readback matching an actual applied outcome at the live fence. Completes matching work only; does not promote verification status or establish complete corpus coverage. Reconcile edits, expired citations and lost fences.',
     'compilation_policy_get': 'Read selected-space compiler policy. Absent policy is disabled and creates no rows.',
     'compilation_policy_set': 'Admin: replace bounded compiler policy at the expected revision. Enabling requires actual operator authorization reference. Installs no scheduler and publishes no knowledge.',
     'compilation_source_bindings_get': 'Read exact current original source/chunk bindings for a bounded selection. Metadata only, no writes. Expired citations return 410; never substitute another generation.',
@@ -148,6 +151,7 @@ DESCRIPTIONS = {
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
+    'compilation_apply', 'compilation_verify',
     'project_event_set','project_audit_step','project_semantic_select','project_semantic_review','project_peripheral_archive','project_release_observe',
     'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',
@@ -164,6 +168,7 @@ REPLAY_SAFE = frozenset({
 
 DESTRUCTIVE = frozenset({
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
+    'compilation_apply', 'compilation_verify',
     'project_event_set','project_audit_step','project_semantic_select','project_semantic_review','project_peripheral_archive','project_release_observe',
     'project_result_save','project_result_publish','project_report_prepare','project_report_member_set','project_report_finalize','project_report_delivery_observe',
     'project_runner_observe',

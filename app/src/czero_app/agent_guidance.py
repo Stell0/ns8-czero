@@ -24,6 +24,17 @@ GUIDANCE = {
     },
     'workflows': [
         {
+            'id': 'knowledge-compiler', 'title': 'Compile source-backed knowledge',
+            'tools': ['compilation_policy_get','compilation_source_bindings_get','compilation_propose',
+                'compilation_tasks_get','compilation_run_claim','compilation_run_checkpoint',
+                'compilation_plan_validate','compilation_apply','compilation_verify'],
+            'steps': [
+                'Use the compiler skill for requested bounded compilation in an explicitly selected space with enabled policy and current Read+Write. Missing tools or disabled policy block compilation; do not substitute ordinary bundles.',
+                'Read original current passages, resolve existing concepts and prepare a closed plan. Dry-run under a live fence; queue-only, authored or uncertain/contrary changes need exact-plan approval. Model output is never verified truth.',
+                'Apply atomically, then independently read every changed record and original citation before compilation_verify. Reconcile saved publication after a lost response or lease transfer; bounded completion is not complete corpus coverage.',
+            ],
+        },
+        {
             'id': 'research', 'title': 'Read and research',
             'tools': ['spaces_list', 'knowledge_search', 'wiki_pages_get', 'citations_get'],
             'steps': [

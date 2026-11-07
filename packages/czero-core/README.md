@@ -647,3 +647,23 @@ retry/backoff, transaction completion and worker limits remain authoritative.
 The worker alternates indexing with other eligible jobs to preserve progress.
 Selected-space index status retains `indexed` and adds current eligible
 `source_indexed` and `wiki_indexed` counts. No new migration is introduced.
+
+
+## Guarded external knowledge compilation (0.40 producer)
+
+`CompilationService.in_space(space_id)` adds `validate_plan`, `apply_plan` and
+`verify_plan` over the six schema0033 coordination tables and existing atomic
+knowledge services. Reasoning and model invocation remain external. Policies
+remain disabled by default; no migration, backfill, provider or schedule runs.
+The released consumer lock remains separate from this unreleased producer.
+
+Plans bind exact original passages/hashes, current targets, dedup decisions,
+classification, profile and live run fence. Dry-run rolls back its bundle. Apply
+commits content, dependencies and metadata-only outcome together; only separate
+matching readback completes a task. Queue-only, authored, uncertain/contrary and
+expanded graph changes require an Editor's exact-plan approval. No automatic
+verified status, authored deletion or source replacement. Old exact evidence is
+never rebound after 410. `compilation_client.navigation_plan/compile_plan/verify_pending`
+are optional external-process helpers, not server/worker callbacks or an LLM runtime.
+See [M2 contracts and acceptance](../../docs/knowledge-compilation/M2.md) and
+[portable agent protocol](../../plugins/c0-knowledge/references/compiler.md).

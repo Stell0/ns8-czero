@@ -21,6 +21,26 @@ def schema(name):
     return deepcopy(getattr(compilation_schema, name))
 
 
+def publication_schema(name):
+    if importlib.util.find_spec('czero_core.compilation_plan_schema') is None:
+        return {}
+    from czero_core import compilation_plan_schema
+    return deepcopy(getattr(compilation_plan_schema, name))
+
+
+class PlanValidate(StrictRequest):
+    data: dict = Field(json_schema_extra=publication_schema('VALIDATE'))
+
+
+class PlanApply(StrictRequest):
+    data: dict = Field(json_schema_extra=publication_schema('APPLY'))
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+class PlanVerify(PlanApply):
+    data: dict = Field(json_schema_extra=publication_schema('VERIFY'))
+
+
 class PolicySet(StrictRequest):
     data: dict = Field(json_schema_extra=schema('POLICY'))
     expected_revision: int = Field(ge=0, le=2147483646)
@@ -53,6 +73,7 @@ def install(app, database, auth, read_context, write_context):
     from czero_core.compilation import (CompilationService, CompilationConflict,
         CompilationNotFound, CompilationNotReady, CompilationDisabled)
     from czero_core.current_content import ContentSuperseded
+    from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound
     service = CompilationService(database, auth.access if auth else None)
     app.state.compilation = service
     operation = app.state.operation_catalog.bind
@@ -64,9 +85,9 @@ def install(app, database, auth, read_context, write_context):
             return getattr(service.in_space(space_id), method)(actor, **arguments)
         except CompilationDisabled:
             raise HTTPException(403, 'compilation_disabled') from None
-        except CompilationConflict:
+        except KnowledgeConflict:
             raise HTTPException(409, 'compilation_conflict') from None
-        except CompilationNotFound:
+        except KnowledgeNotFound:
             raise HTTPException(404, 'compilation_not_found') from None
         except CompilationNotReady:
             raise HTTPException(409, 'compilation_source_not_ready') from None
@@ -137,3 +158,21 @@ def install(app, database, auth, read_context, write_context):
                      context: RequestAccess = Depends(read_context)):
         return invoke(space_id, 'list_dependencies', context.actor, logical_document_id=logical_document_id,
             target_id=target_id, limit=limit, after=after)
+
+    if importlib.util.find_spec('czero_core.compilation_plans') is None:
+        return  # M1 Core remains a fully supported coordination-only consumer.
+
+    @app.post('/api/v1/compilation/plans/validate', response_model=dict)
+    @operation('compilation_plan_validate', 'Editor: dry-run one closed source-backed plan under enabled policy and a live fence. Persists no content or progress. Returns plan hash and review eligibility; does not prove semantic truth or grant publication authority.', Role.EDITOR, dict, space_field='space_id', required_scope='c0:write')
+    def plan_validate(data: PlanValidate, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'validate_plan', context.actor, **data.model_dump())
+
+    @app.post('/api/v1/compilation/apply', response_model=dict)
+    @operation('compilation_apply', 'Editor: atomically publish a validated exact plan and source dependencies under current policy, revisions and fence. Queue-only, authored edits and uncertain/contrary plans require exact-plan approval. Returns applied_pending_verify, never verified truth. Preserve replay key after uncertain response.', Role.EDITOR, dict, read_only=False, space_field='space_id')
+    def plan_apply(data: PlanApply, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'apply_plan', context.actor, **data.model_dump())
+
+    @app.post('/api/v1/compilation/verify', response_model=dict)
+    @operation('compilation_verify', 'Editor: record fresh target/annotation/original readback matching an actual applied outcome at the live fence. Completes matching work only; does not promote verification status or establish complete corpus coverage. Reconcile edits, expired citations and lost fences.', Role.EDITOR, dict, read_only=False, space_field='space_id')
+    def plan_verify(data: PlanVerify, space_id: UUID, context: RequestAccess = Depends(write_context)):
+        return invoke(space_id, 'verify_plan', context.actor, **data.model_dump())

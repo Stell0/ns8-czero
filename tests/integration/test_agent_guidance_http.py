@@ -69,7 +69,7 @@ def test_http_openapi_and_sdk_guidance_match_actual_scope_capabilities(transport
             assert public.status_code==200 and public.json()['guidance']['workflows']==[]
             assert public.headers['cache-control']=='no-store'
             schema=(await rest.get('/openapi.json')).json()
-            assert len(schema['x-c0-agent-guidance']['workflows'])==7
+            assert len(schema['x-c0-agent-guidance']['workflows'])==8
             rest.headers['Authorization']='Bearer '+pair.access_token
             actual=(await rest.get('/agents/capabilities.json')).json()
             assert {flow['id'] for flow in actual['guidance']['workflows']}=={'research','structured-research','selective-context'}

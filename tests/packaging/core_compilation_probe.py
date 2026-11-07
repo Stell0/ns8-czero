@@ -12,6 +12,9 @@ from czero_core import Database
 from czero_core.access import AccessService
 from czero_core.compilation import CompilationService, CompilationConflict
 from czero_core.compilation_schema import defaults, digest
+from czero_core.compilation_client import navigation_plan
+from czero_core.compilation_content import record_binding
+from czero_core.annotations import AnnotationService, ContentTarget
 from czero_core.identity import VerifiedIdentity
 from czero_core.jobs import default_registry
 from czero_core.sources import OriginalStore, SourceService, register_source_handlers
@@ -57,6 +60,7 @@ try:
         document = sources.document(owner, version['id'])
         chunk = sources.chunks(owner, document['id'])[0]
         page = WikiService(database, access).in_space(space).create_page(owner, 'synthetic', 'Synthetic', '# Authored inventory', idempotency_key='page')
+        state['authored_page_id'] = page['id']
         service = CompilationService(database, access).in_space(space)
         assert service.policy(owner)['revision'] == 0
         assert service.status(owner)['sources']['compiled'] == 0
@@ -64,6 +68,23 @@ try:
             authorization_ref='synthetic:disposable-native', idempotency_key='enable-fixture')
         bindings = service.source_bindings(owner, [{'logical_document_id': str(version['source_id']),
             'revision_id': str(version['id']), 'chunk_ids': [str(chunk['id'])]}])['source_bindings']
+        # A real atomic publication stays pending across the native clean restore.
+        publication_task = service.propose(owner, {'policy_revision':1,'origin':'manual',
+            'reason':'missing_concept','topic_key':'native/compiled','source_bindings':bindings},
+            idempotency_key='compile-proposal')['task']
+        compilation = service.claim_run(owner, {'kind':'manual','cycle_key':'native-compiled',
+            'lease_owner':'compiler-fixture','policy_revision':1}, idempotency_key='compile-claim')
+        plan = navigation_plan(space, compilation['tasks'][0], 'Compiled synthetic inventory',
+            'Read the original inventory evidence.', [(sources.citation(owner,chunk['id']),chunk['body'])])
+        request = {'lease':compilation['lease'],'expected_revision':compilation['run']['revision'],'plan':plan}
+        preview = service.validate_plan(owner, request)
+        published = service.apply_plan(owner, {**request,'plan_hash':preview['plan_hash'],
+            'approval':{'plan_hash':preview['plan_hash'],'reference':'synthetic:exact-plan-review'}}, idempotency_key='compile-apply')
+        assert published['outcome'] == 'applied_pending_verify'
+        state['publication_task_id'] = published['task']['id']
+        state['publication_records'] = published['records']
+        service.checkpoint(owner, {'lease':compilation['lease'],'expected_revision':published['run']['revision'],
+            'action':'partial'}, idempotency_key='compile-pending')
         proposal = {'policy_revision': 1, 'origin': 'manual', 'reason': 'incomplete_page', 'topic_key': 'synthetic',
             'source_bindings': bindings, 'target': {'kind': 'page', 'id': page['id'], 'revision': page['revision'],
                 'content_id': page['content']['id'], 'content_hash': page['content']['content_hash']}}
@@ -110,6 +131,35 @@ try:
         assert recovered['lease']['fencing_generation'] == 2
         assert recovered['tasks'][0]['state'] == 'uncertain'
     if mode != 'seed':
+        # Free the metadata-only run; its uncertain external call is never replayed.
+        active = recovered if mode == 'verify' else {'lease':state['lease'],'run':current['runs'][0]}
+        service.checkpoint(owner, {'lease':active['lease'],'expected_revision':active['run']['revision'],
+            'action':'partial'}, idempotency_key='metadata-partial')
+        compilation = service.claim_run(owner, {'kind':'manual','cycle_key':'native-compiled',
+            'lease_owner':'verification-fixture','policy_revision':1}, idempotency_key='compile-recover')
+        task = service.get_task(owner,state['publication_task_id'])
+        assert task['state'] == 'applied_pending_verify'
+        assert task['publication']['records'] == state['publication_records']
+        wiki_reader = WikiService(database,access).in_space(state['space'])
+        annotations = AnnotationService(database,access).in_space(state['space'])
+        proofs = []
+        for saved in state['publication_records']:
+            if saved['kind'] == 'page':
+                value = wiki_reader.get_page(owner,saved['id'])
+            else:
+                primary = state['publication_records'][0]
+                value = annotations.get(owner, ContentTarget('wiki_revision',primary['content_id'],primary['revision']), 'verification')
+                assert value['status'] == 'unverified'
+            proofs.append(record_binding(saved['kind'],value))
+        assert proofs == state['publication_records']
+        selections = [{'logical_document_id':s['logical_document_id'],'revision_id':s['revision_id'],
+            'chunk_ids':[chunk['chunk_id'] for chunk in s['chunks']]} for s in task['source_bindings']]
+        assert service.source_bindings(owner,selections)['source_bindings'] == task['source_bindings']
+        verified = service.verify_plan(owner, {'lease':compilation['lease'],'expected_revision':compilation['run']['revision'],
+            'task_id':task['id'],'expected_task_revision':task['revision'],'policy_revision':1,
+            'plan_hash':task['plan_hash'],'observations':proofs,'source_bindings':task['source_bindings']}, idempotency_key='compile-verify')
+        assert verified['task']['state'] == 'succeeded' and service.status(owner)['sources']['compiled'] == 1
+        assert wiki_reader.get_page(owner,state['authored_page_id'])['content']['body'] == '# Authored inventory'
         with database.engine.begin() as c:
             for table in ('c0_compilation_events','c0_compilation_dependencies','c0_compilation_sources',
                 'c0_compilation_tasks','c0_compilation_runs','c0_compilation_policies',
@@ -120,6 +170,7 @@ try:
             c.execute(text('DELETE FROM c0_accounts WHERE issuer=:issuer'), {'issuer': state['issuer']})
         state_path.unlink()
     print(json.dumps({'compilation_state': True, 'six_tables': True, 'publication_disabled': True,
+        'guarded_compilation': True, 'pending_compilation_verified': mode != 'seed',
         'restored_fence_invalidated': mode == 'verify', 'stage': mode}))
 finally:
     database.close()

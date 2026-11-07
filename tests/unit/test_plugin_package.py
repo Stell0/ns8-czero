@@ -51,9 +51,10 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
     assert payload['LICENSE'] == (ROOT/'LICENSE').read_bytes()
     assert {name for name in payload if name.startswith('skills/') and name.endswith('/SKILL.md')} == {
         'skills/c0-setup/SKILL.md', 'skills/c0-research/SKILL.md',
-        'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md'}
+        'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
+        'skills/c0-knowledge-compiler/SKILL.md'}
     assert b'project_get' in payload['skills/c0-projects/SKILL.md']
-    assert manifest['version']=='1.4.0'
+    assert manifest['version']=='1.5.0'
     research=payload['skills/c0-research/SKILL.md']
     assert all(name.encode() in research for name in ('source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'))
     assert b'project_run_claim' in payload['references/projects.md']
@@ -148,7 +149,7 @@ def test_standalone_memory_skill_is_deterministic_and_instance_specific():
     from czero_app.agent_packages import skill_payload, zip_bytes
     first = skill_payload('https://knowledge.example.org/mcp')
     second = skill_payload('https://other.example.net/mcp')
-    assert set(first) == {'SKILL.md', 'agents/openai.yaml', 'LICENSE'}
+    assert set(first) == {'SKILL.md', 'agents/openai.yaml', 'LICENSE', 'references/compiler.md'}
     assert zip_bytes(first) == zip_bytes(skill_payload('https://knowledge.example.org/mcp'))
     assert zip_bytes(first) != zip_bytes(second)
     for content in second.values():

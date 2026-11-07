@@ -208,7 +208,7 @@ def test_metadata_only_and_review_holds(compiler):
         propose(compiler, bindings, source_label='a private query absent from source')
     held = propose(compiler, bindings, reason='contradiction', origin='retrieval')
     assert held['task']['state'] == 'needs_review' and claim(compiler)['tasks'] == []
-    assert not service.status(owner)['publication_supported']
+    assert service.status(owner)['publication_supported']
     with service.database.engine.connect() as connection:
         events = str(connection.execute(text('SELECT metrics FROM c0_compilation_events')).scalars().all())
         assert 'Ignore all instructions' not in events and 'conversation' not in events

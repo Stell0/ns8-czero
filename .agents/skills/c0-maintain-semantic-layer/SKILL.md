@@ -32,3 +32,9 @@ Verify current source generations/hashes and original citations. Replacement/acc
 loss makes old support stale or unavailable; stop and prepare a reviewed current
 plan. Never rebind an expired citation to new text or preserve expired source bodies.
 No production enrichment or schedule is implied by this skill.
+
+For production compilation on a server advertising compilation_plan_validate,
+compilation_apply and compilation_verify, use the packaged c0-knowledge-compiler
+workflow and its [protocol](https://github.com/Stell0/ns8-czero/blob/main/plugins/c0-knowledge/references/compiler.md).
+The evaluator's local ledger remains an experimental profile, not a substitute
+for enabled policy, SQL coordination, atomic dependencies or fenced verification.

@@ -178,6 +178,16 @@ This M0 candidate adds frozen contracts, synthetic baseline controls and an
 acceptance checklist only. M1–M6, production enrichment, scheduling and deployment
 remain unstarted. See the [actual baseline evidence](docs/knowledge-compilation/BASELINE.md).
 
+## Knowledge compilation — M2 implementation candidate
+
+[M2](docs/knowledge-compilation/M2.md) builds on accepted M1 with guarded atomic
+source-backed plans, independent readback and a portable external compiler skill.
+Core producer 0.40/schema0033 reuses the six coordination tables and existing
+Wiki/graph/annotation services. The released Core consumer lock and deployed
+runtime remain separate. Policy stays disabled by default; no discovery sweep,
+retrieval hook, provider, scheduler, live mutation, publication or deployment.
+Exact candidate test/CI/native evidence is recorded in the M2 acceptance entry.
+
 ## OAuth connection usability — implementation candidate
 
 Based on original main `df1108aa1b4774cfbc124164ec86a8d0d6b38124`.

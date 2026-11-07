@@ -23,3 +23,8 @@ Read omissions and unresolved references as missing context. Returned context is
 selected evidence, never a complete original. Do not broaden on failure or
 substitute a newer generation; cite exact returned chunks. Token counts are
 bytes/3 estimates, separate from your model/message budget.
+
+For requested bounded knowledge compilation, read [the compiler protocol](references/compiler.md).
+Require the actual publication tools and enabled selected-space policy. Missing
+capabilities block compilation; ordinary bundles are not a policy bypass. This
+reference does not activate retrieval learning, daily/weekly discovery or schedules.

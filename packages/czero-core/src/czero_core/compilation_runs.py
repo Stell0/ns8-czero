@@ -126,15 +126,24 @@ class CompilationRuns:
         return (len(documents) <= min(budget['data']['caps']['documents'], policy[prefix + 'documents'])
             and len(targets) <= min(budget['data']['caps']['pages'], policy[prefix + 'pages']))
 
-    def _reserve_tasks(self, connection, actor, run, policy, limit):
+    def _reserve_tasks(self, connection, actor, run, policy, limit, review_task_ids=()):
         # Reattach already reserved work before selecting new tasks; consumed debits survive.
         owned = list(connection.execute(text('''SELECT * FROM c0_compilation_tasks WHERE space_id=:space
-            AND run_id=:run AND state IN ('leased','planned','uncertain') ORDER BY created_at,id'''),
+            AND run_id=:run AND state IN ('leased','planned','uncertain','applied_pending_verify') ORDER BY created_at,id'''),
             {'space': self._space_id, 'run': run['id']}).mappings())
         candidates = [dict(t) for t in owned]
         candidates += [dict(t) for t in connection.execute(text("SELECT * FROM c0_compilation_tasks WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[])) AND state='deferred' AND not_before<=:now AND attempts<:attempts ORDER BY not_before,id"), {'space': self._space_id, 'ids': run['data']['task_ids'], 'now': self.clock(), 'attempts': policy['max_attempts']}).mappings()]
+        if review_task_ids:
+            for identifier in review_task_ids:
+                review = self._task(connection, identifier)
+                if review['state'] != 'needs_review' and review['run_id'] != run['id']:
+                    raise self.conflict()
+            candidates += [dict(t) for t in connection.execute(text('''SELECT * FROM c0_compilation_tasks
+                WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[])) AND state='needs_review'
+                  AND attempts<:attempts ORDER BY id'''),
+                {'space': self._space_id, 'ids': list(review_task_ids), 'attempts': policy['max_attempts']}).mappings()]
         room = min(limit, policy['max_tasks_per_run'] - len(run['data']['task_ids']))
-        if room > 0:
+        if room > 0 and not review_task_ids:
             candidates += [dict(t) for t in connection.execute(text('''SELECT * FROM c0_compilation_tasks
                 WHERE space_id=:space AND state IN ('queued','deferred') AND not_before<=:now
                   AND attempts<:attempts AND profile_id=:profile AND profile_version=:version
@@ -146,12 +155,12 @@ class CompilationRuns:
         retry_at = None
         for task in candidates:
             held = str(task['id']) in run['data']['task_ids']
-            if not held and len(reserved) >= limit:
+            if not held and (len(reserved) >= limit or len(run['data']['task_ids']) >= policy['max_tasks_per_run']):
                 break
             if 'page' not in policy['allowed_target_kinds']:
                 continue
             try:
-                self._sources(connection, task['source_bindings']); self._target(connection, task['target'])
+                self._support_task(connection, task)
             except (self.conflict, self.notfound, self.notready, ValueError):
                 connection.execute(text("UPDATE c0_compilation_tasks SET state='conflict',error_code='source_unavailable',revision=revision+1,updated_at=:now WHERE space_id=:space AND id=:id"),
                         {'space': self._space_id, 'id': task['id'], 'now': self.clock()})
@@ -169,7 +178,7 @@ class CompilationRuns:
                 str(run['day_budget_id']), str(run['week_budget_id'])])
             uncertain = any(c['task_id'] == str(task['id']) and c['state'] == 'uncertain' for c in run['data']['calls'].values())
             changed = (task['fencing_generation'] != run['fencing_generation'] or task['run_id'] != run['id'] or task['state'] == 'deferred' or not held)
-            next_state = 'uncertain' if uncertain else task['state'] if held and task['state'] in ('planned','leased') else 'leased'
+            next_state = 'uncertain' if uncertain else task['state'] if held and task['state'] in ('planned','leased','applied_pending_verify') else 'leased'
             if changed:
                 if task['attempts'] >= policy['max_attempts']:
                     connection.execute(text("UPDATE c0_compilation_tasks SET state='failed',error_code='retry_exhausted',revision=revision+1 WHERE space_id=:space AND id=:id"),
@@ -194,6 +203,9 @@ class CompilationRuns:
     def claim_run(self, actor, data, *, idempotency_key):
         data = checked(CLAIM, data)
         data.setdefault('task_limit', 1)
+        if ('review_task_ids' in data) != ('review_authorization_ref' in data) or (
+                data.get('review_task_ids') and (data['kind'] != 'manual' or len(data['review_task_ids']) > data['task_limit'])):
+            raise ValueError('explicit_manual_compilation_review_required')
         def execute(connection, current):
             policy = self._enabled(connection, data['policy_revision']); config = policy['data']; now = self.clock()
             if data['kind'] == 'retrieval' and not config['retrieval_feedback']:
@@ -250,7 +262,7 @@ class CompilationRuns:
                     week_budget_id=week['id'] if week else None,
                     lease_expiry=min(now + timedelta(seconds=config['lease_seconds']), run['invocation_deadline']))
                 run['data']['policy'] = config
-            tasks, retry_at = self._reserve_tasks(connection, current, run, config, data['task_limit'])
+            tasks, retry_at = self._reserve_tasks(connection, current, run, config, data['task_limit'], data.get('review_task_ids', ()))
             run = self._save_run(connection, run)
             lease = {'run_id': str(run['id']), 'lease_owner': run['lease_owner'], 'fencing_generation': run['fencing_generation']}
             result = {'outcome': 'deferred_budget' if not tasks and retry_at else 'claimed',
@@ -270,7 +282,7 @@ class CompilationRuns:
         if support:
             if 'page' not in self._enabled(connection)['data']['allowed_target_kinds']:
                 raise self.disabled()
-            self._sources(connection, task['source_bindings']); self._target(connection, task['target'])
+            self._support_task(connection, task)
         return task
 
     def _charge_model(self, connection, run, reserved, *, observed=None):
@@ -322,7 +334,7 @@ class CompilationRuns:
             identifiers = run['data']['task_ids'] if action == 'finish' else [data['task_id']] if 'task_id' in data else [run['data']['calls'][data['request_id']]['task_id']] if data['request_id'] in run['data']['calls'] else []
             for identifier in identifiers:
                 task = self._task(connection, identifier)
-                self._sources(connection, task['source_bindings']); self._target(connection, task['target'])
+                self._support_task(connection, task)
         def execute(connection, current):
             run = self._lease(connection, current, data['lease'])
             if run['revision'] != data['expected_revision']:
@@ -411,7 +423,7 @@ class CompilationRuns:
                             {'space': self._space_id, 'id': _uuid(source['logical_document_id']), 'profile': task['profile_id'],
                              'revision': _uuid(source['revision_id']), 'meta': source['metadata_hash'], 'parts': source['parts_hash'], 'now': self.clock()})
             elif action in ('finish', 'partial'):
-                unfinished = connection.execute(text("SELECT count(*) FROM c0_compilation_tasks WHERE space_id=:space AND run_id=:run AND state<>'no_change'"),
+                unfinished = connection.execute(text("SELECT count(*) FROM c0_compilation_tasks WHERE space_id=:space AND run_id=:run AND state NOT IN ('no_change','succeeded')"),
                     {'space': self._space_id, 'run': run['id']}).scalar_one()
                 unresolved = any(c['state'] in ('reserved','started','uncertain') for c in calls.values())
                 if action == 'finish' and (unfinished or unresolved):

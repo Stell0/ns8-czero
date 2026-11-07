@@ -39,12 +39,16 @@ assert calls[-1] == 'search'
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize('change', ['valid', 'missing_project', 'extra', 'replacement'])
-def test_native_download_guard_checks_the_actual_four_skill_package(tmp_path, change):
+@pytest.mark.parametrize('change', ['valid', 'missing_project', 'missing_compiler', 'missing_compiler_reference', 'extra', 'replacement'])
+def test_native_download_guard_checks_the_actual_five_skill_package(tmp_path, change):
     from czero_app.agent_packages import plugin_payload, zip_bytes
     payload = plugin_payload('https://c0.example.test/mcp', 'asdk_app_disposable', 'c0-fixture')
     if change in {'missing_project', 'replacement'}:
         payload.pop('skills/c0-projects/SKILL.md')
+    if change == 'missing_compiler':
+        payload.pop('skills/c0-knowledge-compiler/SKILL.md')
+    if change == 'missing_compiler_reference':
+        payload.pop('references/compiler.md')
     if change in {'extra', 'replacement'}:
         payload['skills/developer/SKILL.md'] = b'Unexpected developer instructions'
     path = tmp_path / 'plugin.zip'

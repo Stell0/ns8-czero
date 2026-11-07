@@ -6,6 +6,7 @@ from pathlib import Path
 
 FILES = ('skills/c0-setup/SKILL.md','skills/c0-research/SKILL.md',
          'skills/c0-maintain-knowledge/SKILL.md','skills/c0-projects/SKILL.md',
+         'skills/c0-knowledge-compiler/SKILL.md','references/compiler.md',
          'references/instance.md','references/connection.md',
          'references/maintenance.md','references/projects.md')
 

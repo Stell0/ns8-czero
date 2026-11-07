@@ -21,7 +21,7 @@ REASONS = ['missing_concept', 'incomplete_page', 'stale_support', 'distributed_e
 ORIGINS = ['manual', 'bootstrap', 'retrieval', 'daily', 'weekly']
 STATES = ['queued', 'leased', 'planned', 'needs_review', 'deferred', 'conflict', 'failed',
     'uncertain', 'superseded', 'no_change', 'applied_pending_verify', 'succeeded']
-ACTIVE = ('queued', 'leased', 'planned', 'needs_review', 'deferred', 'uncertain')
+ACTIVE = ('queued', 'leased', 'planned', 'needs_review', 'deferred', 'uncertain', 'applied_pending_verify')
 ERRORS = ['external_failed', 'unsupported_evidence', 'source_unavailable', 'source_incomplete',
     'concurrent_edit', 'retry_exhausted', 'budget_exhausted', 'model_usage_unknown']
 
@@ -49,9 +49,9 @@ POLICY = record({
     **{key: {'type': 'boolean'} for key in ('enabled', 'retrieval_feedback')},
     'publication_mode': {'enum': ['queue_only', 'automatic_supported']},
     'timezone': {'type': 'string', 'minLength': 1, 'maxLength': 100},
-    'profile_id': {'const': PROFILE}, 'profile_version': {'type': 'integer', 'const': 1},
-    'allowed_target_kinds': {'type': 'array', 'minItems': 1, 'maxItems': 2,
-        'items': {'enum': ['page', 'annotation']}, 'uniqueItems': True},
+    'profile_id': {'enum': [PROFILE, 'sourced-knowledge-v1']}, 'profile_version': {'type': 'integer', 'const': 1},
+    'allowed_target_kinds': {'type': 'array', 'minItems': 1, 'maxItems': 5,
+        'items': {'enum': ['page', 'annotation', 'entity', 'claim', 'relation']}, 'uniqueItems': True},
     'contradiction_handling': {'const': 'review'}, 'uncertainty_handling': {'const': 'review'},
     **{key: integer(1, 1000) for key in ('daily_documents', 'daily_pages', 'weekly_documents',
         'weekly_pages', 'max_outstanding_tasks', 'daily_model_requests', 'weekly_model_requests')},
@@ -77,7 +77,9 @@ PROPOSAL = record({'policy_revision': integer(0, 2147483646), 'origin': {'enum':
     'source_label': {'type': 'string', 'maxLength': 160}},
     ['policy_revision', 'origin', 'reason', 'topic_key', 'source_bindings'])
 CLAIM = record({'kind': {'enum': ORIGINS}, 'cycle_key': KEY, 'lease_owner': KEY,
-    'policy_revision': integer(0, 2147483646), 'task_limit': integer(1, 20)},
+    'policy_revision': integer(0, 2147483646), 'task_limit': integer(1, 20),
+    'review_task_ids': {'type': 'array', 'minItems': 1, 'maxItems': 20, 'items': UUID, 'uniqueItems': True},
+    'review_authorization_ref': KEY},
     ['kind', 'cycle_key', 'lease_owner', 'policy_revision'])
 CHECKPOINT = record({'lease': LEASE, 'expected_revision': integer(1, 2147483646),
     'action': {'enum': ['planned', 'no_change', 'defer', 'fail', 'reserve_model', 'start_model',
@@ -123,7 +125,8 @@ def policy(value):
         ZoneInfo(result['timezone'])
     except (ZoneInfoNotFoundError, ValueError):
         raise ValueError('invalid_compilation_policy') from None
-    if result['retrieval_feedback'] and not result['enabled']:
+    if (result['profile_id'] == PROFILE and set(result['allowed_target_kinds']) - {'page', 'annotation'}
+            or result['retrieval_feedback'] and not result['enabled']):
         raise ValueError('invalid_compilation_policy')
     return result
 

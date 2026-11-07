@@ -14,3 +14,8 @@ Read existing content and original evidence before editing. Make only the reques
 Tool schemas and current server capabilities govern the request. Not every mutation accepts an idempotency key. Do not repeat an uncertain ordinary create automatically; inspect stored results first. An unchanged replay-protected request keeps its key; a changed request gets a new one.
 
 Read back saved current content, revision counters and evidence links. Superseded automatic bodies are removed; keep authored quotations and report expired evidence as stale/unavailable. An expired exact citation or superseded replay returns `content_superseded` (410), requiring current readback and reconciliation. Report exactly what changed, the selected space, saved identities/revisions and any incomplete work. Queued extraction is not successful ingestion of usable evidence. Permission denial needs an authorized grant; insufficient OAuth scope needs fresh explicit consent if the user's role and approved client permit it.
+
+For requested source-to-Wiki compilation, use [the compiler protocol](../../references/compiler.md)
+when the actual compiler tools are available. It adds policy/fencing and atomic
+source dependencies; ordinary requested edits retain their existing behavior.
+Missing compiler capability never authorizes bypass through ordinary bundle writes.

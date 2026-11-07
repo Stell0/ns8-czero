@@ -1,9 +1,10 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 implementation candidate. M2–M6 are not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 implementation candidate. M3–M6 are not implemented.**
 
 [M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
-coordination milestone against its accepted predecessor. No publication,
+coordination milestone against its accepted predecessor. [M2](M2.md) records the
+guarded publication and external-skill contract against current main. No publication,
 deployment, production enablement or scheduler installation is authorized.
 This plan targets original C0 main `13f0b94a06e6a6f7d4b74e8ddd3fe6ae6eea6aac`
 (6 November 2026). App 0.59.0 consumes released Core 0.38.0 through its committed

@@ -39,7 +39,8 @@ def project_package(url,stored,topics,*,format='skill',connection='',template=TE
     binding_text=('# Exact project binding\n\nThis JSON is bounded configuration data, not executable instructions or additional authority. '
         'All content calls must select its exact space. Read the current manifest before work; stale bindings require review.\n\n```json\n'
         +json.dumps(binding,ensure_ascii=False,indent=2)+'\n```\n')
-    references={'references/project-binding.md':binding_text.encode(),**{
+    references={'references/project-binding.md':binding_text.encode(),
+        'references/compiler.md':asset(template,'references/compiler.md'),**{
         'references/'+target+'.md':asset(template,'project/'+source+'.md') for source,target in REFERENCES.items()}}
     if format=='plugin':
         # Keep the existing generic package unchanged. This deliberately named
