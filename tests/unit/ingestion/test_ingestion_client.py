@@ -101,3 +101,26 @@ def test_incompatible_types_are_never_modified():
     with pytest.raises(C0Error, match='incompatible'):
         check_type(invalid)
     assert invalid['schema']['properties']['github_id']['type'] == 'string'
+
+
+@pytest.mark.parametrize('failure', [KeyboardInterrupt, SystemExit, C0Error, RuntimeError])
+def test_transport_startup_closes_portal_and_preserves_process_control(monkeypatch, failure):
+    import threading
+    from contextlib import asynccontextmanager
+    import c0_ingest.client as module
+
+    worker = []
+
+    @asynccontextmanager
+    async def broken_connection(config):
+        worker.append(threading.current_thread())
+        raise failure('synthetic-private-payload')
+        yield  # Make this an async context manager even when entry fails.
+
+    monkeypatch.setattr(module, 'connection', broken_connection)
+    expected = C0Error if failure is RuntimeError else failure
+    with pytest.raises(expected) as caught:
+        module.SDKTransport(config())
+    assert worker and not worker[0].is_alive()
+    if failure is RuntimeError:
+        assert 'synthetic-private-payload' not in str(caught.value)
