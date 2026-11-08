@@ -2,7 +2,7 @@
 
 ## Reviewed source and method
 
-This audit starts from original `Stell0/ns8-czero` main at `1db37f409af756212dc005d160302d01eff23098` (PR108), fetched into an isolated worktree. Existing dirty work, recovered worktrees and private evidence are preserved. Implementation and regression contracts take precedence over earlier prose.
+This audit started from original `Stell0/ns8-czero` main at `1db37f409af756212dc005d160302d01eff23098` (PR108). During candidate validation, PR109 regularly merged as `5a4a9739e4f06be142d6edd8ec938bf371be025a`. The final documentation successor starts from that exact new main in a separate isolated worktree. The initial `5c1e8502f9239a8068705c72019586a7467a2fbe` candidate and its running evidence remain frozen in PR110; no history is rewritten or native run cancelled. Existing dirty work, recovered worktrees and private evidence are preserved. Implementation and regression contracts take precedence over earlier prose.
 
 Active manifests describe app0.63.0, producer Core0.45.0, schema0036 and plugin1.8.0. The app dependency and frozen lock still select released Core0.44.0 with `>=0.44.0,<0.45.0`. These are different identities. The latest dedicated deployment recorded in PLAN is the separately accepted app0.61/Core0.42/schema0034 checkpoint in [PLAN](../PLAN.md#openai-system-one-scoring--accepted-delivery). A source merge does not change that installation; this audit did not probe the live runtime. This review publishes no release, updates no live connector and installs no schedule.
 
@@ -38,6 +38,10 @@ Discovery covers current application routes and UI, Core services/migrations, op
 | Fork development and contributions | [Managed registry](../c0-upstream.json), [fork generator](../examples/fork/create.py), [CI policy](ci-policy.md) | Useful detailed README workflow needed a durable technical home | [Development](development.md#build-an-application-on-c0) |
 | Evaluation versus product quality | [Controlled evaluation](../scripts/evaluate-agentic-retrieval.py), [published BM25 measurements](retrieval-benchmark.md), [M6 results](knowledge-compilation/RESULTS.md) | Compiler quality failure was not prominent at entry point | [README](../README.md), [readiness](release-readiness.md) |
 
+## Latest-main compatibility review
+
+PR109 changes application resource cleanup, propagates process-control exceptions after client cleanup, removes selected unused imports and corrects the native extraction runner's module description. Its new tests exercise failed cleanup and interrupted client startup. The review confirms no public endpoint/tool/schema, role/scope, Core package, dependency lock, migration or managed-file baseline changes. The existing native timer and source/knowledge/retrieval behavior remain as documented. [CODEBASE_REVIEW](../CODEBASE_REVIEW.md) retains that work's actual source/test observations, including its local prerequisite failures; it is not a current setup guide.
+
 ## Diagram review
 
 All four pre-existing Mermaid blocks were reviewed. The two README diagrams were replaced by current system/BYOA diagrams and a dedicated knowledge-model diagram. The compiler plan's selected-architecture diagram now shows read-only retrieval, separate optional agent feedback and review holds. Its M0→M6 dependency diagram remains correct as a historical milestone order and is retained.
@@ -58,7 +62,7 @@ New [architecture diagrams](architecture.md) show knowledge structure, ingestion
 
 The inventory includes root guidance; every Markdown file under docs; package/native/fork READMEs; repository and end-user skills; sample and benchmark guides; and synthetic fixture notes. Relative links/anchors are checked across this complete set. Historical records retain their frozen commands, source identities and failures; current guides identify them as evidence. No historical or private acceptance record is deleted.
 
-The following file-level coverage list records the pre-edit Markdown inventory. “Contract/evidence” identifies generation-bound designs, milestone observations or synthetic fixtures; it is not a current setup recommendation. “Workflow” includes packaged agent instructions and developer routing. Detailed runtime workflows are reused rather than copied into new scripts.
+The following file-level coverage list records the latest-base pre-edit Markdown inventory (120 files). “Contract/evidence” identifies generation-bound designs, milestone observations or synthetic fixtures; it is not a current setup recommendation. “Workflow” includes packaged agent instructions and developer routing. Detailed runtime workflows are reused rather than copied into new scripts.
 
 | Document | Review disposition |
 | --- | --- |
@@ -74,6 +78,7 @@ The following file-level coverage list records the pre-edit Markdown inventory. 
 | [.agents/skills/c0-project-workflows/SKILL.md](../.agents/skills/c0-project-workflows/SKILL.md) | Workflow; checked against current boundaries |
 | [.agents/skills/c0-upgrade-from-upstream/SKILL.md](../.agents/skills/c0-upgrade-from-upstream/SKILL.md) | Workflow; checked against current boundaries |
 | [AGENTS.md](../AGENTS.md) | Workflow; checked against current boundaries |
+| [CODEBASE_REVIEW.md](../CODEBASE_REVIEW.md) | Contract/evidence from merged PR109; retain its frozen checkpoints |
 | [PLAN.md](../PLAN.md) | Roadmap/evidence; retain immutable checkpoints |
 | [README.md](../README.md) | Current guide/navigation; compare with implementation |
 | [app/frontend/licenses/README.md](../app/frontend/licenses/README.md) | Current guide/navigation; compare with implementation |
@@ -184,9 +189,9 @@ The following file-level coverage list records the pre-edit Markdown inventory. 
 
 ## Validation record
 
-The original maintained-document check passes 411 local links at the frozen base. The same checker applied to all 119 pre-edit Markdown files reports no broken local links or anchors. Candidate validation passes all 124 repository Markdown files and 886 local links/anchors, including preserved historical anchors and the five new guides. The default maintained-document check passes 715 local links.
+The original maintained-document check passes 411 local links at the frozen base. The same checker applied to all 119 pre-edit Markdown files reports no broken local links or anchors. Candidate validation passes all 125 repository Markdown files and 888 local links/anchors, including preserved historical anchors and the five new guides. The default maintained-document check passes 717 local links.
 
-The same focused suite passes 68 tests on both exact original main and candidate: documentation navigation/anchors, fork references, generated plugin packages and post-answer feedback safeguards. Documented MCP names were checked against actual registrations, including the profile handler's direct catalog binding. Compiler CLI and Codex MCP command flags were checked through local `--help`; source/settings examples were compared with active schemas. All eight Mermaid blocks parse and render with Mermaid CLI12.2.0 and Chromium. No Mermaid dependency or generated diagram image is added to the project.
+The initial focused suite passed 68 tests on both original main and the first candidate. After PR109, the expanded suite passes 80 tests on exact new main and the successor, including the shared ingestion-client regression tests: documentation navigation/anchors, fork references, generated plugin packages and post-answer feedback safeguards. Documented MCP names were checked against actual registrations, including the profile handler's direct catalog binding. Compiler CLI and Codex MCP command flags were checked through local `--help`; source/settings examples were compared with active schemas. All eight Mermaid blocks parse and render with Mermaid CLI12.2.0 and Chromium. The eight diagram blocks are byte-identical on the new base. No Mermaid dependency or generated diagram image is added to the project. The 22 public vendor/manual URLs checked return success; the documented immutable installation tag exists and its registry module digest matches.
 
 The first candidate link check identified three incorrect implementation-evidence paths, which were corrected before the passing checks. Initial system/minimal Python runs could not import Core dependencies; the equipped app test environment supplies the passing before/after result. The first browser-render attempt could not use the quota-limited temporary directory; a private shared-memory temporary directory supplied the successful render. These failures are not counted as passes. Selected exact-source CI acceptance is reported in the PR separately.
 
