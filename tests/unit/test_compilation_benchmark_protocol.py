@@ -108,3 +108,39 @@ def test_measured_citation_denominator_and_observed_model_events_stay_separate()
     assert result['model_usage_events'] == 3 and result['calls']['mean'] == 2
     row['runner']['final']['citations'] = [];row['grade']['invalid_citations'] = 0
     assert summary([row])['citation_validity'] is None
+
+
+@pytest.mark.parametrize('identifier',['../escape','nested/question','..\\escape','.', '..', ' ', 'a'*161, 'bad\x00id', 42])
+def test_model_question_id_cannot_escape_private_episode_workspace(identifier):
+    from agentic_retrieval.protocol import validate_questions
+    corpus,question,_ = fixture();question['id'] = identifier
+    with pytest.raises(ValueError,match='invalid_question_identity'):
+        validate_questions([question],corpus)
+
+
+def test_audit_arm_comes_from_episode_prefix_not_model_question_id(tmp_path):
+    _,_,row,reviews,path = study(tmp_path)
+    moved = path.with_name('development-0-raw-question-enriched-a-0');path.rename(moved)
+    reviews['episodes'][0]['episode'] = moved.name
+    result = answer_audit(tmp_path,reviews)
+    assert result['arms']['raw']['reviewed'] == 1 and result['arms']['enriched']['episodes'] == 0
+
+
+def test_prose_review_does_not_hide_invalid_packet_fields(tmp_path):
+    _,_,row,reviews,path = study(tmp_path)
+    row['grade']['product_errors'] = 1
+    (path/'episode.json').write_text(json.dumps(row))
+    review = reviews['episodes'][0];review.update(episode_hash=digest(row),correct=False,content_correct=True)
+    result = answer_audit(tmp_path,reviews)['summary']
+    assert result['accuracy'] == 0 and result['content_accuracy'] == 1
+    assert result['unsupported_assertions'] == 0
+    review['assertions'][0]['verdict'] = 'unsupported'
+    with pytest.raises(ValueError,match='content_review_conflicts'):
+        answer_audit(tmp_path,reviews)
+
+
+def test_legacy_review_without_prose_judgment_remains_unreviewed_for_that_metric(tmp_path):
+    _,_,_,reviews,_ = study(tmp_path)
+    result = answer_audit(tmp_path,reviews)['summary']
+    assert result['content_accuracy'] is None and result['content_accuracy_n'] == 0
+    assert result['content_unreviewed'] == 1

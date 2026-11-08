@@ -40,6 +40,11 @@ def validate_questions(questions,corpus):
     validate_corpus(corpus)
     docs={d['id']:d for d in corpus};seen=set()
     for q in questions:
+        identifier=q.get('id')
+        if (not isinstance(identifier,str) or not identifier.strip() or len(identifier)>160
+                or identifier in ('.','..') or '/' in identifier or '\\' in identifier
+                or any(ord(c)<32 for c in identifier)):
+            raise ValueError('invalid_question_identity')
         required={'id','text','language','type','answerability','products','versions',
                   'evidence_sets','provenance','confidence','uncertainty'}
         if not required<=q.keys() or q['id'] in seen or not q['id'] or not q['text']:

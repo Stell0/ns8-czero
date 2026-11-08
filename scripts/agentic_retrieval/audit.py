@@ -26,13 +26,14 @@ def answer_audit(output, reviews):
     truth = {c['chunk_id'] for d in corpus for c in d['chunks']}
     for review in reviews['episodes']:
         required = {'episode','episode_hash','all_assertions_reviewed','correct','assertions','rationale'}
-        if set(review) != required or review['episode'] in seen:
+        if set(review)-{'content_correct'} != required or review['episode'] in seen:
             raise ValueError('duplicate_or_invalid_answer_review')
         seen.add(review['episode']);row = rows.get(review['episode'])
         if row is None or row['status'] != 'measured' or review['episode_hash'] != digest(row):
             raise ValueError('answer_review_missing_or_changed_episode')
-        if type(review['correct']) is not bool and review['correct'] is not None:
-            raise ValueError('invalid_correctness_judgment')
+        for judgment in (review['correct'],review.get('content_correct')):
+            if type(judgment) is not bool and judgment is not None:
+                raise ValueError('invalid_correctness_judgment')
         if (review['all_assertions_reviewed'] is not True or not isinstance(review['rationale'],str)
                 or not review['rationale'].strip() or not isinstance(review['assertions'],list)):
             raise ValueError('incomplete_answer_review')
@@ -55,24 +56,28 @@ def answer_audit(output, reviews):
                 raise ValueError('supported_review_requires_observed_original')
         unsupported = sum(a['verdict'] == 'unsupported' for a in assertions)
         uncertain = sum(a['verdict'] == 'uncertain' for a in assertions)
+        if review.get('content_correct') is True and (unsupported or uncertain):
+            raise ValueError('content_review_conflicts_with_failed_support')
         if review['correct'] is True and (unsupported or uncertain or row['grade']['invalid_citations']
                 or row['grade']['product_errors'] or row['grade']['version_errors']):
             raise ValueError('correct_review_conflicts_with_failed_support')
         audited.append({'episode':review['episode'],'answerability':row['answerability'],
-            'correct':review['correct'],'assertions':len(assertions),'unsupported':unsupported,'uncertain':uncertain})
+            'correct':review['correct'],'content_correct':review.get('content_correct'),'assertions':len(assertions),'unsupported':unsupported,'uncertain':uncertain})
     def aggregate(ids):
         measured = [name for name in ids if rows[name]['status'] == 'measured']
         selected = [r for r in audited if r['episode'] in ids]
         known = [r for r in selected if r['correct'] is not None]
         answerable = [r for r in known if r['answerability'] == 'answerable']
+        content = [r for r in selected if r['content_correct'] is not None]
         return {'episodes':len(ids),'measured':len(measured),'runner_failures':len(ids)-len(measured),
             'reviewed':len(selected),'unreviewed':len(measured)-len(selected),'unknown':len(selected)-len(known),
             'accuracy':sum(r['correct'] for r in known)/len(known) if known else None,
-            'accuracy_n':len(known),'answerable_accuracy':sum(r['correct'] for r in answerable)/len(answerable) if answerable else None,
+            'accuracy_n':len(known),'content_accuracy':sum(r['content_correct'] for r in content)/len(content) if content else None,
+            'content_accuracy_n':len(content),'content_unreviewed':len(selected)-len(content),'answerable_accuracy':sum(r['correct'] for r in answerable)/len(answerable) if answerable else None,
             'answerable_accuracy_n':len(answerable),'reviewed_assertions':sum(r['assertions'] for r in selected),
             'unsupported_assertions':sum(r['unsupported'] for r in selected),'uncertain_assertions':sum(r['uncertain'] for r in selected)}
     return {'freeze_hash':digest(freeze),'reviews_hash':digest(reviews),'provenance':reviews['provenance'],
         'judgment':'source-based analyst attestation, not independent human adjudication or automated entailment',
         'summary':aggregate(set(rows)),
-        'arms':{arm:aggregate({name for name in rows if '-'+arm+'-' in name}) for arm in ('raw','enriched')},
+        'arms':{arm:aggregate({name for name in rows if len(name.split('-',3))==4 and name.split('-',3)[2]==arm}) for arm in ('raw','enriched')},
         'monetary_cost':None,'monetary_cost_status':'unknown unless provider separately reports it'}

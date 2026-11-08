@@ -267,7 +267,8 @@ merge2b322f24f3f84e0554ffc7bae7561ae909c4462f, after exact-head
 [full42418905512](https://github.com/Stell0/ns8-czero/actions/runs/42418905512),
 independent native/artifact grading and full promotion verification. The optional
 screenshot-publication job failed; required browser/native suites passed. Its
-separate main run was still running at M6 inspection. Core0.45 remains unpublished.
+separate main run42423675709 subsequently completed successfully. Core0.45
+remains unpublished; no publication or deployment follows from this observation.
 
 [M6](docs/knowledge-compilation/M6.md) adds controlled compiler-backed A/B
 measurement, independent answer-audit bindings and operational rollout gates.
@@ -275,6 +276,12 @@ Existing source-only builders, frozen private labels, paired SQL snapshots and
 isolated read-only model episodes remain authoritative. Actual hosted ChatGPT
 scheduling and retrieval quality are not inferred from a prompt, package, mock
 or interactive connection. No production changes or schedules are authorized.
+
+[Measured M6 results](docs/knowledge-compilation/RESULTS.md) record the completed
+synthetic comparison with failed quality gates, authorized local-copy maintenance
+acceptance and pending external private-evaluation approval. No retrieval gain or
+production rollout is accepted. Exact delivery-source full/native proof remains
+required for the focused tooling PR.
 
 ## Knowledge compilation — M4 producer candidate
 

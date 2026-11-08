@@ -78,7 +78,12 @@ Reviews bind `freeze_hash`, nonempty analyst `provenance`,
 `independent_of_producer: true`, and an `episodes` list. Each entry supplies the
 actual episode directory name, canonical `episode_hash`,
 `all_assertions_reviewed: true`, `correct` (true/false/null), nonempty `rationale`
-and `assertions`. Each assertion contains its verbatim answer/part `text`,
+and `assertions`. `correct` judges the complete response, including citation and
+literal applicability fields. An optional `content_correct` judgment separately
+records source-based answer correctness without treating a citation-field or
+product-tag formatting failure as a different technical fact. Missing prose
+judgments remain unreviewed; neither rate replaces the frozen quality gates.
+Each assertion contains its verbatim answer/part `text`,
 `verdict` (supported/unsupported/uncertain), and actually observed original
 `chunk_ids`. Supported assertions need original evidence; review the entire
 narrative as well as structured parts. The attestation is an analyst's semantic
