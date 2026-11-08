@@ -30,11 +30,14 @@ external compiler delivery and document BM25; their disabled defaults remain.
 The application has 45 Python modules (6,477 lines), Core 110 including
 migrations (17,870 lines), and external samples 45 (6,089 lines).
 An AST scan of all tracked Python files found no identical function definitions
-of ten or more lines. Near-duplication still needs behavioral comparison.
+of ten or more lines. A repository-wide reference scan also found no private
+top-level Python function mentioned only at its definition; this scan is a
+candidate finder, not proof that dynamic interfaces can be deleted.
+Near-duplication still needs behavioral comparison.
 
 ## Prioritized findings
 
-### R1 — P2: transport initialization turns cancellation into an ordinary error
+### R1 — P2: transport initialization hides process-control exceptions
 
 - Location: `samples/ingestion/src/c0_ingest/client.py`, `SDKTransport.__init__`.
 - Evidence: its `except BaseException` cleans up the portal but then wraps
@@ -173,8 +176,9 @@ environments and mutable test databases on one disposable PostgreSQL server.
 | Maintained documentation | 411 local links passed; review report checked separately |
 | Python changed-file syntax and diff whitespace | Passed |
 | Undefined/redefined Python names (F821/F811) | Passed across runtime, samples and scripts |
-| Broad Python/PostgreSQL/packaging baseline and candidate | Running; final results pending |
-| Python app/worker browser suite | Running with documented Ubuntu 24 compatibility override |
+| Broad original-runtime baseline, including six new regression cases | 3,194 passed, 14 failed, zero skips (3,035.34 seconds) |
+| Broad candidate Python/PostgreSQL/packaging suite | 3,198 passed, 10 failed, zero skips (2,835.09 seconds); four failures fixed, no new failures |
+| Python app/worker browser suite | 43 passed in 728.83 seconds with documented Ubuntu 24 compatibility override |
 | Debian/Rocky native, image/license/privacy/scans and released-consumer acceptance | Pending upstream full CI; no local substitute claimed |
 
 An initial run without correct prerequisites is retained separately: 55 failed,
@@ -201,3 +205,37 @@ recommendations or verification work. The 31 retained static candidates are not
 31 proven dead APIs. No P0/P1 finding or performance improvement is claimed.
 The repository-wide structural review does not certify every line, production
 upgrade or externally hosted assistant scheduling workflow.
+
+All ten shared failures end in `ExtractionError: ocr_unavailable` because
+`/usr/bin/tesseract` is absent. They comprise eight OCR/provenance/resource cases
+and both wheel/source clean-install probes. Failure identities were compared
+automatically: the candidate fixes the four new lifecycle regression failures,
+with no additional failed cases. Neither full local run is described as passing.
+The first Python browser attempt, made before Chromium finished installing,
+retains 16 passes and 27 missing-executable setup errors; the corrected full
+43-case run passes without exclusions.
+
+
+## Final review and remaining acceptance
+
+The complete code diff was reviewed again: shutdown resource order is preserved,
+ordinary connection errors remain sanitized, process-control exceptions propagate,
+and no new wrapper, configuration option or dependency was introduced. Core,
+locks, migrations, public endpoints, tool schemas, roles and scopes are unchanged.
+Managed-file comparison baselines remain untouched; no new infrastructure needs
+registration. Actual `ns8-ui-lib` table/search components use `v-debounce`, and
+its animation component imports `lottie-web-vue`; those dependencies are retained.
+
+The frozen initial PR candidate is `d062fa0e265895816625c5e7e0f106979ee32b07`.
+[PR 109](https://github.com/Stell0/ns8-czero/pull/109) carries the isolated change;
+[full run 42461260572](https://github.com/Stell0/ns8-czero/actions/runs/42461260572)
+retains that source's checks. At closeout, fast feedback, producer images, all
+five security scan jobs, image identities and the released-Core image check pass;
+full Python and Debian/Rocky native jobs are still running. This evidence update
+changes only the report and must receive its own current-head required checks.
+No full native acceptance, merge, Core/module release or deployment is claimed.
+
+Private raw logs and reproducible virtual environments are retained under the
+isolated worktrees' ignored `.cache/audit` directories. Only the disposable
+containers created for this review are cleaned up after local tests finish.
+The original checkout and previously retained worktrees/evidence remain intact.
