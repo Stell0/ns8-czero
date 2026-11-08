@@ -1,5 +1,7 @@
 # Vue website implementation contract
 
+This document records the Vue website delivery and its frozen acceptance. Version statements describe that checkpoint; use the active app/Core manifests and [PLAN](../PLAN.md) for current versions and installed identities. Current reader routes and behavior are summarized in [the user guide](user-guide.md).
+
 The accepted plan replaces the reference website with Vue 3, TypeScript and
 Nebula. Native NS8 settings remain Vue 2/Carbon. Implementation starts from
 original C0 main `b317619322ab0a59af038186db8e55e749f94ff6`, isolated on

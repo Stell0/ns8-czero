@@ -93,13 +93,7 @@ The read-only `/projects` reader exposes configuration/topics, queue, monitoring
 current connector coverage, pinned reports and bounded errors, with literal
 rendering and access-loss/generation guards. M0–M7 exact full/native acceptance
 passes; [readiness](WIKIPLANT_MIGRATION_READINESS.md) records actual evidence.
-The default Core0.34/app0.53 build pins immutable `core-v0.34.0` with its exact
-source revision in `app/uv.lock`; compatible updates stay within0.34.x and require
-review. Explicit producer development remains available through the established
-local override. Installed wheel/archive and disposable native acceptance pass;
-the final ready PR requires its own complete consumer/full gate. Older Core
-installations fail project operations with `project_core_upgrade_required`.
-No reference-instance deployment or real migration is performed.
+Project services are available in compatible released Core. The original project delivery selected Core0.34/app0.53; this is historical evidence, not the current dependency instruction. Use the active [app manifest](../../app/pyproject.toml) and [consumer lock](../../app/uv.lock). Older Core installations fail unsupported project operations with `project_core_upgrade_required`. Publication, consumer adoption and actual host/deployment acceptance remain separate. The separately accepted backend deployment is recorded in [PLAN](../../PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor). Actual project research, unattended host execution and real WikiPlant migration remain separate, unverified work.
 
 See [durable workflow contracts](WORKFLOWS.md) for queue admission, leases,
 fencing, day reservations, invocation uncertainty and source-sync recovery.
