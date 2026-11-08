@@ -2,7 +2,6 @@
 """Explicit private-job CLI; no scheduler, migration or interactive auth fallback."""
 import argparse
 from contextlib import ExitStack
-from dataclasses import asdict
 import json
 from pathlib import Path
 import sys

@@ -2,7 +2,6 @@
 """C0 publication/readback is separate from source collection and reasoning."""
 from dataclasses import dataclass
 import json
-from pathlib import Path
 from time import sleep,perf_counter
 
 import httpx2

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Typed Wiki/claim/graph REST adapters for shared Core operations."""
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import Depends, HTTPException

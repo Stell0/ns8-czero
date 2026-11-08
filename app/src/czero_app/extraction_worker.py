@@ -1,5 +1,5 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
-"""Explicit producer-only extraction runner; not installed into the NS8 timer."""
+"""Bounded extraction pool runner invoked by the native NS8 timer."""
 import json
 import os
 import sys

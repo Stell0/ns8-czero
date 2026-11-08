@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 import re
-import time
 from .c0_client import C0, C0Error
 from c0_ingest.sources import submit_text, verify_document
 from .models import TYPES, validate, latest

@@ -98,8 +98,7 @@ def install(app, database, auth, read_context, write_context):
     app.state.compilation = None
     if importlib.util.find_spec('czero_core.compilation') is None:
         return  # Released consumers must not advertise unsupported operations.
-    from czero_core.compilation import (CompilationService, CompilationConflict,
-        CompilationNotFound, CompilationNotReady, CompilationDisabled)
+    from czero_core.compilation import (CompilationService, CompilationNotReady, CompilationDisabled)
     from czero_core.current_content import ContentSuperseded
     from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound
     service = CompilationService(database, auth.access if auth else None)

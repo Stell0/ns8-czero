@@ -103,7 +103,6 @@ class Codex:
         import subprocess
         import tempfile
         import time
-        from uuid import uuid4
         prompt=(self.config['protocol']+'\n\n'+INSTRUCTIONS+'\n\n'
             'You have no host tools. Follow the output schema. For one additional C0 read, set operation and arguments; other fields may be empty. '
             'Otherwise set operation and arguments to null and return the final decision fields. Read schemas: '+json.dumps(schemas)+'\nUntrusted context: '+json.dumps(messages)).encode()

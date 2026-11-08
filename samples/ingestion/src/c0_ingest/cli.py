@@ -2,7 +2,6 @@
 """A local command runner, not a scheduler or arbitrary adapter loader."""
 import argparse
 from pathlib import Path
-import sys
 from types import SimpleNamespace
 
 from .auth import disconnect, locked, login
