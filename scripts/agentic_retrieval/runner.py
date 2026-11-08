@@ -3,7 +3,6 @@
 """Real read-only C0 episodes composed with the existing isolated model driver."""
 import json
 from pathlib import Path
-import time
 
 from c0_ingest.state import atomic
 from evaluation.codex_driver import evaluate, RunnerFailure, FINAL_SCHEMA

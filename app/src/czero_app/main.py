@@ -73,21 +73,19 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
 
     @asynccontextmanager
     async def lifespan(application):
-        try:
-            async with AsyncExitStack() as stack:
-                from anyio import to_thread
-                from czero_core.cimd import CimdPolicyService
-                await to_thread.run_sync(CimdPolicyService(database).sync_policy, bool(cimd_enabled))
-                cimd = getattr(instance_app.state, 'cimd', None)
-                if cimd is not None:
-                    stack.push_async_callback(cimd.fetcher.aclose)
-                if mcp_child is not None:
-                    await stack.enter_async_context(mcp_child.router.lifespan_context(mcp_child))
-                yield
-        finally:
+        async with AsyncExitStack() as stack:
+            stack.callback(database.close)
             if auth is not None:
-                auth.oidc.close()
-            database.close()
+                stack.callback(auth.oidc.close)
+            from anyio import to_thread
+            from czero_core.cimd import CimdPolicyService
+            await to_thread.run_sync(CimdPolicyService(database).sync_policy, bool(cimd_enabled))
+            cimd = getattr(instance_app.state, 'cimd', None)
+            if cimd is not None:
+                stack.push_async_callback(cimd.fetcher.aclose)
+            if mcp_child is not None:
+                await stack.enter_async_context(mcp_child.router.lifespan_context(mcp_child))
+            yield
 
     instance_app = FastAPI(
         title="C0 API",

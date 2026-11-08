@@ -5,7 +5,6 @@ import csv
 import io
 from pathlib import Path
 import re
-import shutil
 from urllib.parse import quote
 import uuid
 from .config import window

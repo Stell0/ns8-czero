@@ -1,7 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Bounded, one-hop discovery. Seeds never establish affiliation or activity."""
 import csv
-from pathlib import Path
 from .state import digest
 
 def seeds(root, settings):

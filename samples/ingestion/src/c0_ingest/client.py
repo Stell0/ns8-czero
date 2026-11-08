@@ -41,7 +41,7 @@ class SDKTransport:
             self.client = self.context.__enter__()
         except BaseException as exc:
             self.portal_context.__exit__(None, None, None)
-            if isinstance(exc, C0Error):
+            if not isinstance(exc, Exception) or isinstance(exc, C0Error):
                 raise
             raise C0Error('MCP connection failed; inspect authentication before retrying') from None
 

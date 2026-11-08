@@ -1,7 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Deterministic, bounded documentation collection; fetched instructions are data."""
 import fnmatch
-import json
 from pathlib import Path
 import re
 import time
