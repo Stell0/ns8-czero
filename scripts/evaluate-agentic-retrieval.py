@@ -105,11 +105,13 @@ async def loop(args):
         'packages':{n:importlib.metadata.version(n) for n in ('czero-core','czero-app','mcp','c0-ingestion-samples')},
         'boundary':'Disposable authenticated C0; experimental eager MCP adapter, no native discovery claim.',
         'prepared_input':str(args.prepared.resolve()) if args.prepared else None,
-        'exploratory':args.exploratory}
+        'exploratory':args.exploratory,'publisher':getattr(args,'publisher','semantic-layer')}
     if args.resume:
         if json.loads((output/'protocol.json').read_text())!=protocol:raise ValueError('resume_protocol_or_code_changed')
         if json.loads((output/'result.json').read_text())['status'] not in ('stopped_checkpoint','prepared_requires_audit'):raise ValueError('terminal_experiment_cannot_resume')
     else:atomic(output/'protocol.json',protocol)
+    if protocol['publisher']=='compiler' and (config['mode']!='benchmark' or args.exploratory):
+        raise ValueError('compiler_requires_frozen_reviewed_benchmark')
     budget=Budget(output/'ledger.json',config)
     sources=json.loads(Path(args.sources).read_text())
     if args.resume and json.loads((output/'input-hash.json').read_text())!={'sha256':digest(sources)}:raise ValueError('resume_sources_changed')
@@ -149,17 +151,30 @@ async def loop(args):
             if (output/'freeze.json').exists() and json.loads((output/'freeze.json').read_text())!=freeze:
                 raise ValueError('frozen_labels_or_protocol_changed')
             atomic(output/'questions.json',questions);atomic(output/'freeze.json',freeze)
+            compiler_review=None
+            if protocol['publisher']=='compiler':
+                from agentic_retrieval.compiler import review_plan
+                compiler_review=json.loads((output/'compilation-review.json').read_text())
+                review_plan(compiler_review,corpus,plan)
             forbidden=[x for q in questions for x in (q['id'],q['text'])]
             for round_number in range(config['rounds'] if config['mode']=='optimize' and not args.exploratory else 1):
                 validate_plan(plan,corpus,forbidden)
                 atomic(output/f'layer-{round_number}.json',plan)
                 raw=await measure('raw',a,corpus,questions,config,output,budget,'development',round_number)
                 state=output/'layer-state.json'
-                dry=await maintain(b.api_call,b.space,corpus,plan,state,forbidden=forbidden)
-                atomic(output/f'layer-{round_number}-dry-run.json',dry)
-                applied=await maintain(b.api_call,b.space,corpus,plan,state,apply=True,max_operations=120,forbidden=forbidden)
+                if protocol['publisher']=='compiler':
+                    from agentic_retrieval.compiler import publish
+                    dry=await publish(b,corpus,plan,state,compiler_review,forbidden=forbidden)
+                    atomic(output/f'layer-{round_number}-dry-run.json',dry)
+                    applied=await publish(b,corpus,plan,state,compiler_review,apply=True,forbidden=forbidden)
+                    verified=await publish(b,corpus,plan,state,compiler_review,apply=True,forbidden=forbidden)
+                else:
+                    dry=await maintain(b.api_call,b.space,corpus,plan,state,forbidden=forbidden)
+                    atomic(output/f'layer-{round_number}-dry-run.json',dry)
+                    applied=await maintain(b.api_call,b.space,corpus,plan,state,apply=True,max_operations=120,forbidden=forbidden)
+                    verified=await verify(b.api_call,b.space,corpus,plan,state)
                 atomic(output/f'layer-{round_number}-receipt.json',applied)
-                atomic(output/f'layer-{round_number}-verification.json',await verify(b.api_call,b.space,corpus,plan,state))
+                atomic(output/f'layer-{round_number}-verification.json',verified)
                 measured=await compare(a,b,corpus,questions,config,output,budget,'development',round_number,raw=raw)
                 result['rounds'].append({'round':round_number,'plan_hash':digest(plan),'summary':measured['summary'],'unmet':measured['unmet']})
                 atomic(output/'result.json',result)
@@ -199,6 +214,8 @@ def main():
     os.umask(0o077)
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='command',required=True)
     run=sub.add_parser('loop',help='Disposable paired-source comparison with a bounded improvement loop')
+    run.add_argument('--publisher',choices=('semantic-layer','compiler'),default='semantic-layer',
+        help='Publish reviewed construction through the existing semantic profile or production compiler in the disposable fixture')
     run.add_argument('--prepared',type=Path,help='Reuse frozen questions/partitions and the source-only plan; require identical bodies/metadata and audit new bindings')
     run.add_argument('--exploratory',action='store_true',help='Run development with provisional labels, without an audit; never run held-out partitions or claim acceptance')
     run.add_argument('--prepare-only',action='store_true',help='Freeze model proposals and partitions for private source-based analyst audit')
@@ -221,6 +238,8 @@ def main():
     for field in ('corpus','proposed','reviewed','audit','output'):labels.add_argument('--'+field,required=True,type=Path)
     labels.add_argument('--plan',type=Path,help='Optional semantic plan; question-only freezes bind JSON null instead')
     check=sub.add_parser('validate');check.add_argument('--corpus',required=True,type=Path);check.add_argument('--questions',type=Path);check.add_argument('--plan',type=Path)
+    audit=sub.add_parser('answer-audit',help='Bind source-based analyst judgments to exact frozen episodes; no model or publication')
+    audit.add_argument('output',type=Path);audit.add_argument('--reviews',required=True,type=Path)
     status=sub.add_parser('status');status.add_argument('output',type=Path)
     cleanup=sub.add_parser('cleanup',help='Remove only ownership-proven retained disposable databases')
     cleanup.add_argument('output',type=Path)
@@ -228,6 +247,11 @@ def main():
     if args.command=='loop':
         args.output.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
         with locked(args.output.parent/('.'+args.output.name+'.lock')):return asyncio.run(loop(args))
+    if args.command=='answer-audit':
+        from agentic_retrieval.audit import answer_audit
+        report=answer_audit(args.output,json.loads(args.reviews.read_text()))
+        atomic(args.output/'answer-audit.json',report)
+        print(json.dumps(report['summary']));return 0
     if args.command=='cleanup':
         cleanup_pair(os.environ['CZERO_EVAL_DATABASE_URL'],args.output/'database-binding.json');print('Removed owned disposable databases');return 0
     if args.command=='status':

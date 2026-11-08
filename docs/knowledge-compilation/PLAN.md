@@ -1,6 +1,6 @@
 # SQL-backed knowledge compilation
 
-Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91); M4 accepted in [PR95](https://github.com/Stell0/ns8-czero/pull/95); M5 implementation candidate. M6 is not implemented.**
+Status: **M0 accepted in [PR80](https://github.com/Stell0/ns8-czero/pull/80); M1 accepted in [PR83](https://github.com/Stell0/ns8-czero/pull/83); M2 accepted in [PR89](https://github.com/Stell0/ns8-czero/pull/89); M3 accepted in [PR91](https://github.com/Stell0/ns8-czero/pull/91); M4 accepted in [PR95](https://github.com/Stell0/ns8-czero/pull/95); M5 accepted in [PR105](https://github.com/Stell0/ns8-czero/pull/105). M6 implementation and measurement in progress.**
 
 [M1 contracts, interfaces and executed acceptance](M1.md) refine the additive
 coordination milestone against its accepted predecessor. [M2](M2.md) records the
@@ -517,6 +517,8 @@ Refined implementation and executed acceptance: [M5](M5.md).
 
 ### M6 — quality and controlled acceptance
 
+Refined contract and measured acceptance: [M6](M6.md). Operational gates: [operations](OPERATIONS.md).
+
 - Dependency: accepted M5 and separately authorized private mutation namespace/provider.
 - Scope/contracts: complete synthetic matrix, frozen A/B retrieval study, authorized
   representative documentation dry-run and disposable compilation/resumption,
@@ -537,15 +539,9 @@ Refined implementation and executed acceptance: [M5](M5.md).
 
 ## Next Codex prompt
 
-> Implement M1 only from the accepted M0 PR and current original C0 main. Read
-> docs/knowledge-compilation/PLAN.md, CONTRACTS.md and BASELINE.md, AGENTS.md and
-> the Core/feature skills. Preserve the frozen M0 source/fixtures and all existing
-> worktrees. Refine M1's six-table schema and strict operation contracts before
-> runtime edits; implement disabled-by-default policy, metadata-only deduplicated
-> proposals, fenced runs/budgets/checkpoints, status and dependency identities in
-> reusable Core with thin REST/MCP adapters. Add real isolated PostgreSQL race,
-> authority, replay, recovery, query-plan, migration and packaging tests. Run base
-> and candidate checks plus selected full/native acceptance, review the complete
-> diff and open one upstream M1 PR. Keep released Core publication/adoption gates
-> separate; do not publish, deploy, enable learning, mutate production knowledge,
-> install schedules or start M2.
+> Complete the open M6 acceptance gates recorded in M6.md from latest original
+> main. Preserve frozen studies, labels, failures, code hashes and all worktrees.
+> Do not retune from held-out results, substitute model identities or claim
+> unavailable private/host acceptance. Keep Core publication, consumer adoption,
+> production learning, knowledge mutation, deployment and schedules separately
+> authorized. Review the operational gates before proposing any rollout.

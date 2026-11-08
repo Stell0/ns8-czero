@@ -201,7 +201,14 @@ current source/page guards and shared budgets; never reopen a terminal task to
 account for inference. Detect that alternative in actual checkpoint schemas.
 Keep the released Core0.44 consumer lock and registered app identity. Generated
 prompts/packages install no tasks. No Core publication, deployment, production
-learning/knowledge/schedules or M6 is implied by M5 implementation.
+learning/knowledge/schedules is implied by M5 implementation. M5 exact-source
+full/native acceptance passes in PR105 (477331a/full42418905512).
+[M6](docs/knowledge-compilation/M6.md) measures reviewed compiler publication and
+matched retrieval only in owned disposable SQL fixtures. Keep labels/answers out
+of construction, bind independent answer audits to frozen episodes, preserve
+failed thresholds and unknown judgments, and require separate authorization to
+copy private originals. No source/knowledge/policy/schedule production writes,
+Core publication or deployment follow from benchmark acceptance.
 
 
 Source documents and Wiki pages retain only their current complete content generation. This latest-only contract replaces the previous content-history guarantee. Keep stable logical IDs, monotonic concurrency counters, current hashes/provenance and payload-free retry/change identities. Stage replacements privately and publish whole documents atomically; delete superseded bodies, originals, derivatives and indirect receipt copies. Exact expired evidence returns authorized `content_superseded` (410), never rebound text. Preserve authored knowledge and mark invalidated evidence stale. See [migration and preflight](docs/latest-only-migration.md).

@@ -244,7 +244,7 @@ report exclusions. No benchmark quality is claimed before all cells validate.
 The original importer is not restarted; no external recurring schedule or Wiki
 publication is added.
 
-## Knowledge compilation — M5 implementation candidate
+## Knowledge compilation — M6 controlled acceptance candidate
 
 M4 is accepted in [PR95](https://github.com/Stell0/ns8-czero/pull/95), regular
 merge52e84a368ec6371d3eee8f546d9b3f22f53ca1d5. Its exact-head full42392187969
@@ -262,9 +262,26 @@ same authorization/fences/budgets; schema0036 and all six tables remain unchange
 App0.63 retains the immutable released Core0.44 consumer lock. Plugin1.8 retains
 its five skills and registered app identity. Core publication/adoption, deployment,
 policy enablement, production knowledge and schedule activation remain separate.
-M6 is not started. Exact final tests, native acceptance and one focused PR remain
-required; actual hosted ChatGPT scheduling and quality are not inferred from a
-prompt, package, mock or successful interactive connection.
+M5 is accepted in [PR105](https://github.com/Stell0/ns8-czero/pull/105), regular
+merge2b322f24f3f84e0554ffc7bae7561ae909c4462f, after exact-head
+[full42418905512](https://github.com/Stell0/ns8-czero/actions/runs/42418905512),
+independent native/artifact grading and full promotion verification. The optional
+screenshot-publication job failed; required browser/native suites passed. Its
+separate main run42423675709 subsequently completed successfully. Core0.45
+remains unpublished; no publication or deployment follows from this observation.
+
+[M6](docs/knowledge-compilation/M6.md) adds controlled compiler-backed A/B
+measurement, independent answer-audit bindings and operational rollout gates.
+Existing source-only builders, frozen private labels, paired SQL snapshots and
+isolated read-only model episodes remain authoritative. Actual hosted ChatGPT
+scheduling and retrieval quality are not inferred from a prompt, package, mock
+or interactive connection. No production changes or schedules are authorized.
+
+[Measured M6 results](docs/knowledge-compilation/RESULTS.md) record the completed
+synthetic comparison with failed quality gates, authorized local-copy maintenance
+acceptance and pending external private-evaluation approval. No retrieval gain or
+production rollout is accepted. Exact delivery-source full/native proof remains
+required for the focused tooling PR.
 
 ## Knowledge compilation — M4 producer candidate
 
@@ -287,7 +304,7 @@ connection; optional feedback guidance is filtered by actual capabilities.
 App0.61 retains the released Core0.42 consumer lock inherited from PR94. No Core library
 publication/adoption, deployment, policy activation, production knowledge or
 schedule mutation is included. This frozen M4 record predates the separately
-authorized M5 work above; M6 remains unstarted. Exact-source full/native
+authorized M5/M6 work above; retain this historical candidate record. Exact-source full/native
 acceptance and one focused PR remain required for this producer candidate.
 
 
