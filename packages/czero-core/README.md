@@ -23,27 +23,15 @@ scripts outside this package. Optional providers do not determine authorization;
 text search remains independent of inference. Generative operations stay outside
 the runtime.
 
-## Compilation coordination (0.39.0 producer)
+## Knowledge compilation
 
-Schema 0033 adds six empty, space-scoped coordination tables. The trusted
-`czero_core.compilation.CompilationService` reads disabled defaults without
-creating rows. Select an exact space with `in_space(space_id)` before every
-operation. Admin policy configuration is independent of research projects;
-Editor proposals and checkpoints require explicitly enabled policy and actual
-Read+Write authority. API keys cannot configure policy.
+`CompilationService` supplies disabled-by-default, space-scoped policy, metadata-only proposals, exact original bindings, dependencies, actor-bound run fences and persisted budgets. `CompilationPlans` composes existing knowledge operations for bounded source-backed validation, atomic publication and fresh readback. Discovery and semantic-review services coordinate incremental assessments. These services never call a model or install a scheduler; external agents supply evidence analysis and plans.
 
-The coordinator validates current original source/chunk and Wiki revision
-identities, deduplicates metadata-only proposals, tracks observed dependencies,
-and persists actor-bound run fences, retry history and shared daily/weekly
-budget reservations. A database restart/restore invalidates captured leases.
-Status reads compute staleness without writing. Missing external usage retains
-reserved debits and reports unknown usage. It does not run a model, sweep a
-corpus, schedule work, publish knowledge or mark generated facts verified.
+Admin policy configuration requires current authority and an actual authorization reference when enabling learning. Editor operations require current selected-space authority and Write scope. Queue-only and held plans need exact-plan approval. Automatic-supported publication is limited to eligible managed operations in the approved profile. Authored changes, uncertain/contrary content and duplicate candidates remain reviewable. Validation is structural, not proof of truth; apply returns pending verification.
 
-See the [M1 contracts and recovery guide](https://github.com/Stell0/ns8-czero/blob/main/docs/knowledge-compilation/M1.md)
-for ten REST/MCP adapters and bounded inputs. M2 publication is intentionally
-unavailable. Producer acceptance does not publish this Core version or adopt it
-in the app's released dependency/lock; old consumers omit unsupported tools.
+Schema0033 introduced six coordination tables; later migrations add current-publication discovery and assessment indexing. The app's released dependency can be behind this producer tree. Core0.45 adds the alternative selected-page weekly inference reservation; callers must discover actual server support. Missing external usage retains reserved debits. Database recovery invalidates captured leases.
+
+Search remains read-only. The external `compilation_client.feedback_after_answer` helper can separately queue one bounded proposal when enabled feedback policy and actual Read+Write permit it; it never publishes. See the [LLM Wiki guide](../../docs/llm-wiki.md), [compiler contracts](../../docs/knowledge-compilation/CONTRACTS.md), [operations](../../docs/knowledge-compilation/OPERATIONS.md) and [quality results](../../docs/knowledge-compilation/RESULTS.md).
 
 ## Private extraction units (0.37.0)
 
@@ -70,7 +58,7 @@ Library publication and application tag/lock adoption have separate acceptance
 gates. Check the repository roadmap for immutable artifacts and actual consumer
 image/native evidence before adoption; a producer test is not consumer proof.
 
-## Document BM25 (0.44 producer)
+## Document BM25 (introduced in 0.44)
 
 Ordinary source and Wiki search ranks complete eligible current documents with
 BM25 and English/Italian stem variants. Numbers and identifiers in prose are

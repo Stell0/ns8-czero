@@ -1,312 +1,155 @@
-# C0 — A shared second brain for people and AI
+# C0 — Shared knowledge for people and AI agents
 
-> Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](docs/latest-only-migration.md).
+**Keep knowledge across conversations. Find its evidence. Use your preferred AI.**
 
-**Keep what you learn. Find it again. Let your AI assistants build on it.**
+C0 (CZero) is a self-hosted knowledge service and **Agentic RAG platform**. It gives people and external AI agents a shared Wiki, complete source documents, structured records and a knowledge graph. Agents can search, read evidence and maintain knowledge through authorized APIs and tools.
 
-C0 (Czero) is a self-hosted knowledge service: a Wiki, original sources and a structured knowledge graph that people and AI assistants can use together. It stores knowledge independently of a chat or model, makes it searchable through a browser and APIs, and controls who can read, write or manage it.
+**Bring Your Own Agent (BYOA):** C0 stores and manages knowledge. You bring the conversational AI engine and model. C0 does not bundle or host a general-purpose conversational LLM or an autonomous agent runtime.
 
-C0 takes the idea behind [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)—turn sources and useful answers into lasting, connected knowledge—and develops it into a shared application. Indexed retrieval, multiple users, protected spaces and an OAuth-protected MCP server provide the infrastructure around that idea. This is an independent implementation of the pattern.
+Use C0 for team procedures, support knowledge, ongoing research or project knowledge that must survive a chat or model change. You can also fork it to build an application on its reusable storage, permissions, APIs and delivery tools.
 
-You can use C0 as your team's second brain, or fork it as the foundation of your own AI application. Think of it as **a “LAMP for AI” starting point**: reusable storage, permissions, APIs, skills and deployment tooling, with your chosen assistant doing the reasoning.
-
-[Use C0](#use-c0) · [Connect an assistant](#connect-your-ai-assistant) · [How it works](#how-c0-works) · [Build your own application](#fork-c0-and-build-your-own-application) · [Roadmap](PLAN.md)
-
-The reference website uses Vue 3 and Nebula, with English/Italian, responsive
-layouts and light/dark/system themes. Home, Wiki, Sources, Projects and Explore
-focus on reading knowledge. Authorized assistants maintain Wiki and structured
-knowledge; the website retains source upload/replacement/recovery, Account and
-Administration. Native NS8 settings remain Vue 2/Carbon. See the
-[website implementation and acceptance](docs/vue-website.md).
+[Quick start](#use-c0) · [Connect an agent](#connect-your-ai-assistant) · [LLM Wiki guide](docs/llm-wiki.md) · [Documentation](docs/index.md) · [Roadmap](PLAN.md#roadmap)
 
 ## What can C0 do for you?
 
-| You want to… | C0 gives you… |
+| Capability | What is implemented |
 | --- | --- |
-| Stop explaining the same background in every chat | A durable Wiki and source library that different assistants can read and maintain |
-| Find the right information without searching a folder by hand | Indexed text search, linked knowledge, and optional semantic retrieval and reranking |
-| Know where an answer came from | Current original sources, extracted passages and generation-bound citations |
-| Share knowledge with a team | Verified accounts, Reader/Editor/Admin roles, Shared and protected spaces |
-| Keep AI edits accountable | Expected revisions, replay protection on supported mutations, current generations, payload-free retries and readback |
-| Connect your existing assistant | An MCP server, instance-specific skills and a generated ChatGPT plugin package |
-| Build a specialized AI application | A reusable Python Core, reference web application, REST/MCP interfaces, tests and NS8 deployment machinery |
+| Persistent knowledge | Wiki pages, source documents, schema-validated records, tags and explicit spaces |
+| Original evidence | Complete extracted documents, retained originals when selected, exact passages, hashes and generation-bound citations |
+| Retrieval | Document BM25 lexical ranking, exact structured filters, optional embeddings, hybrid ranking, relevance scoring and bounded graph context |
+| Knowledge connections | Entities, aliases, sourced claims, relationships, applicability and revision-specific verification annotations |
+| Ingestion | Text/Markdown through MCP; TXT, Markdown, PDF and DOCX file uploads; reusable external collectors for websites and other sources |
+| Controlled processing | Background extraction/indexing, progress and recovery; opt-in queued extraction, local OCR and exact section/context reads |
+| Shared access | Verified sign-in, Reader/Editor/Admin roles, Shared and protected spaces, explicit OAuth scopes and personal API keys |
+| Agent tools | REST, OAuth-protected MCP, instance-bound instructions and generated ChatGPT skill/plugin packages |
+| Wiki maintenance | External agents can make requested edits or use an enabled, bounded compiler workflow with proposals, validation and readback |
+| Research projects | Protected-space manifests, topic scope, monitoring/queue budgets, external workflow coordination and saved reports |
+| Browser reading | Wiki, Sources, Projects and Explore; English/Italian, responsive pages and light/dark/system themes |
+| Reusable base | Independently distributable Python Core, reference application, tests, fork-update tools and NethServer 8 packaging |
 
-[Published retrieval benchmarks](docs/retrieval-benchmark.md#published-results)
-compare the previous text search with Core 0.44 document BM25 on SciFact,
-NFCorpus and a private documentation corpus. SciFact reaches **0.6782
-nDCG@10**, **0.8073 Recall@10** and **2% empty results**. The report includes
-matched latency, hybrid results, methodology and limitations; it measures
-retrieval rather than generated-answer quality.
+Ordinary text search needs no model provider. Semantic retrieval requires a configured embedding service and a ready index. Optional scoring can rerank or filter candidates. See [retrieval behavior and measured results](docs/retrieval-benchmark.md); a ranking score does not establish that an answer is correct.
 
-For example, a support team can retain troubleshooting procedures and the evidence behind them. A researcher can connect findings across papers while retaining the original passages. A product team can keep decisions, systems and structured records in one place, then use different assistants against the same authorized knowledge.
+## Agentic RAG and Bring Your Own Agent (BYOA)
 
-The useful loop is **collect → connect → ask → improve**. Your assistant can research, summarize and propose or make authorized changes; C0 keeps the resulting current knowledge and evidence available for the next person or conversation.
+In Agentic RAG, the external agent decides what to retrieve, follows references, reads original context and combines the evidence into an answer. It can then make a separately authorized knowledge change. C0 supplies the persistent state and controlled operations for that work.
 
-For repeatable imports, start with the [ingestion samples](samples/ingestion/README.md):
-a full GitHub project/contributor/document pipeline and shared Python helpers for
-other sources. Public adapters and tests stay in Git; your instance `.env`, update
-scripts, OAuth credentials, datasets and receipts stay in an ignored private job.
+| C0 | External agent |
+| --- | --- |
+| Stores and organizes knowledge and evidence | Reasons, plans and talks with the user |
+| Extracts, indexes and retrieves content | Chooses tools and reads enough evidence |
+| Enforces current roles, spaces and scopes | Researches, synthesizes and assesses uncertainty |
+| Checks revisions, evidence identities and supported writes | Decides when to propose or make an authorized update |
+| Stores workflow state and maintenance outcomes | Runs recurring reasoning through its own scheduler or an external host |
 
-Queued document extraction follows the [M0 contracts and synthetic baseline](docs/ingestion-pipeline/CONTRACTS.md).
-M1 adds opt-in private staging; M2 adds PDF page recovery and complete publication.
-The [M3 producer implementation](docs/ingestion-pipeline/M3.md) adds a bounded native
-worker pool and resource/recovery checks, including indexed backup/restore evidence.
-The [M4 implementation](docs/ingestion-pipeline/M4.md) extends selective extraction and
-complete publication to DOCX, Markdown and text. The [M5 implementation](docs/ingestion-pipeline/M5.md)
-derives current section metadata and exact-offset chunks on explicitly queued
-publications.
-The [M6 implementation](docs/ingestion-pipeline/M6.md) adds explicit local-only OCR
-for unsupported PDF scan pages, with bounded execution and page provenance.
-The [M7 implementation](docs/ingestion-pipeline/M7.md) reuses checksummed outputs owned
-by current documents or unexpired work in the same space, with no separate body
-archive.
-The [M8 implementation](docs/ingestion-pipeline/M8.md) adds exact bounded outline,
-section/block, local-reference and context-bundle reads when supported by Core.
-Ordinary source imports continue
-through the existing extraction worker until the later rollout gates pass.
+```mermaid
+flowchart LR
+    User[Person] --> ChatGPT[ChatGPT]
+    User --> Codex[OpenAI Codex]
+    User --> Claude[Claude or another agent]
+    Custom[Custom agent and external scheduler] --> Gate
+    ChatGPT --> Gate
+    Codex --> Gate
+    Claude --> Gate
+    Gate[Authenticated REST or MCP] --> Access[Current role, space and scope checks]
+    Access --> Read[Search and read evidence]
+    Access --> Write[Authorized revision-safe changes]
+    Read --> Knowledge[(Shared C0 knowledge)]
+    Write --> Knowledge
+```
 
-The [M9 implementation](docs/ingestion-pipeline/M9.md) shows extraction progress in the
-reader and detailed recovery in Background Work. Full reindex is explicit and
-replaces exact citations only when the complete replacement publishes.
+ChatGPT, OpenAI Codex, Claude and custom agents use their own connection and instruction formats. Vendor MCP support and tested C0 compatibility are separate facts; see [connection guidance](docs/byoa.md).
 
-The [M10 implementation](docs/ingestion-pipeline/M10.md) adds reproducible extraction
-and selective-context comparisons plus disposable recovery and rollout guidance.
-Measurements, released-consumer acceptance and live deployment remain separate.
+C0 goes beyond a vector index of retrieved chunks. Complete documents remain readable, Wiki pages hold maintained explanations, and entities and sourced claims connect knowledge. Exact citations and current-content checks keep evidence identities explicit. Vectors are optional derivatives. Configured embedding or relevance services can process selected content internally; they do not turn C0 into a conversational AI engine.
 
-## Use C0
+## LLM Wiki
 
-### Use an existing instance
+C0 develops the [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): an external agent reads original sources and turns useful findings into connected, lasting knowledge. People can inspect the Wiki and evidence in the browser and ask an authorized agent to revise it.
 
-1. Open your organization's C0 HTTPS address and sign in with your own account.
-2. Choose Shared or a protected space you have access to.
-3. Read the Wiki, browse Sources or search for what you need.
-4. Ask an authorized assistant to maintain Wiki or structured knowledge. With Write access, add supported files through Sources, or ingest selected text through MCP.
-5. Read back saved changes and follow citations to the original evidence.
+A Wiki can start as a small topic collection in an ordinary space. A protected research project adds a manifest, approved topics, research budgets and report workflows when needed. There is no separate “Create LLM Wiki” wizard. Use [the complete LLM Wiki guide](docs/llm-wiki.md) for both setup paths.
 
-New verified users normally receive **Read** access to Shared. An administrator can grant **Write** or **Manage**, give access to protected spaces, or persistently block a user. Application approval, a person's permissions and disconnecting one connection are separate controls. See [Workspace access](docs/workspace-access.md).
+**Searching does not update the Wiki.** Reader access cannot publish knowledge or queue learning. With effective Write access and an explicitly enabled retrieval-feedback policy, a compatible agent may submit one bounded improvement proposal after answering. That proposal does not publish a page. Requested edits and compiler publication are separate operations. [Update triggers and safeguards](docs/llm-wiki.md#what-happens-after-a-search) explain the exact rules.
 
-Start with the [user guide](docs/user-guide.md), including the first-content walkthrough. You can use the browser without connecting an AI assistant.
-
-### Run your own instance
-
-C0 is packaged as a **NethServer 8 application**. Prepare an NS8 node, a compatible user domain/sign-in provider, and a hostname with trusted HTTPS. Install a tested C0 image, configure the hostname and owner, then open the instance's **Use with AI** page at `/agents`.
-
-Follow the [administrator guide](docs/administration.md). The [accepted runtime in PLAN](PLAN.md#accepted-runtime-and-promotion--24-october-2026) records the current tested candidate and its exact image identities. There is no stable NS8 release tag yet; choose a recorded candidate deliberately rather than treating a moving development tag as a release.
-
-A standard installation runs the application, PostgreSQL/pgvector and the extraction/indexing worker. Optional embeddings and scoring are configuration choices; ordinary text retrieval does not require an external model provider.
-
-The independently released [Core 0.37.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.37.0) includes bounded lexical recovery, introduced in 0.36.1, for questions
-that have no strict matches. Exact phrases/operators remain strict, and the API
-reports the actual lexical strategy. See [behavior and evaluation limits](docs/retrieval-benchmark.md).
-It also supplies queued extraction, structure, optional local OCR, current-owned
-reuse, selective context and progress/reindex services. The app 0.57 consumer
-selects its immutable 0.37.0 release tag and frozen lock
-and verifies that dependency in the image selected for native acceptance.
-Released-consumer full/native and merged-main publication acceptance pass; see
-[exact source and image identities](docs/ingestion-pipeline/M10.md#accepted-main-publication).
-The separately authorized dedicated update and manager restart now pass with
-app 0.57.0 / Core 0.37.0 / schema 0030, retaining content, settings, schedules and
-connections. See [installed image and live verification evidence](PLAN.md#ingestion-deployed-runtime-and-frozen-predecessor--4-november-2026).
-Extraction and OCR remain disabled. Model answer-quality acceptance remains open;
-this is not a default-on rollout or a stable NS8 release. The server supplies
-plugin 1.4.0; refresh a cached client plugin/catalog to expose the new tools while
-preserving its registered connection.
-
-For GitHub Actions and other automation, see [personal API keys](docs/api-keys.md)
-(app 0.58 and Core 0.38; acceptance and the installed baseline are tracked in PLAN).
-
-## Connect your AI assistant
-
-C0 exposes **Model Context Protocol (MCP)** at your instance's `/mcp` URL. It lets an assistant discover available operations, search and read knowledge, follow evidence and make permitted changes. The same Core services enforce authorization behind MCP, REST and the web application.
-
-Open `https://c0.example.org/agents` on your own instance. It provides the connection details and generated downloads bound to that hostname:
-
-- **A `.skill` archive** for the instance's knowledge workflow.
-- **A plugin `.zip`** that references your registered ChatGPT C0 app and includes setup, research, knowledge maintenance and protected-project discovery skills. Repeated daily/weekly project work uses a separate project-bound package; downloading either package does not install a scheduled task.
-- **The MCP URL** for clients with their own connector configuration.
-
-Installing instructions does not connect an account or grant access. Sign in through OAuth, review the requested permissions and complete any C0 application approval. Application approval and personal authorization are separate: administrators can approve and continue from the connection page, then authorize their own connection. Technical client approval alone does not connect an assistant. Read, Write and Manage scopes remain independent. Short access tokens renew through refresh; explicitly consented background connections use an inactivity deadline and can be disconnected or revoked.
-
-| Client | Connection route | C0-specific evidence |
-| --- | --- | --- |
-| ChatGPT | Custom MCP connection plus optional generated skill/plugin; [C0 setup guide](docs/chatgpt.md) and [packaged skills](docs/plugin.md) | Interactive OAuth read/write is verified. Packaged-skill web acceptance and unattended scheduled writes remain release gates. |
-| Codex | Registered public OAuth client and exact loopback callback; [Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp) | A dedicated OAuth connection, protected Wiki reading and an administrator-only read have been verified using the granted scopes. |
-| Claude / Claude Code | Connect to the same remote MCP endpoint using the client's OAuth configuration; [Claude connector guidance](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) | The client supports remote MCP; C0 end-to-end acceptance is still to be recorded. |
-| Grok | Custom MCP connector or an application using remote MCP tools; [Grok connector guidance](https://docs.x.ai/grok/connectors) | The client documents custom MCP; C0 end-to-end acceptance is still to be recorded. |
-
-The generated ChatGPT ZIP is a client-specific package, not a universal installer. Other clients use their own MCP, OAuth and skill formats. C0 requires administrator-approved clients and exact callbacks; do not assume automatic client registration will work in every client. See the [interface reference](docs/reference.md).
-
-After connecting, try a scoped request such as:
-
-> Use C0 to search Shared for the backup procedure. Read the relevant Wiki page and cite the original source passages. Make no changes.
-
-For maintenance:
-
-> In the protected Operations space, read the existing procedure and the selected new evidence. Update only the requested section, preserve authored text and current citations, mark expired evidence stale, then read back the saved revision.
-
-For bounded external knowledge compilation, see the [M5 design and acceptance](docs/knowledge-compilation/M5.md),
-[M6 measurement and operational gates](docs/knowledge-compilation/M6.md),
-and [independent runner](samples/ingestion/examples/compiler/README.md). Use with AI
-generates prompts for your selected space; packages and prompts do not activate
-learning or install schedules. Server capability and released-consumer acceptance
-remain distinct from producer source and host compatibility.
-
-Scheduled maintenance is an external assistant workflow. A working interactive connection or an automation lifecycle marked “completed” does not prove an unattended write succeeded; verify the saved revision and result. See the [roadmap](PLAN.md#roadmap) for the remaining acceptance work.
+[Daily and weekly maintenance](docs/wiki-maintenance.md) uses an external assistant and scheduler. Downloading a package or copying a prompt installs no task. Compiler capabilities are implemented, but the [latest measured compiler study failed its quality gates](docs/knowledge-compilation/RESULTS.md); automatic compilation is not an accepted retrieval improvement or a default-on rollout.
 
 ## How C0 works
 
 ```mermaid
 flowchart TB
-    Person[People] --> Web[Browser Wiki and Sources]
-    Agent[Your AI assistant or agent] --> MCP[OAuth-protected MCP]
-    App[Your application or integration] --> API[REST API]
+    People[People] --> Website[Vue website]
+    Agents[External AI agents] --> MCP[Authenticated MCP]
+    Clients[Applications and collectors] --> REST[REST API]
     subgraph C0["C0 on NethServer 8"]
-        Web --> API
-        API --> Core["Czero Core<br/>Knowledge operations and authorization"]
+        Website --> REST
+        REST --> Core[Python Core services and authorization]
         MCP --> Core
-        Worker[Extraction and indexing worker] --> Core
-        Core --> DB[(PostgreSQL and pgvector)]
-        Core --> Files[Retained original files]
+        Worker[Deterministic extraction and indexing worker] --> Core
+        Core --> DB[(PostgreSQL and optional pgvector index)]
+        Core --> Files[Current retained originals]
     end
-    Core -. Optional retrieval calls .-> Provider[Embedding or scoring provider]
+    Core -. Optional query and content processing .-> Providers[External embedding and relevance services]
+    Identity[Configured sign-in provider] --> REST
+    Agents -. Reasoning outside C0 .-> Models[Agent-selected AI models]
 ```
 
-The assistant supplies reasoning and synthesis. C0 supplies durable state and controlled operations. It does not need to host the assistant's model. Its worker runs registered extraction and maintenance jobs; scheduling an agent's reasoning happens in that agent's platform.
+Core owns domain services, transactions, persisted authorization and migrations. The application supplies REST/MCP and the Vue 3/Nebula website. NS8 provides lifecycle, settings and backup operations; its settings UI uses Vue 2/Carbon. The worker executes registered deterministic jobs. It does not execute user prompts or arbitrary shell commands. See [data, ingestion and retrieval diagrams](docs/architecture.md).
 
-Persistent Wiki pages let later questions reuse earlier work. PostgreSQL indexes, bounded retrieval and incremental indexing serve the knowledge without repeatedly scanning a loose file collection. Optional vector search and reranking can improve relevance. Performance and answer quality depend on the corpus and configuration; see the [retrieval benchmark](docs/retrieval-benchmark.md) for measured evidence and limits.
+Source documents and Wiki pages retain **one current complete content generation**. Replacements publish atomically after validation. Superseded exact evidence returns `content_superseded` (410); stable links open current content. Before upgrading an older installation, back up and run the [latest-only migration preflight](docs/latest-only-migration.md).
 
-### How the data is structured
+## Use C0
 
-```mermaid
-flowchart TB
-    Space["Knowledge space<br/>Shared or protected"]
-    Space --> Source[Sources]
-    Source --> Version[Current source generation]
-    Version --> Document[Extracted document text]
-    Document --> Chunk["Source passages<br/>Stable IDs, hashes and offsets"]
-    Space --> Page[Wiki pages]
-    Page --> Revision[Current Wiki revision]
-    Revision -. Cite original evidence .-> Chunk
-    Space --> Entity["Entities<br/>People, systems and concepts"]
-    Entity --> Claim[Claims about an entity]
-    Claim -->|Evidence links| Chunk
-    Claim -. Optional page association .-> Page
-    Entity --> Relation[Relations to other entities]
-    Space --> Record[Structured records]
-    Type[Instance-wide record schemas] --> Record
-```
+### Use an existing instance
 
-This is a conceptual map of the main relationships, rather than every database table:
+1. Open your organization's C0 HTTPS URL and sign in with your own account.
+2. Choose Shared or an authorized protected space.
+3. Read Wiki, Sources or search results. Follow source references to the complete document.
+4. Connect an agent if you want conversational retrieval or authorized Wiki maintenance.
+5. With Write access, use **Sources → Upload source** to add a supported file. Wait for extraction, then inspect the saved evidence.
 
-- **Sources and passages** retain the evidence behind an answer. A citation identifies the source/version/document/chunk and its location; a generated summary is not a substitute for that evidence.
-- **Wiki pages and revisions** hold maintained explanations, procedures and syntheses. Updates replace the body and remove earlier content; monotonic counters protect concurrent edits.
-- **Entities, claims and relations** connect concepts to each other and to evidence. Structured records let an application store domain-specific data under explicit schemas.
-- **Applicability and verification annotations** attach to an exact content revision. A changed revision does not silently inherit an earlier verification.
-- **Spaces are access and data boundaries.** Content belongs to a selected space; references and evidence stay within that boundary. Record schema definitions are instance-wide, while records are space-scoped.
+New verified users normally receive Read access to Shared. Administrators grant Write/Manage, protected-space access or a persistent block. Application approval, a person's permissions and disconnecting one connection are separate controls. Start with [the user guide and first-content walkthrough](docs/user-guide.md).
 
-## Skills for using C0 and building on C0
+### Run your own instance
 
-There are two audiences, with separate instructions:
+C0 is packaged as a **NethServer 8 application**. Prepare an NS8 node, compatible sign-in provider/user domain, DNS hostname and trusted HTTPS. Install a reviewed immutable candidate, then configure the hostname and owner in NS8 Settings.
 
-| Audience | Included skills | Purpose |
-| --- | --- | --- |
-| People and connected assistants | `c0-setup`, `c0-research`, `c0-maintain-knowledge`, `c0-projects`, `c0-knowledge-compiler`, plus the instance-bound memory skill | Connect the right account, research with citations, and make authorized knowledge changes with revision/retry safeguards |
-| Developers and coding agents | `c0-create-feature`, `c0-develop-core`, `c0-contribute-upstream`, `c0-upgrade-from-upstream`, `c0-evaluate-tools`, `c0-ingest-sources` | Extend an application, improve Core, contribute upstream, review upgrades, evaluate tool guidance and maintain repeatable source ingestion |
+Follow [installation and administration](docs/administration.md) and the [candidate selection record](docs/installation-candidate.md). There is no stable NS8 module release tag. The source tree, released Core dependency and installed runtime can have different versions; a merge does not upgrade an instance. [PLAN](PLAN.md) retains exact acceptance and installed-image records.
 
-Skills describe how to work; Core enforces what is allowed. They do not grant permissions or install an autonomous agent in C0. Repository development skills are kept out of runtime images. See [AGENTS.md](AGENTS.md) for the coding-agent entry point.
+## Connect your AI assistant
 
-## Fork C0 and build your own application
+Open **Use with AI** at `https://c0.example.org/agents` on your instance. Copy its canonical `/mcp` URL, configure your client's OAuth connection, sign in and consent to the required scopes. New clients can require administrator approval. Verify the returned profile and exact space before reading or writing.
 
-Use the full repository as a starting point when your application needs shared knowledge, evidence, structured records, OAuth, MCP and a browser UI. Add your domain and workflow instead of recreating those foundations.
+The page also generates an instance-bound `.skill` archive and a ChatGPT plugin `.zip` for an existing registered app. These supply instructions; they grant no permissions. Other agents use their own formats. [BYOA setup](docs/byoa.md), [ChatGPT setup](docs/chatgpt.md) and [plugin packaging](docs/plugin.md) give the detailed steps.
 
-### 1. Fork and choose your application
+A minimal end-to-end example:
 
-Fork with GitHub's Fork button, or with the GitHub CLI:
+1. Connect the intended account with Read scope and select its space.
+2. Ask: “In this C0 space, find the backup procedure. Read the Wiki page and current original passages. Cite the evidence. Make no changes.”
+3. If a change is needed, obtain effective Editor access and explicit Write consent. Ask: “Using only these selected current sources, update the named procedure in this same space. Preserve conflicting observations. Read back the saved revision and evidence.”
+4. Open that page in C0 and inspect its current content. API or host completion alone is not readback proof.
 
-```sh
-gh repo fork Stell0/ns8-czero --clone
-cd ns8-czero
-git fetch upstream main
-git switch -c feat/my-knowledge-application upstream/main
-```
-
-The CLI sets up the original repository as `upstream`; if you cloned a fork manually, add and verify that remote first. Start from the latest original C0 main, preserving existing fork work in its own branches.
-
-Decide who will use the application, what they need to remember, which records it needs and which spaces/permissions separate their work. For example: a support knowledge base, a research memory or a product operations assistant.
-
-### 2. Give your coding agent the repository instructions
-
-Start Codex, Claude Code or your preferred coding agent in the checkout. Give it a concrete request:
-
-> Read AGENTS.md, README.md and PLAN.md. Use the C0 feature workflow to add a support knowledge application. Keep reusable authorization and knowledge behavior in Core; put our customer-specific UI and workflow in the application. Propose the data model, implement the agreed change, and verify it using a disposable database.
-
-The [development guide](docs/development.md) supplies installation and test commands. The agent instructions and local skills explain which layer to change and how to build, test and deliver it.
-
-### 3. Extend the right layer
-
-| Location | What belongs there |
-| --- | --- |
-| `packages/czero-core` | Reusable Python domain services, authorization, migrations and knowledge contracts |
-| `app` | Your web UI, HTTP/MCP adapters and application-specific behavior using Core services |
-| `imageroot` and `ui` | NS8 lifecycle/configuration/backup and native administration settings |
-| `plugins/c0-knowledge` | End-user skills and instance-bound package templates |
-| `.agents/skills` and `docs` | Instructions for coding agents, contributors and operators |
-
-Use the released Core dependency and frozen lock by default. Change Core deliberately when behavior is reusable; a fork-specific screen or workflow does not automatically require a Core change. If you need only the reusable library, the [standalone consumer example](examples/fork/README.md) demonstrates a smaller starting point; it is a development fixture, not a configured NS8 application.
-
-### 4. Build, test and publish your own application
-
-Choose your own module identity and container image namespace before publishing. Keep native labels, image references, lifecycle paths and CI permissions consistent. A fork publishes its own images; it must not publish the template's registry tags or replace upstream Core releases.
-
-Run the required checks on the latest original C0 base and candidate and add regression tests for the changed behavior. Every PR gets fast automatic checks. Installation, container, migration, authentication, dependency and other sensitive/unknown changes also run Debian/Rocky native acceptance automatically. Reviewed presentation-only changes can request native tests on demand. Git-only documentation retains its explicit lightweight checks. The same risk policy applies to internal and external contributions; database skips are not a pass. See [CI policy](docs/ci-policy.md).
-
-C0 permits agent review and automatic regular merges after the current-source C0 merge gate and required checks pass, without mandatory human approval. Strict branch protection remains. Full native acceptance is still required before releases, canonical publication and production deployment; a fast UI merge is not deployment proof. Coordinate privileged registry checks on an authorized upstream branch without copying credentials into fork secrets.
-
-Install the maintained [NethServer development skills](https://github.com/NethServer/agents) when working on module packaging, containers, deployment or releases. They complement C0's repository skills.
-
-### 5. Keep your fork maintainable
-
-Fetch original C0 main regularly and keep development changes rebased on it. Resolve conflicts and rerun your feature tests as well as the base suite after each upgrade. Preserve frozen/deployed candidates; a rebase that rewrites one requires a new candidate and fresh acceptance.
-
-Review Core dependency updates and managed infrastructure proposals through `c0-upstream.json` and `scripts/sync-upstream.py`. The updater preserves customized files for review rather than overwriting them. Use `c0-upgrade-from-upstream` for upgrades and `c0-contribute-upstream` for reusable contributions. When your improvement can benefit the C0 base, open a focused upstream PR using `c0-contribute-upstream` and the installed `nethserver-pr` skill. Keep application branding, private deployment information and unfinished work separate from those contributions. Update the Codex-facing tool catalog, plugin/skills and documentation alongside behavior changes; verify the connection after upgrading.
-
-For controlled retrieval experiments, use the three [agentic retrieval skills and
-external workflow](docs/agentic-retrieval.md). Preparation supports paginated
-multipart originals and bounded small-model generation. Exploratory runs can start
-before label audit; completed benchmarks report unmet targets as results.
-Synthetic question labels, derived
-knowledge and original evidence remain distinct; model traces stay private.
-
-Optional System One scoring uses the [OpenAI Decisions API](https://developers.openai.com/api/docs/guides/decisions).
-In native settings, configure `https://api.openai.com/v1/decisions`, model
-`gpt-6-luna` and a dedicated OpenAI API key. Select **Filter** to permit both
-filter and rerank requests, or **Rerank** to permit reranking only. Scoring stays
-off by default. Requests score at most sixteen candidate excerpts of 2 KiB each;
-reranking preserves the unscored tail, while filtering returns only scored hits
-at or above the configured threshold (default 0.7). Calibrate with your corpus.
-Provider failures disclose fallback and preserve ordinary ranking. JEV/Kev's
-former protocol is removed: explicitly replace its endpoint, model and key.
-Changing an endpoint clears its saved key unless a replacement is supplied.
-
-For standard dataset retrieval measurements against an existing C0 instance, use
-the repository-only [BEIR benchmark](benchmarks/retrieval/README.md). It submits
-originals to background extraction, verifies the complete corpus, then performs
-read-only evaluation of SciFact, NFCorpus, FiQA or a
-compatible local dataset; no runtime installation or provider changes are needed.
-
-## Roadmap and project status
-
-The knowledge service, browser readers, protected spaces, OAuth/MCP access, persistent background connections and people-first administration are implemented and accepted under the recorded development gates. This remains a **development candidate**, with no stable NS8 release or public plugin-directory listing claimed.
-
-The next priority is dependable use by someone starting from the public documentation: finish packaged-skill installation acceptance, diagnose and verify unattended assistant runs, expand measured client compatibility and close the remaining release gates. Broader agent-memory work and external workflow integration follow their explicit acceptance gates.
-
-Read the [simple roadmap](PLAN.md#roadmap) for order and completion criteria. Detailed historical test counts, frozen image identities and CI evidence remain in [PLAN](PLAN.md) and the [history archive](docs/history/PLAN.md).
+For custom automation, [personal API keys](docs/api-keys.md) provide explicit Read/Write and selected-space bounds. They have no administration scope. [Recurring maintenance](docs/wiki-maintenance.md) explains unattended authentication and verification.
 
 ## Documentation and license
 
-[User guide](docs/user-guide.md) · [Administration](docs/administration.md) · [ChatGPT setup](docs/chatgpt.md) · [Plugin installation](docs/plugin.md) · [Development](docs/development.md) · [Interfaces](docs/reference.md) · [Documentation index](docs/index.md)
+Start at the [documentation index](docs/index.md):
 
-C0 and its reusable Core are licensed under [GPL-3.0-or-later](LICENSE). NethServer conventions are maintained in the [Development Handbook](https://handbook.nethserver.org/).
+- [LLM Wiki creation and evolution](docs/llm-wiki.md)
+- [Recurring Wiki maintenance and example prompts](docs/wiki-maintenance.md)
+- [Architecture, ingestion and retrieval](docs/architecture.md)
+- [User guide](docs/user-guide.md), [administration](docs/administration.md) and [workspace access](docs/workspace-access.md)
+- [API/MCP reference](docs/reference.md), [full documents](docs/full-documents.md) and [retrieval measurements](docs/retrieval-benchmark.md)
+- [Source ingestion samples](samples/ingestion/README.md) and [protected projects](docs/projects/PROJECTS.md)
+
+## Fork C0 and build your own application
+
+Fork C0 when your application needs shared knowledge, evidence, structured records and authorized agent tools. Keep reusable domain behavior in Core and application-specific UI/workflows in the application. Use the released Core dependency and frozen lock by default. Choose independent module/image identities before publishing a fork.
+
+Read [development and contributing](docs/development.md), [AGENTS.md](AGENTS.md), the relevant [repository skill](.agents/skills/c0-create-feature/SKILL.md) and [CI policy](docs/ci-policy.md). The [standalone consumer fixture](examples/fork/README.md) demonstrates a smaller library consumer. Preserve application customizations and contribute reusable improvements through focused upstream PRs.
+
+## Roadmap and project status
+
+C0 remains a development candidate. [Release readiness](docs/release-readiness.md) separates source/native acceptance, client compatibility, packaged-skill use, scheduled execution and production deployment. No stable NS8 release or public plugin-directory listing is claimed. Use [the roadmap](PLAN.md#roadmap) for remaining work and [the documentation audit](docs/documentation-review.md) for implementation evidence and known gaps.
+
+C0 and its reusable Core use [GPL-3.0-or-later](LICENSE). NethServer conventions are maintained in the [Development Handbook](https://handbook.nethserver.org/).
 
 <details>
 <summary>Historical section links</summary>
@@ -360,112 +203,3 @@ These anchors preserve links to the retained historical record.
 <a id="documentation-and-skills-release-readiness-phase"></a>[Documentation and skills release-readiness phase](docs/history/README.md#documentation-and-skills-release-readiness-phase)
 
 </details>
-
-
-## Research projects
-
-The [WikiPlant compatibility track](docs/projects/WIKIPLANT_COMPATIBILITY.md)
-implements reusable research state within existing protected spaces. The initial
-[project contracts](docs/projects/PROJECTS.md) cover versioned configuration,
-topics, authorization and a read-only project overview. The
-[workflow contract](docs/projects/WORKFLOWS.md) adds atomic queue admission,
-day budgets, fenced leases and recoverable attempts. The
-[monitoring/agent contract](docs/projects/MONITORING.md) adds separately capped
-primary-topic coverage, project-bound packages and IANA scheduler handoff.
-The [evidence/report contract](docs/projects/REPORTING.md) adds result proofs,
-report membership/readback and independent publication observations.
-The [maintenance contract](docs/projects/MAINTENANCE.md) adds bounded structural
-audits, revision-specific semantic rotation, archive history, calendar admission
-and metadata-only workflow update checks.
-The [export/preparation contract](docs/projects/EXPORTS.md) adds private,
-integrity-checked project snapshots, offline WikiPlant mapping validation and
-explicitly selected public static files. Fabricated English/Italian reference
-projects exercise daily/weekly workflows without production data.
-Migration preparation has separate gates. Actual external-agent
-and unattended scheduled execution remain unverified.
-This branch does not migrate real projects, deploy an instance or activate schedules.
-
-Project source collection is available in the existing independently installable
-ingestion sample package. [Source contracts](docs/projects/SOURCES.md) describe
-its seven adapters, protected receipts, limits and explicit approval. This
-branch remains an implementation candidate; no live migration is performed.
-
-The project backend is implemented in Core0.34/app0.53 and the external worker0.2.
-That accepted runtime pins the verified immutable `core-v0.34.0` release. M0–M8,
-the final PR and merged-main full/native acceptance pass. The dedicated reference
-installation also passes read-only client, preservation and restart checks; see
-[deployed runtime evidence](PLAN.md#wikiplant-deployed-backend-and-frozen-predecessor).
-The [M8 readiness report](docs/projects/WIKIPLANT_MIGRATION_READINESS.md) records
-implementation acceptance before this separately authorized installation.
-Actual project research and unattended execution remain unverified. Reload the
-host's cached C0 tool catalog to expose the new project operations. No real
-WikiPlant migration, project-space initialization or research-schedule activation
-has occurred.
-
-The earlier app 0.55.0 source checkpoint pins released Core 0.35.2 (Authlib 1.9.1) /
-schema 0022. Earlier security-patch and PR41 acceptance remain recorded in PLAN.
-The full-document library release is described below. No migration is required.
-The accepted remembered website login adds an unchecked **Remember this device**
-choice at sign-in. It requires provider-authorized offline renewal and expires
-after seven days without successful website use; use renews that window across
-browser restarts. Ordinary sessions keep the configured idle/maximum limits
-(default one hour/eight hours). Existing sessions and AI connections are not
-upgraded. Sign out forgets this browser; AI connections keep their separate
-explicit consent and disconnect controls. [Acceptance and the installed image
-identities](PLAN.md#remembered-login-deployed-runtime-and-frozen-predecessor)
-record the approved dedicated-instance update, retained sessions/data/connections,
-real-provider remembered sign-in and successful manager restart. Existing logins
-remain ordinary; choose the option at your next sign-in to remember that device.
-
-Earlier full-document Knowledge Explorer work on `feat/full-document-explorer`
-added All knowledge, Articles and Sources. Imported Markdown opens as a complete
-formatted article with a table of contents, provenance and current content.
-Verified multipart originals appear as one document; Wiki pages remain separate.
-See [full-document contracts, limits and browser instructions](docs/full-documents.md).
-
-[Core 0.35.2](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.35.2) is
-immutably published from `3fb900e` after full local, both-native and artifact
-gates. That app generation adopts its released Git tag and frozen lock. Development evidence
-includes 2,320 Core cases, 2,322 released-Core consumer cases, 207 controller
-cases and six real Playwright workflows
-using HTTPS, PostgreSQL and a standalone extraction worker. Final application
-consumer/native acceptance is recorded in the PR checks and PLAN. At that
-checkpoint, the candidate was not yet merged or deployed and the accepted
-production image trio was unchanged.
-
-The reference knowledge website uses Vue 3 and Nebula with English/Italian,
-light/dark/system themes and responsive navigation. Local Poppins fonts and
-compiled assets require no external service. Knowledge views are read-only;
-authorized source upload/replacement/recovery, account and administration remain
-available. Assistants retain existing REST/MCP knowledge operations. Native NS8
-settings remain Vue 2/Carbon. [Source and publication acceptance](PLAN.md#vue-3-website-remake--source-and-publication-accepted)
-records the exact tests and immutable images. The explicitly authorized
-[dedicated installation](PLAN.md#openai-system-one-scoring--accepted-delivery)
-now runs app0.61/Core0.42/schema0034 after verified backup, update, manager restart
-and live HTTP/MCP/privacy checks. Its prior app0.60 installation remains frozen
-evidence and the genuine upgrade predecessor.
-
-Embedding refresh uses bounded batches and resumes automatically while its ten-minute
-schedule remains enabled. Pausing the schedule stops further continuations after
-already queued work; disabling the provider makes indexing a no-op.
-
-
-[Core 0.42.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.42.0)
-adds OpenAI Decisions scoring and the merged compilation maintenance contracts,
-including schema0034 publication metadata. App0.61 pins its immutable released
-Git source with patch-only updater bounds. Compilation maintenance stays off
-until explicitly configured; existing housekeeping schedules are preserved.
-Consumer and dedicated delivery acceptance are recorded
-separately in [PLAN](PLAN.md#openai-system-one-scoring--accepted-delivery);
-the private BEIR comparison follows operator scoring-key configuration.
-
-[Core 0.44.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.44.0)
-adds document BM25 for ordinary text search, with English/Italian stemming and
-conservative identifier variants. App0.62 adopts its immutable Git tag and lock.
-Unquoted results are relevance candidates; use explicit phrases/operators or
-structured filters for exact version selection. Source citation bodies and
-source-only response shapes are preserved. Schema0036 backfills derivative
-counts without replacing evidence identities. See the
-[retrieval behavior and measurements](docs/retrieval-benchmark.md) and
-[separate consumer acceptance](PLAN.md#document-bm25--released-core-consumer-adoption).
-Installed production images remain unchanged by this adoption.

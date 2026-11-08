@@ -10,7 +10,8 @@ import unicodedata
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-GUIDES = ('installation-candidate', 'index', 'user-guide', 'administration', 'chatgpt', 'plugin',
+GUIDES = ('byoa', 'llm-wiki', 'wiki-maintenance', 'architecture', 'documentation-review',
+          'installation-candidate', 'index', 'user-guide', 'administration', 'chatgpt', 'plugin',
           'development', 'reference', 'workspace-access', 'release-readiness', 'ci-policy',
           'tool-evaluations', 'retrieval-benchmark', 'agentic-retrieval', 'c0-agent-memory-baseline',
           'm14-readiness', 'm14-release-notes')

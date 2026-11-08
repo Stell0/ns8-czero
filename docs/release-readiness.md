@@ -2,6 +2,23 @@
 
 ## Current status
 
+C0 remains a development candidate: no stable NS8 module release or public OpenAI listing is claimed. Documentation, source/native acceptance, independent Core publication, released-consumer adoption, installed runtime, packaged-skill web use and unattended host execution are separate gates. Use [PLAN](../PLAN.md) for exact accepted sources and installed image identities.
+
+The app manifest currently selects released Core0.44.0; the producer tree is newer. [The feature audit](documentation-review.md) records the reviewed source and evidence. The [candidate guide](installation-candidate.md) links a concrete accepted released-consumer image. A documentation update does not deploy that image.
+
+The source plugin supplies setup, research, requested knowledge maintenance, protected-project discovery and compiler guidance. [Plugin setup](plugin.md) describes actual distribution routes. Local package validation and one installed/private connection do not establish both private-Creator and managed-GitHub packaged-skill acceptance on ChatGPT web. Complete those account-specific checks before claiming them.
+
+Compiler coordination/publication and the external host are implemented, with bounded disposable evidence. [M6 quality results](knowledge-compilation/RESULTS.md) failed the declared gates and do not establish a retrieval improvement or authorize automatic learning rollout. [Compiler operations](knowledge-compilation/OPERATIONS.md) and [recurring maintenance](wiki-maintenance.md) keep host/authentication/quality limits explicit. Claude C0-specific acceptance and general ChatGPT unattended-write acceptance remain unestablished by this documentation review.
+
+## Historical M21 checklist
+
+The table below preserves the M21 checkpoint. Its Pending entries are historical observations, not a claim that all later runtime/native/deployment work remains unstarted. Consult PLAN and the current status above before using them as release decisions.
+
+<details>
+<summary>Original M21 status and required evidence</summary>
+
+### M21 status
+
 M21 implementation is in progress. **Documentation and skills release readiness is not yet accepted.** M19 runtime passes its recorded acceptance; reviewed closeout PR30 is merged as `0a9bbb3` and main39643655916 passes. The entry gate is complete. No stable NS8 release or public OpenAI listing is claimed.
 
 Current package inventory follows the source manifest and [installation guide](plugin.md). [M2 compiler acceptance](knowledge-compilation/M2.md) is separate from the outstanding web installation and rollout gates below.
@@ -24,6 +41,8 @@ Historical M21 checkpoint: plugin template 1.1.0. The self-service follow-up tar
 | Reviewed main and closeout | Regular merge, actual main/publication and separate checked documentation marker | Pending |
 
 Record immutable documentation/source and package hashes, tested ChatGPT surface/workspace features, dates, actual outcomes and limitations. Keep raw traces, instance mappings and credentials private; publish sanitized summaries. A package validator, replay fixture or desktop run cannot establish ChatGPT web installation or skill behavior. Missing account/workspace permissions leave the corresponding gate incomplete.
+
+</details>
 
 ## Release scope
 

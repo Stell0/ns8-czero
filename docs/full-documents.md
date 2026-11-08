@@ -1,6 +1,6 @@
 # Complete current source documents
 
-Knowledge Explorer offers All knowledge, Articles and Sources. Wiki articles are
+Home and Search retrieve knowledge; Wiki browses articles and Sources browses original documents. Wiki articles are
 authored knowledge; imported sources are evidence. Each logical document retains
 one current complete generation. This replaces the previous history guarantee.
 
