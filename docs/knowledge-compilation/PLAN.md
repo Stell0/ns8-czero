@@ -59,19 +59,22 @@ compilation does not install schemas or infer taxonomies.
 
 ```mermaid
 flowchart LR
-  Retrieval[After-answer learning] --> Discover
-  Daily[Daily or bootstrap] --> Discover
-  Weekly[Weekly semantic review] --> Discover
+  Search[Read-only retrieval] --> Answer[Cited answer]
+  Answer -. Enabled agent-side feedback .-> Proposal[Bounded proposal]
+  Daily[External bootstrap or daily run] --> Discover[Current source discovery]
+  Weekly[External weekly review] --> Discover
   Discover --> Analyze[External evidence analysis]
-  Analyze --> Plan[Structured bounded plan]
+  Analyze --> Proposal
+  Proposal --> Plan[Structured bounded plan]
   Plan --> Validate[Core validation]
-  Validate --> Apply[Guarded atomic publication]
+  Validate --> Hold[Review or deferral]
+  Validate --> Apply[Eligible or exactly approved publication]
   Apply --> Verify[Fresh readback and outcome]
   Verify --> Queue[SQL tasks and dependencies]
   Queue --> Discover
 ```
 
-All entry points use DISCOVER → ANALYZE → PLAN → VALIDATE → APPLY → VERIFY.
+Bootstrap, daily and weekly compiler runs use DISCOVER → ANALYZE → PLAN → VALIDATE → APPLY → VERIFY. Post-answer retrieval feedback only proposes; it does not publish or launch a run.
 Core supplies deterministic coordination and validation, never an LLM runner.
 The external agent owns semantic reasoning, contradiction assessment, original
 passage reading, deduplication and claims of limitations. The server validates

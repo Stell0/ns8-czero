@@ -6,7 +6,7 @@ The generic end-user package supplies five workflows: `c0-setup`, `c0-research`,
 
 `c0-projects` discovers an already authorized protected research project and its current capabilities. For repeated daily/weekly work, generate a separate project-bound skill through `project_agent_package_get` after configuring that project's manifest. A package never creates the project or installs a scheduled task. If `project_*` tools are not available, refresh the existing ChatGPT C0 connection's tool catalog and start a new conversation; do not substitute generic object writes or create a new connection just to work around missing discovery.
 
-`c0-knowledge-compiler` adds requested bounded compilation when the selected space has enabled policy and the actual catalog includes `compilation_target_bindings_get`, `compilation_plan_validate`, `compilation_apply` and `compilation_verify`. Read [the compiler protocol](../plugins/c0-knowledge/references/compiler.md). Missing tools or disabled policy block compilation; the skill grants no authority and must not substitute ordinary Wiki writes. Core 0.39 supports coordination only; the 0.40 producer adds publication.
+`c0-knowledge-compiler` adds requested bounded compilation when the selected space has enabled policy and the actual catalog includes `compilation_target_bindings_get`, `compilation_plan_validate`, `compilation_apply` and `compilation_verify`. Read [the compiler protocol](../plugins/c0-knowledge/references/compiler.md). Missing tools or disabled policy block compilation; the skill grants no authority and must not substitute ordinary Wiki writes. Compatible Core supports coordination and guarded publication; inspect the installed capabilities rather than inferring availability from the plugin version.
 
 Each operator generates a package for their own registered C0 app. No package defaults to the project's test installation. The source package version is independent of the application version. Current package and real-web acceptance status are in the [readiness checklist](release-readiness.md).
 
@@ -77,7 +77,7 @@ Do not import a template with an example app ID. Do not replace or delete an exi
 Test both explicit skill selection and ordinary requests that should activate it, plus unrelated requests that should not. Keep private traces and credentials outside Git. Record actual web behavior for private Creator setup and managed import separately. No public directory submission or workspace-wide rollout is performed by the packager.
 
 Plugin 1.4 adds conditional selective-context research instructions for the
-0.37 producer APIs. Discover actual tools first, retain exact revision IDs, read
+selective-context APIs. Discover actual tools first, retain exact revision IDs, read
 only selected spans and respect explicit omissions/410. The registered App
 binding, scopes and archive inventory remain unchanged; source/package checks
 do not establish installed ChatGPT packaged-skill acceptance.
@@ -86,3 +86,5 @@ Plugin 1.5 adds the conditional compiler skill and its shared reference to gener
 instance and project packages. Existing app identity and scopes stay unchanged.
 Generated-archive and MCP checks do not prove installation or execution on a
 particular ChatGPT account; M2 does not install a plugin or schedule.
+
+[LLM Wiki](llm-wiki.md) explains manual edits, compiler policy and post-answer feedback. [Recurring maintenance](wiki-maintenance.md) explains host setup and verification. This documentation review changes no plugin package content, version, registered connection or scopes.

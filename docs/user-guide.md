@@ -20,6 +20,10 @@ Knowledge pages are readers. Search for a topic or browse the article tree. Stab
 
 Sources shows complete current documents and extracted text. Superseded automatic bodies, originals and derivatives are removed; authored quotations remain and expired evidence is marked stale. A pending extraction is not yet usable evidence. Missing applicability or verification means unknown. A saved article, a confident answer or a successful write does not establish that a procedure was independently verified.
 
+## Search and maintain an LLM Wiki
+
+Search and browser reading do not update Wiki content or queue learning. A compatible external agent with effective Write access and enabled retrieval-feedback policy can separately propose one improvement after answering. The proposal does not publish a page. Explicit read-only tasks and Reader connections skip feedback. See [LLM Wiki creation and update triggers](llm-wiki.md) and [recurring maintenance](wiki-maintenance.md).
+
 ## Use ChatGPT
 
 Follow [ChatGPT setup](chatgpt.md), then optionally install your instance's [workflow plugin](plugin.md). A normal MCP connection can answer questions without the extra packaged skills. Select the correct connection/plugin in a new conversation.
@@ -114,5 +118,4 @@ and provider rejection stops renewal.
 Your ChatGPT/Codex connections have separate permissions and explicit consent.
 Their activity does not keep this browser signed in. Remembering a device does
 not enable background AI access or upgrade existing connections; disconnect
-connections separately in Account or Workspace access. This candidate still
-requires publication, native acceptance and deployment review before availability.
+connections separately in Account or Workspace access. Check the [installed baseline](../PLAN.md) for the features available on your instance; source acceptance does not upgrade it.

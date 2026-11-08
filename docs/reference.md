@@ -77,25 +77,22 @@ Real role changes and persistent blocks retain existing invalidation semantics.
 Legacy account-list shape and legacy callers remain unchanged. Schema0021 adds
 only `c0_accounts.access_revision` and a distinct random onboarding request UUID.
 
-## Research project candidate
+## Protected research projects
 
 Projects reuse protected spaces, immutable typed schemas, current grants and
 existing knowledge services. See [project contracts](projects/PROJECTS.md),
 [source adapters/CLI](projects/SOURCES.md), [workflow/queue contracts](projects/WORKFLOWS.md),
 [primary monitoring and agents](projects/MONITORING.md)
 and the explicit
-[readiness checkpoint](projects/WIKIPLANT_MIGRATION_READINESS.md). The development
-branch does not activate real research schedules or migrate WikiPlant data.
-Producer Core publication/default consumer adoption and final acceptance remain
-required before claiming released project availability.
+[readiness checkpoint](projects/WIKIPLANT_MIGRATION_READINESS.md). Project operations are implemented in compatible released Core. Discover actual installed capabilities. Reading or configuring a project does not activate external research schedules or migrate WikiPlant data; host execution and migration acceptance remain separate.
 
 See [complete source documents](full-documents.md) for logical identities, bounded
-summary/history APIs, safe rendering and exact historical part resolution.
+current summary/body APIs, safe rendering and exact current part resolution.
 
 Source and Wiki content uses [latest-only storage](latest-only-migration.md). Historical source/Wiki body reads, rollback and content-history export are removed. History compatibility routes list current content only and are omitted from OpenAPI discovery; MCP no longer advertises `source_document_history`, `wiki_revisions_list` or `knowledge_annotations_history`. Expired exact content and superseded replay requests return HTTP 410 / MCP `content_superseded`, after current space authorization.
 
 
-## Selective source context (0.37 producer)
+## Selective source context
 
 When advertised by the installed Core, `source_document_outline_get` reads bounded
 section metadata for a stable logical document. Retain its exact `revision_id` and
@@ -128,7 +125,7 @@ unresolved references explicit. Whole-document readers remain unchanged. Legacy
 in-memory structural derivation retains the 2 MiB/1M-character extracted-body
 ceiling; larger multipart originals retain their existing complete reader.
 
-## Extraction progress and recovery (producer candidate)
+## Extraction progress and recovery
 
 When installed Core exposes these capabilities, browser REST provides
 `GET /sources/{source_id}/extraction` for selected-space Reader progress and
@@ -152,12 +149,10 @@ carry explicit Read/Write scope ceilings and selected spaces; they never grant
 administration. Create, list and revoke keys only from a browser session on the
 Account page. See [the API-key interface and workflow guide](api-keys.md).
 
-## Compilation coordination (producer capability)
+## Knowledge compilation
 
-[Knowledge compilation M1](knowledge-compilation/M1.md) specifies the ten
-metadata-only REST/MCP operations under `/api/v1/compilation`. Policies default
-to disabled independently of research projects. Reads never initialize or
-process work. Current originals and target revisions remain authoritative;
-observed dependencies and bounded completion do not imply verified compilation.
-The app advertises these operations only when installed Core supports them.
-Released Core adoption and M2 publication require their separate acceptance.
+Compiler coordination, guarded publication, source discovery, assessment and semantic-review operations are implemented under `/api/v1/compilation` and matching `compilation_*` MCP names. The app registers only operations supported by its installed Core. The producer package can contain newer inputs than the released consumer; inspect actual capabilities and schemas.
+
+Policies default to disabled, retrieval feedback off and queue-only publication. Admin policy configuration requires actual authority and expected revision; it installs no scheduler. Editor coordination and publication require enabled selected-space policy, Read+Write, current evidence, target/policy revisions, live fences and budgets. Queue-only and held plans require exact-plan review. `compilation_plan_validate` is a dry-run; `compilation_apply` publishes atomically and returns pending verification; `compilation_verify` records fresh saved-result readback. None proves semantic truth.
+
+`knowledge_search` and other retrieval operations never queue learning. A compatible external agent can use a separate bounded post-answer proposal workflow under enabled retrieval-feedback policy. Reader and explicitly read-only tasks cannot do so. See [the complete search/update rules](llm-wiki.md#what-happens-after-a-search), [compiler operations](knowledge-compilation/OPERATIONS.md) and [external maintenance](wiki-maintenance.md).

@@ -21,7 +21,7 @@ Start **Connect**. C0 opens its sign-in page and then a connection approval page
 
 If you are a C0 Admin, choose **Review this connection** on the connection page. Check the exact client identity and callbacks, leave **Read** selected for research, and choose **Approve selected permissions**. Approval grants no user role and issues no token.
 
-Other users ask an Admin to open C0 **Administration → ChatGPT connections → Waiting for approval**. After the user signs in, the request appears there with its metadata URL, callback and requested permissions. Choose **Review connection**, preview its metadata and approve only the permissions needed. The user then chooses **Check approval** on their connection page.
+Other users ask an Admin to open C0 **Administration → Workspace access**. After the user signs in, the request appears there with its metadata URL, callback and requested permissions. Choose **Approve** on the pending request, preview its verified metadata and approve only the permissions needed. The user then chooses **Check approval** on their connection page.
 
 Choose **Continue to consent**, review the ordinary OAuth consent page and approve explicitly. Requests expire after five minutes; if needed, start Connect again in ChatGPT. Discovery being enabled does not automatically approve a client. Existing manually approved UUID clients keep their normal flow.
 
@@ -56,7 +56,7 @@ An application Admin must approve the necessary write scope, and the user needs 
 | Symptom | Check and next step |
 | --- | --- |
 | Initial `invalid_request` | Confirm this instance runs the self-service onboarding update and Client metadata discovery is enabled. Valid new CIMD requests open sign-in/approval; malformed callbacks, duplicate parameters, wrong resource or discovery disabled still fail. Start Connect afresh; keep its full URL private. |
-| Login succeeds but C0 denies access | Ask the owner/Admin to check People and permissions for an explicit block or retained earlier denial. New verified users receive Shared Reader access by default; client approval grants no additional role. |
+| Login succeeds but C0 denies access | Ask the owner/Admin to check Workspace access for an explicit block or retained earlier denial. New verified users receive Shared Reader access by default; client approval grants no additional role. |
 | OAuth `invalid_scope` during reconnect | A valid CIMD request outside its approval opens the permission review page. Select only the approved permissions you need, or ask an Admin to review additional scopes. Existing UUID clients retain strict scope errors. Do not grant Admin merely to silence an error. |
 | `insufficient_scope` | Request fresh explicit consent only if your role and approved client permit the operation. Refresh cannot add scope. |
 | Permission denied for a space | Request an authorized grant; do not switch to Shared to bypass denial. |
@@ -66,3 +66,7 @@ An application Admin must approve the necessary write scope, and the user needs 
 | Wrong account or instance | Stop and select the intended connection, then confirm profile/space. Do not overwrite another connection's configuration. |
 
 When reporting a problem, include the action, fixed error code, whether it was a new or existing connection and approximate time. Keep passwords, tokens, cookies, raw journals and full authorization URLs out of reports.
+
+## Recurring maintenance
+
+Use [the maintenance guide](wiki-maintenance.md#chatgpt) for current host scheduling steps, scoped daily/weekly prompts and independent saved-result verification. Background consent, package installation and task creation are separate operations.
