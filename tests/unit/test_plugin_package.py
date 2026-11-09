@@ -56,7 +56,7 @@ def test_reproducible_archive_binding_checksums_and_web_dependencies(tmp_path):
         'skills/c0-maintain-knowledge/SKILL.md', 'skills/c0-projects/SKILL.md',
         'skills/c0-knowledge-compiler/SKILL.md'}
     assert b'project_get' in payload['skills/c0-projects/SKILL.md']
-    assert manifest['version']=='1.8.0'
+    assert manifest['version']=='1.9.0'
     research=payload['skills/c0-research/SKILL.md']
     assert all(name.encode() in research for name in ('source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get'))
     assert b'project_run_claim' in payload['references/projects.md']

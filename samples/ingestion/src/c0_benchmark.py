@@ -87,6 +87,12 @@ def normalize(result,sources):
         if parent is None or parent['version_id']!=citation['version_id']:raise C0Error('benchmark_hit_outside_corpus')
         row={**parent,'rank':rank,'chunk_id':hit['id'],'body':citation['body']}
         chunks.append(row)
+        for support in hit.get('supporting_passages',[]):
+            extra=support.get('citation')
+            if (not isinstance(extra,dict) or support.get('kind')!='chunk'
+                    or extra.get('source_id')!=citation['source_id'] or extra.get('version_id')!=citation['version_id']):
+                raise C0Error('benchmark_hit_outside_corpus')
+            chunks.append({**parent,'rank':rank,'chunk_id':support['id'],'body':extra['body'],'supporting':True})
         if parent['id'] not in seen:
             seen.add(parent['id']);documents.append({**parent,'rank':len(documents)+1})
     return chunks,documents
@@ -104,7 +110,8 @@ def metrics(question,chunks,documents):
         evidence.extend(any(alternative in chunk for alternative in alternatives for chunk in passages) for alternatives in label['passages'])
     output['evidence_coverage']=sum(evidence)/len(evidence) if evidence else None
     output['complete_evidence']=int(all(evidence)) if evidence else None
-    output['duplicate_document_rate']=(len(chunks)-len(documents))/len(chunks) if chunks else 0.
+    primary=[c for c in chunks if not c.get('supporting')]
+    output['duplicate_document_rate']=(len(primary)-len(documents))/len(primary) if primary else 0.
     output['wrong_product_hits']=sum(bool(question.get('products')) and d['product'] not in question['products'] for d in documents)
     output['wrong_version_hits']=sum(bool(question.get('versions')) and bool(d['version']) and d['version'] not in question['versions'] for d in documents)
     output['unknown_version_hits']=sum(not d['version'] for d in documents)

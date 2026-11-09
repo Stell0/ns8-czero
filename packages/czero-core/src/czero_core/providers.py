@@ -54,11 +54,14 @@ class ProviderSettings:
 class EmbeddingSettings(ProviderSettings):
     dimensions: int = 1536
     send_dimensions: bool = False
+    input_format: str = 'legacy'
 
     def __post_init__(self):
         super().__post_init__()
         if type(self.dimensions) is not int or not 1<=self.dimensions<=2000 or type(self.send_dimensions) is not bool:
             raise ValueError('invalid_embedding_dimensions')
+        if self.input_format not in ('legacy','context-v1'):
+            raise ValueError('invalid_embedding_input_format')
 
 
 @dataclass(frozen=True)

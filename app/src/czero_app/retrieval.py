@@ -4,7 +4,18 @@
 from typing import Annotated, Literal
 from uuid import UUID
 from fastapi import Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+try:
+    from czero_core.search_query import MAX_RAW_QUERY, normalize_query
+except ModuleNotFoundError as error:
+    if error.name != 'czero_core.search_query':
+        raise
+    # Released consumers keep their advertised Core contract until adoption.
+    SearchQuery = Annotated[str, Field(min_length=1, max_length=512)]
+else:
+    SearchQuery = Annotated[str, Field(min_length=1, max_length=MAX_RAW_QUERY,
+        description='At most 512 characters after whitespace normalization; shorten longer requests explicitly.'),
+        BeforeValidator(normalize_query)]
 from czero_core.identity import PermissionDenied, Role
 from czero_core.retrieval import SearchService
 from czero_app.auth import RequestAccess
@@ -18,6 +29,20 @@ class WikiCitation(BaseModel):
     revision: int
     slug: str
     content_hash: str
+
+
+class SearchPassage(BaseModel):
+    id: UUID
+    kind: Literal['chunk','wiki_revision']
+    resource_id: UUID
+    revision: int
+    title: str
+    content_hash: str
+    excerpt: str
+    start_offset: int
+    end_offset: int
+    citation: CitationView | None
+    wiki: WikiCitation | None
 
 
 class SearchHit(BaseModel):
@@ -34,6 +59,7 @@ class SearchHit(BaseModel):
     citation: CitationView | None
     wiki: WikiCitation | None
     relevance_score: float | None = Field(default=None, ge=0, le=1)
+    supporting_passages: list[SearchPassage] = Field(default_factory=list, max_length=1)
 
 
 class SearchResult(BaseModel):
@@ -61,11 +87,15 @@ class IndexStatus(BaseModel):
     wiki_indexed: int | None = None
     model: str | None = None
     dimensions: int | None = None
+    input_format: Literal['legacy','context-v1'] | None = None
+    source_expected: int | None = None
+    wiki_expected: int | None = None
+    complete: bool | None = None
 
 
 class SearchOptions(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    query: str = Field(min_length=1, max_length=512)
+    query: SearchQuery
     space_id: UUID | None = Field(default=None,
         description='Explicit authorized space selector inside options for MCP. Omission selects legacy Shared; never use that as a fallback after denial.')
     limit: int | None = Field(default=None, ge=1, le=50)

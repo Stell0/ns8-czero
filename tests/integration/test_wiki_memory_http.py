@@ -91,6 +91,8 @@ def test_accepted_contracts_only_add_optional_space_and_lexical_metadata(applica
                                 'default':None}
                 observed=contract.legacy_search_output(actual[key]) if (
                     key=='output_schema' and expected['name']=='knowledge_search') else actual[key]
+                if key=='input_schema' and expected['name']=='knowledge_search':
+                    observed=contract.legacy_search_input(observed)
                 if key=='output_schema' and expected['name']=='knowledge_index_status':
                     observed=contract.legacy_index_status_output(observed)
                 value_at_key=contract.schema_hash(observed)

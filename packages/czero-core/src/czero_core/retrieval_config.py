@@ -29,7 +29,8 @@ class RetrievalSettings:
         if not isinstance(value,dict) or set(value)!={'format','embedding','scorer','limits'} or type(value['format']) is not int or value['format']!=1:
             raise ValueError('invalid_retrieval_configuration')
         embedding,scorer,limits=value['embedding'],value['scorer'],value['limits']
-        if (not isinstance(embedding,dict) or set(embedding)!={'enabled','endpoint','model','dimensions','send_dimensions','api_key','timeout'}
+        if isinstance(embedding,dict):embedding={'input_format':'legacy',**embedding}
+        if (not isinstance(embedding,dict) or set(embedding)!={'enabled','endpoint','model','dimensions','send_dimensions','input_format','api_key','timeout'}
                 or type(embedding['enabled']) is not bool or not isinstance(scorer,dict)
                 or set(scorer)!={'mode','endpoint','model','api_key','timeout','threshold'}
                 or scorer['mode'] not in ('off','rerank','filter') or not isinstance(limits,dict)
@@ -44,7 +45,7 @@ class RetrievalSettings:
         checked_e=EmbeddingSettings(**eargs) if embedding['enabled'] or embedding['endpoint'] or embedding['model'] else None
         checked_s=ScorerSettings(**sargs) if scorer['mode']!='off' or scorer['endpoint'] or scorer['model'] else None
         if checked_e is None:
-            EmbeddingSettings('https://disabled.invalid/embeddings','disabled',**{k:eargs[k] for k in ('dimensions','send_dimensions','api_key','timeout')})
+            EmbeddingSettings('https://disabled.invalid/embeddings','disabled',**{k:eargs[k] for k in ('dimensions','send_dimensions','input_format','api_key','timeout')})
         if checked_s is None:
             ScorerSettings('https://disabled.invalid/systemone','disabled',**{k:sargs[k] for k in ('api_key','timeout','threshold')})
         return cls(checked_e if embedding['enabled'] else None,checked_s if scorer['mode']!='off' else None,

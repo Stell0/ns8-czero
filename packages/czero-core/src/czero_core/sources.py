@@ -451,7 +451,8 @@ class SourceService(SpaceBound):
         from .lexical import select_lexical
         from .bm25 import search_documents
         self._page(limit, offset)
-        query = _label(query, 512)
+        from .search_query import normalize_query
+        query = normalize_query(query)
         with self.database.engine.connect() as connection:
             connection.execute(text('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ'))
             self._authorize(connection, actor)

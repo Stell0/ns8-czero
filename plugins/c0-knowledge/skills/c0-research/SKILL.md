@@ -7,6 +7,16 @@ Read [the instance binding](../../references/instance.md). Discover the connecte
 
 Search existing knowledge, then read the matching article and original source passages. Use actual tool schemas: `knowledge_search` selects its space inside `options`; `knowledge_search_structured` inside `data`; ordinary content tools use top-level `space_id`. Prefer text search with reranking off when optional retrieval is unavailable.
 
+Search queries normalize whitespace and accept at most 512 normalized characters.
+For longer requests, prepare a concise query from the user's request alone; keep
+identifiers and explicit constraints, and do not silently truncate the request.
+When advertised, read `supporting_passages` as well as each primary hit: hybrid
+can retain a distinct semantic passage from the same document. Each passage has
+its own citation and offsets. Count all passages against the context budget;
+overlapping evidence earns no additional coverage. Check actual retrieval mode,
+fallbacks, embedding input format and complete index coverage before comparing
+text with embeddings. Contextual labels are retrieval metadata, never quotations.
+
 When `lexical_strategy=bm25` is reported, unquoted terms retrieve relevance candidates across complete documents, with English/Italian inflections and conservative identifier spelling variants. Numbers in prose are ranking signals. Use existing structured version/applicability filters or explicit phrases/operators for exact selection, then read the evidence before making claims. Other languages retain literal matching. Older instances may report `websearch` or `relaxed`; discover the actual contract.
 
 For complete original context, when advertised, use `source_version_document_get` with the cited immutable `version_id`, or browse `source_documents_list` and read `source_documents_get`. Use its stable logical ID for current content. An exact expired revision/citation returns `content_superseded` (410); report evidence unavailable and label any separately offered current-document link. Never present current text as the old evidence. These logical IDs differ from extracted `document_id` values in citations. Require `state=ready`; an incomplete snapshot has no complete body. Never reconstruct originals by joining overlapping search chunks.

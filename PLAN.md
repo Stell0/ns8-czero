@@ -1,5 +1,15 @@
 # C0 roadmap
 
+## Retrieval evidence producer candidate
+
+The isolated candidate starts at original main `6bb8cea`, with Core0.46/schema0037
+and plugin1.9. It normalizes bounded search whitespace, retains one distinct
+semantic passage during document fusion, and adds opt-in versioned contextual
+embedding inputs with transactional invalidation and complete-coverage checks.
+See [contracts and validation](docs/retrieval-evidence.md). The released Core0.44
+consumer lock, installed runtime and accepted image identities remain frozen.
+No Core publication, consumer adoption, live indexing or deployment is implied.
+
 ## Document BM25 — released Core, consumer adoption
 
 [PR99](https://github.com/Stell0/ns8-czero/pull/99) regularly merged as

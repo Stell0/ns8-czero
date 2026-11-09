@@ -1,5 +1,20 @@
 # C0 Core
 
+## Retrieval evidence producer (0.46)
+
+Schema0037 records embedding input format and invalidates contextual vectors on
+source/Wiki label changes. `EmbeddingSettings(input_format='context-v1')` explicitly
+selects bounded recorded product/version, title and original heading context.
+`legacy` remains the default and retains its profile identity. Contextual search
+requires complete current source/Wiki coverage and falls back explicitly while
+building or refreshing its index. Citation bodies and offsets are unchanged.
+
+Search-only whitespace normalization accepts up to 8192 raw and 512 normalized
+characters. Hybrid document fusion retains one distinct `supporting_passages`
+entry without changing its primary hit or RRF document ranking. Both passages
+retain exact current evidence references. See the
+[contracts and evaluation limits](../../docs/retrieval-evidence.md).
+
 > Latest-only semantics replace the previous content-history guarantee. Each logical source document and Wiki article retains one current complete generation. Old exact citations and superseded mutation replays return `content_superseded` (410); stable links open current content. Back up before the destructive upgrade and run the [read-only preflight](../../docs/latest-only-migration.md).
 
 Reusable Python services for C0 applications, independent of the NethServer

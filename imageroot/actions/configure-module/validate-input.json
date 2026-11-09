@@ -81,6 +81,14 @@
                         },
                         "send_dimensions": {
                             "type": "boolean"
+                        },
+                        "input_format": {
+                            "type": "string",
+                            "enum": [
+                                "legacy",
+                                "context-v1"
+                            ],
+                            "description": "Embedding input format; context-v1 requires building a separate complete index."
                         }
                     }
                 },

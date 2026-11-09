@@ -111,7 +111,8 @@ def prepare(module_id):
 
 def snapshot(module_id):
     query = """SELECT json_build_object('profiles',(SELECT json_agg(t ORDER BY id) FROM
-        (SELECT id,model,dimensions,generation,active FROM c0_embedding_profiles) t),
+        (SELECT id,model,dimensions,generation,active,
+          coalesce(to_jsonb(p)->>'input_format','legacy') AS input_format FROM c0_embedding_profiles p) t),
         'chunks',(SELECT json_agg(t ORDER BY id) FROM (SELECT id,revision_id,ordinal,start_offset,end_offset,
         content_hash FROM c0_wiki_chunks) t),'vectors',(SELECT json_agg(t ORDER BY id) FROM
         (SELECT id,profile_id,generation,source_chunk_id,wiki_chunk_id,input_hash,embedding::text AS vector

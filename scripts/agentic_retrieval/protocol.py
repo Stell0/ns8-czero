@@ -145,7 +145,8 @@ def original_citations(calls,corpus):
         if not isinstance(value,dict):continue
         if call['name']=='sources_search':citations=value.get('citations',[])
         elif call['name'] in ('knowledge_search','knowledge_search_structured'):
-            citations=[h.get('citation',{}) for h in value.get('hits',[])]
+            citations=[p.get('citation',{}) for h in value.get('hits',[])
+                       for p in [h,*h.get('supporting_passages',[])]]
         else:continue
         for citation in citations:
             if not isinstance(citation,dict):continue

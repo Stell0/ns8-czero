@@ -75,6 +75,11 @@ flowchart TB
 
 `knowledge_search` supports `auto`, `text`, `semantic` and `hybrid`. With configured embeddings, auto requests hybrid; otherwise it uses text. English/Italian normalization and document BM25 rank ordinary queries. Explicit query syntax and [structured applicability filters](reference.md) retain exact constraints. Source search keeps its citation-list contract; optional ranker metadata does not change evidence identity.
 
+The [retrieval evidence producer](retrieval-evidence.md) adds search-specific
+whitespace normalization and one exact supporting passage to hybrid hits. Its
+opt-in contextual embedding format uses recorded labels and original ancestor
+headings; these prefixes are derivatives and never replace citation text.
+
 Provider absence/failure reports fallback and leaves ordinary text ranking available. Optional scoring uses bounded candidate excerpts and can rerank or filter when configured; filtering can return no hits. It does not establish factual verification. Current authority is checked before optional I/O and again before returning results. An optional bounded graph expansion can add connected context. See [retrieval options and measurements](retrieval-benchmark.md).
 
 Retrieval does not queue a compiler job, revise Wiki pages or execute model reasoning in C0. [Optional agent-side post-answer feedback](llm-wiki.md#what-happens-after-a-search) is a separate write workflow.

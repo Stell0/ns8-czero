@@ -8,11 +8,12 @@ const helpers = import(pathToFileURL(path.join(__dirname, '../../ui/src/retrieva
 
 test('retrieval form never copies a saved credential into inputs', async () => {
   const { retrievalForm, retrievalPayload } = await helpers;
-  const form = retrievalForm({embedding:{enabled:true,api_key:'unexpected-secret',api_key_configured:true}});
+  const form = retrievalForm({embedding:{enabled:true,input_format:'context-v1',api_key:'unexpected-secret',api_key_configured:true}});
   assert.equal(form.embedding.api_key,'');
   assert.equal(form.embedding.api_key_configured,true);
   const payload = retrievalPayload(form);
   assert.equal(payload.embedding.enabled,true);
+  assert.equal(payload.embedding.input_format,'context-v1');
   assert.equal(payload.embedding.api_key,'');
   assert.equal('api_key_configured' in payload.embedding,false);
   assert.equal(JSON.stringify(payload).includes('unexpected-secret'),false);

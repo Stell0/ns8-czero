@@ -16,7 +16,7 @@ from czero_core.knowledge import EvidenceNotReady
 from czero_core.structured import StructuredFilters, StructuredSearchService
 from czero_core.wiki import KnowledgeConflict, KnowledgeNotFound
 from czero_app.auth import RequestAccess
-from czero_app.retrieval import WikiCitation
+from czero_app.retrieval import WikiCitation, SearchPassage, SearchQuery
 from czero_app.sources import CitationView
 
 Kind = Literal['source_version','wiki_revision','entity','object','claim']
@@ -156,7 +156,7 @@ class FilterOptions(BaseModel):
 
 class StructuredSearch(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    query: str = Field(strict=True, min_length=1, max_length=512, repr=False)
+    query: SearchQuery = Field(repr=False)
     space_id: UUID | None = Field(default=None,
         description='Explicit authorized space inside data for MCP; distinct from ordinary search options.space_id.')
     filters: FilterOptions = Field(default_factory=FilterOptions)
@@ -194,6 +194,7 @@ class StructuredHit(BaseModel):
     evidence_refs: list[EvidenceReference]
     retrieval_method: str
     relevance_score: float | None = Field(default=None, ge=0, le=1)
+    supporting_passages: list[SearchPassage] = Field(default_factory=list, max_length=1)
 
 
 class StructuredResult(BaseModel):

@@ -45,6 +45,21 @@ def test_normalization_deduplicates_parent_and_rejects_old_or_foreign_evidence()
     with pytest.raises(C0Error,match='unexpected_hit_kind'):normalize({'hits':[{'kind':'wiki_revision'}]},source)
 
 
+def test_supporting_passages_add_evidence_without_inflating_document_rank_or_duplicates():
+    source={'s':{'id':'parent','url':'a','version_id':'v'}}
+    primary={'kind':'chunk','id':'c1','citation':{'source_id':'s','version_id':'v','body':'alpha'}}
+    support={'kind':'chunk','id':'c2','citation':{'source_id':'s','version_id':'v','body':'beta'}}
+    chunks,docs=normalize({'hits':[{**primary,'supporting_passages':[support]}]},source)
+    assert len(chunks)==2 and len(docs)==1 and docs[0]['rank']==1
+    assert chunks[1]['supporting'] and chunks[1]['body']=='beta'
+    q=question();q['relevant']=q['relevant'][:1]
+    m=metrics(q,chunks,[{**docs[0],'product':'Product','version':'8'}])
+    assert m['complete_evidence']==1 and m['duplicate_document_rate']==0
+    bad={**support,'citation':{**support['citation'],'version_id':'expired'}}
+    with pytest.raises(C0Error,match='outside_corpus'):
+        normalize({'hits':[{**primary,'supporting_passages':[bad]}]},source)
+
+
 def test_labels_require_current_hashes_and_actual_passages():
     manifest={'documents':[{'url':u,'content_hash':'hash-'+u} for u in ('a','b')]}
     bodies={'a':'alpha alternative alpha beta','b':'gamma'}

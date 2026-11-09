@@ -1,5 +1,11 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+Retrieval evidence producer work is tracked in
+[its contract](docs/retrieval-evidence.md): Core0.46/schema0037, plugin1.9,
+bounded whitespace normalization, one exact supporting passage and opt-in
+`context-v1` embedding inputs. Preserve legacy profiles and the released consumer
+lock. Source implementation does not authorize live activation or publication.
+
 The current accepted dedicated installation is app **0.61.0**, released Core
 **0.42.0**, schema **0034**, source `827fbde711325a2f67b08ca7fee3d9ac5e950b67`.
 Its supported C0-only backup/update, manager restart, preservation, live HTTP/MCP
