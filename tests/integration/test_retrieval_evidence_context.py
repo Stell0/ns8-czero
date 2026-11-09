@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from czero_core.embeddings import EmbeddingStore,profile_identity
 from czero_core.migrate import migrate_database
+from czero_core.providers import ScorerSettings,SystemOneClient
 from czero_core.retrieval import SearchService
 from czero_core.structured import StructuredSearchService
 from test_embeddings import indexed,search,wiki,sources,access
@@ -65,6 +66,32 @@ def test_optional_index_readiness_failure_falls_back_without_exposing_diagnostic
     assert result['retrieval_method']=='text' and result['fallback_reason']=='embedding_storage_unavailable'
     assert result['hits'][0]['citation']['body']=='alpha evidence' and not calls
     assert 'private-storage-diagnostic' not in json.dumps(result)
+
+
+@pytest.mark.parametrize('title,expected',[('Recovery',0),('字'*256,1)])
+def test_scorer_reports_title_clipping_with_short_supporting_evidence(indexed,monkeypatch,title,expected):
+    store,fixtures,_=indexed;_,wiki,_=fixtures
+    body='alpha introduction. Precise recovery procedure.'
+    create_page(wiki,title=title,body=body)
+    with store.database.engine.begin() as c:store._index_batch(c)
+    observed=[]
+    def score(request):
+        payload=json.loads(request.content)
+        candidate,=json.loads(payload['input'])['candidates'];observed.append(candidate['text'])
+        return httpx2.Response(200,json={'model':payload['model'],
+            'answers':[{'name':'r0','type':'predicate','probability':.9}]})
+    scorer=SystemOneClient(ScorerSettings('https://score.example.test/v1','fixture'),transport=httpx2.MockTransport(score))
+    service=SearchService(store.database,wiki[0].access,embedding_client=store.client,scorer=scorer,scorer_mode='rerank')
+    original=service._text
+    def lexical(*args,**kwargs):
+        hits,strategy=original(*args,**kwargs)
+        return [{**hit,'excerpt':body[:5],'start_offset':0,'end_offset':5} for hit in hits],strategy
+    monkeypatch.setattr(service,'_text',lexical)
+    result=service.search(wiki[1],'alpha',mode='hybrid')
+    assert result['scored_count']==1 and result['scorer_truncated_candidates']==expected
+    assert len(observed)==1 and 'Precise recovery procedure.' in observed[0]
+    assert len((title+'\nalpha\n'+body).encode())<2048
+    assert len(result['hits'][0]['supporting_passages'])==1
 
 
 @pytest.mark.parametrize('kind',['source','wiki'])

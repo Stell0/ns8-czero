@@ -241,8 +241,8 @@ class SearchService(SpaceBound):
                     with self.database.engine.connect() as connection:self._authorize(connection,actor)
                     scored=self.scorer.score(query,[{'id':hit_key(hit),'text':scorer_text(hit)} for hit in candidates])
                     usage['systemone']=scored['usage'];truncated=scored['truncated_candidates'];scored_count=len(candidates)
-                    truncated+=sum(bool(h.get('supporting_passages')) and len((h['title']+'\n'+'\n'.join(
-                        p['excerpt'] for p in [h,*h['supporting_passages']])).encode())>2048 for h in candidates)
+                    truncated+=sum(bool(h.get('supporting_passages')) and scorer_text(h)!=(h['title']+'\n'+'\n'.join(
+                        p['excerpt'] for p in [h,*h['supporting_passages']])) for h in candidates)
                     ranked=[{**hit,'relevance_score':scored['scores'][hit_key(hit)]} for hit in candidates]
                     ranked.sort(key=lambda h:(-h['relevance_score'],hit_key(h)))
                     hits=([h for h in ranked if h['relevance_score']>=self.scorer.settings.threshold]
