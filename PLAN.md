@@ -1,5 +1,16 @@
 # C0 roadmap
 
+## Administration role wording
+
+The clarification candidate starts from original main `4af1d70`. English and
+Italian person-role selectors and saved summaries show cumulative access levels;
+protected-space Editor choices use the same Read and write label. The selectors
+save the existing role values, while application consent keeps independent scope
+labels. Frontend lint/format/types/build and 28 unit checks pass. Eight isolated
+browser contexts pass English/Italian, light/dark and phone/desktop selection,
+save/readback, keyboard and overflow checks using synthetic API replies. Full
+native acceptance remains the automatic CI gate for these Vue components.
+
 ## Retrieval evidence producer candidate
 
 The isolated candidate starts at original main `6bb8cea`, with Core0.46/schema0037

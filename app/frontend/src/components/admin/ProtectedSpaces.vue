@@ -147,7 +147,7 @@ const save = useMutation({
             :options="[
               { id: 'none', label: t('admin.noGrant') },
               { id: 'reader', label: t('account.read') },
-              { id: 'editor', label: t('account.write') },
+              { id: 'editor', label: t('admin.readWrite') },
             ]"
             :no-options-label="t('common.options')"
             :optional-label="t('common.optional')"

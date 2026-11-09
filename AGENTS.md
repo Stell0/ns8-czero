@@ -1,5 +1,9 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+Person-role selectors and saved summaries use cumulative labels: **Read**,
+**Read and write**, **Read, write and manage**. Preserve single role selection and
+independent application consent scopes; do not reuse role labels for scopes.
+
 Retrieval evidence producer work is tracked in
 [its contract](docs/retrieval-evidence.md): Core0.46/schema0037, plugin1.9,
 bounded whitespace normalization, one exact supporting passage and opt-in

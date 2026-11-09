@@ -107,7 +107,7 @@ Source documents and Wiki pages retain **one current complete content generation
 4. Connect an agent if you want conversational retrieval or authorized Wiki maintenance.
 5. With Write access, use **Sources → Upload source** to add a supported file. Wait for extraction, then inspect the saved evidence.
 
-New verified users normally receive Read access to Shared. Administrators grant Write/Manage, protected-space access or a persistent block. Application approval, a person's permissions and disconnecting one connection are separate controls. Start with [the user guide and first-content walkthrough](docs/user-guide.md).
+New verified users normally receive Read access to Shared. Administrators choose one cumulative access level: Read, Read and write, or Read, write and manage. They also manage protected-space access and persistent blocks. Application approval, a person's permissions and disconnecting one connection are separate controls. Application consent permissions remain independent selections. Start with [the user guide and first-content walkthrough](docs/user-guide.md).
 
 ### Run your own instance
 

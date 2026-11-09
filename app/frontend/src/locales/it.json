@@ -271,6 +271,9 @@
   "admin": {
     "people": "Persone e applicazioni",
     "role": "Permesso",
+    "readWrite": "Lettura e scrittura",
+    "readWriteManage": "Lettura, scrittura e gestione",
+    "roleHelp": "La scrittura include la lettura. La gestione include lettura e scrittura.",
     "approve": "Approva applicazione",
     "decline": "Rifiuta applicazione",
     "block": "Blocca accesso",
