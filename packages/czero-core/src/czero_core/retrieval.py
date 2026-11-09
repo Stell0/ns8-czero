@@ -206,8 +206,12 @@ class SearchService(SpaceBound):
             connection.execute(text('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ'))
             self._authorize(connection,actor)
             ordinary,lexical_strategy=self._text(connection,query,limit=self.limits.candidates,kind=kind)
-            profile=self.embeddings._profile(connection) if self.embeddings.client else None
-            ready=profile is not None and self.embeddings._ready(connection,profile)
+            profile=None;ready=False
+            if self.embeddings.client and desired!='text':
+                try:
+                    profile=self.embeddings._profile(connection)
+                    ready=profile is not None and self.embeddings._ready(connection,profile)
+                except SQLAlchemyError:failures.append('embedding_storage_unavailable')
         hits=ordinary
         if desired in ('semantic','hybrid'):
             if self.embeddings.client is None:failures.append('embeddings_not_configured')

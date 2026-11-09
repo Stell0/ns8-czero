@@ -7,6 +7,7 @@ import os
 import httpx2
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from czero_core.embeddings import EmbeddingStore,profile_identity
 from czero_core.migrate import migrate_database
@@ -38,6 +39,32 @@ def test_normalized_queries_have_identical_core_source_and_structured_results(se
         assert source[0].search(source[1],query)==source[0].search(source[1],'alpha recovery')
         structured=StructuredSearchService(service.database,wiki[0].access)
         assert structured.search(wiki[1],query,mode='text')==structured.search(wiki[1],'alpha recovery',mode='text')
+
+
+def test_text_override_never_consults_optional_embedding_index(contextual,monkeypatch):
+    store,fixtures,calls=contextual;_,wiki,source=fixtures
+    version=upload(source,data=b'alpha evidence');execute(source,'source.extract',version['id'])
+    service=SearchService(store.database,wiki[0].access,embedding_client=store.client)
+    def unavailable(*args,**kwargs):
+        pytest.fail('Text search must not inspect optional embedding storage')
+    monkeypatch.setattr(service.embeddings,'_profile',unavailable)
+    monkeypatch.setattr(service.embeddings,'_ready',unavailable)
+    result=service.search(wiki[1],'alpha',mode='text',rerank='off')
+    assert result['retrieval_method']=='text' and result['fallback_reason'] is None
+    assert result['hits'][0]['citation']['body']=='alpha evidence' and not calls
+
+
+def test_optional_index_readiness_failure_falls_back_without_exposing_diagnostics(contextual,monkeypatch):
+    store,fixtures,calls=contextual;_,wiki,source=fixtures
+    version=upload(source,data=b'alpha evidence');execute(source,'source.extract',version['id'])
+    service=SearchService(store.database,wiki[0].access,embedding_client=store.client)
+    def unavailable(*args,**kwargs):
+        raise SQLAlchemyError('private-storage-diagnostic')
+    monkeypatch.setattr(service.embeddings,'_profile',unavailable)
+    result=service.search(wiki[1],'alpha',mode='hybrid',rerank='off')
+    assert result['retrieval_method']=='text' and result['fallback_reason']=='embedding_storage_unavailable'
+    assert result['hits'][0]['citation']['body']=='alpha evidence' and not calls
+    assert 'private-storage-diagnostic' not in json.dumps(result)
 
 
 @pytest.mark.parametrize('kind',['source','wiki'])
