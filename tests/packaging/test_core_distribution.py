@@ -92,6 +92,10 @@ def test_clean_install_is_independent_of_checkout_and_ns8_sdk(installed):
         "from czero_core.jobs import default_registry;from czero_core.objects import ObjectService;"
         "from czero_core.wiki import WikiService;from czero_core.sources import SourceService;"
         "from czero_core.lexical import LexicalQuery;"
+        "from czero_core.search_query import normalize_query;"
+        "from czero_core.embedding_context import contextual_input;"
+        "assert normalize_query('  alpha\\n beta')=='alpha beta';"
+        "assert contextual_input({'title':'Guide','body':'evidence'}).endswith('\\nevidence');"
         "from czero_core.renewal import NativeAuthorityService,SessionPolicy;"
         "from czero_core.cimd import CimdService;from czero_core.cimd_metadata import parse_metadata;"
         "from czero_core.projects import ProjectService;from czero_core.project_schedules import schedule_contract;"
@@ -125,7 +129,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0036_document_bm25'
+        assert results[0]==results[1] and results[0][1]=='0037_embedding_context'
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,

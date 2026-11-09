@@ -23,12 +23,16 @@ def validate(value):
     if not isinstance(value, dict) or set(value) != set(expected) or type(value['format']) is not int or value['format'] != 1:
         raise ValueError('invalid_retrieval_configuration')
     for section in ('embedding', 'scorer', 'limits'):
-        if not isinstance(value[section], dict) or set(value[section]) != set(expected[section]):
+        allowed=set(expected[section]) | ({'input_format'} if section=='embedding' else set())
+        if (not isinstance(value[section], dict) or not set(expected[section]) <= set(value[section])
+                or set(value[section])-allowed):
             raise ValueError('invalid_retrieval_configuration')
     for name in ('embedding', 'scorer'):
         item = value[name]
         active = item['enabled'] if name == 'embedding' else item['mode'] != 'off'
         if name == 'embedding':
+            if item.get('input_format','legacy') not in ('legacy','context-v1'):
+                raise ValueError('invalid_retrieval_configuration')
             if type(item['enabled']) is not bool or type(item['send_dimensions']) is not bool or type(item['dimensions']) is not int or not 1 <= item['dimensions'] <= 2000:
                 raise ValueError('invalid_retrieval_configuration')
         elif item['mode'] not in ('off', 'rerank', 'filter'):
@@ -82,6 +86,7 @@ def merge(previous, patch):
         raise ValueError('invalid_retrieval_configuration')
     for section, changes in patch.items():
         allowed = set(result[section]) | ({'clear_api_key'} if section != 'limits' else set())
+        if section=='embedding':allowed.add('input_format')
         if not isinstance(changes, dict) or set(changes) - allowed:
             raise ValueError('invalid_retrieval_configuration')
         changes = changes.copy()

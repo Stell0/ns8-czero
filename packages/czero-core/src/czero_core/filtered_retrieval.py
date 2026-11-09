@@ -36,6 +36,8 @@ class FilteredEmbeddingStore(EmbeddingStore):
             'wiki': kind != 'source' and 'wiki' in filters.categories}
 
     def _ready(self, connection, profile):
+        if self.client.settings.input_format=='context-v1' and not super()._ready(connection,profile):
+            return False
         eligibility, parameters = self._eligibility(connection, profile, 'all')
         return connection.execute(text('SELECT 1' + eligibility + ' LIMIT 1'), parameters).scalar_one_or_none() is not None
 

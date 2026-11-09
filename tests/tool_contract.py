@@ -51,17 +51,49 @@ def legacy_search_output(schema):
     field = projected['properties'].pop('lexical_strategy')
     assert structural_schema(field) == {'anyOf':[
         {'enum':['websearch','relaxed','bm25'],'type':'string'},{'type':'null'}], 'default':None}
+    definitions=projected.get('$defs',{})
+    for name in ('SearchHit','StructuredHit'):
+        if name not in definitions:continue
+        hit=definitions[name]
+        assert 'supporting_passages' not in hit.get('required',[])
+        support=hit['properties'].pop('supporting_passages')
+        assert structural_schema(support)=={'type':'array','maxItems':1,'items':{'$ref':'#/$defs/SearchPassage'}}
+    passage=definitions.pop('SearchPassage')
+    assert set(passage['required'])=={'id','kind','resource_id','revision','title','content_hash',
+        'excerpt','start_offset','end_offset','citation','wiki'}
+    assert set(passage['properties'])==set(passage['required'])
+    for field in ('citation','wiki','excerpt','start_offset','end_offset'):
+        hit=definitions.get('SearchHit',definitions.get('StructuredHit'))
+        # Structured primary offsets are nullable for non-evidence records.
+        if field not in ('start_offset','end_offset') or 'SearchHit' in definitions:
+            assert structural_schema(passage['properties'][field])==structural_schema(hit['properties'][field])
+    return projected
+
+
+def legacy_search_input(schema):
+    """Check the deliberate raw bound while retaining all other frozen rules."""
+    projected=deepcopy(schema)
+    definitions=projected.get('$defs',{})
+    for candidate in (projected,definitions.get('SearchOptions',{}),definitions.get('StructuredSearch',{})):
+        query=candidate.get('properties',{}).get('query')
+        if query is not None:
+            assert query['type']=='string' and query['minLength']==1 and query['maxLength']==8192
+            query['maxLength']=512
     return projected
 
 
 def legacy_index_status_output(schema):
     """Check additive optional coverage counts before frozen-schema comparison."""
     projected = deepcopy(schema)
-    for name in ('source_indexed', 'wiki_indexed'):
+    for name in ('source_indexed', 'wiki_indexed','source_expected','wiki_expected'):
         assert name not in projected.get('required', [])
         field = projected['properties'].pop(name)
         assert structural_schema(field) == {'anyOf':[
             {'type':'integer'}, {'type':'null'}], 'default':None}
+    for name,shape in [('input_format',{'enum':['legacy','context-v1'],'type':'string'}),('complete',{'type':'boolean'})]:
+        assert name not in projected.get('required',[])
+        field=projected['properties'].pop(name)
+        assert structural_schema(field)=={'anyOf':[shape,{'type':'null'}],'default':None}
     return projected
 
 

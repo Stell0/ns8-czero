@@ -95,3 +95,14 @@ def test_upgrade_restore_keep_settings_and_restrict_mode(native, monkeypatch):
     with pytest.raises(SystemExit, match='Invalid private retrieval configuration'):
         step(monkeypatch, 'bin/czero-create-retrieval-state')
     assert (state / 'retrieval.env').read_text() == 'broken-private-state'
+
+
+def test_legacy_config_loads_and_contextual_selection_is_explicit_and_preserved(native):
+    _,config=native
+    old=config.defaults();old['embedding'].pop('input_format',None)
+    updated=config.merge(old,{})
+    assert updated==old and RetrievalSettings.parse(updated).embedding is None
+    contextual=config.merge(updated,{'embedding':{'input_format':'context-v1'}})
+    assert config.public(contextual)['embedding']['input_format']=='context-v1'
+    assert config.merge(contextual,{'limits':{'graph_depth':1}})['embedding']['input_format']=='context-v1'
+    with pytest.raises(ValueError):config.merge(contextual,{'embedding':{'input_format':'arbitrary'}})

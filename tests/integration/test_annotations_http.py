@@ -368,6 +368,8 @@ def test_accepted_am3_contracts_add_only_optional_lexical_metadata(annotation_ht
                 assert actual[key] and isinstance(actual[key],str)
                 continue
             observed=actual[key]
+            if key=='input_schema' and expected['name'] in ('knowledge_search','knowledge_search_structured'):
+                observed=contract.legacy_search_input(observed)
             if key=='output_schema' and expected['name'] in ('knowledge_search','knowledge_search_structured'):
                 observed=contract.legacy_search_output(observed)
             if key=='output_schema' and expected['name']=='knowledge_index_status':

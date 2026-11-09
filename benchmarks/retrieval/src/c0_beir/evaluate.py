@@ -149,7 +149,7 @@ def evaluate(client, dataset, manifest, output, *, modes=('text', 'semantic', 'h
                                 rows.append(row)
                                 query_file.write(json.dumps(row, sort_keys=True) + '\n'); query_file.flush()
                         chunks, documents = normalize(result, sources)
-                        for hit in result['hits']:
+                        for hit in [p for h in result['hits'] for p in [h,*h.get('supporting_passages',[])]]:
                             citation = hit['citation']
                             expected = chunks_by_id.get(citation['chunk_id'])
                             if not expected:
@@ -173,7 +173,7 @@ def evaluate(client, dataset, manifest, output, *, modes=('text', 'semantic', 'h
                                    fallback_reasons=result.get('fallback_reasons', []), candidate_count=result.get('candidate_count'),
                                    scored_count=result.get('scored_count'), scorer_truncated_candidates=result.get('scorer_truncated_candidates'),
                                    provider_usage=result.get('provider_usage', {}), documents=ranking,
-                                   metrics=measure(dataset.qrels[qid], ranking, len(chunks)) if valid and repetition == 0 else None)
+                                   metrics=measure(dataset.qrels[qid], ranking, sum(not c.get('supporting') for c in chunks)) if valid and repetition == 0 else None)
                         rows.append(row)
                         query_file.write(json.dumps(row, sort_keys=True, ensure_ascii=False) + '\n'); query_file.flush()
                         ranking_file.write(json.dumps({'query_id': qid, 'selection': selection, 'repetition': repetition,

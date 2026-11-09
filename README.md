@@ -27,7 +27,9 @@ Use C0 for team procedures, support knowledge, ongoing research or project knowl
 | Browser reading | Wiki, Sources, Projects and Explore; English/Italian, responsive pages and light/dark/system themes |
 | Reusable base | Independently distributable Python Core, reference application, tests, fork-update tools and NethServer 8 packaging |
 
-Ordinary text search needs no model provider. Semantic retrieval requires a configured embedding service and a ready index. Optional scoring can rerank or filter candidates. See [retrieval behavior and measured results](docs/retrieval-benchmark.md); a ranking score does not establish that an answer is correct.
+Ordinary text search needs no model provider. Semantic retrieval requires a configured embedding service and a ready index.
+The [retrieval evidence candidate](docs/retrieval-evidence.md) adds bounded query
+normalization, supporting passages and opt-in contextual embeddings. Optional scoring can rerank or filter candidates. See [retrieval behavior and measured results](docs/retrieval-benchmark.md); a ranking score does not establish that an answer is correct.
 
 ## Agentic RAG and Bring Your Own Agent (BYOA)
 

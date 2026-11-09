@@ -8,13 +8,14 @@ from sqlalchemy import Uuid,bindparam,text
 from sqlalchemy.exc import SQLAlchemyError
 from .identity import PermissionDenied,Role
 from .spaces import SpaceBound
-from .sources import SourceService,_label
+from .sources import SourceService
 from .wiki import _view,KnowledgeNotFound
 from .embeddings import EmbeddingStore
 from .knowledge import KnowledgeService
 from .providers import ProviderUnavailable
 from .lexical import select_lexical
 from .bm25 import RANKER_VERSION,search_documents
+from .search_query import normalize_query
 
 
 def excerpt(body,query,*,origin=0):
@@ -48,15 +49,51 @@ def document_key(hit):
     return ('source:' if hit['kind']=='chunk' else 'wiki:')+str(hit['resource_id'])
 
 
+PASSAGE_FIELDS = ('id','kind','resource_id','revision','title','content_hash','excerpt',
+                  'start_offset','end_offset','citation','wiki')
+
+
+def distinct_passage(first, second):
+    if first.get('excerpt') == second.get('excerpt'):
+        return False
+    # Offsets from different extracted documents are not comparable.
+    def origin(hit):
+        citation = hit.get('citation')
+        return citation.get('document_id') if citation else hit.get('id')
+    if origin(first) != origin(second):
+        return True
+    # Even a short uncovered tail can contain the required command. Suppress
+    # only evidence already completely covered by the primary exact span.
+    return not (first['start_offset'] <= second['start_offset']
+                and first['end_offset'] >= second['end_offset'])
+
+
 def reciprocal_rank_fusion(*rankings, document_level=False):
-    hits={};scores={}
+    hits={};scores={};support={}
     for ranking in rankings:
         seen=set();rank=0
         for hit in ranking:
             key=document_key(hit) if document_level else hit_key(hit)
             if key in seen:continue
-            seen.add(key);rank+=1;hits.setdefault(key,hit);scores[key]=scores.get(key,0.)+1./(60+rank)
-    return [{**hits[key],'score':scores[key]} for key in sorted(hits,key=lambda k:(-scores[k],k))]
+            seen.add(key);rank+=1
+            if key not in hits:
+                hits[key]=hit
+            elif document_level and key not in support and distinct_passage(hits[key],hit):
+                support[key]=[{field:hit[field] for field in PASSAGE_FIELDS}]
+            scores[key]=scores.get(key,0.)+1./(60+rank)
+    return [{**hits[key],'score':scores[key],**({'supporting_passages':support[key]} if key in support else {})}
+            for key in sorted(hits,key=lambda k:(-scores[k],k))]
+
+
+def scorer_text(hit):
+    if not hit.get('supporting_passages'):
+        return hit['title']+'\n'+hit['excerpt']
+    passages=[hit,*hit.get('supporting_passages',[])]
+    # The provider admits 2048 UTF-8 bytes per document. Reserve an equal share
+    # for each passage, so a long lexical excerpt cannot hide semantic evidence.
+    title=hit['title'].encode()[:256].decode('utf-8',errors='ignore')
+    budget=(2048-len(title.encode())-len(passages))//len(passages)
+    return title+'\n'+'\n'.join(p['excerpt'].encode()[:budget].decode('utf-8',errors='ignore') for p in passages)
 
 
 class SearchService(SpaceBound):
@@ -153,7 +190,7 @@ class SearchService(SpaceBound):
         return [self.knowledge.graph(actor,key,depth=depth,limit=16) for key in roots]
 
     def search(self,actor,query,*,limit=None,mode='auto',kind='all',graph_depth=0,rerank=None):
-        query=_label(query,512);limit=min(20,self.limits.max_limit) if limit is None else limit
+        query=normalize_query(query);limit=min(20,self.limits.max_limit) if limit is None else limit
         selected=self.scorer_mode if rerank is None else rerank
         if (type(limit) is not int or not 1<=limit<=self.limits.max_limit
                 or mode not in ('auto','text','semantic','hybrid') or kind not in ('all','source','wiki')
@@ -181,7 +218,9 @@ class SearchService(SpaceBound):
                     embedded=self.embeddings.client.embed([query]);usage['embedding']=embedded['usage']
                     with self.database.engine.connect() as connection:
                         self._authorize(connection,actor)
-                        semantic=self._semantic(connection,embedded['vectors'][0],query,kind)
+                        if self.embeddings.client.settings.input_format=='context-v1' and not self.embeddings._ready(connection,profile):
+                            semantic=[];failures.append('embedding_index_not_ready')
+                        else:semantic=self._semantic(connection,embedded['vectors'][0],query,kind)
                     if semantic:
                         hits=semantic if desired=='semantic' else reciprocal_rank_fusion(ordinary,semantic,document_level=True)
                         method=desired
@@ -196,8 +235,10 @@ class SearchService(SpaceBound):
                 candidates=hits[:self.limits.scorer_candidates]
                 try:
                     with self.database.engine.connect() as connection:self._authorize(connection,actor)
-                    scored=self.scorer.score(query,[{'id':hit_key(hit),'text':hit['title']+'\n'+hit['excerpt']} for hit in candidates])
+                    scored=self.scorer.score(query,[{'id':hit_key(hit),'text':scorer_text(hit)} for hit in candidates])
                     usage['systemone']=scored['usage'];truncated=scored['truncated_candidates'];scored_count=len(candidates)
+                    truncated+=sum(bool(h.get('supporting_passages')) and len((h['title']+'\n'+'\n'.join(
+                        p['excerpt'] for p in [h,*h['supporting_passages']])).encode())>2048 for h in candidates)
                     ranked=[{**hit,'relevance_score':scored['scores'][hit_key(hit)]} for hit in candidates]
                     ranked.sort(key=lambda h:(-h['relevance_score'],hit_key(h)))
                     hits=([h for h in ranked if h['relevance_score']>=self.scorer.settings.threshold]
@@ -215,15 +256,16 @@ class SearchService(SpaceBound):
             self._authorize(connection,actor)
             from .current_content import ContentSuperseded
             space=self._space(connection)
-            source_ids=[hit['resource_id'] for hit in hits if hit['kind']=='chunk']
-            wiki_ids=[hit['resource_id'] for hit in hits if hit['kind']=='wiki_revision']
+            passages=[p for hit in hits for p in [hit,*hit.get('supporting_passages',[])]]
+            source_ids=[hit['resource_id'] for hit in passages if hit['kind']=='chunk']
+            wiki_ids=[hit['resource_id'] for hit in passages if hit['kind']=='wiki_revision']
             sources=dict(connection.execute(text('''SELECT id,current_version_id FROM c0_sources
                 WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'''),
                 {'space':space,'ids':source_ids}).all()) if source_ids else {}
             wikis=dict(connection.execute(text('''SELECT id,revision FROM c0_wiki_pages
                 WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'''),
                 {'space':space,'ids':wiki_ids}).all()) if wiki_ids else {}
-            for hit in hits:
+            for hit in passages:
                 if hit['kind']=='chunk' and sources.get(hit['resource_id'])!=hit['citation']['version_id']:
                     raise ContentSuperseded()
                 if hit['kind']=='wiki_revision' and wikis.get(hit['resource_id'])!=hit['revision']:

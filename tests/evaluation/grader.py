@@ -54,7 +54,8 @@ def observed_citations(calls, snapshot):
         if name=='citations_get': complete.append(value)
         elif name=='sources_search': complete.extend(value.get('citations',[]))
         elif name in ('knowledge_search','knowledge_search_structured'):
-            complete.extend(h['citation'] for h in value.get('hits',[]) if isinstance(h.get('citation'),dict))
+            complete.extend(p['citation'] for h in value.get('hits',[])
+                for p in [h,*h.get('supporting_passages',[])] if isinstance(p.get('citation'),dict))
         elif name=='source_versions_list':
             seen_versions.update({v['id']:v for v in value.get('versions',[])})
         elif name=='sources_ingest_text' and 'id' in value: seen_versions[value['id']]=value

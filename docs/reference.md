@@ -34,6 +34,14 @@ Application membership, effective space grants, actual OAuth scopes and current 
 
 REST content selection normally uses `space_id` in the query; bundle selection is in its request body. MCP normally uses top-level `space_id`, except `knowledge_search` uses `options.space_id`, and structured search/bundle use `data.space_id`. Use current schemas for exact placement. Legacy content/resource forms select Shared and never grant protected access by a resource UUID.
 
+The Core0.46 producer normalizes search whitespace before enforcing a
+512-character normalized limit (8192 raw characters). Oversized requests fail
+without truncation. Optional `supporting_passages` contains at most one distinct
+exact passage per hybrid hit, with its own citation and offsets. Read it within
+the same context budget as primary evidence. Index status optionally reports
+`input_format`, `source_expected`, `wiki_expected` and `complete`; older servers
+may omit these fields. See [format adoption and limits](retrieval-evidence.md).
+
 ## Evidence and edits
 
 - Plain text/Markdown ingestion: at most 131072 UTF-8 bytes; use the returned immutable source version and await extraction.

@@ -6,7 +6,7 @@ from sqlalchemy import text
 from .filtered_retrieval import FilteredEvidenceSearch
 from .retrieval import SearchService, excerpt, reciprocal_rank_fusion
 from .retrieval_filters import StructuredFilters
-from .sources import _label
+from .search_query import normalize_query
 from .spaces import SpaceBound
 from .receipts import snapshot
 
@@ -66,7 +66,7 @@ class StructuredSearchService(SpaceBound):
         return hits
 
     def search(self, actor, query, *, filters=None, limit=None, mode='auto', rerank=None):
-        query = _label(query, 512)
+        query = normalize_query(query)
         filters = StructuredFilters() if filters is None else filters
         limit = min(20, self.limits.max_limit) if limit is None else limit
         selected = self.evidence.scorer_mode if rerank is None else rerank
