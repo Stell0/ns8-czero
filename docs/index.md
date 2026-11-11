@@ -26,3 +26,5 @@ C0 (CZero) is a self-hosted knowledge service and Agentic RAG platform. Bring Yo
 [PLAN](../PLAN.md#roadmap) records current priorities and exact source/image acceptance. [CI policy](ci-policy.md) defines required validation. An accepted source, a published Core artifact and an installed runtime are separate states.
 
 The [Vue website contract](vue-website.md), [extraction milestone records](ingestion-pipeline/PLAN.md), [compiler milestone records](knowledge-compilation/PLAN.md) and [WikiPlant audit](projects/WIKIPLANT_COMPATIBILITY.md) retain generation-specific design and evidence. Use the guides above for current setup. Milestone plans are not assertions that every planned capability is released or enabled. [Historical evidence](history/PLAN.md) remains available with its original identities and limitations.
+
+- [Secure cross-space reference contract](cross-space-references-plan.md)

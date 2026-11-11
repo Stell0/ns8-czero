@@ -1,5 +1,14 @@
 # C0 roadmap
 
+## Secure cross-space references
+
+The operator-selected [implementation contract](docs/cross-space-references-plan.md)
+starts at original main `bdb928e62a057309d7822282fd7c505303d3bbfb`.
+M0 preserves the contract; M1 adds shared batch authorization; M2 adds outgoing
+reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
+Core publication, released consumer adoption and live deployment retain separate
+acceptance gates. No browser panels or live changes are included.
+
 ## Released Core0.46 — native OAuth consumer candidate
 
 Start at latest original main `bdb928e`, preserving the accepted producer
@@ -54,6 +63,7 @@ image contains released Git Core0.46.0 at `d8ae98c`, schema0037 and the matcher.
 Regular merge `505b8ee` preserves the candidate; its main
 [43105029868](https://github.com/Stell0/ns8-czero/actions/runs/43105029868)
 hits the same Debian cloud-image404. No live update is established.
+
 
 ## Native OAuth callback repair
 
