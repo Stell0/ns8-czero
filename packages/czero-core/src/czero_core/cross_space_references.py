@@ -55,16 +55,20 @@ def _summary_query():
         fields = {'object': "'type_name',t.type_name", 'page': "'label',t.title",
                   'source': "'label',t.title", 'entity': "'label',t.label",
                   'claim': "'predicate',t.predicate,'evidence_stale',t.evidence_stale"}[kind]
-        branches.append("""SELECT r.id,r.relation_kind,jsonb_build_object(
+        branches.append("""SELECT jsonb_build_object(
             'space_id',r.target_space_id,'kind',r.target_kind,'id',r.target_id,
-            'revision',t.revision,"""+fields+""") AS target
-            FROM c0_cross_space_references r JOIN """+table+""" t
-              ON t.space_id=r.target_space_id AND t.id=r.target_"""+kind+"""_id
-            WHERE r.source_space_id=:space AND r.source_kind=:kind AND r.source_id=:source
-              AND r.target_space_id=ANY(CAST(:targets AS uuid[]))
-              AND r.target_kind='"""+kind+"' AND "+_active(kind, 't')+"""
-              AND (CAST(:after AS uuid) IS NULL OR r.id>CAST(:after AS uuid))""")
-    return text('SELECT * FROM ('+' UNION ALL '.join(branches)+') visible ORDER BY id LIMIT :limit')
+            'revision',t.revision,"""+fields+""") AS target FROM """+table+""" t
+            WHERE t.space_id=r.target_space_id AND t.id=r.target_"""+kind+"""_id
+              AND r.target_kind='"""+kind+"' AND "+_active(kind, 't'))
+    # Preserve parameterized lookups under the keyset limit; flattening this
+    # lateral UNION can hash entire endpoint tables in a high-degree space.
+    return text("""SELECT r.id,r.relation_kind,summary.target
+        FROM c0_cross_space_references r CROSS JOIN LATERAL ("""+
+        ' UNION ALL '.join(branches)+""" OFFSET 0) summary
+        WHERE r.source_space_id=:space AND r.source_kind=:kind AND r.source_id=:source
+          AND r.target_space_id=ANY(CAST(:targets AS uuid[]))
+          AND (CAST(:after AS uuid) IS NULL OR r.id>CAST(:after AS uuid))
+        ORDER BY r.id LIMIT :limit""")
 
 
 _LIST = _summary_query()
@@ -104,7 +108,7 @@ class CrossSpaceReferenceService:
         fingerprint = hashlib.sha256(json.dumps({'space': str(space), 'operation': operation,
             **payload}, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
         try:
-            with self.database.engine.begin() as c:
+            with self.database.engine.connect().execution_options(isolation_level='READ COMMITTED') as c, c.begin():
                 # Match mixed-domain bundles before reading any caller authority.
                 for lock in (49375, 49376):
                     c.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': lock})
@@ -186,7 +190,7 @@ class CrossSpaceReferenceService:
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError('invalid_paging')
         after = None if after is None else space_uuid(after)
-        with self.database.engine.begin() as c:
+        with self.database.engine.connect().execution_options(isolation_level='READ COMMITTED') as c, c.begin():
             hold_authority(c)
             _, selected = self._source_actor(c, actor, space, targets, Role.READER, read=True)
             if not self._available(c, space, source):
@@ -194,9 +198,17 @@ class CrossSpaceReferenceService:
             rows = c.execute(_LIST, {'space': space, 'kind': source['kind'], 'source': source['id'],
                 'targets': [identifier for identifier in targets if identifier in selected],
                 'after': after, 'limit': limit+1}).mappings().all()
-            self.access.checked_actor(c, actor).require(Role.READER)
-            result = snapshot({'references': [dict(row) for row in rows[:limit]],
-                'next_after': rows[limit-1]['id'] if len(rows) > limit else None})
-            if len(json.dumps(result, ensure_ascii=True).encode()) > 256 * 1024:
+            references, used = [], 80  # Reserve the envelope and a full continuation UUID.
+            for row in rows[:limit]:
+                item = snapshot(dict(row))
+                size = len(json.dumps(item, ensure_ascii=True).encode()) + 2
+                if used + size > 256 * 1024:
+                    break
+                references.append(item)
+                used += size
+            if rows and not references:
                 raise ValueError('reference_response_too_large')
+            result = {'references': references,
+                      'next_after': references[-1]['id'] if len(rows) > len(references) else None}
+            self.access.checked_actor(c, actor).require(Role.READER)
             return result

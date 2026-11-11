@@ -151,25 +151,30 @@ def seed(f, args):
         for case in cases:
             for target in case['targets']:
                 refs.create(owner,space_id=ids[0],source=case['source'],target=target,idempotency_key=uuid4().hex)
-        # Larger corpus: 1000 additional sources x 100 targets, with sparse matching
-        # source/space selections. All writes remain in this disposable database.
+    # One high-degree source, not merely many unrelated low-degree sources.
+    # Both original and candidate receive the same 100000 synthetic target objects.
+    dense=objects.in_space(ids[0]).create(owner,'benchmark-reference',{})
+    dense={'kind':'object','id':str(dense['id']),'type_name':'benchmark-reference'}
+    dense_targets=[]
+    for start in range(0,100000,1000):
+        rows=[]
+        for n in range(start,start+1000):
+            tid=UUID(hashlib.md5(('corpus-target-'+str(n)).encode()).hexdigest())
+            target_space=UUID(ids[1+n%10])
+            rows.append({'id':uuid4(),'space':UUID(ids[0]),'source':UUID(dense['id']),
+                         'target_space':target_space,'target':tid,'actor':owner.user_id})
+            if n<100:dense_targets.append({'space_id':str(target_space),'kind':'object',
+                                           'id':str(tid),'type_name':'benchmark-reference'})
         with db.engine.begin() as c:
             c.execute(text("""INSERT INTO c0_objects(space_id,id,type_name,data,tags)
-                SELECT :space,md5('corpus-source-'||n)::uuid,'benchmark-reference','{}','{}'
-                FROM generate_series(1,1000) n"""),{'space':UUID(ids[0])})
-        targets=[[v for v in pools[space] if v['kind']=='object'][n] for n in range(10) for space in ids[1:]]
-        for start in range(0,1000,10):
-            rows=[]
-            for n in range(start+1,start+11):
-                sid=UUID(hashlib.md5(('corpus-source-'+str(n)).encode()).hexdigest())
-                for target in targets:
-                    rows.append({'id':uuid4(),'space':UUID(ids[0]),'source':sid,'target_space':UUID(target['space_id']),
-                                 'target':UUID(target['id']),'actor':owner.user_id})
-            with db.engine.begin() as c:
+                VALUES (:target_space,:target,'benchmark-reference','{}','{}')"""),rows)
+            if not args.baseline:
                 c.execute(text("""INSERT INTO c0_cross_space_references(id,source_space_id,source_kind,source_id,
                     target_space_id,target_kind,target_id,relation_kind,created_by,source_object_id,target_object_id)
                     VALUES (:id,:space,'object',:source,:target_space,'object',:target,'references',:actor,:source,:target)"""),rows)
-        with db.engine.begin() as c: c.execute(text('ANALYZE'))
+    cases.append({'source':dense,'targets':dense_targets,'selected':ids[1:],
+                  'count':100,'spaces':10,'layout':'object','corpus_refs':100000})
+    with db.engine.begin() as c:c.execute(text('ANALYZE'))
     # Same-space controls remain within the existing entity degree bound.
     source=next(v for v in pools[ids[0]] if v['kind']=='object')
     for target in pools[ids[0]][5:]:
@@ -183,21 +188,72 @@ def seed(f, args):
 
 
 def principal(f, native, ids, auth, visible):
-    native=replace(native,expires_at=time.time()+300)
+    native=replace(native,expires_at=time.time()+3600)
     owner=f.access.resolve(native)
     sessions=f.app.state.auth.sessions
     if auth=='key':
         keys=ApiKeyService(f.access,client_id='benchmark',client_secret='synthetic',resource=ORIGIN+'/mcp')
         value=keys.create(owner,name='Benchmark',scopes={'c0:read'},space_ids=[ids[0],*visible])
         return keys.verify(value['key'],resource=keys.resource).actor
-    session=sessions.get(sessions.create(native))
+    if getattr(f,'benchmark_cookie',None): sessions.logout(f.benchmark_cookie,f.benchmark_csrf)
+    f.benchmark_cookie=sessions.create(native)
+    session=sessions.get(f.benchmark_cookie)
+    f.benchmark_csrf=session.csrf_token
     if auth=='session':return session.actor
     grants=f.app.state.delegated_grants
+    if getattr(f,'benchmark_refresh',None):
+        grants.revoke(f.benchmark_refresh,f.client['client_id'],resource=grants.resource)
     verifier=secrets.token_urlsafe(32)
     code=grants.issue_code(session,f.client['client_id'],callback=CALLBACK,scopes={'c0:read'},
                            challenge=pkce_challenge(verifier),resource=ORIGIN+'/mcp')
     pair=grants.exchange_code(code,f.client['client_id'],callback=CALLBACK,verifier=verifier,resource=ORIGIN+'/mcp')
+    f.benchmark_refresh=pair.refresh_token
     return grants.verify(pair.access_token,resource=grants.resource).actor
+
+
+def revocation_probe(f, ids, native, case):
+    """Five admitted readers must finish before a waiting grant revocation."""
+    from czero_core.cross_space_references import CrossSpaceReferenceService
+    spaces=SpaceService(f.db,f.access)
+    account=f.access.resolve(replace(native,expires_at=time.time()+300)).user_id
+    target=case['selected'][0]
+    revision=next(g['revision'] for g in spaces.list_grants(f.owner,target)['grants'] if g['account_id']==str(account))
+    saved=spaces.set_grant(f.owner,target,account,Role.READER,expected_revision=revision,idempotency_key=uuid4().hex)
+    actor=principal(f,native,ids,'session',[target])
+    service=CrossSpaceReferenceService(f.db,f.access)
+    admitted=threading.Barrier(6);release=threading.Event();revoking=threading.Event()
+    original=service._available
+    def pause(c,space,endpoint,**kwargs):
+        admitted.wait(5)
+        if not release.wait(5):raise RuntimeError('reader_barrier_timeout')
+        return original(c,space,endpoint,**kwargs)
+    service._available=pause
+    arguments={'space_id':ids[0],'source':case['source'],'target_space_ids':case['selected'],'limit':100}
+    def revoke():
+        revoking.set()
+        start=time.perf_counter()
+        spaces.set_grant(f.owner,target,account,None,expected_revision=saved['revision'],idempotency_key=uuid4().hex)
+        return (time.perf_counter()-start)*1000
+    try:
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            readers=[pool.submit(service.list,actor,**arguments) for _ in range(5)]
+            admitted.wait(5)
+            revoked=pool.submit(revoke)
+            if not revoking.wait(5):raise RuntimeError('revoker_barrier_timeout')
+            with f.db.engine.connect() as c:
+                for _ in range(100):
+                    waiting=c.execute(text("SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted AND database=(SELECT oid FROM pg_database WHERE datname=current_database())")).scalar_one()
+                    if waiting:break
+            assert waiting and not revoked.done(), 'revocation_did_not_wait_for_admitted_readers'
+            release.set()
+            completed=[r.result(5) for r in readers]
+            elapsed=revoked.result(5)
+    finally:
+        release.set();service._available=original
+    later=service.list(actor,**arguments)
+    assert all(row['target']['space_id']!=target for row in later['references'])
+    return {'concurrent_readers':len(completed),'revocation_wait_and_commit_ms':elapsed,
+            'post_revocation_target_items':0,'deadlocks':0,'timeouts':0}
 
 
 async def run(args):
@@ -234,10 +290,11 @@ async def run(args):
                     # Unchanged saves retain their revision; read it back exactly.
                     grants[space]=next(g['revision'] for g in spaces.list_grants(f.owner,space)['grants'])
                 for auth in args.auth:
-                    actor=principal(f,native,ids,auth,allowed)
+                    key_actor=principal(f,native,ids,auth,allowed) if auth=='key' else None
                     for case in cases:
                         for concurrency in args.concurrency:
                             for repetition in range(args.repetitions):
+                                actor=key_actor or principal(f,native,ids,auth,allowed)
                                 if args.baseline:
                                     calls={
                                         'object_relations':lambda:resolver.in_space(ids[0]).relations(actor,control['id']),
@@ -254,12 +311,14 @@ async def run(args):
                                     if args.baseline and operation not in args.controls: continue
                                     result=measure(f.db,call,args,concurrency)
                                     evidence['measurements'].append({'count':case['count'],'spaces':case['spaces'],
-                                        'layout':case['layout'],'visibility':visibility,'auth':auth,
+                                        'layout':case['layout'],'corpus_refs':case.get('corpus_refs',case['count']),
+                                        'availability':args.availability,'visibility':visibility,'auth':auth,
                                         'concurrency':concurrency,'repetition':repetition,'operation':operation,**result})
                                     save()
             if not args.baseline:
                 from czero_core.cross_space_references import _LIST
                 case=cases[-1]
+                evidence['revocation']=revocation_probe(f,ids,native,case)
                 with f.db.engine.begin() as c:
                     query='EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) '+str(_LIST)
                     evidence['query_plan']=c.execute(text(query),{'space':UUID(ids[0]),'kind':'object','source':case['source']['id'],
