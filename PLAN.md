@@ -1624,8 +1624,12 @@ developer-skill contradictions required changes. Related maintained setup,
 development and release guidance needs no package/version or scope change.
 Base and candidate documentation/fork checks each pass 17 cases; maintained
 local-link checks pass, and both edited skills pass frontmatter validation.
-The diff is entirely in the existing Git-only documentation allowlist. Actual PR
-checks and the C0 merge gate remain required. This changes no runtime, dependency,
+The original cleanup diff is entirely in the existing Git-only documentation
+allowlist. The follow-up adds instruction review as a PR readiness/merge requirement,
+a matching contributor-skill step and a registered PR template. The template is a
+new path outside the documentation allowlist, so the combined PR requires full
+acceptance under the unchanged CI policy. Actual PR checks and the C0 merge gate
+remain required. This changes no runtime, dependency,
 connection, schedule or accepted installation identity.
 
 ## Current baseline
