@@ -13,6 +13,33 @@ permissions:
   contents: read
   actions: read
 jobs:
+  mirror-diagnostic:
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 5
+    steps:
+      - name: Inspect Ubuntu mirror connectivity
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, urllib.request
+          release = dict(line.rstrip().split('=', 1) for line in open('/etc/os-release') if '=' in line)
+          codename = release['VERSION_CODENAME'].strip('"')
+          for host, scheme in [('azure.archive.ubuntu.com', 'http'), ('archive.ubuntu.com', 'https'), ('security.ubuntu.com', 'https')]:
+              result = {'host': host, 'codename': codename}
+              try:
+                  dns = subprocess.run(['getent', 'ahostsv4', host], capture_output=True, text=True, timeout=15)
+                  result['dns_returncode'] = dns.returncode
+                  result['addresses'] = sorted({line.split()[0] for line in dns.stdout.splitlines()})
+                  with urllib.request.urlopen(scheme + '://' + host + '/ubuntu/dists/' + codename + '/InRelease', timeout=15) as response:
+                      result['status'] = response.status
+                      result['bytes'] = len(response.read())
+              except Exception as error:
+                  result['error'] = type(error).__name__ + ': ' + str(error)
+              print(json.dumps(result), flush=True)
+          PY
   checks:
     runs-on: ubuntu-24.04
     # Fast feedback starts no database. Full checks use isolated runner loopback.
