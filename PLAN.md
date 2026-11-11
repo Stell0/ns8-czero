@@ -1689,6 +1689,10 @@ frozen full runs remain preserved. This CI/policy implementation itself requires
 full native acceptance before merge; no release or deployment is implied. Focused
 policy/promotion/documentation/fork checks pass 186 cases, including actual Git
 registry changes and the documentation checker. Full exact-source CI remains pending.
+After the released-Core adoption merged, the successor candidate starts at original
+main `505b8ee54b5ce79bf873145e36f12dc7d5ec7c3e`. Preserve the earlier candidate
+`08a207e21fc9b04995880a259ecade5b0dece7db` and its full acceptance run; the
+successor requires its own current-base validation and full native acceptance.
 
 ## Current baseline
 
@@ -1699,8 +1703,8 @@ contains installed immutable tags/digests, supported update/restart acceptance a
 preservation evidence. Those installed images are the next genuine predecessor;
 retain the prior app0.60/Core0.39 installation and all earlier frozen evidence.
 
-Source versions are separate: `app/pyproject.toml` currently declares app0.63;
-its committed `uv.lock` selects released Core0.44. Producer
+Source versions are separate: `app/pyproject.toml` currently declares app0.64;
+its committed `uv.lock` selects released Core0.46. Producer
 `packages/czero-core/pyproject.toml` declares Core0.46/schema0037, and the plugin
 manifest declares 1.9. These source capabilities do not establish publication,
 consumer adoption or live activation. Use active manifests/locks as they advance,
