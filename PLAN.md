@@ -13,7 +13,15 @@ Implementation candidate: Core0.47/schema0038 adds immutable typed references,
 current summaries, actor/source-scoped payload-free receipts and guarded deletion.
 Plugin1.10 and guidance7 describe navigation and separate publication authority.
 The transport is capability-gated: actual frozen Core0.44 consumer startup/profile
-read succeeds and unsupported operations stay absent; its lock is unchanged.
+read succeeds and unsupported operations stay absent. A successor on original
+main505b8ee preserves the new Core0.46 tag/lock, app0.64 and genuine native
+predecessor. The Core0.47 feature tree is identical to frozen dab4140; repeat
+affected native checks on the successor. Its231 affected PostgreSQL/security/
+transport/catalog/package-guidance cases pass, as do56 documentation/source-pin/
+release-policy cases and21 Robot dry runs. Actual frozen Core0.46 startup/profile
+read, unsupported-tool omission and immutable Git/schema/loopback probes pass.
+No dependency range, tag/lock or genuine predecessor identity is replaced by
+this feature; producer/native and released-consumer gates remain distinct.
 
 Executed focused proof:58 PostgreSQL Core/authorization cases (all25 endpoint
 pairs, migration0037→0038 preserving rows/constraints, key restrictions, revocation

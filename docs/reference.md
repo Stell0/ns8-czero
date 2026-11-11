@@ -169,7 +169,7 @@ Policies default to disabled, retrieval feedback off and queue-only publication.
 
 [Contract and acceptance](cross-space-references-plan.md). These routes/tools are
 registered only when the installed Core includes the service; the released
-Core0.44 consumer does not advertise them.
+Core0.46 consumer does not advertise them.
 
 - POST `/api/v1/cross-space-references?space_id=UUID` / `cross_space_ref_create`:
   typed source and target (target includes space_id), relation_kind=references,

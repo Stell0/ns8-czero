@@ -6,6 +6,13 @@ Core producer 0.46.0/schema0037, app0.63.0; released consumer still Core0.44.x.
 Producer development, immutable Core publication, consumer adoption and live
 acceptance are separate milestones. No live deployment is authorized here.
 
+The frozen first candidate `dab4140014de7a113ec36f672587ad355ca62343` is
+preserved. Its successor starts at original main
+`505b8ee54b5ce79bf873145e36f12dc7d5ec7c3e`, which adopts released Core0.46
+in app0.64 and retains the genuine app0.63/Core0.45 native predecessor. The
+feature's Core package tree is unchanged across that transplant. Preserve the
+new released lock and repeat affected compatibility and native checks.
+
 ## Purpose and architectural decision
 
 Add one outgoing-only table and a small Core service, separate from object
