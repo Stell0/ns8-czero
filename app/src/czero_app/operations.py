@@ -24,7 +24,7 @@ class OperationCatalog:
             return auth.access.authorize(actor, role)
         self.registry = OperationRegistry(authorize)
 
-    def bind(self, name, description, role, result_model, *, read_only=True, space_field=None, required_scope=None):
+    def bind(self, name, description, role, result_model, *, read_only=True, space_field=None, required_scope=None, additional_scopes=()):
         """Keep FastAPI's signature/CSRF dependencies and reuse its typed handler."""
         def decorate(handler):
             signature = inspect.signature(handler)
@@ -62,7 +62,8 @@ class OperationCatalog:
 
             self.registry.register(Operation(name, description_for(name, description), role, scope,
                 model.model_json_schema(), output.json_schema(), invoke, read_only,
-                preauthorize=preauthorize if space_field else None))
+                preauthorize=preauthorize if space_field else None,
+                **({'additional_scopes': additional_scopes} if additional_scopes else {})))
 
             @wraps(handler)
             def route(*args, **kwargs):
@@ -91,4 +92,5 @@ class OperationCatalog:
                 route.description = metadata['description']
                 route.openapi_extra = {**(route.openapi_extra or {}), 'x-c0-operation': {
                     **{key: metadata[key] for key in ('name', 'minimum_role', 'required_scope', 'read_only')},
+                    **({'required_scopes': metadata['required_scopes']} if 'required_scopes' in metadata else {}),
                     'annotations': annotations_for(metadata)}}

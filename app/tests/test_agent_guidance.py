@@ -62,3 +62,24 @@ def test_feedback_guidance_requires_every_actual_read_and_write_capability():
         assert FEEDBACK_STEP not in steps(allowed-{absent})
     assert FEEDBACK_STEP not in steps(research['tools'])
     assert 'compilation_propose' not in str(steps(research['tools']))
+
+
+def test_reference_navigation_is_capability_gated_and_separates_publication():
+    flow = next(f for f in agent_guidance([{'name':'cross_space_refs_list'}])['workflows']
+                if f['id']=='cross-space-navigation')
+    assert 'explicitly authorized publication task and destination' in str(flow)
+    assert 'independently authorized API' in str(flow)
+    assert not any(f['id']=='cross-space-navigation' for f in agent_guidance([])['workflows'])
+
+
+def test_released_core_omits_uninstalled_reference_capability(monkeypatch):
+    import importlib.util
+    from fastapi import FastAPI
+    from czero_app.cross_space_references import install
+    from czero_app.operations import OperationCatalog
+    real = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util,'find_spec',lambda name:None if name=='czero_core.cross_space_references' else real(name))
+    app=FastAPI();app.state.operation_catalog=OperationCatalog(None)
+    install(app,None,None,lambda:None,lambda:None)
+    assert not app.state.operation_catalog.registry._operations
+    assert not any('cross-space-references' in r.path for r in app.routes)

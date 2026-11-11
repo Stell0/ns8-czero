@@ -38,3 +38,11 @@ save the query, answer, private conversation or evaluation labels. Do not start
 new corpus analysis, publish Wiki changes, enable policy or request broader scopes.
 If the host cannot continue after answer delivery or honor the bound, skip feedback;
 do not delay the answer or claim deferred execution was installed.
+
+When `cross_space_refs_list` is advertised, use it only with the explicit source
+space and 1–10 selected target spaces. Hidden and inactive endpoints return no
+item, count or placeholder; an empty list does not prove that no links exist.
+Follow a summary with a fresh authorized target content read. These are current
+navigation links, not exact evidence, subscriptions or permission grants.
+Resolution never authorizes copying: require an explicitly authorized publication
+task and destination before moving information into another space.

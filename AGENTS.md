@@ -1,5 +1,13 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+Cross-space reference producer work is tracked in
+[its contract](docs/cross-space-references-plan.md): Core0.47/schema0038,
+plugin1.10, five stable endpoint kinds, outgoing-only summaries and explicit
+source/target selectors. References confer no authority or evidence. Preserve
+metadata-free storage, both-endpoint read checks, blind source-owned deletion,
+credential bindings and revocation lock order. The released consumer lock and
+installed runtime remain separate from this producer candidate.
+
 Retrieval evidence producer work is tracked in
 [its contract](docs/retrieval-evidence.md): Core0.46/schema0037, plugin1.9,
 bounded whitespace normalization, one exact supporting passage and opt-in

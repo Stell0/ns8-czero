@@ -200,8 +200,48 @@ async def protected_spaces(client, http, previous=None):
     assert stale.is_error and stale.content[0].text=='knowledge_conflict', 'Installed protected stale write overwrote current state'
     annotations=await annotated_memory(client,http,space,current,previous['annotations'] if previous else None)
     consolidation=await consolidated_memory(client,http,space,current,previous['consolidation'] if previous else None)
+    references = (await cross_space_navigation(client,http,space,current,previous.get('references') if previous else None)
+                  if 'cross_space_ref_create' in {t.name for t in (await client.list_tools()).tools} else None)
     return {'request':request,'space':space,'data':data,'first':first,'current':current,
-            'annotations':annotations,'consolidation':consolidation}
+            'annotations':annotations,'consolidation':consolidation,'references':references}
+
+
+async def cross_space_navigation(client, http, space, page, previous=None):
+    """Actual installed reference lifecycle, independent target read and replay."""
+    async def call(name, arguments):
+        result = await client.call_tool(name, arguments)
+        assert not result.is_error, 'Installed reference operation failed'
+        return json.loads(result.content[0].text)
+    if previous is None:
+        shared = next(s['id'] for s in (await call('spaces_list', {}))['spaces'] if s['shared'])
+        target = await call('wiki_pages_upsert', {'space_id':shared,'data':{
+            'slug':'reference-target-'+uuid4().hex,'title':'Reference target',
+            'body':'Independent navigation target.','idempotency_key':uuid4().hex}})
+        data = {'source':{'kind':'page','id':page['id']},
+                'target':{'space_id':shared,'kind':'page','id':target['id']},
+                'idempotency_key':uuid4().hex}
+        ack = await call('cross_space_ref_create', {'space_id':space['id'],'data':data})
+        deleted = await call('cross_space_ref_delete', {'space_id':space['id'],'data':{
+            'source':data['source'],'reference_id':ack['reference_id'],'idempotency_key':uuid4().hex}})
+        assert deleted is None, 'Installed blind delete disclosed a result'
+        assert await call('cross_space_ref_create', {'space_id':space['id'],'data':data}) == ack, 'Installed original acknowledgement changed'
+        listing = {'space_id':space['id'],'source_kind':'page','source_id':page['id'],'target_space_ids':[shared]}
+        assert (await call('cross_space_refs_list', listing))['references'] == [], 'Installed replay resurrected a deleted reference'
+        data = {**data,'idempotency_key':uuid4().hex}
+        ack = await call('cross_space_ref_create', {'space_id':space['id'],'data':data})
+        previous = {'data':data,'ack':ack,'listing':listing,'target':target}
+    assert await call('cross_space_ref_create', {'space_id':space['id'],'data':previous['data']}) == previous['ack'], 'Installed reference retry changed identity'
+    actual = await call('cross_space_refs_list', previous['listing'])
+    assert len(actual['references']) == 1 and actual['references'][0]['id'] == previous['ack']['reference_id'], 'Installed outgoing reference missing'
+    assert actual['references'][0]['target']['label'] == 'Reference target', 'Installed current summary mismatch'
+    params = previous['listing']
+    response = await http.get('/api/v1/cross-space-references', params=params)
+    assert response.status_code == 200 and response.json() == actual, 'Installed REST/MCP reference parity failed'
+    assert response.headers.get('cache-control') == 'no-store', 'Installed reference response was cacheable'
+    target = await call('wiki_pages_get', {'space_id':previous['data']['target']['space_id'],
+                                         'page_id':previous['target']['id']})
+    assert target['content']['body'] == 'Independent navigation target.', 'Installed independent content read failed'
+    return previous
 
 
 async def consolidated_memory(client,http,space,previous_page,previous=None):
@@ -553,7 +593,7 @@ async def check(value):
                 for tool in tools:
                     schemes = tool.meta.get('securitySchemes') if tool.meta else None
                     assert isinstance(schemes, list) and len(schemes) == 1, 'Installed tool OAuth metadata missing'
-                    assert schemes[0]['type'] == 'oauth2' and len(schemes[0]['scopes']) == 1, 'Installed tool OAuth scheme invalid'
+                    assert schemes[0]['type'] == 'oauth2' and (schemes[0]['scopes'] == ['c0:write','c0:read'] if tool.name == 'cross_space_ref_create' else len(schemes[0]['scopes']) == 1), 'Installed tool OAuth scheme invalid'
                     scope = schemes[0]['scopes'][0]
                     assert scope in {'c0:read','c0:write','c0:admin'}, 'Installed tool OAuth scope invalid'
                     assert scope != 'c0:admin' or role == 'admin', 'Installed Admin tool discovery crossed role'
@@ -563,7 +603,7 @@ async def check(value):
                 capability_response = await http.get('/agents/capabilities.json')
                 assert capability_response.status_code == 200, 'Installed capabilities unavailable'
                 capability = capability_response.json()
-                assert capability['guidance']['version'] == 6, 'Installed tool guidance version mismatch'
+                assert capability['guidance']['version'] == 7, 'Installed tool guidance version mismatch'
                 available = {item['name']:item for item in capability['operations']}
                 expected_hints = {'get_profile':(True,False,True,False),
                     **{name:(True,False,True,False) for name in ('source_document_outline_get','source_document_sections_get','source_document_references_get','context_bundle_get')},

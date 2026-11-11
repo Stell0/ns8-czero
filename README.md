@@ -153,6 +153,15 @@ Fork C0 when your application needs shared knowledge, evidence, structured recor
 
 Read [development and contributing](docs/development.md), [AGENTS.md](AGENTS.md), the relevant [repository skill](.agents/skills/c0-create-feature/SKILL.md) and [CI policy](docs/ci-policy.md). The [standalone consumer fixture](examples/fork/README.md) demonstrates a smaller library consumer. Preserve application customizations and contribute reusable improvements through focused upstream PRs.
 
+## Cross-space reference candidate
+
+The Core0.47 producer adds guarded outgoing links between objects, Wiki pages,
+sources, entities and claims. REST/MCP list only current authorized summaries in
+explicitly selected target spaces; content reads remain independently authorized.
+There are no browser panels. [The contract](docs/cross-space-references-plan.md)
+separates producer validation, immutable release, consumer adoption and deployment.
+The released consumer and installed runtime are unchanged.
+
 ## Roadmap and project status
 
 C0 remains a development candidate. [Release readiness](docs/release-readiness.md) separates source/native acceptance, client compatibility, packaged-skill use, scheduled execution and production deployment. No stable NS8 release or public plugin-directory listing is claimed. Use [the roadmap](PLAN.md#roadmap) for remaining work and [the documentation audit](docs/documentation-review.md) for implementation evidence and known gaps.
