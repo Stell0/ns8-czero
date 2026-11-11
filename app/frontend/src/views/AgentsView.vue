@@ -42,9 +42,12 @@ const workflows = computed(
     capabilities.data.value?.guidance.workflows.filter(
       (flow) =>
         session.canWrite ||
-        ['research', 'structured-research', 'selective-context'].includes(
-          flow.id,
-        ),
+        [
+          'research',
+          'structured-research',
+          'selective-context',
+          'cross-space-navigation',
+        ].includes(flow.id),
     ) || [],
 )
 const operationNames = computed(
