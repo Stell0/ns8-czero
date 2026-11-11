@@ -317,7 +317,8 @@ class OAuthGrantService:
             if scope in scopes:
                 actor.require(role)
         client = self.clients._registered(connection, client_id)
-        if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
+        if (client is None or not self.clients.redirect_uri_matches(callback, client['redirect_uris'])
+                or not scopes <= set(client['allowed_scopes'])):
             raise GrantRejected()
         if persistent and 'refresh_token' not in client.get('grant_types', ['authorization_code', 'refresh_token']):
             raise GrantRejected()

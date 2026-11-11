@@ -38,7 +38,7 @@ def main():
         registry.sync_policy(True)
         url = 'https://client.example.test/' + uuid4().hex + '/client.json'
         metadata = parse_metadata(url, json.dumps({'client_id': url, 'client_name': 'Packaged CIMD client',
-            'redirect_uris': [callback], 'token_endpoint_auth_method': 'none',
+            'redirect_uris': [callback, 'http://127.0.0.1/callback'], 'token_endpoint_auth_method': 'none',
             'grant_types': ['authorization_code', 'refresh_token']}).encode())
         approved = registry.approve(actor, metadata, expected_digest=metadata.digest)
         assert grants.clients._lookup(approved['client_id']) is None
@@ -50,6 +50,17 @@ def main():
         assert grants.verify(tokens.access_token, resource=resource).client_id == url
         rotated = grants.refresh(tokens.refresh_token, url, resource=resource)
         assert grants.verify(rotated.access_token, resource=resource).actor.user_id == actor.user_id
+        loopback = 'http://127.0.0.1:53123/callback'
+        code = grants.issue_code(session, url, callback=loopback, scopes={'c0:read'},
+            challenge=pkce_challenge(verifier), resource=resource, verification=attestation)
+        try:
+            grants.exchange_code(code, url, callback='http://127.0.0.1:53124/callback', verifier=verifier, resource=resource)
+        except GrantRejected:
+            pass
+        else:
+            raise AssertionError('Code exchanged using a different loopback port')
+        native = grants.exchange_code(code, url, callback=loopback, verifier=verifier, resource=resource)
+        assert grants.verify(native.access_token, resource=resource).actor.user_id == actor.user_id
         CimdPolicyService(database).sync_policy(False)
         registry.sync_policy(True)
         try:
@@ -60,7 +71,8 @@ def main():
             raise AssertionError('Revoked CIMD authority revived')
         registry.sync_policy(False)
         grants.clients.set_enabled(actor, UUID(approved['client_id']), enabled=False, expected_revision=1)
-        print(json.dumps({'approval': True, 'url_identity': True, 'rotation': True, 'revocation': True}))
+        print(json.dumps({'approval': True, 'url_identity': True, 'rotation': True, 'revocation': True,
+                          'loopback_port': True, 'exact_code_callback': True}))
     finally:
         try:
             if started:

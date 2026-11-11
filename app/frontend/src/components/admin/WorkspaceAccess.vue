@@ -40,6 +40,10 @@ interface Application {
 }
 interface Review {
   metadata_digest: string
+  request: {
+    callback: string
+    scopes: string[]
+  }
   descriptor: {
     client_name: string
     client_id: string
@@ -140,11 +144,16 @@ const preview = useMutation({
       false,
     )
     if (!current()) return
-    scopes.value = {
-      'c0:read':
-        !value.descriptor.scope_ceiling ||
-        value.descriptor.scope_ceiling.includes('c0:read'),
-    }
+    scopes.value = Object.fromEntries(
+      ['c0:read', 'c0:write', 'c0:admin'].map((scope) => [
+        scope,
+        !!value.client?.allowed_scopes.includes(scope) ||
+          (scope === 'c0:read' &&
+            value.request.scopes.includes(scope) &&
+            (!value.descriptor.scope_ceiling ||
+              value.descriptor.scope_ceiling.includes(scope))),
+      ]),
+    )
     reviewed.value = { id, value }
   },
 })
@@ -383,6 +392,9 @@ function approve() {
         />
         <p>{{ reviewed.value.descriptor.client_name }}</p>
         <p class="break-all">{{ reviewed.value.descriptor.client_id }}</p>
+        <p class="break-all">
+          {{ t('consent.callback') }}: {{ reviewed.value.request.callback }}
+        </p>
         <ul>
           <li
             v-for="callback in reviewed.value.descriptor.redirect_uris"
@@ -401,6 +413,8 @@ function approve() {
           "
           :disabled="
             mutation.isLoading.value ||
+            (!reviewed.value.request.scopes.includes(scope) &&
+              !reviewed.value.client?.allowed_scopes.includes(scope)) ||
             (!!reviewed.value.descriptor.scope_ceiling &&
               !reviewed.value.descriptor.scope_ceiling.includes(scope))
           "

@@ -107,7 +107,7 @@ class ClientOnboardingService:
     def _view(self, connection, row):
         raw = row['parameters']
         client = self.grants.clients._registered(connection, row['metadata_url'])
-        approved = client is not None and raw['redirect_uri'] in client['redirect_uris']
+        approved = client is not None and self.grants.clients.redirect_uri_matches(raw['redirect_uri'], client['redirect_uris'])
         return {'metadata_url': row['metadata_url'], 'callback': raw['redirect_uri'],
                 'scopes': raw.get('scope', 'c0:read').split(), 'expires_at': row['expires_at'],
                 'approved': approved, 'allowed_scopes': client['allowed_scopes'] if approved else []}

@@ -61,6 +61,22 @@ class OAuthClientService:
     def __init__(self, access):
         self.access = access
 
+    @staticmethod
+    def redirect_uri_matches(callback, registered_uris):
+        """Portless HTTP loopback registrations allow a request-local port."""
+        try:
+            redirect_uri(callback)
+        except ValueError:
+            return False
+        if callback in registered_uris:
+            return True
+        parsed = urlsplit(callback)
+        if (callback.startswith('http://') and parsed.hostname in ('localhost', '127.0.0.1', '::1')
+                and parsed.port is not None):
+            template = parsed._replace(netloc=parsed.netloc.rsplit(':', 1)[0]).geturl()
+            return template in registered_uris
+        return False
+
     def _authorize(self, connection, actor):
         if self.access is None:
             raise PermissionDenied()

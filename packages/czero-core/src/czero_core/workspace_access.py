@@ -186,7 +186,8 @@ class WorkspaceAccessService:
             account = self._account(connection, row['account_id'])
             if account['blocked'] or account['role'] is None:
                 raise PermissionDenied()
-            if metadata.client_id != row['metadata_url'] or row['parameters']['redirect_uri'] not in metadata.redirect_uris:
+            if (metadata.client_id != row['metadata_url']
+                    or not self.grants.clients.redirect_uri_matches(row['parameters']['redirect_uri'], metadata.redirect_uris)):
                 raise ClientConflict()
             existing = connection.execute(text('''SELECT c.id,c.scopes,c.enabled,c.revision FROM c0_cimd_clients b
                 JOIN c0_oauth_clients c ON c.id=b.client_id WHERE b.metadata_url=:url'''),

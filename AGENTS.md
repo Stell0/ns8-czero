@@ -251,6 +251,13 @@ live updates need explicit authorization and their own acceptance.
 
 ## Contracts to preserve
 
+Native OAuth callbacks may choose a port only for a portless approved HTTP
+loopback URL. Keep the original host/path and explicit-port/HTTPS exact checks,
+use the shared Core matcher throughout approval/consent/authorization, and bind
+code redemption to the exact requested callback and PKCE proof. SDK descriptor
+projection is request-local; never persist an observed port into the registered
+client. Older released Core retains exact behavior until explicit adoption.
+
 Authorization uses current persisted Reader/Editor/Admin membership inside Core transactions, explicit protected-space selection and actual delegated scopes. Tool discovery does not grant authority. Preserve lock ordering, exact evidence identities, expected revisions and payload-free replay receipts; a superseded request returns 410 instead of old content. A denied space must never fall back to Shared. Optional providers cannot decide authorization or make ordinary text retrieval unavailable.
 
 OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. CIMD defaults off, approves exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Remote metadata never supplies roles. Existing UUID clients remain independent.

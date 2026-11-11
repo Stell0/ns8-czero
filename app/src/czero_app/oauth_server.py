@@ -82,6 +82,8 @@ def install_oauth_server(app, auth, read_context, write_context):
 
     origin = auth.oidc.config.public_origin.rstrip('/')
     grants = OAuthGrantService(auth.access, auth.sessions.client_id, origin + '/mcp', authority=auth.sessions.authority)
+    # Older released Core retains exact matching until independent adoption.
+    callback_matches = getattr(grants.clients, 'redirect_uri_matches', lambda callback, registered: callback in registered)
     consent = OAuthConsentService(grants)
     onboarding = ClientOnboardingService(grants)
     app.state.client_onboarding = onboarding
@@ -117,7 +119,7 @@ def install_oauth_server(app, auth, read_context, write_context):
             return JSONResponse({'error':'invalid_target'}, status_code=400)
         if kind == 'authorize':
             saved = await to_thread.run_sync(partial(grants.clients._lookup, raw.get('client_id')))
-            if saved is not None and raw.get('redirect_uri') not in saved['redirect_uris']:
+            if saved is not None and not callback_matches(raw.get('redirect_uri'), saved['redirect_uris']):
                 return JSONResponse({'error': 'invalid_request'}, status_code=400)
             if (raw.get('client_id', '').startswith('https://')
                     and (saved is None or not set(raw.get('scope', 'c0:read').split()) <= set(saved['allowed_scopes']))
@@ -132,7 +134,7 @@ def install_oauth_server(app, auth, read_context, write_context):
                     max_age=300, secure=True, httponly=True, samesite='lax', path='/')
                 response.delete_cookie(COOKIE, path='/', secure=True, httponly=True, samesite='lax')
                 return response
-            if saved is None or raw.get('redirect_uri') not in saved['redirect_uris']:
+            if saved is None or not callback_matches(raw.get('redirect_uri'), saved['redirect_uris']):
                 return JSONResponse({'error':'invalid_request'}, status_code=400)
         request_token, response_token = raw_request.set(raw), pending_response.set(None)
         kind_token = request_kind.set(kind)
