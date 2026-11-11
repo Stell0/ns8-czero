@@ -34,6 +34,9 @@ jobs:
     uses: NethServer/ns8-github-actions/.github/workflows/test-on-qemu.yml@v1
     with:
       distro: debian13
+      # The floating latest directory can temporarily omit genericcloud images.
+      # Keep a dated upstream image; the shared runner verifies its SHA512SUMS.
+      cloud_image_url: https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-genericcloud-amd64-20261103-2651.qcow2
       repo_ref: ${{ inputs.source }}
       image_url: ${{ inputs.image_url }}
       version_tag: ${{ inputs.image_tag }}
