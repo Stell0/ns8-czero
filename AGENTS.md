@@ -58,6 +58,8 @@ Fork-specific screens, branding and workflows belong in the application. Change 
 
 Forks use the released Core dependency and frozen lock by default. `CZERO_CORE_SOURCE=local` is an explicit producer-development choice, never an automatic fallback. Choose independent module/image identities and publishing permissions before shipping a fork. Do not publish the template's registry tags or replace an immutable upstream Core release. Review managed-file updates through the explicit `c0-upstream.json` registry; preserve customizations and unresolved comparisons.
 
+For code changes, follow the [shared implementation practices](.agents/references/development.md#implementation-practices); relevant skills add domain-specific requirements.
+
 ## Skills and responsibilities
 
 | Work | Skill |

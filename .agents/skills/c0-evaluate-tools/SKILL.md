@@ -15,4 +15,4 @@ Report every failure, the measured comparison, safety/state/citation outcomes, c
 
 For packaged end-user skill evaluation, include the generated instance binding and referenced files in the isolated model input and record their hashes. Never expose this evaluator skill, grading rules or expected answers. Such measurements complement actual packaged-skill ChatGPT web acceptance; they cannot establish it.
 
-For fork-specific verification and managed-file boundaries, read the [fork development reference](../../references/development.md).
+When changing the evaluation implementation, read the [shared development reference](../../references/development.md) for implementation practices and fork verification.

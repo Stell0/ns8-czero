@@ -8,6 +8,8 @@ writing another collector. Inspect the closest source adapter and tests. Reuse t
 shared client, OAuth, state and source-verification functions rather than inventing
 MCP operations or copying another application's credential store.
 
+When changing an adapter, follow the [shared implementation practices](../../references/development.md#implementation-practices).
+
 Implement reusable collection/mapping code in the public samples and meaningful
 synthetic regressions in the repository tests. Record source-specific pagination,
 stable identity, evidence, incremental-window, coverage and recovery lessons there.
