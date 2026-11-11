@@ -9,6 +9,13 @@ Inspect the actual fork/upstream diff and Git history before selecting changes. 
 
 Bring focused regression tests and necessary generic documentation with the reusable change. Run them in the isolated target checkout; inspect the complete resulting diff and confirm no unrelated/private material entered it. Keep version/lock changes consistent with the target's conventions. A package-version change also requires inspecting native route/browser health expectations; Python tests alone do not prove installed compatibility. If the change cannot be separated without a design decision, explain that concrete dependency rather than publishing a misleading partial fix.
 
+Before marking the PR ready, review AGENTS.md and relevant developer/end-user
+skills against the final diff. Update affected instructions and references, verify
+packaged inventories when affected, and record updated paths or “no instruction
+changes needed” with a reason in the PR description. Complete the template's
+instruction-review checkbox and recheck after source/base changes; this review and
+any required instruction fixes are merge requirements.
+
 For commits and PRs, use the installed `conventional-commit` and `nethserver-pr` skills from https://github.com/NethServer/agents. Follow their attribution, target, assignee and review conventions. Reuse existing authorization; prepare a concrete reviewable result before asking only for genuinely missing publication permission. Do not add unsolicited reviewers. Review the exact diff and follow the target project's explicit policy: C0 permits agent review and protected automatic regular merge without mandatory human approval. Never merge a failed or stale candidate; full native proof remains mandatory for releases and production deployment. Inspect actual CI/logs, address failures and report the resulting PR URL and precise validation. Keep fork-only changes in the fork.
 
 Read the [fork development reference](../../references/development.md) for verification and managed-file boundaries, and the upstream [development guide](https://github.com/Stell0/ns8-czero/blob/main/docs/development.md) for reference-app commands. The fork's active manifests and CI policy remain authoritative.
