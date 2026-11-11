@@ -144,7 +144,9 @@ test('role changes preserve expected revision and CSRF, suppress duplicate write
     .click()
   const modal = page.getByRole('dialog')
   await modal.getByRole('button', { name: 'Permission' }).click()
-  await page.getByRole('option', { name: 'Write', exact: true }).click()
+  await page
+    .getByRole('option', { name: 'Read and write', exact: true })
+    .click()
   const save = modal.getByRole('button', { name: 'Save', exact: true })
   await save.press('Enter')
   await expect(save).toBeDisabled()

@@ -11,7 +11,8 @@ artifact verification passes Debian21, Rocky26/three expected skips, all eight
 native browser workflows, five scan/SBOM pairs and zero OAuth-query candidates.
 The required C0 merge gate passes; optional screenshot publication remains
 nonblocking. Main [43090674220](https://github.com/Stell0/ns8-czero/actions/runs/43090674220)
-is still running and is a separate source/publication gate.
+fails during Debian cloud-image download with HTTP404; retain that failed
+main evidence as a separate source/publication gate.
 
 Immutable [Core0.46.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.46.0)
 is published from that accepted producer by
@@ -42,8 +43,17 @@ migration and source/lock cases, plus21 Robot dry runs. The installed package's
 immutable Git identity and loopback behavior pass the runtime probe, and source
 selection returns released. The lock changes only the app/Core versions and
 Core tag/commit. Actual Renovate44.161.0 bounds pass on Node24; maintained
-documentation checks pass723 local links. Full consumer/image/native acceptance
-remains pending.
+documentation checks pass723 local links. Full released-Git Python validation
+passes3294 cases with no skips. [PR115](https://github.com/Stell0/ns8-czero/pull/115)
+passes full [43093793504](https://github.com/Stell0/ns8-czero/actions/runs/43093793504)
+attempt2 after retrying its failed artifact-download job following the GitHub
+Actions outage. The actual C0 merge gate and independent native/artifact audit
+pass: Debian21, Rocky26/three expected skips, all eight browser workflows,
+five scan/SBOM pairs and zero OAuth-query candidates. The actual published app
+image contains released Git Core0.46.0 at `d8ae98c`, schema0037 and the matcher.
+Regular merge `505b8ee` preserves the candidate; its main
+[43105029868](https://github.com/Stell0/ns8-czero/actions/runs/43105029868)
+hits the same Debian cloud-image404. No live update is established.
 
 ## Native OAuth callback repair
 
@@ -72,6 +82,31 @@ Frontend lint/format/type/build and maintained documentation checks pass.
 The host package run passes12 cases and fails2 extraction probes because its
 OCR binary is absent; retain that evidence and rerun unchanged checks in the
 separate parser-equipped disposable container. Full native CI remains required.
+## Administration role wording
+
+Repair acceptance starts on current original main `505b8ee`, preserving the
+frozen PR113 commit `1a866a2`, the OAuth repair and released Core0.46 adoption.
+Update every person-role/protected-space browser selector to the cumulative
+labels, while retaining independent application-scope checkboxes and all
+existing permission, revision, CSRF and recovery checks. Cover saved role
+labels, unchanged role values, English/Italian, light/dark and phone/desktop
+keyboard/layout workflows. Require full native CI, actual merge gates and
+merged-main publication before the authorized dedicated update. Stop on a new
+GitHub-outage CI failure; preserve failed evidence and do not bypass checks.
+
+The moving Debian13 cloud-image URL returns404 during the current main runs.
+Use the shared runner's supported URL override for the official dated
+20261103-2651 Debian13 image, whose adjacent SHA512SUMS is available. Preserve
+the checksum verification, scenarios, timeouts and full native requirements.
+
+The clarification candidate starts from original main `4af1d70`. English and
+Italian person-role selectors and saved summaries show cumulative access levels;
+protected-space Editor choices use the same Read and write label. The selectors
+save the existing role values, while application consent keeps independent scope
+labels. Frontend lint/format/types/build and 28 unit checks pass. Eight isolated
+browser contexts pass English/Italian, light/dark and phone/desktop selection,
+save/readback, keyboard and overflow checks using synthetic API replies. Full
+native acceptance remains the automatic CI gate for these Vue components.
 
 ## Retrieval evidence producer candidate
 

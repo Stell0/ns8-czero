@@ -282,7 +282,7 @@ class NativeWebsite:
     def spaces(self, module_id):
         owner_context=self.fresh();self.login()
         member=next(row for row in self.api('access/accounts')['accounts'] if row['username']=='c0member')
-        self.goto('/admin');self.permissions(member['id'],'Write')
+        self.goto('/admin');self.permissions(member['id'],'Read and write')
         self.goto('/admin/spaces')
         name='<img src=x> protected-'+secrets.token_hex(4)
         self.fill('Name',name);self.click('Create protected space')
@@ -312,7 +312,7 @@ class NativeWebsite:
         citation=retained['sources'][0]['citation']
         self.goto('/evidence/'+citation['chunk_id']+'?space_id='+retained['space']['id'])
         self.run('Get Text','role=article','contains','Selected native memory evidence');self.accessible('sources','reader')
-        self.run('Switch Context',owner_context);self.goto('/admin/spaces?space_id='+space);self.grant('Write')
+        self.run('Switch Context',owner_context);self.goto('/admin/spaces?space_id='+space);self.grant('Read and write')
         self.run('Switch Context',member_context);self.goto(article)
         self.api('wiki/pages/'+page['id'],{'title':page['title'],'body':'# Independent private update','metadata':{},'expected_revision':2,'idempotency_key':'native-editor-update'},'PUT',space=space)
         self.run('Reload');self.run('Get Text','article','contains','Independent private update')
@@ -375,7 +375,7 @@ class NativeWebsite:
             self.command('api-cli run node/1/restart-module --data '+shlex.quote(json.dumps({'module_id':module_id})))
             self.builtin.run_keyword('Wait Until Keyword Succeeds','30s','2s','Check application route');phase('blocked_after_restart')
             self.run('Reload');self.permissions(value['member_id'],'Read');phase('unblocked')
-            for option,stage in [('Write','editor_permissions'),('Manage','manage_permissions'),('Read','reader_permissions')]:
+            for option,stage in [('Read and write','editor_permissions'),('Read, write and manage','manage_permissions'),('Read','reader_permissions')]:
                 self.permissions(value['member_id'],option);phase(stage)
             require_stages(measurements);self.accessible('admin','admin')
         finally:self.discovery(module_id,original)
