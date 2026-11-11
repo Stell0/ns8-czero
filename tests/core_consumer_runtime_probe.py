@@ -12,6 +12,7 @@ from czero_core.current_content import ContentSuperseded
 from czero_core.retention import preflight
 from czero_core.documents import DocumentService
 from czero_core.api_keys import ApiKeyService, ApiKeyBinding
+from czero_core.oauth_clients import OAuthClientService
 
 version, commit = sys.argv[1:]
 assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version)
@@ -24,10 +25,16 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0036_document_bm25'
+assert SCHEMA_REVISION == '0037_embedding_context'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
+assert OAuthClientService.redirect_uri_matches(
+    'http://localhost:53123/callback', ('http://localhost/callback',))
+assert not OAuthClientService.redirect_uri_matches(
+    'http://127.0.0.1:53123/callback', ('http://localhost/callback',))
+assert not OAuthClientService.redirect_uri_matches(
+    'http://localhost:53124/callback', ('http://localhost:53123/callback',))
 assert importlib.util.find_spec('czero_core.compilation') is not None
 assert importlib.util.find_spec('czero_core.bm25') is not None
 from fastapi import FastAPI
@@ -41,4 +48,4 @@ install_compilation(application, None, None, lambda: None, lambda: None)
 assert isinstance(application.state.compilation, CompilationService)
 assert len([route for route in application.routes
             if route.path.startswith('/api/v1/compilation/')]) == 19
-print('Released image Core matches immutable Git lock and latest-only schema/contracts; no NS8 SDK')
+print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')
