@@ -135,6 +135,13 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
         reference_evidence=command([str(python),'-I',str(reference_probe)],cwd=directory,
             env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
         assert all(json.loads(reference_evidence).values())
+        reference_state=directory/'reference-state.json'
+        for stage in ('seed','verify'):
+            retained_evidence=command([str(python),'-I',str(reference_probe)],cwd=directory,
+                env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1',
+                     'CZERO_REFERENCE_STAGE':stage,'CZERO_REFERENCE_STATE':str(reference_state)})
+            assert all(json.loads(retained_evidence).values())
+        assert not reference_state.exists()
         probe=directory/'core_text_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_text_probe.py',probe)
         evidence=command([str(python),'-I',str(probe)],cwd=directory,
