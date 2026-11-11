@@ -271,6 +271,9 @@
   "admin": {
     "people": "People and applications",
     "role": "Permission",
+    "readWrite": "Read and write",
+    "readWriteManage": "Read, write and manage",
+    "roleHelp": "Write includes read. Manage includes read and write.",
     "approve": "Approve application",
     "decline": "Decline application",
     "block": "Block access",

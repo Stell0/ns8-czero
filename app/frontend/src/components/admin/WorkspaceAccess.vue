@@ -241,7 +241,11 @@ function approve() {
                   : person.blocked
                     ? t('admin.block')
                     : t(
-                        `account.${person.role === 'admin' ? 'manage' : person.role === 'editor' ? 'write' : 'read'}`,
+                        person.role === 'admin'
+                          ? 'admin.readWriteManage'
+                          : person.role === 'editor'
+                            ? 'admin.readWrite'
+                            : 'account.read',
                       )
               }}</NeTableCell
               ><NeTableCell :data-label="t('common.actions')"
@@ -367,12 +371,13 @@ function approve() {
         :label="t('admin.role')"
         :options="[
           { id: 'reader', label: t('account.read') },
-          { id: 'editor', label: t('account.write') },
-          { id: 'admin', label: t('account.manage') },
+          { id: 'editor', label: t('admin.readWrite') },
+          { id: 'admin', label: t('admin.readWriteManage') },
           { id: 'blocked', label: t('admin.block') },
         ]"
         :no-options-label="t('common.options')"
         :optional-label="t('common.optional')"
+        :helper-text="t('admin.roleHelp')"
         :disabled="mutation.isLoading.value"
     /></NeModal>
     <NeModal

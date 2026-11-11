@@ -27,8 +27,11 @@ Choose **Change permissions**, select a preset and save:
 | Preset | Core role | Permissions |
 | --- | --- | --- |
 | Read | Reader | Read |
-| Read and Write | Editor | Read, Write |
-| Read, Write and Manage | Admin | Read, Write, Manage |
+| Read and write | Editor | Read, Write |
+| Read, write and manage | Admin | Read, Write, Manage |
+
+Choose one cumulative access level. The selector and saved person summary use
+the same labels. Application consent permissions remain independent selections.
 
 Saving a real change disconnects all that person's application connections.
 They must sign in and consent again. An unchanged save leaves connections in
