@@ -115,14 +115,14 @@ def test_stale_or_incomplete_proof_cannot_authorize_merge(field, value):
         policy()['verify_gate'](proof, SHA, BASE, 'c' * 64)
 
 
-def test_native_sensitive_changes_are_full_even_in_drafts_and_manual_is_always_full():
+def test_sensitive_drafts_are_fast_ready_and_manual_runs_are_full():
     decide = policy()['validation_mode']
-    assert decide('runtime', 'app', 'pull_request', True) == 'full'
+    assert decide('runtime', 'app', 'pull_request', True) == 'fast'
     for event in ('ready_for_review', 'synchronize', 'reopened'):
         assert decide('runtime', 'app', 'pull_request', False) == 'full', event
     assert decide('docs', 'docs', 'push', False) == 'docs'
     assert decide('docs', 'docs', 'workflow_dispatch', False) == 'full'
-    assert decide('runtime', 'unknown', 'pull_request', True) == 'full'
+    assert decide('runtime', 'unknown', 'pull_request', True) == 'fast'
 
 
 def test_document_label_and_missing_readiness_cannot_bypass_gate():
@@ -365,7 +365,7 @@ def test_sensitive_or_uncertain_change_cannot_hide_in_a_ui_diff(path):
     assert selection['native_required'] is True
     for draft in (False, True):
         assert p['validation_mode']('runtime', selection['feedback'], 'pull_request', draft,
-                                   native_required=selection['native_required']) == 'full'
+                                   native_required=selection['native_required']) == ('fast' if draft else 'full')
     proof = evidence(mode='fast')
     proof.update(native_required=False, native_reason='ui_allowlist')
     with pytest.raises(ValueError, match='native_classification_changed'):
@@ -560,3 +560,79 @@ def test_full_documentation_dispatch_still_runs_required_fast_job():
     assert "needs.classify.outputs.mode == 'full'" in feedback
     assert 'feedback' in policy()['required_jobs']('docs','full')
     policy()['verify_gate'](evidence('docs','full'),SHA,BASE,'c'*64,require_full=True,native_required=False)
+
+
+def test_draft_feedback_never_becomes_sensitive_merge_proof():
+    p = policy()
+    for feedback in ('app', 'broad', 'unknown'):
+        assert p['validation_mode']('runtime', feedback, 'pull_request', True) == 'fast'
+        assert p['validation_mode']('runtime', feedback, 'pull_request', False) == 'full'
+        for event in ('push', 'workflow_dispatch'):
+            assert p['validation_mode']('runtime', feedback, event, True) == 'full'
+    proof = evidence(mode='fast')
+    proof['draft'] = True
+    with pytest.raises(ValueError, match='ready_for_review_required'):
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=True)
+    proof['draft'] = False  # Becoming ready cannot promote the old fast result.
+    with pytest.raises(ValueError, match='full_validation_required'):
+        p['verify_gate'](proof, SHA, BASE, 'c'*64, native_required=True)
+
+
+@pytest.mark.parametrize('damage', [None, 'runtime_path', 'metadata', 'remove',
+    'entry_change', 'duplicate_path', 'duplicate_key', 'malformed', 'missing_baseline',
+    'existing_baseline_path', 'registry_mode', 'mixed_runtime'])
+def test_registry_document_exemption_uses_committed_content(tmp_path, damage):
+    import json
+    def git(*args):
+        return subprocess.check_output(['git', '-C', str(tmp_path), *args], text=True).strip()
+    def commit():
+        git('add', '.')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'fixture')
+        return git('rev-parse', 'HEAD')
+    git('init', '-q')
+    (tmp_path/'README.md').write_text('fixture\n')
+    (tmp_path/'docs').mkdir()
+    (tmp_path/'docs/ci-policy.md').write_text('existing policy\n')
+    baseline = commit()
+    value = {'format':1, 'upstream':'https://example.org/repo.git', 'revision':baseline,
+             'files':[{'path':'README.md','mode':'100644','sha256':'a'*64}]}
+    registry = tmp_path/'c0-upstream.json'
+    registry.write_text(json.dumps(value))
+    base = commit()
+    added = {'path':'.github/pull_request_template.md','mode':None,'sha256':None}
+    value['files'].append(added)
+    if damage == 'runtime_path': added['path']='containers/czero-app/Containerfile'
+    elif damage == 'metadata': value['upstream']='https://example.org/other.git'
+    elif damage == 'remove': value['files'].pop(0)
+    elif damage == 'entry_change': value['files'][0]['sha256']='b'*64
+    elif damage == 'duplicate_path': value['files'].append(added.copy())
+    elif damage == 'missing_baseline': value['revision']='f'*40
+    elif damage == 'existing_baseline_path':
+        # The original registry omitted this existing document; null is invalid.
+        added['path']='docs/ci-policy.md'
+    raw=json.dumps(value)
+    if damage == 'duplicate_key': raw=raw.replace('"format": 1','"format": 1, "format": 1')
+    elif damage == 'malformed': raw='{'
+    registry.write_text(raw)
+    if damage == 'registry_mode': registry.chmod(0o755)
+    if damage == 'mixed_runtime': (tmp_path/'runtime.py').write_text('print(1)\n')
+    head=commit()
+    result=policy()['classify_source'](base, head, cwd=tmp_path)
+    assert (result['kind']=='docs') == (damage is None)
+    assert result['native_required'] == (damage is not None)
+    # Exercise the real docs entry point; a forged declaration cannot bypass it.
+    selection = {**result, 'kind':'docs', 'base':base, 'source':head, 'event':'pull_request'}
+    selected = tmp_path/'selection.json'
+    selected.write_text(json.dumps(selection))
+    checked = subprocess.run(['python3', str(Path(__file__).parents[2]/'scripts/check-docs.py'),
+                              str(selected)], cwd=tmp_path, capture_output=True, text=True)
+    assert (checked.returncode == 0) == (damage is None), checked.stdout + checked.stderr
+
+
+def test_developer_instructions_are_docs_but_packaged_skills_are_runtime():
+    p=policy()
+    for name in ('c0-project-workflows','c0-benchmark-agentic-retrieval',
+                 'c0-generate-retrieval-questions','c0-maintain-semantic-layer'):
+        assert p['classify']([change('.agents/skills/'+name+'/SKILL.md')])['kind']=='docs'
+    assert p['classify']([change('.github/pull_request_template.md','A',old_mode='000000')])['kind']=='docs'
+    assert p['classify']([change('plugins/c0-knowledge/skills/c0-research/SKILL.md')])['native_required']

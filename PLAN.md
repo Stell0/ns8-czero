@@ -1763,6 +1763,15 @@ The final local documentation/fork/CI-policy selection passes 160 cases and all
 ten developer skills pass frontmatter validation. Link checks include the standalone
 consumer. No model-driven behavioral evaluation is claimed; full CI remains pending.
 
+The subsequent CI policy change narrows documentation classification to reviewed
+developer assets and verified documentation-only registry additions. Draft runtime
+PRs receive fast feedback; ready sensitive PRs, manual full runs and releases keep
+full acceptance. Draft/fast proofs cannot authorize sensitive merges. Existing
+frozen full runs remain preserved. This CI/policy implementation itself requires
+full native acceptance before merge; no release or deployment is implied. Focused
+policy/promotion/documentation/fork checks pass 186 cases, including actual Git
+registry changes and the documentation checker. Full exact-source CI remains pending.
+
 ## Current baseline
 
 The accepted dedicated installation is app **0.61.0**, released Core **0.42.0**,
