@@ -74,6 +74,13 @@ Per-target-resolution comparison and final exact-source full/native/browser/
 image/artifact/merge proof remain separate gates. Do not publish Core, adopt a
 new consumer lock or deploy on focused or diagnostic evidence alone.
 
+The next preserved successor starts at original main
+`a106f188d362fa02574972662f84bb3fc93774af` after the cumulative role-label merge.
+It retains the upstream labels, their native assertions and the identical dated
+Debian image pin. The original base and latest base have identical released
+Core0.46 package trees; the reference Core0.47 tree remains unchanged. Repeat
+full/native and browser verification on this source before promotion.
+
 ## Released Core0.46 — native OAuth consumer candidate
 
 Start at latest original main `bdb928e`, preserving the accepted producer
