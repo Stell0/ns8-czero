@@ -213,7 +213,10 @@ PYTHONPATH=tests .venv/bin/python -m benchmarks.cross_space_references \
 Defaults are20 warmups,200 measured calls,three repetitions,concurrency1/5, all
 count/space/visibility/credential/layout cases plus one source with100000 outgoing
 references. `--availability archived` and `--availability missing` create separate
-inactive/deleted-target runs. Report actual visible cardinality: space-wide grants
+inactive/deleted-target runs. `--visibility sparse --references 100 --spaces 10
+--layouts object` additionally distributes100 readable edges and99900 unreadable
+edges across the dense source's ten target spaces. Fixture hard deletion runs in
+500-row statements under the unchanged database deadline. Report actual visible cardinality: space-wide grants
 cannot make half the resources in one selected space individually unauthorized.
 
 The same driver runs with `--baseline` against exact original-source imports.
@@ -225,3 +228,28 @@ The driver records current SQL plans, allocations/RSS, bytes, SQL counts and a
 five-reader revocation barrier. No runtime deadlines, memory settings or authority
 rules are relaxed. Byte-limited pages may return fewer than limit; continuation
 always identifies the last visible returned reference.
+
+## Measured producer evidence
+
+The frozen source `dab4140014de7a113ec36f672587ad355ca62343` completes the full
+active matrix:1782 measurement groups,20 warmups,200 samples,three repetitions,
+all reference/space/visibility/credential/layout selections and concurrency1/5.
+Its Core tree `038af088d8155be709ff9d7a839b7f0155f28528` remains unchanged in the
+successor on original main `505b8ee54b5ce79bf873145e36f12dc7d5ec7c3e`.
+
+| Measurement | Observed maximum |
+| --- | --- |
+| Server-side P50 / P95 | 45.5ms / 60.6ms |
+| Peak Python allocations / returned bytes | 377218 / 25870 bytes |
+| SQL statements: browser session / OAuth / key | 15 / 25 / 14, constant throughout |
+| Dense-source EXPLAIN execution | 4.9ms,101 outgoing and indexed endpoint lookups |
+| Five-reader revocation wait and commit | 149.2ms; zero later target items,deadlocks,timeouts |
+
+The same frozen driver compares original `bdb928e62a057309d7822282fd7c505303d3bbfb`
+with candidate `19ad5efe1aa2379d4e3a2784f3546b8a7c2b7d36` for existing same-space
+object relationships and entity links. All72 matched repetition groups pass the
+`max(10%,5ms)` regression allowance; the largest P95 increase is2.1ms.
+These are local measurements, not a network or production service-level promise.
+Raw evidence and earlier failed diagnostics remain private. Independent Core
+publication, released-consumer image identity and final full/native acceptance
+remain required; see [the current checkpoint](../PLAN.md#secure-cross-space-references).
