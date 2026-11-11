@@ -1865,6 +1865,11 @@ genericcloud image before VM boot. Native CI now selects the official dated
 20261103-2651 image and its published SHA512SUMS through the shared runner's
 existing URL override. Both native suites remain mandatory; no failed result is
 waived and the original runs remain available.
+The access-role repair subsequently merges as original main
+`a106f188d362fa02574972662f84bb3fc93774af`. A further successor preserves its
+cumulative role labels, browser regressions and identical Debian image pin.
+Keep `b77bc6a68d1cf54823a19114a22129871ff3240d` and both full runs frozen;
+the current-base successor requires its own focused and full/native acceptance.
 
 ## Current baseline
 
