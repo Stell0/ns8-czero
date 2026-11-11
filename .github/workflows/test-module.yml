@@ -34,6 +34,8 @@ jobs:
     uses: NethServer/ns8-github-actions/.github/workflows/test-on-qemu.yml@v1
     with:
       distro: debian13
+      # Keep the accepted image bytes: the moving latest genericcloud URL is gone.
+      cloud_image_url: https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-genericcloud-amd64-20261103-2651.qcow2
       repo_ref: ${{ inputs.source }}
       image_url: ${{ inputs.image_url }}
       version_tag: ${{ inputs.image_tag }}
