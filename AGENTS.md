@@ -89,7 +89,8 @@ merely to satisfy this requirement.
 Use the [CI policy](docs/ci-policy.md) on the exact latest original C0 main and
 candidate. Every PR gets fast automatic checks. Installation/configuration,
 containers, migrations, authentication, dependencies, CI/policy code and uncertain
-changes also get automatic full Debian/Rocky native acceptance. Reviewed
+changes get fast checks while draft and automatic full Debian/Rocky native
+acceptance when ready for review. Reviewed
 presentation-only changes use the explicit low-risk allowlist and can request
 full native acceptance on demand. Both internal and external contributors follow
 this risk policy; there is no blanket full-native requirement for Git-only docs
@@ -239,8 +240,8 @@ released Git source in the actual published/native app image, not only a tempora
 probe. Producer acceptance is not released-consumer deployment proof.
 
 [CI policy](docs/ci-policy.md) defines the current risk-based checks. Every PR
-gets fast checks; sensitive/unknown changes automatically require full native
-acceptance, and allowlisted presentation changes can request it on demand. Full
+gets fast checks; sensitive/unknown ready PRs automatically require full native
+acceptance (drafts receive fast checks and cannot merge), and allowlisted presentation changes can request it on demand. Full
 native acceptance remains mandatory before Core/module releases, canonical image
 publication and production deployment. A fast merge proof never authorizes those
 operations.
