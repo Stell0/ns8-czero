@@ -1860,6 +1860,11 @@ After the released-Core adoption merged, the successor candidate starts at origi
 main `505b8ee54b5ce79bf873145e36f12dc7d5ec7c3e`. Preserve the earlier candidate
 `08a207e21fc9b04995880a259ecade5b0dece7db` and its full acceptance run; the
 successor requires its own current-base validation and full native acceptance.
+The preserved first CI candidate encounters HTTP 404 for Debian's floating
+genericcloud image before VM boot. Native CI now selects the official dated
+20261103-2651 image and its published SHA512SUMS through the shared runner's
+existing URL override. Both native suites remain mandatory; no failed result is
+waived and the original runs remain available.
 
 ## Current baseline
 

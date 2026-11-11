@@ -23,6 +23,12 @@ gate independently reclassify the committed diff; a declaration is insufficient.
 
 ## Development feedback
 
+The Debian native VM uses the dated official image selected in
+`.github/workflows/test-module.yml`, verified against its published SHA512SUMS by
+the shared runner. Update that pin with a reachable official image and checksum,
+then require both native suites. The floating `latest` directory can temporarily
+omit the genericcloud image during publication; do not skip native acceptance.
+
 Every PR receives automatic fast checks. Reviewed Git-only documentation uses
 the explicit `DOCS` allowlist: UTF-8, conflict markers, diff/local-link checks and
 policy regressions. Runtime PRs prioritize speed: application/template, Core and tooling unit
