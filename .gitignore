@@ -116,3 +116,5 @@ __pycache__/
 .local/benchmark/
 
 .venv-benchmark/
+.local/cross-space-references/
+.local/released-consumer/
