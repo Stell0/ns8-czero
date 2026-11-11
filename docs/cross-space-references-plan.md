@@ -186,3 +186,35 @@ acceptance are separate facts. Main risks: metadata leaks, policy divergence,
 revocation deadlocks, multipart confusion, authorized copying and release mismatch.
 Minimum useful delivery is all five kinds, guarded creation/list/blind-delete and
 real PostgreSQL plus authenticated REST/MCP proof, without browser mutation panels.
+
+## Reproduce producer verification
+
+Use the explicit local Core environment from [development](development.md) and a
+private `CZERO_TEST_DATABASE_URL` selecting a disposable PostgreSQL/pgvector server.
+The benchmark creates and drops its own randomly named database; it never uses
+an installed C0 instance. Keep its output under ignored private evidence paths.
+
+```sh
+PYTHONPATH=tests .venv/bin/python -m pytest -q \
+  tests/integration/test_space_batch.py \
+  tests/integration/test_cross_space_references.py \
+  tests/integration/test_cross_space_references_http.py
+PYTHONPATH=tests .venv/bin/python -m benchmarks.cross_space_references \
+  --output .local/cross-space-references/benchmark.json
+```
+
+Defaults are20 warmups,200 measured calls,three repetitions,concurrency1/5, all
+count/space/visibility/credential/layout cases plus one source with100000 outgoing
+references. `--availability archived` and `--availability missing` create separate
+inactive/deleted-target runs. Report actual visible cardinality: space-wide grants
+cannot make half the resources in one selected space individually unauthorized.
+
+The same driver runs with `--baseline` against exact original-source imports.
+`--controls object_relations entity_links` measures existing same-space controls;
+`--controls independent_resolution` measures original per-target resolver calls.
+Keep the driver checksum fixed across comparisons. Reduced `--samples`,
+`--warmups`, `--repetitions` or matrix selections are diagnostics, not full gates.
+The driver records current SQL plans, allocations/RSS, bytes, SQL counts and a
+five-reader revocation barrier. No runtime deadlines, memory settings or authority
+rules are relaxed. Byte-limited pages may return fewer than limit; continuation
+always identifies the last visible returned reference.

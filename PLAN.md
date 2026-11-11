@@ -9,6 +9,39 @@ reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
 Core publication, released consumer adoption and live deployment retain separate
 acceptance gates. No browser panels or live changes are included.
 
+Implementation candidate: Core0.47/schema0038 adds immutable typed references,
+current summaries, actor/source-scoped payload-free receipts and guarded deletion.
+Plugin1.10 and guidance7 describe navigation and separate publication authority.
+The transport is capability-gated: actual frozen Core0.44 consumer startup/profile
+read succeeds and unsupported operations stay absent; its lock is unchanged.
+
+Executed focused proof:58 PostgreSQL Core/authorization cases (all25 endpoint
+pairs, migration0037→0038 preserving rows/constraints, key restrictions, revocation
+waits in both orders, explicit READ COMMITTED under a repeatable-read default,
+byte-budget pagination and endpoint-delete serialization);10 signed REST/current+legacy SDK cases;
+6 exact native-probe HTTP regressions;67 catalog/guidance/archive/runtime-audit
+cases. The parser-equipped disposable container passes all6 wheel/source package
+checks, including installed references, repeated migrations and OCR. Host package
+OCR failures remain private. Node settings28, schema patterns,21 Robot dry runs
+and maintained documentation checks pass.
+
+The benchmark driver includes a100000-edge corpus and explicit matrix controls.
+An initial5-sample diagnostic finds constant SQL counts over1/100 references and
+1/10 target spaces for sessions/OAuth/keys, max P95 about13ms,342154 peak allocated
+bytes and25616 returned bytes. These are diagnostics, not accepted benchmark gates.
+A later20-sample dense-source diagnostic covers100000 outgoing references with
+all three credentials, visibility modes and concurrency1/5: maximum P95 about57ms,
+constant SQL counts,374654 peak allocated bytes, and five admitted readers complete
+before revocation. The original broad join exhausts64MiB PostgreSQL shared memory;
+its failure is retained. The revised parameterized lateral UNION/keyset plan avoids
+whole-endpoint hash scans without changing limits. Removing explicit READ COMMITTED
+reproduces stale-key admission; restoring it passes the barrier regression.
+Space-wide permissions cannot yield partial resource authorization in one selected
+space; half-visibility measurements must report actual visible cardinality.
+Broad exact-main/candidate, full benchmark, Debian/Rocky/browser/image and merge
+proof remain pending. Do not publish Core, adopt a new consumer lock or deploy
+on this focused evidence alone.
+
 ## Released Core0.46 — native OAuth consumer candidate
 
 Start at latest original main `bdb928e`, preserving the accepted producer

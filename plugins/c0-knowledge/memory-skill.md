@@ -39,3 +39,10 @@ wins. If post-answer continuation or its budget is unavailable, skip it. A learn
 failure cannot delay or replace the answer, and a proposal is not compilation.
 
 For explicitly requested recurring maintenance or external setup, read [scheduling and recovery](references/scheduling.md). Package generation installs no host task.
+
+When advertised, cross_space_refs_list reads only authorized current summaries
+from explicit source and target spaces (1–10 target selectors). Follow with a
+fresh target API read. References are navigation, not evidence or permission;
+never copy target information without an explicitly authorized publication task
+and destination. Creation requires source Editor, target Reader and Read+Write.
+Blind deletion needs source Write only; empty success reveals no target state.

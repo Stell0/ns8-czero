@@ -60,7 +60,7 @@ def install(tmp_path,kind):
     with zipfile.ZipFile(BytesIO(zip_bytes(payload))) as archive:archive.extractall(directory)
     if kind=='plugin':
         instructions,package=load_plugin(directory)
-        assert package['version']=='1.9.0'
+        assert package['version']=='1.10.0'
     else:
         instructions=(directory/'SKILL.md').read_text()+(directory/'references/compiler.md').read_text()
     assert 'feedback_after_answer' in instructions and 'after answer delivery' in instructions

@@ -129,6 +129,8 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     from czero_app.compilation import install as install_compilation
     install_compilation(instance_app, database, auth, read_context, write_context)
     install_oauth_routes(instance_app, auth, read_context, write_context)
+    from czero_app.cross_space_references import install as install_cross_space_references
+    install_cross_space_references(instance_app, database, auth, read_context, write_context)
     catalog.annotate_openapi(instance_app)
 
     def connection_metadata():

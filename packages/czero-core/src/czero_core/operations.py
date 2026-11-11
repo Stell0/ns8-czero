@@ -41,6 +41,7 @@ class Operation:
     read_only: bool = True
     # Trusted resource/space policy runs before a scope-upgrade challenge.
     preauthorize: Callable | None = None
+    additional_scopes: tuple[str, ...] = ()
 
 
 class OperationRegistry:
@@ -55,6 +56,8 @@ class OperationRegistry:
                 or not 1 <= len(operation.description) <= 1024
                 or not isinstance(operation.role, Role)
                 or operation.scope not in SCOPES
+                or not isinstance(operation.additional_scopes, tuple)
+                or any(scope not in SCOPES for scope in operation.additional_scopes)
                 or type(operation.read_only) is not bool
                 or not callable(operation.handler)
                 or (operation.preauthorize is not None and not callable(operation.preauthorize))
@@ -70,7 +73,7 @@ class OperationRegistry:
         self._operations[operation.name] = Operation(
             operation.name, operation.description, operation.role, operation.scope,
             deepcopy(operation.input_schema), deepcopy(operation.output_schema),
-            operation.handler, operation.read_only, operation.preauthorize)
+            operation.handler, operation.read_only, operation.preauthorize, operation.additional_scopes)
 
     def _current(self, actor: Actor, operation: Operation, scopes, arguments):
         self._validate_scopes(scopes)
@@ -91,9 +94,10 @@ class OperationRegistry:
             # the invocation's actual delegation while refreshing that Actor.
             current = replace(selected, api_key_binding=current.api_key_binding, delegation=current.delegation,
                               delegated_scopes=current.delegated_scopes)
-        if ((scopes is not None and operation.scope not in scopes)
-                or (current.delegated_scopes is not None and operation.scope not in current.delegated_scopes)):
-            raise ScopeDenied(operation.scope)
+        for scope in (operation.scope, *operation.additional_scopes):
+            if ((scopes is not None and scope not in scopes)
+                    or (current.delegated_scopes is not None and scope not in current.delegated_scopes)):
+                raise ScopeDenied(scope)
         return current
 
     @staticmethod
@@ -106,6 +110,8 @@ class OperationRegistry:
         return {'name': operation.name, 'description': operation.description,
                 'minimum_role': operation.role.value, 'required_scope': operation.scope,
                 'read_only': operation.read_only,
+                **({'required_scopes': [operation.scope, *operation.additional_scopes]}
+                   if operation.additional_scopes else {}),
                 'input_schema': deepcopy(operation.input_schema),
                 'output_schema': deepcopy(operation.output_schema)}
 
@@ -119,7 +125,7 @@ class OperationRegistry:
                 current.require(operation.role)
             except PermissionDenied:
                 continue
-            if scopes is not None and operation.scope not in scopes:
+            if scopes is not None and not {operation.scope, *operation.additional_scopes} <= scopes:
                 continue
             result.append(self._metadata(operation))
         return sorted(result, key=lambda value: value['name'])
