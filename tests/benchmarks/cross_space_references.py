@@ -160,7 +160,8 @@ def seed(f, args):
         rows=[]
         for n in range(start,start+1000):
             tid=UUID(hashlib.md5(('corpus-target-'+str(n)).encode()).hexdigest())
-            target_space=UUID(ids[1+n%10])
+            target_space=UUID((ids[1] if n<100 else ids[2+n%9])
+                if 'sparse' in args.visibility else ids[1+n%10])
             rows.append({'id':uuid4(),'space':UUID(ids[0]),'source':UUID(dense['id']),
                          'target_space':target_space,'target':tid,'actor':owner.user_id})
             if n<100:dense_targets.append({'space_id':str(target_space),'kind':'object',
@@ -280,10 +281,15 @@ async def run(args):
                                 c.execute(text('UPDATE '+table+' SET deleted=true WHERE space_id=ANY(CAST(:spaces AS uuid[]))'),{'spaces':ids[1:]})
                     else:
                         for table in ('c0_claims','c0_entities','c0_wiki_revisions','c0_wiki_pages','c0_sources','c0_objects'):
-                            c.execute(text('DELETE FROM '+table+' WHERE space_id=ANY(CAST(:spaces AS uuid[]))'),{'spaces':ids[1:]})
+                            # Bound fixture cascades too; retain the normal statement deadline.
+                            while c.execute(text('DELETE FROM '+table+' WHERE id IN (SELECT id FROM '+table+
+                                    ' WHERE space_id=ANY(CAST(:spaces AS uuid[])) LIMIT 500)'),
+                                    {'spaces':ids[1:]}).rowcount:
+                                pass
             grants={space:1 for space in ids[1:]}
             for visibility in args.visibility:
-                allowed=ids[1:] if visibility in ('all','archived','missing') else [] if visibility=='none' else ids[1::2]
+                allowed=(ids[1:2] if visibility=='sparse' else ids[1:] if visibility=='all'
+                         else [] if visibility=='none' else ids[1::2])
                 for space in ids[1:]:
                     spaces.set_grant(f.owner,space,spaces.access.resolve(replace(native,expires_at=time.time()+300)).user_id,
                         Role.READER if space in allowed else None,expected_revision=grants[space],idempotency_key=uuid4().hex)
@@ -340,7 +346,7 @@ def main():
     parser.add_argument('--spaces',type=int,nargs='+',default=[1,2,5,10])
     parser.add_argument('--concurrency',type=int,nargs='+',default=[1,5])
     parser.add_argument('--layouts',nargs='+',choices=['object','mixed'],default=['object','mixed'])
-    parser.add_argument('--visibility',nargs='+',choices=['all','half','none'],default=['all','half','none'])
+    parser.add_argument('--visibility',nargs='+',choices=['all','half','none','sparse'],default=['all','half','none'])
     parser.add_argument('--auth',nargs='+',choices=['session','oauth','key'],default=['session','oauth','key'])
     args=parser.parse_args()
     if any(n not in (1,10,50,100) for n in args.references) or any(n not in (1,2,5,10) for n in args.spaces):parser.error('outside v1 matrix')

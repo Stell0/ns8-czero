@@ -46,9 +46,33 @@ whole-endpoint hash scans without changing limits. Removing explicit READ COMMIT
 reproduces stale-key admission; restoring it passes the barrier regression.
 Space-wide permissions cannot yield partial resource authorization in one selected
 space; half-visibility measurements must report actual visible cardinality.
-Broad exact-main/candidate, full benchmark, Debian/Rocky/browser/image and merge
-proof remain pending. Do not publish Core, adopt a new consumer lock or deploy
-on this focused evidence alone.
+The frozen dab4140 active benchmark completes1782 groups with20 warmups,
+200 measured calls and three repetitions at concurrency1/5. Maximum P50 is45.5ms,
+P95 is60.6ms, peak allocated memory377218 bytes and response25870 bytes. Session/
+OAuth/key SQL counts remain15/25/14 throughout. Five admitted readers complete
+before revocation (149.2ms wait/commit), with no post-revocation target items,
+deadlocks or timeouts; the dense indexed query plan executes in4.9ms.
+Matched original bdb928e and candidate19ad5ef same-space controls pass all72
+repetition comparisons; maximum P95 increase is2.1ms, below the5ms allowance.
+Separate archived/deleted and0.1%-visible100000-edge fixtures also pass their
+measured gates. Bound fixture deletion into500-row statements rather than
+relaxing the existing deadline. Sparse selection uses one readable target space
+among ten selected spaces and exactly100 readable references among100000.
+
+Latest base505b8ee actual full local checks pass3294 cases and43 real browser
+cases; Rocky passes. Its Debian job fails because the moving genericcloud URL
+returns404. Preserve this failure. The candidate pins the dated official image
+whose SHA512 is identical to the earlier accepted VM, keeping checksum checks.
+The first feature native run exposes stale browser workflow expectations; the
+Reader display allowlist and both browser suites now cover navigation. All7
+real guidance browser cases pass across roles, light/dark, desktop/phone and
+keyboard controls. Node24 frontend checks pass28 tests, lint, formatting, types
+and build; the policy21 Robot dry runs pass. Retained reference/receipt seed and
+verification pass all6 external package cases and a real PostgreSQL dump/restore.
+
+Per-target-resolution comparison and final exact-source full/native/browser/
+image/artifact/merge proof remain separate gates. Do not publish Core, adopt a
+new consumer lock or deploy on focused or diagnostic evidence alone.
 
 ## Released Core0.46 — native OAuth consumer candidate
 
