@@ -518,6 +518,11 @@ Backup and restore into a clean disposable instance
     ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_COMPILATION_STAGE=seed czero python - < /tmp/czero-core-compilation-probe.py
     ...    return_rc=True    timeout=80s
     Should Be Equal As Integers    ${rc}    0    msg=${output}
+    Put File    ${CURDIR}/packaging/core_references_probe.py    /tmp/czero-core-references-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_REFERENCE_STAGE=seed czero python - < /tmp/czero-core-references-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
     Log To Console    Backup phase: create native destination and schedule
     ${backup} =    Create Disposable Backup    ${module_id}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
@@ -556,6 +561,12 @@ Backup and restore into a clean disposable instance
     Should Be True    ${compiler}[restored_fence_invalidated]
     Should Be True    ${compiler}[guarded_compilation]
     Should Be True    ${compiler}[pending_compilation_verified]
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_REFERENCE_STAGE=verify czero python - < /tmp/czero-core-references-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${references} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${references}[restored_reference_verified]
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
     ...    return_rc=True    timeout=180s
