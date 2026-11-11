@@ -10,7 +10,9 @@ plugin1.10, five stable endpoint kinds, outgoing-only summaries and explicit
 source/target selectors. References confer no authority or evidence. Preserve
 metadata-free storage, both-endpoint read checks, blind source-owned deletion,
 credential bindings and revocation lock order. The released consumer lock and
-installed runtime remain separate from this producer candidate.
+installed runtime remain separate from this producer candidate. The current
+consumer manifest pins Core0.46 after PR115; preserve that lock and the genuine
+app0.63/Core0.45 native predecessor when validating the feature.
 
 Retrieval evidence producer work is tracked in
 [its contract](docs/retrieval-evidence.md): Core0.46/schema0037, plugin1.9,
