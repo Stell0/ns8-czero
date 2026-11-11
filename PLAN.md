@@ -1,5 +1,50 @@
 # C0 roadmap
 
+## Released Core0.46 — native OAuth consumer candidate
+
+Start at latest original main `bdb928e`, preserving the accepted producer
+`d8ae98c` and its immutable images. [PR114](https://github.com/Stell0/ns8-czero/pull/114)
+passes exact full [43035611008](https://github.com/Stell0/ns8-czero/actions/runs/43035611008)
+after retrying external DNS/API failures: 3294 Python/PostgreSQL/packaging,
+43 document-browser,32 website-browser and28 Vue unit cases. Independent
+artifact verification passes Debian21, Rocky26/three expected skips, all eight
+native browser workflows, five scan/SBOM pairs and zero OAuth-query candidates.
+The required C0 merge gate passes; optional screenshot publication remains
+nonblocking. Main [43090674220](https://github.com/Stell0/ns8-czero/actions/runs/43090674220)
+is still running and is a separate source/publication gate.
+
+Immutable [Core0.46.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.46.0)
+is published from that accepted producer by
+[43091209705](https://github.com/Stell0/ns8-czero/actions/runs/43091209705).
+Downloaded release checksums pass: wheel
+`d75f4d3ae48c13036ea20b683b746e69757a90265bcd6391b4754491602c99ae`,
+archive `4e96ab9af0b2331c8a914331c4fb7a055159b5ae75f869337718eb99fa90776a`.
+Metadata, license, schema0037 and the loopback matcher are present in the assets.
+The app0.64 candidate adopts its Git tag/lock with
+`>=0.46.0,<0.47.0` and matching patch-only updater bounds. Keep the Core package
+tree unchanged. Verify the actual released Git source, schema0037 and loopback
+matcher in the published app image. Migration0037 defaults existing embedding
+profiles to legacy input; adoption does not enable contextual inputs or queue
+reindexing. Existing roles, scopes, callbacks, sources and schedules retain
+their contracts.
+
+Native acceptance must upgrade the genuine app0.63/Core0.45/schema0036
+predecessor `1db37f4` using all three frozen image digests, preserve content and
+grants, and exercise clean backup/restore. Retain the older migration fixtures.
+Run the OAuth regressions with released Core and require full consumer/native,
+current-source review/merge and actual main publication checks. Live update
+remains separately authorized and requires supported backup, preservation,
+readiness, client checks, restart and positive-control journald audits. Neither
+a published Core nor producer acceptance establishes consumer deployment.
+
+Local released-Git validation passes169 focused authorization, callback,
+migration and source/lock cases, plus21 Robot dry runs. The installed package's
+immutable Git identity and loopback behavior pass the runtime probe, and source
+selection returns released. The lock changes only the app/Core versions and
+Core tag/commit. Actual Renovate44.161.0 bounds pass on Node24; maintained
+documentation checks pass723 local links. Full consumer/image/native acceptance
+remains pending.
+
 ## Native OAuth callback repair
 
 Permit a requested port only when an approved callback is a portless HTTP
