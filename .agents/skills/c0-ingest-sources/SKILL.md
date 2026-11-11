@@ -33,8 +33,10 @@ with the verified original-main base and a private denylist of this deployment's
 hostnames, identities and credentials. Never publish that denylist. Automated scans
 complement manual review; they do not prove arbitrary source content is public.
 Keep real payloads/receipts and private lessons outside Git; retain useful generic
-lessons in sample documentation and tests. Run the required full base/candidate
-checks and open a focused original C0 PR through c0-contribute-upstream and the
+lessons in sample documentation and tests. Select base/candidate checks under the current [upstream CI risk policy](https://github.com/Stell0/ns8-czero/blob/main/docs/ci-policy.md);
+full native acceptance remains required for sensitive changes and releases/deployment.
+Validate the affected behavior and open a focused original C0 PR through
+c0-contribute-upstream and the
 installed nethserver-pr skill. Preserve customer work and follow AGENTS.md's
 review, provenance and frozen-candidate rules.
 
