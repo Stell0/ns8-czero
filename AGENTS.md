@@ -81,6 +81,21 @@ When a feature or fix can benefit the original C0 base, isolate the reusable cha
 
 Explain the behavior, compatibility and migration impact, include feature regression tests and reproducible validation, and follow the skill's review/assignment rules. Never assign an unsolicited reviewer. Address review feedback; do not merge a failed candidate. Core publication and fork adoption still follow their immutable-release and consumer-verification gates.
 
+## PR readiness includes instruction review
+
+Before marking a PR ready, review AGENTS.md, relevant developer skills and affected
+end-user skills against the complete final diff. Update instructions when behavior,
+interfaces, workflows, validation, packaging or authorization requirements change.
+Verify affected references and packaged inventories. Instruction updates belong in
+the same PR and must pass the applicable checks before merge.
+
+Record the review in the PR description: name updated instruction paths, or state
+“no instruction changes needed” with a brief reason. Complete the instruction-review
+checkbox in the PR template. Recheck the declaration when the source or base changes;
+reviewers must assess the instructions against the final implementation. A checked
+box alone does not establish correctness. Do not make unrelated instruction edits
+merely to satisfy this requirement.
+
 ## Tests are part of the feature
 
 Use the [CI policy](docs/ci-policy.md) on the exact latest original C0 main and
