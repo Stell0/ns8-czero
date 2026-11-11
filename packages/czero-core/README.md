@@ -1,5 +1,15 @@
 # C0 Core
 
+## Cross-space reference producer (0.47)
+
+Schema0038 adds outgoing current-resource navigation across explicitly selected
+spaces. `CrossSpaceReferenceService` validates five stable endpoint kinds, hides
+edges without current Read on both endpoints and permits source-authorized blind
+deletion. Summaries contain no bodies, evidence or snapshots. Create requires
+Read+Write; references never grant permissions or authorize publication. See the
+[contract and acceptance plan](../../docs/cross-space-references-plan.md).
+The app's released Core lock remains independent of this producer candidate.
+
 ## Retrieval evidence producer (0.46)
 
 Schema0037 records embedding input format and invalidates contextual vectors on
