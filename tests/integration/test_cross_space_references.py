@@ -284,7 +284,7 @@ def test_revocation_waits_for_admitted_read_and_later_read_is_denied(references)
             # Inspect PostgreSQL's actual lock wait instead of trusting thread timing.
             with service.database.engine.connect() as c:
                 for _ in range(100):
-                    waiting = c.execute(text("SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted")).scalar_one()
+                    waiting = c.execute(text("SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted AND database=(SELECT oid FROM pg_database WHERE datname=current_database())")).scalar_one()
                     if waiting: break
                 assert waiting and not revoked.done()
             release.set()
@@ -365,3 +365,55 @@ def test_upgrade_from_schema0037_preserves_existing_constraints_and_rows():
                 assert db.health()['status'] == 'ok'
             finally: db.close()
     asyncio.run(check())
+
+
+def test_revocation_winning_lock_order_cannot_admit_stale_key_under_repeatable_default(references):
+    from czero_core.api_keys import ApiKeyService
+    service, owner, ids, _, _ = references
+    service.create(owner, **request(references))
+    keys = ApiKeyService(service.access, client_id='fixture', client_secret='synthetic', resource='https://c0.example.test/mcp')
+    issued = keys.create(owner, name='Revocation race', scopes={'c0:read'}, space_ids=ids)
+    actor = keys.verify(issued['key'], resource=keys.resource).actor
+    original_engine = service.database.engine
+    service.database.engine = original_engine.execution_options(isolation_level='REPEATABLE READ')
+    started = Event()
+    def track(c, cursor, statement, parameters, context, many):
+        if 'pg_advisory_xact_lock_shared' in statement: started.set()
+    event.listen(service.database.engine, 'before_cursor_execute', track)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with original_engine.begin() as c:
+                for lock in (49372,49378,49379,49382):
+                    c.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key':lock})
+                c.execute(text('UPDATE c0_api_keys SET revoked_at=now() WHERE id=:id'), {'id':UUID(str(issued['id']))})
+                read = pool.submit(listing, references, actor)
+                assert started.wait(3)
+                for _ in range(100):
+                    waiting=c.execute(text("SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted AND database=(SELECT oid FROM pg_database WHERE datname=current_database())")).scalar_one()
+                    if waiting: break
+                assert waiting and not read.done()
+            with pytest.raises(PermissionDenied): read.result(4)
+    finally:
+        event.remove(service.database.engine, 'before_cursor_execute', track)
+        service.database.engine = original_engine
+
+
+def test_maximum_unicode_labels_paginate_within_byte_budget(references):
+    import json
+    service, owner, ids, endpoints, _ = references
+    pages = [uuid4() for _ in range(100)]
+    with service.database.engine.begin() as c:
+        c.execute(text('INSERT INTO c0_wiki_pages(space_id,id,slug,title) VALUES (:space,:id,:slug,:title)'),
+            [{'space':UUID(ids[1]),'id':identifier,'slug':str(identifier),'title':'😀'*256} for identifier in pages])
+    for page in pages:
+        service.create(owner, space_id=ids[0], source=endpoints[0]['object'],
+                       target={'space_id':ids[1],'kind':'page','id':str(page)}, idempotency_key=uuid4().hex)
+    seen, after = [], None
+    while True:
+        result = listing(references, limit=100, after=after)
+        assert len(json.dumps(result, ensure_ascii=True).encode()) <= 256 * 1024
+        if after is None: assert 0 < len(result['references']) < 100
+        seen.extend(row['target']['id'] for row in result['references'])
+        after = result['next_after']
+        if after is None: break
+    assert len(seen) == 100 and set(seen) == set(map(str,pages))
