@@ -22,7 +22,22 @@ def test_selective_context_guidance_and_stable_workflow_identity(live,browser,ro
         expect(browser.get_by_role('button',name='Knowledge space Shared',exact=True)).to_be_visible()
     browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
     expect(browser.get_by_text('Your current access: '+effective+'.',exact=True)).to_have_text('Your current access: '+effective+'.')
-    expect(browser.locator('details[data-workflow]')).to_have_count(3 if effective=='reader' else 8)
+    expected={'research','structured-research','selective-context','cross-space-navigation'}
+    if effective!='reader':expected|={'knowledge-compiler','evidence','update','investigation','consolidate'}
+    workflows=browser.locator('details[data-workflow]')
+    expect(workflows).to_have_count(len(expected))
+    assert set(workflows.evaluate_all("nodes => nodes.map(node => node.dataset.workflow)"))==expected
+    navigation=browser.locator('details[data-workflow="cross-space-navigation"]')
+    for theme in ('light','dark'):
+        browser.emulate_media(color_scheme=theme)
+        for width in (1280,390):
+            browser.set_viewport_size({'width':width,'height':900})
+            navigation.locator('summary').focus();browser.keyboard.press('Enter')
+            expect(navigation.locator('ol')).to_be_visible()
+            expect(navigation).to_contain_text('explicitly authorized publication task and destination')
+            expect(navigation).to_contain_text('independently authorized API')
+            assert not browser.evaluate('document.documentElement.scrollWidth > innerWidth')
+            browser.keyboard.press('Enter')
     selective=browser.locator('details[data-workflow][data-workflow="selective-context"]')
     selective.locator('summary').click()
     expect(selective).to_contain_text('retain its exact revision_id and full-body hash')
