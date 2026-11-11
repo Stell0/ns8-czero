@@ -117,6 +117,12 @@ Follow [installation and administration](docs/administration.md) and the [candid
 
 ## Connect your AI assistant
 
+The native OAuth callback repair is staged in the Core producer source. Approved
+portless HTTP loopback callbacks accept a client-selected port while preserving
+host/path checks and exact code redemption. Released Core adoption and installed
+Claude Code acceptance remain separate; this source fix does not update a live
+instance. See the [repair acceptance plan](PLAN.md#native-oauth-callback-repair).
+
 Open **Use with AI** at `https://c0.example.org/agents` on your instance. Copy its canonical `/mcp` URL, configure your client's OAuth connection, sign in and consent to the required scopes. New clients can require administrator approval. Verify the returned profile and exact space before reading or writing.
 
 The page also generates an instance-bound `.skill` archive and a ChatGPT plugin `.zip` for an existing registered app. These supply instructions; they grant no permissions. Other agents use their own formats. [BYOA setup](docs/byoa.md), [ChatGPT setup](docs/chatgpt.md) and [plugin packaging](docs/plugin.md) give the detailed steps.

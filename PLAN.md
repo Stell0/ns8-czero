@@ -1,5 +1,33 @@
 # C0 roadmap
 
+## Native OAuth callback repair
+
+Permit a requested port only when an approved callback is a portless HTTP
+loopback URL (`localhost`, `127.0.0.1` or `[::1]`). Keep the exact host/path,
+explicit-port registrations, HTTPS callbacks and code-exchange callback binding.
+Use one Core matcher for approval, onboarding, consent and code issuance; the
+HTTP adapter projects only that validated request callback into the SDK's
+request-local descriptor. Preserve current roles, scopes, metadata reviews and
+all existing authority/revision checks. No schema or consumer lock change.
+
+Acceptance: reproduce the rejected approval, test actual PostgreSQL and signed
+HTTP approval/consent/token exchange with changing loopback ports, reject host,
+path, scheme, port, PKCE and scope substitutions, and exercise the administrator
+dialog in Chromium. Run base/candidate checks under the CI risk policy and retain
+full Debian/Rocky native acceptance before merge. Core publication, released app
+adoption and live deployment remain separate; no live permissions are changed.
+
+Executed local evidence: exact original main `4af1d703` has verified full
+acceptance `42609484240`. Six new signed-HTTP cases fail with approval409 before
+the repair and pass afterward. The affected authentication selection passes209
+cases; released Core0.44 compatibility passes84. Fast Python checks pass1739,
+native JavaScript28, frontend unit checks28 and Robot dry runs21. All11 affected
+Chromium workflows pass, including light/dark phone/desktop keyboard approval.
+Frontend lint/format/type/build and maintained documentation checks pass.
+The host package run passes12 cases and fails2 extraction probes because its
+OCR binary is absent; retain that evidence and rerun unchanged checks in the
+separate parser-equipped disposable container. Full native CI remains required.
+
 ## Retrieval evidence producer candidate
 
 The isolated candidate starts at original main `6bb8cea`, with Core0.46/schema0037

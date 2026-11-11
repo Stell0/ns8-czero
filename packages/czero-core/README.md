@@ -89,6 +89,15 @@ separate. See the [query and evaluation guide](https://github.com/Stell0/ns8-cze
 
 ## Optional verified-user admission and client onboarding
 
+`OAuthClientService.redirect_uri_matches(callback, registered_uris)` permits a
+request-selected port for a portless approved HTTP loopback callback
+(`localhost`, `127.0.0.1` or `[::1]`). Host and path still match exactly; HTTPS
+and registrations with explicit ports retain exact matching. Approval,
+onboarding, consent and code issuance share this rule. Code redemption always
+requires the exact callback, including its port, bound to the issued code.
+No schema migration is required. The app's released Core lock is unchanged;
+publication and consumer adoption remain separate acceptance steps.
+
 Version0.31.1 adds `AccessService(..., admit_readers=True)` for applications that admit new verified users as Readers. The default remains closed admission for existing consumers. An explicit `set_role(..., None)` persists a block, so repeated sign-in cannot readmit a revoked user. Migration0019 preserves existing accounts without membership as blocked; owner identity and existing explicit roles remain authoritative. An application Admin must explicitly grant an old blocked identity access. Protected-space grants and delegated scopes are unchanged.
 
 `ClientOnboardingService` stages a valid public metadata-URL authorization request for at most five minutes. Separate opaque browser/request bindings, issuer/native/resource/policy revision checks, count limits and current verified sessions protect the handoff. It never fetches metadata or approves a client. Only signed-in, CSRF-protected requests appear in the Admin queue. Trusted adapters use the ordinary reviewed CIMD flow, then atomically consume the handoff into ordinary consent with explicitly selected requested/approved scopes. State and PKCE values remain private; role changes, policy changes, expiry and replay fail closed. This is independent of HTTP/UI and preserves legacy approved-client behavior.

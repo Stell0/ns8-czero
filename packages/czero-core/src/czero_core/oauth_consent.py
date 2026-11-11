@@ -60,7 +60,8 @@ class OAuthConsentService:
         now = _date(self.grants._now())
         connection.execute(text('DELETE FROM c0_oauth_consent WHERE expires_at<=:now'), {'now': now})
         client = self.grants.clients._registered(connection, client_id)
-        if client is None or callback not in client['redirect_uris'] or not scopes <= set(client['allowed_scopes']):
+        if (client is None or not self.grants.clients.redirect_uri_matches(callback, client['redirect_uris'])
+                or not scopes <= set(client['allowed_scopes'])):
             raise ConsentRejected()
         if client.get('registration_kind') == 'cimd':
             from .cimd import CimdRejected

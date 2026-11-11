@@ -63,8 +63,15 @@ class OAuthProvider:
         value = await to_thread.run_sync(partial(self.grants.clients._lookup, client_id))
         if value is None:
             return None
+        callbacks = value['redirect_uris']
+        raw = raw_request.get()
+        matcher = getattr(self.grants.clients, 'redirect_uri_matches', None)
+        if (request_kind.get() == 'authorize' and raw is not None and raw.get('client_id') == client_id
+                and matcher is not None and matcher(raw.get('redirect_uri'), callbacks)):
+            # Project Core's approved callback into the SDK's exact request-local descriptor.
+            callbacks = [raw['redirect_uri']]
         return OAuthClientInformationFull(client_id=value['client_id'], client_name=value['client_name'],
-            redirect_uris=value['redirect_uris'], scope=' '.join(value['allowed_scopes']),
+            redirect_uris=callbacks, scope=' '.join(value['allowed_scopes']),
             token_endpoint_auth_method='none', grant_types=value.get('grant_types', ['authorization_code','refresh_token']), response_types=['code'])
 
     async def register_client(self, client_info):

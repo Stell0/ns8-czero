@@ -23,6 +23,10 @@ const descriptor = {
   scope_ceiling: ['c0:read'],
 }
 const digest = 'a'.repeat(64)
+const reviewRequest = {
+  callback: 'http://localhost:53123/callback',
+  scopes: ['c0:read'],
+}
 async function access(page: Page) {
   await api(page, 'admin')
   await page.route('**/access/workspace?**', (route) =>
@@ -164,6 +168,7 @@ test('approval respects metadata ceiling and unchanged permissions preserve exis
     route.fulfill({
       json: {
         descriptor,
+        request: reviewRequest,
         metadata_digest: digest,
         client: {
           client_id: 'client-id',
@@ -214,7 +219,12 @@ test('application approval remains open until the save completes', async ({
   await access(page)
   await page.route('**/access/requests/request-id/preview', (route) =>
     route.fulfill({
-      json: { descriptor, metadata_digest: digest, client: null },
+      json: {
+        descriptor,
+        request: reviewRequest,
+        metadata_digest: digest,
+        client: null,
+      },
     }),
   )
   let finish!: () => void
@@ -249,6 +259,144 @@ test('application approval remains open until the save completes', async ({
   await expect(save).toBeDisabled()
   finish()
   await expect(modal).toHaveCount(0)
+})
+
+for (const theme of ['light', 'dark']) {
+  for (const width of [390, 1280]) {
+    test(`native approval shows the requested callback and bounds permissions: ${theme} ${width}`, async ({
+      page,
+    }) => {
+      await access(page)
+      await page.setViewportSize({ width, height: 900 })
+      await page.addInitScript(
+        (theme) => localStorage.setItem('c0-theme', theme),
+        theme,
+      )
+      await page.route('**/access/requests/request-id/preview', (route) =>
+        route.fulfill({
+          json: {
+            descriptor: {
+              ...descriptor,
+              redirect_uris: ['http://localhost/callback'],
+              scope_ceiling: null,
+            },
+            request: reviewRequest,
+            metadata_digest: digest,
+            client: null,
+          },
+        }),
+      )
+      let approved = false
+      await page.route(
+        '**/access/requests/request-id/approve',
+        async (route) => {
+          expect(route.request().postDataJSON()).toEqual({
+            metadata_digest: digest,
+            allowed_scopes: ['c0:read'],
+            client_id: null,
+            expected_revision: null,
+          })
+          approved = true
+          await route.fulfill({ json: {} })
+        },
+      )
+      await page.goto('/admin')
+      await page
+        .getByRole('button', { name: 'Approve application', exact: true })
+        .click()
+      const modal = page.getByRole('dialog')
+      await expect(
+        modal.getByText('Callback: ' + reviewRequest.callback, { exact: true }),
+      ).toBeVisible()
+      await expect(
+        modal.getByRole('checkbox', { name: 'Read', exact: true }),
+      ).toBeChecked()
+      for (const name of ['Write', 'Manage']) {
+        await expect(
+          modal.getByRole('checkbox', { name, exact: true }),
+        ).not.toBeChecked()
+        await expect(
+          modal.getByRole('checkbox', { name, exact: true }),
+        ).toBeDisabled()
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true)
+      await expect(page.locator('html')).toHaveClass(
+        theme === 'dark' ? /dark/ : /^(?!.*dark)/,
+      )
+      await page.screenshot({
+        path: test.info().outputPath('approval.png'),
+        animations: 'disabled',
+      })
+      const read = modal.getByRole('checkbox', { name: 'Read', exact: true })
+      await page.keyboard.press('Tab')
+      for (let step = 0; step < 4; step++) {
+        if (
+          await read.evaluate((element) => element === document.activeElement)
+        )
+          break
+        await page.keyboard.press('Tab')
+      }
+      await expect(read).toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(
+        modal.getByRole('button', { name: 'Approve application', exact: true }),
+      ).toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(
+        modal.getByRole('button', { name: 'Cancel', exact: true }),
+      ).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Enter')
+      await expect(modal).not.toBeVisible()
+      expect(approved).toBe(true)
+    })
+  }
+}
+
+test('approval preserves existing application permissions for a narrower request', async ({
+  page,
+}) => {
+  await access(page)
+  await page.route('**/access/requests/request-id/preview', (route) =>
+    route.fulfill({
+      json: {
+        descriptor: { ...descriptor, scope_ceiling: null },
+        request: reviewRequest,
+        metadata_digest: digest,
+        client: {
+          client_id: 'client-id',
+          revision: 2,
+          enabled: true,
+          review_required: false,
+          metadata_digest: digest,
+          allowed_scopes: ['c0:read', 'c0:write'],
+        },
+      },
+    }),
+  )
+  await page.goto('/admin')
+  await page
+    .getByRole('button', { name: 'Approve application', exact: true })
+    .click()
+  const modal = page.getByRole('dialog')
+  for (const name of ['Read', 'Write']) {
+    await expect(
+      modal.getByRole('checkbox', { name, exact: true }),
+    ).toBeChecked()
+    await expect(
+      modal.getByRole('checkbox', { name, exact: true }),
+    ).toBeEnabled()
+  }
+  await expect(
+    modal.getByRole('checkbox', { name: 'Manage', exact: true }),
+  ).not.toBeChecked()
+  await expect(
+    modal.getByRole('checkbox', { name: 'Manage', exact: true }),
+  ).toBeDisabled()
 })
 
 test('closing a metadata preview cannot populate a newly opened client form', async ({
