@@ -1,5 +1,14 @@
 # C0 roadmap
 
+## Secure cross-space references
+
+The operator-selected [implementation contract](docs/cross-space-references-plan.md)
+starts at original main `bdb928e62a057309d7822282fd7c505303d3bbfb`.
+M0 preserves the contract; M1 adds shared batch authorization; M2 adds outgoing
+reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
+Core publication, released consumer adoption and live deployment retain separate
+acceptance gates. No browser panels or live changes are included.
+
 ## Released Core0.46 — native OAuth consumer candidate
 
 Start at latest original main `bdb928e`, preserving the accepted producer
@@ -44,6 +53,7 @@ selection returns released. The lock changes only the app/Core versions and
 Core tag/commit. Actual Renovate44.161.0 bounds pass on Node24; maintained
 documentation checks pass723 local links. Full consumer/image/native acceptance
 remains pending.
+
 
 ## Native OAuth callback repair
 
