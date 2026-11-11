@@ -1821,8 +1821,8 @@ historical anchor aliases; its complete prior text is preserved in
 [the instruction checkpoint](docs/history/AGENTS.md#instruction-checkpoint--11-november-2026).
 Current runtime selection now points to the accepted delivery record. Developer
 skills distinguish runtime end-user assets and follow risk-based validation.
-All ten developer and five end-user skills were reviewed; only the two confirmed
-developer-skill contradictions required changes. Related maintained setup,
+The initial review covered all ten developer and five end-user skills; its two
+confirmed developer-skill contradictions were corrected. Related maintained setup,
 development and release guidance needs no package/version or scope change.
 Base and candidate documentation/fork checks each pass 17 cases; maintained
 local-link checks pass, and both edited skills pass frontmatter validation.
@@ -1833,6 +1833,20 @@ new path outside the documentation allowlist, so the combined PR requires full
 acceptance under the unchanged CI policy. Actual PR checks and the C0 merge gate
 remain required. This changes no runtime, dependency,
 connection, schedule or accepted installation identity.
+
+The subsequent developer-skill review adds shared implementation practices for
+focused changes, caller/contract tracing, behavioral tests, domain errors, bounded
+external work, dependency decisions and private diagnostics. Core guidance keeps
+released migrations immutable and requires populated-predecessor checks; feature
+guidance routes frontend work to Nebula. Project guidance separates candidate
+implementation from live capability checks. Contribution review checks final diff
+scope, and collector-specific prose is removed from unrelated skills. Existing
+shared references and skills are already registered for standalone consumers.
+Evaluation and semantic-maintenance workflows retain their authority and evidence
+boundaries; these coding rules do not impose development checks on unchanged runs.
+The final local documentation/fork/CI-policy selection passes 160 cases and all
+ten developer skills pass frontmatter validation. Link checks include the standalone
+consumer. No model-driven behavioral evaluation is claimed; full CI remains pending.
 
 ## Current baseline
 
