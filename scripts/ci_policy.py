@@ -20,9 +20,11 @@ DOCS = frozenset({
     'docs/chatgpt.md', 'docs/plugin.md', 'docs/development.md',
     'docs/reference.md', 'docs/vue-website.md', 'docs/release-readiness.md', 'docs/tool-evaluations.md',
     'docs/history/README.md', 'docs/history/AGENTS.md', 'docs/history/PLAN.md',
-    '.agents/references/development.md',
+    '.agents/references/development.md', '.github/pull_request_template.md',
     *('.agents/skills/'+name+'/SKILL.md' for name in (
-        'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources')),
+        'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources',
+        'c0-project-workflows', 'c0-benchmark-agentic-retrieval',
+        'c0-generate-retrieval-questions', 'c0-maintain-semantic-layer')),
 })
 SHA = re.compile(r'[0-9a-f]{40}\Z')
 EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
@@ -99,8 +101,72 @@ def git_changes(base, head, *, cwd='.', pr=True):
     return result
 
 
+def documentation_registry_additions(base, head, *, cwd='.', pr=True):
+    """Only new allowlisted documents absent at the immutable registry baseline."""
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate_registry_key')
+            result[key] = value
+        return result
+
+    def read(revision):
+        raw = subprocess.check_output(['git', 'show', revision+':c0-upstream.json'], cwd=cwd,
+                                      stderr=subprocess.DEVNULL)
+        if len(raw) > 2 * 1024 * 1024:
+            raise ValueError('registry_too_large')
+        value = json.loads(raw, object_pairs_hook=unique)
+        if (set(value) != {'format', 'upstream', 'revision', 'files'} or
+                type(value['format']) is not int or value['format'] != 1 or
+                not isinstance(value['upstream'], str) or
+                not isinstance(value['revision'], str) or not SHA.fullmatch(value['revision']) or
+                not isinstance(value['files'], list) or not 1 <= len(value['files']) <= 256):
+            raise ValueError('invalid_registry')
+        entries = {}
+        for entry in value['files']:
+            if not isinstance(entry, dict) or not isinstance(entry.get('path'), str):
+                raise ValueError('invalid_registry_entry')
+            if entry['path'] in entries:
+                raise ValueError('duplicate_registry_path')
+            entries[entry['path']] = entry
+        return value, entries
+
+    try:
+        before_ref = subprocess.check_output(['git', 'merge-base', base, head], cwd=cwd,
+                                            text=True).strip() if pr else base
+        before, old = read(before_ref)
+        after, new = read(head)
+        if any(before[key] != after[key] for key in ('format', 'upstream', 'revision')):
+            return False
+        if any(new.get(path) != entry for path, entry in old.items()):
+            return False
+        additions = new.keys() - old.keys()
+        if not additions:
+            return False
+        # A missing baseline commit is not evidence that a path was absent.
+        subprocess.run(['git', 'cat-file', '-e', after['revision']+'^{commit}'], cwd=cwd,
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for path in additions:
+            if path not in DOCS or new[path] != {'path': path, 'mode': None, 'sha256': None}:
+                return False
+            present = subprocess.run(['git', 'cat-file', '-e', after['revision']+':'+path], cwd=cwd,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if present.returncode != 128:
+                return False
+        return True
+    except (ValueError, TypeError, KeyError, subprocess.CalledProcessError):
+        return False
+
+
 def classify_source(base, head, *, cwd='.', pr=True):
-    selected = classify(git_changes(base, head, cwd=cwd, pr=pr))
+    changes = git_changes(base, head, cwd=cwd, pr=pr)
+    registry = any(c['path'] == 'c0-upstream.json' for c in changes)
+    registry = registry and all(c['status'] == 'M' and
+        c['old_path'] == c['path'] and c['old_mode'] == c['mode'] == '100644'
+        for c in changes if 'c0-upstream.json' in (c['old_path'], c['path']))
+    registry = registry and documentation_registry_additions(base, head, cwd=cwd, pr=pr)
+    selected = classify(changes, documentation_registry=registry)
     if selected['native_reason'] != 'ui_allowlist':
         return selected
     paths = [path for path in selected['paths'] if presentation_path(path)]
@@ -127,9 +193,10 @@ def classify_source(base, head, *, cwd='.', pr=True):
     return selected
 
 
-def classify(changes):
+def classify(changes, *, documentation_registry=False):
     paths = sorted({p for c in changes for p in (c['old_path'], c['path'])})
-    areas = {'ui' if presentation_path(p) or ui_test_path(p) else area(p) for p in paths}
+    areas = {'docs' if documentation_registry and p == 'c0-upstream.json' else
+             'ui' if presentation_path(p) or ui_test_path(p) else area(p) for p in paths}
     if not changes or any(c['status'][0] not in 'AMDRC' or
             c['old_mode'] not in {'000000', '100644', '100755'} or
             c['mode'] not in {'000000', '100644', '100755'} for c in changes):
@@ -151,11 +218,13 @@ def classify(changes):
 
 
 def validation_mode(kind, feedback, event, draft, *, native_required=True):
-    if event == 'workflow_dispatch' or feedback == 'unknown':
+    if event == 'workflow_dispatch':
         return 'full'
     if kind == 'docs':
         return 'docs'
-    return 'full' if native_required else 'fast'
+    if event == 'pull_request' and draft is True:
+        return 'fast'
+    return 'full' if native_required or feedback == 'unknown' else 'fast'
 
 
 def required_jobs(kind, mode, *, version=POLICY_VERSION):

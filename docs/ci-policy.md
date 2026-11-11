@@ -7,6 +7,20 @@ mandatory. Required checks, current-source validation and branch protection
 remain mandatory. This policy supersedes the earlier policy requiring native tests for every ready
 PR recorded in the historical evidence below.
 
+## Developer documentation classification
+
+The closed documentation allowlist includes the PR template, shared developer
+reference and all ten named repository skills. Packaged end-user skills remain
+runtime inputs and require full acceptance. Documentation checks validate links,
+skill discovery metadata and generated standalone-fork references.
+
+A modified `c0-upstream.json` qualifies only when its metadata and existing entries
+are unchanged and its sole semantic change adds allowlisted documentation paths
+with null mode/hash, verified absent at the immutable registry baseline. Missing
+baseline objects, malformed/duplicate entries, other additions, removals, changed
+hashes/modes or unrelated changes require full acceptance. The checker and merge
+gate independently reclassify the committed diff; a declaration is insufficient.
+
 ## Development feedback
 
 Every PR receives automatic fast checks. Reviewed Git-only documentation uses
@@ -35,10 +49,13 @@ also require native acceptance, even inside an allowlisted presentation file.
 Authentication/account/admin pages, application JavaScript, third-party assets,
 installation/configuration/backup/restore, containers, migrations, Core,
 dependencies/locks, CI/policy code and unknown paths require full native
-acceptance automatically, including on draft PRs. Mixed diffs retain the highest
+acceptance automatically, when ready for review. Draft runtime PRs receive fast checks and cannot pass
+the merge gate; ready-for-review events require full acceptance for sensitive changes. Mixed diffs retain the highest
 risk; renaming a sensitive file cannot hide its original path.
 
-`fast` runtime merge acceptance requires the automatic fast job. `full` acceptance
+`fast` runtime merge acceptance is limited to reviewed low-risk presentation changes
+and requires the automatic fast job. A sensitive draft can run fast feedback, but
+that result cannot authorize merge even if the PR subsequently becomes ready. `full` acceptance
 requires that job **and** all Python/PostgreSQL/packaging cases, released-Core
 compatibility, image/license/parser audits, five scan/SBOM pairs, immutable image
 identity checks, Debian genuine-predecessor upgrade, Rocky installation and all

@@ -15,8 +15,8 @@ permissions:
   contents: read
   actions: read
   pull-requests: read
-# Full acceptance is never cancelled. Fast checks run on every runtime PR;
-# only the reviewed presentation allowlist can merge without native proof.
+# Full acceptance is never cancelled. Draft runtime PRs receive fast checks;
+# ready sensitive PRs require full acceptance before merge.
 jobs:
   classify:
     runs-on: ubuntu-24.04
@@ -72,7 +72,7 @@ jobs:
       - name: Test the classification and gate policy
         run: |
           pip install pytest==8.4.2 PyYAML==6.0.3
-          python -m pytest -q tests/unit/test_ci_policy.py
+          python -m pytest -q tests/unit/test_ci_policy.py tests/unit/test_documentation.py tests/unit/test_fork_example.py
   feedback:
     needs: classify
     if: needs.classify.outputs.kind == 'runtime' || needs.classify.outputs.mode == 'full'
