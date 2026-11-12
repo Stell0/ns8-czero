@@ -57,8 +57,8 @@ const filterField = ref(''),
 watch(
   [type, () => route.query.space_id, () => definition.data.value],
   () => {
-    visible.value = fields.value
-      .filter(([, schema]) => scalar(schema))
+    const scalars = fields.value.filter(([, schema]) => scalar(schema))
+    visible.value = (scalars.length ? scalars : fields.value)
       .slice(0, 6)
       .map(([key]) => key)
     filterField.value = ''
@@ -129,7 +129,7 @@ const records = useResource(
   () => !!definition.data.value && !!type.value,
 )
 const selectedId = ref('')
-const record = computed(() =>
+const selectedRecord = computed(() =>
   definition.data.value
     ? records.data.value?.objects.find((item) => item.id === selectedId.value)
     : undefined,
@@ -341,9 +341,9 @@ function column(key: string, checked: boolean) {
         </template>
       </ResourceState>
       <NeSideDrawer
-        v-if="record"
+        v-if="selectedRecord"
         :is-shown="true"
-        :title="record.id"
+        :title="selectedRecord.id"
         :close-aria-label="t('common.close')"
         @close="selectedId = ''"
         ><dl class="space-y-3">
@@ -353,7 +353,7 @@ function column(key: string, checked: boolean) {
             </dt>
             <dd>
               <RecordValue
-                :value="record.data[key]"
+                :value="selectedRecord.data[key]"
                 :schema="schema"
                 expanded
               /></dd
@@ -361,17 +361,19 @@ function column(key: string, checked: boolean) {
         </dl>
         <dl class="mt-4 space-y-2">
           <dt>{{ t('tables.revision') }}</dt>
-          <dd>{{ record.revision }}</dd>
+          <dd>{{ selectedRecord.revision }}</dd>
           <dt>{{ t('tables.created') }}</dt>
-          <dd>{{ record.created_at }}</dd>
+          <dd>{{ selectedRecord.created_at }}</dd>
           <dt>{{ t('common.updated') }}</dt>
-          <dd>{{ record.updated_at }}</dd>
+          <dd>{{ selectedRecord.updated_at }}</dd>
           <dt>{{ t('tables.tag') }}</dt>
-          <dd>{{ record.tags.join(', ') }}</dd>
+          <dd>{{ selectedRecord.tags.join(', ') }}</dd>
         </dl>
-        <RouterLink :to="`/explore/records/${record.id}`" class="text-link">{{
-          t('tables.relationships')
-        }}</RouterLink>
+        <RouterLink
+          :to="`/explore/records/${selectedRecord.id}`"
+          class="text-link"
+          >{{ t('tables.relationships') }}</RouterLink
+        >
       </NeSideDrawer>
     </template>
   </div>

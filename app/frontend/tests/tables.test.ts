@@ -3,7 +3,12 @@ import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import RecordValue from '../src/components/RecordValue.vue'
 import en from '../src/locales/en.json'
-import { fieldLabel, preview, scalar } from '../src/api/tables'
+import {
+  fieldLabel,
+  preview,
+  scalar,
+  type FieldSchema,
+} from '../src/api/tables'
 const plugins = [createI18n({ legacy: false, locale: 'en', messages: { en } })]
 describe('generic record values', () => {
   it('distinguishes absent, null, empty, false and zero', () => {
@@ -50,4 +55,31 @@ describe('generic record values', () => {
     )
     expect(scalar({ type: 'array' })).toBe(false)
   })
+})
+
+it('opens nested values on demand without shortening their strings', async () => {
+  const text = 'nested content '.repeat(30).trimEnd()
+  const shapes: { value: unknown; schema: FieldSchema }[] = [
+    {
+      value: { note: text },
+      schema: { type: 'object', properties: { note: { type: 'string' } } },
+    },
+    { value: [text], schema: { type: 'array', items: { type: 'string' } } },
+    {
+      value: [{ note: text }],
+      schema: {
+        type: 'array',
+        items: { type: 'object', properties: { note: { type: 'string' } } },
+      },
+    },
+  ]
+  for (const props of shapes) {
+    const wrapper = mount(RecordValue, { props, global: { plugins } })
+    expect(wrapper.text()).not.toContain(text)
+    expect(wrapper.findAll('table')).toHaveLength(0)
+    const details = wrapper.get('details')
+    ;(details.element as HTMLDetailsElement).open = true
+    await details.trigger('toggle')
+    expect(wrapper.text()).toContain(text)
+  }
 })

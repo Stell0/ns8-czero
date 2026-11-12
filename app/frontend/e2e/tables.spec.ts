@@ -173,3 +173,48 @@ test('can return from an empty final collection page', async ({ page }) => {
     page.getByRole('link', { name: 'Collection 0', exact: true }),
   ).toBeVisible()
 })
+
+test('shows data columns for a schema containing only nested fields', async ({
+  page,
+}) => {
+  await api(page)
+  await page.route('**/api/v1/object-types/nested_only', (route) =>
+    route.fulfill({
+      json: {
+        name: 'nested_only',
+        label: 'Nested records',
+        schema: {
+          type: 'object',
+          properties: {
+            nested: {
+              type: 'object',
+              properties: { label: { type: 'string' } },
+            },
+          },
+        },
+      },
+    }),
+  )
+  await page.route('**/api/v1/objects?**', (route) =>
+    route.fulfill({
+      json: {
+        objects: [
+          {
+            id: 'nested-1',
+            revision: 1,
+            tags: [],
+            data: { nested: { label: 'Nested only record' } },
+          },
+        ],
+      },
+    }),
+  )
+  await page.goto(`/tables/nested_only?space_id=${shared}`)
+  await expect(
+    page.getByRole('columnheader', { name: 'Nested', exact: true }),
+  ).toBeVisible()
+  await page.getByText('Object', { exact: true }).click()
+  await expect(
+    page.getByText('Nested only record', { exact: true }),
+  ).toBeVisible()
+})

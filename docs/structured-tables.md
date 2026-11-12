@@ -8,9 +8,11 @@ navigation leads to a paginated selected-space collection directory. Each collec
 has a `/tables/:type` page; existing `/explore/records/:id` links continue to work.
 
 The Vue website uses existing Nebula components. Columns come from immutable
-registered schemas, including schema titles and optional properties. Six scalar
-columns are initially visible; the column chooser exposes all fields. Nested values
-expand recursively, arrays of objects render child tables, and the Nebula drawer
+registered schemas, including schema titles and optional properties. Up to six scalar
+columns are initially visible; types with only structured fields instead expose
+those fields immediately. The column chooser exposes all fields. Nested values
+expand recursively on demand, with complete strings available after expansion.
+Arrays of objects render child tables, and the Nebula drawer
 shows the complete selected record with metadata and a link to relationships.
 Missing, null, empty strings, false and zero remain distinct. Text is never HTML.
 Payload dates, encoded JSON strings and foreign keys are not inferred.

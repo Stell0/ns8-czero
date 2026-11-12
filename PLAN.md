@@ -3751,3 +3751,11 @@ unit cases pass locally. The successor is based on the merged Core prerequisite,
 with independent released-Core/full/native acceptance still required before merge
 and canonical publication. No installed images, data, settings or schedules change
 with this source work; production deployment remains separately authorized.
+
+
+The consumer's nested-schema follow-up preserves its prior frozen candidate and
+adds default columns for types containing only nested fields, lazy group rendering
+and complete nested strings after expansion. Local frontend checks pass33 unit
+cases and60 browser workflows, including the nested-only structure. Core's
+published tree, tag and lock remain unchanged; the revised source receives new
+full acceptance while earlier runs are retained.
