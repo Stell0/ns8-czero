@@ -1,5 +1,25 @@
 # C0 Core
 
+## Self-service Read producer (0.48)
+
+Schema0039 adds `readable_by_all` to spaces. Existing protected spaces default
+to false; Shared remains unchanged. `SpaceService.create` accepts the optional
+Boolean, and `set_access` requires a current space revision and replay key.
+Baseline access is Reader, capped by current membership and credential ceilings;
+explicit grants can add editing. Tightening access retires affected credentials.
+
+`ClientOnboardingService.register_reader` accepts only a verified first-party
+session bound to the pending request and a trusted validated `ClientMetadata`.
+It registers a new identity for requested Read only. It never changes an existing
+client, disabled identity or review hold. Network validation stays in the app. `submit(..., review_requested=False)`
+binds automatic Read preparation without publishing an Admin review request;
+ordinary callers retain the previous visible-review default.
+The reusable Core discovery policy remains explicit; the reference application
+now enables it automatically for its configured authenticated HTTPS endpoint.
+
+Independent publication and consumer adoption require separate exact-source
+acceptance. Application pins change only after verified publication.
+
 ## Cross-space reference producer (0.47)
 
 Schema0038 adds outgoing current-resource navigation across explicitly selected

@@ -361,6 +361,8 @@ def test_accepted_am3_contracts_add_only_optional_lexical_metadata(annotation_ht
             assert expected['name'] not in app.state.operations._operations
             continue
         actual=app.state.operations.definition(expected['name'])
+        if expected['name'] in ('spaces_list','spaces_get','spaces_create'):
+            actual=contract.legacy_space_audience(actual)
         for key,value in expected.items():
             if key=='description':
                 # M18 intentionally revises presentation; the complete card/wire

@@ -36,6 +36,7 @@ class SpaceView(BaseModel):
     id: UUID
     name: str
     shared: bool
+    readable_by_all: bool = False
     revision: int
     created_at: datetime
     role: Literal['reader','editor','admin']
@@ -48,6 +49,14 @@ class SpacesView(BaseModel):
 class SpaceCreate(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     name: str = Field(min_length=1, max_length=128)
+    readable_by_all: bool = False
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+class SpaceAccessUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    readable_by_all: bool
+    expected_revision: int = Field(ge=1, lt=2147483646)
     idempotency_key: str = Field(min_length=1, max_length=128)
 
 
@@ -88,7 +97,7 @@ def install_space_routes(app, database, auth, read_context, write_context):
         return invoke(service.list, context.actor, limit=limit, offset=offset)
 
     @app.post('/api/v1/spaces', response_model=SpaceView, status_code=201)
-    @operation('spaces_create', 'Create a protected space. Application Admins have access under actual OAuth scopes.', Role.ADMIN, SpaceView, read_only=False)
+    @operation('spaces_create', 'Create a space, restricted by default, with an optional authenticated-reader audience. Application Admins retain access under actual OAuth scopes.', Role.ADMIN, SpaceView, read_only=False)
     def create(data: SpaceCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.create, context.actor, **data.model_dump())
 
@@ -108,4 +117,8 @@ def install_space_routes(app, database, auth, read_context, write_context):
         return invoke(service.set_grant, context.actor, space_id, account_id,
             Role(data.role) if data.role is not None else None,
             expected_revision=data.expected_revision, idempotency_key=data.idempotency_key)
+    @app.put('/api/v1/spaces/{space_id}/access', response_model=SpaceView)
+    @operation('space_access_set', 'Admin: change the authenticated-reader audience at its current revision. Restricting access revokes affected credentials.', Role.ADMIN, SpaceView, read_only=False, space_field='space_id')
+    def access(space_id: UUID, data: SpaceAccessUpdate, context: RequestAccess = Depends(write_context)):
+        return invoke(service.set_access, context.actor, space_id, **data.model_dump())
     return service

@@ -152,18 +152,16 @@ def main(module_id, operation):
     host = personas['host']
     assert host.endswith('.test'), 'CIMD recovery is confined to disposable hosts'
     if operation == 'seed':
-        task('module/' + module_id + '/configure-module', {'host': host, 'cimd_enabled': True})
+        task('module/' + module_id + '/configure-module', {'host': host})
     config = task('module/' + module_id + '/get-configuration', {})
-    assert config['cimd_enabled'] is True, 'Native CIMD switch did not survive update/restore'
+    assert 'cimd_enabled' not in config, 'Retired discovery setting was restored'
     browser = Browser('https://' + host)
     profile = browser.login('c0owner', personas['password'])
     result = seed(module_id, browser, profile) if operation == 'seed' else verify(module_id, browser, profile)
     if result['stage'] == 'restore':
-        task('module/' + module_id + '/configure-module', {'host': host, 'cimd_enabled': False})
-        assert task('module/' + module_id + '/get-configuration', {})['cimd_enabled'] is False
         status, body, _ = browser.api('/api/v1/oauth/cimd')
-        assert status == 200 and json.loads(body)['enabled'] is False, 'Native CIMD cleanup policy remained on'
-        result['policy_disabled'] = True
+        assert status == 200 and json.loads(body)['enabled'] is True, 'Self-service discovery unavailable'
+        result['self_service_available'] = True
     print('C0 CIMD recovery: ' + json.dumps(result))
 
 

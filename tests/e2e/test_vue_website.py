@@ -157,7 +157,7 @@ def test_vue_native_approval_waits_for_saved_metadata(live,vue_browser,request,m
     page=vue_browser
     params={'client_id':metadata_url,'redirect_uri':'https://client.example.test/callback',
         'response_type':'code','code_challenge_method':'S256','code_challenge':'a'*43,
-        'scope':'c0:read c0:write','resource':live.origin+'/mcp'}
+        'scope':'c0:write','resource':live.origin+'/mcp'}
     page.goto(live.origin+'/oauth/authorize?'+urlencode(params))
     profile=page.request.get(live.origin+'/api/v1/me').json()
     pending=page.request.post(live.origin+'/oauth/connect/request',data={},
@@ -170,9 +170,10 @@ def test_vue_native_approval_waits_for_saved_metadata(live,vue_browser,request,m
         admin.goto(live.origin+'/admin')
         admin.get_by_role('button',name='Approve application',exact=True).click()
         dialog=admin.get_by_role('dialog')
-        expect(dialog.get_by_role('checkbox',name='Read',exact=True)).to_be_checked()
+        expect(dialog.get_by_role('checkbox',name='Read',exact=True)).not_to_be_checked()
         for name in ('Write','Manage'):
             expect(dialog.get_by_role('checkbox',name=name,exact=True)).not_to_be_checked()
+        dialog.get_by_role('checkbox',name='Write',exact=True).check()
         dialog.get_by_role('button',name='Approve application',exact=True).click()
         native=NativeWebsite.__new__(NativeWebsite)
         def wait(name,selector,state,timeout):
@@ -183,7 +184,7 @@ def test_vue_native_approval_waits_for_saved_metadata(live,vue_browser,request,m
         clients=admin.request.get(live.origin+'/api/v1/oauth/cimd').json()['clients']
         saved=next((client for client in clients if client['metadata_url']==metadata_url),None)
         assert saved is not None,'Native verifier ran before approval was saved'
-        assert saved['enabled'] and saved['allowed_scopes']==['c0:read']
+        assert saved['enabled'] and saved['allowed_scopes']==['c0:write']
         assert saved['metadata_digest']==metadata.digest
         assert fetches==2
     finally:
@@ -375,9 +376,9 @@ def test_vue_admin_surfaces_space_creation_and_reader_denial(live,vue_browser):
         expect(page.get_by_role('heading',name='Administration',exact=True)).to_be_visible()
         expect(page.get_by_text('Cannot load content',exact=True)).to_have_count(0)
     page.get_by_role('textbox',name='Name',exact=True).fill('Browser-created protected space')
-    page.get_by_role('button',name='Create protected space',exact=True).click()
+    page.get_by_role('button',name='Create space',exact=True).click()
     expect(page.get_by_role('button',name='Knowledge space Browser-created protected space',exact=True)).to_be_visible()
-    expect(page.get_by_role('button',name='member No protected-space grant',exact=True)).to_be_visible()
+    expect(page.get_by_role('button',name='member No additional grant',exact=True)).to_be_visible()
     space=next(row for row in live.rest.get('/api/v1/spaces').json()['spaces'] if row['name']=='Browser-created protected space')
     assert not space['shared']
     assert live.rest.get('/api/v1/spaces/'+space['id'],headers={'Authorization':'Bearer '+live.member}).status_code==403
@@ -405,7 +406,8 @@ def test_vue_admin_can_identify_and_inspect_each_queued_job(live,vue_browser):
         expect(page.locator('main pre')).to_contain_text(job['id'])
 
 
-def test_vue_admin_approves_and_connects_without_details_then_preserves_grant(live,request,monkeypatch):
+@pytest.mark.parametrize('persona', ['owner', 'reader'])
+def test_vue_self_service_read_connects_then_preserves_existing_approval(live,request,monkeypatch,persona):
     import json
     import secrets
     import time
@@ -428,6 +430,7 @@ def test_vue_admin_approves_and_connects_without_details_then_preserves_grant(li
     with sync_playwright() as playwright:
         browser=playwright.chromium.launch(headless=True)
         context=browser.new_context(ignore_https_errors=True)
+        context.add_cookies([{'name':'fixture_persona','value':persona,'url':live.origin}])
         page=context.new_page()
         try:
             page.goto(live.origin+'/auth/login')
@@ -438,8 +441,7 @@ def test_vue_admin_approves_and_connects_without_details_then_preserves_grant(li
                 'state':'browser-fixture','scope':'c0:read c0:write','resource':live.origin+'/mcp'}))
             expect(page.get_by_role('heading',name='Grok fixture',exact=True)).to_be_visible()
             expect(page.get_by_role('checkbox',name='Read',exact=True)).to_be_checked()
-            expect(page.get_by_role('checkbox',name='Write',exact=True)).not_to_be_checked()
-            page.get_by_role('button',name='Approve and continue',exact=True).click()
+            expect(page.get_by_role('checkbox',name='Write',exact=True)).to_have_count(0)
             expect(page.get_by_role('button',name='Authorize',exact=True)).to_be_enabled()
             expect(page.get_by_role('checkbox',name='Write',exact=True)).to_have_count(0)
             page.get_by_role('button',name='Authorize',exact=True).click()
@@ -452,6 +454,9 @@ def test_vue_admin_approves_and_connects_without_details_then_preserves_grant(li
             assert response.status==200
             token=response.json()
             assert token['scope']=='c0:read'
+            if persona == 'reader':
+                assert page.request.get(live.origin+'/api/v1/me', headers={'Authorization':'Bearer '+token['access_token']}).status == 200
+                return
             before=next(client for client in page.request.get(live.origin+'/api/v1/oauth/cimd').json()['clients'] if client['metadata_url']==identity)
             page.goto(live.origin+'/admin/advanced')
             row=page.locator('li').filter(has=page.get_by_role('heading',name='Grok fixture',exact=True))

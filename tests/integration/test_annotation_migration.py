@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Schema-0015 protected data and real delegated authority survive both migrations."""
+from previous_content_services import historical_space_authorization
 from datetime import datetime, timezone
 import hashlib
 from io import BytesIO
@@ -62,51 +63,53 @@ def test_schema_0015_upgrade_preserves_current_content_and_protected_authority(t
         with database.engine.begin() as connection:
             connection.execute(text("INSERT INTO c0_memberships(account_id,role) VALUES (:id,'editor')"), {'id': editor_id})
         editor = access.resolve(identity(editor_key, 'editor'))
+        with historical_space_authorization(predecessor_python) as PreviousSpaces:
+            spaces = PreviousSpaces(database, access)
+            private = spaces.create(owner, 'Retained protected space', idempotency_key='space')
+            grant = spaces.set_grant(owner, private['id'], editor_id, Role.READER,
+                expected_revision=0, idempotency_key='grant')
+            PreviousKnowledge,PreviousSources,previous_registry,previous_handlers=predecessor_services(predecessor_python)
+            knowledge = PreviousKnowledge(database, access).in_space(private['id'])
+            request = {'slug': 'retained-procedure', 'title': 'Retained', 'body': 'Original café 東京',
+                       'metadata': {'retained': True}, 'idempotency_key': 'first-page'}
+            first = knowledge.upsert_page(owner, **request)
+            current = knowledge.upsert_page(owner, **{**request, 'body': 'Later retained body',
+                'expected_revision': 1, 'idempotency_key': 'later-page'})
+            entity = knowledge.create_entity(owner, 'procedure', 'Retained aliases', aliases=['Retained alternate'], idempotency_key='entity')
+            registry = previous_registry(); originals = OriginalStore(tmp_path / 'originals')
+            previous_handlers(registry, database, originals)
+            sources = PreviousSources(database, access, registry, originals).in_space(private['id'])
+            source = sources.ingest(owner, BytesIO('Exact original evidence café 東京'.encode()),
+                title='Retained evidence', filename='retained.txt', media_type='text/plain', retain_original=True)
+            with database.engine.begin() as connection:
+                registry.get('source.extract').execute(connection, {'version_id': source['id']})
+            document = sources.document(owner, source['id']); chunk = sources.chunks(owner, document['id'])[0]
+            assertion = knowledge.create_claim(owner, entity['id'], 'observed', {'state': 'unknown'},
+                page_id=first['id'], evidence_chunk_ids=[chunk['id']], idempotency_key='claim')
+            objects = ObjectService(database, access)
+            objects.register_type(owner, 'retained-type', 'Retained type', {'type': 'object',
+                'properties': {'name': {'type': 'string', 'maxLength': 64}}, 'required': ['name'], 'additionalProperties': False}, ['name'])
+            objects.create(owner, 'retained-type', {'name': 'Same key'})
+            protected = objects.in_space(private['id'])
+            record = protected.create(owner, 'retained-type', {'name': 'Same key'})
+            other = protected.create(owner, 'retained-type', {'name': 'Other key'})
+            protected.add_relation(owner, record['id'], other['id'], 'related-to', source_type='retained-type', target_type='retained-type')
+            callback, resource = 'https://client.example.test/callback', 'https://app.example.test/mcp'
+            client = OAuthClientService(access).register(owner, 'Retained client', [callback], scopes=['c0:read', 'c0:write'])
+            tokens = OAuthGrantService(access, 'czero900', resource)
+            pair = legacy_pair(database, editor, issuer, 'czero900', client, resource, {'c0:read','c0:write'})
+            original_bytes = originals.path(source['id']).read_bytes()
+            with database.engine.connect() as connection:
+                tables = connection.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
+                assert len(tables) == 40
+                columns = {table: connection.execute(text('''SELECT column_name FROM information_schema.columns
+                    WHERE table_schema='public' AND table_name=:table ORDER BY ordinal_position'''), {'table': table}).scalars().all() for table in tables}
+                def snapshot(connection):
+                    return {table: connection.execute(text('SELECT row_to_json(t)::text FROM (SELECT ' +
+                        ','.join('"'+column+'"' for column in columns[table]) + ' FROM "'+table+'") t ORDER BY row_to_json(t)::text')).scalars().all() for table in tables}
+                before = snapshot(connection)
+                shared = connection.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()
         spaces = SpaceService(database, access)
-        private = spaces.create(owner, 'Retained protected space', idempotency_key='space')
-        grant = spaces.set_grant(owner, private['id'], editor_id, Role.READER,
-            expected_revision=0, idempotency_key='grant')
-        PreviousKnowledge,PreviousSources,previous_registry,previous_handlers=predecessor_services(predecessor_python)
-        knowledge = PreviousKnowledge(database, access).in_space(private['id'])
-        request = {'slug': 'retained-procedure', 'title': 'Retained', 'body': 'Original café 東京',
-                   'metadata': {'retained': True}, 'idempotency_key': 'first-page'}
-        first = knowledge.upsert_page(owner, **request)
-        current = knowledge.upsert_page(owner, **{**request, 'body': 'Later retained body',
-            'expected_revision': 1, 'idempotency_key': 'later-page'})
-        entity = knowledge.create_entity(owner, 'procedure', 'Retained aliases', aliases=['Retained alternate'], idempotency_key='entity')
-        registry = previous_registry(); originals = OriginalStore(tmp_path / 'originals')
-        previous_handlers(registry, database, originals)
-        sources = PreviousSources(database, access, registry, originals).in_space(private['id'])
-        source = sources.ingest(owner, BytesIO('Exact original evidence café 東京'.encode()),
-            title='Retained evidence', filename='retained.txt', media_type='text/plain', retain_original=True)
-        with database.engine.begin() as connection:
-            registry.get('source.extract').execute(connection, {'version_id': source['id']})
-        document = sources.document(owner, source['id']); chunk = sources.chunks(owner, document['id'])[0]
-        assertion = knowledge.create_claim(owner, entity['id'], 'observed', {'state': 'unknown'},
-            page_id=first['id'], evidence_chunk_ids=[chunk['id']], idempotency_key='claim')
-        objects = ObjectService(database, access)
-        objects.register_type(owner, 'retained-type', 'Retained type', {'type': 'object',
-            'properties': {'name': {'type': 'string', 'maxLength': 64}}, 'required': ['name'], 'additionalProperties': False}, ['name'])
-        objects.create(owner, 'retained-type', {'name': 'Same key'})
-        protected = objects.in_space(private['id'])
-        record = protected.create(owner, 'retained-type', {'name': 'Same key'})
-        other = protected.create(owner, 'retained-type', {'name': 'Other key'})
-        protected.add_relation(owner, record['id'], other['id'], 'related-to', source_type='retained-type', target_type='retained-type')
-        callback, resource = 'https://client.example.test/callback', 'https://app.example.test/mcp'
-        client = OAuthClientService(access).register(owner, 'Retained client', [callback], scopes=['c0:read', 'c0:write'])
-        tokens = OAuthGrantService(access, 'czero900', resource)
-        pair = legacy_pair(database, editor, issuer, 'czero900', client, resource, {'c0:read','c0:write'})
-        original_bytes = originals.path(source['id']).read_bytes()
-        with database.engine.connect() as connection:
-            tables = connection.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
-            assert len(tables) == 40
-            columns = {table: connection.execute(text('''SELECT column_name FROM information_schema.columns
-                WHERE table_schema='public' AND table_name=:table ORDER BY ordinal_position'''), {'table': table}).scalars().all() for table in tables}
-            def snapshot(connection):
-                return {table: connection.execute(text('SELECT row_to_json(t)::text FROM (SELECT ' +
-                    ','.join('"'+column+'"' for column in columns[table]) + ' FROM "'+table+'") t ORDER BY row_to_json(t)::text')).scalars().all() for table in tables}
-            before = snapshot(connection)
-            shared = connection.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()
         for _ in range(2):
             migrate_database(database)
             with database.engine.connect() as connection:

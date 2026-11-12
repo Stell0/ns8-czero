@@ -211,3 +211,78 @@ def test_write_only_authority_is_not_blocked_by_a_global_read_scope(delegated_sp
     descriptions = app.state.operations.describe(delegated, scopes={'c0:read', 'c0:write', 'c0:admin'})
     assert {'wiki_pages_resolve', 'wiki_pages_upsert'} <= {d['name'] for d in descriptions}
     assert pair.access_token not in repr(delegated) and pair.refresh_token not in repr(delegated)
+
+
+def test_authenticated_audience_is_read_only_revisioned_and_restrictable(spaces):
+    service, owner, _ = spaces
+    actor = member(spaces, Role.EDITOR)
+    space = create(spaces, readable_by_all=True)
+    assert authorized(service, actor, space['id']).role is Role.READER
+    assert service.get(actor, space['id'])['readable_by_all'] is True
+    assert any(s['id'] == space['id'] for s in service.list(actor)['spaces'])
+    with pytest.raises(PermissionDenied):
+        authorized(service, actor, space['id'], Role.EDITOR)
+    with pytest.raises(PermissionDenied):
+        service.set_access(actor, space['id'], readable_by_all=False,
+                           expected_revision=space['revision'], idempotency_key=uuid4().hex)
+    restricted = service.set_access(owner, space['id'], readable_by_all=False,
+                                   expected_revision=space['revision'], idempotency_key=uuid4().hex)
+    assert restricted['revision'] == space['revision'] + 1
+    with pytest.raises(PermissionDenied):
+        authorized(service, actor, space['id'])
+    with pytest.raises(SpaceConflict):
+        service.set_access(owner, space['id'], readable_by_all=True,
+                           expected_revision=space['revision'], idempotency_key=uuid4().hex)
+
+
+def test_audience_preserves_explicit_grants_and_shared_policy(spaces):
+    service, owner, _ = spaces
+    actor = member(spaces, Role.EDITOR)
+    space = create(spaces, readable_by_all=True)
+    grant = service.set_grant(owner, space['id'], actor.user_id, Role.EDITOR,
+                             expected_revision=0, idempotency_key=uuid4().hex)
+    assert authorized(service, actor, space['id'], Role.EDITOR).role is Role.EDITOR
+    service.set_grant(owner, space['id'], actor.user_id, None,
+                      expected_revision=grant['revision'], idempotency_key=uuid4().hex)
+    assert authorized(service, actor, space['id']).role is Role.READER
+    shared = next(s for s in service.list(owner)['spaces'] if s['shared'])
+    with pytest.raises(ValueError, match='shared_space_policy_immutable'):
+        service.set_access(owner, shared['id'], readable_by_all=False,
+                           expected_revision=shared['revision'], idempotency_key=uuid4().hex)
+
+
+def test_audience_tightening_retires_key_and_reopening_cannot_revive_it(spaces):
+    from czero_core.api_keys import ApiKeyService
+    from czero_core.identity import TokenRejected
+    service, owner, _ = spaces
+    actor = member(spaces, Role.READER)
+    space = create(spaces, readable_by_all=True)
+    other = create(spaces, readable_by_all=True)
+    keys = ApiKeyService(service.access, client_id='fixture', client_secret='synthetic', resource=RESOURCE)
+    token = keys.create(actor, name='Read research', scopes={'c0:read'}, space_ids=[space['id']])['key']
+    bound = keys.verify(token, resource=RESOURCE).actor
+    assert [s['id'] for s in service.list(bound)['spaces']] == [space['id']]
+    with pytest.raises(PermissionDenied):
+        authorized(service, bound, other['id'])
+    restricted = service.set_access(owner, space['id'], readable_by_all=False,
+        expected_revision=space['revision'], idempotency_key=uuid4().hex)
+    service.set_access(owner, space['id'], readable_by_all=True,
+        expected_revision=restricted['revision'], idempotency_key=uuid4().hex)
+    with pytest.raises(TokenRejected):
+        keys.verify(token, resource=RESOURCE)
+    with pytest.raises(PermissionDenied):
+        authorized(service, bound, space['id'])
+
+
+def test_legacy_restricted_creation_retry_keeps_its_original_fingerprint(spaces):
+    import json
+    service, owner, _ = spaces
+    request = {'name': 'Legacy ' + uuid4().hex, 'idempotency_key': uuid4().hex}
+    result = create(spaces, **request)
+    legacy = {key: value for key, value in result.items() if key != 'readable_by_all'}
+    with service.database.engine.begin() as c:
+        c.execute(text('UPDATE c0_space_receipts SET result=CAST(:result AS jsonb) WHERE actor_id=:actor AND key=:key'),
+                  {'result': json.dumps(legacy), 'actor': owner.user_id, 'key': request['idempotency_key']})
+    assert service.create(owner, **request) == legacy
+    with pytest.raises(SpaceConflict):
+        service.create(owner, **request, readable_by_all=True)

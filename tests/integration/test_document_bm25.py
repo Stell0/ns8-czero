@@ -1,4 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+from test_current_content_migration import predecessor_python
+from previous_content_services import historical_space_authorization
 import math
 import os
 from uuid import uuid4
@@ -182,7 +184,7 @@ def test_filtered_out_documents_do_not_change_corpus_statistics(structured):
     assert service.search(wiki[1], 'backup restore', filters=filters, mode='text') == before
 
 
-def test_retained_generations_backfill_without_replacing_citation_ids(tmp_path):
+def test_retained_generations_backfill_without_replacing_citation_ids(tmp_path, predecessor_python):
     from alembic import command
     from alembic.config import Config
     from pathlib import Path
@@ -215,19 +217,20 @@ def test_retained_generations_backfill_without_replacing_citation_ids(tmp_path):
         issuer = 'https://migration.example.test'
         acl = AccessService(database, issuer, key)
         actor = acl.resolve(VerifiedIdentity(issuer, 'owner', str(key), 'owner', 'Owner', time.time()+300))
-        wiki = WikiService(database, acl)
-        page = wiki.create_page(actor, 'retained', 'Tetraspanin', 'Original retained evidence', idempotency_key='page')
-        registry = default_registry()
-        originals = OriginalStore(tmp_path/'originals')
-        register_source_handlers(registry, database, originals)
-        source = SourceService(database, acl, registry, originals)
-        fixture = (source, actor, registry, [])
-        ingest(fixture, 'BCL-2 original retained evidence')
-        def content(c):
-            return {table:c.execute(text('SELECT row_to_json(t)::text FROM '+table+' t ORDER BY id')).scalars().all()
-                    for table in ('c0_documents','c0_chunks','c0_source_versions','c0_wiki_revisions')}
-        with database.engine.connect() as c:
-            before = content(c)
+        with historical_space_authorization(predecessor_python) as PreviousSpaces:
+            wiki = WikiService(database, acl)
+            page = wiki.create_page(actor, 'retained', 'Tetraspanin', 'Original retained evidence', idempotency_key='page')
+            registry = default_registry()
+            originals = OriginalStore(tmp_path/'originals')
+            register_source_handlers(registry, database, originals)
+            source = SourceService(database, acl, registry, originals)
+            fixture = (source, actor, registry, [])
+            ingest(fixture, 'BCL-2 original retained evidence')
+            def content(c):
+                return {table:c.execute(text('SELECT row_to_json(t)::text FROM '+table+' t ORDER BY id')).scalars().all()
+                        for table in ('c0_documents','c0_chunks','c0_source_versions','c0_wiki_revisions')}
+            with database.engine.connect() as c:
+                before = content(c)
         migrate_database(database)
         migrate_database(database)
         with database.engine.connect() as c:

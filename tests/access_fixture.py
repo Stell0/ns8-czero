@@ -39,23 +39,40 @@ def run(module_id,phase):
             checked(admin,'/api/v1/access/accounts/'+member['id'],{'role':'reader','expected_revision':member['access_revision']},'PUT',owner['csrf_token'],204)
         user=Browser(origin);profile=user.login('c0member',personas['password'])
         assert profile['role']=='reader'
+        public = {'client_id':URL,'redirect_uris':['https://client.example.test/callback']}
+        pair = issue(user,profile,public,self_service=True)
+        assert pair['scope']=='c0:read' and connection_status(user,pair)==200
+        opened=checked(admin,'/api/v1/spaces',{'name':'Default Read '+secrets.token_hex(4),
+            'readable_by_all':True,'idempotency_key':secrets.token_hex(16)},'POST',owner['csrf_token'],201)
+        status,body,_=user.request('/api/v1/spaces/'+opened['id'],headers={'Authorization':'Bearer '+pair['access_token']})
+        assert status==200 and json.loads(body)['role']=='reader'
+        page=checked(admin,'/api/v1/wiki/pages/upsert?space_id='+opened['id'],
+            {'slug':'default-read','title':'Shared documentation','body':'Documentation available after sign-in.',
+             'idempotency_key':secrets.token_hex(16)},'POST',owner['csrf_token'])
+        status,body,_=user.request('/api/v1/wiki/pages/'+page['id']+'?space_id='+opened['id'],
+            headers={'Authorization':'Bearer '+pair['access_token']})
+        assert status==200 and json.loads(body)['content']['body']==page['content']['body']
+        proof.update(self_service_read=True,default_space_read=True)
         raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
              'code_challenge_method':'S256','code_challenge':'a'*43,'state':secrets.token_urlsafe(32),
-             'scope':'c0:read c0:write','resource':origin+'/mcp'}
+             'scope':'c0:write','resource':origin+'/mcp'}
         assert user.request('/oauth/authorize?'+urlencode(raw))[0]==200
         pending=checked(user,'/oauth/connect/request',{},'POST',profile['csrf_token'])
-        assert pending['approved'] is False,'Native fixture application was already approved'
+        assert pending['approved'] is True and pending['allowed_scopes']==['c0:read'], 'Self-service changed the application permission ceiling'
         request=checked(admin,'/api/v1/access/accounts/'+member['id']+'/applications')['applications'][0]
         proof.update(fresh_reader=profile['role']=='reader',pending_request=request['kind']=='request')
-        value={'member_id':member['id'],'request_id':request['id'],'application_name':NAME}
+        value={'member_id':member['id'],'request_id':request['id'],'application_name':NAME,'public_space':opened['id']}
         PATH.write_text(json.dumps(value));PATH.chmod(0o600)
         user.logout(profile)
     else:
         value=json.loads(PATH.read_text())
+        if phase=='blocked_after_restart':
+            assert checked(admin,'/api/v1/spaces/'+value['public_space'])['readable_by_all'] is True
+            proof['public_space_preserved']=True
         if phase=='approved':
             clients=checked(admin,'/api/v1/oauth/cimd')['clients']
             app=next(c for c in clients if c['metadata_url']==URL)
-            assert app['client_name']==NAME and app['allowed_scopes']==['c0:read'] and app['enabled']
+            assert app['client_name']==NAME and app['allowed_scopes']==['c0:read','c0:write'] and app['enabled']
             assert app['metadata_digest']==DIGEST,'Native approval differs from fixed public metadata'
             proof.update(allowed_scopes=app['allowed_scopes'],user_role=member['role'],metadata_verified=app['metadata_digest']==DIGEST)
             assert member['role']=='reader' and not member['blocked']
@@ -63,7 +80,7 @@ def run(module_id,phase):
             # A fresh independent pending request for Decline; existing approval stays.
             user=Browser(origin);profile=user.login('c0member',personas['password'])
             raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
-                 'code_challenge_method':'S256','code_challenge':'b'*43,'scope':'c0:read c0:write',
+                 'code_challenge_method':'S256','code_challenge':'b'*43,'scope':'c0:admin',
                  'resource':origin+'/mcp'}
             assert user.request('/oauth/authorize?'+urlencode(raw))[0]==200
             checked(user,'/oauth/connect/request',{},'POST',profile['csrf_token'])

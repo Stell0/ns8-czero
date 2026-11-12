@@ -62,18 +62,11 @@ def test_new_reader_gets_signin_visible_approval_then_explicit_consent_and_real_
                 assert (await user.get('/oauth/connect')).status_code == 200
                 assert (await user.post('/oauth/connect/request', json={})).status_code == 403
                 request = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                assert request.status_code == 200 and not request.json()['approved']
-                assert not {'state', 'code_challenge', 'native_client', 'issuer'} & request.json().keys()
-                assert not harness.requests
+                assert request.status_code == 200 and request.json() == {'next': '/oauth/consent'}
+                assert harness.requests
                 assert (await user.get('/api/v1/oauth/connection-requests')).status_code == 403
                 admin.headers['Authorization'] = 'Bearer ' + owner
-                queue = (await admin.get('/api/v1/oauth/connection-requests')).json()['requests']
-                assert len(queue) == 1 and queue[0]['username'] == 'member'
-                assert raw['state'] not in json.dumps(queue)
-                await approve(admin)
-                assert len(harness.requests) == 2
-                next_step = await user.post('/oauth/connect/continue', json={'scopes': ['c0:read']}, headers=headers(profile))
-                assert next_step.status_code == 200 and next_step.json() == {'next': '/oauth/consent'}
+                assert (await admin.get('/api/v1/oauth/connection-requests')).json()['requests'] == []
                 assert 'c0_onboarding' not in user.cookies
                 with registry.access.database.engine.connect() as connection:
                     assert connection.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE account_id=:id'), {'id': profile['id']}).scalar_one() == 0
@@ -104,11 +97,8 @@ def test_registered_read_client_can_explicitly_narrow_a_broader_reconnect_reques
                 response = await user.get('/oauth/authorize', params=raw)
                 assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
                 profile = await signin(user, target='/oauth/connect')
-                await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                bad = await user.post('/oauth/connect/continue', json={'scopes': ['c0:admin']}, headers=headers(profile))
-                assert bad.status_code == 410
-                result = await user.post('/oauth/connect/continue', json={'scopes': ['c0:read']}, headers=headers(profile))
-                assert result.status_code == 200
+                result = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
+                assert result.status_code == 200 and result.json() == {'next': '/oauth/consent'}
                 consent = (await user.get('/oauth/consent/request')).json()
                 assert consent['scopes'] == ['c0:read']
     asyncio.run(check())
@@ -145,7 +135,7 @@ def test_handoff_policy_change_binding_and_expired_page_are_human_readable(cimd_
     async def check():
         app, _, registry = cimd_http
         async with browser(app) as user, browser(app) as other:
-            await user.get('/oauth/authorize', params=parameters()[0])
+            await user.get('/oauth/authorize', params=parameters(scope='c0:write')[0])
             profile = await signin(user, target='/oauth/connect')
             await user.post('/oauth/connect/request', json={}, headers=headers(profile))
             other.cookies.set('c0_onboarding', user.cookies.get('c0_onboarding'), domain='c0.example.test', path='/')
@@ -166,4 +156,35 @@ def test_normal_signin_returns_only_to_fixed_local_pages(application, target):
             expected = '/' + target if target in ('agents', 'admin') else '/'
             await signin(user, target=expected, return_to=target)
             assert 'c0_login_return' not in user.cookies
+    asyncio.run(check())
+
+
+def test_self_service_rechecks_account_block_after_metadata_io(cimd_http, monkeypatch, certificates):
+    from uuid import UUID
+    async def check():
+        app, owner, registry = cimd_http
+        access = registry.access
+        access.admit_readers = True
+        administrator = access.resolve(app.state.auth.oidc.verify_access_token(owner))
+        async with Harness(monkeypatch, certificates) as harness:
+            app.state.cimd.fetcher = harness.fetcher
+            async with browser(app) as user:
+                profile = await signin(user, code='unit-only-forbidden-code')
+                assert (await user.get('/oauth/authorize', params=parameters()[0])).status_code == 302
+                harness.gate = asyncio.Event()
+                pending = asyncio.create_task(user.post('/oauth/connect/request', json={}, headers=headers(profile)))
+                async with asyncio.timeout(3):
+                    while not harness.requests:
+                        await asyncio.sleep(0.01)
+                from czero_core.workspace_access import WorkspaceAccessService
+                from czero_core.client_onboarding import ClientOnboardingService
+                assert ClientOnboardingService(app.state.delegated_grants).requests(administrator) == []
+                assert WorkspaceAccessService(app.state.delegated_grants).applications(administrator, UUID(profile['id']))['applications'] == []
+                access.set_role(administrator, UUID(profile['id']), None)
+                harness.gate.set()
+                assert (await pending).status_code in (401, 403)
+                assert registry.status(administrator)['clients'] == []
+                with access.database.engine.connect() as connection:
+                    assert connection.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE account_id=:id'),
+                                              {'id': UUID(profile['id'])}).scalar_one() == 0
     asyncio.run(check())

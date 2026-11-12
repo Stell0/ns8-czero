@@ -2,7 +2,7 @@
 
 Open **Administration → Workspace access** with your C0 administrator account.
 The table groups each person with their application requests and connections.
-People with pending requests appear first. If discovery is off, the page points to Advanced for connection setup. Use **Next people** or **More
+People with pending requests appear first. Self-service Read discovery is enabled whenever the configured authenticated HTTPS endpoint is available. Use **Next people** or **More
 applications** when the table has another page.
 
 | Columns | Meaning |
@@ -17,7 +17,7 @@ applications** when the table has another page.
 
 New users verified by the configured sign-in provider receive **Read** access to
 Shared. A persistent administrator block takes precedence over this default.
-Protected spaces still need explicit grants for Readers and Editors. **Manage**
+Other spaces can allow Read for all signed-in users or require explicit grants. Editing still requires an explicit grant and sufficient workspace permissions. **Manage**
 gives administration and implicit access to every space.
 
 ## Change a person's permissions
@@ -41,8 +41,7 @@ and cannot be blocked or changed here; owner selection stays in NS8 Settings.
 
 ## Approve or decline a request
 
-**Needs application approval** means this exact application identity/callback
-has not been approved. **Needs additional application permissions** means its
+Validated new HTTPS metadata clients can connect for Read after company sign-in and explicit user consent, without administrator approval. The connection can read every space its user can read. Disabled clients and identities requiring a metadata review remain unavailable. Additional application permissions need administrator approval. **Needs application approval** applies to requests that cannot use self-service Read. **Needs additional application permissions** means its
 request exceeds the approved permission ceiling. Choose **Approve** to review
 the verified name, origin, callback and permissions. New Write and Manage
 permissions are not selected automatically. Existing approved permissions are
@@ -88,9 +87,9 @@ does not claim a durable connection history.
 **Disable application for everyone** is explicitly global: it stops all of that
 application's connections, without blocking its users. Enabling it later permits
 fresh consent and does not revive old credentials. Manually approved UUID clients
-remain independent of optional client metadata discovery, which defaults off.
+remain independent of self-service metadata clients.
 
-Use **Protected spaces** for space-specific grants and **Background work** for
+Use **Spaces** for space-specific grants and **Background work** for
 jobs and schedules. The Workspace access page does not load background tasks. The **Skip to content**
 link keeps you on the current page and preserves the selected space.
 A user's **Account → Your connected apps** still manages their own connections.
@@ -98,3 +97,9 @@ A user's **Account → Your connected apps** still manages their own connections
 The supported legacy NS8 URL still offers first-party people and permission
 management. Connecting ChatGPT requires the configured application hostname;
 this page does not enable OAuth or MCP on a legacy path.
+
+## Space audiences
+
+Use **Administration → Spaces** to choose **All signed-in users** or **Selected people**. The first grants baseline Read for the whole space, including sources, originals and attachments, to current and future admitted users. Individual grants add permissions; removing a grant does not remove baseline Read. Existing protected spaces remain restricted after migration. Shared retains its existing role policy. Restricting an audience disconnects affected connections and revokes their API keys; reopening the space does not revive those credentials.
+
+Client discovery has no installation switch. Upgrading or restoring an old disabled installation enables self-service Read; explicit account blocks and disabled applications remain enforced. Applications requesting Read alongside Write or Manage can proceed with Read, then obtain additional permissions through the existing administrator workflow and fresh consent.

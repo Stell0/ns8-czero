@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Strict nonprivate observations required from actual native access workflows."""
 EXPECTED={
-    'prepare':{'fresh_reader':True,'pending_request':True},
-    'approved':{'allowed_scopes':['c0:read'],'user_role':'reader','metadata_verified':True},
+    'prepare':{'fresh_reader':True,'pending_request':True,'self_service_read':True,'default_space_read':True},
+    'approved':{'allowed_scopes':['c0:read','c0:write'],'user_role':'reader','metadata_verified':True},
     'declined':{'remaining_requests':1,'consented_connections':2},
     'disconnected':{'member_statuses':[200,401],'other_status':200,'refresh_status':400},
     'blocked':{'member_statuses':[401,401],'other_status':200,'blocked_signins':2,'blocked':True},
-    'blocked_after_restart':{'member_statuses':[401,401],'other_status':200,'blocked_signins':2,'blocked':True,'restart_changed':True},
+    'blocked_after_restart':{'member_statuses':[401,401],'other_status':200,'blocked_signins':2,'blocked':True,'restart_changed':True,'public_space_preserved':True},
     'unblocked':{'user_role':'reader','member_statuses':[401,401],'fresh_login':True,'clients_disabled':True},
     'editor_permissions':{'user_role':'editor','workspace_status':403},
     'manage_permissions':{'user_role':'admin','workspace_status':200},

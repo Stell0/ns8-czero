@@ -1,13 +1,15 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Seed old layouts with installed predecessor persistence, never runtime shims."""
 import importlib
+from contextlib import contextmanager
+from unittest.mock import patch
 import importlib.util
 from pathlib import Path
 import subprocess
 import sys
 
 from czero_core.identity import Role
-from czero_core.spaces import SpaceService
+from czero_core import spaces
 
 
 def services(python):
@@ -22,7 +24,19 @@ def services(python):
     old_jobs=importlib.import_module(prefix+'.jobs')
     class CurrentAuthorization:
         def _authorize(self,connection,actor,role=Role.READER):
-            return SpaceService(self.database,self.access).authorize(connection,actor,Role(role.value),space_id=self._space_id)
+            return spaces.SpaceService(self.database,self.access).authorize(connection,actor,Role(role.value),space_id=self._space_id)
     class PreviousKnowledge(CurrentAuthorization,old_knowledge.KnowledgeService):pass
     class PreviousSources(CurrentAuthorization,old_sources.SourceService):pass
     return PreviousKnowledge,PreviousSources,old_jobs.default_registry,old_sources.register_source_handlers
+
+
+@contextmanager
+def historical_space_authorization(python):
+    """Use the installed predecessor's actual space SQL only while seeding old DDL."""
+    services(python)
+    previous = importlib.import_module('c0_previous_content_0352.spaces')
+    # Share the trusted current Actor's string-enum identity across package namespaces.
+    previous.Role = Role
+    from czero_core import api_keys
+    with patch.object(spaces, 'SpaceService', previous.SpaceService), patch.object(api_keys, 'SpaceService', previous.SpaceService):
+        yield previous.SpaceService

@@ -103,7 +103,7 @@ def test_native_cimd_helper_fails_if_restore_keeps_old_access(recovery):
 
 
 @pytest.mark.parametrize('host,operation', [('production.example.org', 'seed'), ('czero7.test', 'verify')])
-def test_native_cimd_cli_rejects_live_hosts_or_missing_restored_switch(recovery, monkeypatch, host, operation):
+def test_native_cimd_cli_rejects_live_hosts_or_retired_restored_switch(recovery, monkeypatch, host, operation):
     fixture, _, _, _, _, _, directory = recovery
     monkeypatch.setattr(fixture, 'STATE', directory)
     (directory/'personas.json').write_text(json.dumps({'host': host, 'password': 'synthetic-only'}))
@@ -111,7 +111,7 @@ def test_native_cimd_cli_rejects_live_hosts_or_missing_restored_switch(recovery,
     calls = []
     monkeypatch.setattr(fixture, 'task', lambda *args: calls.append(args) or {'cimd_enabled': False})
     monkeypatch.setattr(fixture, 'Browser', lambda *_: pytest.fail('A rejected fixture must not sign in'))
-    with pytest.raises(AssertionError, match='disposable hosts|switch did not survive'):
+    with pytest.raises(AssertionError, match='disposable hosts|Retired discovery setting'):
         fixture.main('czero7', operation)
     assert len(calls) == (0 if operation == 'seed' else 1)
 

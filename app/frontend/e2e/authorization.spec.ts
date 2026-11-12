@@ -288,3 +288,73 @@ test('failed application save shows an error and never continues OAuth', async (
   expect(continued).toBe(false)
   await expect(page.locator('body')).not.toContainText('private backend detail')
 })
+
+for (const theme of ['light', 'dark']) {
+  test(`new Read client reaches consent without admin approval: ${theme}`, async ({
+    page,
+  }) => {
+    await api(page, 'reader')
+    await page.addInitScript(
+      (value) => localStorage.setItem('c0-theme', value),
+      theme,
+    )
+    await page.route('**/oauth/connect/request', (route) =>
+      route.fulfill({ json: { next: '/oauth/consent' } }),
+    )
+    await page.route('**/oauth/consent/request', (route) =>
+      route.fulfill({
+        json: {
+          client_name: 'New application',
+          client_id: identity,
+          callback,
+          scopes: ['c0:read'],
+          eligible_scopes: ['c0:read'],
+          csrf_token: 'fixture-csrf',
+        },
+      }),
+    )
+    await page.goto('/oauth/connect')
+    await expect(page).toHaveURL(/\/oauth\/consent$/)
+    await expect(
+      page.getByText('Read content in all spaces you can access.'),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('checkbox', { name: 'Read', exact: true }),
+    ).toBeChecked()
+    await expect(
+      page.getByRole('checkbox', { name: 'Write', exact: true }),
+    ).toHaveCount(0)
+    await expect(page.getByText(/waiting.*admin/i)).toHaveCount(0)
+  })
+}
+
+test('a Write-only request never selects an unrequested Read scope', async ({
+  page,
+}) => {
+  await api(page, 'reader')
+  await page.route('**/oauth/connect/request', (route) =>
+    route.fulfill({
+      json: {
+        metadata_url: identity,
+        callback,
+        scopes: ['c0:write'],
+        approved: true,
+        allowed_scopes: ['c0:read'],
+        csrf_token: 'fixture-csrf',
+      },
+    }),
+  )
+  await page.goto('/oauth/connect')
+  await expect(
+    page.getByRole('checkbox', { name: 'Read', exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('checkbox', { name: 'Write', exact: true }),
+  ).not.toBeChecked()
+  await expect(
+    page.getByRole('checkbox', { name: 'Write', exact: true }),
+  ).toBeDisabled()
+  await expect(
+    page.getByRole('button', { name: 'Authorize', exact: true }),
+  ).toBeDisabled()
+})

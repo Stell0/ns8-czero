@@ -15,7 +15,33 @@ const session = useSession(),
   router = useRouter(),
   { t } = useI18n(),
   name = ref(''),
-  choices = ref<Record<string, string>>({})
+  audience = ref('restricted'),
+  existingAudience = ref('restricted'),
+  choices = ref<Record<string, string>>({}),
+  audienceRevision = ref(0)
+let observedAudience = 'restricted',
+  observedSpace = ''
+watch(
+  () => session.space,
+  (space) => {
+    if (!space) return
+    const next = space?.readable_by_all ? 'all' : 'restricted'
+    if (
+      observedSpace !== (space?.id || '') ||
+      existingAudience.value === observedAudience
+    ) {
+      existingAudience.value = next
+      audienceRevision.value = space?.revision || 0
+    }
+    observedSpace = space?.id || ''
+    observedAudience = next
+  },
+  { immediate: true },
+)
+const audienceOptions = () => [
+  { id: 'restricted', label: t('admin.selectedPeople') },
+  { id: 'all', label: t('admin.allSignedIn') },
+]
 const replay = new ReplayIdentity()
 interface Grant {
   account_id: string
@@ -66,7 +92,7 @@ watch(data, (accounts) => {
     observed.set(account.id, role)
   }
 })
-const draft = useDraftGuard([name])
+const draft = useDraftGuard([name, audience, existingAudience])
 const create = useMutation({
   mutation: async () => {
     const current = draft.current()
@@ -74,7 +100,10 @@ const create = useMutation({
       'spaces',
       {
         method: 'POST',
-        data: replay.data('spaces', { name: name.value.trim() }),
+        data: replay.data('spaces', {
+          name: name.value.trim(),
+          readable_by_all: audience.value === 'all',
+        }),
       },
       false,
     )
@@ -83,6 +112,27 @@ const create = useMutation({
         path: '/admin/spaces',
         query: { space_id: space.id },
       })
+  },
+})
+const saveAudience = useMutation({
+  mutation: async () => {
+    const space = session.space!
+    const current = draft.current()
+    await request(
+      `spaces/${space.id}/access`,
+      {
+        method: 'PUT',
+        data: replay.data(`spaces/${space.id}/access`, {
+          readable_by_all: existingAudience.value === 'all',
+          expected_revision: audienceRevision.value,
+        }),
+      },
+      false,
+    )
+    if (!current()) return
+    observedAudience = existingAudience.value
+    replay.clear()
+    await session.load()
   },
 })
 const save = useMutation({
@@ -115,7 +165,15 @@ const save = useMutation({
         v-model="name"
         :label="t('common.name')"
         :disabled="create.isLoading.value"
-      /><NeButton
+      />
+      <NeListbox
+        v-model="audience"
+        :label="t('admin.audience')"
+        :options="audienceOptions()"
+        :no-options-label="t('common.options')"
+        :optional-label="t('common.optional')"
+      />
+      <NeButton
         type="submit"
         kind="primary"
         :loading="create.isLoading.value"
@@ -123,9 +181,32 @@ const save = useMutation({
         >{{ t('admin.createSpace') }}</NeButton
       >
     </form>
+    <form
+      v-if="session.space && !session.space.shared"
+      class="space-y-4"
+      @submit.prevent="!saveAudience.isLoading.value && saveAudience.mutate()"
+    >
+      <NeListbox
+        v-model="existingAudience"
+        :label="t('admin.audience')"
+        :options="audienceOptions()"
+        :disabled="saveAudience.isLoading.value"
+        :no-options-label="t('common.options')"
+        :optional-label="t('common.optional')"
+      />
+      <p>{{ t('admin.audienceHelp') }}</p>
+      <NeButton
+        type="submit"
+        :loading="saveAudience.isLoading.value"
+        :disabled="saveAudience.isLoading.value"
+        >{{ t('admin.saveAudience') }}</NeButton
+      >
+    </form>
     <ErrorNotice
-      v-if="create.error.value || save.error.value"
-      :error="create.error.value || save.error.value"
+      v-if="create.error.value || save.error.value || saveAudience.error.value"
+      :error="
+        create.error.value || save.error.value || saveAudience.error.value
+      "
     /><ResourceState
       v-if="!session.space?.shared"
       :error="error"

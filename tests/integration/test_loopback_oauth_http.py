@@ -37,33 +37,17 @@ def test_native_reader_approval_consent_reconnect_and_exact_token_callback(cimd_
                     if port == 53123:
                         assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
                         pending = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                        assert pending.status_code == 200 and not pending.json()['approved']
+                        assert pending.status_code == 200 and pending.json() == {'next': '/oauth/consent'}
+                        assert registry.clients._lookup(URL)['allowed_scopes'] == ['c0:read']
                         path = '/api/v1/access/accounts/' + profile['id'] + '/applications'
-                        request = (await admin.get(path)).json()['applications'][0]
-                        path = '/api/v1/access/requests/' + request['id']
-                        review = await admin.post(path + '/preview', headers=headers(admin_profile))
-                        assert review.status_code == 200
-                        assert review.json()['request']['callback'] == callback
-                        assert review.json()['descriptor']['redirect_uris'] == [registered]
-                        body = {'metadata_digest': review.json()['metadata_digest'], 'allowed_scopes': ['c0:admin']}
-                        denied = await admin.post(path + '/approve', json=body, headers=headers(admin_profile))
-                        assert denied.status_code == 409
-                        assert registry.clients._lookup(URL) is None
-                        body['allowed_scopes'] = ['c0:read']
-                        approved = await admin.post(path + '/approve', json=body, headers=headers(admin_profile))
-                        assert approved.status_code == 200
+                        assert (await admin.get(path)).json()['applications'] == []
                         for rejected in ('http://localhost.evil.test:53123/callback',
                                          'http://' + host + ':53123/other',
                                          'https://' + host + ':53123/callback'):
                             denied = await user.get('/oauth/authorize', params={**raw, 'redirect_uri': rejected})
                             assert denied.status_code == 400
                             assert 'location' not in denied.headers and 'set-cookie' not in denied.headers
-                        pending = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                        assert pending.status_code == 200 and pending.json()['approved']
-                        rows = (await admin.get('/api/v1/access/accounts/' + profile['id'] + '/applications')).json()['applications']
-                        assert rows[0]['status'] == 'waiting_for_consent'
-                        continued = await user.post('/oauth/connect/continue', json={'scopes': ['c0:read']}, headers=headers(profile))
-                        assert continued.status_code == 200
+                        assert (await user.post('/oauth/connect/request', json={}, headers=headers(profile))).status_code == 410
                     else:
                         # Already approved: exercise both Core and the SDK's authorization guard.
                         assert response.status_code == 302 and response.headers['location'].endswith('/oauth/consent')

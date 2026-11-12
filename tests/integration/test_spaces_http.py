@@ -41,6 +41,53 @@ async def create_space(client, fixture):
     return result
 
 
+def test_default_read_exposes_content_and_tightening_retires_oauth(space_http, knowledge_http, transport):
+    async def check():
+        app, _, _, _, _, issue, owner, member = transport
+        access = app.state.auth.access
+        access.admit_readers = True
+        identity = app.state.auth.oidc.verify_access_token(member)
+        assert access.resolve(identity).role.value == 'reader'
+        pair = issue(identity, {'c0:read'})
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+owner}) as admin, AsyncClient(
+                transport=ASGITransport(app=app), base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+pair.access_token}) as reader:
+            response = await admin.post('/api/v1/spaces', json={
+                'name':'Open documentation '+uuid4().hex, 'readable_by_all':True,
+                'idempotency_key':uuid4().hex})
+            assert response.status_code == 201
+            space = response.json(); space_http[1].append(space['id'])
+            selected = {'space_id':space['id']}
+            page = (await admin.post('/api/v1/wiki/pages/upsert', params=selected, json={
+                'slug':'default-read', 'title':'Documentation', 'body':'Available after sign-in.',
+                'idempotency_key':uuid4().hex})).json()
+            path = '/api/v1/wiki/pages/'+page['id']
+            content = await reader.get(path, params=selected)
+            assert content.status_code == 200, content.json()
+            assert content.json()['content']['body'] == page['content']['body']
+            assert (await reader.get(path)).status_code == 404
+            assert (await reader.get('/api/v1/spaces/'+space['id']+'/grants')).status_code == 403
+            denied = await reader.post('/api/v1/wiki/pages/upsert', params=selected,
+                headers={'Authorization':'Bearer '+member}, json={
+                    'slug':'denied', 'title':'Denied', 'body':'Denied', 'idempotency_key':uuid4().hex})
+            assert denied.status_code == 403
+            policy = '/api/v1/spaces/'+space['id']+'/access'
+            restricted = await admin.put(policy, json={'readable_by_all':False,
+                'expected_revision':space['revision'], 'idempotency_key':uuid4().hex})
+            assert restricted.status_code == 200
+            assert (await reader.get(path, params=selected)).status_code == 401
+            fresh = issue(identity, {'c0:read'})
+            headers = {'Authorization':'Bearer '+fresh.access_token}
+            assert (await reader.get(path, params=selected, headers=headers)).status_code == 403
+            reopened = await admin.put(policy, json={'readable_by_all':True,
+                'expected_revision':restricted.json()['revision'], 'idempotency_key':uuid4().hex})
+            assert reopened.status_code == 200
+            assert (await reader.get(path, params=selected)).status_code == 401
+            assert (await reader.get(path, params=selected, headers=headers)).json()['content']['body'] == page['content']['body']
+    asyncio.run(check())
+
+
 def test_signed_space_discovery_wiki_names_replay_and_fail_closed_selectors(space_http, knowledge_http):
     async def check():
         app, owner, member, *_ = space_http[0]

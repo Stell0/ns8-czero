@@ -13,6 +13,7 @@ export interface Space {
   id: string
   name: string
   shared: boolean
+  readable_by_all: boolean
   role: 'reader' | 'editor' | 'admin'
   revision: number
 }
@@ -116,6 +117,13 @@ export const useSession = defineStore('session', () => {
         found.role !== selected?.role
       )
         await load()
+      else if (found.revision > (space.value?.revision || 0)) {
+        // Refresh policy metadata without discarding an unchanged-authority draft.
+        space.value = found
+        spaces.value = spaces.value.map((item) =>
+          item.id === found.id ? found : item,
+        )
+      }
     } catch (cause) {
       if (!(cause instanceof StaleResponse)) error.value = cause
     }

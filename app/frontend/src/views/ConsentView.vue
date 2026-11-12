@@ -27,6 +27,7 @@ interface Consent {
   background_supported?: boolean
   background_requested?: boolean
   background_ready?: boolean
+  next?: string
   connection_idle_seconds?: number
 }
 const { data, error, isPending, refetch } = useResource(
@@ -38,14 +39,30 @@ const { data, error, isPending, refetch } = useResource(
       false,
     ),
 )
+watch(data, (value) => {
+  if (value?.next === '/oauth/consent') location.assign(localURL(value.next))
+})
+const needsReview = computed(
+  () =>
+    connecting.value &&
+    !!data.value &&
+    (!data.value.approved ||
+      data.value.scopes.some(
+        (scope) => !data.value?.allowed_scopes?.includes(scope),
+      )),
+)
 const eligible = computed(() =>
-  connecting.value && session.isAdmin && !data.value?.approved
+  needsReview.value && session.isAdmin
     ? (data.value?.scopes || []).filter(
         (scope) =>
           !reviewed.value?.value.descriptor.scope_ceiling ||
           reviewed.value.value.descriptor.scope_ceiling.includes(scope),
       )
-    : data.value?.eligible_scopes || data.value?.allowed_scopes || [],
+    : connecting.value
+      ? (data.value?.scopes || []).filter((scope) =>
+          data.value?.allowed_scopes?.includes(scope),
+        )
+      : data.value?.eligible_scopes || [],
 )
 interface Review {
   metadata_digest: string
@@ -61,6 +78,7 @@ interface Existing {
   metadata_url: string
   enabled: boolean
   revision: number
+  allowed_scopes?: string[]
 }
 const reviewed = ref<{ value: Review; existing?: Existing }>()
 const choices = ref<Record<string, boolean>>({}),
@@ -115,7 +133,7 @@ const preview = useMutation({
 })
 watch(
   () =>
-    connecting.value && !data.value?.approved && session.isAdmin
+    needsReview.value && session.isAdmin
       ? `${data.value?.metadata_url || ''}:${data.value?.callback || ''}`
       : '',
   (identity) => {
@@ -139,7 +157,16 @@ async function approveApplication() {
       method: review.existing ? 'PUT' : 'POST',
       data: {
         metadata_digest: review.value.metadata_digest,
-        allowed_scopes: [...selected.value],
+        allowed_scopes: [
+          ...new Set([
+            ...(review.existing?.allowed_scopes || []).filter(
+              (scope) =>
+                !review.value.descriptor.scope_ceiling ||
+                review.value.descriptor.scope_ceiling.includes(scope),
+            ),
+            ...selected.value,
+          ]),
+        ],
         ...(review.existing
           ? { expected_revision: review.existing.revision }
           : { metadata_url: data.value.metadata_url }),
@@ -155,7 +182,7 @@ const canSubmit = computed(
     !submit.isLoading.value &&
     !preview.isLoading.value &&
     (!connecting.value ||
-      data.value.approved ||
+      !needsReview.value ||
       (session.isAdmin && !!reviewed.value)),
 )
 const submit = useMutation({
@@ -163,7 +190,7 @@ const submit = useMutation({
     const current = draft.current()
     const value = data.value
     if (!value) return
-    if (approve && connecting.value && !value.approved) {
+    if (approve && needsReview.value) {
       await approveApplication()
       if (!current()) return
     }
@@ -225,6 +252,9 @@ const submit = useMutation({
           {{ data.metadata_url }}
         </p>
         <p>{{ t('consent.permissions') }}</p>
+        <p v-if="data.scopes?.includes('c0:read')">
+          {{ t('consent.readBoundary') }}
+        </p>
       </div>
       <fieldset class="min-w-0 space-y-3" :disabled="submit.isLoading.value">
         <legend class="sr-only">{{ t('consent.permissions') }}</legend>
@@ -268,7 +298,7 @@ const submit = useMutation({
         v-if="submit.error.value || preview.error.value"
         :error="submit.error.value || preview.error.value"
       />
-      <div v-if="connecting && !data.approved" class="space-y-3">
+      <div v-if="connecting && needsReview" class="space-y-3">
         <p>
           {{ t(session.isAdmin ? 'consent.adminApproval' : 'consent.pending') }}
         </p>
@@ -295,7 +325,7 @@ const submit = useMutation({
         >
           {{
             t(
-              connecting && !data.approved && session.isAdmin
+              connecting && needsReview && session.isAdmin
                 ? 'consent.approveContinue'
                 : background && !data.background_ready
                   ? 'consent.continue'

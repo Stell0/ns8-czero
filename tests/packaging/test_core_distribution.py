@@ -129,7 +129,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0038_cross_space_references'
+        assert results[0]==results[1] and results[0][1]=='0039_space_audiences'
         reference_probe=directory/'core_references_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_references_probe.py',reference_probe)
         reference_evidence=command([str(python),'-I',str(reference_probe)],cwd=directory,

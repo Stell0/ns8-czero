@@ -175,10 +175,6 @@
             },
             "description": "New sign-in absolute/inactivity bounds; idle must not exceed absolute"
         },
-        "cimd_enabled": {
-            "type": "boolean",
-            "description": "Allow administrator-approved public OAuth client metadata URLs; disabled by default"
-        },
         "connection_idle_seconds": {
             "type": "integer",
             "minimum": 86400,

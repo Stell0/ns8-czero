@@ -285,7 +285,7 @@ class NativeWebsite:
         self.goto('/admin');self.permissions(member['id'],'Read and write')
         self.goto('/admin/spaces')
         name='<img src=x> protected-'+secrets.token_hex(4)
-        self.fill('Name',name);self.click('Create protected space')
+        self.fill('Name',name);self.click('Create space')
         self.run('Wait For Elements State','header button:has-text('+json.dumps(name)+')','visible','timeout=30s')
         from urllib.parse import parse_qs
         space=parse_qs(urlsplit(self.browser.get_url()).query)['space_id'][0]
@@ -323,7 +323,7 @@ class NativeWebsite:
         self.run('Get Text','main','contains','Configuration 2');self.run('Get Text','main','contains','no_material_update')
         self.goto(article);self.run('Get Text','article','contains','Independent private update')
         self.api('wiki/pages/'+page['id']+'?revision=1',status=410,space=space)
-        self.run('Switch Context',owner_context);self.goto('/admin/spaces?space_id='+space);self.grant('No protected-space grant')
+        self.run('Switch Context',owner_context);self.goto('/admin/spaces?space_id='+space);self.grant('No additional grant')
         self.run('Switch Context',member_context)
         self.browser.evaluate_javascript(None,"() => document.dispatchEvent(new Event('visibilitychange'))")
         self.run('Get Text','main','contains','Sign in or choose a space you can access.')
@@ -334,9 +334,9 @@ class NativeWebsite:
         self.run('Get Text','main','contains','Sign in or choose a space you can access.')
         self.run('Get Element Count','main li','==',0)
 
-    def discovery(self, module_id, enabled):
-        request=json.dumps({'host':self.host,'lets_encrypt':False,'cimd_enabled':enabled})
-        self.command('api-cli run module/'+shlex.quote(module_id)+'/configure-module --data '+shlex.quote(request))
+    def discovery(self, module_id):
+        output, rc = self.ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/get-configuration', return_rc=True, timeout='180 seconds')
+        assert rc == 0 and 'cimd_enabled' not in json.loads(output)
 
     def people_access(self, module_id):
         from workspace_access_evidence import validate_measurement, require_stages
@@ -351,9 +351,9 @@ class NativeWebsite:
             measurements.append(measured);self.builtin.log_to_console(marker+json.dumps(measured,sort_keys=True))
         output,rc=self.ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/get-configuration',return_rc=True,timeout='180 seconds')
         assert rc==0
-        original=json.loads(output)['cimd_enabled'];assert type(original) is bool
+        assert 'cimd_enabled' not in json.loads(output)
         try:
-            self.discovery(module_id,True);phase('prepare')
+            self.discovery(module_id);phase('prepare')
             self.run('Reload')
             value=json.loads(self.ssh.execute_command('cat /tmp/czero-oidc-fixture/workspace-access.json'))
             row='[data-application-id="'+value['request_id']+'"] '
@@ -361,6 +361,7 @@ class NativeWebsite:
             self.run('Get Text','[role="dialog"]','contains','C0 disposable access browser')
             for name in ('Write','Manage'):self.run('Get Property',self.role('checkbox',name),'checked','==',False)
             self.run('Get Property',self.role('checkbox','Read'),'checked','==',True)
+            self.checked('Write',True)
             self.click('Approve application','[role="dialog"] ')
             self.dialog_closed();phase('approved')
             self.click('Reload')
@@ -378,7 +379,7 @@ class NativeWebsite:
             for option,stage in [('Read and write','editor_permissions'),('Read, write and manage','manage_permissions'),('Read','reader_permissions')]:
                 self.permissions(value['member_id'],option);phase(stage)
             require_stages(measurements);self.accessible('admin','admin')
-        finally:self.discovery(module_id,original)
+        finally:self.discovery(module_id)
 
     def skip(self):
         before=urlsplit(self.browser.get_url())
@@ -399,16 +400,16 @@ class NativeWebsite:
         self.accessible('admin',role);self.people_access(module_id)
         self.goto('/admin/advanced');self.skip()
         output,rc=self.ssh.execute_command('api-cli run module/'+shlex.quote(module_id)+'/get-configuration',return_rc=True,timeout='180 seconds')
-        assert rc==0;original=json.loads(output)['cimd_enabled']
+        assert rc==0;assert 'cimd_enabled' not in json.loads(output)
         try:
-            self.discovery(module_id,True);self.run('Reload');self.click('Register client')
+            self.discovery(module_id);self.run('Reload');self.click('Register client')
             self.select('Clients','HTTPS')
             for url in ('https://127.0.0.1/client.json','https://localhost/client.json'):
                 self.fill('Client metadata URL',url);self.click('Load application','[role="dialog"] ')
                 self.run('Wait For Elements State','[role="dialog"] [role="alert"]','visible','timeout=30s')
                 self.run('Wait For Elements State',self.button('Approve application','[role="dialog"] '),'disabled')
             self.run('Click',self.role('button','Close'))
-        finally:self.discovery(module_id,original)
+        finally:self.discovery(module_id)
         self.run('Reload');self.click('Register client')
         name='browser-client-'+secrets.token_hex(4)
         self.fill('Name',name);self.fill('Callback','https://client.example.test/callback')

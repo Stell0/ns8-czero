@@ -1,5 +1,15 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+Self-service Read and space audiences use independently published Core0.48.0 /
+schema0039 at `2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`. App0.66 stages its
+released tag/lock with `>=0.48.0,<0.49.0` and matching patch-only updater bounds.
+Keep its Core package tree identical to the immutable release. Producer/full/native
+43209361920 and publisher43218817753 pass; final released-consumer acceptance
+remains required. Preserve explicit blocks, disabled clients, metadata-review
+holds and credential ceilings. Space audiences give baseline Read only; existing
+protected spaces stay restricted. The discovery toggle is retired on upgrade and
+restore. Preserve all failed candidates and installed identities; see PLAN.
+
 Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and
 independent application consent scopes; do not reuse role labels for scopes.
@@ -12,8 +22,8 @@ nor evidence. Preserve identity-only edges, current both-endpoint read checks,
 blind source-owned deletion, credential bindings and revocation lock order.
 App0.65 adopts released Core0.47.0 at
 `884ff312c18fbc18bb613137bbb6ced17df6cfb0`, with matching patch-only updater bounds.
-Keep the Core package tree identical to that immutable release and preserve all
-frozen producer/consumer candidates and native evidence. Main0daf8a0 passes full/
+Keep the current Core tree identical to its active immutable consumer release;
+preserve earlier producer/consumer candidates and native evidence. Main0daf8a0 passes full/
 native acceptance, canonical publication, independent artifact/promotion checks
 and six fresh registry reads. The accepted installation in
 [PLAN's current baseline](PLAN.md#current-baseline) remains the next genuine
@@ -223,7 +233,7 @@ client. Older released Core retains exact behavior until explicit adoption.
 
 Authorization uses current persisted Reader/Editor/Admin membership inside Core transactions, explicit protected-space selection and actual delegated scopes. Tool discovery does not grant authority. Preserve lock ordering, exact evidence identities, expected revisions and payload-free replay receipts; a superseded request returns 410 instead of old content. A denied space must never fall back to Shared. Optional providers cannot decide authorization or make ordinary text retrieval unavailable.
 
-OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. CIMD defaults off, approves exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Remote metadata never supplies roles. Existing UUID clients remain independent.
+OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. The reference app enables CIMD for its configured authenticated HTTPS endpoint; the reusable Core policy remains explicit. Self-service registration permits only requested Read for validated exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Additional client permissions require administrator approval. Remote metadata never supplies roles. Existing UUID clients remain independent.
 
 That absolute bound remains unchanged for existing/interactive grants. Newly consented background grants explicitly opt into a separate offline authority with a snapshotted thirty-day inactivity window and no fixed maximum. Browser cookies, codes and pending consent retain their finite bounds. Background login purpose and expected account bind to one-use persisted state. Rotating persistent refresh credentials use a keyed family/generation proof with bounded database storage and committed replay revocation before SDK scope validation. Preserve client/account/resource/secret bindings, current-role checks, browser-logout versus explicit-disconnect semantics and genuine predecessor recovery; never promote old grants silently. Mandatory native evidence includes real offline issuance, owned provider logout, renewal and revocation; local/fake-clock tests alone do not establish ChatGPT scheduling acceptance.
 

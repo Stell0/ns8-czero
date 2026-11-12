@@ -22,7 +22,7 @@ def lifecycle(monkeypatch,tmp_path):
     monkeypatch.delenv('CZERO_CONNECTION_IDLE_SECONDS',raising=False)
     updates,statuses = [],[]
     monkeypatch.setitem(sys.modules,'agent',SimpleNamespace(mset_env=lambda value:updates.append(dict(value)),
-        set_status=statuses.append,read_envfile=lambda _: {},safe_open=lambda name:open(name,'w')))
+        unset_env=lambda key:None,set_status=statuses.append,read_envfile=lambda _: {},safe_open=lambda name:open(name,'w')))
     def step(name,data=None):
         monkeypatch.setattr(sys,'stdin',StringIO(json.dumps(data)))
         return runpy.run_path(str(ROOT/'imageroot'/name))

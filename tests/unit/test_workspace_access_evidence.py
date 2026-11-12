@@ -19,12 +19,14 @@ def test_all_actual_access_stages_are_required():
 
 
 @pytest.mark.parametrize('phase,key,value',[
-    ('approved','allowed_scopes',['c0:read','c0:write']),('approved','user_role','editor'),
+    ('approved','allowed_scopes',['c0:read']),('approved','user_role','editor'),
     ('disconnected','member_statuses',[401,401]),('disconnected','other_status',401),
     ('disconnected','refresh_status',200),('blocked_after_restart','blocked_signins',0),
     ('blocked','blocked',1),('blocked_after_restart','restart_changed',False),('unblocked','member_statuses',[200,401]),
     ('manage_permissions','workspace_status',403),('editor_permissions','workspace_status',200),
     ('unblocked','clients_disabled',False),('prepare','fresh_reader',False),
+    ('prepare','self_service_read',False),('prepare','default_space_read',False),
+    ('blocked_after_restart','public_space_preserved',False),
 ])
 def test_false_or_private_access_evidence_is_rejected(phase,key,value):
     rows=copy.deepcopy(VALID);row=next(r for r in rows if r['phase']==phase);row[key]=value

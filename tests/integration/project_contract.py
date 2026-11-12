@@ -25,7 +25,8 @@ COMPILATION_OPERATIONS = frozenset({'compilation_policy_get', 'compilation_polic
     'compilation_discovery_get','compilation_discover','compilation_assessment_complete',
     'compilation_semantic_select','compilation_semantic_review'})
 REFERENCE_OPERATIONS = frozenset({'cross_space_ref_create','cross_space_refs_list','cross_space_ref_delete'})
-TOOL_COUNT = len(REFERENCE_OPERATIONS) + len(COMPILATION_OPERATIONS) + 75 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
+SPACE_ACCESS_OPERATIONS = frozenset({'space_access_set'})
+TOOL_COUNT = len(REFERENCE_OPERATIONS) + len(COMPILATION_OPERATIONS) + len(SPACE_ACCESS_OPERATIONS) + 75 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
 
 REMOVED_HISTORY_OPERATIONS=frozenset({'wiki_revisions_list','knowledge_annotations_history','source_document_history'})
 CHANGED_VALIDATION_CONTRACTS=frozenset({'claims_annotate','claims_create','claims_get','claims_list','claims_retract','knowledge_bundle_apply','sources_list'})
