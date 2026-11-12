@@ -155,15 +155,15 @@ Fork C0 when your application needs shared knowledge, evidence, structured recor
 
 Read [development and contributing](docs/development.md), [AGENTS.md](AGENTS.md), the relevant [repository skill](.agents/skills/c0-create-feature/SKILL.md) and [CI policy](docs/ci-policy.md). The [standalone consumer fixture](examples/fork/README.md) demonstrates a smaller library consumer. Preserve application customizations and contribute reusable improvements through focused upstream PRs.
 
-## Cross-space reference candidate
+## Cross-space references
 
-The Core0.47 producer adds guarded outgoing links between objects, Wiki pages,
+App0.65 adopts released Core0.47 for guarded outgoing links between objects, Wiki pages,
 sources, entities and claims. REST/MCP list only current authorized summaries in
 explicitly selected target spaces; content reads remain independently authorized.
 There are no browser panels. [The contract](docs/cross-space-references-plan.md)
 separates producer validation, immutable release, consumer adoption and deployment.
-The Core0.47 producer retains separate publication, released-consumer and live
-acceptance gates; the accepted installation remains app0.64/Core0.46.
+Released-consumer acceptance is tracked separately. The accepted installation
+remains app0.64/Core0.46; live deployment remains separately authorized.
 
 ## Roadmap and project status
 
