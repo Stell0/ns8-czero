@@ -11,8 +11,9 @@ source/target selectors. References confer no authority or evidence. Preserve
 metadata-free storage, both-endpoint read checks, blind source-owned deletion,
 credential bindings and revocation lock order. The released consumer lock and
 installed runtime remain separate from this producer candidate. The current
-consumer manifest pins Core0.46 after PR115; preserve that lock and the genuine
-app0.63/Core0.45 native predecessor when validating the feature.
+consumer manifest pins Core0.46 after PR115; preserve that lock and the feature
+candidate's frozen app0.63/Core0.45 native evidence. The accepted installation
+below is the next genuine predecessor for a future live upgrade.
 
 Retrieval evidence producer work is tracked in
 [its contract](docs/retrieval-evidence.md): Core0.46/schema0037, plugin1.9,
@@ -20,13 +21,18 @@ bounded whitespace normalization, one exact supporting passage and opt-in
 `context-v1` embedding inputs. Preserve legacy profiles and the released consumer
 lock. Source implementation does not authorize live activation or publication.
 
-The current accepted dedicated installation is app **0.61.0**, released Core
-**0.42.0**, schema **0034**, source `827fbde711325a2f67b08ca7fee3d9ac5e950b67`.
-Its supported C0-only backup/update, manager restart, preservation, live HTTP/MCP
-and root-journal acceptance are recorded in
-[PLAN](PLAN.md#openai-system-one-scoring--accepted-delivery). Freeze its installed
-CI tag/digests as the next genuine predecessor. Retain the prior `a8bb2e8`
-installation, immutable Core release and all earlier evidence.
+The current accepted dedicated installation is app **0.64.0**, released Core
+**0.46.0**, schema **0037**, source `a106f188d362fa02574972662f84bb3fc93774af`.
+Exact main full43117140826, canonical publication, independent native/artifact
+inspection and six registry alias reads pass. Supported C0-only backup/update,
+manager restart, data/authority/settings/schedule/unrelated-inventory preservation,
+actual released Git Core and live OAuth/HTTP/MCP/root-journal checks pass. See
+[the accepted deployment](PLAN.md#native-oauth-accepted-deployment). Freeze its
+three installed digests and CI tag as the next genuine upgrade predecessor.
+Preserve actual predecessor `1db37f4` / app0.63/Core0.45/schema0036 and all older
+images/evidence. The existing embedding profile remains legacy with no reindex.
+Core0.47 producer work, its publication/consumer adoption and live activation
+remain separate; documentation markers do not replace the installed images.
 
 Core0.44.0 is immutably published at `bb882504fb5ab3b94f10bd1d286b06fa81b004ea`
 after PR99's regular merge, full PostgreSQL/native/browser/artifact gates and
@@ -34,7 +40,8 @@ publisher42407305955. It adds schema0036 document BM25 and preserves exact
 citations. App0.62 adopts the released tag/lock through regularly merged PR100
 with exact consumer full/native/browser/image acceptance. Main42413222963,
 independent artifact audit, full promotion proof and six registry alias reads
-pass. Production remains app0.61/Core0.42 as recorded above.
+pass. That source/publication checkpoint did not itself change the installation;
+the current accepted runtime is recorded above.
 See [BM25 acceptance](PLAN.md#document-bm25--released-core-consumer-adoption).
 
 ## Product purpose
@@ -357,7 +364,10 @@ upgrade, full import and schedules require separate authorization.
 
 ## Accepted baseline and preserved evidence
 
-The accepted dedicated runtime is app **0.57.0**, released Core **0.37.0**,
+The current runtime is [recorded above](PLAN.md#native-oauth-accepted-deployment).
+The following 4 November checkpoint remains historical evidence.
+
+That accepted dedicated runtime was app **0.57.0**, released Core **0.37.0**,
 schema **0030**, source `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` after the
 separately authorized 4 November update and manager restart. See [exact installed
 identities and predecessor](PLAN.md#ingestion-deployed-runtime-and-frozen-predecessor--4-november-2026).
