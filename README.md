@@ -162,8 +162,9 @@ sources, entities and claims. REST/MCP list only current authorized summaries in
 explicitly selected target spaces; content reads remain independently authorized.
 There are no browser panels. [The contract](docs/cross-space-references-plan.md)
 separates producer validation, immutable release, consumer adoption and deployment.
-Released-consumer acceptance is tracked separately. The accepted installation
-remains app0.64/Core0.46; live deployment remains separately authorized.
+[Released-consumer full/native and publication acceptance](PLAN.md#released-core047-consumer-acceptance)
+passes. The accepted installation remains app0.64/Core0.46; live deployment
+remains separately authorized.
 
 ## Roadmap and project status
 

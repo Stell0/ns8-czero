@@ -4,19 +4,20 @@ Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and
 independent application consent scopes; do not reuse role labels for scopes.
 
-Cross-space reference producer work is tracked in
-[its contract](docs/cross-space-references-plan.md): Core0.47/schema0038,
-plugin1.10, five stable endpoint kinds, outgoing-only summaries and explicit
-source/target selectors. References confer no authority or evidence. Preserve
-metadata-free storage, both-endpoint read checks, blind source-owned deletion,
-credential bindings and revocation lock order. App0.65 adopts released
-Core0.47.0 at `884ff312c18fbc18bb613137bbb6ced17df6cfb0`, schema0038,
-with matching patch-only updater bounds. Keep the Core package tree identical
-to that immutable release and preserve all frozen producer/consumer candidates
-and native evidence. The accepted installation in
+Cross-space references complete M0–M4: [contract](docs/cross-space-references-plan.md)
+and [released-consumer acceptance](PLAN.md#released-core047-consumer-acceptance).
+Core0.47/schema0038 and plugin1.10 support five stable endpoint kinds with outgoing
+summaries and explicit source/target selectors. References confer neither authority
+nor evidence. Preserve identity-only edges, current both-endpoint read checks,
+blind source-owned deletion, credential bindings and revocation lock order.
+App0.65 adopts released Core0.47.0 at
+`884ff312c18fbc18bb613137bbb6ced17df6cfb0`, with matching patch-only updater bounds.
+Keep the Core package tree identical to that immutable release and preserve all
+frozen producer/consumer candidates and native evidence. Main0daf8a0 passes full/
+native acceptance, canonical publication, independent artifact/promotion checks
+and six fresh registry reads. The accepted installation in
 [PLAN's current baseline](PLAN.md#current-baseline) remains the next genuine
-predecessor. Require current released-consumer/image/native acceptance before
-promotion; no live deployment is included.
+predecessor. No live deployment or browser reference panels are included.
 
 ## Current state and precedence
 

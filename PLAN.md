@@ -93,6 +93,81 @@ reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
 Core publication, released consumer adoption and live deployment retain separate
 acceptance gates. No browser panels or live changes are included.
 
+### Released Core0.47 consumer acceptance
+
+App **0.65.0**, independently released Core **0.47.0** and schema
+**0038_cross_space_references** complete M0–M4. This is source and publication
+acceptance. The installed baseline remains app 0.64/Core 0.46 at `a106f18`. Live
+deployment and browser panels remain separate M5 work.
+
+Producer [PR119](https://github.com/Stell0/ns8-czero/pull/119) regularly merges as
+`08e979c`. Exact producer full 43118191778, actual main full 43125359808,
+independent downloaded native/privacy/scan audits, full promotion and six fresh
+canonical registry reads pass. Immutable Core tag `core-v0.47.0` stays at
+`884ff312` with package tree `038af088d8155be709ff9d7a839b7f0155f28528`. Publisher
+43125626421 and independently downloaded wheel/archive checksums pass. Retain the
+frozen producer, successor, failed query-plan/fixture/environment runs and earlier
+native evidence.
+
+Consumer [PR128](https://github.com/Stell0/ns8-czero/pull/128):
+`8167f12cc663445bba4f70efbc8c9ce2753a3936`, regular merge
+`0daf8a0ef6bb9c570c139e60ae6351f46c17e19a`, exact full
+[43141979583](https://github.com/Stell0/ns8-czero/actions/runs/43141979583) and
+actual main full
+[43148755615](https://github.com/Stell0/ns8-czero/actions/runs/43148755615). HEAD
+and merge trees match. Actual published/native app images select released Core
+from the frozen Git lock, verify its immutable `884ff312` identity and schema
+0038, bind all three reference routes and contain no NS8 SDK. The final native
+predecessor is the separately accepted app 0.64, Core 0.46/schema 0037 `a106f18`
+installation, using all three verified immutable images. Reference rows and
+non-resurrecting replay receipts survive the native clean restore on both
+distributions.
+
+Exact-source full checks pass 3379 Python/PostgreSQL/packaging, 43
+document-browser, 40 website-browser, 28 Vue unit cases and 21 Robot dry runs.
+Independent downloaded audits pass Debian 21 and Rocky 26/three expected skips,
+all eight native browser/privacy workflows, 30 accessibility contexts, five
+scan/SBOM pairs, three query-audited artifacts and zero OAuth-query candidates.
+Exact-source full promotion passes. All six fresh main/latest alias reads match
+these accepted immutable identities. The source tag is
+`ci-0daf8a0ef6bb9c570c139e60ae6351f46c17e19a-43148755615-1`.
+
+| Image | Accepted publication digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:56dfa3144f5fbc8c8ee984f02261f98e48da15c8310d2d41e57f7bb7ec5aff69` |
+| `ghcr.io/stell0/czero-app` | `sha256:0a45ef93c9c3fa9b1cd39373c64366dad32448fc754ab1291b3d3ed83769e2b3` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:ed2278da16eca349c6fa019c4a5f03426dc04f06c76f59efee4851016b8c2e91` |
+
+The complete actual released-Git suite also passes 3365 cases without database
+skips at frozen `c1aba893`; app/Core code is byte-identical to the final consumer.
+The identical final file tree passes 440 affected released-Git cases and 9
+documentation tests; the exact source also passes 225 source/policy/documentation
+cases, 21 Robot dry runs, 743 local links and actual Renovate 44.161.0 patch/minor
+bounds. All other locked runtime versions remain frozen.
+
+The same frozen benchmark driver completes 30 Option-A independent-resolution
+groups with 20 warmups, 200 measured calls, three repetitions and concurrency 1/5.
+For 100 mixed targets/ten spaces its median-repetition P95 is 796.9/2219.4 ms,
+with 2100 SQL statements. These reads fetch complete resources; the new reference
+list returns summaries, so they are workload controls rather than identical
+payload comparisons. The new active matrix has 1782 groups, max P95 60.6 ms,
+constant session/OAuth/key SQL counts 15/25/14 and 377218 peak allocated bytes.
+All 72 same-space control comparisons pass; max P95 increase 2.1 ms. Frozen
+`884ff312` missing/sparse fixtures pass 36 groups each, with max P95 31.2/102.7 ms
+and no post-revocation items, deadlocks or timeouts.
+
+The frozen acbfdfb actual released-Git signed REST diagnostic interleaves hidden,
+missing-resource and missing-space creates: 20 warmups and 200 calls per variant
+in each of three repetitions. All return identical 404 bodies and no-store; P95
+spans 21.7–22.4 ms. This is a gross local timing observation, not constant-time or
+production latency proof. The existing connected account profile read still works;
+its unchanged installed catalog correctly does not advertise references. No
+connection identity, consent, live source, data, schedules or installed image is
+changed by this acceptance. No stable NS8 module release is claimed.
+
+The following candidate checkpoints are retained as history; this accepted
+checkpoint supersedes their pending source/publication gates.
+
 ### Released Core0.47 consumer candidate
 
 [PR119](https://github.com/Stell0/ns8-czero/pull/119) regularly merges as
