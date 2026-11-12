@@ -16,6 +16,7 @@ export function keyRequest(
   form: {
     name: string
     days: string
+    neverExpires: boolean
     write: boolean
     selected: Record<string, boolean>
   },
@@ -23,10 +24,16 @@ export function keyRequest(
 ) {
   const result = v.safeParse(schema, {
     name: form.name,
-    lifetime_days: form.days.trim() ? Number(form.days) : null,
+    lifetime_days: form.neverExpires ? null : Number(form.days),
     space_ids: Object.keys(form.selected).filter((id) => form.selected[id]),
   })
-  if (!result.success) throw new ApiError(422)
+  if (!result.success)
+    throw new ApiError(
+      422,
+      result.issues.some((issue) => issue.path?.[0]?.key === 'lifetime_days')
+        ? 'key_lifetime'
+        : '',
+    )
   if (
     result.output.space_ids.some(
       (id) =>

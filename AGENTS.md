@@ -20,6 +20,11 @@ Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and
 independent application consent scopes; do not reuse role labels for scopes.
 
+API key creation defaults to 90 days, with a visible 1–365-day range. No expiration
+requires the explicit Never expires choice; blank input must not imply indefinite
+authority. Preserve the existing nullable lifetime API and current scope/space,
+permission-revision and revocation checks.
+
 Cross-space references complete M0–M4: [contract](docs/cross-space-references-plan.md)
 and [released-consumer acceptance](PLAN.md#released-core047-consumer-acceptance).
 Core0.47/schema0038 and plugin1.10 support five stable endpoint kinds with outgoing

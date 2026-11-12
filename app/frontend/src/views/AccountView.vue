@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import {
@@ -12,7 +12,7 @@ import {
 } from '@nethesis/vue-components'
 import { useDraftGuard } from '../composables/draft'
 import { keyRequest } from '../api/key-form'
-import { boundary, request } from '../api/client'
+import { ApiError, boundary, request } from '../api/client'
 import { useResource } from '../api/queries'
 import { useSession } from '../stores/session'
 import { usePreferences } from '../stores/preferences'
@@ -53,6 +53,7 @@ const keys = useResource(
 const create = ref(false),
   name = ref(''),
   days = ref('90'),
+  neverExpires = ref(false),
   write = ref(false),
   selected = ref<Record<string, boolean>>({}),
   secret = ref('')
@@ -73,6 +74,8 @@ function openCreate() {
   keyDraft++
   name.value = ''
   days.value = '90'
+  neverExpires.value = false
+  creation.reset()
   write.value = false
   selected.value = {}
   secret.value = ''
@@ -95,6 +98,7 @@ const creation = useMutation({
           {
             name: name.value,
             days: days.value,
+            neverExpires: neverExpires.value,
             write: write.value,
             selected: selected.value,
           },
@@ -110,6 +114,11 @@ const creation = useMutation({
     // Do not return the secret to Colada's mutation cache.
   },
 })
+const lifetimeError = computed(
+  () =>
+    creation.error.value instanceof ApiError &&
+    creation.error.value.code === 'key_lifetime',
+)
 const confirmationDraft = useDraftGuard([confirm])
 const removal = useMutation({
   mutation: async () => {
@@ -239,7 +248,11 @@ const removal = useMutation({
             class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default p-4"
           >
             <span
-              >{{ key.name }} · {{ key.scopes.join(', ')
+              >{{ key.name }} · {{ key.scopes.join(', ') }} ·
+              {{
+                key.expires_at
+                  ? t('account.keyExpires', { date: date(key.expires_at) })
+                  : t('account.neverExpires')
               }}<span v-if="key.revoked_at">
                 · {{ t('account.revoked') }}</span
               ></span
@@ -277,7 +290,7 @@ const removal = useMutation({
         @submit.prevent="!creation.isLoading.value && creation.mutate()"
       >
         <ErrorNotice
-          v-if="creation.error.value"
+          v-if="creation.error.value && !lifetimeError"
           :error="creation.error.value"
         />
         <NeTextInput
@@ -288,8 +301,20 @@ const removal = useMutation({
         <NeTextInput
           v-model="days"
           :label="t('account.days')"
-          :disabled="creation.isLoading.value"
+          :helper-text="t('account.daysHelp')"
+          :invalid-message="lifetimeError ? t('account.daysInvalid') : ''"
+          :aria-invalid="lifetimeError"
+          :disabled="creation.isLoading.value || neverExpires"
+          @update:model-value="creation.reset()"
         />
+        <NeCheckbox
+          v-model="neverExpires"
+          :label="t('account.neverExpires')"
+          :disabled="creation.isLoading.value"
+          @update:model-value="creation.reset()"
+        >
+          <template #description>{{ t('account.neverExpiresHelp') }}</template>
+        </NeCheckbox>
         <NeCheckbox
           v-model="write"
           :label="t('account.write')"

@@ -6,8 +6,23 @@ reference application; standalone forks provide their own transport and account 
 API keys let automation call REST and MCP without an interactive login or token
 refresh. Sign in and open **Account → API keys**. Enter a name, choose Read or
 Read and write, explicitly select allowed spaces, and choose an expiration.
-The default is 90 days; one year and an explicit No expiration option are available.
+The default is 90 days. Enter a whole number from 1 to 365 or select **Never
+expires**. The form shows this range and rejects blank or out-of-range values;
+only the explicit checkbox creates a key without expiration. The list shows each
+key's expiration date or **Never expires**.
 Copy the new key immediately. C0 stores its hash and cannot show it again.
+
+The 365-day maximum is a validation policy shared by Core, REST and the website,
+not a database limit. Increasing finite lifetimes requires changing those checks
+together and publishing/adopting a new Core release. No-expiration keys already
+use the supported null lifetime and need no migration.
+
+A non-expiring key has no automatic time limit on misuse after theft. Prefer an
+expiring key when rotation is practical. For unattended workflows that need no
+expiration, restrict the key to the necessary spaces and Read scope when possible,
+store it in a secret manager, and revoke it when the workflow ends or exposure is
+suspected. Write keys also permit changes to the selected knowledge. Current C0
+permission checks and revocation still apply to non-expiring keys.
 
 Keys act as their creator and have no administration scope. They cannot exceed
 the creator's current permissions or enter a space outside their selected list.

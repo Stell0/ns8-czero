@@ -1,5 +1,27 @@
 # C0 roadmap
 
+## API key expiration form — implementation candidate
+
+Based on original main `38c28bc`. Expose the existing nullable API key lifetime
+as an explicit Never expires checkbox; retain the 90-day default and 1–365-day
+finite range. Blank input must not silently create a permanent credential. Show
+the range beside the field and in its validation error, in English and Italian.
+Explain indefinite exposure and show expiration in the key list. Core, schema,
+REST/MCP contracts and released dependency identities remain unchanged.
+
+Acceptance: form boundary tests, translated browser requests and keyboard/theme/
+mobile checks, existing real-backend creation/revocation coverage extended to
+no-expiration keys, website checks and required full native CI. No live update
+is authorized by this work.
+
+Local candidate checks pass on Node24.22.2: lint/format/types/build,29 unit cases,
+55 website browser cases,11 released-Core API key/PostgreSQL cases and six real
+HTTPS/browser creation/revocation/theme/accessibility cases, without database
+skips. Original-main website checks/28 unit cases and11 API key integration
+cases pass. Production npm audit reports zero findings; documentation validates
+747 local links. Full Debian/Rocky CI remains required before merge. Initial
+browser assertion/setup failures are retained privately.
+
 <a id="self-service-read-and-space-audiences--released-consumer-candidate"></a>
 
 ## Self-service Read and space audiences — accepted source
