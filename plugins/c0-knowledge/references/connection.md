@@ -2,7 +2,7 @@
 
 The instance URL and registered app ID are in `instance.md`. Check that the user selected that app. Never choose a similarly named C0 connection automatically.
 
-1. An instance administrator configures trusted public HTTPS, NethServer sign-in. New verified users normally receive Reader access to Shared and spaces open to all signed-in users; explicitly blocked users stay blocked.
+1. An instance administrator configures trusted public HTTPS and NethServer sign-in. New verified users normally receive Reader access to Shared and spaces open to all signed-in users; explicitly blocked users stay blocked.
 2. In ChatGPT web, open Plugins → personal → + → Add custom MCP server. Use this instance's `/mcp` URL, OAuth and CIMD, with no static client ID or secret.
 3. A validated new HTTPS metadata client can connect for Read after company sign-in and explicit user consent. No administrator review is needed for Read. Read consent covers every space the user can read. Disabled applications, blocked users and changed metadata requiring review remain unavailable.
 4. When an application requests Read alongside additional permissions, continue with Read immediately. Write and Manage require administrator approval, sufficient user permissions and fresh consent. Requests expire after five minutes; restart Connect if necessary. Malformed requests and wrong callbacks/resources still fail. There is no discovery toggle, including after an upgrade or restore.

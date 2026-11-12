@@ -1,61 +1,76 @@
 # C0 roadmap
 
-## Self-service Read and space audiences — implementation candidate
+## Self-service Read and space audiences — released-consumer candidate
 
-Based on original main6e9554c. New HTTPS metadata clients use verified first-party
-sign-in and explicit Read consent without administrator review. The discovery
-switch is removed for both new and upgraded/restored installations. Explicit
-user blocks, disabled applications, metadata review, scopes and credential
-bindings remain enforced. Space audiences add authenticated baseline Read with
-revisioned Admin changes; existing protected spaces remain restricted. The
-whole readable space is included, and tightening revokes affected credentials.
+Based on original main `6e9554c95d5317feb82d262f0d83d21658d13b44`. Validated
+new HTTPS metadata clients receive Read after company sign-in and explicit consent,
+without administrator review. The discovery switch is removed on new, upgraded
+and restored installations. Preserve account blocks, disabled clients, metadata
+review, exact callbacks, actual scopes and credential ceilings. Space audiences
+add baseline Reader access for admitted users; existing protected spaces stay
+restricted. The whole readable space is included. Tightening access retires
+affected credentials, and reopening cannot revive them.
 
-Development evidence: original-main authentication baseline56 passes in an
-independent database; focused review108 and final focused101 pass. Node24 website
-checks pass28 unit cases and47 interactions; four audience cases also pass after
-draft guards with inspected phone/desktop theme screenshots. Signed HTTPS browser
-acceptance passes12, including Reader/Admin self-service Read issuance. Native UI
-controllers28, action schemas and745 documentation links pass. Final fast checks
-pass1741 locally. These counts overlap and are not an aggregate acceptance total.
+Producer `2f40ffeb2acac807f485f7bde7f97651e7d9d8bf` passes full
+[43209361920](https://github.com/Stell0/ns8-czero/actions/runs/43209361920), the
+actual C0 gate, independent downloaded native/privacy/image/recovery audit and
+exact-source promotion. Evidence includes3376 actual Python/PostgreSQL/packaging
+cases without skips,47 website interactions,44 document-browser cases,28 Vue unit
+cases,28 native controllers and21 Robot dry runs. Native reports pass Debian21
+and Rocky26/three expected skips,all eight browser/privacy workflows,30 numeric
+accessibility contexts,five scan/SBOM pairs and zero OAuth-query candidates.
+The native Read proof reads authored Wiki content with a real self-service Read
+token and preserves the audience after restart. Optional screenshot publication403
+is nonblocking. The original-main authentication baseline56 and focused successor90
+also pass in separate databases; these counts overlap, not an aggregate total.
 
-Draft PR130 sourceb76220b's fast43188463675 fails three native-fixture expectations:
-two retained Core0.47 bindings and one missing mocked SDK cleanup operation. The
-successor corrects them without changing or cancelling the failed evidence.
-The broad development run retains3333 passes/35 failures/three errors. Its
-successors correct stale approval/plugin/schema expectations, seed historical
-layouts with the installed released predecessor's space authorization, and avoid
-PYTHONPATH contamination of independent predecessor processes. The OCR/PDF and
-independent packaging container rerun passes41; migration reruns pass31 plus the
-three corrected populated compilation predecessors. The automatic-preparation
-queue guard passes80 database cases; updated frontend interactions pass47 and
-native fixture/controller regressions pass53. Unchanged-authority policy metadata refresh preserves audience drafts and their original revisions; the four browser audience cases include stale-save rejection. These are overlapping development
-checks, not an exact-source full/native acceptance claim.
+Keep the immutable producer tag
+`ci-2f40ffeb2acac807f485f7bde7f97651e7d9d8bf-43209361920-1` and its images:
 
-Native acceptance now requires real first-use Read issuance through the fixed
-public HTTPS metadata fixture, Reader access to an authenticated-reader space,
-explicit additional Write review without changing the Reader role, and audience
-preservation after restart. Full exact-source producer, native and released
-consumer acceptance remains required.
+| Image | Producer digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:59d8ecc389332eb5303d42e2fd9808979bddc9fbf4ff3dbf3d36c81db5637b68` |
+| `ghcr.io/stell0/czero-app` | `sha256:1bdf027b509cdc2339a4de309f95decaa002b273ef30b2492d0f06e92e6138a2` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:c2eee554a3e59488296313339f4a25190e048a477d815ee9e2dc118bafd9a625` |
 
-Frozen source `6ff42f227cf3918195112a7f3998aa33d6e232bb` passes3375 actual
-Python/PostgreSQL/packaging cases without skips in both the independent OCR
-container and hosted full acceptance. Hosted website interactions47 and document
-browsers44 pass. Full run43199706723 fails Rocky's saved-settings browser case,
-which still tries to click the retired discovery switch: Debian21 passes;
-Rocky25 passes/three expected skips/one failure. Its new self-service Read,
-audience and all ten people-access stages pass. Preserve that failed run and
-candidate images. The successor asserts the setting is absent before and after
-reload, reads a real authored page through default Read, and checks audience
-tightening/reopening against actual delegated credentials. This is not accepted
-full/native evidence; immutable Core publication remains blocked pending a
-successful successor and independent artifact/promotion audits.
-The successor's focused signed-HTTP, space, onboarding and native-controller
-regressions pass90 cases; all21 Robot non-browser dry runs pass. These focused
-checks do not replace its required fresh full/native run.
+[Core0.48.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.48.0),
+schema0039, is independently published from that exact source by
+[43218817753](https://github.com/Stell0/ns8-czero/actions/runs/43218817753).
+Downloaded checksums, standalone wheel/archive metadata, license and packaged
+migration inspection pass. The publisher passes all8 package checks, including
+provided-artifact rebuilds, isolated installs and migration/recovery. Wheel SHA256
+`b53578ea2337ff1cdb8ec0c2bc5ec9a16e69f6ee1e09363cc4952fede5a6f284`;
+archive SHA256
+`add66e2cc335b4219927f9c204b06d2d4dc1afcac2f2eec5b9e3f38626e1512d`.
+Never move the tag or replace its assets. The Core package tree is
+`9bec54862b9f00364943b908d78ff601ffd650f7`.
 
-Producer development and regression validation are in progress. Core publication,
-released-consumer adoption, exact-source full/native acceptance and upstream
-review remain required. No live deployment or existing-space audience change is claimed.
+App0.66 stages the released Git tag/lock with `>=0.48.0,<0.49.0` and matching
+patch-only updater bounds. Other runtime dependencies remain frozen. Its actual
+released-image probe must bind schema0039, self-service admission and the space
+access route without a database or model execution. Final current-source
+released-consumer/full/native/artifact/promotion and upstream review remain
+required. Producer acceptance is not released-consumer deployment proof.
+The actual frozen Git consumer passes143 focused authorization, HTTP, onboarding,
+source/lock, release-policy, native-contract and documentation cases. Its runtime
+probe verifies the immutable Git identity and new route binding; the source
+selector returns released and only the app/Core lock entries change. A separate
+local artifact reinstall attempt fails on container PyPI connection timeouts;
+retain its log without counting it as a pass. It does not replace the publisher's
+successful exact-artifact package checks or the required consumer native gate.
+
+Retain failed development/native evidence: b76220b fast43188463675 had stale native
+health/mock expectations; broad development had3333 passes/35 failures/three errors
+before fixture corrections and isolated predecessor environments. The standalone
+OCR/packaging rerun passes41. Frozen6ff42f2 passes3375 regressions but full43199706723
+fails Rocky's saved-settings browser case, which still clicked the retired switch:
+Debian21 passes;Rocky25 passes/three skips/one failure. Its new Read/audience and
+ten access stages pass. The accepted successor asserts switch absence before and
+after reload and checks real Wiki bodies plus audience-bound OAuth retirement.
+Preserve those commits, images and failed/private logs.
+
+No live deployment, existing-space audience change, connector consent expansion
+or installed-baseline change is claimed.
 
 ## Native OAuth accepted deployment
 

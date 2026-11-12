@@ -25,7 +25,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0038_cross_space_references'
+assert SCHEMA_REVISION == '0039_space_audiences'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
@@ -54,4 +54,12 @@ install_references(application, None, None, lambda: None, lambda: None)
 assert isinstance(application.state.cross_space_references, CrossSpaceReferenceService)
 assert len([route for route in application.routes
             if route.path == '/api/v1/cross-space-references']) == 3
+from czero_core.spaces import SpaceService
+from czero_core.client_onboarding import ClientOnboardingService
+from czero_app.spaces import install_space_routes
+install_space_routes(application, None, None, lambda: None, lambda: None)
+assert isinstance(application.state.spaces, SpaceService)
+assert callable(SpaceService.set_access) and callable(ClientOnboardingService.register_reader)
+assert len([route for route in application.routes
+            if route.path == '/api/v1/spaces/{space_id}/access']) == 1
 print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')

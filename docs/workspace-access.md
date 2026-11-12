@@ -89,7 +89,7 @@ application's connections, without blocking its users. Enabling it later permits
 fresh consent and does not revive old credentials. Manually approved UUID clients
 remain independent of self-service metadata clients.
 
-Use **Protected spaces** for space-specific grants and **Background work** for
+Use **Spaces** for space-specific grants and **Background work** for
 jobs and schedules. The Workspace access page does not load background tasks. The **Skip to content**
 link keeps you on the current page and preserves the selected space.
 A user's **Account → Your connected apps** still manages their own connections.

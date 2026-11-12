@@ -1,10 +1,14 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-Self-service Read is an implementation candidate: preserve explicit blocks, disabled
-clients, metadata-review holds and credential ceilings. Space audiences give
-baseline Read only; existing protected spaces stay restricted on migration.
-The old discovery toggle is retired, including on upgrade/restore. Release and
-consumer adoption gates remain open; see PLAN.
+Self-service Read and space audiences use independently published Core0.48.0 /
+schema0039 at `2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`. App0.66 stages its
+released tag/lock with `>=0.48.0,<0.49.0` and matching patch-only updater bounds.
+Keep its Core package tree identical to the immutable release. Producer/full/native
+43209361920 and publisher43218817753 pass; final released-consumer acceptance
+remains required. Preserve explicit blocks, disabled clients, metadata-review
+holds and credential ceilings. Space audiences give baseline Read only; existing
+protected spaces stay restricted. The discovery toggle is retired on upgrade and
+restore. Preserve all failed candidates and installed identities; see PLAN.
 
 Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and
@@ -18,8 +22,8 @@ nor evidence. Preserve identity-only edges, current both-endpoint read checks,
 blind source-owned deletion, credential bindings and revocation lock order.
 App0.65 adopts released Core0.47.0 at
 `884ff312c18fbc18bb613137bbb6ced17df6cfb0`, with matching patch-only updater bounds.
-Keep the Core package tree identical to that immutable release and preserve all
-frozen producer/consumer candidates and native evidence. Main0daf8a0 passes full/
+Keep the current Core tree identical to its active immutable consumer release;
+preserve earlier producer/consumer candidates and native evidence. Main0daf8a0 passes full/
 native acceptance, canonical publication, independent artifact/promotion checks
 and six fresh registry reads. The accepted installation in
 [PLAN's current baseline](PLAN.md#current-baseline) remains the next genuine
