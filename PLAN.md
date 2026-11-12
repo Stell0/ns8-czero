@@ -136,7 +136,17 @@ font failures and repeat with the compiled frontend. The corrected successor
 passes211 actual released-Git page/font, reference, authorization, SDK and
 source/lock tests, plus the native Renovate44.161.0 bounds check. Runtime dependencies,
 Core bytes and acceptance limits remain unchanged.
-Keep the genuine app0.63/Core0.45 predecessor and all its frozen image identities.
+Latest original main1e99d7d records the independently authorized accepted
+app0.64/Core0.46/schema0037 installation. Preserve that deployment record and
+all app0.63/Core0.45 frozen feature evidence. The new consumer successor uses
+the accepted a106f18 installation's three immutable digests as its genuine
+native predecessor, exercising actual schema0037→0038 update/restore. It adds
+no live deployment authority. Core bytes, lock, app code and prior acceptance
+runs remain unchanged. The successor passes217 actual released-Git reference,
+page/font, SDK, source, predecessor and release-policy cases,21 Robot dry runs,
+730 documentation links and the real Renovate44.161.0 bounds check. Independent
+registry reads bind all three predecessor digests and source labels to a106f18.
+Fresh exact-source full/native acceptance remains required.
 Migration0038 adds an empty reference table; no existing content, grants, scopes,
 connections or schedules are changed. Full released-consumer/native/image and
 main publication gates remain required. No installed baseline changes, browser
