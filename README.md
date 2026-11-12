@@ -117,11 +117,13 @@ Follow [installation and administration](docs/administration.md) and the [candid
 
 ## Connect your AI assistant
 
-The native OAuth callback repair is staged in the Core producer source. Approved
-portless HTTP loopback callbacks accept a client-selected port while preserving
-host/path checks and exact code redemption. Released Core adoption and installed
-Claude Code acceptance remain separate; this source fix does not update a live
-instance. See the [repair acceptance plan](PLAN.md#native-oauth-callback-repair).
+The native OAuth callback repair is delivered in released Core0.46.0 and the
+accepted app0.64.0 dedicated deployment. Approved portless HTTP loopback callbacks
+accept a client-selected port with host/path, explicit consent and exact code
+redemption checks. The [accepted deployment record](PLAN.md#native-oauth-accepted-deployment)
+contains its checked source and immutable images. Start a fresh authorization
+flow if an earlier request expired; a new application can still need administrator
+approval. Actual Claude Code end-user acceptance remains a separate check.
 
 Open **Use with AI** at `https://c0.example.org/agents` on your instance. Copy its canonical `/mcp` URL, configure your client's OAuth connection, sign in and consent to the required scopes. New clients can require administrator approval. Verify the returned profile and exact space before reading or writing.
 
@@ -160,7 +162,8 @@ sources, entities and claims. REST/MCP list only current authorized summaries in
 explicitly selected target spaces; content reads remain independently authorized.
 There are no browser panels. [The contract](docs/cross-space-references-plan.md)
 separates producer validation, immutable release, consumer adoption and deployment.
-The released consumer and installed runtime are unchanged.
+The Core0.47 producer retains separate publication, released-consumer and live
+acceptance gates; the accepted installation remains app0.64/Core0.46.
 
 ## Roadmap and project status
 

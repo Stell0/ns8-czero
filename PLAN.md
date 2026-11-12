@@ -1,5 +1,89 @@
 # C0 roadmap
 
+## Native OAuth accepted deployment
+
+The separately authorized 12 November update installs app **0.64.0**, released
+Core **0.46.0**, schema **0037_embedding_context**, source
+`a106f188d362fa02574972662f84bb3fc93774af`. This is the installed baseline;
+later producer work and Git-only documentation markers retain separate acceptance
+and deployment gates.
+
+[PR115](https://github.com/Stell0/ns8-czero/pull/115) regularly merges the released
+consumer as `505b8ee`. [PR113](https://github.com/Stell0/ns8-czero/pull/113) repairs
+cumulative-role browser assertions and the Debian image URL, then regularly
+merges as `a106f18`. Its accepted `5af2aba` candidate and that main source have
+identical Git trees. Full
+[43117140826](https://github.com/Stell0/ns8-czero/actions/runs/43117140826), the
+actual C0 gate, canonical publication, independent downloaded native/artifact
+inspection and six fresh registry alias reads pass. Evidence includes 3294
+Python/PostgreSQL/packaging cases without skips, 43 document-browser cases,
+40 website-browser cases, 28 Vue unit cases and 21 Robot dry runs. Actual native
+reports pass Debian upgrade 21 and Rocky installation 26/three expected skips,
+all eight browser/privacy workflows, 30 accessibility contexts, five scan/SBOM
+pairs and zero OAuth-query candidates. The dated Debian image uses its published
+SHA512 verification. Retain earlier DNS/artifact-outage and cloud-image404 runs;
+optional PR screenshot publication403 remains nonblocking.
+
+Freeze the installed tag `ci-a106f188d362fa02574972662f84bb3fc93774af-43117140826-1`
+and these identities as the next genuine upgrade predecessor:
+
+| Image | Installed digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:ef32840cf6b92730f80decb8c45ac3b1d0076bb7ed0623b5b7fb5869b8820714` |
+| `ghcr.io/stell0/czero-app` | `sha256:05e37d34478b14f6d5ac24f1c72a88f9777aa64270940d8007a537fcdb681185` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:bee0fac158c41ae862a78464a94a6a950704e27de38a9b3213b5512d1b4abd00` |
+
+The actual published, native and installed app images verify released Git Core
+`d8ae98ca1a60e34803fa7ed04ea998c1f9dbb33a` from immutable
+[Core0.46.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.46.0),
+schema0037 and the loopback matcher, with no NS8 SDK or local-Core fallback.
+The one existing embedding profile remains legacy; extraction/reindex counts
+stay unchanged. Core0.47/schema0038 cross-space references remain separate
+producer work and are absent from this installed source.
+
+The genuine inspected predecessor is app0.63.0/Core0.45.0/schema0036, source
+`1db37f409af756212dc005d160302d01eff23098`, tag
+`ci-1db37f409af756212dc005d160302d01eff23098-42437861637-1`. Keep its images
+and earlier accepted installation evidence, including the historical
+app0.61/Core0.42 record:
+
+| Image | Genuine predecessor digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:369d81853dc99d3710ea733fcb5d010256d699421728660ede4c9d15b74c3967` |
+| `ghcr.io/stell0/czero-app` | `sha256:9ee56e8f67564b1228e1abcb427a5ee25bbd01303058f1da11365288c387687b` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:0b91cd3e1e7da919bb0746c3f3d412c739b275b3e0de50b52ec0aecfe5123fad` |
+
+Supported C0-only backup and full Restic read-data verification pass before
+update. All 16 current backup definitions are restored exactly. Read-only
+preflight verifies 6587 complete sources, 451 multipart parents and no pending
+source replacements. A fresh 64-table/1,315,729-row snapshot binds preservation:
+55 tables retain exact row hashes; API-key authority matches the verified backup
+and only one last-used timestamp advances from live reads. This comparison uses
+offline selected-table extraction and parameterized read-only SQL, with no
+production restore. Schema revision, append-only job history, scheduler clocks
+and documented renewal fields receive separate checks. Knowledge cursors/events,
+credentials, settings, grants, schedules and all 11 unrelated module identities
+and flag sets are preserved. The source-original store remains empty.
+
+The supported immutable-digest update and `node/1/restart-module` pass. Actual
+installed image/Core identities, trusted HTTPS app/Core/schema readiness and all
+C0 units pass afterward. Fresh MCP discovery matches 121 capability operations
+under the existing key's scopes; the existing OAuth connection returns the same
+account before update, after update and after restart. Bounded root application
+journals contain 55 entries, three real health and 14 MCP positive controls, and
+zero credential/query/traceback candidates. The owned documentation-job lock is
+released; its files and definitions are retained. Private data, credentials,
+snapshot identities and raw operational evidence remain outside Git.
+
+Approved portless HTTP loopback callbacks accept the requested native port;
+explicit ports, host/path/resource, consent and exact token redemption retain
+their checks. Person roles use cumulative labels while application scopes remain
+independent. Actual end-user Claude Code approval/consent still needs a fresh
+interactive flow; native fixtures and signed HTTP tests do not establish that
+vendor-client acceptance. Broader packaged-skill/scheduled-client gates, Core0.47
+adoption and a stable NS8 module release remain separate. The interactive-browser
+and container CPU-quota waivers are unchanged.
+
 ## Secure cross-space references
 
 The operator-selected [implementation contract](docs/cross-space-references-plan.md)
@@ -134,7 +218,8 @@ five scan/SBOM pairs and zero OAuth-query candidates. The actual published app
 image contains released Git Core0.46.0 at `d8ae98c`, schema0037 and the matcher.
 Regular merge `505b8ee` preserves the candidate; its main
 [43105029868](https://github.com/Stell0/ns8-czero/actions/runs/43105029868)
-hits the same Debian cloud-image404. No live update is established.
+hits the same Debian cloud-image404. This is the historical consumer checkpoint;
+the accepted deployment is recorded in [the current baseline](#native-oauth-accepted-deployment).
 
 
 ## Native OAuth callback repair
