@@ -451,3 +451,13 @@ These aliases preserve incoming links; their content describes past acceptance.
 <a id="instruction-checkpoint--11-november-2026"></a>[Instruction checkpoint — 11 November 2026](docs/history/AGENTS.md#instruction-checkpoint--11-november-2026)
 
 </details>
+
+
+## Structured table browsing candidate
+
+Use the existing Nebula components for the schema-driven Tables reader. Discovery
+of populated types must authorize the selected space inside Core; global schemas
+remain global by default. Sorting/filtering precede pagination, use validated
+scalar fields, and retain stable ties. Preserve existing Explore URLs and current
+account/space response guards. See [the contract](docs/structured-tables.md).
+Core0.49 publication and released-consumer adoption remain separate gates.

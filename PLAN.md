@@ -3700,3 +3700,14 @@ does not replace current-source acceptance or grant deployment authority.
 
 The installed app0.57/Core0.37/schema0030 runtime at
 `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` remains the live baseline.
+
+
+## Generic structured tables — implementation candidate
+
+The operator selected Nebula and authorized implementation. Base is original
+main `6d505cb77aa383ae772b4538c64a7c1c29c6d88b`. The candidate adds space-scoped
+populated collection discovery, scalar server sorting, and a schema-driven Vue
+table browser with read-only details. See [the contract](docs/structured-tables.md).
+Core0.49 is a producer candidate; the immutable Core0.48 consumer lock is retained.
+Full native, immutable publication, consumer adoption and deployment are separate
+gates. No accepted runtime identity changes with this implementation.

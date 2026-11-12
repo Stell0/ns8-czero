@@ -130,3 +130,17 @@ def legacy_space_audience(operation):
     assert strip(projected['input_schema'], True) == (1 if operation['name'] == 'spaces_create' else 0)
     assert strip(projected['output_schema']) == 1
     return projected
+
+
+def legacy_table_input(schema, operation):
+    """Check additive browse parameters before retaining the frozen contract."""
+    projected = deepcopy(schema)
+    additions = ({'populated_only': {'type': 'boolean', 'default': False},
+        'space_id': {'anyOf': [{'type': 'string', 'format': 'uuid'}, {'type': 'null'}], 'default': None}}
+        if operation == 'object_types_list' else
+        {'sort': {'anyOf': [{'type': 'string'}, {'type': 'null'}], 'default': None},
+         'direction': {'enum': ['asc', 'desc'], 'type': 'string', 'default': 'asc'}})
+    for key, expected in additions.items():
+        assert key not in projected.get('required', [])
+        assert structural_schema(projected['properties'].pop(key)) == expected
+    return projected

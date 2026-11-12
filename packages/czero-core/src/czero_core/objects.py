@@ -84,9 +84,16 @@ class ObjectService(SpaceBound):
                 return dict(row)
         except IntegrityError: raise ObjectConflict() from None
 
-    def list_types(self,actor,*,limit=100,offset=0):
+    def list_types(self,actor,*,limit=100,offset=0,populated_only=False):
         page(limit,offset)
         with self.database.engine.connect() as c:
+            if type(populated_only) is not bool: raise ValueError('invalid_filter')
+            if populated_only:
+                self._authorize(c,actor,Role.READER)
+                return [dict(r) for r in c.execute(text('''SELECT t.* FROM c0_object_types t
+                    WHERE EXISTS (SELECT 1 FROM c0_objects o WHERE o.space_id=:space AND o.type_name=t.name)
+                    ORDER BY t.name LIMIT :limit OFFSET :offset'''),
+                    {'space':self._space(c),'limit':limit,'offset':offset}).mappings()]
             self._authorize_types(c,actor,Role.READER)
             return [dict(r) for r in c.execute(text('SELECT * FROM c0_object_types ORDER BY name LIMIT :limit OFFSET :offset'),
                 {'limit':limit,'offset':offset}).mappings()]
@@ -112,7 +119,7 @@ class ObjectService(SpaceBound):
             self._authorize(c,actor,Role.READER)
             return dict(self._get(c,object_id))
 
-    def list(self,actor,type_name,*,limit=50,offset=0,where=None,tag=None):
+    def list(self,actor,type_name,*,limit=50,offset=0,where=None,tag=None,sort=None,direction="asc"):
         page(limit,offset)
         where={} if where is None else bounded_json(where,maximum=4096)
         if len(where)>8: raise ValueError('invalid_filter')
@@ -122,11 +129,24 @@ class ObjectService(SpaceBound):
             spec=self._type(c,type_name)
             if set(where)-set(spec['schema'].get('properties',{})):
                 raise ValueError('invalid_filter')
-            return [content_row(r) for r in c.execute(text('''SELECT * FROM c0_objects
+            if direction not in ('asc','desc'): raise ValueError('invalid_filter')
+            order='created_at,id'
+            if sort is not None:
+                if type(sort) is not str: raise ValueError('invalid_filter')
+                if sort in ('@created_at','@updated_at','@revision'):
+                    expression={'@created_at':'created_at','@updated_at':'updated_at','@revision':'revision'}[sort]
+                else:
+                    field_type=spec['schema'].get('properties',{}).get(sort,{}).get('type')
+                    if field_type not in ('string','integer','number','boolean'): raise ValueError('invalid_filter')
+                    expression='(data ->> :sort)'
+                    if field_type in ('integer','number'): expression='CAST(data ->> :sort AS numeric)'
+                    elif field_type=='boolean': expression='CAST(data ->> :sort AS boolean)'
+                order=f'{expression} {direction} NULLS LAST,id'
+            return [content_row(r) for r in c.execute(text(f'''SELECT * FROM c0_objects
                 WHERE space_id=:space AND type_name=:name AND data @> CAST(:filter AS jsonb)
                 AND (CAST(:tag AS varchar) IS NULL OR tags @> ARRAY[CAST(:tag AS varchar)])
-                ORDER BY created_at,id LIMIT :limit OFFSET :offset'''),
-                {'space':self._space(c),'name':type_name,'filter':json.dumps(where),'tag':tag,'limit':limit,'offset':offset}).mappings()]
+                ORDER BY {order} LIMIT :limit OFFSET :offset'''),
+                {'space':self._space(c),'name':type_name,'filter':json.dumps(where),'tag':tag,'limit':limit,'offset':offset,'sort':sort}).mappings()]
 
     def _event(self,c,actor,row,operation):
         c.execute(text('''INSERT INTO c0_object_events(space_id,feed_cursor,object_id,type_name,revision,operation,actor_id)

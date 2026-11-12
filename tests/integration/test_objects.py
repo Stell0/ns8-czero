@@ -178,3 +178,19 @@ def test_trusted_relational_resolvers_do_not_import_request_kinds(objects):
     with pytest.raises(ObjectNotFound): extended.resolve_reference(owner,'account',uuid4(),'profile')
     with pytest.raises(ValueError,match='reference_type_mismatch'):
         extended.resolve_reference(owner,'account',owner.user_id,'wrong')
+
+
+def test_populated_collections_and_server_sorting(objects):
+    svc,owner,inv,proj=objects
+    assert inv not in {r['name'] for r in svc.list_types(owner,populated_only=True)}
+    for n in (10,2,30,1): svc.create(owner,inv,{'name':f'item-{n}','count':n})
+    svc.create(owner,inv,{'name':'missing'})
+    assert inv in {r['name'] for r in svc.list_types(owner,populated_only=True)}
+    assert proj not in {r['name'] for r in svc.list_types(owner,populated_only=True)}
+    assert [r['data']['count'] for r in svc.list(owner,inv,sort='count',limit=2)]==[1,2]
+    assert [r['data']['count'] for r in svc.list(owner,inv,sort='count',limit=2,offset=2)]==[10,30]
+    assert [r['data'].get('count') for r in svc.list(owner,inv,sort='count',direction='desc')]==[30,10,2,1,None]
+    assert len(svc.list(owner,inv,sort='count',where={'count':10}))==1
+    for sort in ('unknown',"name; DROP TABLE c0_objects",'@id'):
+        with pytest.raises(ValueError,match='invalid_filter'): svc.list(owner,inv,sort=sort)
+    with pytest.raises(ValueError,match='invalid_filter'): svc.list(owner,inv,direction='invalid')

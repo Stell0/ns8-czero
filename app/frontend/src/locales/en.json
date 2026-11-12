@@ -14,7 +14,8 @@
     "search": "Search",
     "advanced": "Technical clients",
     "work": "Background work",
-    "spaces": "Spaces"
+    "spaces": "Spaces",
+    "tables": "Tables"
   },
   "common": {
     "loading": "Loading…",
@@ -332,5 +333,29 @@
     "audienceHelp": "All signed-in users can read the whole space, including sources and attachments. Individual grants add permissions; they cannot remove this Read access. Restricting the audience disconnects affected application connections.",
     "saveAudience": "Save audience",
     "audienceReason": "You can read this space because it is available to all signed-in users."
+  },
+  "tables": {
+    "columns": "Columns",
+    "missing": "Not present",
+    "null": "Null",
+    "empty": "Empty text",
+    "yes": "Yes",
+    "no": "No",
+    "items": "{count} items",
+    "object": "Object",
+    "filterField": "Filter field",
+    "filterValue": "Exact value (booleans: true or false)",
+    "all": "All records",
+    "tag": "Tag",
+    "apply": "Apply filters",
+    "reset": "Reset filters",
+    "activeFilter": "Active filters:",
+    "revision": "Revision",
+    "created": "Created",
+    "relationships": "Open record and relationships",
+    "sort": "Sort by",
+    "defaultOrder": "Default order",
+    "ascending": "Ascending",
+    "descending": "Descending"
   }
 }

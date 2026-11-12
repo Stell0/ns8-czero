@@ -30,6 +30,11 @@ export const router = createRouter({
       meta: { title: 'reader.evidence' },
     },
     {
+      path: '/tables/:type?',
+      component: () => import('./views/TablesView.vue'),
+      meta: { title: 'nav.tables' },
+    },
+    {
       path: '/projects',
       component: () => import('./views/ProjectsView.vue'),
       meta: { title: 'nav.projects' },

@@ -35,6 +35,13 @@ def test_signed_rest_objects_types_batches_references_and_events(application):
                 assert (await client.get('/api/v1/object-types/'+names[0])).json()['name']==names[0]
                 first=await client.post('/api/v1/objects',json={'type_name':names[0],'data':{'name':'server'},'tags':['priority']})
                 assert first.status_code==201; row=first.json(); path='/api/v1/objects/'+row['id']
+                catalogue=await client.get('/api/v1/object-types',params={'populated_only':'true'})
+                assert catalogue.status_code==200
+                assert names[0] in {t['name'] for t in catalogue.json()['types']}
+                assert names[1] not in {t['name'] for t in catalogue.json()['types']}
+                sorted_rows=await client.get('/api/v1/objects',params={'type_name':names[0],'sort':'name','direction':'desc'})
+                assert sorted_rows.status_code==200 and sorted_rows.json()['objects'][0]['id']==row['id']
+                assert (await client.get('/api/v1/objects',params={'type_name':names[0],'sort':'missing'})).status_code==422
                 assert (await client.get(path)).json()['revision']==1
                 assert (await client.get('/api/v1/objects',params={'type_name':names[0],'where':'{"name":"server"}','tag':'priority'})).json()['objects'][0]['id']==row['id']
                 assert (await client.post('/api/v1/objects',json={'type_name':names[0],'data':{'name':'server'}})).status_code==409

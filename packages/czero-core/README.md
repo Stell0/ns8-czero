@@ -1,5 +1,15 @@
 # C0 Core
 
+## Structured table browsing producer (0.49)
+
+`ObjectService.list_types(populated_only=True)` returns only types with records
+in its authorized selected space. The default global schema catalogue is
+unchanged. `list` accepts an optional scalar schema field or `@created_at`,
+`@updated_at`, `@revision` sort, with `asc`/`desc`, null/missing values last and
+stable ID ties. Filtering and sorting precede bounded pagination. No migration
+is required. The consumer lock remains on its published release until independent
+producer publication and released-consumer acceptance complete.
+
 ## Self-service Read producer (0.48)
 
 Schema0039 adds `readable_by_all` to spaces. Existing protected spaces default

@@ -97,6 +97,13 @@ Core owns domain services, transactions, persisted authorization and migrations.
 
 Source documents and Wiki pages retain **one current complete content generation**. Replacements publish atomically after validation. Superseded exact evidence returns `content_superseded` (410); stable links open current content. Before upgrading an older installation, back up and run the [latest-only migration preflight](docs/latest-only-migration.md).
 
+## Structured tables candidate
+
+The table browser in development lists populated record collections in the selected
+space and renders their registered schemas with Nebula tables, filters, sorting,
+column selection and record details. See [the contract and acceptance record](docs/structured-tables.md).
+Released-Core adoption and native acceptance are tracked separately from implementation.
+
 ## Use C0
 
 ### Use an existing instance
