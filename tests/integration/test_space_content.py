@@ -339,3 +339,16 @@ def test_waiting_writer_cannot_use_revoked_token_after_regrant(delegated_wiki, m
     assert service.changes(owner_session.actor) == []
     with service.database.engine.connect() as c:
         assert c.execute(text('SELECT count(*) FROM c0_knowledge_receipts WHERE space_id=:space'), {'space': UUID(private['id'])}).scalar_one() == 0
+
+
+def test_populated_type_catalogue_is_scoped_and_checks_live_access(spaces, objects):
+    svc, owner, inv, proj = objects
+    private = create(spaces)
+    hidden = svc.in_space(private['id'])
+    hidden.create(owner, inv, {'name': 'private only', 'count': 10})
+    assert inv in {t['name'] for t in hidden.list_types(owner, populated_only=True)}
+    assert inv not in {t['name'] for t in svc.list_types(owner, populated_only=True)}
+    reader = member(spaces, Role.READER)
+    with pytest.raises(PermissionDenied): hidden.list_types(reader, populated_only=True)
+    with pytest.raises(PermissionDenied): hidden.list(reader, inv, sort='count')
+    assert proj not in {t['name'] for t in hidden.list_types(owner, populated_only=True)}

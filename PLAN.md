@@ -3700,3 +3700,13 @@ does not replace current-source acceptance or grant deployment authority.
 
 The installed app0.57/Core0.37/schema0030 runtime at
 `5e89055de12f46b2e87325d8fee1e6ee59dfa15d` remains the live baseline.
+
+
+## Structured record browsing Core producer
+
+Core0.49 adds authorized selected-space populated type discovery and optional
+stable scalar sorting before pagination. No database migration is needed.
+This producer is isolated from the reference table UI and its HTTP/MCP changes.
+The existing app remains on immutable released Core0.48 until publication and
+separate consumer adoption pass exact-source full/native and artifact checks.
+The accepted installation remains unchanged.

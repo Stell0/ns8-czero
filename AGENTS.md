@@ -451,3 +451,12 @@ These aliases preserve incoming links; their content describes past acceptance.
 <a id="instruction-checkpoint--11-november-2026"></a>[Instruction checkpoint — 11 November 2026](docs/history/AGENTS.md#instruction-checkpoint--11-november-2026)
 
 </details>
+
+
+## Record browsing Core0.49 producer candidate
+
+Keep populated type discovery scoped to current persisted Reader authority.
+Legacy global schema discovery remains the default. Optional record sorting
+uses validated scalar fields, missing/null last and stable ID ties before paging.
+Core0.49 producer publication and app consumer adoption are separate gates;
+retain the released app lock and accepted runtime until their checks pass.
