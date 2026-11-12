@@ -1711,7 +1711,24 @@ Each bounded root app-journal window contains **38 actual entries**, with succes
 
 ## Roadmap
 
-### Active implementation — reusable ingestion samples
+### Active work and remaining acceptance
+
+The opening sections track the native OAuth callback repair and retrieval-evidence
+producer work. Knowledge compilation has implemented workflows but failed measured
+quality gates; its production rollout is not accepted. Preserve separate Core
+publication, released-consumer adoption, source/full/native and live deployment gates.
+The release-readiness phases below retain packaged-skill web and real scheduled-client
+acceptance requirements. Source implementation is not proof of those outcomes.
+
+Reusable ingestion samples are implemented. Their original implementation checkpoint
+is preserved below; use current samples and skills for new adapters.
+
+<details>
+<summary>Historical ingestion implementation and acceptance plan</summary>
+
+<a id="active-implementation--reusable-ingestion-samples"></a>
+
+### Historical reusable ingestion samples checkpoint
 
 The operator approves the full GitHub project/contributor/document pipeline as
 an instance-neutral sample and a dedicated ingestion OAuth connection. Add a
@@ -1764,6 +1781,8 @@ and two actual SDK/database cases pass, including preserved human edits. Fresh
 frozen-candidate full local/CI checks and PR review remain required. These tools do not replace the
 accepted runtime images or establish actual scheduled-client acceptance.
 
+</details>
+
 Work through these phases in order. Each phase needs observable results before it is called complete; there are no promised dates.
 
 | Phase | Status | What people should get | Done when |
@@ -1776,8 +1795,8 @@ Work through these phases in order. Each phase needs observable results before i
 
 ### What already works
 
-- A person can read and maintain knowledge in the browser; an authorized assistant can search/read through MCP and perform explicit knowledge changes.
-- Sources retain versions and extracted passages; Wiki pages retain revisions; evidence, records and graph relationships stay within their selected space.
+- A person can read knowledge and use the explicit source-upload workflow in the browser; an authorized assistant can search/read through MCP and perform requested knowledge changes.
+- Sources and Wiki pages retain one current complete content generation, with stable logical IDs, monotonic revision counters and current exact citations; evidence, records and graph relationships stay within their selected space.
 - Verified users, Read/Write/Manage roles, protected-space grants, application approval, exact disconnect and persistent blocking are implemented.
 - Text retrieval works without a model provider. Optional embeddings/scoring and a reusable Python Core support applications that need more.
 - NS8 packaging, disposable tests, CI image/native checks and managed fork/Core update mechanisms are implemented.
@@ -1794,17 +1813,108 @@ These capabilities are available in a tested **development candidate**. They do 
 
 Use [release-readiness requirements](docs/release-readiness.md) for the remaining gate definitions. Its older implementation checkpoints and unchecked historical rows must be read together with the newer accepted-runtime evidence below; they do not undo passed runtime gates. No automatic knowledge-maintenance agent or native Wiki cron handler is proposed as a substitute for testing the external assistant workflow.
 
+## Agent instruction maintenance — 11 November 2026
+
+The instruction cleanup uses original main
+`bdb928e62a057309d7822282fd7c505303d3bbfb`. AGENTS retains durable rules and
+historical anchor aliases; its complete prior text is preserved in
+[the instruction checkpoint](docs/history/AGENTS.md#instruction-checkpoint--11-november-2026).
+Current runtime selection now points to the accepted delivery record. Developer
+skills distinguish runtime end-user assets and follow risk-based validation.
+The initial review covered all ten developer and five end-user skills; its two
+confirmed developer-skill contradictions were corrected. Related maintained setup,
+development and release guidance needs no package/version or scope change.
+Base and candidate documentation/fork checks each pass 17 cases; maintained
+local-link checks pass, and both edited skills pass frontmatter validation.
+The original cleanup diff is entirely in the existing Git-only documentation
+allowlist. The follow-up adds instruction review as a PR readiness/merge requirement,
+a matching contributor-skill step and a registered PR template. The template is a
+new path outside the documentation allowlist, so the combined PR requires full
+acceptance under the unchanged CI policy. Actual PR checks and the C0 merge gate
+remain required. This changes no runtime, dependency,
+connection, schedule or accepted installation identity.
+
+The subsequent developer-skill review adds shared implementation practices for
+focused changes, caller/contract tracing, behavioral tests, domain errors, bounded
+external work, dependency decisions and private diagnostics. Core guidance keeps
+released migrations immutable and requires populated-predecessor checks; feature
+guidance routes frontend work to Nebula. Project guidance separates candidate
+implementation from live capability checks. Contribution review checks final diff
+scope, and collector-specific prose is removed from unrelated skills. Existing
+shared references and skills are already registered for standalone consumers.
+Evaluation and semantic-maintenance workflows retain their authority and evidence
+boundaries; these coding rules do not impose development checks on unchanged runs.
+The final local documentation/fork/CI-policy selection passes 160 cases and all
+ten developer skills pass frontmatter validation. Link checks include the standalone
+consumer. No model-driven behavioral evaluation is claimed; full CI remains pending.
+
+The subsequent CI policy change narrows documentation classification to reviewed
+developer assets and verified documentation-only registry additions. Draft runtime
+PRs receive fast feedback; ready sensitive PRs, manual full runs and releases keep
+full acceptance. Draft/fast proofs cannot authorize sensitive merges. Existing
+frozen full runs remain preserved. This CI/policy implementation itself requires
+full native acceptance before merge; no release or deployment is implied. Focused
+policy/promotion/documentation/fork checks pass 186 cases, including actual Git
+registry changes and the documentation checker. Full exact-source CI remains pending.
+After the released-Core adoption merged, the successor candidate starts at original
+main `505b8ee54b5ce79bf873145e36f12dc7d5ec7c3e`. Preserve the earlier candidate
+`08a207e21fc9b04995880a259ecade5b0dece7db` and its full acceptance run; the
+successor requires its own current-base validation and full native acceptance.
+The preserved first CI candidate encounters HTTP 404 for Debian's floating
+genericcloud image before VM boot. Native CI now selects the official dated
+20261103-2651 image and its published SHA512SUMS through the shared runner's
+existing URL override. Both native suites remain mandatory; no failed result is
+waived and the original runs remain available.
+The access-role repair subsequently merges as original main
+`a106f188d362fa02574972662f84bb3fc93774af`. A further successor preserves its
+cumulative role labels, browser regressions and identical Debian image pin.
+Keep `b77bc6a68d1cf54823a19114a22129871ff3240d` and both full runs frozen;
+the current-base successor requires its own focused and full/native acceptance.
+Cross-space reference PR119 then advances original main to
+`08e979c4ae285bed03953cf58c6a0a63ebc8888c`. Preserve the previous candidate
+`f474737bc8d74bfc6ad3713314d3dd5824cb1e2b` and its full run43119794696.
+The next successor retains the cross-space contracts, migration0038, plugin1.10,
+released consumer lock and new feature regressions. Repeat exact-source acceptance.
+Documentation closeout PR124 advances original main to
+`1e99d7d0ed3912ebbfc3a925f9eec961bc8170ad` and records the accepted app0.64
+installation. Preserve candidate `401336b681ff64898bb937add88f8e12ca026dae`,
+successful full43126746286 and its exact-source promotion proof. The successor
+resolves instruction conflicts against that closeout, retains its deployment
+evidence and repeats the required current-base checks before merge.
+
 ## Current baseline
+
+The accepted dedicated installation is app **0.64.0**, released Core **0.46.0**,
+schema **0037**, source `a106f188d362fa02574972662f84bb3fc93774af`.
+Its [accepted deployment record](#native-oauth-accepted-deployment)
+contains installed immutable tags/digests, supported update/restart acceptance and
+preservation evidence. Those installed images are the next genuine predecessor;
+retain the actual app0.63/Core0.45 predecessor, historical app0.61/Core0.42 and
+all earlier frozen images and evidence.
+
+Source versions are separate: use `app/pyproject.toml` and its committed `uv.lock`
+for the app and released Core dependency, `packages/czero-core/pyproject.toml`
+and its migrations for producer Core/schema, and the plugin manifest for its
+package version. These source capabilities do not establish publication, consumer
+adoption or live activation. Use the [verified installation candidate](docs/installation-candidate.md)
+for published image selection. No stable NS8 module release is claimed.
+
+<details>
+<summary>Historical baseline checkpoint</summary>
+
+### Historical remembered-login baseline
 
 Accepted dedicated runtime: app **0.54.0**, released Core **0.35.0**, schema **0022**, source `31b0c85a71743ab6dcdb04c12ac18dd4c1500722`. Freeze its three [installed image digests](#remembered-login-deployed-runtime-and-frozen-predecessor) as the next genuine upgrade predecessor. Documentation/main-marker images do not replace it; prior installation records remain preserved below.
 
 Prior runtime main `05ce22c` passed full [40106287084](https://github.com/Stell0/ns8-czero/actions/runs/40106287084), canonical publication and independent actual native/privacy/scan audits. Reviewed documentation closeout PR35 merged as `f735004`; its [main40137756852](https://github.com/Stell0/ns8-czero/actions/runs/40137756852) and exact-source documentation promotion verifier pass. Original dirty checkouts, recovered M20 worktrees, drafts and immutable artifacts remain preserved.
 
+</details>
+
 ## How development proceeds
 
 Agree the behavior and acceptance, implement one focused change in the right layer, verify it with disposable tests, review the PR, and follow the [CI policy](docs/ci-policy.md). Current CI policy uses fast PR checks and automatic native acceptance for sensitive changes; reviewed allowlisted UI can request it on demand. C0 permits protected automatic regular merge without mandatory human approval. Full native proof and explicit live authorization remain required for releases and production deployment. Internal and external contributions follow the same risk classification; see [contributor requirements](AGENTS.md#tests-are-part-of-the-feature). Existing interactive Playwright and CPU-quota waivers remain unchanged.
 
-The detailed plan and evidence below preserve decisions, failures, exact sources, image identities and test results. Older “current” or “pending” wording describes its checkpoint; the baseline and roadmap above govern present work.
+The detailed plan and evidence below preserve decisions, failures, exact sources, image identities and test results. Older “current” or “pending” wording describes its checkpoint; the Current baseline section and opening active-work records govern present work.
 
 <details>
 <summary>Detailed implementation plans and acceptance evidence</summary>

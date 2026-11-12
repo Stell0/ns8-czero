@@ -1042,6 +1042,11 @@
       "path": "docs/api-keys.md",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

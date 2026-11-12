@@ -8,6 +8,8 @@ writing another collector. Inspect the closest source adapter and tests. Reuse t
 shared client, OAuth, state and source-verification functions rather than inventing
 MCP operations or copying another application's credential store.
 
+When changing an adapter, follow the [shared implementation practices](../../references/development.md#implementation-practices).
+
 Implement reusable collection/mapping code in the public samples and meaningful
 synthetic regressions in the repository tests. Record source-specific pagination,
 stable identity, evidence, incremental-window, coverage and recovery lessons there.
@@ -33,8 +35,10 @@ with the verified original-main base and a private denylist of this deployment's
 hostnames, identities and credentials. Never publish that denylist. Automated scans
 complement manual review; they do not prove arbitrary source content is public.
 Keep real payloads/receipts and private lessons outside Git; retain useful generic
-lessons in sample documentation and tests. Run the required full base/candidate
-checks and open a focused original C0 PR through c0-contribute-upstream and the
+lessons in sample documentation and tests. Select base/candidate checks under the current [upstream CI risk policy](https://github.com/Stell0/ns8-czero/blob/main/docs/ci-policy.md);
+full native acceptance remains required for sensitive changes and releases/deployment.
+Validate the affected behavior and open a focused original C0 PR through
+c0-contribute-upstream and the
 installed nethserver-pr skill. Preserve customer work and follow AGENTS.md's
 review, provenance and frozen-candidate rules.
 
