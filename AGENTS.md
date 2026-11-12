@@ -13,7 +13,8 @@ credential bindings and revocation lock order. The released consumer lock and
 installed runtime remain separate from this producer candidate. The current
 consumer manifest pins Core0.46 after PR115; preserve that lock and the feature
 candidate's frozen app0.63/Core0.45 native evidence. The accepted installation
-below is the next genuine predecessor for a future live upgrade.
+in [PLAN's current baseline](PLAN.md#current-baseline) is the next genuine
+predecessor for a future live upgrade.
 
 ## Current state and precedence
 

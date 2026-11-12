@@ -1875,15 +1875,22 @@ Cross-space reference PR119 then advances original main to
 `f474737bc8d74bfc6ad3713314d3dd5824cb1e2b` and its full run43119794696.
 The next successor retains the cross-space contracts, migration0038, plugin1.10,
 released consumer lock and new feature regressions. Repeat exact-source acceptance.
+Documentation closeout PR124 advances original main to
+`1e99d7d0ed3912ebbfc3a925f9eec961bc8170ad` and records the accepted app0.64
+installation. Preserve candidate `401336b681ff64898bb937add88f8e12ca026dae`,
+successful full43126746286 and its exact-source promotion proof. The successor
+resolves instruction conflicts against that closeout, retains its deployment
+evidence and repeats the required current-base checks before merge.
 
 ## Current baseline
 
-The accepted dedicated installation is app **0.61.0**, released Core **0.42.0**,
-schema **0034**, source `827fbde711325a2f67b08ca7fee3d9ac5e950b67`.
-Its [accepted delivery record](#openai-system-one-scoring--accepted-delivery)
+The accepted dedicated installation is app **0.64.0**, released Core **0.46.0**,
+schema **0037**, source `a106f188d362fa02574972662f84bb3fc93774af`.
+Its [accepted deployment record](#native-oauth-accepted-deployment)
 contains installed immutable tags/digests, supported update/restart acceptance and
 preservation evidence. Those installed images are the next genuine predecessor;
-retain the prior app0.60/Core0.39 installation and all earlier frozen evidence.
+retain the actual app0.63/Core0.45 predecessor, historical app0.61/Core0.42 and
+all earlier frozen images and evidence.
 
 Source versions are separate: use `app/pyproject.toml` and its committed `uv.lock`
 for the app and released Core dependency, `packages/czero-core/pyproject.toml`
