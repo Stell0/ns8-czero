@@ -101,34 +101,64 @@ class SpaceService:
         current.require(minimum)
         return current
 
-    def authorize(self, connection, actor, minimum=Role.READER, *, space_id=None, check_scopes=True):
-        current = self._actor(connection, actor, Role.READER)
-        identifier = self.shared_id(connection) if space_id is None else space_uuid(space_id)
-        if current.api_key_binding is not None:
-            if identifier not in current.api_key_binding.validate(connection)['space_ids']:
-                raise PermissionDenied()
-        shared = connection.execute(text('SELECT shared FROM c0_spaces WHERE id=:id'),
-                                    {'id': identifier}).scalar_one_or_none()
-        # Unknown and inaccessible selectors have the same denial. Never
-        # reinterpret them as the default shared space or infer from a UUID.
-        if shared is None:
+    @staticmethod
+    def _policy(current, identifier, shared, grant, allowed, minimum, check_scopes):
+        # One policy for single and batch selectors, with key ceilings first.
+        if shared is None or (allowed is not None and identifier not in allowed):
             raise PermissionDenied()
         if current.role is Role.ADMIN or shared:
-            current.require(minimum)
-            if check_scopes:
-                require_scope(current, minimum)
-            return replace(current, space_id=identifier)
-        grant = connection.execute(text('''SELECT role FROM c0_space_grants
-            WHERE space_id=:space AND account_id=:account'''),
-            {'space': identifier, 'account': current.user_id}).scalar_one_or_none()
-        if grant is None:
-            raise PermissionDenied()
-        effective = min((current.role, Role(grant)), key=_RANK.__getitem__)
-        result = replace(current, role=effective, space_id=identifier)
+            result = replace(current, space_id=identifier)
+        else:
+            if grant is None:
+                raise PermissionDenied()
+            result = replace(current, role=min((current.role, Role(grant)), key=_RANK.__getitem__),
+                             space_id=identifier)
         result.require(minimum)
         if check_scopes:
             require_scope(result, minimum)
         return result
+
+    def _selected(self, connection, current, identifiers, minimum, check_scopes):
+        allowed = (current.api_key_binding.validate(connection)['space_ids']
+                   if current.api_key_binding is not None else None)
+        rows = connection.execute(text('''SELECT s.id,s.shared,g.role FROM c0_spaces s
+            LEFT JOIN c0_space_grants g ON g.space_id=s.id AND g.account_id=:account
+            WHERE s.id=ANY(CAST(:ids AS uuid[]))'''),
+            {'account': current.user_id, 'ids': identifiers}).mappings()
+        result = {}
+        for row in rows:
+            try:
+                result[row['id']] = self._policy(current, row['id'], row['shared'], row['role'],
+                                                 allowed, minimum, check_scopes)
+            except ScopeDenied:
+                raise
+            except PermissionDenied:
+                pass
+        return result
+
+    def authorize(self, connection, actor, minimum=Role.READER, *, space_id=None, check_scopes=True):
+        current = self._actor(connection, actor, Role.READER)
+        identifier = self.shared_id(connection) if space_id is None else space_uuid(space_id)
+        selected = self._selected(connection, current, [identifier], minimum, check_scopes)
+        if identifier not in selected:
+            raise PermissionDenied()
+        return selected[identifier]
+
+    def authorize_many(self, connection, actor, space_ids, minimum=Role.READER, *, check_scopes=True):
+        """Internal bounded selection; denied selectors are absent, invalid callers fail.
+
+        Callers needing revocation ordering must hold_authority before this call.
+        Results retain the original credential bindings and are never cached.
+        """
+        if not isinstance(space_ids, (list, tuple)) or not 1 <= len(space_ids) <= 11:
+            raise ValueError('invalid_space_selection')
+        identifiers = [space_uuid(value) for value in space_ids]
+        if len(set(identifiers)) != len(identifiers):
+            raise ValueError('invalid_space_selection')
+        current = self._actor(connection, actor, minimum)
+        if check_scopes:
+            require_scope(current, minimum)
+        return self._selected(connection, current, identifiers, minimum, check_scopes)
 
     def list(self, actor, *, limit=100, offset=0):
         _paging(limit, offset)

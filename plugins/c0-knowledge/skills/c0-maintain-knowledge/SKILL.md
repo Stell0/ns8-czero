@@ -32,3 +32,17 @@ not ordinary Wiki edits. Process those durable tasks through the common compiler
 under current policy and budgets; a queued observation is not compiled knowledge.
 
 For explicitly requested recurring maintenance or external setup, read [scheduling and recovery](../../references/scheduling.md). Package generation installs no host task.
+
+When advertised, `cross_space_ref_create` records only an outgoing navigation
+identity: source Editor, target Reader and both Read/Write scopes are required.
+Supply explicit source/target spaces and an unchanged-request idempotency key.
+Objects require their registered type; multipart document parents use their
+managed object identity, not a source/version/chunk ID. Acknowledgement records
+the original operation; independently list current state. Replaying creation
+after deletion never recreates a link. `cross_space_ref_delete` requires source
+Write only and returns empty success even for missing or foreign-source UUIDs.
+Linking never copies content or supplies evidence. Require a separate explicitly
+authorized publication task and destination before copying target information.
+One Write API key currently requires Editor in every selected space; asymmetric
+source Editor/target Reader roles need appropriate OAuth consent. Never combine
+two credentials or broaden permissions to work around that limitation.

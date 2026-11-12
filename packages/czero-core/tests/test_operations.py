@@ -104,3 +104,20 @@ def test_finite_registry_capacity_accommodates_compilation_without_unbounding():
         registry.register(Operation('read_' + str(index), 'Read', Role.READER, 'c0:read', {}, {}, lambda actor, arguments: {}))
     with pytest.raises(ValueError, match='duplicate_or_excess_operation'):
         registry.register(Operation('overflow', 'Read', Role.READER, 'c0:read', {}, {}, lambda actor, arguments: {}))
+
+
+def test_additional_scope_is_enforced_and_metadata_is_additive():
+    actor = Actor(uuid4(), Role.EDITOR)
+    registry = OperationRegistry(lambda actor, role: actor)
+    registry.register(Operation('reference', 'Reference', Role.EDITOR, 'c0:write', {}, {},
+        lambda actor, arguments: {'ok': True}, False, additional_scopes=('c0:read',)))
+    metadata = registry.definition('reference')
+    assert metadata['required_scope'] == 'c0:write'
+    assert metadata['required_scopes'] == ['c0:write','c0:read']
+    assert registry.describe(actor, scopes={'c0:write'}) == []
+    for scopes, missing in [({'c0:write'},'c0:read'), ({'c0:read'},'c0:write')]:
+        with pytest.raises(ScopeDenied) as error: registry.execute('reference',actor,{},scopes=scopes)
+        assert error.value.scope == missing
+    assert registry.execute('reference',actor,{},scopes={'c0:read','c0:write'}) == {'ok':True}
+    assert 'required_scopes' not in OperationRegistry._metadata(Operation(
+        'read', 'Read', Role.READER, 'c0:read', {}, {}, lambda actor, arguments: {}))

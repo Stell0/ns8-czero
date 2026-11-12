@@ -164,3 +164,30 @@ Compiler coordination, guarded publication, source discovery, assessment and sem
 Policies default to disabled, retrieval feedback off and queue-only publication. Admin policy configuration requires actual authority and expected revision; it installs no scheduler. Editor coordination and publication require enabled selected-space policy, Read+Write, current evidence, target/policy revisions, live fences and budgets. Queue-only and held plans require exact-plan review. `compilation_plan_validate` is a dry-run; `compilation_apply` publishes atomically and returns pending verification; `compilation_verify` records fresh saved-result readback. None proves semantic truth.
 
 `knowledge_search` and other retrieval operations never queue learning. A compatible external agent can use a separate bounded post-answer proposal workflow under enabled retrieval-feedback policy. Reader and explicitly read-only tasks cannot do so. See [the complete search/update rules](llm-wiki.md#what-happens-after-a-search), [compiler operations](knowledge-compilation/OPERATIONS.md) and [external maintenance](wiki-maintenance.md).
+
+## Cross-space references (Core0.47 producer)
+
+[Contract and acceptance](cross-space-references-plan.md). These routes/tools are
+registered only when the installed Core includes the service; the released
+Core0.46 consumer does not advertise them.
+
+- POST `/api/v1/cross-space-references?space_id=UUID` / `cross_space_ref_create`:
+  typed source and target (target includes space_id), relation_kind=references,
+  idempotency_key. Uniform200 `{reference_id}` requires source Editor, target
+  Reader and both Read+Write. Replay acknowledges the original operation.
+- GET the same route / `cross_space_refs_list`: required source_kind, source_id,
+  source_type_name for objects, and1–10 distinct target_space_ids (repeated query
+  parameters in REST). Optional limit1–100(default50) and after UUID. Returns
+  references and next_after; hidden/inactive targets do not affect pagination.
+  The256KiB response ceiling can shorten a page; follow next_after.
+- DELETE the same route / `cross_space_ref_delete`: source descriptor,
+  reference_id and idempotency_key. Source Editor/Write only; REST204 and MCP null
+  are indistinguishable for existing, missing and foreign-source UUIDs.
+
+Object endpoints require registered type_name; other kinds forbid it. Stable
+sources differ from multipart parent objects. Links are current navigation, never
+exact citations or publication permission. Follow with an authorized target API;
+copy content only for an explicitly authorized publication task and destination.
+A Write API key still requires Editor in every selected space. Error404 for every
+unavailable create target is `reference_target_unavailable`; conflict409 and invalid
+request422 contain no target diagnostics. All responses are no-store.

@@ -1,5 +1,86 @@
 # C0 roadmap
 
+## Secure cross-space references
+
+The operator-selected [implementation contract](docs/cross-space-references-plan.md)
+starts at original main `bdb928e62a057309d7822282fd7c505303d3bbfb`.
+M0 preserves the contract; M1 adds shared batch authorization; M2 adds outgoing
+reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
+Core publication, released consumer adoption and live deployment retain separate
+acceptance gates. No browser panels or live changes are included.
+
+Implementation candidate: Core0.47/schema0038 adds immutable typed references,
+current summaries, actor/source-scoped payload-free receipts and guarded deletion.
+Plugin1.10 and guidance7 describe navigation and separate publication authority.
+The transport is capability-gated: actual frozen Core0.44 consumer startup/profile
+read succeeds and unsupported operations stay absent. A successor on original
+main505b8ee preserves the new Core0.46 tag/lock, app0.64 and genuine native
+predecessor. The Core0.47 feature tree is identical to frozen dab4140; repeat
+affected native checks on the successor. Its231 affected PostgreSQL/security/
+transport/catalog/package-guidance cases pass, as do56 documentation/source-pin/
+release-policy cases and21 Robot dry runs. Actual frozen Core0.46 startup/profile
+read, unsupported-tool omission and immutable Git/schema/loopback probes pass.
+No dependency range, tag/lock or genuine predecessor identity is replaced by
+this feature; producer/native and released-consumer gates remain distinct.
+
+Executed focused proof:58 PostgreSQL Core/authorization cases (all25 endpoint
+pairs, migration0037→0038 preserving rows/constraints, key restrictions, revocation
+waits in both orders, explicit READ COMMITTED under a repeatable-read default,
+byte-budget pagination and endpoint-delete serialization);10 signed REST/current+legacy SDK cases;
+6 exact native-probe HTTP regressions;67 catalog/guidance/archive/runtime-audit
+cases. The parser-equipped disposable container passes all6 wheel/source package
+checks, including installed references, repeated migrations and OCR. Host package
+OCR failures remain private. Node settings28, schema patterns,21 Robot dry runs
+and maintained documentation checks pass.
+
+The benchmark driver includes a100000-edge corpus and explicit matrix controls.
+An initial5-sample diagnostic finds constant SQL counts over1/100 references and
+1/10 target spaces for sessions/OAuth/keys, max P95 about13ms,342154 peak allocated
+bytes and25616 returned bytes. These are diagnostics, not accepted benchmark gates.
+A later20-sample dense-source diagnostic covers100000 outgoing references with
+all three credentials, visibility modes and concurrency1/5: maximum P95 about57ms,
+constant SQL counts,374654 peak allocated bytes, and five admitted readers complete
+before revocation. The original broad join exhausts64MiB PostgreSQL shared memory;
+its failure is retained. The revised parameterized lateral UNION/keyset plan avoids
+whole-endpoint hash scans without changing limits. Removing explicit READ COMMITTED
+reproduces stale-key admission; restoring it passes the barrier regression.
+Space-wide permissions cannot yield partial resource authorization in one selected
+space; half-visibility measurements must report actual visible cardinality.
+The frozen dab4140 active benchmark completes1782 groups with20 warmups,
+200 measured calls and three repetitions at concurrency1/5. Maximum P50 is45.5ms,
+P95 is60.6ms, peak allocated memory377218 bytes and response25870 bytes. Session/
+OAuth/key SQL counts remain15/25/14 throughout. Five admitted readers complete
+before revocation (149.2ms wait/commit), with no post-revocation target items,
+deadlocks or timeouts; the dense indexed query plan executes in4.9ms.
+Matched original bdb928e and candidate19ad5ef same-space controls pass all72
+repetition comparisons; maximum P95 increase is2.1ms, below the5ms allowance.
+Separate archived/deleted and0.1%-visible100000-edge fixtures also pass their
+measured gates. Bound fixture deletion into500-row statements rather than
+relaxing the existing deadline. Sparse selection uses one readable target space
+among ten selected spaces and exactly100 readable references among100000.
+
+Latest base505b8ee actual full local checks pass3294 cases and43 real browser
+cases; Rocky passes. Its Debian job fails because the moving genericcloud URL
+returns404. Preserve this failure. The candidate pins the dated official image
+whose SHA512 is identical to the earlier accepted VM, keeping checksum checks.
+The first feature native run exposes stale browser workflow expectations; the
+Reader display allowlist and both browser suites now cover navigation. All7
+real guidance browser cases pass across roles, light/dark, desktop/phone and
+keyboard controls. Node24 frontend checks pass28 tests, lint, formatting, types
+and build; the policy21 Robot dry runs pass. Retained reference/receipt seed and
+verification pass all6 external package cases and a real PostgreSQL dump/restore.
+
+Per-target-resolution comparison and final exact-source full/native/browser/
+image/artifact/merge proof remain separate gates. Do not publish Core, adopt a
+new consumer lock or deploy on focused or diagnostic evidence alone.
+
+The next preserved successor starts at original main
+`a106f188d362fa02574972662f84bb3fc93774af` after the cumulative role-label merge.
+It retains the upstream labels, their native assertions and the identical dated
+Debian image pin. The original base and latest base have identical released
+Core0.46 package trees; the reference Core0.47 tree remains unchanged. Repeat
+full/native and browser verification on this source before promotion.
+
 ## Released Core0.46 — native OAuth consumer candidate
 
 Start at latest original main `bdb928e`, preserving the accepted producer
@@ -54,6 +135,7 @@ image contains released Git Core0.46.0 at `d8ae98c`, schema0037 and the matcher.
 Regular merge `505b8ee` preserves the candidate; its main
 [43105029868](https://github.com/Stell0/ns8-czero/actions/runs/43105029868)
 hits the same Debian cloud-image404. No live update is established.
+
 
 ## Native OAuth callback repair
 

@@ -523,7 +523,15 @@ class NativeWebsite:
             self.goto('/');self.accessible('home',role)
             self.goto('/agents')
             self.run('Get Element Count','details[data-task]','==',1 if role=='reader' else 7)
-            self.run('Get Element Count','details[data-workflow]','==',3 if role=='reader' else 8)
+            expected={'research','structured-research','selective-context','cross-space-navigation'}
+            if role!='reader':expected|={'knowledge-compiler','evidence','update','investigation','consolidate'}
+            self.run('Get Element Count','details[data-workflow]','==',len(expected))
+            actual=self.browser.evaluate_javascript(None,
+                '() => Array.from(document.querySelectorAll("details[data-workflow]"), node => node.dataset.workflow)')
+            assert set(actual)==expected, 'Unexpected authorized navigation workflows'
+            self.run('Click','details[data-workflow="cross-space-navigation"] summary')
+            self.run('Get Text','details[data-workflow="cross-space-navigation"]','contains','explicitly authorized publication task and destination')
+            self.run('Get Text','details[data-workflow="cross-space-navigation"]','contains','independently authorized API')
             self.run('Get Element Count','details[data-workflow="knowledge-compiler"]','==',0 if role=='reader' else 1)
             if role!='reader':
                 self.run('Click','details[data-workflow="knowledge-compiler"] summary')

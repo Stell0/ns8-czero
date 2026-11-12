@@ -177,8 +177,9 @@ def test_role_eligible_discovery_and_explicit_scope_upgrade(transport, mode, rol
                     assert ('job_handlers_list' in names) == (role is Role.ADMIN)
                     assert len(wire_tools) == len(tools)
                     for tool, wire in zip(tools, wire_tools):
-                        scope = app.state.operations.definition(tool.name)['required_scope']
-                        schemes = [{'type':'oauth2', 'scopes':[scope]}]
+                        definition = app.state.operations.definition(tool.name)
+                        scopes = definition.get('required_scopes', [definition['required_scope']])
+                        schemes = [{'type':'oauth2', 'scopes':scopes}]
                         assert tool.meta['securitySchemes'] == schemes
                         assert wire['securitySchemes'] == wire['_meta']['securitySchemes'] == schemes
                     assert not (await client.call_tool('object_types_list', {})).is_error

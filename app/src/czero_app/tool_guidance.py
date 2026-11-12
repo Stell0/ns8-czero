@@ -7,6 +7,10 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'cross_space_ref_create': 'Create an outgoing current-resource link with source Editor, target Reader and both c0:write and c0:read. Select both spaces explicitly. It stores no content, grants no authority and is not evidence. Retry acknowledges the original operation; list current state separately.',
+    'cross_space_refs_list': 'List current outgoing summaries from a readable source in 1–10 explicitly selected target spaces. Hidden or inactive endpoints produce no item or count. Follow with a fresh authorized content API; a reference never authorizes copying or publication.',
+    'cross_space_ref_delete': 'Blindly delete a known source-owned reference with source Editor/c0:write and an unchanged-request retry key. No target Read required. Missing, foreign-source and already deleted UUIDs return the same empty result. Recreated references have different UUIDs.',
+
     'compilation_discovery_get': 'Read selected-space durable inventory/review cursors without creating state. Inventory completion is not semantic corpus coverage.',
     'compilation_discover': 'Editor: advance a bounded current-publication inventory/reconciliation batch under enabled policy, live fence and current revision. Queue source assessments, reserve work and invalidate stale dependencies; no inference or publication. Configured daily/weekly projects require their actual host-task lease.',
     'compilation_assessment_complete': 'Editor: save a current whole-original assessment with canonical child proposal identities and fixed unresolved findings. Only actual verified children and fresh support count as compiled. Cannot publish; partial/unread/contrary work remains visible.',
@@ -157,6 +161,7 @@ DESCRIPTIONS = {
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
 REPLAY_SAFE = frozenset({
+    'cross_space_ref_create', 'cross_space_ref_delete',
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_apply', 'compilation_verify',
     'compilation_discover','compilation_assessment_complete','compilation_semantic_select','compilation_semantic_review',
@@ -175,6 +180,7 @@ REPLAY_SAFE = frozenset({
 })
 
 DESTRUCTIVE = frozenset({
+    'cross_space_ref_delete',
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_apply', 'compilation_verify',
     'compilation_discover','compilation_assessment_complete','compilation_semantic_select','compilation_semantic_review',

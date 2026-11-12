@@ -54,7 +54,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.64.0    ${route_host}=${host}    ${expected_core}=0.46.0
+    [Arguments]    ${expected_app}=0.64.0    ${route_host}=${host}    ${expected_core}=0.47.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -121,7 +121,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.64.0    0.46.0
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.64.0    0.47.0
         Predecessor Content    verify
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
@@ -518,6 +518,11 @@ Backup and restore into a clean disposable instance
     ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_COMPILATION_STAGE=seed czero python - < /tmp/czero-core-compilation-probe.py
     ...    return_rc=True    timeout=80s
     Should Be Equal As Integers    ${rc}    0    msg=${output}
+    Put File    ${CURDIR}/packaging/core_references_probe.py    /tmp/czero-core-references-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_REFERENCE_STAGE=seed czero python - < /tmp/czero-core-references-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
     Log To Console    Backup phase: create native destination and schedule
     ${backup} =    Create Disposable Backup    ${module_id}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
@@ -556,6 +561,12 @@ Backup and restore into a clean disposable instance
     Should Be True    ${compiler}[restored_fence_invalidated]
     Should Be True    ${compiler}[guarded_compilation]
     Should Be True    ${compiler}[pending_compilation_verified]
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_REFERENCE_STAGE=verify czero python - < /tmp/czero-core-references-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${references} =    Evaluate    json.loads($output)    modules=json
+    Should Be True    ${references}[restored_reference_verified]
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
     ...    return_rc=True    timeout=180s
@@ -675,7 +686,7 @@ Check saved settings and application HTTPS in a browser
     Should Be Equal As Integers    ${rc}    0
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.46.0"
+    Get Text    body    contains    "core_version":"0.47.0"
     Get Text    body    contains    "app_version":"0.64.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health

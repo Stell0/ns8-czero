@@ -4,7 +4,7 @@
 from copy import deepcopy
 
 GUIDANCE = {
-    'version': 6,
+    'version': 7,
     'rules': [
         'Use the installed compiler scheduling reference for explicitly requested recurrence. Generated prompts/packages install no task. Verify exact selected space/project, current capabilities/policy, IANA occurrences, saved host IDs and actual C0 result readback; unavailable unattended connector/skill/authentication means BLOCKED.',
         'Discover current operations and authorized spaces before reading or writing. Membership, space grants and actual OAuth scopes remain authoritative on every request.',
@@ -24,6 +24,16 @@ GUIDANCE = {
         'resources': 'Use c0://spaces/{space_id}/wiki/pages/{page_id}, c0://spaces/{space_id}/source-versions/{version_id}, or c0://spaces/{space_id}/entities/{entity_id}. Legacy URIs select Shared.',
     },
     'workflows': [
+        {
+            'id': 'cross-space-navigation', 'title': 'Follow authorized cross-space references',
+            'tools': ['cross_space_refs_list'],
+            'steps': [
+                'Select the source space and 1–10 explicit target spaces. Listing discloses only currently readable active endpoint summaries; an empty list says nothing about hidden links.',
+                'Read target content through its existing independently authorized API. A reference is current navigation, never evidence, permission, a subscription or publication authority.',
+                'Copy information only for an explicitly authorized publication task and destination. Private Read plus broader-space Write can disclose information; reference resolution does not enforce declassification.',
+            ],
+        },
+
         {
             'id': 'knowledge-compiler', 'title': 'Compile source-backed knowledge',
             'tools': ['compilation_policy_get','compilation_source_bindings_get','compilation_target_bindings_get','compilation_propose',

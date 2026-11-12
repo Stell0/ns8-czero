@@ -69,11 +69,15 @@ def test_http_openapi_and_sdk_guidance_match_actual_scope_capabilities(transport
             assert public.status_code==200 and public.json()['guidance']['workflows']==[]
             assert public.headers['cache-control']=='no-store'
             schema=(await rest.get('/openapi.json')).json()
-            assert len(schema['x-c0-agent-guidance']['workflows'])==8
+            assert {flow['id'] for flow in schema['x-c0-agent-guidance']['workflows']}=={
+                'cross-space-navigation','knowledge-compiler','research','selective-context',
+                'structured-research','evidence','update','investigation','consolidate'}
             rest.headers['Authorization']='Bearer '+pair.access_token
             actual=(await rest.get('/agents/capabilities.json')).json()
-            assert {flow['id'] for flow in actual['guidance']['workflows']}=={'research','structured-research','selective-context'}
+            assert {flow['id'] for flow in actual['guidance']['workflows']}=={'research','structured-research','selective-context','cross-space-navigation'}
             assert all(item['read_only'] for item in actual['operations'])
+            navigation=next(flow for flow in actual['guidance']['workflows'] if flow['id']=='cross-space-navigation')
+            assert 'explicitly authorized publication task and destination' in str(navigation)
             wire=[]
             async def observe(response):
                 await response.aread()
