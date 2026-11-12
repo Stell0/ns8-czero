@@ -132,6 +132,7 @@ watch(
   },
 )
 function selectSort(value: unknown) {
+  if (String(value) === sort.value) return
   void router.push({
     query: { ...route.query, sort: String(value) || undefined, offset: 0 },
   })
