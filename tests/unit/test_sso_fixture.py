@@ -243,6 +243,8 @@ def test_objects_browser_fills_credentials_without_robot_keyword_arguments(monke
     library=runpy.run_path(str(ROOT/'tests/CzeroSso.py'))['CzeroSso']()
     library.verify_disposable_objects_browser('czero7.test')
     assert filled.count(('input[name="password"]',secret))==2
+    assert sum(name == 'Browser.Go To' and args[0].endswith('/tables') for name,args in invocations) == 2
+    assert sum(name == 'Browser.Click' and 'Browser inventory' in args[0] for name,args in invocations) == 2
     assert all(secret not in str(item) for item in invocations+commands)
 
 

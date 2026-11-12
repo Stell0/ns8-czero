@@ -45,6 +45,7 @@ const destinations = [
   'home',
   'wiki',
   'sources',
+  'tables',
   'projects',
   'explore',
   'agents',

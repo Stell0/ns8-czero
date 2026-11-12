@@ -3710,3 +3710,44 @@ This producer is isolated from the reference table UI and its HTTP/MCP changes.
 The existing app remains on immutable released Core0.48 until publication and
 separate consumer adoption pass exact-source full/native and artifact checks.
 The accepted installation remains unchanged.
+
+
+## Generic structured tables — released consumer candidate
+
+The operator selected Nebula and authorized implementation and completion of CI.
+Core prerequisite PR135 regularly merges as `834e99bf3eed0cb7134eb1dcb5c150cc9952dad9`.
+Core0.49.0 is immutably published from tested source
+`998ef32b6eedb545e6e4c0eb7ebb468e19ea3ddb` at `core-v0.49.0`; its package
+tree is `4bd585d50047201658f5eba494cafaff8557e860`. Exact full43303591331 and
+ready full43308328208 pass the required checks. Publisher43318027771 passes
+independent source/wheel installation and extraction/migration checks.
+Downloaded release checksums and metadata are independently verified:
+
+```text
+16d2e30904e5793d239b62e9ccda983b332689c94c0ce90273f6fd7d41b45639  ./czero_core-0.49.0-py3-none-any.whl
+f51fddbdfe4385bfc76bfbc0d1c2ec9600f2739ea731be6b3e80b8f9ea3b046e  ./czero_core-0.49.0.tar.gz
+```
+
+Independent full/native artifact audit verifies Debian21, Rocky26/three expected
+skips, eight browser workflows/privacy guards,30 accessibility contexts and five
+scan/SBOM pairs with zero OAuth-query candidates. Full local evidence includes
+3378 Python/PostgreSQL/packaging cases,45 browser acceptance cases and55 Vue
+workflows. Optional screenshot publication failed on its token permissions; the
+required native suites and their downloaded artifacts pass. Preserve both runs.
+
+App0.67 adopts the released Git source with >=0.49.0,<0.50.0, matching patch-only
+updater bounds and a regenerated frozen lock. The package tree stays unchanged;
+reference CI selects released Core. The Tables navigation/home directory expose
+populated collections, with one schema-generated Nebula table per type, typed
+filters, server sorting, column selection and recursive record details.
+See [the contract](docs/structured-tables.md). Existing Explore URLs remain valid.
+
+Original mixed implementation PR134 and its frozen failed full43303198802 remain
+as evidence. That full run found two additional historical contract projections
+and51 ingestion fixture failures caused by global type discovery gaining an
+optional selector. The repair preserves global metadata bootstrap while retaining
+content/populated-space checks; all59 affected integration cases and13 client
+unit cases pass locally. The successor is based on the merged Core prerequisite,
+with independent released-Core/full/native acceptance still required before merge
+and canonical publication. No installed images, data, settings or schedules change
+with this source work; production deployment remains separately authorized.

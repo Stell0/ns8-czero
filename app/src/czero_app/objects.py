@@ -162,8 +162,10 @@ def install_object_routes(app: FastAPI,database,auth,read_context,write_context,
 
     @app.get('/api/v1/object-types',response_model=TypesView)
     @operation('object_types_list', 'List immutable object type definitions', Role.READER, TypesView, read_only=True)
-    def types(limit: int=100,offset: int=0,context: RequestAccess=Depends(read_context)):
-        return {'types':invoke(service.list_types,context.actor,limit=limit,offset=offset)}
+    def types(limit: int=100,offset: int=0,populated_only: bool=False,space_id: UUID | None=None,
+              context: RequestAccess=Depends(read_context)):
+        target=selected(space_id) if populated_only else service
+        return {'types':invoke(target.list_types,context.actor,limit=limit,offset=offset,populated_only=populated_only)}
 
     @app.post('/api/v1/object-types',response_model=TypeView,status_code=201)
     @operation('object_types_create', 'Register an immutable bounded object schema. Unique strings require explicit maxLength <=128.', Role.ADMIN, TypeView, read_only=False)
@@ -178,11 +180,12 @@ def install_object_routes(app: FastAPI,database,auth,read_context,write_context,
     @app.get('/api/v1/objects',response_model=ObjectsView)
     @operation('objects_list', 'List and filter typed object records', Role.READER, ObjectsView, read_only=True, space_field='space_id')
     def objects(type_name: str,limit: int=50,offset: int=0,where: str='{}',tag: str | None=None,
-                space_id: UUID | None = None, context: RequestAccess=Depends(read_context)):
+                space_id: UUID | None = None, sort: str | None=None, direction: Literal['asc','desc']='asc',
+                context: RequestAccess=Depends(read_context)):
         if len(where.encode('utf-8'))>4096: raise HTTPException(422,'invalid_filter')
         try: filters=json.loads(where)
         except (ValueError,RecursionError): raise HTTPException(422,'invalid_filter') from None
-        return {'objects':invoke(selected(space_id).list,context.actor,type_name,limit=limit,offset=offset,where=filters,tag=tag)}
+        return {'objects':invoke(selected(space_id).list,context.actor,type_name,limit=limit,offset=offset,where=filters,tag=tag,sort=sort,direction=direction)}
 
     @app.post('/api/v1/objects',response_model=ObjectView,status_code=201)
     @operation('objects_create', 'Create a typed object record', Role.EDITOR, ObjectView, read_only=False, space_field='space_id')
