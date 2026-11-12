@@ -20,7 +20,8 @@ export interface TableRecord {
   data: Record<string, unknown>
 }
 export function fieldLabel(name: string, schema?: FieldSchema) {
-  const label = schema?.title || name.replaceAll('_', ' ')
+  if (schema?.title) return schema.title
+  const label = name.replaceAll('_', ' ')
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 export function scalar(schema: FieldSchema) {

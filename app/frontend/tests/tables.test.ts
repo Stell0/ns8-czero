@@ -45,6 +45,7 @@ describe('generic record values', () => {
       }).text(),
     ).toBe(value)
     expect(fieldLabel('external_key')).toBe('External key')
+    expect(fieldLabel('device', { type: 'string', title: 'iPhone' })).toBe('iPhone')
     expect(scalar({ type: 'array' })).toBe(false)
   })
 })
