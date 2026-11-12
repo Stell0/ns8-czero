@@ -147,6 +147,15 @@ page/font, SDK, source, predecessor and release-policy cases,21 Robot dry runs,
 730 documentation links and the real Renovate44.161.0 bounds check. Independent
 registry reads bind all three predecessor digests and source labels to a106f18.
 Fresh exact-source full/native acceptance remains required.
+Original main8f265dd then merges the separate CI/developer-guidance change.
+Preserve acbfdfb/run43134856085 and its running evidence; its full Python suite
+and all21 genuine0.64 Debian upgrade cases pass. A new isolated consumer
+successor retains the complete streamlined instructions and managed registry,
+including explicit instruction review before PR readiness. Its app/Core code,
+consumer tag/lock, versioning fix and genuine0.64 predecessor fixture exactly
+match acbfdfb. The Core package tree remains identical to published core-v0.47.0.
+Repeat affected policy, reference, package and exact-source full/native checks;
+no frozen history, image identity or acceptance limit is changed.
 Migration0038 adds an empty reference table; no existing content, grants, scopes,
 connections or schedules are changed. Full released-consumer/native/image and
 main publication gates remain required. No installed baseline changes, browser
