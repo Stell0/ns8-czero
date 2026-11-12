@@ -93,6 +93,49 @@ reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
 Core publication, released consumer adoption and live deployment retain separate
 acceptance gates. No browser panels or live changes are included.
 
+### Released Core0.47 consumer candidate
+
+[PR119](https://github.com/Stell0/ns8-czero/pull/119) regularly merges as
+`08e979c4ae285bed03953cf58c6a0a63ebc8888c`; its tested producer
+`884ff312c18fbc18bb613137bbb6ced17df6cfb0` passes exact full
+[43118191778](https://github.com/Stell0/ns8-czero/actions/runs/43118191778):
+3365 Python/PostgreSQL/packaging,43 live browser,40 website browser,28 Vue unit
+cases and21 Robot dry runs. Exact-source full promotion and independent downloaded
+artifact checks pass: Debian21,Rocky26/three expected skips,all eight native
+browser/privacy workflows,five scan/SBOM pairs and zero OAuth-query candidates.
+The regular merge retains exactly the tested tree. The previous candidate and
+failed private evidence remain frozen. Basea106f18 full43117140826 also passes.
+
+[Core0.47.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.47.0) is
+immutably published from that producer by
+[43125626421](https://github.com/Stell0/ns8-czero/actions/runs/43125626421).
+Downloaded checksums and independent wheel/archive inspection pass: wheel
+`902ad47cba16e7337d0f6826292ce8526ba97ab5341aff5e540e4779337f0d63`,
+archive `c303ee19a7763e98fd60dbd6a27405b90f81958f7bc5c6bd4f753f1d6041fefc`.
+The assets include the standalone service,license and schema0038. Publisher
+external installation/recovery checks pass all6 cases.
+
+App0.65 separately adopts its Git tag/lock at the immutable producer commit,
+with `>=0.47.0,<0.48.0` and matching patch-only updater bounds. Other dependency
+versions remain frozen. The Core package tree is unchanged, so reference image
+publication must select released Core and verify its actual Git identity and
+schema0038 inside the published/native app image. Extend that runtime probe to
+bind all three reference routes without a database or model execution.
+Local actual released-Git validation passes148 focused authorization, reference,
+transport, scope, source/lock, release-policy and documentation cases,728 local
+links and21 Robot dry runs. The runtime probe binds schema0038 and all three
+reference routes without a database/model; its Git identity matches884ff312.
+The reference source selector returns released, and every frozen runtime version
+is preserved. The registered runtime probe changes deliberately; registry and
+unresolved comparison state remain unchanged.
+Keep the genuine app0.63/Core0.45 predecessor and all its frozen image identities.
+Migration0038 adds an empty reference table; no existing content, grants, scopes,
+connections or schedules are changed. Full released-consumer/native/image and
+main publication gates remain required. No installed baseline changes, browser
+reference panels, live upgrade or schedule activation are included.
+
+### Producer checkpoints and measured evidence
+
 Implementation candidate: Core0.47/schema0038 adds immutable typed references,
 current summaries, actor/source-scoped payload-free receipts and guarded deletion.
 Plugin1.10 and guidance7 describe navigation and separate publication authority.

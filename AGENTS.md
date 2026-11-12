@@ -10,10 +10,13 @@ plugin1.10, five stable endpoint kinds, outgoing-only summaries and explicit
 source/target selectors. References confer no authority or evidence. Preserve
 metadata-free storage, both-endpoint read checks, blind source-owned deletion,
 credential bindings and revocation lock order. The released consumer lock and
-installed runtime remain separate from this producer candidate. The current
-consumer manifest pins Core0.46 after PR115; preserve that lock and the feature
-candidate's frozen app0.63/Core0.45 native evidence. The accepted installation
-below is the next genuine predecessor for a future live upgrade.
+installed runtime remain separate from source acceptance. App0.65 adopts
+released Core0.47.0 at `884ff312c18fbc18bb613137bbb6ced17df6cfb0`, schema0038,
+with matching patch-only updater bounds. Keep the Core package tree identical
+to that immutable release and preserve the frozen app0.63/Core0.45 feature
+candidate evidence. The accepted app0.64/Core0.46 installation below is the
+next genuine predecessor. Require final released-consumer/image/native
+acceptance before promotion; no live deployment is included.
 
 Retrieval evidence producer work is tracked in
 [its contract](docs/retrieval-evidence.md): Core0.46/schema0037, plugin1.9,
