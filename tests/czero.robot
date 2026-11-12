@@ -662,7 +662,8 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> h3 >> text="czero"    visible    timeout=30s
     Go To    https://${host}/
     Get Text    h1    ==    Home
-    Get Element Count    nav[data-c0-navigation] a    ==    7
+    Get Element Count    nav[data-c0-navigation] a    ==    8
+    Get Attribute    nav[data-c0-navigation] a:has-text("Tables")    href    ==    /tables
     Get Element Count    nav a[aria-current="page"]    ==    1
     Press Keys    body    Tab
     Wait For Elements State    .skip-link    focused

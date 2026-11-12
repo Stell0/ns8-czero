@@ -3759,3 +3759,13 @@ and complete nested strings after expansion. Local frontend checks pass33 unit
 cases and60 browser workflows, including the nested-only structure. Core's
 published tree, tag and lock remain unchanged; the revised source receives new
 full acceptance while earlier runs are retained.
+
+
+Frozen consumer full43322706237 exposes a missing server page allowlist entry
+for direct `/tables` requests and a native navigation assertion still expecting
+seven links. The successor registers both table URLs explicitly, keeps unknown
+routes closed, and checks the eighth navigation link. Root and prefixed HTTP
+regressions reproduce both404s before the repair and pass afterward. The real
+backend/Chromium record workflow now includes table reload/filter/sort/details and
+passes locally;198 focused checks and21 Robot dry runs pass. Preserve
+that failed full run and the prior945c8be candidate's independent run.
