@@ -25,7 +25,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0037_embedding_context'
+assert SCHEMA_REVISION == '0038_cross_space_references'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
@@ -41,6 +41,8 @@ from fastapi import FastAPI
 from czero_core.compilation import CompilationService
 from czero_app.operations import OperationCatalog
 from czero_app.compilation import install as install_compilation
+from czero_core.cross_space_references import CrossSpaceReferenceService
+from czero_app.cross_space_references import install as install_references
 application = FastAPI()
 application.state.operation_catalog = OperationCatalog(None)
 # Binding the released API must require neither a database nor model execution.
@@ -48,4 +50,8 @@ install_compilation(application, None, None, lambda: None, lambda: None)
 assert isinstance(application.state.compilation, CompilationService)
 assert len([route for route in application.routes
             if route.path.startswith('/api/v1/compilation/')]) == 19
+install_references(application, None, None, lambda: None, lambda: None)
+assert isinstance(application.state.cross_space_references, CrossSpaceReferenceService)
+assert len([route for route in application.routes
+            if route.path == '/api/v1/cross-space-references']) == 3
 print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')
