@@ -5,6 +5,7 @@ const spaces = [{ id, role: 'reader' }]
 const form = {
   name: ' Workflow ',
   days: '90',
+  neverExpires: false,
   write: false,
   selected: { [id]: true },
 }
@@ -21,15 +22,26 @@ it('requires current grants and checks every write selection', () => {
     keyRequest({ ...form, write: true }, [{ id, role: 'editor' }]).scopes,
   ).toEqual(['c0:read', 'c0:write'])
 })
-it('rejects invalid names, missing spaces and unbounded lifetimes', () => {
-  for (const changed of [
-    { name: '' },
-    { selected: {} },
-    { days: '0' },
-    { days: '366' },
-    { days: '1.5' },
-    { days: 'oops' },
-  ])
+it('rejects invalid names and missing spaces', () => {
+  for (const changed of [{ name: '' }, { selected: {} }])
     expect(() => keyRequest({ ...form, ...changed }, spaces)).toThrow()
-  expect(keyRequest({ ...form, days: '' }, spaces).lifetime_days).toBeNull()
+})
+
+it('requires a whole lifetime from 1 to 365 unless never expires is selected', () => {
+  for (const days of ['', ' ', '0', '-1', '366', '1.5', 'oops', 'Infinity']) {
+    expect(() => keyRequest({ ...form, days }, spaces)).toThrowError(
+      expect.objectContaining({ status: 422, code: 'key_lifetime' }),
+    )
+    expect(
+      keyRequest({ ...form, days, neverExpires: true }, spaces).lifetime_days,
+    ).toBeNull()
+  }
+  for (const days of ['1', '90', '365'])
+    expect(keyRequest({ ...form, days }, spaces).lifetime_days).toBe(
+      Number(days),
+    )
+  expect(() => keyRequest({ ...form, neverExpires: true }, [])).toThrow()
+  expect(() =>
+    keyRequest({ ...form, neverExpires: true, write: true }, spaces),
+  ).toThrow()
 })

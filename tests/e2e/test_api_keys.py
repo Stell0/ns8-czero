@@ -6,7 +6,8 @@ from test_nebula_theme import assert_accessibility
 SECRET='Copy this key now. It will not be shown again.'
 
 
-def test_account_key_creation_disclosure_and_revocation(live,browser):
+@pytest.mark.parametrize('never_expires',[False,True])
+def test_account_key_creation_disclosure_and_revocation(live,browser,never_expires):
     browser.goto(live.origin+'/account')
     browser.get_by_role('button',name='Create API key',exact=True).click()
     dialog=browser.get_by_role('dialog')
@@ -18,14 +19,31 @@ def test_account_key_creation_disclosure_and_revocation(live,browser):
             assert browser.evaluate('document.documentElement.scrollWidth <= innerWidth')
     dialog.get_by_role('textbox',name='Name',exact=True).fill('Workflow fixture')
     dialog.get_by_role('checkbox',name='Shared',exact=True).check()
+    days=dialog.get_by_role('textbox',name='Lifetime in days',exact=True)
+    expect(days).to_have_value('90')
+    if never_expires:
+        days.fill('366')
+        dialog.get_by_role('button',name='Create API key',exact=True).click()
+        expect(dialog).to_contain_text('Enter a whole number from 1 to 365')
+        choice=dialog.get_by_role('checkbox',name='Never expires',exact=True)
+        days.focus()
+        browser.keyboard.press('Tab')
+        expect(choice).to_be_focused()
+        browser.keyboard.press('Space')
+        expect(days).to_be_disabled()
     dialog.get_by_role('button',name='Create API key',exact=True).press('Enter')
     expect(browser.get_by_role('textbox',name=SECRET,exact=True)).to_be_visible()
     secret=browser.get_by_role('textbox',name=SECRET,exact=True).input_value()
     assert secret.startswith('c0k_')
+    saved=browser.evaluate("async()=> (await (await fetch('/api/v1/api-keys')).json()).api_keys")
+    key=next(row for row in saved if row['name']=='Workflow fixture')
+    assert (key['expires_at'] is None)==never_expires
+    assert live.rest.get('/api/v1/me',headers={'Authorization':'Bearer '+secret}).status_code==200
     browser.get_by_role('button',name='I saved the key',exact=True).press('Enter')
     expect(browser.get_by_role('textbox',name=SECRET,exact=True)).to_have_count(0)
     browser.reload()
     expect(browser.get_by_text('Workflow fixture',exact=False)).to_be_visible()
+    if never_expires:expect(browser.get_by_text('Never expires',exact=False)).to_be_visible()
     assert secret not in browser.content()
     browser.get_by_role('button',name='Revoke API key',exact=True).click()
     dialog.get_by_role('button',name='Revoke API key',exact=True).click()

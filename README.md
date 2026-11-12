@@ -137,6 +137,8 @@ A minimal end-to-end example:
 4. Open that page in C0 and inspect its current content. API or host completion alone is not readback proof.
 
 For custom automation, [personal API keys](docs/api-keys.md) provide explicit Read/Write and selected-space bounds. They have no administration scope. [Recurring maintenance](docs/wiki-maintenance.md) explains unattended authentication and verification.
+The Account form defaults to 90 days, accepts 1–365 days and offers an explicit
+**Never expires** choice with a security explanation.
 
 ## Documentation and license
 
