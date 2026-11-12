@@ -82,10 +82,9 @@ publication and six fresh independent registry identity reads pass for all three
 | `ghcr.io/stell0/czero-app` | `sha256:818c91c782471981d81349c01857366b10c1972677d02ff91887f8e49c782ffd` |
 | `ghcr.io/stell0/czero-postgres` | `sha256:12289c460619f3ff3ba47e761319e1cab3589e40e84ab05150bd5b82d5d2dec9` |
 
-This is source/publication acceptance. The installed baseline and genuine
-predecessor below remain unchanged; production upgrade, actual connector reload
-and live space-audience changes require their separate authorization. No stable
-NS8 module release or actual new packaged-skill/vendor acceptance is claimed.
+This source/publication acceptance precedes the separately authorized deployment
+recorded below. No stable NS8 module release or actual new packaged-skill/vendor
+acceptance is claimed.
 
 Retain failed development/native evidence: b76220b fast43188463675 had stale native
 health/mock expectations; broad development had3333 passes/35 failures/three errors
@@ -97,16 +96,70 @@ ten access stages pass. The accepted successor asserts switch absence before and
 after reload and checks real Wiki bodies plus audience-bound OAuth retirement.
 Preserve those commits, images and failed/private logs.
 
-No live deployment, existing-space audience change, connector consent expansion
-or installed-baseline change is claimed.
+The following live closeout records the separately authorized update and requested
+space-audience change. Connector consent scopes remain unchanged.
+
+## Self-service Read accepted deployment
+
+The separately authorized 12 November update installs app **0.66.0**, released
+Core **0.48.0**, schema **0039_space_audiences**, source
+`145d144725f748b8a168aefce72b0f866bbe820e`. The accepted immutable tag and three
+installed digests are the source/publication identities above. Installed-image
+inspection and the actual running app verify released Git Core
+`2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`, the new space-access API and no
+local-Core fallback or NS8 SDK. These installed images become the next genuine
+upgrade predecessor. Retain the actual previous app0.64/Core0.46/schema0037
+installation and all three digests in the Native OAuth record below.
+
+Supported C0-only backup and full Restic read-data verification pass before the
+immutable-digest update. All 16 backup definitions are restored exactly. Read-only
+preflight verifies 6590 complete sources, 453 multipart parents and no pending
+source replacements. The original 64-table/1,317,377-row snapshot binds exact
+preservation before the audience change. Final preservation separates the one
+requested audience revision and Core receipt from stored knowledge and authority;
+52 data tables retain exact hashes.
+API-key usage and remembered-browser renewal match the verified backup on fixed
+fields and advance their activity clocks monotonically. Checks use isolated
+backup-table extraction and read-only SQL, without restoring production data.
+Existing job history, grant families, credential bindings, knowledge cursors/events,
+settings, schedules, mounts and all 11 unrelated module identities/flag sets are
+preserved. The source-original store remains empty; extraction/reindex counts
+stay zero and the existing embedding profile stays legacy. The retired discovery
+setting is the only configuration removal; image/predecessor environment changes
+are checked separately.
+
+The explicitly requested documentation space now allows all admitted users to
+read its complete contents. A current persisted Admin applies the revision-bound
+Core operation with a replay key. An existing ungranted account reads real Wiki
+content as Reader and is denied editing. Other space audiences and explicit grants
+remain unchanged. Migration defaults keep all other protected spaces restricted;
+cross-space references remain empty and existing client-review state is preserved.
+
+The supported update and `node/1/restart-module` pass. The app invocation changes;
+all four C0 units, current runtime, trusted HTTPS route/certificate and readiness
+pass afterward. Fresh MCP discovery matches 124 capability operations under the
+existing key's scopes. The existing OAuth connection returns the same account
+before update, after update and after restart; post-restart space discovery sees
+the requested audience. Installed plugin1.11 assets preserve the registered app
+identity, and the HTTP skill archive exactly matches installed package bytes.
+This verifies current server discovery and real authorized operations; the current
+assistant's cached catalog is not reloaded and new vendor packaged-skill acceptance
+is not claimed. No consent scopes are broadened.
+
+Bounded root application journals contain 156 entries, three real health and 32 MCP
+positive controls, and zero credential/query/traceback candidates. The owned
+documentation-job maintenance lock is released after acceptance, with job files
+and definitions retained. Private identities, credentials, snapshot data and raw
+operational evidence stay outside Git. Failed local validation helpers remain
+preserved separately from passing acceptance. No stable module release is claimed.
 
 ## Native OAuth accepted deployment
 
 The separately authorized 12 November update installs app **0.64.0**, released
 Core **0.46.0**, schema **0037_embedding_context**, source
-`a106f188d362fa02574972662f84bb3fc93774af`. This is the installed baseline;
-later producer work and Git-only documentation markers retain separate acceptance
-and deployment gates.
+`a106f188d362fa02574972662f84bb3fc93774af`. This historical installation is the
+genuine predecessor of the self-service Read deployment above. Git-only
+documentation markers retain separate acceptance and deployment gates.
 
 [PR115](https://github.com/Stell0/ns8-czero/pull/115) regularly merges the released
 consumer as `505b8ee`. [PR113](https://github.com/Stell0/ns8-czero/pull/113) repairs
@@ -2129,13 +2182,13 @@ evidence and repeats the required current-base checks before merge.
 
 ## Current baseline
 
-The accepted dedicated installation is app **0.64.0**, released Core **0.46.0**,
-schema **0037**, source `a106f188d362fa02574972662f84bb3fc93774af`.
-Its [accepted deployment record](#native-oauth-accepted-deployment)
+The accepted dedicated installation is app **0.66.0**, released Core **0.48.0**,
+schema **0039**, source `145d144725f748b8a168aefce72b0f866bbe820e`.
+Its [accepted deployment record](#self-service-read-accepted-deployment)
 contains installed immutable tags/digests, supported update/restart acceptance and
 preservation evidence. Those installed images are the next genuine predecessor;
-retain the actual app0.63/Core0.45 predecessor, historical app0.61/Core0.42 and
-all earlier frozen images and evidence.
+retain the actual app0.64/Core0.46 predecessor, app0.63/Core0.45, historical
+app0.61/Core0.42 and all earlier frozen images and evidence.
 
 Source versions are separate: use `app/pyproject.toml` and its committed `uv.lock`
 for the app and released Core dependency, `packages/czero-core/pyproject.toml`

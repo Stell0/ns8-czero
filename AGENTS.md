@@ -1,6 +1,6 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-Self-service Read and space audiences are source-accepted in app0.66 / released
+Self-service Read and space audiences are deployed in app0.66 / released
 Core0.48.0 / schema0039 / plugin1.11. Core is immutable at
 `2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`; preserve its exact package tree,
 released Git tag/lock and patch-only updater bounds. PR130 regularly merges as
@@ -10,9 +10,11 @@ and six fresh registry reads pass. Producer43209361920 and publisher43218817753
 remain separate evidence. Preserve explicit blocks, disabled clients, metadata
 review and credential ceilings; baseline audience access is Read only. Existing
 protected spaces remain restricted, and the discovery switch is retired on
-upgrade/restore. Preserve all failed candidates and installed identities. Source
-acceptance does not change the installed baseline or authorize deployment or live
-space-audience changes; see PLAN.
+upgrade/restore. The separately authorized deployment and one requested space
+audience change pass supported backup/update/restart, preservation and live
+connection/privacy checks. See PLAN for the installed immutable identities and
+genuine app0.64/Core0.46 predecessor. Preserve all failed candidates and private
+evidence. Further deployments or audience changes need their own authorization.
 
 Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and
@@ -29,9 +31,9 @@ App0.65 adopts released Core0.47.0 at
 Keep the current Core tree identical to its active immutable consumer release;
 preserve earlier producer/consumer candidates and native evidence. Main0daf8a0 passes full/
 native acceptance, canonical publication, independent artifact/promotion checks
-and six fresh registry reads. The accepted installation in
-[PLAN's current baseline](PLAN.md#current-baseline) remains the next genuine
-predecessor. No live deployment or browser reference panels are included.
+and six fresh registry reads. The accepted app0.66 installation includes this
+dependency through Core0.48; retain its earlier source/publication evidence. Browser reference panels remain
+separate work. See [PLAN's current baseline](PLAN.md#current-baseline).
 
 ## Current state and precedence
 
