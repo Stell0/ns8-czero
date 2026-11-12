@@ -42,10 +42,30 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
         return response
 
     @app.post('/oauth/connect/request', include_in_schema=False)
-    def submit(request: Request, context=Depends(write_context)):
-        session = browser_session(request)
-        return {**service.submit(session, *pending(request)),
-                'profile': auth.access.profile(session.actor), 'csrf_token': session.csrf_token}
+    async def submit(request: Request, context=Depends(write_context)):
+        session = await to_thread.run_sync(partial(browser_session, request))
+        tokens = pending(request)
+        view = await to_thread.run_sync(partial(service.submit, session, *tokens))
+        if view['self_service_allowed'] and 'c0:read' in view['scopes']:
+            # Fetch only after first-party sign-in and CSRF-bound account admission.
+            fetched = await cimd.fetcher.fetch(view['metadata_url'], cache=True)
+            session = await to_thread.run_sync(partial(browser_session, request))
+            await to_thread.run_sync(partial(service.register_reader, session, *tokens,
+                fetched.metadata, cache_seconds=fetched.remaining))
+            view = await to_thread.run_sync(partial(service.view, session, *tokens))
+        if view['approved']:
+            scopes = set(view['scopes']) & set(view['allowed_scopes'])
+            if scopes:
+                verification = await cimd.verification(view['metadata_url'])
+                session = await to_thread.run_sync(partial(browser_session, request))
+                consent = await to_thread.run_sync(partial(service.complete, session, *tokens,
+                    scopes=scopes, verification=verification))
+                response = JSONResponse({'next': '/oauth/consent'}, headers={'Cache-Control': 'no-store'})
+                response.set_cookie('c0_consent', consent.request + '.' + consent.binding,
+                    max_age=300, secure=True, httponly=True, samesite='lax', path='/')
+                response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
+                return response
+        return {**view, 'profile': auth.access.profile(session.actor), 'csrf_token': session.csrf_token}
 
     @app.post('/oauth/connect/continue', include_in_schema=False)
     async def proceed(request: Request, data: ConnectionScopes, context=Depends(write_context)):

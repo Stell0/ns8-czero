@@ -18,7 +18,7 @@ pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='d
 
 
 async def request(user,profile):
-    raw,_=parameters(scope='c0:read c0:write')
+    raw,_=parameters(scope='c0:write')
     assert (await user.get('/oauth/authorize',params=raw)).status_code==302
     assert (await user.post('/oauth/connect/request',json={},headers=headers(profile))).status_code==200
 
@@ -52,15 +52,20 @@ def test_browser_approval_decline_disconnect_and_persistent_block_are_separate(c
                 preview=await admin.post(route+'/preview',headers=headers(adm))
                 assert preview.status_code==200 and len(h.requests)==1
                 value=preview.json()
-                body={'metadata_digest':value['metadata_digest'],'allowed_scopes':['c0:read']}
+                body={'metadata_digest':value['metadata_digest'],'allowed_scopes':['c0:write']}
                 assert (await admin.post(route+'/approve',json=body)).status_code==403
                 assert (await admin.post(route+'/approve',json=body,headers=headers(adm))).status_code==200
                 assert len(h.requests)==2 and (await member_row(admin))['role']=='reader'
-                assert registry.clients._lookup(URL)['allowed_scopes']==['c0:read']
+                assert registry.clients._lookup(URL)['allowed_scopes']==['c0:write']
                 assert (await admin.delete(route)).status_code==403
                 assert (await admin.delete(route,headers=headers(adm))).status_code==204
                 assert (await user.post('/oauth/connect/continue',json={'scopes':['c0:read']},headers=headers(person))).status_code==410
                 assert (await admin.delete(route,headers=headers(adm))).status_code==410
+                # An Admin separately extends application permissions; the Reader role is unchanged.
+                registered = registry.clients._lookup(URL)
+                assert (await admin.put('/api/v1/oauth/cimd/clients/' + str(registered['internal_id']),
+                    json={'metadata_digest': value['metadata_digest'], 'allowed_scopes': ['c0:read','c0:write'],
+                          'expected_revision': registered['revision']}, headers=headers(adm))).status_code == 200
                 # Two independent explicit consents for the same user/application.
                 first=await issued_pair(user,{'client_id':URL},login_code='unit-only-forbidden-code')
                 second=await issued_pair(user,{'client_id':URL},login_code='unit-only-forbidden-code')
@@ -132,7 +137,7 @@ def test_preview_and_approval_recheck_request_after_metadata_io(cimd_http,monkey
     ('/api/v1/access/requests/private-canary/preview','POST',None),
     ('/api/v1/access/connections/private-canary','DELETE',None),
     ('/api/v1/access/requests/00000000-0000-4000-8000-000000000001/approve','POST',
-     {'metadata_digest':'private-canary','allowed_scopes':['c0:read']}),
+     {'metadata_digest':'private-canary','allowed_scopes':['c0:write']}),
 ])
 def test_invalid_access_input_is_static_and_never_reflected(application,path,method,body):
     async def check():

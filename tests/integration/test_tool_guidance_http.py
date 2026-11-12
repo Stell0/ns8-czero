@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 import pytest
-from project_contract import REFERENCE_OPERATIONS, COMPILATION_OPERATIONS, PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT, REMOVED_HISTORY_OPERATIONS, CHANGED_VALIDATION_CONTRACTS
+from project_contract import SPACE_ACCESS_OPERATIONS, REFERENCE_OPERATIONS, COMPILATION_OPERATIONS, PROJECT_OPERATIONS, DOCUMENT_OPERATIONS, TOOL_COUNT, REMOVED_HISTORY_OPERATIONS, CHANGED_VALIDATION_CONTRACTS
 
 from czero_app.tool_guidance import DESCRIPTIONS
 from test_auth_http import application, ORIGIN
@@ -32,8 +32,8 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
     frozen = json.loads((Path(__file__).parents[1] / 'fixtures/tool_guidance/m17_contract.json').read_text())
     actual = [app.state.operations.definition(name) for name in sorted(app.state.operations._operations)]
     assert len(actual) == TOOL_COUNT
-    assert {item['name'] for item in actual} - {item['name'] for item in frozen['operations']} == REFERENCE_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | COMPILATION_OPERATIONS
-    original = [item for item in actual if item['name'] not in REFERENCE_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | COMPILATION_OPERATIONS]
+    assert {item['name'] for item in actual} - {item['name'] for item in frozen['operations']} == SPACE_ACCESS_OPERATIONS | REFERENCE_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | COMPILATION_OPERATIONS
+    original = [item for item in actual if item['name'] not in SPACE_ACCESS_OPERATIONS | REFERENCE_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | COMPILATION_OPERATIONS]
     assert len(original)==75 and len(frozen['operations'])==77
     current=json.loads((Path(__file__).parents[1]/'fixtures/tool_guidance/latest_only_contract.json').read_text())
     latest={row['name']:row for row in current['operations']}
@@ -50,11 +50,12 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
         if item['name']=='knowledge_index_status' else item for item in projected]
     projected=[{**item,'input_schema':contract.legacy_search_input(item['input_schema'])}
         if item['name'] in ('knowledge_search','knowledge_search_structured') else item for item in projected]
+    projected = [contract.legacy_space_audience(item) if item['name'] in ('spaces_list','spaces_get','spaces_create') else item for item in projected]
     assert [contract.operation_contract(item) for item in projected]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()
     assert not any(path.endswith('/history') or path.endswith('/revisions') for path in schema['paths'])
-    assert [item for item in contract.route_contract(schema) if item['operation'] not in REFERENCE_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | COMPILATION_OPERATIONS] == [row for row in frozen['rest_bindings'] if row['operation'] not in REMOVED_HISTORY_OPERATIONS]
+    assert [item for item in contract.route_contract(schema) if item['operation'] not in SPACE_ACCESS_OPERATIONS | REFERENCE_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | COMPILATION_OPERATIONS] == [row for row in frozen['rest_bindings'] if row['operation'] not in REMOVED_HISTORY_OPERATIONS]
     for methods in schema['paths'].values():
         for route in methods.values():
             if isinstance(route, dict) and 'x-c0-operation' in route:

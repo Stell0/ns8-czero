@@ -20,7 +20,7 @@ Use C0 for team procedures, support knowledge, ongoing research or project knowl
 | Knowledge connections | Entities, aliases, sourced claims, relationships, applicability and revision-specific verification annotations |
 | Ingestion | Text/Markdown through MCP; TXT, Markdown, PDF and DOCX file uploads; reusable external collectors for websites and other sources |
 | Controlled processing | Background extraction/indexing, progress and recovery; opt-in queued extraction, local OCR and exact section/context reads |
-| Shared access | Verified sign-in, Reader/Editor/Admin roles, Shared and protected spaces, explicit OAuth scopes and personal API keys |
+| Shared access | Verified sign-in, Reader/Editor/Admin roles, self-service Read connections, space audiences, explicit OAuth scopes and personal API keys |
 | Agent tools | REST, OAuth-protected MCP, instance-bound instructions and generated ChatGPT skill/plugin packages |
 | Wiki maintenance | External agents can make requested edits or use an enabled, bounded compiler workflow with proposals, validation and readback |
 | Research projects | Protected-space manifests, topic scope, monitoring/queue budgets, external workflow coordination and saved reports |

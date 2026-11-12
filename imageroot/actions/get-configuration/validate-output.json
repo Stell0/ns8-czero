@@ -179,10 +179,6 @@
                 "idle_seconds"
             ]
         },
-        "cimd_enabled": {
-            "type": "boolean",
-            "description": "Allow administrator-approved public OAuth client metadata URLs; disabled by default"
-        },
         "connection_idle_seconds": {
             "type": "integer",
             "minimum": 86400,
@@ -248,7 +244,6 @@
         "owner_ldap_uuid",
         "retrieval",
         "session_policy",
-        "cimd_enabled",
         "connection_idle_seconds"
     ]
 }

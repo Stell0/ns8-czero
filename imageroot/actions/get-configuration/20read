@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin'))
 from czero_retrieval_config import read, public
 from czero_session_policy import read as session_policy
 from czero_connection_policy import read as connection_policy
-from czero_cimd_config import read as cimd_enabled
 from czero_extraction_config import read as extraction
 
 config = {"host": os.getenv("CZERO_HOST", ""),
@@ -25,6 +24,5 @@ config = {"host": os.getenv("CZERO_HOST", ""),
 config['retrieval'] = public(read(Path(os.environ['AGENT_STATE_DIR']) / 'retrieval.env'))
 config['session_policy'] = session_policy()
 config['connection_idle_seconds'] = connection_policy()
-config['cimd_enabled'] = cimd_enabled()
 config['extraction'] = extraction()
 json.dump(config, fp=sys.stdout)

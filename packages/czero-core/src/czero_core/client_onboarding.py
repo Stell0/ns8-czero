@@ -108,8 +108,12 @@ class ClientOnboardingService:
         raw = row['parameters']
         client = self.grants.clients._registered(connection, row['metadata_url'])
         approved = client is not None and self.grants.clients.redirect_uri_matches(raw['redirect_uri'], client['redirect_uris'])
+        known = connection.execute(text("""SELECT c.enabled,b.review_required FROM c0_cimd_clients b
+            JOIN c0_oauth_clients c ON c.id=b.client_id WHERE b.metadata_url=:url"""),
+            {'url': row['metadata_url']}).mappings().one_or_none()
         return {'metadata_url': row['metadata_url'], 'callback': raw['redirect_uri'],
                 'scopes': raw.get('scope', 'c0:read').split(), 'expires_at': row['expires_at'],
+                'self_service_allowed': known is None,
                 'approved': approved, 'allowed_scopes': client['allowed_scopes'] if approved else []}
 
     def view(self, session, request, binding):
@@ -136,6 +140,28 @@ class ClientOnboardingService:
                 connection.execute(text('UPDATE c0_client_onboarding SET account_id=:id WHERE hash=:hash'),
                                    {'id': actor.user_id, 'hash': row['hash']})
             return self._view(connection, row)
+
+    def register_reader(self, session, request, binding, metadata, *, cache_seconds=0):
+        """Register only a new validated identity for Read; never repair a disabled client."""
+        from .cimd_metadata import ClientMetadata
+        if not isinstance(metadata, ClientMetadata) or not 0 <= cache_seconds <= 300:
+            raise OnboardingRejected()
+        with self.grants.access.database.engine.begin() as connection:
+            self._lock(connection)
+            actor = self._session(connection, session)
+            row = self._request(connection, request, binding)
+            raw = row['parameters']
+            if (row['account_id'] != actor.user_id or metadata.client_id != row['metadata_url']
+                    or not self.grants.clients.redirect_uri_matches(raw['redirect_uri'], metadata.redirect_uris)
+                    or 'c0:read' not in raw.get('scope', 'c0:read').split()
+                    or (metadata.scope_ceiling is not None and 'c0:read' not in metadata.scope_ceiling)):
+                raise OnboardingRejected()
+            existing = connection.execute(text('SELECT 1 FROM c0_cimd_clients WHERE metadata_url=:url'), {'url': row['metadata_url']}).first()
+            if existing is not None:
+                # Existing policy, including explicit disable and sticky review, always wins.
+                return
+            self.grants.cimd._store(connection, metadata, scopes=['c0:read'],
+                expected_digest=metadata.digest, cache_seconds=cache_seconds)
 
     def requests(self, actor):
         with self.grants.access.database.engine.connect() as connection:

@@ -91,7 +91,7 @@ def test_settings_round_trip(monkeypatch, capsys, tmp_path):
     assert config == {'host':'c0.example.test','lets_encrypt':True, 'retrieval':public(defaults()),
         'extraction':{'enabled':False,'workers':2,'document_workers':2,'space_workers':2,
             'max_queued_units':2000,'max_staging_bytes':33554432,'ocr_enabled':False,'ocr_language':'eng','cache_enabled':True},
-        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600}, 'cimd_enabled':False,
+        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
         'connection_idle_seconds':2592000,
         **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
     schema = json.loads((ACTIONS / 'get-configuration/validate-output.json').read_text())
@@ -108,7 +108,7 @@ def test_unconfigured_defaults_are_machine_readable(monkeypatch, capsys, tmp_pat
     assert json.loads(capsys.readouterr().out) == {'host':'','lets_encrypt':False, 'retrieval':public(defaults()),
         'extraction':{'enabled':False,'workers':2,'document_workers':2,'space_workers':2,
             'max_queued_units':2000,'max_staging_bytes':33554432,'ocr_enabled':False,'ocr_language':'eng','cache_enabled':True},
-        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600}, 'cimd_enabled':False,
+        'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
         'connection_idle_seconds':2592000,
         **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
 

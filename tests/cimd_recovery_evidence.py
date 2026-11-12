@@ -4,7 +4,7 @@ from collections import Counter
 
 COMMON = {'stage', 'approval_preserved', 'policy_enabled', 'core_seeded', 'network_fetch_tested'}
 EXTRAS = {'seed': set(), 'update': {'existing_authority_retained', 'refresh_rotated', 'absolute_bound_preserved'},
-          'restore': {'old_authority_rejected', 'old_grant_unexpired', 'fresh_consent', 'client_disabled', 'policy_disabled'}}
+          'restore': {'old_authority_rejected', 'old_grant_unexpired', 'fresh_consent', 'client_disabled', 'self_service_available'}}
 
 
 def validate_measurement(value):

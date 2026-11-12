@@ -72,20 +72,6 @@
                 :disabled="loading.getConfiguration || loading.configureModule"
               />
               <p>{{ $t("settings.sharing_help") }}</p>
-              <h3>{{ $t("settings.cimd_title") }}</h3>
-              <NsToggle
-                v-model="cimdEnabled"
-                data-c0-cimd-switch="true"
-                :label="$t('settings.cimd_enabled')"
-                :disabled="loading.getConfiguration || loading.configureModule"
-              />
-              <p>{{ $t("settings.cimd_help") }}</p>
-              <NsInlineNotification
-                v-if="error.cimd_enabled"
-                kind="error"
-                :description="error.cimd_enabled"
-                :showCloseButton="false"
-              />
               <h3>{{ $t("settings.session_policy_title") }}</h3>
               <p>{{ $t("settings.session_policy_help") }}</p>
               <NsTextInput
@@ -223,7 +209,6 @@ export default {
       savedHost: "",
       letsEncrypt: false,
       ssoEnabled: false,
-      cimdEnabled: false,
       idp: "",
       userDomain: "",
       owner: "",
@@ -251,7 +236,6 @@ export default {
         retrieval: "",
         session_policy: "",
         connection_idle_seconds: "",
-        cimd_enabled: "",
       },
     };
   },
@@ -388,7 +372,6 @@ export default {
       this.host = taskResult.output.host;
       this.savedHost = this.host;
       this.letsEncrypt = taskResult.output.lets_encrypt;
-      this.cimdEnabled = taskResult.output.cimd_enabled === true;
       this.owner = taskResult.output.owner;
       this.retrieval = retrievalForm(taskResult.output.retrieval);
       this.sessionPolicy = sessionPolicyForm(taskResult.output.session_policy);
@@ -419,8 +402,7 @@ export default {
           const field = validationError.parameter || validationError.field;
           if (field === "retrieval") {
             this.error.retrieval = this.$t("settings.retrieval_invalid");
-          } else if (field === "cimd_enabled") {
-            this.error.cimd_enabled = this.$t("settings.cimd_invalid");
+
           } else if (field === "session_policy") {
             this.error.session_policy = this.$t(
               "settings.session_policy_invalid"
@@ -447,7 +429,6 @@ export default {
       this.error.retrieval = "";
       this.error.session_policy = "";
       this.error.connection_idle_seconds = "";
-      this.error.cimd_enabled = "";
       let sessionPolicy;
       let connectionIdleSeconds;
       try {
@@ -514,7 +495,6 @@ export default {
             retrieval: retrievalPayload(this.retrieval),
             session_policy: sessionPolicy,
             connection_idle_seconds: connectionIdleSeconds,
-            cimd_enabled: this.cimdEnabled,
           },
           extra: {
             title: this.$t("settings.configure_instance", {

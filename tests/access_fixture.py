@@ -41,7 +41,7 @@ def run(module_id,phase):
         assert profile['role']=='reader'
         raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
              'code_challenge_method':'S256','code_challenge':'a'*43,'state':secrets.token_urlsafe(32),
-             'scope':'c0:read c0:write','resource':origin+'/mcp'}
+             'scope':'c0:write','resource':origin+'/mcp'}
         assert user.request('/oauth/authorize?'+urlencode(raw))[0]==200
         pending=checked(user,'/oauth/connect/request',{},'POST',profile['csrf_token'])
         assert pending['approved'] is False,'Native fixture application was already approved'
@@ -55,7 +55,7 @@ def run(module_id,phase):
         if phase=='approved':
             clients=checked(admin,'/api/v1/oauth/cimd')['clients']
             app=next(c for c in clients if c['metadata_url']==URL)
-            assert app['client_name']==NAME and app['allowed_scopes']==['c0:read'] and app['enabled']
+            assert app['client_name']==NAME and app['allowed_scopes']==['c0:write'] and app['enabled']
             assert app['metadata_digest']==DIGEST,'Native approval differs from fixed public metadata'
             proof.update(allowed_scopes=app['allowed_scopes'],user_role=member['role'],metadata_verified=app['metadata_digest']==DIGEST)
             assert member['role']=='reader' and not member['blocked']
@@ -63,7 +63,7 @@ def run(module_id,phase):
             # A fresh independent pending request for Decline; existing approval stays.
             user=Browser(origin);profile=user.login('c0member',personas['password'])
             raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
-                 'code_challenge_method':'S256','code_challenge':'b'*43,'scope':'c0:read c0:write',
+                 'code_challenge_method':'S256','code_challenge':'b'*43,'scope':'c0:read',
                  'resource':origin+'/mcp'}
             assert user.request('/oauth/authorize?'+urlencode(raw))[0]==200
             checked(user,'/oauth/connect/request',{},'POST',profile['csrf_token'])

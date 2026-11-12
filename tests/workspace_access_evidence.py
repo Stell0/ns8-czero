@@ -3,7 +3,7 @@
 """Strict nonprivate observations required from actual native access workflows."""
 EXPECTED={
     'prepare':{'fresh_reader':True,'pending_request':True},
-    'approved':{'allowed_scopes':['c0:read'],'user_role':'reader','metadata_verified':True},
+    'approved':{'allowed_scopes':['c0:write'],'user_role':'reader','metadata_verified':True},
     'declined':{'remaining_requests':1,'consented_connections':2},
     'disconnected':{'member_statuses':[200,401],'other_status':200,'refresh_status':400},
     'blocked':{'member_statuses':[401,401],'other_status':200,'blocked_signins':2,'blocked':True},

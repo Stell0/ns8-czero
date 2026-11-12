@@ -13,6 +13,7 @@ export interface Space {
   id: string
   name: string
   shared: boolean
+  readable_by_all: boolean
   role: 'reader' | 'editor' | 'admin'
   revision: number
 }
@@ -113,7 +114,8 @@ export const useSession = defineStore('session', () => {
         me.id !== previous?.id ||
         me.role !== previous?.role ||
         me.csrf_token !== previous?.csrf_token ||
-        found.role !== selected?.role
+        found.role !== selected?.role ||
+        found.revision !== selected?.revision
       )
         await load()
     } catch (cause) {

@@ -68,8 +68,7 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     database = database if database is not None else Database()
     auth = auth if auth is not None else AppAuth.from_env(database, base_path)
     mcp_child = None
-    from czero_app.cimd_config import configured as cimd_configured
-    cimd_enabled = cimd_configured() and auth is not None and not base_path
+    cimd_enabled = auth is not None and not base_path
 
     @asynccontextmanager
     async def lifespan(application):

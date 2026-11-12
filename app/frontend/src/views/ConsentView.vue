@@ -27,6 +27,7 @@ interface Consent {
   background_supported?: boolean
   background_requested?: boolean
   background_ready?: boolean
+  next?: string
   connection_idle_seconds?: number
 }
 const { data, error, isPending, refetch } = useResource(
@@ -38,6 +39,9 @@ const { data, error, isPending, refetch } = useResource(
       false,
     ),
 )
+watch(data, (value) => {
+  if (value?.next === '/oauth/consent') location.assign(localURL(value.next))
+})
 const eligible = computed(() =>
   connecting.value && session.isAdmin && !data.value?.approved
     ? (data.value?.scopes || []).filter(
@@ -225,6 +229,9 @@ const submit = useMutation({
           {{ data.metadata_url }}
         </p>
         <p>{{ t('consent.permissions') }}</p>
+        <p v-if="data.scopes?.includes('c0:read')">
+          {{ t('consent.readBoundary') }}
+        </p>
       </div>
       <fieldset class="min-w-0 space-y-3" :disabled="submit.isLoading.value">
         <legend class="sr-only">{{ t('consent.permissions') }}</legend>

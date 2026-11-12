@@ -24,7 +24,7 @@ def native(monkeypatch, tmp_path):
         monkeypatch.delenv(name, raising=False)
     updates, statuses = [], []
     monkeypatch.setitem(sys.modules, 'agent', SimpleNamespace(
-        mset_env=lambda values: updates.append(dict(values)), set_status=statuses.append,
+        mset_env=lambda values: updates.append(dict(values)), unset_env=lambda key: None, set_status=statuses.append,
         read_envfile=lambda _: {}, safe_open=lambda name: open(name, 'w')))
     return updates, statuses
 

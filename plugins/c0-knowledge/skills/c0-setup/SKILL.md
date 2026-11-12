@@ -5,7 +5,7 @@ description: Connect or check the C0 instance associated with this plugin, inclu
 
 Read [this package's instance binding](../../references/instance.md). Use only its associated C0 app. If that app or its tools are missing, explain what is missing and guide the user through connection; do not substitute a different instance.
 
-Follow [connection setup](../../references/connection.md) when sign-in or client approval is needed. Ask the user to complete private login in the provider page. Never request passwords, access tokens, cookies or a full OAuth authorization URL in chat.
+Follow [connection setup](../../references/connection.md) for sign-in, self-service Read consent or additional client permissions. Ask the user to complete private login in the provider page. Never request passwords, access tokens, cookies or a full OAuth authorization URL in chat.
 
 Once connected, call `get_profile` and `spaces_list`. Show the returned account label and ask the user to select the intended authorized space if ambiguous. A returned profile proves the connected account, not membership in an unlisted space. Do not save or alter content during setup.
 

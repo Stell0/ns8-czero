@@ -86,6 +86,7 @@ DESCRIPTIONS = {
     'spaces_get': 'Read one authorized space and the account’s effective role there. Use its space_id explicitly in later content calls; do not substitute Shared after a denial.',
     'spaces_create': 'Admin: create a protected knowledge space with a required replay key. This creates storage, not grants for other accounts; configure explicit Reader/Editor grants separately.',
     'space_grants_list': 'Admin: inspect Reader/Editor grants and their revisions for a space. Shared has fixed policy and Admin access is implicit; listing does not grant access.',
+    'space_access_set': 'Admin: choose whether all admitted users can read the complete space, including sources and attachments. Use its current expected revision and replay key. Restricting the audience revokes affected credentials. Shared policy is fixed.',
     'space_grants_set': 'Admin: set or revoke a space grant using its current expected revision (zero creates) and replay key. Changes revoke affected delegated tokens; regranting never revives them.',
     'wiki_pages_list': 'Find Wiki page metadata in the selected space, with bounded pagination. Results contain summaries, not article bodies or verified evidence; read the chosen page with wiki_pages_get.',
     'wiki_pages_resolve': 'Find one page by its exact fixed slug in the selected space. Archived pages require include_deleted. Use this before create-only upsert; clarify ambiguous user targets before writing.',
@@ -175,7 +176,7 @@ REPLAY_SAFE = frozenset({
     'entity_references_create', 'entity_references_remove',
     'entity_relations_create', 'entity_relations_update', 'jobs_enqueue',
     'knowledge_annotations_update', 'knowledge_bundle_apply', 'sources_ingest_text',
-    'space_grants_set', 'spaces_create', 'wiki_pages_archive', 'wiki_pages_create',
+    'space_access_set', 'space_grants_set', 'spaces_create', 'wiki_pages_archive', 'wiki_pages_create',
     'wiki_pages_update', 'wiki_pages_upsert',
 })
 
@@ -193,7 +194,7 @@ DESTRUCTIVE = frozenset({
     'entity_references_remove', 'entity_relations_update', 'jobs_enqueue',
     'knowledge_annotations_update', 'knowledge_bundle_apply', 'oauth_clients_configure',
     'object_relations_delete', 'objects_batch', 'objects_delete', 'objects_update',
-    'schedules_create', 'schedules_update', 'sources_archive', 'space_grants_set',
+    'schedules_create', 'schedules_update', 'sources_archive', 'space_access_set', 'space_grants_set',
     'wiki_pages_archive', 'wiki_pages_update', 'wiki_pages_upsert',
 })
 

@@ -1,5 +1,19 @@
 # C0 roadmap
 
+## Self-service Read and space audiences — implementation candidate
+
+Based on original main6e9554c. New HTTPS metadata clients use verified first-party
+sign-in and explicit Read consent without administrator review. The discovery
+switch is removed for both new and upgraded/restored installations. Explicit
+user blocks, disabled applications, metadata review, scopes and credential
+bindings remain enforced. Space audiences add authenticated baseline Read with
+revisioned Admin changes; existing protected spaces remain restricted. The
+whole readable space is included, and tightening revokes affected credentials.
+
+Producer development and regression validation are in progress. Core publication,
+released-consumer adoption, exact-source full/native acceptance and upstream
+review remain required. No live deployment or existing-space audience change is claimed.
+
 ## Native OAuth accepted deployment
 
 The separately authorized 12 November update installs app **0.64.0**, released

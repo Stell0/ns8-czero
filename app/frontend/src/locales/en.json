@@ -14,7 +14,7 @@
     "search": "Search",
     "advanced": "Technical clients",
     "work": "Background work",
-    "spaces": "Protected spaces"
+    "spaces": "Spaces"
   },
   "common": {
     "loading": "Loading…",
@@ -266,7 +266,8 @@
     "permissions": "Choose what this application can do with your C0 account.",
     "adminApproval": "Approve this application for the selected permissions, then continue to authorize your connection.",
     "approveContinue": "Approve and continue",
-    "signedIn": "Signed in as {name}"
+    "signedIn": "Signed in as {name}",
+    "readBoundary": "Read content in all spaces you can access."
   },
   "admin": {
     "people": "People and applications",
@@ -278,7 +279,7 @@
     "decline": "Decline application",
     "block": "Block access",
     "unblock": "Allow access",
-    "createSpace": "Create protected space",
+    "createSpace": "Create space",
     "grant": "Save access",
     "jobs": "Jobs",
     "schedules": "Schedules",
@@ -295,7 +296,7 @@
     "disable": "Disable",
     "enable": "Enable",
     "saved": "Changes saved",
-    "noGrant": "No protected-space grant",
+    "noGrant": "No additional grant",
     "extractionUnits": "Extraction units",
     "unit": "Unit",
     "attempts": "Attempts / total",
@@ -319,6 +320,12 @@
     },
     "loadApplication": "Load application",
     "approvalSaved": "Application approval saved. Return to your assistant and connect again to finish authorization.",
-    "approvalHelp": "Changing application permissions disconnects existing connections. Return to your assistant to authorize a new connection."
+    "approvalHelp": "Changing application permissions disconnects existing connections. Return to your assistant to authorize a new connection.",
+    "selectedPeople": "Selected people",
+    "allSignedIn": "All signed-in users",
+    "audience": "Who can read",
+    "audienceHelp": "All signed-in users can read the whole space, including sources and attachments. Individual grants add permissions; they cannot remove this Read access. Restricting the audience disconnects affected application connections.",
+    "saveAudience": "Save audience",
+    "audienceReason": "You can read this space because it is available to all signed-in users."
   }
 }

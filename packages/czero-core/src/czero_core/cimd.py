@@ -155,6 +155,12 @@ class CimdService(CimdPolicyService):
             raise ValueError('invalid_client_update')
         self.clients._authorize(connection, actor)
         self._policy(connection)
+        return self._store(connection, metadata, scopes=scopes, expected_digest=expected_digest,
+            client_id=client_id, expected_revision=expected_revision, cache_seconds=cache_seconds)
+
+    def _store(self, connection, metadata, *, scopes, expected_digest,
+               client_id=None, expected_revision=None, cache_seconds=0):
+        """Trusted locked storage; callers must establish their own authority."""
         row = connection.execute(text(_QUERY + ' WHERE b.metadata_url=:url'),
                                  {'url': metadata.client_id}).mappings().one_or_none()
         if client_id is None and row is not None:

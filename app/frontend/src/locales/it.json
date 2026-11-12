@@ -14,7 +14,7 @@
     "search": "Cerca",
     "advanced": "Client tecnici",
     "work": "Attività in background",
-    "spaces": "Spazi protetti"
+    "spaces": "Spazi"
   },
   "common": {
     "loading": "Caricamento…",
@@ -266,7 +266,8 @@
     "permissions": "Scegli cosa può fare questa applicazione con il tuo account C0.",
     "adminApproval": "Approva questa applicazione per i permessi selezionati, poi continua per autorizzare la connessione.",
     "approveContinue": "Approva e continua",
-    "signedIn": "Accesso effettuato come {name}"
+    "signedIn": "Accesso effettuato come {name}",
+    "readBoundary": "Leggere contenuti in tutti gli spazi a cui puoi accedere."
   },
   "admin": {
     "people": "Persone e applicazioni",
@@ -278,7 +279,7 @@
     "decline": "Rifiuta applicazione",
     "block": "Blocca accesso",
     "unblock": "Consenti accesso",
-    "createSpace": "Crea spazio protetto",
+    "createSpace": "Crea spazio",
     "grant": "Salva accesso",
     "jobs": "Attività",
     "schedules": "Pianificazioni",
@@ -295,7 +296,7 @@
     "disable": "Disabilita",
     "enable": "Abilita",
     "saved": "Modifiche salvate",
-    "noGrant": "Nessun permesso per lo spazio protetto",
+    "noGrant": "Nessun permesso aggiuntivo",
     "extractionUnits": "Unità di estrazione",
     "unit": "Unità",
     "attempts": "Tentativi / totale",
@@ -319,6 +320,12 @@
     },
     "loadApplication": "Carica applicazione",
     "approvalSaved": "L’applicazione è stata approvata. Torna al tuo assistente e connettiti di nuovo per completare l’autorizzazione.",
-    "approvalHelp": "La modifica dei permessi dell’applicazione interrompe le connessioni esistenti. Torna al tuo assistente per autorizzare una nuova connessione."
+    "approvalHelp": "La modifica dei permessi dell’applicazione interrompe le connessioni esistenti. Torna al tuo assistente per autorizzare una nuova connessione.",
+    "selectedPeople": "Persone selezionate",
+    "allSignedIn": "Tutti gli utenti autenticati",
+    "audience": "Chi può leggere",
+    "audienceHelp": "Tutti gli utenti autenticati possono leggere tutto lo spazio, inclusi fonti e allegati. Le autorizzazioni individuali aggiungono permessi e non possono rimuovere questo accesso in lettura. Limitare il pubblico disconnette le applicazioni interessate.",
+    "saveAudience": "Salva pubblico",
+    "audienceReason": "Puoi leggere questo spazio perché è disponibile per tutti gli utenti autenticati."
   }
 }

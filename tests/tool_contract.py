@@ -111,3 +111,22 @@ def route_contract(schema):
         for method, definition in methods.items()
         if isinstance(definition, dict) and 'x-c0-operation' in definition],
         key=lambda value: (value['path'], value['method']))
+
+
+def legacy_space_audience(operation):
+    """Check the additive Boolean contract before comparing older frozen schemas."""
+    projected = deepcopy(operation)
+    def strip(schema, creating=False):
+        found = 0
+        for shape in [schema, *schema.get('$defs', {}).values()]:
+            properties = shape.get('properties', {})
+            if 'readable_by_all' not in properties:
+                continue
+            field = properties.pop('readable_by_all')
+            assert structural_schema(field) == {'type': 'boolean', 'default': False}
+            assert 'readable_by_all' not in shape.get('required', [])
+            found += 1
+        return found
+    assert strip(projected['input_schema'], True) == (1 if operation['name'] == 'spaces_create' else 0)
+    assert strip(projected['output_schema']) == 1
+    return projected

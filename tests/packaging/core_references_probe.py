@@ -68,8 +68,8 @@ try:
             state_path.write_text(json.dumps(state))
             state_path.chmod(0o600)
     with db.engine.connect() as c:
-        assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0038_cross_space_references'
-    print(json.dumps({'installed_references':True,'payload_free_replay':True,'packaged_schema0038':True,
+        assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0039_space_audiences'
+    print(json.dumps({'installed_references':True,'payload_free_replay':True,'packaged_schema0039':True,
         **({'retained_reference_seeded':True} if mode=='seed' else {}),
         **({'restored_reference_verified':True} if mode=='verify' else {})}))
 finally:db.close()

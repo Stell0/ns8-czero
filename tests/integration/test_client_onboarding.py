@@ -159,3 +159,65 @@ def test_per_client_storage_limit_is_bounded(onboarding):
     raw, _ = parameters(onboarding)
     for _ in range(32): service.begin(raw)
     with pytest.raises(OnboardingRejected): service.begin(raw)
+
+
+def test_self_service_registers_only_read_and_requires_consent(onboarding):
+    service, fixture = onboarding
+    session = fixture[-1][3]
+    metadata = replace(fixture[3], client_id='https://self-service.example.test/client.json')
+    raw, verifier = parameters(onboarding, client_id=metadata.client_id)
+    pending = service.begin(raw)
+    service.submit(session, pending.request, pending.binding)
+    service.register_reader(session, pending.request, pending.binding, metadata)
+    view = service.view(session, pending.request, pending.binding)
+    assert view['approved'] and view['allowed_scopes'] == ['c0:read']
+    registered = service.grants.clients._lookup(metadata.client_id)
+    verification = service.grants.cimd.observe(metadata, expected_revision=registered['revision'])
+    consent = service.complete(session, pending.request, pending.binding,
+                               scopes={'c0:read'}, verification=verification)
+    assert service.requests(session.actor) == []
+    consent_service = OAuthConsentService(service.grants)
+    result = consent_service.complete(session, consent.request, consent.binding,
+                                      approve=True, scopes={'c0:read'}, verification=verification)
+    pair = service.grants.exchange_code(result.code, metadata.client_id,
+        callback=CALLBACK, verifier=verifier, resource=RESOURCE)
+    assert service.grants.verify(pair.access_token, resource=RESOURCE).scopes == frozenset({'c0:read'})
+    with service.grants.access.database.engine.begin() as connection:
+        connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id': registered['internal_id']})
+
+
+def test_self_service_cannot_substitute_callback_or_unrequested_read(onboarding):
+    service, fixture = onboarding
+    session = fixture[-1][3]
+    metadata = replace(fixture[3], client_id='https://self-service.example.test/client.json')
+    for changes in [{'scope': 'c0:write'}, {'redirect_uri': 'https://other.example.test/callback'}]:
+        raw, _ = parameters(onboarding, client_id=metadata.client_id, **changes)
+        pending = service.begin(raw)
+        service.submit(session, pending.request, pending.binding)
+        with pytest.raises(OnboardingRejected):
+            service.register_reader(session, pending.request, pending.binding, metadata)
+    assert service.grants.clients._lookup(metadata.client_id) is None
+
+
+def test_self_service_concurrent_registration_preserves_disable(onboarding):
+    service, fixture = onboarding
+    session = fixture[-1][3]
+    metadata = replace(fixture[3], client_id='https://concurrent.example.test/client.json')
+    raw, _ = parameters(onboarding, client_id=metadata.client_id)
+    pending = service.begin(raw)
+    service.submit(session, pending.request, pending.binding)
+    def register(_):
+        service.register_reader(session, pending.request, pending.binding, metadata)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(register, range(2)))
+    registered = service.grants.clients._lookup(metadata.client_id)
+    try:
+        assert registered['allowed_scopes'] == ['c0:read']
+        service.grants.clients.set_enabled(session.actor, registered['internal_id'],
+                                          enabled=False, expected_revision=registered['revision'])
+        service.register_reader(session, pending.request, pending.binding, metadata)
+        assert service.grants.clients._lookup(metadata.client_id) is None
+        assert service.view(session, pending.request, pending.binding)['self_service_allowed'] is False
+    finally:
+        with service.grants.access.database.engine.begin() as connection:
+            connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id': registered['internal_id']})

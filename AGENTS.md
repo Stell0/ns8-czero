@@ -1,5 +1,11 @@
 # C0 / ns8-czero — Instructions for coding agents
 
+Self-service Read is an implementation candidate: preserve explicit blocks, disabled
+clients, metadata-review holds and credential ceilings. Space audiences give
+baseline Read only; existing protected spaces stay restricted on migration.
+The old discovery toggle is retired, including on upgrade/restore. Release and
+consumer adoption gates remain open; see PLAN.
+
 Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and
 independent application consent scopes; do not reuse role labels for scopes.
@@ -223,7 +229,7 @@ client. Older released Core retains exact behavior until explicit adoption.
 
 Authorization uses current persisted Reader/Editor/Admin membership inside Core transactions, explicit protected-space selection and actual delegated scopes. Tool discovery does not grant authority. Preserve lock ordering, exact evidence identities, expected revisions and payload-free replay receipts; a superseded request returns 410 instead of old content. A denied space must never fall back to Shared. Optional providers cannot decide authorization or make ordinary text retrieval unavailable.
 
-OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. CIMD defaults off, approves exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Remote metadata never supplies roles. Existing UUID clients remain independent.
+OAuth keeps verified native identity, explicit consent, S256, exact callback/resource/host/origin checks, bounded bodies and duplicate rejection. Authorization may ignore future optional parameters only after full multimap validation; token/revocation remain strict. Refresh cannot add scope or extend the original absolute authority. The reference app enables CIMD for its configured authenticated HTTPS endpoint; the reusable Core policy remains explicit. Self-service registration permits only requested Read for validated exact HTTPS URL identities, pins public DNS/TLS peers and rechecks authority after I/O. Additional client permissions require administrator approval. Remote metadata never supplies roles. Existing UUID clients remain independent.
 
 That absolute bound remains unchanged for existing/interactive grants. Newly consented background grants explicitly opt into a separate offline authority with a snapshotted thirty-day inactivity window and no fixed maximum. Browser cookies, codes and pending consent retain their finite bounds. Background login purpose and expected account bind to one-use persisted state. Rotating persistent refresh credentials use a keyed family/generation proof with bounded database storage and committed replay revocation before SDK scope validation. Preserve client/account/resource/secret bindings, current-role checks, browser-logout versus explicit-disconnect semantics and genuine predecessor recovery; never promote old grants silently. Mandatory native evidence includes real offline issuance, owned provider logout, renewal and revocation; local/fake-clock tests alone do not establish ChatGPT scheduling acceptance.
 

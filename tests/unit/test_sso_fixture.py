@@ -302,7 +302,7 @@ def test_admin_browser_checks_real_controls_without_private_arguments(monkeypatc
     app.origin='https://c0.example.test';app.host='c0.example.test'
     app.browser=SimpleNamespace(fill_text=lambda *args:calls.append(('Fill Text',args)),
         evaluate_javascript=accessibility_measurement,get_url=lambda:app.origin+'/admin/work')
-    app.ssh=SimpleNamespace(execute_command=lambda *args,**kwargs:(json.dumps({'cimd_enabled':False}),0))
+    app.ssh=SimpleNamespace(execute_command=lambda *args,**kwargs:(json.dumps({}),0))
     app.run=lambda name,*args:calls.append((name,args))
     app.people_access=lambda *args:None
     app.discovery=lambda *args:None
@@ -389,14 +389,13 @@ def test_predecessor_profile_wrapper_uses_supplied_health_version(monkeypatch,st
     assert levels == ['NONE','INFO','NONE','INFO']
 
 
-@pytest.mark.parametrize('original', [False, True])
-def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, original):
+def test_people_browser_never_toggles_discovery_after_browser_failure(monkeypatch):
     from vue_native_browser import NativeWebsite
     import shlex
     changed=[]
     def execute(command, **options):
         if '/get-configuration' in command:
-            return json.dumps({'cimd_enabled':original}),0
+            return json.dumps({}),0
         if '/configure-module' in command:
             args=shlex.split(command)
             changed.append(json.loads(args[args.index('--data')+1])['cimd_enabled'])
@@ -412,7 +411,7 @@ def test_people_browser_restores_discovery_after_browser_failure(monkeypatch, or
     app.run=fail_browser
     with pytest.raises(AssertionError,match='Forced browser stop'):
         app.people_access('czero7')
-    assert changed == [True,original]
+    assert changed == []
 
 
 @pytest.mark.parametrize('after', ['https://c0.test/?space_id=selected#main-content',

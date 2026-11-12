@@ -197,6 +197,12 @@ function search() {
             :optional-label="t('common.optional')"
             @update:model-value="selectSpace"
           />
+          <p
+            v-if="session.space?.readable_by_all && !session.space.shared"
+            class="text-sm text-text-secondary"
+          >
+            {{ t('admin.audienceReason') }}
+          </p>
           <form
             class="flex flex-1 items-end gap-2"
             role="search"

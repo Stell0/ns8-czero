@@ -14,7 +14,7 @@ COMMON = {'approval_preserved': True, 'policy_enabled': True, 'core_seeded': Tru
 SEED = {'stage': 'seed', **COMMON}
 UPDATE = {'stage': 'update', **COMMON, 'existing_authority_retained': True, 'refresh_rotated': True, 'absolute_bound_preserved': True}
 RESTORE = {'stage': 'restore', **COMMON, 'old_authority_rejected': True, 'old_grant_unexpired': True,
-           'fresh_consent': True, 'client_disabled': True, 'policy_disabled': True}
+           'fresh_consent': True, 'client_disabled': True, 'self_service_available': True}
 
 
 @pytest.mark.parametrize('change', [

@@ -55,19 +55,17 @@ def test_generator_preflights_paths_before_creating_destination(tmp_path, kind):
     assert not destination.exists()
 
 
-def test_generated_fork_has_complete_native_cimd_dependencies(tmp_path):
-    import runpy
+def test_generated_fork_retires_discovery_switch_and_keeps_upgrade_cleanup(tmp_path):
     destination = tmp_path / 'consumer'
     EXAMPLE.create(destination, ROOT)
-    helper = destination / 'imageroot/bin/czero_cimd_config.py'
-    assert helper.is_file(), 'Generated native configuration imports an unregistered CIMD helper'
-    assert runpy.run_path(str(helper))['read']({}) is False
-    for name in ('imageroot/bin/czero-create-cimd-config',
+    for name in ('imageroot/bin/czero_cimd_config.py', 'imageroot/bin/czero-create-cimd-config',
                  'imageroot/actions/create-module/33cimd',
-                 'imageroot/update-module.d/53cimd',
                  'imageroot/actions/configure-module/14validate-cimd',
                  'imageroot/actions/configure-module/39persist-cimd'):
-        assert (destination / name).is_file() and (destination / name).stat().st_mode & 0o111
+        assert not (destination / name).exists()
+    cleanup = destination / 'imageroot/update-module.d/53cimd'
+    assert cleanup.is_file() and cleanup.stat().st_mode & 0o111
+    assert "unset_env('CZERO_CIMD_ENABLED')" in cleanup.read_text()
 
 
 def test_generated_consumer_includes_workspace_audit_dependencies(tmp_path):
