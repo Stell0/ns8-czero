@@ -45,7 +45,7 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
     async def submit(request: Request, context=Depends(write_context)):
         session = await to_thread.run_sync(partial(browser_session, request))
         tokens = pending(request)
-        view = await to_thread.run_sync(partial(service.submit, session, *tokens))
+        view = await to_thread.run_sync(partial(service.submit, session, *tokens, review_requested=False))
         if view['self_service_allowed'] and 'c0:read' in view['scopes']:
             # Fetch only after first-party sign-in and CSRF-bound account admission.
             fetched = await cimd.fetcher.fetch(view['metadata_url'], cache=True)
@@ -65,6 +65,7 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
                     max_age=300, secure=True, httponly=True, samesite='lax', path='/')
                 response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
                 return response
+        view = await to_thread.run_sync(partial(service.submit, session, *tokens))
         return {**view, 'profile': auth.access.profile(session.actor), 'csrf_token': session.csrf_token}
 
     @app.post('/oauth/connect/continue', include_in_schema=False)

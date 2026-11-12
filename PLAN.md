@@ -21,7 +21,21 @@ pass1738 locally. These counts overlap and are not an aggregate acceptance total
 Draft PR130 sourceb76220b's fast43188463675 fails three native-fixture expectations:
 two retained Core0.47 bindings and one missing mocked SDK cleanup operation. The
 successor corrects them without changing or cancelling the failed evidence.
-Broader database/packaging validation remains unresolved; the PR stays draft.
+The broad development run retains3333 passes/35 failures/three errors. Its
+successors correct stale approval/plugin/schema expectations, seed historical
+layouts with the installed released predecessor's space authorization, and avoid
+PYTHONPATH contamination of independent predecessor processes. The OCR/PDF and
+independent packaging container rerun passes41; migration reruns pass31 plus the
+three corrected populated compilation predecessors. The automatic-preparation
+queue guard passes80 database cases; updated frontend interactions pass47 and
+native fixture/controller regressions pass53. Unchanged-authority policy metadata refresh preserves audience drafts and their original revisions; the four browser audience cases include stale-save rejection. These are overlapping development
+checks, not an exact-source full/native acceptance claim.
+
+Native acceptance now requires real first-use Read issuance through the fixed
+public HTTPS metadata fixture, Reader access to an authenticated-reader space,
+explicit additional Write review without changing the Reader role, and audience
+preservation after restart. Full exact-source producer, native and released
+consumer acceptance remains required.
 
 Producer development and regression validation are in progress. Core publication,
 released-consumer adoption, exact-source full/native acceptance and upstream

@@ -12,6 +12,7 @@ depends_on = None
 def upgrade():
     op.add_column('c0_spaces', sa.Column('readable_by_all', sa.Boolean(), nullable=False, server_default=sa.false()))
     op.execute('UPDATE c0_spaces SET readable_by_all=true WHERE shared')
+    op.add_column('c0_client_onboarding', sa.Column('review_requested', sa.Boolean(), nullable=False, server_default=sa.true()))
 
 
 def downgrade():

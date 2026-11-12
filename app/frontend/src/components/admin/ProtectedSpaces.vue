@@ -24,6 +24,7 @@ let observedAudience = 'restricted',
 watch(
   () => session.space,
   (space) => {
+    if (!space) return
     const next = space?.readable_by_all ? 'all' : 'restricted'
     if (
       observedSpace !== (space?.id || '') ||

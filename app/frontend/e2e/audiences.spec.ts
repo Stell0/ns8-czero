@@ -15,6 +15,8 @@ for (const theme of ['light', 'dark']) {
       let readable = false
       let revision = 3
       let saves = 0
+      let conflicts = 0
+      let verified = 0
       await page.route('**/api/v1/spaces?**', (route) =>
         route.fulfill({
           json: {
@@ -45,9 +47,29 @@ for (const theme of ['light', 'dark']) {
       await page.route(`**/spaces/${privateSpace}/grants?**`, (route) =>
         route.fulfill({ json: { grants: [] } }),
       )
+      await page.route(`**/spaces/${privateSpace}`, (route) => {
+        verified++
+        return route.fulfill({
+          json: {
+            id: privateSpace,
+            name: 'Documentation',
+            shared: false,
+            readable_by_all: readable,
+            role: 'admin',
+            revision,
+          },
+        })
+      })
       await page.route(`**/spaces/${privateSpace}/access`, (route) => {
         const body = route.request().postDataJSON()
-        expect(body.expected_revision).toBe(revision)
+        if (body.expected_revision !== revision) {
+          expect(body.expected_revision).toBe(revision - 1)
+          conflicts++
+          return route.fulfill({
+            status: 409,
+            json: { detail: 'space_conflict' },
+          })
+        }
         expect(body.idempotency_key).toBeTruthy()
         expect(route.request().headers()['x-c0-csrf']).toBe('fixture-csrf')
         readable = body.readable_by_all
@@ -78,6 +100,31 @@ for (const theme of ['light', 'dark']) {
         ),
       ).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath('audience.png') })
+      await page
+        .getByRole('button', { name: /^Who can read/ })
+        .last()
+        .click()
+      await page
+        .getByRole('option', { name: 'Selected people', exact: true })
+        .click()
+      revision++
+      readable = false
+      await page.evaluate(() =>
+        document.dispatchEvent(new Event('visibilitychange')),
+      )
+      await expect.poll(() => verified).toBeGreaterThan(0)
+      await expect(
+        page.getByText(
+          'You can read this space because it is available to all signed-in users.',
+        ),
+      ).toHaveCount(0)
+      await expect(
+        page.getByRole('button', { name: /^Who can read/ }).last(),
+      ).toContainText('Selected people')
+      await save.click()
+      await expect.poll(() => conflicts).toBe(1)
+      expect(saves).toBe(1)
+
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

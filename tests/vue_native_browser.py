@@ -360,7 +360,7 @@ class NativeWebsite:
             self.click('Approve application',row)
             self.run('Get Text','[role="dialog"]','contains','C0 disposable access browser')
             for name in ('Write','Manage'):self.run('Get Property',self.role('checkbox',name),'checked','==',False)
-            self.run('Get Property',self.role('checkbox','Read'),'checked','==',False)
+            self.run('Get Property',self.role('checkbox','Read'),'checked','==',True)
             self.checked('Write',True)
             self.click('Approve application','[role="dialog"] ')
             self.dialog_closed();phase('approved')

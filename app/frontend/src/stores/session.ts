@@ -114,10 +114,16 @@ export const useSession = defineStore('session', () => {
         me.id !== previous?.id ||
         me.role !== previous?.role ||
         me.csrf_token !== previous?.csrf_token ||
-        found.role !== selected?.role ||
-        found.revision !== selected?.revision
+        found.role !== selected?.role
       )
         await load()
+      else if (found.revision > (space.value?.revision || 0)) {
+        // Refresh policy metadata without discarding an unchanged-authority draft.
+        space.value = found
+        spaces.value = spaces.value.map((item) =>
+          item.id === found.id ? found : item,
+        )
+      }
     } catch (cause) {
       if (!(cause instanceof StaleResponse)) error.value = cause
     }

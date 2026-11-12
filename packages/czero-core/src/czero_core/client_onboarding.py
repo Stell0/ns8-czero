@@ -124,8 +124,10 @@ class ClientOnboardingService:
                 raise OnboardingRejected()
             return self._view(connection, row)
 
-    def submit(self, session, request, binding):
-        """Trusted adapter requires same-origin CSRF for this approval request."""
+    def submit(self, session, request, binding, *, review_requested=True):
+        """Bind a first-party request; automatic Read preparation stays out of review."""
+        if type(review_requested) is not bool:
+            raise OnboardingRejected()
         with self.grants.access.database.engine.begin() as connection:
             self._lock(connection)
             actor = self._session(connection, session)
@@ -137,8 +139,10 @@ class ClientOnboardingService:
                     {'id': actor.user_id, 'now': _date(self.grants._now())}).scalar_one()
                 if count >= 16:
                     raise OnboardingRejected()
-                connection.execute(text('UPDATE c0_client_onboarding SET account_id=:id WHERE hash=:hash'),
-                                   {'id': actor.user_id, 'hash': row['hash']})
+                connection.execute(text('UPDATE c0_client_onboarding SET account_id=:id,review_requested=:review WHERE hash=:hash'),
+                                   {'id': actor.user_id, 'hash': row['hash'], 'review': review_requested})
+            elif review_requested and not row['review_requested']:
+                connection.execute(text('UPDATE c0_client_onboarding SET review_requested=true WHERE hash=:hash'), {'hash': row['hash']})
             return self._view(connection, row)
 
     def register_reader(self, session, request, binding, metadata, *, cache_seconds=0):
@@ -168,7 +172,7 @@ class ClientOnboardingService:
             self.grants.clients._authorize(connection, actor)
             policy = self.grants.cimd._policy(connection)
             rows = connection.execute(text('''SELECT o.*,a.username FROM c0_client_onboarding o
-                JOIN c0_accounts a ON a.id=o.account_id WHERE o.expires_at>:now
+                JOIN c0_accounts a ON a.id=o.account_id WHERE o.expires_at>:now AND o.review_requested
                 AND o.issuer=:issuer AND o.native_client=:native AND o.resource=:resource
                 AND o.policy_revision=:policy ORDER BY o.expires_at DESC,o.hash LIMIT 64'''),
                 {'now': _date(self.grants._now()), 'issuer': self.grants.access.issuer,

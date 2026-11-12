@@ -60,14 +60,14 @@ class WorkspaceAccessService:
             rows = connection.execute(text('''SELECT a.id FROM c0_accounts a
                 WHERE a.issuer=:issuer ORDER BY EXISTS (
                     SELECT 1 FROM c0_client_onboarding o JOIN c0_cimd_policy p ON p.id=1
-                    WHERE o.account_id=a.id AND o.issuer=:issuer AND o.native_client=:native
+                    WHERE o.review_requested AND o.account_id=a.id AND o.issuer=:issuer AND o.native_client=:native
                     AND o.resource=:resource AND o.expires_at>:now AND p.enabled
                     AND o.policy_revision=p.revision) DESC,a.username,a.id LIMIT :limit OFFSET :offset'''),
                 {'issuer': self.access.issuer, 'native': self.grants.native_client, 'resource': self.grants.resource,
                  'now': _date(self.grants._now()), 'limit': limit+1, 'offset': offset}).scalars().all()
             pending = connection.execute(text('''SELECT count(*) FROM c0_client_onboarding o
                 JOIN c0_cimd_policy p ON p.id=1 JOIN c0_accounts a ON a.id=o.account_id
-                WHERE o.issuer=:issuer AND a.issuer=:issuer AND o.native_client=:native
+                WHERE o.review_requested AND o.issuer=:issuer AND a.issuer=:issuer AND o.native_client=:native
                 AND o.resource=:resource AND o.expires_at>:now AND p.enabled AND o.policy_revision=p.revision'''),
                 {'issuer': self.access.issuer, 'native': self.grants.native_client,
                  'resource': self.grants.resource, 'now': _date(self.grants._now())}).scalar_one()
@@ -79,7 +79,7 @@ class WorkspaceAccessService:
             raise OnboardingRejected()
         policy = self.grants.cimd._policy(connection)
         row = connection.execute(text('''SELECT o.* FROM c0_client_onboarding o
-            JOIN c0_accounts a ON a.id=o.account_id WHERE o.id=:id AND o.expires_at>:now
+            JOIN c0_accounts a ON a.id=o.account_id WHERE o.review_requested AND o.id=:id AND o.expires_at>:now
             AND o.issuer=:issuer AND a.issuer=:issuer AND o.native_client=:native
             AND o.resource=:resource AND o.policy_revision=:policy'''),
             {'id': identifier, 'now': _date(self.grants._now()), 'issuer': self.access.issuer,
@@ -116,7 +116,7 @@ class WorkspaceAccessService:
             account = self._account(connection, account_id)
             rows = connection.execute(text('''SELECT kind,id FROM (
                 SELECT 0 AS kind,o.id FROM c0_client_onboarding o JOIN c0_cimd_policy p ON p.id=1
-                WHERE o.account_id=:account AND o.expires_at>:now AND o.issuer=:issuer
+                WHERE o.review_requested AND o.account_id=:account AND o.expires_at>:now AND o.issuer=:issuer
                 AND o.native_client=:native AND o.resource=:resource AND p.enabled AND o.policy_revision=p.revision
                 UNION ALL SELECT 1 AS kind,g.id FROM c0_oauth_grants g
                 WHERE g.account_id=:account AND g.issuer=:issuer AND g.native_client=:native AND g.resource=:resource

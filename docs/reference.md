@@ -17,7 +17,7 @@ Use the installed `/openapi.json` and authenticated `/agents/capabilities.json` 
 | `/api/v1/health` | App/Core versions and database/schema/vector readiness |
 | `/projects`, `/api/v1/project` | Protected project reader and explicit project state; candidate features require matching Core |
 | `/api/v1/spaces` | Authorized space discovery; explicit selection for content |
-| `/api/v1/oauth/clients`, `/api/v1/oauth/cimd` | Admin-approved manual clients and optional metadata discovery |
+| `/api/v1/oauth/clients`, `/api/v1/oauth/cimd` | Manual clients, self-service Read metadata clients and reviewed additional permissions |
 | `/docs`, `/openapi.json` | Interactive REST documentation and machine-readable schemas |
 
 Legacy NS8-prefix installations retain REST compatibility but do not advertise MCP until configured on a hostname root.
@@ -30,7 +30,7 @@ without legacy page aliases; see [the website contract](vue-website.md).
 
 ## Roles, scopes and selectors
 
-Application membership, effective space grants, actual OAuth scopes and current client/native authority all apply. Content reads ordinarily use `c0:read`; content maintenance uses `c0:write`; administration uses `c0:admin`. Initial read consent does not authorize a write. Role denial is different from an insufficient-scope challenge.
+Application membership, space audiences and grants, actual OAuth scopes and current client/native authority all apply. Content reads ordinarily use `c0:read`; content maintenance uses `c0:write`; administration uses `c0:admin`. Initial read consent does not authorize a write. `readable_by_all` gives admitted users baseline Read; explicit grants can add editing. Admins change this audience through `PUT /api/v1/spaces/{space_id}/access` or `space_access_set`, with an expected revision and retry key. Shared policy remains fixed. Role denial is different from an insufficient-scope challenge.
 
 REST content selection normally uses `space_id` in the query; bundle selection is in its request body. MCP normally uses top-level `space_id`, except `knowledge_search` uses `options.space_id`, and structured search/bundle use `data.space_id`. Use current schemas for exact placement. Legacy content/resource forms select Shared and never grant protected access by a resource UUID.
 

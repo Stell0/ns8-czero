@@ -11,7 +11,9 @@ explicit grants can add editing. Tightening access retires affected credentials.
 `ClientOnboardingService.register_reader` accepts only a verified first-party
 session bound to the pending request and a trusted validated `ClientMetadata`.
 It registers a new identity for requested Read only. It never changes an existing
-client, disabled identity or review hold. Network validation stays in the app.
+client, disabled identity or review hold. Network validation stays in the app. `submit(..., review_requested=False)`
+binds automatic Read preparation without publishing an Admin review request;
+ordinary callers retain the previous visible-review default.
 The reusable Core discovery policy remains explicit; the reference application
 now enables it automatically for its configured authenticated HTTPS endpoint.
 

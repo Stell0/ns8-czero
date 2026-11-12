@@ -61,7 +61,7 @@ def recover_consent_session(module_id, browser, client, *, expire_session=None):
     return profile
 
 
-def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None):
+def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None, self_service=False):
     verifier=secrets.token_urlsafe(32);state=secrets.token_urlsafe(32)
     challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
     parameters={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],
@@ -78,6 +78,11 @@ def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None)
         {'Content-Type':'application/x-www-form-urlencoded'})[0]==200,'Installed optional authorization form failed'
     status, _, _=browser.request('/oauth/authorize?'+urlencode(parameters))
     assert status==200,'Installed OAuth consent page unavailable'
+    if self_service:
+        assert browser.api('/oauth/connect/request', {}, 'POST')[0] == 403, 'Self-service bypassed CSRF'
+        status, body, _ = browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])
+        assert status == 200 and json.loads(body) == {'next':'/oauth/consent'}, 'Self-service Read did not reach consent'
+        assert browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])[0] == 410, 'Self-service handoff replay accepted'
     if prepare_connection is not None:
         assert browser.api('/oauth/connect/request', {}, 'POST')[0] == 403, 'Installed onboarding CSRF bypass'
         # Core-seeded native recovery deliberately supplies no live metadata endpoint.

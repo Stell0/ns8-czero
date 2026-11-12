@@ -401,7 +401,7 @@ def test_people_browser_never_toggles_discovery_after_browser_failure(monkeypatc
             changed.append(json.loads(args[args.index('--data')+1])['cimd_enabled'])
             return '','',0
         assert command == 'python3 /tmp/access_fixture.py czero7 prepare'
-        return 'C0 workspace access: '+json.dumps({'phase':'prepare','fresh_reader':True,'pending_request':True}),'',0
+        return 'C0 workspace access: '+json.dumps({'phase':'prepare','fresh_reader':True,'pending_request':True,'self_service_read':True,'default_space_read':True}),'',0
     monkeypatch.setattr(BuiltIn,'get_library_instance',lambda *args:SimpleNamespace(execute_command=execute))
     monkeypatch.setattr(BuiltIn,'log_to_console',lambda *args:None)
     app=NativeWebsite.__new__(NativeWebsite)

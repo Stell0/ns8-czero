@@ -1,5 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Additive predecessor migration preserves existing authority and authored rows."""
+from test_current_content_migration import predecessor_python
+from previous_content_services import historical_space_authorization
 import os
 from pathlib import Path
 import time
@@ -21,7 +23,7 @@ from czero_core.wiki import WikiService
 
 
 @pytest.mark.parametrize('predecessor',['0032_api_key_revisions','0033_compilation_state','0034_compilation_maintenance'])
-def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tmp_path):
+def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tmp_path, predecessor_python):
     url = make_url(os.environ['CZERO_TEST_DATABASE_URL'])
     name = 'c0_compiler_migration_' + uuid4().hex
     admin = create_engine(url, hide_parameters=True)
@@ -38,39 +40,40 @@ def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tm
         issuer, key = 'https://migration.example.invalid/' + uuid4().hex, uuid4()
         access = AccessService(db, issuer, key)
         owner = access.resolve(VerifiedIdentity(issuer, 'owner', str(key), 'owner', 'Owner', time.time()+300))
-        space = SpaceService(db, access).create(owner, 'Migration fixture', idempotency_key='space')['id']
-        wiki = WikiService(db, access).in_space(space)
-        page = wiki.create_page(owner, 'authored', 'Authored', '# Preserve authored knowledge', idempotency_key='authored')
-        keys = ApiKeyService(access, client_id='fixture', client_secret='synthetic', resource='https://example.invalid/mcp')
-        token = keys.create(owner, name='Retained key', scopes={'c0:read'}, space_ids=[space])['key']
-        from czero_core.sources import OriginalStore, SourceService, register_source_handlers
-        from czero_core.jobs import default_registry
-        registry=default_registry(); originals=OriginalStore(tmp_path/'originals')
-        register_source_handlers(registry,db,originals)
-        sources=SourceService(db,access,registry,originals).in_space(space)
-        original=sources.ingest_text(owner,title='Retained original',body='Synthetic retained original.',idempotency_key='original')
-        with db.engine.begin() as c:
-            registry.get('source.extract').execute(c,{'version_id':original['id']})
-        original_view=sources.get(owner,original['source_id'])
-        if predecessor in ('0033_compilation_state','0034_compilation_maintenance'):
-            from czero_core.compilation import CompilationService
-            from czero_core.compilation_schema import defaults
-            compiler=CompilationService(db,access).in_space(space)
-            compiler.configure(owner,{**defaults(),'enabled':True},expected_revision=0,
-                authorization_ref='synthetic:migration',idempotency_key='compiler')
-            doc=sources.document(owner,original['id']);chunk=sources.chunks(owner,doc['id'])[0]
-            bindings=compiler.source_bindings(owner,[{'logical_document_id':original['source_id'],
-                'revision_id':original['id'],'chunk_ids':[str(chunk['id'])]}])['source_bindings']
-            compiler.propose(owner,{'policy_revision':1,'origin':'manual','reason':'incomplete_page',
-                'topic_key':'retained','source_bindings':bindings,'target':{'kind':'page','id':page['id'],
-                'revision':page['revision'],'content_id':page['content']['id'],'content_hash':page['content']['content_hash']}},
-                idempotency_key='retained-proposal')
-            if predecessor=='0034_compilation_maintenance':
-                compiler.claim_run(owner,{'kind':'manual','cycle_key':'retained','lease_owner':'migration',
-                    'policy_revision':1},idempotency_key='retained-lease')
-        with db.engine.connect() as c:
-            names = c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
-            before = {table: c.execute(text('SELECT to_jsonb(t) FROM '+table+' t ORDER BY to_jsonb(t)::text')).scalars().all() for table in names}
+        with historical_space_authorization(predecessor_python) as PreviousSpaces:
+            space = PreviousSpaces(db, access).create(owner, 'Migration fixture', idempotency_key='space')['id']
+            wiki = WikiService(db, access).in_space(space)
+            page = wiki.create_page(owner, 'authored', 'Authored', '# Preserve authored knowledge', idempotency_key='authored')
+            keys = ApiKeyService(access, client_id='fixture', client_secret='synthetic', resource='https://example.invalid/mcp')
+            token = keys.create(owner, name='Retained key', scopes={'c0:read'}, space_ids=[space])['key']
+            from czero_core.sources import OriginalStore, SourceService, register_source_handlers
+            from czero_core.jobs import default_registry
+            registry=default_registry(); originals=OriginalStore(tmp_path/'originals')
+            register_source_handlers(registry,db,originals)
+            sources=SourceService(db,access,registry,originals).in_space(space)
+            original=sources.ingest_text(owner,title='Retained original',body='Synthetic retained original.',idempotency_key='original')
+            with db.engine.begin() as c:
+                registry.get('source.extract').execute(c,{'version_id':original['id']})
+            original_view=sources.get(owner,original['source_id'])
+            if predecessor in ('0033_compilation_state','0034_compilation_maintenance'):
+                from czero_core.compilation import CompilationService
+                from czero_core.compilation_schema import defaults
+                compiler=CompilationService(db,access).in_space(space)
+                compiler.configure(owner,{**defaults(),'enabled':True},expected_revision=0,
+                    authorization_ref='synthetic:migration',idempotency_key='compiler')
+                doc=sources.document(owner,original['id']);chunk=sources.chunks(owner,doc['id'])[0]
+                bindings=compiler.source_bindings(owner,[{'logical_document_id':original['source_id'],
+                    'revision_id':original['id'],'chunk_ids':[str(chunk['id'])]}])['source_bindings']
+                compiler.propose(owner,{'policy_revision':1,'origin':'manual','reason':'incomplete_page',
+                    'topic_key':'retained','source_bindings':bindings,'target':{'kind':'page','id':page['id'],
+                    'revision':page['revision'],'content_id':page['content']['id'],'content_hash':page['content']['content_hash']}},
+                    idempotency_key='retained-proposal')
+                if predecessor=='0034_compilation_maintenance':
+                    compiler.claim_run(owner,{'kind':'manual','cycle_key':'retained','lease_owner':'migration',
+                        'policy_revision':1},idempotency_key='retained-lease')
+            with db.engine.connect() as c:
+                names = c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'alembic_version' ORDER BY tablename")).scalars().all()
+                before = {table: c.execute(text('SELECT to_jsonb(t) FROM '+table+' t ORDER BY to_jsonb(t)::text')).scalars().all() for table in names}
         for _ in range(2):
             migrate_database(db)
             with db.engine.connect() as c:
@@ -80,6 +83,9 @@ def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tm
                     'c0_compilation_sources':['assessment_task_id','seen_sweep_id','publication_marker']}
                 if predecessor=='0034_compilation_maintenance':
                     added={}  # This predecessor already has every maintenance column.
+                added.update({'c0_spaces':['readable_by_all'],'c0_client_onboarding':['review_requested']})
+                assert c.execute(text('SELECT bool_and(readable_by_all=shared) FROM c0_spaces')).scalar_one()
+                assert not c.execute(text('SELECT 1 FROM c0_client_onboarding WHERE NOT review_requested LIMIT 1')).scalar_one_or_none()
                 after={}
                 for table in names:
                     expression='to_jsonb(t)-CAST(:added AS text[])'

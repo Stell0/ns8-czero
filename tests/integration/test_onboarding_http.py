@@ -157,3 +157,34 @@ def test_normal_signin_returns_only_to_fixed_local_pages(application, target):
             await signin(user, target=expected, return_to=target)
             assert 'c0_login_return' not in user.cookies
     asyncio.run(check())
+
+
+def test_self_service_rechecks_account_block_after_metadata_io(cimd_http, monkeypatch, certificates):
+    from uuid import UUID
+    async def check():
+        app, owner, registry = cimd_http
+        access = registry.access
+        access.admit_readers = True
+        administrator = access.resolve(app.state.auth.oidc.verify_access_token(owner))
+        async with Harness(monkeypatch, certificates) as harness:
+            app.state.cimd.fetcher = harness.fetcher
+            async with browser(app) as user:
+                profile = await signin(user, code='unit-only-forbidden-code')
+                assert (await user.get('/oauth/authorize', params=parameters()[0])).status_code == 302
+                harness.gate = asyncio.Event()
+                pending = asyncio.create_task(user.post('/oauth/connect/request', json={}, headers=headers(profile)))
+                async with asyncio.timeout(3):
+                    while not harness.requests:
+                        await asyncio.sleep(0.01)
+                from czero_core.workspace_access import WorkspaceAccessService
+                from czero_core.client_onboarding import ClientOnboardingService
+                assert ClientOnboardingService(app.state.delegated_grants).requests(administrator) == []
+                assert WorkspaceAccessService(app.state.delegated_grants).applications(administrator, UUID(profile['id']))['applications'] == []
+                access.set_role(administrator, UUID(profile['id']), None)
+                harness.gate.set()
+                assert (await pending).status_code in (401, 403)
+                assert registry.status(administrator)['clients'] == []
+                with access.database.engine.connect() as connection:
+                    assert connection.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE account_id=:id'),
+                                              {'id': UUID(profile['id'])}).scalar_one() == 0
+    asyncio.run(check())

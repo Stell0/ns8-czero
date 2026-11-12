@@ -327,3 +327,34 @@ for (const theme of ['light', 'dark']) {
     await expect(page.getByText(/waiting.*admin/i)).toHaveCount(0)
   })
 }
+
+test('a Write-only request never selects an unrequested Read scope', async ({
+  page,
+}) => {
+  await api(page, 'reader')
+  await page.route('**/oauth/connect/request', (route) =>
+    route.fulfill({
+      json: {
+        metadata_url: identity,
+        callback,
+        scopes: ['c0:write'],
+        approved: true,
+        allowed_scopes: ['c0:read'],
+        csrf_token: 'fixture-csrf',
+      },
+    }),
+  )
+  await page.goto('/oauth/connect')
+  await expect(
+    page.getByRole('checkbox', { name: 'Read', exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('checkbox', { name: 'Write', exact: true }),
+  ).not.toBeChecked()
+  await expect(
+    page.getByRole('checkbox', { name: 'Write', exact: true }),
+  ).toBeDisabled()
+  await expect(
+    page.getByRole('button', { name: 'Authorize', exact: true }),
+  ).toBeDisabled()
+})
