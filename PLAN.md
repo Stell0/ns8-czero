@@ -128,6 +128,14 @@ reference routes without a database/model; its Git identity matches884ff312.
 The reference source selector returns released, and every frozen runtime version
 is preserved. The registered runtime probe changes deliberately; registry and
 unresolved comparison state remain unchanged.
+The first frozen consumer8cfcd37/run43127377557 rejects a stale hardcoded
+Core0.46 versioning fixture. The successor derives each consumer's active tag
+from its manifest and exercises actual Renovate44.161.0 patch/minor bounds.
+The first manual full released run lacks its frontend build; preserve its page/
+font failures and repeat with the compiled frontend. The corrected successor
+passes211 actual released-Git page/font, reference, authorization, SDK and
+source/lock tests, plus the native Renovate44.161.0 bounds check. Runtime dependencies,
+Core bytes and acceptance limits remain unchanged.
 Keep the genuine app0.63/Core0.45 predecessor and all its frozen image identities.
 Migration0038 adds an empty reference table; no existing content, grants, scopes,
 connections or schedules are changed. Full released-consumer/native/image and
