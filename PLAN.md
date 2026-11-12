@@ -12,11 +12,11 @@ whole readable space is included, and tightening revokes affected credentials.
 
 Development evidence: original-main authentication baseline56 passes in an
 independent database; focused review108 and final focused101 pass. Node24 website
-checks pass28 unit cases and46 interactions; four audience cases also pass after
+checks pass28 unit cases and47 interactions; four audience cases also pass after
 draft guards with inspected phone/desktop theme screenshots. Signed HTTPS browser
 acceptance passes12, including Reader/Admin self-service Read issuance. Native UI
 controllers28, action schemas and745 documentation links pass. Final fast checks
-pass1738 locally. These counts overlap and are not an aggregate acceptance total.
+pass1741 locally. These counts overlap and are not an aggregate acceptance total.
 
 Draft PR130 sourceb76220b's fast43188463675 fails three native-fixture expectations:
 two retained Core0.47 bindings and one missing mocked SDK cleanup operation. The
@@ -36,6 +36,22 @@ public HTTPS metadata fixture, Reader access to an authenticated-reader space,
 explicit additional Write review without changing the Reader role, and audience
 preservation after restart. Full exact-source producer, native and released
 consumer acceptance remains required.
+
+Frozen source `6ff42f227cf3918195112a7f3998aa33d6e232bb` passes3375 actual
+Python/PostgreSQL/packaging cases without skips in both the independent OCR
+container and hosted full acceptance. Hosted website interactions47 and document
+browsers44 pass. Full run43199706723 fails Rocky's saved-settings browser case,
+which still tries to click the retired discovery switch: Debian21 passes;
+Rocky25 passes/three expected skips/one failure. Its new self-service Read,
+audience and all ten people-access stages pass. Preserve that failed run and
+candidate images. The successor asserts the setting is absent before and after
+reload, reads a real authored page through default Read, and checks audience
+tightening/reopening against actual delegated credentials. This is not accepted
+full/native evidence; immutable Core publication remains blocked pending a
+successful successor and independent artifact/promotion audits.
+The successor's focused signed-HTTP, space, onboarding and native-controller
+regressions pass90 cases; all21 Robot non-browser dry runs pass. These focused
+checks do not replace its required fresh full/native run.
 
 Producer development and regression validation are in progress. Core publication,
 released-consumer adoption, exact-source full/native acceptance and upstream

@@ -46,6 +46,12 @@ def run(module_id,phase):
             'readable_by_all':True,'idempotency_key':secrets.token_hex(16)},'POST',owner['csrf_token'],201)
         status,body,_=user.request('/api/v1/spaces/'+opened['id'],headers={'Authorization':'Bearer '+pair['access_token']})
         assert status==200 and json.loads(body)['role']=='reader'
+        page=checked(admin,'/api/v1/wiki/pages/upsert?space_id='+opened['id'],
+            {'slug':'default-read','title':'Shared documentation','body':'Documentation available after sign-in.',
+             'idempotency_key':secrets.token_hex(16)},'POST',owner['csrf_token'])
+        status,body,_=user.request('/api/v1/wiki/pages/'+page['id']+'?space_id='+opened['id'],
+            headers={'Authorization':'Bearer '+pair['access_token']})
+        assert status==200 and json.loads(body)['content']['body']==page['content']['body']
         proof.update(self_service_read=True,default_space_read=True)
         raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
              'code_challenge_method':'S256','code_challenge':'a'*43,'state':secrets.token_urlsafe(32),

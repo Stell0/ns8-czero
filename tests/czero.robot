@@ -631,10 +631,7 @@ Check saved settings and application HTTPS in a browser
     Wait For Elements State    iframe >>> .ns-text-input input >> nth=0    enabled    timeout=30s
     Get Property    iframe >>> .ns-text-input input >> nth=0    value    ==    ${host}
     Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
-    Wait For Elements State    iframe >>> input[data-c0-cimd-switch]    attached
-    Get Property    iframe >>> input[data-c0-cimd-switch]    checked    ==    ${False}
-    Click    iframe >>> .ns-toggle:has(input[data-c0-cimd-switch]) label
-    Get Property    iframe >>> input[data-c0-cimd-switch]    checked    ==    ${True}
+    Get Element Count    iframe >>> input[data-c0-cimd-switch]    ==    0
     Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
     Fill Text    iframe >>> .ns-text-input input >> nth=0    localhost
     Click    iframe >>> button >> text="Save"
@@ -656,9 +653,7 @@ Check saved settings and application HTTPS in a browser
     Get Property    iframe >>> .ns-text-input input >> nth=0    value    ==    ${host}
     Get Attribute    iframe >>> a:has-text("Open C0 application")    href    ==    https://${host}/
     Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
-    Wait For Elements State    iframe >>> input[data-c0-cimd-switch]    attached
-    Get Property    iframe >>> input[data-c0-cimd-switch]    checked    ==    ${True}
-    Click    iframe >>> .ns-toggle:has(input[data-c0-cimd-switch]) label
+    Get Element Count    iframe >>> input[data-c0-cimd-switch]    ==    0
     Click    iframe >>> .ns-toggle:has(input[data-c0-sso-switch]) label
     Click    iframe >>> button >> text="Save"
     Wait For Elements State    iframe >>> button >> text="Save"    enabled    timeout=30s
