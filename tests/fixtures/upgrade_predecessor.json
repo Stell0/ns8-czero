@@ -1,14 +1,14 @@
 {
-  "source": "1db37f409af756212dc005d160302d01eff23098",
-  "tag": "ci-1db37f409af756212dc005d160302d01eff23098-42437861637-1",
-  "app_version": "0.63.0",
-  "core_version": "0.45.0",
-  "schema_revision": "0036_document_bm25",
+  "source": "a106f188d362fa02574972662f84bb3fc93774af",
+  "tag": "ci-a106f188d362fa02574972662f84bb3fc93774af-43117140826-1",
+  "app_version": "0.64.0",
+  "core_version": "0.46.0",
+  "schema_revision": "0037_embedding_context",
   "reader_admission": true,
   "images": {
-    "module": "ghcr.io/stell0/czero@sha256:369d81853dc99d3710ea733fcb5d010256d699421728660ede4c9d15b74c3967",
-    "app": "ghcr.io/stell0/czero-app@sha256:9ee56e8f67564b1228e1abcb427a5ee25bbd01303058f1da11365288c387687b",
-    "postgres": "ghcr.io/stell0/czero-postgres@sha256:0b91cd3e1e7da919bb0746c3f3d412c739b275b3e0de50b52ec0aecfe5123fad"
+    "module": "ghcr.io/stell0/czero@sha256:ef32840cf6b92730f80decb8c45ac3b1d0076bb7ed0623b5b7fb5869b8820714",
+    "app": "ghcr.io/stell0/czero-app@sha256:05e37d34478b14f6d5ac24f1c72a88f9777aa64270940d8007a537fcdb681185",
+    "postgres": "ghcr.io/stell0/czero-postgres@sha256:bee0fac158c41ae862a78464a94a6a950704e27de38a9b3213b5512d1b4abd00"
   },
   "background_grant": true
 }

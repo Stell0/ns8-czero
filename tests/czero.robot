@@ -54,7 +54,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.64.0    ${route_host}=${host}    ${expected_core}=0.47.0
+    [Arguments]    ${expected_app}=0.65.0    ${route_host}=${host}    ${expected_core}=0.47.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -84,7 +84,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:369d81853dc99d3710ea733fcb5d010256d699421728660ede4c9d15b74c3967
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:ef32840cf6b92730f80decb8c45ac3b1d0076bb7ed0623b5b7fb5869b8820714
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -94,9 +94,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed 1db37f4 predecessor images.
+        # Freeze all three actually deployed a106f18 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:9ee56e8f67564b1228e1abcb427a5ee25bbd01303058f1da11365288c387687b','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:0b91cd3e1e7da919bb0746c3f3d412c739b275b3e0de50b52ec0aecfe5123fad'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:05e37d34478b14f6d5ac24f1c72a88f9777aa64270940d8007a537fcdb681185','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:bee0fac158c41ae862a78464a94a6a950704e27de38a9b3213b5512d1b4abd00'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -110,7 +110,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.63.0    0.45.0
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.64.0    0.46.0
         Predecessor Content    seed
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
@@ -121,7 +121,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.64.0    0.47.0
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.65.0    0.47.0
         Predecessor Content    verify
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
@@ -687,7 +687,7 @@ Check saved settings and application HTTPS in a browser
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Go To    https://${host}/api/v1/health
     Get Text    body    contains    "core_version":"0.47.0"
-    Get Text    body    contains    "app_version":"0.64.0"
+    Get Text    body    contains    "app_version":"0.65.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health
     Go To    https://${host}/agents

@@ -93,6 +93,76 @@ reference storage and Core operations; M3 supplies REST/MCP and agent guidance.
 Core publication, released consumer adoption and live deployment retain separate
 acceptance gates. No browser panels or live changes are included.
 
+### Released Core0.47 consumer candidate
+
+[PR119](https://github.com/Stell0/ns8-czero/pull/119) regularly merges as
+`08e979c4ae285bed03953cf58c6a0a63ebc8888c`; its tested producer
+`884ff312c18fbc18bb613137bbb6ced17df6cfb0` passes exact full
+[43118191778](https://github.com/Stell0/ns8-czero/actions/runs/43118191778):
+3365 Python/PostgreSQL/packaging,43 live browser,40 website browser,28 Vue unit
+cases and21 Robot dry runs. Exact-source full promotion and independent downloaded
+artifact checks pass: Debian21,Rocky26/three expected skips,all eight native
+browser/privacy workflows,five scan/SBOM pairs and zero OAuth-query candidates.
+The regular merge retains exactly the tested tree. The previous candidate and
+failed private evidence remain frozen. Basea106f18 full43117140826 also passes.
+
+[Core0.47.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.47.0) is
+immutably published from that producer by
+[43125626421](https://github.com/Stell0/ns8-czero/actions/runs/43125626421).
+Downloaded checksums and independent wheel/archive inspection pass: wheel
+`902ad47cba16e7337d0f6826292ce8526ba97ab5341aff5e540e4779337f0d63`,
+archive `c303ee19a7763e98fd60dbd6a27405b90f81958f7bc5c6bd4f753f1d6041fefc`.
+The assets include the standalone service,license and schema0038. Publisher
+external installation/recovery checks pass all6 cases.
+
+App0.65 separately adopts its Git tag/lock at the immutable producer commit,
+with `>=0.47.0,<0.48.0` and matching patch-only updater bounds. Other dependency
+versions remain frozen. The Core package tree is unchanged, so reference image
+publication must select released Core and verify its actual Git identity and
+schema0038 inside the published/native app image. Extend that runtime probe to
+bind all three reference routes without a database or model execution.
+Local actual released-Git validation passes148 focused authorization, reference,
+transport, scope, source/lock, release-policy and documentation cases,728 local
+links and21 Robot dry runs. The runtime probe binds schema0038 and all three
+reference routes without a database/model; its Git identity matches884ff312.
+The reference source selector returns released, and every frozen runtime version
+is preserved. The registered runtime probe changes deliberately; registry and
+unresolved comparison state remain unchanged.
+The first frozen consumer8cfcd37/run43127377557 rejects a stale hardcoded
+Core0.46 versioning fixture. The successor derives each consumer's active tag
+from its manifest and exercises actual Renovate44.161.0 patch/minor bounds.
+The first manual full released run lacks its frontend build; preserve its page/
+font failures and repeat with the compiled frontend. The corrected successor
+passes211 actual released-Git page/font, reference, authorization, SDK and
+source/lock tests, plus the native Renovate44.161.0 bounds check. Runtime dependencies,
+Core bytes and acceptance limits remain unchanged.
+Latest original main1e99d7d records the independently authorized accepted
+app0.64/Core0.46/schema0037 installation. Preserve that deployment record and
+all app0.63/Core0.45 frozen feature evidence. The new consumer successor uses
+the accepted a106f18 installation's three immutable digests as its genuine
+native predecessor, exercising actual schema0037→0038 update/restore. It adds
+no live deployment authority. Core bytes, lock, app code and prior acceptance
+runs remain unchanged. The successor passes217 actual released-Git reference,
+page/font, SDK, source, predecessor and release-policy cases,21 Robot dry runs,
+730 documentation links and the real Renovate44.161.0 bounds check. Independent
+registry reads bind all three predecessor digests and source labels to a106f18.
+Fresh exact-source full/native acceptance remains required.
+Original main8f265dd then merges the separate CI/developer-guidance change.
+Preserve acbfdfb/run43134856085 and its running evidence; its full Python suite
+and all21 genuine0.64 Debian upgrade cases pass. A new isolated consumer
+successor retains the complete streamlined instructions and managed registry,
+including explicit instruction review before PR readiness. Its app/Core code,
+consumer tag/lock, versioning fix and genuine0.64 predecessor fixture exactly
+match acbfdfb. The Core package tree remains identical to published core-v0.47.0.
+Repeat affected policy, reference, package and exact-source full/native checks;
+no frozen history, image identity or acceptance limit is changed.
+Migration0038 adds an empty reference table; no existing content, grants, scopes,
+connections or schedules are changed. Full released-consumer/native/image and
+main publication gates remain required. No installed baseline changes, browser
+reference panels, live upgrade or schedule activation are included.
+
+### Producer checkpoints and measured evidence
+
 Implementation candidate: Core0.47/schema0038 adds immutable typed references,
 current summaries, actor/source-scoped payload-free receipts and guarded deletion.
 Plugin1.10 and guidance7 describe navigation and separate publication authority.
