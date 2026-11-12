@@ -165,11 +165,11 @@ Policies default to disabled, retrieval feedback off and queue-only publication.
 
 `knowledge_search` and other retrieval operations never queue learning. A compatible external agent can use a separate bounded post-answer proposal workflow under enabled retrieval-feedback policy. Reader and explicitly read-only tasks cannot do so. See [the complete search/update rules](llm-wiki.md#what-happens-after-a-search), [compiler operations](knowledge-compilation/OPERATIONS.md) and [external maintenance](wiki-maintenance.md).
 
-## Cross-space references (Core0.47 producer)
+## Cross-space references (Core0.47)
 
 [Contract and acceptance](cross-space-references-plan.md). These routes/tools are
-registered only when the installed Core includes the service; the released
-Core0.46 consumer does not advertise them.
+registered when the installed Core includes the service. App0.65 adopts
+released Core0.47; older Core0.46 consumers do not advertise them.
 
 - POST `/api/v1/cross-space-references?space_id=UUID` / `cross_space_ref_create`:
   typed source and target (target includes space_id), relation_kind=references,
