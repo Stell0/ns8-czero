@@ -1,14 +1,18 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-Self-service Read and space audiences use independently published Core0.48.0 /
-schema0039 at `2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`. App0.66 stages its
-released tag/lock with `>=0.48.0,<0.49.0` and matching patch-only updater bounds.
-Keep its Core package tree identical to the immutable release. Producer/full/native
-43209361920 and publisher43218817753 pass; final released-consumer acceptance
-remains required. Preserve explicit blocks, disabled clients, metadata-review
-holds and credential ceilings. Space audiences give baseline Read only; existing
-protected spaces stay restricted. The discovery toggle is retired on upgrade and
-restore. Preserve all failed candidates and installed identities; see PLAN.
+Self-service Read and space audiences are source-accepted in app0.66 / released
+Core0.48.0 / schema0039 / plugin1.11. Core is immutable at
+`2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`; preserve its exact package tree,
+released Git tag/lock and patch-only updater bounds. PR130 regularly merges as
+`145d144725f748b8a168aefce72b0f866bbe820e`. Consumer full43220620934 and actual
+main full43229872256, canonical publication, independent artifact/promotion checks
+and six fresh registry reads pass. Producer43209361920 and publisher43218817753
+remain separate evidence. Preserve explicit blocks, disabled clients, metadata
+review and credential ceilings; baseline audience access is Read only. Existing
+protected spaces remain restricted, and the discovery switch is retired on
+upgrade/restore. Preserve all failed candidates and installed identities. Source
+acceptance does not change the installed baseline or authorize deployment or live
+space-audience changes; see PLAN.
 
 Person-role selectors and saved summaries use cumulative labels: **Read**,
 **Read and write**, **Read, write and manage**. Preserve single role selection and

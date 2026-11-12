@@ -1,6 +1,8 @@
 # C0 roadmap
 
-## Self-service Read and space audiences — released-consumer candidate
+<a id="self-service-read-and-space-audiences--released-consumer-candidate"></a>
+
+## Self-service Read and space audiences — accepted source
 
 Based on original main `6e9554c95d5317feb82d262f0d83d21658d13b44`. Validated
 new HTTPS metadata clients receive Read after company sign-in and explicit consent,
@@ -45,19 +47,45 @@ archive SHA256
 Never move the tag or replace its assets. The Core package tree is
 `9bec54862b9f00364943b908d78ff601ffd650f7`.
 
-App0.66 stages the released Git tag/lock with `>=0.48.0,<0.49.0` and matching
-patch-only updater bounds. Other runtime dependencies remain frozen. Its actual
-released-image probe must bind schema0039, self-service admission and the space
-access route without a database or model execution. Final current-source
-released-consumer/full/native/artifact/promotion and upstream review remain
-required. Producer acceptance is not released-consumer deployment proof.
+App0.66 adopts the immutable released Git tag/lock with `>=0.48.0,<0.49.0`
+and matching patch-only updater bounds. Other runtime dependencies remain frozen.
 The actual frozen Git consumer passes143 focused authorization, HTTP, onboarding,
-source/lock, release-policy, native-contract and documentation cases. Its runtime
-probe verifies the immutable Git identity and new route binding; the source
-selector returns released and only the app/Core lock entries change. A separate
-local artifact reinstall attempt fails on container PyPI connection timeouts;
-retain its log without counting it as a pass. It does not replace the publisher's
-successful exact-artifact package checks or the required consumer native gate.
+source/lock, release-policy, native-contract and documentation cases, plus21 Robot
+dry runs. Independent downloaded wheel/archive rebuild, clean installation and
+migration/recovery checks pass all6 cases after refreshing the disposable test
+container's stale DNS; retain the initial PyPI timeout evidence.
+
+[PR130](https://github.com/Stell0/ns8-czero/pull/130) regularly merges tested
+consumer `d230779e21550c8f24d4f84749cbde80b0ebbdb1` as
+`145d144725f748b8a168aefce72b0f866bbe820e`; their tracked Git trees match.
+Consumer full [43220620934](https://github.com/Stell0/ns8-czero/actions/runs/43220620934)
+and actual main full
+[43229872256](https://github.com/Stell0/ns8-czero/actions/runs/43229872256) pass
+all required checks and their actual C0 gates. Both pass3376 regression cases
+without database skips,47 website interactions,44 document browsers,Debian21
+and Rocky26/three expected skips. Independent downloaded native/privacy/image/
+recovery audits and exact-source promotion verifications pass, including all
+eight browser/privacy workflows,30 accessibility contexts,five scan/SBOM pairs
+and zero OAuth-query candidates. Earlier optional PR screenshot publication403
+remains nonblocking; failed evidence is preserved.
+
+The actual published/native app image verifies released Core Git source
+`2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`, schema0039 and the new space-access
+API binding, with no local-Core fallback or NS8 SDK. Actual main canonical
+publication and six fresh independent registry identity reads pass for all three
+`main` and `latest` aliases. Preserve accepted tag
+`ci-145d144725f748b8a168aefce72b0f866bbe820e-43229872256-1` and these identities:
+
+| Image | Accepted source/publication digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:64a02c825b7d32090e5727f0e95e967877a43394bc9b9183f54e22c6c692c612` |
+| `ghcr.io/stell0/czero-app` | `sha256:818c91c782471981d81349c01857366b10c1972677d02ff91887f8e49c782ffd` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:12289c460619f3ff3ba47e761319e1cab3589e40e84ab05150bd5b82d5d2dec9` |
+
+This is source/publication acceptance. The installed baseline and genuine
+predecessor below remain unchanged; production upgrade, actual connector reload
+and live space-audience changes require their separate authorization. No stable
+NS8 module release or actual new packaged-skill/vendor acceptance is claimed.
 
 Retain failed development/native evidence: b76220b fast43188463675 had stale native
 health/mock expectations; broad development had3333 passes/35 failures/three errors
