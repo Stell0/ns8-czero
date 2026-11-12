@@ -124,3 +124,22 @@ def test_transport_startup_closes_portal_and_preserves_process_control(monkeypat
     assert worker and not worker[0].is_alive()
     if failure is RuntimeError:
         assert 'synthetic-private-payload' not in str(caught.value)
+
+
+def test_global_type_catalogue_is_available_before_space_selection():
+    transport = Transport()
+    transport.operations.append({'name': 'object_types_list', 'read_only': True,
+        'input_schema': {'properties': {'space_id': {}, 'populated_only': {}}}})
+    client = C0(config(), transport=transport)
+    client.call('object_types_list')
+    assert transport.calls[-1] == ('object_types_list', {})
+    client.call('object_types_list', populated_only=False)
+    assert transport.calls[-1][1] == {'populated_only': False}
+    with pytest.raises(C0Error, match='space_id'):
+        client.call('object_types_list', populated_only=True)
+    client.select_space('target')
+    client.call('object_types_list', populated_only=True)
+    assert transport.calls[-1][1] == {'populated_only': True, 'space_id': 'target'}
+    with pytest.raises(C0Error, match='space_id'):
+        client.call('object_types_list', populated_only=False, space_id='other')
+    assert client.writes == 0

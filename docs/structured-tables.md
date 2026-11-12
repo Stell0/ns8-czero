@@ -43,6 +43,10 @@ Identifiers and direction are validated; field values remain SQL bound parameter
 Existing exact filters, tag constraints, scopes, persisted membership and selected
 space authorization remain authoritative. Responses and operation names are unchanged.
 
+The reusable ingestion client retains global schema discovery before selecting a
+space. Populated discovery and explicit space selectors still require the saved
+selected-space binding; no ordinary content call gains a global exception.
+
 Existing database indexes support space/type discovery. No migration or generic
 per-field indexing is added. Large collection workloads require query-plan review
 before adding workload-specific indexes. Internal timeouts remain unchanged.
