@@ -87,7 +87,7 @@ does not claim a durable connection history.
 **Disable application for everyone** is explicitly global: it stops all of that
 application's connections, without blocking its users. Enabling it later permits
 fresh consent and does not revive old credentials. Manually approved UUID clients
-remain independent of optional client metadata discovery, which defaults off.
+remain independent of self-service metadata clients.
 
 Use **Protected spaces** for space-specific grants and **Background work** for
 jobs and schedules. The Workspace access page does not load background tasks. The **Skip to content**

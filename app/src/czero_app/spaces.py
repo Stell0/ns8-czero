@@ -97,7 +97,7 @@ def install_space_routes(app, database, auth, read_context, write_context):
         return invoke(service.list, context.actor, limit=limit, offset=offset)
 
     @app.post('/api/v1/spaces', response_model=SpaceView, status_code=201)
-    @operation('spaces_create', 'Create a protected space. Application Admins have access under actual OAuth scopes.', Role.ADMIN, SpaceView, read_only=False)
+    @operation('spaces_create', 'Create a space, restricted by default, with an optional authenticated-reader audience. Application Admins retain access under actual OAuth scopes.', Role.ADMIN, SpaceView, read_only=False)
     def create(data: SpaceCreate, context: RequestAccess = Depends(write_context)):
         return invoke(service.create, context.actor, **data.model_dump())
 

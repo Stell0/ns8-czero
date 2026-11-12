@@ -10,6 +10,19 @@ bindings remain enforced. Space audiences add authenticated baseline Read with
 revisioned Admin changes; existing protected spaces remain restricted. The
 whole readable space is included, and tightening revokes affected credentials.
 
+Development evidence: original-main authentication baseline56 passes in an
+independent database; focused review108 and final focused101 pass. Node24 website
+checks pass28 unit cases and46 interactions; four audience cases also pass after
+draft guards with inspected phone/desktop theme screenshots. Signed HTTPS browser
+acceptance passes12, including Reader/Admin self-service Read issuance. Native UI
+controllers28, action schemas and745 documentation links pass. Final fast checks
+pass1738 locally. These counts overlap and are not an aggregate acceptance total.
+
+Draft PR130 sourceb76220b's fast43188463675 fails three native-fixture expectations:
+two retained Core0.47 bindings and one missing mocked SDK cleanup operation. The
+successor corrects them without changing or cancelling the failed evidence.
+Broader database/packaging validation remains unresolved; the PR stays draft.
+
 Producer development and regression validation are in progress. Core publication,
 released-consumer adoption, exact-source full/native acceptance and upstream
 review remain required. No live deployment or existing-space audience change is claimed.
