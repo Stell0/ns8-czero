@@ -226,3 +226,11 @@ These anchors preserve links to the retained historical record.
 <a id="documentation-and-skills-release-readiness-phase"></a>[Documentation and skills release-readiness phase](docs/history/README.md#documentation-and-skills-release-readiness-phase)
 
 </details>
+
+
+### Structured record browsing producer
+
+The Core0.49 producer candidate adds selected-space collection discovery and
+optional scalar sorting for generic record browsers. It retains existing defaults
+and requires no migration. Reference UI integration and released-Core adoption
+remain separate from this library candidate.
