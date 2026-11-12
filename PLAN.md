@@ -1785,6 +1785,11 @@ The access-role repair subsequently merges as original main
 cumulative role labels, browser regressions and identical Debian image pin.
 Keep `b77bc6a68d1cf54823a19114a22129871ff3240d` and both full runs frozen;
 the current-base successor requires its own focused and full/native acceptance.
+Cross-space reference PR119 then advances original main to
+`08e979c4ae285bed03953cf58c6a0a63ebc8888c`. Preserve the previous candidate
+`f474737bc8d74bfc6ad3713314d3dd5824cb1e2b` and its full run43119794696.
+The next successor retains the cross-space contracts, migration0038, plugin1.10,
+released consumer lock and new feature regressions. Repeat exact-source acceptance.
 
 ## Current baseline
 
@@ -1795,13 +1800,12 @@ contains installed immutable tags/digests, supported update/restart acceptance a
 preservation evidence. Those installed images are the next genuine predecessor;
 retain the prior app0.60/Core0.39 installation and all earlier frozen evidence.
 
-Source versions are separate: `app/pyproject.toml` currently declares app0.64;
-its committed `uv.lock` selects released Core0.46. Producer
-`packages/czero-core/pyproject.toml` declares Core0.46/schema0037, and the plugin
-manifest declares 1.9. These source capabilities do not establish publication,
-consumer adoption or live activation. Use active manifests/locks as they advance,
-and the [verified installation candidate](docs/installation-candidate.md) for
-published image selection. No stable NS8 module release is claimed.
+Source versions are separate: use `app/pyproject.toml` and its committed `uv.lock`
+for the app and released Core dependency, `packages/czero-core/pyproject.toml`
+and its migrations for producer Core/schema, and the plugin manifest for its
+package version. These source capabilities do not establish publication, consumer
+adoption or live activation. Use the [verified installation candidate](docs/installation-candidate.md)
+for published image selection. No stable NS8 module release is claimed.
 
 <details>
 <summary>Historical baseline checkpoint</summary>
