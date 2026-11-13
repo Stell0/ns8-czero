@@ -228,11 +228,11 @@ These anchors preserve links to the retained historical record.
 </details>
 
 
-### Structured record browsing producer
+### Structured record tables
 
 Core0.49 adds selected-space collection discovery and optional scalar sorting
 for generic record browsers. It is independently published at `core-v0.49.0`
 from source `998ef32`. App0.67 adopts its released tag and frozen lock.
 Read [structured tables](docs/structured-tables.md) for browsing collections,
-filters, sorting and complete record details; final consumer acceptance is tracked
-in PLAN. Existing defaults remain compatible and no migration is required.
+filters, sorting and complete record details. Released-consumer, native and
+separately authorized deployment acceptance are recorded in [PLAN](PLAN.md#generic-tables-accepted-deployment). Existing defaults remain compatible and no migration is required.

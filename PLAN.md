@@ -2204,12 +2204,14 @@ evidence and repeats the required current-base checks before merge.
 
 ## Current baseline
 
-The accepted dedicated installation is app **0.66.0**, released Core **0.48.0**,
-schema **0039**, source `145d144725f748b8a168aefce72b0f866bbe820e`.
-Its [accepted deployment record](#self-service-read-accepted-deployment)
+The accepted dedicated installation is app **0.67.0**, released Core **0.49.0**,
+schema **0039**, source `72fbdfe7c9be13351359ae240ffc72dde654fab0`.
+Its [accepted deployment record](#generic-tables-accepted-deployment)
 contains installed immutable tags/digests, supported update/restart acceptance and
 preservation evidence. Those installed images are the next genuine predecessor;
-retain the actual app0.64/Core0.46 predecessor, app0.63/Core0.45, historical
+retain the actual app0.66/Core0.48 predecessor in the
+[self-service Read record](#self-service-read-accepted-deployment),
+app0.64/Core0.46, app0.63/Core0.45, historical
 app0.61/Core0.42 and all earlier frozen images and evidence.
 
 Source versions are separate: use `app/pyproject.toml` and its committed `uv.lock`
@@ -3814,3 +3816,60 @@ Production update and live connector catalog refresh/readback require separate
 explicit authorization and their supported backup/preservation/acceptance process.
 This documentation closeout receives its own Git-only PR/main checks and does not
 replace accepted runtime images or claim a stable module release.
+
+
+## Generic tables accepted deployment
+
+The operator separately authorizes the 13 November dedicated C0 deployment.
+The supported immutable-digest update installs app **0.67.0**, released
+Core **0.49.0**, schema **0039_space_audiences**, from accepted source
+`72fbdfe7c9be13351359ae240ffc72dde654fab0`. The installed immutable tag and all
+three digests are the [accepted main identities](#final-table-browser-acceptance--13-november-2026)
+above. Fresh exact-source full promotion verification passes before deployment.
+Actual installed module/app/database inspection and the released-Core runtime
+probe verify those digests, Git commit `998ef32`, version and schema; no producer
+fallback or NS8 SDK is present. No migration is required from app0.66/Core0.48.
+
+The genuine observed predecessor is source
+`145d144725f748b8a168aefce72b0f866bbe820e`, app0.66/Core0.48/schema0039.
+Its immutable tag and three digests remain in the self-service Read deployment
+record. Final acceptance finds a missing local predecessor image reference;
+pulling its existing immutable registry images restores the local cache and
+verifies every predecessor digest/source without changing running containers. Keep the initial failed local check privately.
+
+The owned C0-only backup completes and all16 backup definitions are restored
+exactly. A full Restic read-data integrity check finds no errors. Read-only content
+preflight verifies6590 complete sources,453 multipart parents, no pending imports,
+no superseded content and no blocked filesystem entries. The maintenance lock
+excludes the existing documentation job throughout acceptance and is released.
+Its files, definitions and pre-existing external unit states are preserved.
+
+Read-only snapshots bind65 tables and1,318,796 pre-update rows. Every stored data
+table retains its exact hash. Existing job history, OAuth authority, credentials,
+space audiences, grants, knowledge cursors/events, settings, schedules and mounts
+are preserved. API-key verification changes only last-use activity; all fixed
+fields, five keys and monotonic timestamps are checked independently. Grant
+refresh generations remain monotonic. The source-original store remains empty.
+Extraction/reindex counts and all ten unrelated module identities/flag sets remain
+unchanged. No new task, schedule, audience, role or consent scope is introduced.
+
+The update takes29.31 seconds; supported `node/1/restart-module` also succeeds.
+Actual app invocation identities change on both operations. All four C0 units,
+container health, trusted HTTPS route/certificate and runtime readiness pass.
+Live SDK discovery matches124 capability operations and verifies the new populated
+type and sort schemas with a real authorized read. Existing OAuth connection reads
+return the same account and its seven spaces; a bounded read in the selected
+populated structured space succeeds. No connection identity is replaced.
+
+This verifies fresh server discovery and actual existing-client operations;
+this assistant's cached catalog is not reloaded. The in-app browser runtime is
+unavailable because its referenced runtime file is missing; the existing
+interactive-browser waiver remains. The exact deployed image already passed
+all automated native browser gates, and direct live table routes return HTTPS200.
+No new vendor packaged-skill acceptance or stable module release is claimed.
+
+Bounded root application journals contain56 entries, two health and16 MCP request
+positive controls, and zero credential/query/traceback candidates. Raw snapshots,
+credentials and operational evidence remain private. This three-document closeout
+uses its own Git-only PR/main checks and does not rebuild or replace the installed
+runtime. Further live changes require their own authorization.
