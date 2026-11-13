@@ -3712,7 +3712,7 @@ separate consumer adoption pass exact-source full/native and artifact checks.
 The accepted installation remains unchanged.
 
 
-## Generic structured tables — released consumer candidate
+## Generic structured tables — accepted source delivery
 
 The operator selected Nebula and authorized implementation and completion of CI.
 Core prerequisite PR135 regularly merges as `834e99bf3eed0cb7134eb1dcb5c150cc9952dad9`.
@@ -3748,7 +3748,7 @@ and51 ingestion fixture failures caused by global type discovery gaining an
 optional selector. The repair preserves global metadata bootstrap while retaining
 content/populated-space checks; all59 affected integration cases and13 client
 unit cases pass locally. The successor is based on the merged Core prerequisite,
-with independent released-Core/full/native acceptance still required before merge
+with independent released-Core/full/native acceptance recorded below after merge
 and canonical publication. No installed images, data, settings or schedules change
 with this source work; production deployment remains separately authorized.
 
@@ -3769,3 +3769,48 @@ regressions reproduce both404s before the repair and pass afterward. The real
 backend/Chromium record workflow now includes table reload/filter/sort/details and
 passes locally;198 focused checks and21 Robot dry runs pass. Preserve
 that failed full run and the prior945c8be candidate's independent run.
+
+
+### Final table browser acceptance — 13 November 2026
+
+[PR136](https://github.com/Stell0/ns8-czero/pull/136) regularly merges reviewed
+source `d8c4d63634e36e842d98ffecd6d324e1c57c3b84` as
+`72fbdfe7c9be13351359ae240ffc72dde654fab0`. The merged file tree exactly equals
+that tested source. [PR full43332715393](https://github.com/Stell0/ns8-czero/actions/runs/43332715393)
+and [actual main43340875300](https://github.com/Stell0/ns8-czero/actions/runs/43340875300)
+pass their full C0 merge gates; main's canonical publication succeeds. Both run
+3381 Python/PostgreSQL/packaging cases without database skips,45 real-backend
+browser cases,60 Vue browser workflows,33 frontend unit tests and21 Robot dry runs.
+
+Independent downloaded-artifact audits of both sources pass Debian21 and
+Rocky26/three expected skips, all eight installed-browser workflows/privacy guards,
+32 accessibility contexts including Tables as Admin/Reader, five actual scan/SBOM
+pairs and zero OAuth-query candidates across three audited artifacts. Exact checked
+sources, genuine upgrade predecessor and all three installed digests match.
+Exact-source full promotion verification passes before PR merge and for actual
+main. The real published app images verify released Core0.49.0's immutable Git
+commit, installed version, schema and loopback operation contracts; their committed
+Core package tree remains `4bd585d50047201658f5eba494cafaff8557e860`.
+
+Canonical `main`/`latest` aliases match six fresh independent public registry reads
+of these accepted main candidates. Preserve immutable tag
+`ci-72fbdfe7c9be13351359ae240ffc72dde654fab0-43340875300-1` and identities:
+
+| Image | Immutable digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:73b3a0830254d34e4daa00909617b72b7597212cd5ace546700e6b5b6f40c293` |
+| `ghcr.io/stell0/czero-app` | `sha256:5f711d2e8eb5b1bdd18cb8db0e6a523aa7a0fba8fe424b89d40c98641463c8be` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:6949b90d567a3abc8c899bb342424322006d756019a6d78059a1bacd6ccf55dd` |
+
+The module retains its exact candidate sibling tags; canonical publication does
+not rebuild the tested images. Optional PR screenshot publication failed on token
+permissions; required suites, downloadable native artifacts and merge gates pass.
+Actual main screenshot publication also succeeds. Keep failed runs43322706237 and
+43326089396, their source commits/images and private downloaded failure evidence.
+
+This is source, released-consumer and publication acceptance. The installed live
+baseline, data, settings, files, OAuth clients and schedules remain unchanged.
+Production update and live connector catalog refresh/readback require separate
+explicit authorization and their supported backup/preservation/acceptance process.
+This documentation closeout receives its own Git-only PR/main checks and does not
+replace accepted runtime images or claim a stable module release.
