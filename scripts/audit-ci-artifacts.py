@@ -127,7 +127,8 @@ def audit_reports(directory, source, images, logs):
         assert value['source'] == source
         assert [i['digest'] for i in value['images']] == [i['digest'] for i in images[1:]], 'Installed app/database digests differ'
     measurements = marker_values(logs, 'C0 accessibility: ')
-    assert len(measurements) >= 28
+    assert len(measurements) >= 32
+    assert {('tables','admin'),('tables','reader')} <= {(m['page'],m['role']) for m in measurements}, 'Installed table browser evidence missing'
     assert {value['role'] for value in measurements if value.get('page') == 'account'} == {'admin', 'editor', 'reader'}, 'Account connection controls were not checked for every role'
     for value in measurements:
         assert all(type(v) is int and v >= 0 for k, v in value.items() if k not in {'page', 'role'})

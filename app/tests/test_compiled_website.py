@@ -49,3 +49,20 @@ def test_missing_build_fails_without_returning_a_legacy_page(tmp_path):
     with pytest.raises(HTTPException) as failure:
         Website(tmp_path,'').render()
     assert failure.value.status_code==503
+
+
+@pytest.mark.parametrize('prefix', ['', '/czero/czero17'])
+def test_table_links_and_reload_serve_the_compiled_website(website, prefix):
+    from fastapi import FastAPI
+    child=FastAPI();website.install(child)
+    app=FastAPI()
+    app.mount(prefix or '/', child)
+    async def check():
+        async with AsyncClient(transport=ASGITransport(app=app),base_url='https://example.org') as client:
+            for path in ('/tables', '/tables/inventory-records'):
+                response=await client.get(prefix+path+'?space_id=selected')
+                assert response.status_code==200
+                assert '<base href="/czero/czero17/" />' in response.text
+                assert response.headers['cache-control']=='no-store'
+            assert (await client.get(prefix+'/tables/inventory/extra')).status_code==404
+    asyncio.run(check())

@@ -34,7 +34,7 @@ class Website:
             return self.render()
 
         for path in ('/', '/search', '/wiki', '/wiki/{identifier}', '/sources', '/sources/{identifier}',
-                     '/evidence/{identifier}', '/projects', '/explore', '/explore/{kind}', '/explore/{kind}/{identifier}',
+                     '/evidence/{identifier}', '/tables', '/tables/{identifier}', '/projects', '/explore', '/explore/{kind}', '/explore/{kind}/{identifier}',
                      '/account', '/agents', '/admin', '/admin/spaces', '/admin/advanced', '/admin/work'):
             app.add_api_route(path, page, methods=['GET'], include_in_schema=False)
 

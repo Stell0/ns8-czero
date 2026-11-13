@@ -51,6 +51,8 @@ def test_complete_m17_validation_and_authority_contract_is_preserved(application
     projected=[{**item,'input_schema':contract.legacy_search_input(item['input_schema'])}
         if item['name'] in ('knowledge_search','knowledge_search_structured') else item for item in projected]
     projected = [contract.legacy_space_audience(item) if item['name'] in ('spaces_list','spaces_get','spaces_create') else item for item in projected]
+    projected = [{**item, 'input_schema': contract.legacy_table_input(item['input_schema'], item['name'])}
+        if item['name'] in ('object_types_list','objects_list') else item for item in projected]
     assert [contract.operation_contract(item) for item in projected]==expected
     assert set(DESCRIPTIONS) == {item['name'] for item in actual}
     schema = app.openapi()

@@ -94,7 +94,9 @@ class C0:
         if not operation:
             raise C0Error('Required C0 operation is unavailable: ' + name)
         properties = operation['input_schema'].get('properties', {})
-        if 'space_id' in properties:
+        global_types = (name == 'object_types_list' and arguments.get('populated_only', False) is False
+                        and 'space_id' not in arguments)
+        if 'space_id' in properties and not global_types:
             requested = arguments.get('space_id', self.space_id)
             if not requested or requested != self.space_id:
                 raise C0Error('Missing or wrong target space_id')

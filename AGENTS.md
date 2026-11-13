@@ -453,10 +453,19 @@ These aliases preserve incoming links; their content describes past acceptance.
 </details>
 
 
-## Record browsing Core0.49 producer candidate
+## Record browsing Core0.49 and tables consumer
 
 Keep populated type discovery scoped to current persisted Reader authority.
 Legacy global schema discovery remains the default. Optional record sorting
 uses validated scalar fields, missing/null last and stable ID ties before paging.
-Core0.49 producer publication and app consumer adoption are separate gates;
-retain the released app lock and accepted runtime until their checks pass.
+Core0.49 is immutably published from `998ef32`; its package tree must stay
+identical to the released Git dependency. App0.67 adopts its tag/lock with
+>=0.49.0,<0.50.0 and matching patch-only updater bounds. Keep the installed
+baseline unchanged until separately authorized deployment.
+
+The schema-driven Tables reader uses existing Nebula components and current
+account/space response guards. Preserve schema titles verbatim, exact filters,
+server sorting, bounded pagination and safe nested value rendering. Global
+schema discovery remains available before ingestion space selection; populated
+discovery and content operations keep exact selected-space checks. Existing
+Explore record links remain valid. See [the contract](docs/structured-tables.md).

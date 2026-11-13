@@ -14,7 +14,8 @@
     "search": "Cerca",
     "advanced": "Client tecnici",
     "work": "Attività in background",
-    "spaces": "Spazi"
+    "spaces": "Spazi",
+    "tables": "Tabelle"
   },
   "common": {
     "loading": "Caricamento…",
@@ -332,5 +333,29 @@
     "audienceHelp": "Tutti gli utenti autenticati possono leggere tutto lo spazio, inclusi fonti e allegati. Le autorizzazioni individuali aggiungono permessi e non possono rimuovere questo accesso in lettura. Limitare il pubblico disconnette le applicazioni interessate.",
     "saveAudience": "Salva pubblico",
     "audienceReason": "Puoi leggere questo spazio perché è disponibile per tutti gli utenti autenticati."
+  },
+  "tables": {
+    "columns": "Colonne",
+    "missing": "Non presente",
+    "null": "Null",
+    "empty": "Testo vuoto",
+    "yes": "Sì",
+    "no": "No",
+    "items": "{count} elementi",
+    "object": "Oggetto",
+    "filterField": "Campo filtro",
+    "filterValue": "Valore esatto (booleani: true o false)",
+    "all": "Tutti i record",
+    "tag": "Tag",
+    "apply": "Applica filtri",
+    "reset": "Reimposta filtri",
+    "activeFilter": "Filtri attivi:",
+    "revision": "Revisione",
+    "created": "Creato",
+    "relationships": "Apri record e relazioni",
+    "sort": "Ordina per",
+    "defaultOrder": "Ordine predefinito",
+    "ascending": "Crescente",
+    "descending": "Decrescente"
   }
 }

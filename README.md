@@ -24,7 +24,7 @@ Use C0 for team procedures, support knowledge, ongoing research or project knowl
 | Agent tools | REST, OAuth-protected MCP, instance-bound instructions and generated ChatGPT skill/plugin packages |
 | Wiki maintenance | External agents can make requested edits or use an enabled, bounded compiler workflow with proposals, validation and readback |
 | Research projects | Protected-space manifests, topic scope, monitoring/queue budgets, external workflow coordination and saved reports |
-| Browser reading | Wiki, Sources, Projects and Explore; English/Italian, responsive pages and light/dark/system themes |
+| Browser reading | Wiki, Sources, Tables, Projects and Explore; English/Italian, responsive pages and light/dark/system themes |
 | Reusable base | Independently distributable Python Core, reference application, tests, fork-update tools and NethServer 8 packaging |
 
 Ordinary text search needs no model provider. Semantic retrieval requires a configured embedding service and a ready index.
@@ -230,7 +230,9 @@ These anchors preserve links to the retained historical record.
 
 ### Structured record browsing producer
 
-The Core0.49 producer candidate adds selected-space collection discovery and
-optional scalar sorting for generic record browsers. It retains existing defaults
-and requires no migration. Reference UI integration and released-Core adoption
-remain separate from this library candidate.
+Core0.49 adds selected-space collection discovery and optional scalar sorting
+for generic record browsers. It is independently published at `core-v0.49.0`
+from source `998ef32`. App0.67 adopts its released tag and frozen lock.
+Read [structured tables](docs/structured-tables.md) for browsing collections,
+filters, sorting and complete record details; final consumer acceptance is tracked
+in PLAN. Existing defaults remain compatible and no migration is required.
