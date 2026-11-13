@@ -1,6 +1,15 @@
 # C0 / ns8-czero — Instructions for coding agents
 
-Self-service Read and space audiences are deployed in app0.66 / released
+The accepted dedicated runtime is app **0.67.0**, released Core **0.49.0**,
+schema **0039**, source `72fbdfe7c9be13351359ae240ffc72dde654fab0`.
+Its separately authorized table-browser deployment passes supported backup,
+immutable update, restart, preservation and live connection/privacy checks.
+Core remains immutable at `998ef32b6eedb545e6e4c0eb7ebb468e19ea3ddb`.
+Preserve the installed image identities and genuine app0.66/Core0.48 predecessor
+in [PLAN's current baseline](PLAN.md#current-baseline). Future deployments still
+need explicit authorization; documentation-only heads never replace these images.
+
+Self-service Read and space audiences were accepted in app0.66 / released
 Core0.48.0 / schema0039 / plugin1.11. Core is immutable at
 `2f40ffeb2acac807f485f7bde7f97651e7d9d8bf`; preserve its exact package tree,
 released Git tag/lock and patch-only updater bounds. PR130 regularly merges as
@@ -461,7 +470,8 @@ uses validated scalar fields, missing/null last and stable ID ties before paging
 Core0.49 is immutably published from `998ef32`; its package tree must stay
 identical to the released Git dependency. App0.67 adopts its tag/lock with
 >=0.49.0,<0.50.0 and matching patch-only updater bounds. Keep the installed
-baseline unchanged until separately authorized deployment.
+baseline and genuine predecessor as recorded in PLAN; the separately authorized
+table-browser deployment is accepted there.
 
 The schema-driven Tables reader uses existing Nebula components and current
 account/space response guards. Preserve schema titles verbatim, exact filters,
