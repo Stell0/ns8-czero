@@ -99,6 +99,11 @@ Source documents and Wiki pages retain **one current complete content generation
 
 ## Use C0
 
+Personal Data ingestion is being implemented using existing NethCTI and WebTop
+APIs. It remains disabled by default and has not passed native acceptance or
+released-Core consumer adoption. See [scope and actual limits](docs/personal-data/CONTRACT.md).
+
+
 ### Use an existing instance
 
 1. Open your organization's C0 HTTPS URL and sign in with your own account.

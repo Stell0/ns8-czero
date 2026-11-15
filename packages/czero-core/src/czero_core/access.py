@@ -72,7 +72,8 @@ class AccessService:
             return Actor(user_id, Role.ADMIN, True)
         if row["role"] is None:
             raise PermissionDenied()
-        return Actor(user_id, Role(row["role"]))
+        from .personal_data import can_edit_personal
+        return Actor(user_id, Role(row["role"]), personal_editor=can_edit_personal(connection, self.issuer, row['account_key']))
 
     def authorize(self, actor: Actor, minimum: Role) -> Actor:
         """Revalidate a caller at a shared service boundary."""
@@ -119,8 +120,14 @@ class AccessService:
                 raise PermissionDenied() from None
             if row['account_id'] != current.user_id or actor.api_key_binding.service.access.issuer != self.issuer:
                 raise PermissionDenied()
+            personal_editor = current.personal_editor and connection.execute(text('''SELECT EXISTS(
+                SELECT 1 FROM c0_personal_owners o JOIN c0_accounts a
+                ON a.issuer=o.issuer AND a.account_key=o.directory_id
+                JOIN c0_personal_config p ON p.issuer=o.issuer AND p.provider_id=o.provider_id
+                WHERE a.id=:id AND o.active AND o.space_id=ANY(CAST(:spaces AS uuid[])))'''),
+                {'id':current.user_id,'spaces':row['space_ids']}).scalar_one()
             current = replace(current, api_key_binding=actor.api_key_binding,
-                              delegated_scopes=frozenset(row['scopes']))
+                              delegated_scopes=frozenset(row['scopes']),personal_editor=personal_editor)
         if actor.session_binding is not None:
             from .sessions import SessionBinding, SessionRejected
             from .renewal import RenewalRejected

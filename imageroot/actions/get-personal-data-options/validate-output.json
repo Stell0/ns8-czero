@@ -1,0 +1,57 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "nethvoice": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                    }
+                },
+                "required": [
+                    "id",
+                    "label"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "webtop": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                    }
+                },
+                "required": [
+                    "id",
+                    "label"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+    "required": [
+        "nethvoice",
+        "webtop"
+    ],
+    "additionalProperties": false
+}

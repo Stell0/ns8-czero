@@ -102,11 +102,15 @@ class SpaceService:
         return current
 
     @staticmethod
-    def _policy(current, identifier, shared, grant, allowed, minimum, check_scopes, readable_by_all=False):
+    def _policy(current, identifier, shared, grant, allowed, minimum, check_scopes, readable_by_all=False, personal=False, owns_personal=False):
         # One policy for single and batch selectors, with key ceilings first.
         if shared is None or (allowed is not None and identifier not in allowed):
             raise PermissionDenied()
-        if current.role is Role.ADMIN or shared:
+        if personal and current.role is not Role.ADMIN:
+            if not owns_personal:
+                raise PermissionDenied()
+            result = replace(current, role=Role.EDITOR, space_id=identifier)
+        elif current.role is Role.ADMIN or shared:
             result = replace(current, space_id=identifier)
         else:
             if grant is None and not readable_by_all:
@@ -121,15 +125,19 @@ class SpaceService:
     def _selected(self, connection, current, identifiers, minimum, check_scopes):
         allowed = (current.api_key_binding.validate(connection)['space_ids']
                    if current.api_key_binding is not None else None)
-        rows = connection.execute(text('''SELECT s.id,s.shared,s.readable_by_all,g.role FROM c0_spaces s
-            LEFT JOIN c0_space_grants g ON g.space_id=s.id AND g.account_id=:account
+        rows = connection.execute(text('''SELECT s.id,s.shared,s.readable_by_all,s.personal,g.role,
+            EXISTS(SELECT 1 FROM c0_personal_owners o JOIN c0_personal_config p
+                ON p.issuer=o.issuer AND p.provider_id=o.provider_id
+                JOIN c0_accounts a ON a.issuer=o.issuer AND a.account_key=o.directory_id
+                WHERE o.space_id=s.id AND o.active AND a.id=:account) AS owns_personal
+            FROM c0_spaces s LEFT JOIN c0_space_grants g ON g.space_id=s.id AND g.account_id=:account
             WHERE s.id=ANY(CAST(:ids AS uuid[]))'''),
             {'account': current.user_id, 'ids': identifiers}).mappings()
         result = {}
         for row in rows:
             try:
                 result[row['id']] = self._policy(current, row['id'], row['shared'], row['role'],
-                                                 allowed, minimum, check_scopes, row['readable_by_all'])
+                                                 allowed, minimum, check_scopes, row['readable_by_all'], row['personal'], row['owns_personal'])
             except ScopeDenied:
                 raise
             except PermissionDenied:
@@ -155,7 +163,7 @@ class SpaceService:
         identifiers = [space_uuid(value) for value in space_ids]
         if len(set(identifiers)) != len(identifiers):
             raise ValueError('invalid_space_selection')
-        current = self._actor(connection, actor, minimum)
+        current = self._actor(connection, actor, Role.READER)
         if check_scopes:
             require_scope(current, minimum)
         return self._selected(connection, current, identifiers, minimum, check_scopes)
@@ -167,11 +175,16 @@ class SpaceService:
             require_scope(current, Role.READER)
             allowed = current.api_key_binding.validate(c)['space_ids'] if current.api_key_binding is not None else None
             rows = c.execute(text('''SELECT s.id,s.name,s.shared,s.readable_by_all,s.revision,s.created_at,
-                CASE WHEN :admin THEN 'admin' WHEN s.shared THEN CAST(:role AS text)
+                s.personal,
+                CASE WHEN :admin THEN 'admin' WHEN s.personal THEN 'editor' WHEN s.shared THEN CAST(:role AS text)
                 WHEN CAST(:role AS text)='reader' THEN 'reader' ELSE COALESCE(g.role::text,'reader') END AS role
                 FROM c0_spaces s LEFT JOIN c0_space_grants g
                 ON g.space_id=s.id AND g.account_id=:account
-                WHERE (s.shared OR s.readable_by_all OR :admin OR g.role IS NOT NULL)
+                WHERE (:admin OR (NOT s.personal AND (s.shared OR s.readable_by_all OR g.role IS NOT NULL))
+                    OR EXISTS(SELECT 1 FROM c0_personal_owners o JOIN c0_personal_config p
+                        ON p.issuer=o.issuer AND p.provider_id=o.provider_id
+                        JOIN c0_accounts a ON a.issuer=o.issuer AND a.account_key=o.directory_id
+                        WHERE o.space_id=s.id AND o.active AND a.id=:account))
                 AND (CAST(:allowed AS uuid[]) IS NULL OR s.id=ANY(CAST(:allowed AS uuid[])))
                 ORDER BY s.shared DESC,s.name,s.id LIMIT :limit OFFSET :offset'''),
                 {'allowed': allowed, 'admin': current.role is Role.ADMIN, 'role': current.role.value,
@@ -182,7 +195,7 @@ class SpaceService:
         identifier = space_uuid(space_id)
         with self.database.engine.connect() as c:
             current = self.authorize(c, actor, space_id=identifier)
-            row = c.execute(text('SELECT id,name,shared,readable_by_all,revision,created_at FROM c0_spaces WHERE id=:id'),
+            row = c.execute(text('SELECT id,name,shared,readable_by_all,personal,revision,created_at FROM c0_spaces WHERE id=:id'),
                             {'id': identifier}).mappings().one()
             return snapshot({**row, 'role': current.role.value})
 
@@ -256,6 +269,8 @@ class SpaceService:
         value = role.value if role is not None else None
         def execute(c, current):
             self.authorize(c, current, Role.ADMIN, space_id=identifier)
+            if c.execute(text('SELECT personal FROM c0_spaces WHERE id=:id'), {'id':identifier}).scalar_one():
+                raise ValueError('personal_space_policy_immutable')
             if identifier == self.shared_id(c):
                 raise ValueError('shared_space_policy_immutable')
             target = c.execute(text('SELECT id FROM c0_accounts WHERE id=:id AND issuer=:issuer'),
@@ -299,6 +314,8 @@ class SpaceService:
         def execute(c, current):
             self.authorize(c, current, Role.ADMIN, space_id=identifier)
             old = c.execute(text('SELECT * FROM c0_spaces WHERE id=:id FOR UPDATE'), {'id': identifier}).mappings().one()
+            if old['personal']:
+                raise ValueError('personal_space_policy_immutable')
             if old['shared']:
                 raise ValueError('shared_space_policy_immutable')
             if old['revision'] != expected_revision:
@@ -319,7 +336,7 @@ class SpaceService:
                         c.execute(text('DELETE FROM c0_oauth_grants WHERE account_id=:id'), {'id': account})
                 c.execute(text('UPDATE c0_spaces SET readable_by_all=:readable,revision=revision+1 WHERE id=:id'),
                           {'readable': readable_by_all, 'id': identifier})
-            row = c.execute(text('SELECT id,name,shared,readable_by_all,revision,created_at FROM c0_spaces WHERE id=:id'), {'id': identifier}).mappings().one()
+            row = c.execute(text('SELECT id,name,shared,readable_by_all,personal,revision,created_at FROM c0_spaces WHERE id=:id'), {'id': identifier}).mappings().one()
             return {**row, 'role': 'admin'}
         return self._mutate(actor, 'space.access', {'space_id': str(identifier), 'readable_by_all': readable_by_all,
             'expected_revision': expected_revision}, idempotency_key, execute)

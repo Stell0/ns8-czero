@@ -34,9 +34,12 @@ restore = state / 'restore-database'
 restore.mkdir(mode=0o755,exist_ok=True)
 restore.chmod(0o755)
 script = restore / '10restore.sh'
-script.write_text('''# Sourced by the upstream init server, before the permanent server starts.
+script.write_text(r'''# Sourced by the upstream init server, before the permanent server starts.
 pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -U czero -d czero
 status=$?
+if [ "$status" -eq 0 ]; then
+    psql -v ON_ERROR_STOP=1 -U czero -d czero -c "DO \$\$ BEGIN IF to_regclass('c0_personal_config') IS NOT NULL THEN UPDATE c0_personal_config SET validated=false; END IF; END \$\$;" || status=$?
+fi
 docker_temp_server_stop
 exit "$status"
 ''')

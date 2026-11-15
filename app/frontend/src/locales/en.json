@@ -331,6 +331,7 @@
     "allSignedIn": "All signed-in users",
     "audience": "Who can read",
     "audienceHelp": "All signed-in users can read the whole space, including sources and attachments. Individual grants add permissions; they cannot remove this Read access. Restricting the audience disconnects affected application connections.",
+    "personalSpaceFixed": "Personal Data spaces cannot be shared.",
     "saveAudience": "Save audience",
     "audienceReason": "You can read this space because it is available to all signed-in users."
   },

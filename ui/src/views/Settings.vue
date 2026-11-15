@@ -72,6 +72,131 @@
                 :disabled="loading.getConfiguration || loading.configureModule"
               />
               <p>{{ $t("settings.sharing_help") }}</p>
+              <h3>{{ $t("settings.personal_data_title") }}</h3>
+              <NsToggle
+                v-model="personalData.enabled"
+                :label="$t('settings.personal_data_enable')"
+                :disabled="loading.getConfiguration || loading.configureModule"
+              />
+              <p>{{ $t("settings.personal_data_disable_help") }}</p>
+              <div v-if="personalData.enabled">
+                <NsComboBox
+                  v-model="personalData.nethvoice"
+                  :title="$t('settings.personal_data_nethvoice')"
+                  :label="$t('settings.personal_data_choose')"
+                  :options="
+                    personalDataOptions.nethvoice.map((item) => ({
+                      name: item.id,
+                      value: item.id,
+                      label: item.label,
+                    }))
+                  "
+                  :disabled="loading.configureModule"
+                />
+                <NsComboBox
+                  v-model="personalData.webtop"
+                  :title="$t('settings.personal_data_webtop')"
+                  :label="$t('settings.personal_data_choose')"
+                  :options="
+                    personalDataOptions.webtop.map((item) => ({
+                      name: item.id,
+                      value: item.id,
+                      label: item.label,
+                    }))
+                  "
+                  :disabled="loading.configureModule"
+                />
+                <p>{{ $t("settings.personal_data_limits") }}</p>
+                <NsInlineNotification
+                  v-if="error.personal_data"
+                  kind="error"
+                  :description="error.personal_data"
+                  :showCloseButton="false"
+                />
+              </div>
+              <NsInlineNotification
+                v-if="
+                  personalDataStatus.status === 'degraded' ||
+                  personalDataStatus.status === 'source_unavailable' ||
+                  personalDataStatus.status === 'provider_mismatch'
+                "
+                kind="warning"
+                :description="
+                  personalDataStatus.status === 'provider_mismatch'
+                    ? $t('settings.personal_data_error_provider_mismatch')
+                    : $t('settings.personal_data_state_degraded')
+                "
+                :showCloseButton="false"
+              />
+              <p>
+                {{
+                  $t("settings.personal_data_cleanup", {
+                    count: personalDataStatus.pending_cleanup || 0,
+                  })
+                }}
+              </p>
+              <p v-if="personalDataStatus.extraction">
+                {{
+                  $t("settings.personal_data_extraction", {
+                    ready: personalDataStatus.extraction.ready || 0,
+                    queued: personalDataStatus.extraction.queued || 0,
+                    failed: personalDataStatus.extraction.failed || 0,
+                  })
+                }}
+              </p>
+              <p
+                v-if="
+                  Object.keys(personalDataStatus.attachment_issues || {}).length
+                "
+              >
+                {{ $t("settings.personal_data_attachment_issues") }}:
+                <span
+                  v-for="(count, code) in personalDataStatus.attachment_issues"
+                  :key="code"
+                >
+                  {{ code }}: {{ count }}
+                </span>
+              </p>
+              <p
+                v-if="
+                  !personalDataStatus.users || !personalDataStatus.users.length
+                "
+              >
+                {{ $t("settings.personal_data_unverified") }}
+              </p>
+              <ul v-else>
+                <li
+                  v-for="(item, index) in personalDataStatus.users"
+                  :key="index"
+                >
+                  {{ item.username }} — {{ item.connector }}:
+                  {{ $t("settings.personal_data_state_" + item.status) }}
+                  <span v-if="item.error_code">
+                    ·
+                    {{ $t("settings.personal_data_error_" + item.error_code) }}
+                  </span>
+                  <span v-if="item.last_success">
+                    ·
+                    {{
+                      $t("settings.personal_data_last_success", {
+                        value: item.last_success,
+                      })
+                    }}</span
+                  >
+                  <span v-if="item.cursor">
+                    ·
+                    {{
+                      $t("settings.personal_data_batch", {
+                        count: item.cursor.documents || 0,
+                        skipped: item.cursor.skipped || 0,
+                      })
+                    }}</span
+                  >
+                  <span v-if="item.inventory_overdue">
+                    · {{ $t("settings.personal_data_inventory_overdue") }}</span
+                  >
+                </li>
+              </ul>
               <h3>{{ $t("settings.session_policy_title") }}</h3>
               <p>{{ $t("settings.session_policy_help") }}</p>
               <NsTextInput
@@ -172,7 +297,10 @@ import to from "await-to-js";
 import { mapState } from "vuex";
 import RetrievalSettings from "../components/RetrievalSettings.vue";
 import { sessionPolicyForm, sessionPolicyPayload } from "../session-policy.mjs";
-import { connectionPolicyForm, connectionPolicyPayload } from "../connection-policy.mjs";
+import {
+  connectionPolicyForm,
+  connectionPolicyPayload,
+} from "../connection-policy.mjs";
 import {
   retrievalForm,
   retrievalPayload,
@@ -213,6 +341,9 @@ export default {
       userDomain: "",
       owner: "",
       retrieval: retrievalForm(),
+      personalData: { enabled: false, nethvoice: null, webtop: null },
+      personalDataOptions: { nethvoice: [], webtop: [] },
+      personalDataStatus: { users: [], pending_cleanup: 0 },
       sessionPolicy: sessionPolicyForm(),
       connectionIdleDays: connectionPolicyForm(),
       identityProviders: [],
@@ -235,6 +366,7 @@ export default {
         authOptions: "",
         retrieval: "",
         session_policy: "",
+        personal_data: "",
         connection_idle_seconds: "",
       },
     };
@@ -258,10 +390,40 @@ export default {
     this.clearTaskListeners();
   },
   created() {
+    this.getPersonalDataState(
+      "get-personal-data-options",
+      "personalDataOptions"
+    );
+    this.getPersonalDataState("get-personal-data-status", "personalDataStatus");
     this.getAuthOptions();
     this.getConfiguration();
   },
   methods: {
+    async getPersonalDataState(action, target) {
+      const eventId = this.getUuid();
+      this.listenTask(`${action}-completed-${eventId}`, (context, result) => {
+        this.clearTaskListeners(action);
+        this[target] = result.output;
+      });
+      this.listenTask(`${action}-aborted-${eventId}`, () => {
+        this.clearTaskListeners(action);
+        this.error.personal_data = this.$t("settings.personal_data_unverified");
+      });
+      const [error] = await to(
+        this.createModuleTaskForApp(this.instanceName, {
+          action,
+          extra: {
+            eventId,
+            isNotificationHidden: true,
+            title: this.$t("settings.personal_data_title"),
+          },
+        })
+      );
+      if (error) {
+        this.clearTaskListeners(action);
+        this.error.personal_data = this.$t("settings.personal_data_unverified");
+      }
+    },
     async getAuthOptions() {
       this.loading.authOptions = true;
       const action = "get-auth-options";
@@ -373,15 +535,25 @@ export default {
       this.savedHost = this.host;
       this.letsEncrypt = taskResult.output.lets_encrypt;
       this.owner = taskResult.output.owner;
+      this.personalData = taskResult.output.personal_data || {
+        enabled: false,
+        nethvoice: null,
+        webtop: null,
+      };
       this.retrieval = retrievalForm(taskResult.output.retrieval);
       this.sessionPolicy = sessionPolicyForm(taskResult.output.session_policy);
-      this.connectionIdleDays = connectionPolicyForm(taskResult.output.connection_idle_seconds);
+      this.connectionIdleDays = connectionPolicyForm(
+        taskResult.output.connection_idle_seconds
+      );
       this.ssoEnabled = Boolean(taskResult.output.user_domain);
       this.pendingIdentity = taskResult.output;
       this.applyIdentitySelection();
       this.loading.getConfiguration = false;
     },
     configureModuleValidationFailed(validationErrors) {
+      if (validationErrors.some((item) => item.field === "personal_data")) {
+        this.error.personal_data = this.$t("settings.personal_data_required");
+      }
       this.clearTaskListeners("configure-module");
       this.loading.configureModule = false;
       for (const validationError of validationErrors) {
@@ -402,13 +574,14 @@ export default {
           const field = validationError.parameter || validationError.field;
           if (field === "retrieval") {
             this.error.retrieval = this.$t("settings.retrieval_invalid");
-
           } else if (field === "session_policy") {
             this.error.session_policy = this.$t(
               "settings.session_policy_invalid"
             );
           } else if (field === "connection_idle_seconds") {
-            this.error.connection_idle_seconds = this.$t("settings.connection_policy_invalid");
+            this.error.connection_idle_seconds = this.$t(
+              "settings.connection_policy_invalid"
+            );
           } else if (["idp", "user_domain", "owner"].includes(field)) {
             this.error[field] = this.$t("settings.identity_invalid");
           } else {
@@ -432,9 +605,13 @@ export default {
       let sessionPolicy;
       let connectionIdleSeconds;
       try {
-        connectionIdleSeconds = connectionPolicyPayload(this.connectionIdleDays);
+        connectionIdleSeconds = connectionPolicyPayload(
+          this.connectionIdleDays
+        );
       } catch (_) {
-        this.error.connection_idle_seconds = this.$t("settings.connection_policy_invalid");
+        this.error.connection_idle_seconds = this.$t(
+          "settings.connection_policy_invalid"
+        );
         this.focusElement("connectionIdleDays");
         return;
       }
@@ -452,6 +629,14 @@ export default {
       }
       if (this.ssoEnabled && (!this.idp || !this.userDomain || !this.owner)) {
         this.error.configureModule = this.$t("settings.identity_required");
+        return;
+      }
+      if (
+        this.personalData.enabled &&
+        (!this.ssoEnabled ||
+          (!this.personalData.nethvoice && !this.personalData.webtop))
+      ) {
+        this.error.personal_data = this.$t("settings.personal_data_required");
         return;
       }
       this.progress = 0;
@@ -492,6 +677,12 @@ export default {
             idp: this.ssoEnabled ? this.idp : "",
             user_domain: this.ssoEnabled ? this.userDomain : "",
             owner: this.ssoEnabled ? this.owner : "",
+            personal_data: {
+              ...this.personalData,
+              nethvoice: this.personalData.nethvoice || null,
+              webtop: this.personalData.webtop || null,
+              enabled: this.ssoEnabled && this.personalData.enabled,
+            },
             retrieval: retrievalPayload(this.retrieval),
             session_policy: sessionPolicy,
             connection_idle_seconds: connectionIdleSeconds,

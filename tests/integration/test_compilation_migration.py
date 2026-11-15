@@ -83,8 +83,8 @@ def test_predecessor_upgrade_twice_preserves_every_existing_table(predecessor,tm
                     'c0_compilation_sources':['assessment_task_id','seen_sweep_id','publication_marker']}
                 if predecessor=='0034_compilation_maintenance':
                     added={}  # This predecessor already has every maintenance column.
-                added.update({'c0_spaces':['readable_by_all'],'c0_client_onboarding':['review_requested']})
-                assert c.execute(text('SELECT bool_and(readable_by_all=shared) FROM c0_spaces')).scalar_one()
+                added.update({'c0_spaces':['readable_by_all','personal'],'c0_client_onboarding':['review_requested']})
+                assert c.execute(text('SELECT bool_and(readable_by_all=shared AND NOT personal) FROM c0_spaces')).scalar_one()
                 assert not c.execute(text('SELECT 1 FROM c0_client_onboarding WHERE NOT review_requested LIMIT 1')).scalar_one_or_none()
                 after={}
                 for table in names:

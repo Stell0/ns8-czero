@@ -38,6 +38,7 @@ class OriginalFileResponse(FileResponse):
 
 
 class SourceView(BaseModel):
+    managed_import: dict | None = None
     id: UUID
     title: str
     metadata: dict

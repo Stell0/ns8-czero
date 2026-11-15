@@ -1,5 +1,23 @@
 # C0 roadmap
 
+## Personal Data ingestion — implementation in progress
+
+Original-main base: `6845d45`. Implement only C0; NethVoice/NethCTI and
+WebTop remain unchanged. The [contract](docs/personal-data/CONTRACT.md) records
+the operator-approved API compromises and the required identity, authority,
+cleanup and coverage gates. Source inspection is not installed-version proof.
+An operator-selected NethVoice test instance is authorized for capability verification; a new
+WebTop test installation/configuration is authorized. No C0 production deployment
+is authorized. Preserve the installed C0 baseline and all unrelated modules.
+
+Delivery order: personal identity/space authorization and fenced reconciliation;
+existing-API NethCTI connector; existing-API WebTop connector; native settings,
+timer, backup/recovery and combined disposable/native acceptance. No source
+capability is advertised as verified until an actual bound probe succeeds.
+The operator also accepts the single transcription variant served by NethCTI
+(cleaned when present, otherwise raw), with explicit provenance uncertainty.
+
+
 ## API key expiration form — implementation candidate
 
 Based on original main `38c28bc`. Expose the existing nullable API key lifetime

@@ -236,7 +236,8 @@ def install_oauth_server(app, auth, read_context, write_context):
         eligible = []
         for scope, role in [('c0:read',Role.READER),('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
             try:
-                session.actor.require(role)
+                if not (role is Role.EDITOR and getattr(session.actor,'personal_editor',False)):
+                    session.actor.require(role)
                 if scope in view['scopes']:
                     eligible.append(scope)
             except PermissionDenied:

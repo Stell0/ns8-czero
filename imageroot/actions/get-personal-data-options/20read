@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+import json,os,sys
+from pathlib import Path
+import agent
+from agent.ldapproxy import Ldapproxy
+sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
+from czero_personal_data import discover
+try:
+    provider,options=discover(agent.redis_connect(use_replica=True),Ldapproxy(),os.environ.get('CZERO_USER_DOMAIN',''))
+    json.dump({key:[{field:row[field] for field in ('id','label')} for row in options[key]] for key in ('nethvoice','webtop')},sys.stdout)
+except Exception:
+    json.dump({'nethvoice':[],'webtop':[]},sys.stdout)

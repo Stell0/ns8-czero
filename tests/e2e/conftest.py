@@ -216,7 +216,22 @@ def live(browser_database,request,monkeypatch,tmp_path):
             result=connection.execute(text("UPDATE c0_sources SET metadata=metadata-'parent_external_id' WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))"),
                 {'space':private['id'],'ids':[row['source_id'] for row in receipts]})
             assert result.rowcount==len(receipts)
-    value=PrivateLive(origin=origin,rest=rest,client=client,definition=definition,space=private['id'],second=second['id'],upload=upload,publish=publish,legacy_metadata=legacy_metadata,
+    def provision_personal():
+        from czero_core.personal_data import PersonalDataService
+        access=app.state.auth.access
+        identity=app.state.auth.oidc.verify_access_token(member)
+        actor=access.resolve(identity)
+        with access.database.engine.connect() as c:
+            directory=c.execute(text('SELECT account_key FROM c0_accounts WHERE id=:id'),{'id':actor.user_id}).scalar_one()
+        service=PersonalDataService(access.database,access,app.state.sources)
+        provider,instance=uuid4(),uuid4()
+        administrator=access.resolve(app.state.auth.oidc.verify_access_token(owner))
+        service.configure(administrator,provider_id=provider,enabled=True,services={'webtop':str(instance)},expected_generation=0)
+        rows=service.reconcile_directory(provider_id=provider,entries=[
+            {'directory_id':str(directory),'username':'member','active':True},
+            {'directory_id':str(uuid4()),'username':'other','active':True}],complete=True)
+        return {row['username']:row['space_id'] for row in rows}
+    value=PrivateLive(origin=origin,provision_personal=provision_personal,rest=rest,client=client,definition=definition,space=private['id'],second=second['id'],upload=upload,publish=publish,legacy_metadata=legacy_metadata,
         member=member,grant_path=grant_path,errors=errors,tmp=tmp_path,originals=app.state.sources.originals,delay=delay,pause_worker=pause_worker,resume_worker=resume_worker)
     yield value
 

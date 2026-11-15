@@ -78,7 +78,7 @@ const { data, error, isPending, refetch } = useResource(
       return { ...account, grant }
     })
   },
-  () => !!session.space && !session.space.shared,
+  () => !!session.space && !session.space.shared && !session.space.personal,
 )
 const observed = new Map<string, string>()
 watch(data, (accounts) => {
@@ -181,8 +181,11 @@ const save = useMutation({
         >{{ t('admin.createSpace') }}</NeButton
       >
     </form>
+    <p v-if="session.space?.personal" role="status">
+      {{ t('admin.personalSpaceFixed') }}
+    </p>
     <form
-      v-if="session.space && !session.space.shared"
+      v-if="session.space && !session.space.shared && !session.space.personal"
       class="space-y-4"
       @submit.prevent="!saveAudience.isLoading.value && saveAudience.mutate()"
     >
@@ -208,7 +211,7 @@ const save = useMutation({
         create.error.value || save.error.value || saveAudience.error.value
       "
     /><ResourceState
-      v-if="!session.space?.shared"
+      v-if="!session.space?.shared && !session.space?.personal"
       :error="error"
       :loading="isPending"
       ><ul class="space-y-5">

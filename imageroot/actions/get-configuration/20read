@@ -15,6 +15,7 @@ from czero_retrieval_config import read, public
 from czero_session_policy import read as session_policy
 from czero_connection_policy import read as connection_policy
 from czero_extraction_config import read as extraction
+from czero_personal_data import read as personal_data
 
 config = {"host": os.getenv("CZERO_HOST", ""),
           "lets_encrypt": os.getenv("CZERO_LETS_ENCRYPT", "false").lower() == "true",
@@ -25,4 +26,5 @@ config['retrieval'] = public(read(Path(os.environ['AGENT_STATE_DIR']) / 'retriev
 config['session_policy'] = session_policy()
 config['connection_idle_seconds'] = connection_policy()
 config['extraction'] = extraction()
+config['personal_data'] = personal_data()
 json.dump(config, fp=sys.stdout)

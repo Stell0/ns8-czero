@@ -36,6 +36,7 @@ class SpaceView(BaseModel):
     id: UUID
     name: str
     shared: bool
+    personal: bool = False
     readable_by_all: bool = False
     revision: int
     created_at: datetime
@@ -92,7 +93,7 @@ def install_space_routes(app, database, auth, read_context, write_context):
         except ValueError: raise HTTPException(422, 'invalid_space_request') from None
 
     @app.get('/api/v1/spaces', response_model=SpacesView)
-    @operation('spaces_list', 'Discover authorized spaces and effective roles; omitted content selectors use the legacy shared space.', Role.READER, SpacesView)
+    @operation('spaces_list', 'Discover authorized spaces, personal classification and effective roles. Personal owners can edit their own space without changing the application role; omitted selectors use Shared.', Role.READER, SpacesView)
     def spaces(limit: int = 100, offset: int = 0, context: RequestAccess = Depends(read_context)):
         return invoke(service.list, context.actor, limit=limit, offset=offset)
 

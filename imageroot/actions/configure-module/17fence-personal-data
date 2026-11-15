@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+"""Fence before changing identity/environment or restarting any content worker."""
+import json,os,sys,subprocess
+from pathlib import Path
+import agent
+sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
+from czero_personal_data import read
+request=json.load(sys.stdin)
+pending=json.loads((Path(os.environ['AGENT_STATE_DIR'])/'personal-data-pending.json').read_text())
+previous=read()
+identity_changed=any(request.get(field,os.environ.get(env,''))!=os.environ.get(env,'')
+    for field,env in (('user_domain','CZERO_USER_DOMAIN'),('idp','CZERO_IDP_UUID')))
+if previous['enabled'] and (previous!=pending or identity_changed):
+    subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True,stdout=sys.stderr)
+    agent.run_helper('czero-personal-data-run','--fence-only',stdout=sys.stderr).check_returncode()

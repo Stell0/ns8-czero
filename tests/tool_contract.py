@@ -144,3 +144,18 @@ def legacy_table_input(schema, operation):
         assert key not in projected.get('required', [])
         assert structural_schema(projected['properties'].pop(key)) == expected
     return projected
+
+
+def legacy_personal_metadata(schema):
+    """Allow only the declared optional space/source classification additions."""
+    projected=deepcopy(schema)
+    for shape in [projected,*projected.get('$defs',{}).values()]:
+        properties=shape.get('properties',{})
+        if 'personal' in properties:
+            assert 'personal' not in shape.get('required',[])
+            assert structural_schema(properties.pop('personal'))=={'type':'boolean','default':False}
+        if 'managed_import' in properties:
+            assert 'managed_import' not in shape.get('required',[])
+            assert structural_schema(properties.pop('managed_import'))=={
+                'anyOf':[{'additionalProperties':True,'type':'object'},{'type':'null'}],'default':None}
+    return projected
