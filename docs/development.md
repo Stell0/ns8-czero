@@ -62,20 +62,191 @@ Do not run tests concurrently against a shared mutable database. Use fresh uniqu
 
 ## Public contracts and safety
 
-For repeatable external-source imports, read the [ingestion samples](../samples/ingestion/README.md)
-and use c0-ingest-sources. Shared client-side helpers and adapters are development
-tools, separate from Core/runtime packages. Save actual instance jobs and `.env`
-under ignored `.local/ingestion`; publish only generic adapters, synthetic tests
-and reusable source lessons after privacy review. The normal unit and integration
-suites include their regressions; the example has its own frozen dependency lock.
+Use trusted operation bindings, current persisted roles inside Core transactions,
+explicit spaces and delegated scopes. Preserve lock ordering, expected revisions,
+exact evidence identities and payload-free replay receipts. A denied space never
+falls back to Shared. Tools, provider responses and metadata confer no authority.
+Verify HTTP, ordinary SDK metadata and current/legacy MCP wire contracts when touched.
 
-Use trusted operation bindings, current-role checks inside Core transactions and existing lock ordering. Preserve original source/version/document/chunk identity, protected-space selection, expected revisions and replay receipts. A discovered tool or provider response does not confer authority. HTTP, ordinary SDK metadata and current/legacy MCP wire contracts all need verification when touched.
+Source and Wiki content is latest-only: stage replacements privately, validate and
+publish whole documents atomically, and delete superseded bodies, originals,
+derivatives and indirect receipt copies. Keep stable logical IDs, monotonic
+counters and current hashes/provenance. Expired exact evidence and superseded
+replays return authorized `content_superseded` (410), never rebound text. Preserve
+authored knowledge and mark invalidated evidence stale. Follow the
+[migration and preflight](latest-only-migration.md) for authorized upgrades.
 
-Static user pages use local assets, literal DOM rendering and generation/access-loss guards. Raw HTML from knowledge remains inactive. Ordinary readers must not initialize mutation controllers or load Admin membership lists. Copy current canonical instance URLs rather than constructing a deployment-specific hostname.
+## Feature contracts
 
-OAuth retains exact callback/resource guards, duplicate-field rejection, explicit consent, S256 and current native/membership/scope checks. Authorization ignores optional future fields only after duplicate/type/bound checks; token/revoke remain strict. CIMD uses only approved URL identities, bounded public-DNS-pinned verified HTTPS and post-I/O authority rechecks. Do not add TLS/DNS bypasses or derive roles from metadata.
+Read the relevant subsection and linked contract before changing these features.
+These are standing requirements; source versions, accepted images, run IDs and
+pending acceptance belong in [PLAN](../PLAN.md#current-baseline). Consult
+[archived conventions](history/AGENTS.md) and [milestone evidence](history/PLAN.md)
+only for the relevant historical topic.
 
-For non-obvious implementation history, consult the [archived agent conventions](history/AGENTS.md) and [executed milestone evidence](history/PLAN.md), using the relevant topic rather than loading the entire archive for every task.
+### Identity and access
+
+Follow [workspace access](workspace-access.md) and [API-key contracts](api-keys.md).
+Preserve explicit blocks, disabled clients, metadata review and credential ceilings.
+Baseline audience access is Read only; existing protected spaces remain restricted.
+The retired discovery switch must not reappear during upgrade/restore. Application
+approval, user permissions, exact connection disconnect and persistent blocking
+remain distinct. Person-role selectors use one cumulative choice: **Read**,
+**Read and write**, or **Read, write and manage**. Application consent scopes are
+independent selections and do not reuse these role labels.
+
+OAuth retains verified native identity, explicit consent, S256, exact
+callback/resource/host/origin checks, bounded bodies and duplicate rejection.
+Authorization may ignore future optional fields only after full multimap validation;
+token/revocation remain strict. A client-selected port is allowed only for an approved
+portless HTTP loopback URL: preserve host/path, explicit-port and HTTPS exact checks.
+Use the shared Core matcher in approval/consent/authorization; bind redemption to
+the exact requested callback and PKCE proof. SDK descriptor projection is request-local;
+never persist an observed port into the registered client.
+
+The reference app enables CIMD for its configured authenticated HTTPS endpoint;
+Core policy remains explicit. Self-service registration permits only requested
+Read for validated exact HTTPS URL identities. Pin public DNS/TLS peers and recheck
+authority after I/O. Additional client permissions require administrator approval;
+remote metadata never supplies roles. Existing UUID clients remain independent.
+
+Refresh cannot add scope or extend existing interactive grants' absolute authority.
+New background grants explicitly opt into separate offline authority with a
+snapshotted thirty-day inactivity window and no fixed maximum; never promote old
+grants silently. Cookies, codes and pending consent remain finite. Bind background
+login purpose and expected account to one-use persisted state. Persistent refresh
+rotation uses keyed family/generation proofs, bounded storage and committed replay
+revocation before SDK scope validation. Preserve client/account/resource/secret
+bindings, current-role checks and genuine predecessor recovery. Native acceptance
+includes real offline issuance, owned provider logout, renewal and revocation;
+local/fake-clock tests do not establish scheduled-client acceptance.
+
+Remembered website login stays server-bound, one-use, Origin-checked and renewable
+only after verified offline issuance and successful authenticated traffic. Browser
+logout and exact connection disconnect remain distinct. API-key creation defaults
+to 90 days with a visible 1–365-day range; only explicit **Never expires** selects
+indefinite authority. Preserve the nullable lifetime API, account/space revision
+bindings through trusted Actor refreshes, scopes and revocation. Keys never gain
+native extraction or first-party authority.
+
+### Website and structured tables
+
+Follow [Vue website contracts](vue-website.md), [structured tables](structured-tables.md)
+and the installed Nebula skill. `app/frontend` uses Vue 3/TypeScript, Composition API,
+the frozen npm lock and local compiled assets; NS8 `ui` remains Vue 2/Carbon.
+Preserve emerald semantic colors, Poppins 400/500 and font notices, and matching
+English/Italian keys. Knowledge views are readers; source upload, replacement,
+reprocessing and recovery are explicit exceptions. Preserve cookies, X-C0-CSRF,
+account/space query identities, cancellation, response/draft/replay/access-loss
+guards, unique template identifiers and 410 supersession. Never store knowledge or
+credentials in browser storage or enable stored HTML/remote images. Ordinary readers
+do not initialize mutation controllers or fetch Admin lists; files remain REST uploads.
+
+Sign-in uses its server-bound native form and escaped inert boot data; website
+routes have no legacy aliases. OAuth setup loads reviewed application metadata
+without requiring Details. Failed or stale previews cannot advance the connection;
+unchanged technical-client reviews preserve existing grants and revisions. Copy
+canonical instance URLs instead of constructing deployment-specific hostnames.
+Run frontend checks, real browser workflows and affected native workflows under
+[CI policy](ci-policy.md); a component build alone is not browser acceptance.
+
+Keep populated record-type discovery scoped to current Reader authority, with
+legacy global schema discovery as the default and available before ingestion space
+selection. Sorting validates scalar fields, places missing/null last and uses stable
+ID ties before paging. Tables preserve schema titles verbatim, exact filters,
+server sorting, bounded pagination, safe nested rendering and existing Explore links.
+
+### Ingestion and extraction
+
+Use c0-ingest-sources and the [ingestion samples](../samples/ingestion/README.md)
+before writing another collector. Reuse shared client/authentication/state/readback
+helpers. Put generic source logic, synthetic tests and reusable lessons in samples;
+keep instance wrappers, `.env`, credentials, datasets, state, receipts and operational
+notes in ignored `.local/ingestion/<job>/`. Preserve space/account/external-key
+mappings and the original job until validation passes. Run authorized ingestion
+through saved scripts and verify actual results. Review the full adapter diff and
+run the privacy checker with a private deployment denylist before contributing.
+Do not install schedules or broaden authority as an ingestion side effect.
+
+Queued extraction follows [pipeline contracts](ingestion-pipeline/CONTRACTS.md).
+Preserve disabled defaults, native actor leases, fenced completion and whole-document
+publication; extraction units never become external source-sync publication parts.
+Optional structure overflow retains complete-body fallback; parser/integrity failures
+remain publication failures. Local OCR is explicit and local-only with fixed
+commands/model fingerprints, process-group deadlines and disabled pending-work
+behavior. Cache reuse stays same-space, current or unexpired staging, input/profile-bound
+and ownership-rechecked; no permanent retired-body cache. Selective context binds
+logical ID, current revision/hash and citation offsets with strict budgets and no
+fallback. Preserve worker resource/restore grading and both timers' activation during backup.
+
+### Retrieval and cross-space references
+
+Read [retrieval evidence](retrieval-evidence.md), [benchmarks](retrieval-benchmark.md)
+and [cross-space reference contracts](cross-space-references-plan.md). Provider-free
+question recovery belongs in the shared Core lexical helper. Preserve strict
+query operators/results, minimum term and identifier constraints, selected-space,
+category and annotation predicates, and current supporting-passage citations.
+Freeze product/version provenance with benchmark bodies because it affects fallback
+eligibility. Record actual `lexical_strategy` separately from semantic/provider
+modes; optional metadata cannot alter authority or legacy source citation lists.
+Keep bounded normalization, legacy embedding profiles, opt-in contextual inputs
+and complete-coverage invalidation. Producer work does not authorize activation or
+released-consumer adoption.
+
+Cross-space references retain five stable endpoint kinds, identity-only edges,
+explicit source/target selectors, current both-endpoint read checks, blind source-owned
+deletion, credential bindings and revocation lock order. References confer neither
+authority nor evidence; browser reference panels remain separate work.
+
+The [BEIR benchmark](../benchmarks/retrieval/README.md) is a repository-only tool
+using public authenticated APIs. Keep dependencies, datasets, manifests and reports
+out of runtime packages/images. Reuse `c0_ingest` authentication, readback and atomic
+state helpers. Evaluation is read-only and requires the exact dedicated protected
+space and complete verified corpus. Queue missing originals before verifying
+extraction; preserve source/version/hash receipts and the single uncertain write
+intent across resumes. Synthetic tests run in the ingestion unit suite; the optional
+local extra checks metrics against BEIR's `pytrec_eval`. Real ingestion/evaluation
+and provider changes require explicit authority.
+
+### Compilation and protected projects
+
+Follow [compiler contracts](knowledge-compilation/M5.md) and [measured quality
+results](knowledge-compilation/RESULTS.md). Search remains read-only; Readers,
+explicit read-only tasks and missing Write skip feedback. Enabled feedback queues
+a bounded source-backed proposal, not published knowledge. Never store queries,
+answers, conversations or benchmark labels in compiler metadata. Reuse all six
+coordinator tables, durable cursors, fences, budgets and current source/page bindings;
+never reopen terminal tasks to account for inference. Generated packages install no
+tasks. Preserve failed quality thresholds and independent answer audits; benchmark
+acceptance does not authorize private-source copying, publication or production writes.
+
+Use [project contracts](projects/PROJECTS.md) and c0-project-workflows for protected
+projects. Generic object/bundle writes must not bypass managed-record policy.
+Preserve actor-bound leases, manifest versions, fencing, attempt reservations,
+uncertain-call recovery, independent monitoring coverage and report/evidence revisions.
+Saved results, notification, external publication and human reading are distinct.
+Consult the affected source/workflow/monitoring/reporting/maintenance contract;
+historical milestones do not grant live migration or scheduling authority.
+
+### Plugins and connectors
+
+After feature, Core or base upgrades, check affected MCP tools, descriptions,
+schemas, safety annotations, plugin/skill content and setup guidance against the
+actual instance. Update affected artifacts together; refresh/reload the tool catalog,
+verify the intended account and perform a real authorized operation. Include
+regression checks for changed tool contracts and workflows. Inspect tool results
+and saved revisions: HTTP 200 or a package build alone is not success.
+
+Preserve connection identity and unrelated settings on content-only updates. New
+scopes require appropriate client approval and fresh explicit OAuth consent.
+Documentation-only changes without connector-contract impact need no plugin bump.
+Synchronize runtime COPY inputs, the closed audit allowlist, offline/HTTP package
+inventories, native downloaded-archive checks and evaluation inputs when packaged
+skills change. Only instance-bound end-user skills ship in runtime; standalone
+consumers receive registered developer skills with explicit upstream links for
+absent application-specific contracts. Never initialize projects or schedules to
+test discovery. Separate vendor MCP support from tested C0 compatibility, and
+interactive OAuth from actual scheduled execution or packaged-skill acceptance.
 
 ## Forks and upstream updates
 
