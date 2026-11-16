@@ -191,3 +191,26 @@ copy content only for an explicitly authorized publication task and destination.
 A Write API key still requires Editor in every selected space. Error404 for every
 unavailable create target is `reference_target_unavailable`; conflict409 and invalid
 request422 contain no target diagnostics. All responses are no-store.
+
+
+## Automatic source updates (Core 0.50 producer)
+
+Discover actual server capabilities before using these operations. Select the
+exact space; Reader can inspect definitions/runs/documents and Editor with
+`c0:write` can preview, save and command definitions.
+
+| Operation | REST route | Behavior |
+| --- | --- | --- |
+| `automatic_sources_list` | GET `/api/v1/automatic-sources` | Paginated current definitions |
+| `automatic_sources_preview` | POST `/api/v1/automatic-sources/preview` | Bounded remote sample, no saved state |
+| `automatic_sources_save` | POST `/api/v1/automatic-sources` | Create or replace complete configuration |
+| `automatic_sources_command` | POST `/api/v1/automatic-sources/{identifier}/actions` | Run, pause or remove with expected revision |
+| `automatic_source_runs_list` | GET `/api/v1/automatic-sources/{identifier}/runs` | Paginated run status |
+| `automatic_source_documents_list` | GET `/api/v1/automatic-sources/{identifier}/documents` | Paginated collected source IDs |
+
+Every route requires explicit `space_id`. Saves and commands require a replay
+key; updates require the current definition revision. `enabled=true` explicitly
+authorizes background collection for the exact definition and space. Null
+interval means manual updates; intervals range from300 to2678400 seconds.
+Removal retains documents. Pending/partial states do not prove successful
+publication. See [configuration and authority](automatic-sources.md).

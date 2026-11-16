@@ -1,5 +1,17 @@
 # C0 Core
 
+## Automatic source updates producer (0.50)
+
+Schema0040 adds space-owned public-source definitions, background grants bound
+to current account/space grant revisions, fenced runs and document ownership.
+`AutomaticSourceService` exposes Reader inspection and Editor revision/replay
+operations. `SourceUpdater` collects outside transactions and publishes through
+existing staged source services. The registered adapters are public GitHub and
+websites; credentials, shell execution and model calls are not supported.
+See the [contract](../../docs/automatic-sources.md). The app consumer remains on
+its immutable release until independent producer publication and adoption.
+
+
 ## Structured table browsing producer (0.49)
 
 `ObjectService.list_types(populated_only=True)` returns only types with records

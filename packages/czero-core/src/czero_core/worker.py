@@ -159,7 +159,7 @@ class Worker:
                         connection.invalidate()
 
 
-def main(registry: Registry | None = None) -> int:
+def main(registry: Registry | None = None, *, budget_seconds: int = 90) -> int:
     database = None
     previous = signal.getsignal(signal.SIGTERM)
     def terminate(signum,frame):
@@ -167,7 +167,7 @@ def main(registry: Registry | None = None) -> int:
     signal.signal(signal.SIGTERM,terminate)
     try:
         database = Database()
-        count = Worker(database,registry or default_registry()).tick()
+        count = Worker(database,registry or default_registry()).tick(budget_seconds=budget_seconds)
         print(json.dumps({"processed":count}))
         return 0
     except WorkerInterrupted:

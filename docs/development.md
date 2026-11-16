@@ -158,6 +158,13 @@ server sorting, bounded pagination, safe nested rendering and existing Explore l
 
 ### Ingestion and extraction
 
+The [automatic-source producer](automatic-sources.md) adds explicitly enabled
+space-owned public GitHub/website updates. Its native worker uses registered
+collectors and existing source publication, with current authority and run fences.
+Develop with explicit local Core; the frozen consumer lock remains independent.
+Existing external ingestion jobs stay runnable until an explicit migration.
+
+
 Use c0-ingest-sources and the [ingestion samples](../samples/ingestion/README.md)
 before writing another collector. Reuse shared client/authentication/state/readback
 helpers. Put generic source logic, synthetic tests and reusable lessons in samples;

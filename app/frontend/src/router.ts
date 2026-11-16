@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { basePath } from './api/client'
+import { automaticSourcesAvailable } from './api/features'
 
 export const router = createRouter({
   history: createWebHistory(`${basePath}/`),
@@ -18,6 +19,11 @@ export const router = createRouter({
       path: '/wiki/:id?',
       component: () => import('./views/WikiView.vue'),
       meta: { title: 'nav.wiki' },
+    },
+    {
+      path: '/automatic-sources',
+      component: () => import('./views/AutomaticSourcesView.vue'),
+      meta: { title: 'automatic.title' },
     },
     {
       path: '/sources/:id?',
@@ -81,6 +87,8 @@ export const router = createRouter({
 })
 
 router.beforeEach((to, from) => {
+  if (to.path === '/automatic-sources' && !automaticSourcesAvailable())
+    return { path: '/sources', query: { ...from.query, ...to.query } }
   if (
     !('space_id' in to.query) &&
     from.query.space_id &&

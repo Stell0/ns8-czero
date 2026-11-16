@@ -7,6 +7,13 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'automatic_sources_list': 'List native public-source definitions in the explicitly selected space. Definitions configure collection; their documents remain normal source evidence.',
+    'automatic_sources_save': 'Create or revise a public GitHub or website source definition with current Editor/c0:write, expected revision and replay key. enabled=true explicitly grants background collection for this selection and space under your current editing authority. Saving replaces the complete configuration; read it before editing. Browser logout does not stop it; pause revokes it.',
+    'automatic_sources_command': 'Run now, pause or remove a selected-space definition with current Editor/c0:write, expected revision and replay key. Running requires enabled background authority. Removal retains collected documents. Read status after uncertain responses.',
+    'automatic_sources_preview': 'Fetch one bounded public-source preview with selected-space Editor/c0:write. No definitions, source content or schedules are saved. A sample is not exhaustive coverage.',
+    'automatic_source_runs_list': 'Inspect current native collection and extraction run status in the selected space. Pending or partial work is not successful completion.',
+    'automatic_source_documents_list': 'List documents collected by a selected-space definition. Follow source IDs with current complete-document reads; definition/run metadata is not evidence.',
+
     'cross_space_ref_create': 'Create an outgoing current-resource link with source Editor, target Reader and both c0:write and c0:read. Select both spaces explicitly. It stores no content, grants no authority and is not evidence. Retry acknowledges the original operation; list current state separately.',
     'cross_space_refs_list': 'List current outgoing summaries from a readable source in 1–10 explicitly selected target spaces. Hidden or inactive endpoints produce no item or count. Follow with a fresh authorized content API; a reference never authorizes copying or publication.',
     'cross_space_ref_delete': 'Blindly delete a known source-owned reference with source Editor/c0:write and an unchanged-request retry key. No target Read required. Missing, foreign-source and already deleted UUIDs return the same empty result. Recreated references have different UUIDs.',
@@ -161,7 +168,7 @@ DESCRIPTIONS = {
 
 # These operations have mandatory durable replay receipts. Revision protection
 # alone, uniqueness and ordinary HTTP PUT/DELETE behavior do not promise one.
-REPLAY_SAFE = frozenset({
+REPLAY_SAFE = frozenset({'automatic_sources_save', 'automatic_sources_command',
     'cross_space_ref_create', 'cross_space_ref_delete',
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_apply', 'compilation_verify',
@@ -180,7 +187,7 @@ REPLAY_SAFE = frozenset({
     'wiki_pages_update', 'wiki_pages_upsert',
 })
 
-DESTRUCTIVE = frozenset({
+DESTRUCTIVE = frozenset({'automatic_sources_command',
     'cross_space_ref_delete',
     'compilation_policy_set', 'compilation_propose', 'compilation_run_claim', 'compilation_run_checkpoint',
     'compilation_apply', 'compilation_verify',
@@ -201,7 +208,7 @@ DESTRUCTIVE = frozenset({
 # Content stays in a bounded workspace; configurable inference is not an
 # arbitrary-URL fetch feature. Generic registered jobs/schedules can nevertheless
 # call providers (or perform cleanup), so their hints must cover those effects.
-OPEN_WORLD = frozenset({'knowledge_search', 'knowledge_search_structured',
+OPEN_WORLD = frozenset({'automatic_sources_save', 'automatic_sources_command', 'automatic_sources_preview','knowledge_search', 'knowledge_search_structured',
     'jobs_enqueue', 'schedules_create', 'schedules_update'})
 
 

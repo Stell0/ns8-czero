@@ -55,7 +55,9 @@ def test_distributions_have_license_runtime_metadata_and_complete_migrations(dis
         expected={str(p.relative_to(ROOT/'packages/czero-core/src')) for p in (ROOT/'packages/czero-core/src/czero_core/migrations').rglob('*.py')}
         assert expected <= set(names)
         assert {'czero_core/compilation_plans.py','czero_core/compilation_plan_schema.py',
-                'czero_core/compilation_content.py','czero_core/compilation_client.py'} <= set(names)
+                'czero_core/compilation_content.py','czero_core/compilation_client.py',
+                'czero_core/automatic_sources.py','czero_core/source_updates.py','czero_core/source_collectors.py',
+                'czero_core/source_http.py','czero_core/source_html.py'} <= set(names)
         assert not any(part in name.split('/') for name in names for part in ('tests','.agents','.github','app'))
         assert not any(name.endswith(('.pyc','.h','.pxd','.pyx')) for name in names)
     with tarfile.open(source) as archive:
@@ -129,7 +131,12 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0039_space_audiences'
+        assert results[0]==results[1] and results[0][1]=='0040_automatic_sources'
+        automatic_probe=directory/'core_automatic_sources_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_automatic_sources_probe.py',automatic_probe)
+        automatic_evidence=command([str(python),'-I',str(automatic_probe)],cwd=directory,
+            env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
+        assert all(json.loads(automatic_evidence).values())
         reference_probe=directory/'core_references_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_references_probe.py',reference_probe)
         reference_evidence=command([str(python),'-I',str(reference_probe)],cwd=directory,

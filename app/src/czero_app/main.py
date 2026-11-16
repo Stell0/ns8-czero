@@ -117,6 +117,8 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     registry = build_registry(database, originals, settings=retrieval_settings)
     install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
     sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
+    from czero_app.automatic_sources import install as install_automatic_sources
+    install_automatic_sources(instance_app, database, auth, read_context, write_context)
     from czero_app.extraction_status import install as install_extraction_status
     install_extraction_status(instance_app,auth,sources,read_context,write_context)
     knowledge = install_knowledge_routes(instance_app, database, auth, read_context, write_context)

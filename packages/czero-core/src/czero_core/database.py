@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0039_space_audiences"
+SCHEMA_REVISION = "0040_automatic_sources"
 
 
 class Database:

@@ -1,5 +1,26 @@
 # C0 roadmap
 
+## Automatic sources — implementation candidate
+
+Implement native space-owned public GitHub and website definitions, Editor
+REST/MCP operations, background authorization, bounded worker collection and a
+translated Nebula management page. See [contract](docs/automatic-sources.md).
+Schema0040 and shared public transport/conversion require producer and full
+native acceptance, followed by independent Core publication and consumer adoption.
+Existing external jobs and production schedules are not migrated automatically.
+Local development evidence on original main `6845d45`: the independent baseline
+passes1299 unit/source/worker checks. Candidate checks pass1283 unit cases,
+78 focused source/HTTP/MCP/worker cases, all six wheel/archive checks and three
+genuine-predecessor migration/recovery cases without database skips. The real
+HTTPS browser validates configuration, Reader access, light/dark phone/desktop
+controls and an actual CLI worker fetching a pinned public GitHub original with
+exact SHA256 readback. Node24.22.3 lint/format/types/tests/build pass.
+Initial failed ownership/PYTHONPATH fixtures, catalogue-count expectations and
+source-readback test mistakes remain private evidence; their38-case corrective
+rerun passes. These are development results; exact-source fast/full/native,
+independent Core publication and released-consumer adoption remain required.
+
+
 ## API key expiration form — implementation candidate
 
 Based on original main `38c28bc`. Expose the existing nullable API key lifetime
