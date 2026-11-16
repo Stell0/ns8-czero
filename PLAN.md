@@ -1,12 +1,14 @@
 # C0 roadmap
 
-## Automatic sources — released-consumer candidate
+<a id="automatic-sources--released-consumer-candidate"></a>
 
-Implement native space-owned public GitHub and website definitions, Editor
-REST/MCP operations, background authorization, bounded worker collection and a
-translated Nebula management page. See [contract](docs/automatic-sources.md).
-Schema0042 and shared public transport/conversion require producer and full
-native acceptance, followed by independent Core publication and consumer adoption.
+## Automatic sources — accepted source
+
+Native space-owned public GitHub and website definitions, Editor REST/MCP
+operations, background authorization, bounded worker collection and a translated
+Nebula management page are implemented. See [contract](docs/automatic-sources.md).
+Schema0042 and shared public transport/conversion pass producer and full native
+acceptance, independent Core publication and released-consumer adoption.
 Existing external jobs and production schedules are not migrated automatically.
 Core0.50 is already published by the separate personal-data work at `280ca06`.
 Preserve its library contracts and schema0040/0041 bytes. Automatic updates use
@@ -39,7 +41,7 @@ installation26/three expected skips,eight browser/privacy workflows,32 numeric
 accessibility contexts,five actual scan/SBOM pairs and zero OAuth-query candidates.
 Optional screenshot publication is nonblocking. Earlier boot-envelope, unmanaged
 metadata and anonymous GitHub quota failures and frozen candidates are retained;
-the corrected exact-source run passes without skips or weakened checks.
+the corrected exact-source run passes without database skips or weakened checks.
 
 Preserve immutable producer tag
 `ci-627604b87e524bbd30011068e5ab5bfce4f61eca-43888685778-1` and its images:
@@ -60,13 +62,65 @@ published checksums. All eight independent supplied-artifact checks pass,
 including clean wheel/archive installs, deterministic rebuilds and migrations.
 Core's published package tree stays unchanged on adoption.
 App0.69 pins that released Git source/lock with `>=0.51.0,<0.52.0` and matching
-patch-only updater bounds; native personal-data application0.68 remains separate.
+patch-only updater bounds; the native personal-data application0.68 candidate remains separate.
 A clean frozen-lock environment verifies the actual released Git commit and passes
 108 focused app/source/transport cases,two actual HTTPS/browser cases and21 Robot
 dry runs. An initial local GitHub422 and its unchanged-source passing replay are
 retained privately; the intervening direct collector fetch also succeeds.
-Fresh released-consumer/full/native/image/artifact and current-source merge gates
-remain required. No live deployment or existing-job migration is authorized.
+Released consumer `28e6d86f235fe8e80e433b4aed929cd67bb5d2fd` passes
+[full43912084376](https://github.com/Stell0/ns8-czero/actions/runs/43912084376),
+the actual C0 merge gate and current-base/diff/exact-source full promotion.
+CI passes3457 Python/PostgreSQL/packaging cases,49 document-browser cases,
+60 website interactions,34 frontend cases and21 Robot dry runs. Independent
+native/privacy/scan inspection verifies Debian21,Rocky26/three expected skips,
+eight browser/privacy workflows,32 numeric accessibility contexts,five scan/SBOM
+pairs and zero OAuth-query candidates. The actual published app image is pulled
+independently, matched to its recorded digest/source label and passes the released
+Git source/schema0042/six automatic-source API bindings probe without the NS8 SDK.
+
+A prior released-consumer candidate passed all local/browser/image/scan/Debian
+checks but failed Rocky's OAuth browser. The native helper asserted temporary1/7
+prompt counts before compiler policy loaded; the complete Reader/writer sets are
+2/15. It now waits for the real status prompt and checks the complete sets.
+Two real delayed-policy browser cases reproduce both states; all nine affected
+browser and47 native-helper/privacy cases pass. The final full/native run passes
+these stronger checks. Failed candidates, reports and logs remain retained.
+
+Preserve immutable released-consumer tag
+`ci-28e6d86f235fe8e80e433b4aed929cd67bb5d2fd-43912084376-1` and its images:
+
+| Image | Released-consumer digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:3ab56a6f6726098dba0fdc61161d2f9859b37c233bf0cc4ae7952be028c8ba40` |
+| `ghcr.io/stell0/czero-app` | `sha256:89a468f4abe7cf5aded68380a9289fbea882be592ada133d4b00307dacff6ff9` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:c76a786631fe4831d80890fc1b34f930d4b3c794eec06c398a59da8081b842d4` |
+
+[PR141](https://github.com/Stell0/ns8-czero/pull/141) regularly merges as
+`803914b372df6d777ccfba453e27efa2a4a41fa1`, with exactly the tested consumer tree.
+Actual main [43926696627](https://github.com/Stell0/ns8-czero/actions/runs/43926696627)
+passes full/local/native/privacy/scan gates and canonical publication. Its actual
+C0 gate and exact-source full promotion pass. CI repeats3457 Python/PostgreSQL/
+packaging cases,49 document-browser cases,60 website interactions,34 frontend
+cases and21 Robot dry runs. Independent downloaded reports verify Debian21,
+Rocky26/three expected skips,eight browser/privacy workflows,32 numeric
+accessibility contexts,five scan/SBOM pairs and zero OAuth-query candidates.
+The actual main app image independently passes the installed released Git
+source/schema/API probe; its digest and source label match the tested candidate.
+All six fresh canonical `main`/`latest` registry reads match the accepted source,
+digests and immutable sibling references. No stable module release is claimed.
+
+Preserve immutable main tag
+`ci-803914b372df6d777ccfba453e27efa2a4a41fa1-43926696627-1` and its images:
+
+| Image | Accepted main digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:76a5b992881b96b2b5d54e272276487a80fb1df31b0531d6547a02b76990d8f7` |
+| `ghcr.io/stell0/czero-app` | `sha256:6719fdc34eb03bbdab36b8109427ac265ef5f9f802a39596afe09d2a84e03d1e` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:d93f989691ddbb7a6db058ef46c195a01605b68a15b7f8cf3f74c1bb3526df3a` |
+
+This is source, consumer and publication acceptance. No live deployment or real-job
+migration was performed. The installed app0.67/Core0.49/schema0039 baseline,
+existing private ingestion jobs and production schedules remain unchanged.
 
 
 ## API key expiration form — implementation candidate
