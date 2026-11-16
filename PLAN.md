@@ -17,15 +17,32 @@ capability is advertised as verified until an actual bound probe succeeds.
 The operator also accepts the single transcription variant served by NethCTI
 (cleaned when present, otherwise raw), with explicit provenance uncertainty.
 
-[Draft PR140](https://github.com/Stell0/ns8-czero/pull/140) preserves producer
-candidate `975bbd6`; its full workflow43770452775 passes, including Debian/Rocky.
-The current successor adds concurrent recent-item collection, complete unvisited-user
-coverage and nonempty personal backup/credential fixtures, and needs fresh exact-source
-acceptance. Installed test WebTop identity/folder/message reads work with a newly
-created dedicated key; a synthetic MIME message stays unread, but attachment download
-returns500. NethCTI's selected full personal transcript inventory is empty. These are
-observed limitations, not permission to change either source product or deploy C0.
-See the [validation record](docs/personal-data/VALIDATION.md) for the separate gates.
+[Draft PR140](https://github.com/Stell0/ns8-czero/pull/140) retains the frozen
+producer candidates and their evidence. Independent
+[Core0.50.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.50.0),
+schema0041, is published from `280ca06639bf6df55082aca397c2a6a585d988e0` by
+[publisher43800162081](https://github.com/Stell0/ns8-czero/actions/runs/43800162081).
+Exact full [43792034668](https://github.com/Stell0/ns8-czero/actions/runs/43792034668),
+independent downloaded native/privacy/image/scan/backup audit and source promotion
+pass. Wheel/archive checksums and license/migration inspection pass. The Core
+package tree `b84309dd17fbbe5f86bcf789602e82cead8fde38` remains immutable.
+
+App0.68 stages adoption of the released tag/lock with `>=0.50.0,<0.51.0` and
+matching patch-only updater bounds. Its consumer and exact-source full/native
+acceptance are separate gates. Later app-only fixes scope runtime mismatch cleanup
+to the incompatible connection, isolate the private protocol from container logs
+and preserve confirmed message deletion despite unrelated attachment failures.
+These changes do not replace the frozen Core release evidence.
+
+The new test WebTop installation now has verified public HTTPS. The actual C0
+adapter verifies identity/folders, safely extracts the synthetic message and
+preserves its unread flag. Supported attachment download returns500 and is recorded
+for retry. NethCTI's configured HTTPS profile/history works on-node without token
+transfer, but its selected full personal transcript inventory is empty. Actual
+transcript/summary content, workload coverage and the first-version manual key
+lifecycle decision remain open. No source-product changes or C0 production
+deployment are authorized. See the
+[validation record](docs/personal-data/VALIDATION.md) for the separate gates.
 
 
 ## API key expiration form — implementation candidate

@@ -94,11 +94,12 @@ fixture and source-inspection results.
 
 ## Candidate implementation and release gates
 
-This candidate changes C0 only. Core producer 0.50 / schema0041 owns directory
-spaces, effective authorization, generation fencing, import receipts, exclusions,
-checkpoints and retirement. The released consumer lock remains on Core0.49 until
-independent publication and consumer adoption have passed; this branch is explicit
-producer development and is not a released consumer deployment.
+This candidate changes C0 only. Independently released Core0.50 / schema0041
+owns directory spaces, effective authorization, generation fencing, import
+receipts, exclusions, checkpoints and retirement. App0.68 adopts the immutable
+`core-v0.50.0` Git source and lock with compatible minor bounds. Released-consumer
+and full native acceptance remain required; Core publication does not establish
+those separate gates. The published Core package bytes remain unchanged.
 
 The native settings provide compatible instance selection and sanitized per-user
 coverage. `set-personal-data-credential` accepts a dedicated WebTop domain API key

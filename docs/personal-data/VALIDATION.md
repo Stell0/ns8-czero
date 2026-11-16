@@ -1,8 +1,9 @@
 # Personal Data candidate validation
 
 This is producer development on original C0 main
-`6845d45252a73327b7eabce38fe28fdc81e3e5d0`. Core0.50/schema0041 is a candidate;
-the released consumer remains pinned to Core0.49. No production deployment,
+`6845d45252a73327b7eabce38fe28fdc81e3e5d0`. Core0.50/schema0041 is independently
+published; app0.68 stages its released tag/lock adoption, with consumer acceptance
+still pending. No production deployment,
 source-product modification or source-product pull request is part of this work.
 
 ## Executed checks
@@ -200,3 +201,41 @@ redirects refused: the selected user's profile and empty personal-history respon
 match the connector contract. The session token stays on the node; no token is
 returned, printed or saved by that probe. Actual transcript/summary content remains
 unverified until a test record exists.
+
+
+## Independent Core publication and consumer adoption
+
+[Core0.50.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.50.0) is
+immutably published from `280ca06639bf6df55082aca397c2a6a585d988e0` by
+[publisher43800162081](https://github.com/Stell0/ns8-czero/actions/runs/43800162081).
+Exact full [43792034668](https://github.com/Stell0/ns8-czero/actions/runs/43792034668)
+and source promotion pass. The independent archived-source artifact audit accepts
+both native distributions, their personal mappings/checkpoints/exclusions,
+restored credential file, retained authored knowledge, publication fence and
+physical import cleanup, plus the required browser/privacy/image/scan evidence.
+The earlier393dedc native input-contract failure remains preserved.
+
+Downloaded wheel SHA256:
+`a53c7b7cc2b3f45f4f7b6cda89da3e78b7b64f8c70cbed5ba7b557079762ad4b`.
+Downloaded archive SHA256:
+`836e19e5ec08edfb1f083f733ca16ee98e4e7761c6260782933bfe4ee1cdd2c8`.
+Checksums, runtime metadata, license and packaged0041 migration inspection pass.
+The Core package tree is `b84309dd17fbbe5f86bcf789602e82cead8fde38`; later app
+fixes and consumer adoption must not change it or replace the tag/assets.
+
+The app0.68 consumer manifest and frozen lock select `core-v0.50.0` at that exact
+commit with `>=0.50.0,<0.51.0`; patch-only updater bounds match. A clean isolated
+consumer environment imports Core from the actual Git release rather than the
+local editable package. Independent downloaded-artifact checks and current
+released-consumer feature tests are separate from producer proof. Actual published
+and native app images must also prove the released Git source before readiness.
+
+The actual released-Git consumer passes110 focused cases without database skips.
+Independent downloaded wheel/archive rebuilds, external installs, OCR and migrations
+pass6 cases using the producer commit epoch1794795899. The initial independent
+rebuild used the generic default epoch and failed only on tar timestamps; all
+members, contents and modes matched. Failed evidence is retained separately.
+All21 native Robot dry runs and706 maintained documentation links pass. The
+consumer lock changes only the application/Core versions and immutable Core source;
+other dependency bytes and published Core files remain unchanged. Current consumer
+full/native/image acceptance remains a separate outstanding gate.
