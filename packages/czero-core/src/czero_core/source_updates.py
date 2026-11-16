@@ -31,9 +31,9 @@ class SourceUpdater:
                 pending=c.execute(text('''SELECT i.*,v.state,s.revision,s.current_version_id FROM c0_automatic_source_items i
                     LEFT JOIN c0_source_versions v ON v.id=i.version_id AND v.source_id=i.source_id JOIN c0_sources s ON s.id=i.source_id
                     WHERE i.definition_id=:id'''),{'id':row['id']}).mappings().all()
-                if any(v['state'] is None for v in pending):raise UpdateConflict('source_changed')
+                if any(v['state'] is None and v['version_id'] is not None for v in pending):raise UpdateConflict('source_changed')
                 if any(v['state']=='failed' for v in pending):raise CollectionError('source_extraction_failed')
-                if any(v['state']!='ready' for v in pending):
+                if any(v['state']!='ready' and v['version_id'] is not None for v in pending):
                     service._finish(c,row,'pending',cursor=row['cursor']);return 1
                 for old in pending:
                     if old['current_version_id']!=old['version_id']:raise UpdateConflict('source_changed')
@@ -61,6 +61,7 @@ class SourceUpdater:
                         filename='source.md' if item['media_type']=='text/markdown' else 'source.txt',
                         media_type=item['media_type'],retain_original=False,encoded=json.dumps(metadata),
                         source_id=old['source_id'] if old else None,expected_revision=old['source_revision'] if old else None)
+                    c.execute(text("UPDATE c0_source_versions SET publication_metadata=CAST(publication_metadata AS jsonb) || jsonb_build_object('_automatic_source_revision',CAST(:revision AS bigint)) WHERE id=:id"),{'id':version['id'],'revision':row['revision']})
                     revision=sources._source(c,version['source_id'])['revision']
                     c.execute(text('''INSERT INTO c0_automatic_source_items(definition_id,external_key,source_id,source_revision,version_id,content_hash)
                         VALUES (:id,:key,:source,:revision,:version,:hash) ON CONFLICT(definition_id,external_key) DO UPDATE

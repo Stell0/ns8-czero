@@ -641,7 +641,8 @@ class ExtractionQueue(SpaceBound):
                     {'id':identifier,'code':error or 'manifest_mismatch'})
                 return False
             version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),{'id':current['version_id']}).mappings().one()
-            _publish_extracted(c,version,evidence,segments,JobService(self.database,registry),reuse_identical=False,structure=structure,chunking_profile=chunking)
+            published=_publish_extracted(c,version,evidence,segments,JobService(self.database,registry),reuse_identical=False,structure=structure,chunking_profile=chunking,access=self.access)
+            if published.get('state')=='cancelled':return False
             c.execute(text("""UPDATE c0_extraction_units SET state='published',body=NULL,locations=NULL,provenance=NULL,
                 lease_deadline=NULL WHERE run_id=:id"""),{'id':identifier})
             c.execute(text("""UPDATE c0_extraction_runs SET state='ready',error_code=NULL,

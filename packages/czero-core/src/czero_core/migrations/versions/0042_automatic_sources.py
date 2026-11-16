@@ -32,7 +32,7 @@ def upgrade():
     op.execute('''CREATE TABLE c0_automatic_source_items (
         definition_id uuid NOT NULL REFERENCES c0_automatic_sources(id) ON DELETE CASCADE,
         external_key varchar(64) NOT NULL, source_id uuid NOT NULL REFERENCES c0_sources(id),
-        source_revision integer NOT NULL, version_id uuid NOT NULL,
+        source_revision integer NOT NULL, version_id uuid,
         content_hash varchar(64) NOT NULL,
         PRIMARY KEY(definition_id,external_key)
     )''')

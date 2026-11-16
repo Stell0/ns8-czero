@@ -3,6 +3,7 @@
 """Trusted extension point shared by the application API and worker."""
 from czero_core.jobs import default_registry
 import os
+import importlib.util
 from czero_core.sources import OriginalStore, register_source_handlers
 from czero_core.embeddings import EmbeddingStore, register_embedding_handlers
 from czero_core.retrieval_config import load_settings
@@ -10,11 +11,18 @@ from sqlalchemy.exc import SQLAlchemyError
 import logging
 
 
-def build_registry(database=None, originals=None, *, settings=None, transport=None):
+def build_registry(database=None, originals=None, *, settings=None, transport=None, access=None):
     # Forks register synchronous deterministic handlers here in trusted code.
     registry = default_registry()
     originals = originals or OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
-    register_source_handlers(registry, database, originals)
+    if access is None and os.getenv('CZERO_OIDC_ISSUER') and os.getenv('CZERO_OWNER_LDAP_UUID'):
+        from uuid import UUID
+        from czero_core.access import AccessService
+        access=AccessService(database,os.environ['CZERO_OIDC_ISSUER'],UUID(os.environ['CZERO_OWNER_LDAP_UUID']))
+    if importlib.util.find_spec('czero_core.automatic_sources') is None:
+        register_source_handlers(registry, database, originals)
+    else:
+        register_source_handlers(registry, database, originals,access=access)
     # Disabled providers still have a safe handler if an Admin enables their
     # dormant schedule; unknown handlers must not stop the whole worker.
     settings=settings or load_settings()

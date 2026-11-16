@@ -528,10 +528,16 @@ class SourceService(SpaceBound):
         return {'source': source, 'document': document, 'chunk': chunk}
 
 
-def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True,structure=None,chunking_profile='fixed-v1'):
+def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True,structure=None,chunking_profile='fixed-v1',access=None):
     """Trusted complete evidence; caller owns the content lock/transaction."""
     from .personal_data import guard_publication
     guard_publication(connection, row['source_id'], row['id'])
+    from .automatic_sources import guard_publication as guard_automatic
+    automatic='_automatic_source_revision' in (row['publication_metadata'] or {})
+    if automatic:reuse_identical=False
+    if not guard_automatic(connection,row,access):return {'state':'cancelled'}
+    if automatic:
+        row={**row,'publication_metadata':{key:value for key,value in row['publication_metadata'].items() if key!='_automatic_source_revision'}}
     from .current_content import publish_versions
     version_id=row['id']
     source=connection.execute(text('SELECT * FROM c0_sources WHERE id=:id'),{'id':row['source_id']}).mappings().one()
@@ -562,7 +568,7 @@ def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=T
     return {'state': 'ready', 'document_id': str(document_id), 'chunks': len(segments)}
 
 
-def register_source_handlers(registry, database, originals):
+def register_source_handlers(registry, database, originals, *, access=None):
     jobs = JobService(database, registry)
 
     def extract(connection, payload):
@@ -584,7 +590,7 @@ def register_source_handlers(registry, database, originals):
             connection.execute(text("UPDATE c0_source_versions SET state='failed',error_code=:code WHERE id=:id"),
                 {'id': version_id, 'code': error.code})
             return {'state': 'failed', 'error_code': error.code}
-        return _publish_extracted(connection,row,evidence,segments,jobs,reuse_identical=not row['force_reindex'])
+        return _publish_extracted(connection,row,evidence,segments,jobs,reuse_identical=not row['force_reindex'],access=access)
 
     def cleanup(connection, payload):
         from .current_content import content_lock,retire_versions

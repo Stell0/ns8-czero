@@ -23,7 +23,7 @@ def update_sources():
         database=Database()
         access=AccessService(database,issuer,UUID(owner))
         originals=OriginalStore(os.getenv('CZERO_SOURCE_DIR','/var/lib/czero/sources'))
-        sources=SourceService(database,access,build_registry(database,originals),originals)
+        sources=SourceService(database,access,build_registry(database,originals,access=access),originals)
         with deadline(25):
             SourceUpdater(AutomaticSourceService(database,access),sources).tick()
     except JobTimedOut:

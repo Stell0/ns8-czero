@@ -296,3 +296,105 @@ def test_personal_editor_background_authority_stays_in_its_owned_space(personal)
     with service.database.engine.begin() as c:
         with pytest.raises(PermissionDenied):selected.fenced(c,claimed)
     assert selected.runs(admin,saved['id'])[0]['state']=='running'
+
+
+@pytest.mark.parametrize('existing',[False,True])
+@pytest.mark.parametrize('stop',['pause','revoke','remove'])
+def test_staged_publication_is_fenced_and_explicit_resume_keeps_source_id(automatic,existing,stop):
+    service,sources,owner,registry=automatic
+    acl=sources.access;key=uuid4();record_unadmitted(acl,key,'publication-editor')
+    account=account_named(acl,owner,'publication-editor');acl.set_role(owner,account['id'],Role.EDITOR)
+    editor=acl.resolve(identity(acl,key,'publication-editor'))
+    args=dict(name='Fenced public original',kind='github',config={'repositories':['synthetic/example']},
+              enabled=True,interval_seconds=3600)
+    saved=service.save(editor,**args,idempotency_key=str(uuid4()))
+    if existing:
+        updater=SourceUpdater(service,sources,collector=collector());updater.tick()
+        Worker(service.database,registry).tick();updater.tick()
+        service.command(editor,saved['id'],expected_revision=1,idempotency_key=str(uuid4()),action='run')
+    SourceUpdater(service,sources,collector=collector(b'# Replacement\n\nComplete replacement.')).tick()
+    with service.database.engine.connect() as c:
+        staged=dict(c.execute(text('SELECT * FROM c0_automatic_source_items WHERE definition_id=:id'),{'id':saved['id']}).mappings().one())
+        previous=c.execute(text('SELECT current_version_id FROM c0_sources WHERE id=:id'),{'id':staged['source_id']}).scalar_one()
+    if stop in ('pause','remove'):service.command(editor,saved['id'],expected_revision=1,idempotency_key=str(uuid4()),action=stop)
+    else:acl.set_role(owner,account['id'],Role.READER)
+    for _ in range(2):Worker(service.database,registry).tick()
+    assert sources.get(owner,staged['source_id'])['current_version_id']==previous
+    with service.database.engine.connect() as c:
+        assert c.execute(text('SELECT 1 FROM c0_source_versions WHERE id=:id'),{'id':staged['version_id']}).scalar_one_or_none() is None
+    assert not sources.originals.path(staged['version_id']).exists()
+    if stop=='remove':
+        sources._test_retained=staged['source_id']
+        return
+    acl.set_role(owner,account['id'],Role.EDITOR)
+    editor=acl.resolve(identity(acl,key,'publication-editor'))
+    service.save(editor,**args,identifier=saved['id'],expected_revision=2 if stop=='pause' else 1,idempotency_key=str(uuid4()))
+    updater=SourceUpdater(service,sources,collector=collector(b'# Resumed\n\nFresh authorized content.'))
+    updater.tick();Worker(service.database,registry).tick();updater.tick()
+    assert service.runs(owner,saved['id'])[0]['state']=='complete'
+    result=service.documents(owner,saved['id'])
+    assert len(result)==1 and result[0]['id']==staged['source_id']
+    assert '_automatic_source_revision' not in sources.get(owner,staged['source_id'])['metadata']
+
+
+def test_forged_stage_metadata_cannot_cancel_another_definition(automatic):
+    from czero_core.automatic_sources import guard_publication
+    service,sources,owner,registry=automatic;saved=definition(automatic)
+    SourceUpdater(service,sources,collector=collector()).tick()
+    forged=sources.ingest_text(owner,title='Unmanaged fake marker',body='Manually submitted text.',
+        metadata={'automatic_source_id':saved['id'],'_automatic_source_revision':1},idempotency_key=str(uuid4()))
+    automatic[1]._test_retained=UUID(forged['source_id'])
+    with service.database.engine.begin() as c:
+        version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),{'id':forged['id']}).mappings().one()
+        assert guard_publication(c,version,service.access) is False
+        assert c.execute(text('SELECT state FROM c0_source_versions WHERE id=(SELECT version_id FROM c0_automatic_source_items WHERE definition_id=:id)'),{'id':saved['id']}).scalar_one()=='queued'
+    assert service.runs(owner,saved['id'])[0]['state']=='pending'
+
+
+@pytest.mark.parametrize('revoke',[False,True])
+def test_parallel_extraction_rechecks_native_authority_before_publication(automatic,revoke):
+    from czero_core.extraction import extract_isolated
+    from czero_core.extraction_queue import ExtractionQueue
+    service,sources,owner,_=automatic
+    acl=sources.access;key=uuid4();record_unadmitted(acl,key,'pool-editor')
+    account=account_named(acl,owner,'pool-editor');acl.set_role(owner,account['id'],Role.EDITOR)
+    editor=acl.resolve(identity(acl,key,'pool-editor'))
+    saved=service.save(editor,name='Pool original',kind='github',config={'repositories':['synthetic/example']},
+        enabled=True,interval_seconds=3600,idempotency_key=str(uuid4()))
+    updater=SourceUpdater(service,sources,collector=collector());updater.tick()
+    with service.database.engine.connect() as c:
+        item=dict(c.execute(text('SELECT * FROM c0_automatic_source_items WHERE definition_id=:id'),{'id':saved['id']}).mappings().one())
+    queue=ExtractionQueue(service.database,acl,sources.originals,enabled=True)
+    run=queue.enqueue(owner,item['version_id'],expected_generation=1)
+    claim=queue.claim()
+    result=extract_isolated(sources.originals.check(claim.original),claim.original['media_type'])
+    assert queue.complete(claim,result)
+    if revoke:acl.set_role(owner,account['id'],Role.READER)
+    assert queue.publish(run['id']) is (not revoke)
+    current=sources.get(owner,item['source_id'])['current_version_id']
+    if revoke:
+        assert current is None
+        with service.database.engine.connect() as c:
+            assert c.execute(text('SELECT count(*) FROM c0_extraction_units WHERE run_id=:id'),{'id':run['id']}).scalar_one()==0
+        assert service.runs(owner,saved['id'])[0]['state']=='blocked'
+    else:
+        assert current==item['version_id']
+        updater.tick()
+        assert service.runs(owner,saved['id'])[0]['state']=='complete'
+
+
+def test_manual_metadata_edit_before_extraction_cannot_be_overwritten(automatic):
+    service,sources,owner,registry=automatic;saved=definition(automatic)
+    updater=SourceUpdater(service,sources,collector=collector());updater.tick()
+    Worker(service.database,registry).tick();updater.tick()
+    stored=service.documents(owner,saved['id'])[0]
+    previous=sources.get(owner,stored['id'])
+    service.command(owner,saved['id'],expected_revision=1,idempotency_key=str(uuid4()),action='run')
+    SourceUpdater(service,sources,collector=collector(b'Automatic replacement waiting for extraction.')).tick()
+    current=sources.get(owner,stored['id'])
+    sources.ingest_text(owner,title='Manually retitled',body=collector()()[0][0]['body'].decode(),
+        media_type='text/markdown',source_id=stored['id'],expected_revision=current['revision'],idempotency_key=str(uuid4()))
+    Worker(service.database,registry).tick()
+    assert sources.get(owner,stored['id'])['title']=='Manually retitled'
+    assert sources.get(owner,stored['id'])['current_version_id']==previous['current_version_id']
+    assert service.runs(owner,saved['id'])[0]['state']=='blocked'

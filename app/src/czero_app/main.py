@@ -114,7 +114,7 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     install_space_routes(instance_app, database, auth, read_context, write_context)
     originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
     retrieval_settings=load_settings()
-    registry = build_registry(database, originals, settings=retrieval_settings)
+    registry = build_registry(database, originals, settings=retrieval_settings,access=auth.access if auth else None)
     install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
     sources = install_source_routes(instance_app, database, auth, read_context, write_context, registry, originals)
     from czero_app.automatic_sources import install as install_automatic_sources

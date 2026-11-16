@@ -29,6 +29,11 @@ cannot advance successful completion. Existing documents are replaced only throu
 the normal staged complete-document pipeline. Manually edited/deleted sources
 cause a conflict rather than being overwritten. Remote disappearance never deletes
 stored evidence. Run receipts contain metadata and hashes, never fetched bodies.
+Extraction rechecks the saved authority at final publication, including the
+parallel parser path. Stopping updates retires unpublished replacements and keeps
+the previous complete document. Explicit resumption fetches fresh content while
+retaining logical source IDs. Core embedders pass their trusted `AccessService`
+as `access=` to `register_source_handlers`; native staging fails closed without it.
 
 GitHub file collection selects UTF-8 text/code; known binary assets and documents
 are excluded. Unsupported non-UTF-8 selections fail explicitly without truncation.

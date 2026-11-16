@@ -4,6 +4,8 @@ import importlib.util
 import json
 import os
 import time
+import tempfile
+from pathlib import Path
 from uuid import uuid4
 from czero_core.access import AccessService
 from czero_core.automatic_sources import AutomaticSourceService,UpdateConflict
@@ -35,5 +37,30 @@ try:
         else:raise AssertionError('Paused source retained a publication fence')
     service.command(owner,saved['id'],action='remove',expected_revision=2,idempotency_key=uuid4().hex)
     assert service.list(owner)==[]
-    print(json.dumps({'installed_automatic_sources':True,'background_fence':True,'source_configuration_replay':True}))
+    from czero_core.jobs import default_registry
+    from czero_core.sources import SourceService,OriginalStore,register_source_handlers
+    from czero_core.source_updates import SourceUpdater
+    from czero_core.worker import Worker
+    with tempfile.TemporaryDirectory() as directory:
+        originals=OriginalStore(Path(directory));registry=default_registry()
+        register_source_handlers(registry,database,originals,access=access)
+        sources=SourceService(database,access,registry,originals).in_space(space)
+        def collected(*args):
+            return [{'key':'a'*64,'title':'Standalone evidence','body':b'# Standalone\n\nComplete original.',
+                     'media_type':'text/markdown','metadata':{'original_url':'https://example.org/original'}}],{},True
+        draft['idempotency_key']=uuid4().hex
+        saved=service.save(owner,**draft)
+        updater=SourceUpdater(service,sources,collector=collected);updater.tick()
+        source_id=service.documents(owner,saved['id'])[0]['id']
+        service.command(owner,saved['id'],action='pause',expected_revision=1,idempotency_key=uuid4().hex)
+        Worker(database,registry).tick()
+        assert sources.get(owner,source_id)['current_version_id'] is None
+        draft['idempotency_key']=uuid4().hex
+        service.save(owner,**draft,identifier=saved['id'],expected_revision=2)
+        updater.tick();Worker(database,registry).tick();updater.tick()
+        assert service.runs(owner,saved['id'])[0]['state']=='complete'
+        assert service.documents(owner,saved['id'])[0]['id']==source_id
+        assert sources.get(owner,source_id)['current_version_id'] is not None
+    print(json.dumps({'installed_automatic_sources':True,'background_fence':True,'source_configuration_replay':True,
+                      'installed_staged_publication_fence':True,'installed_source_resume':True}))
 finally:database.close()

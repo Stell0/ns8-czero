@@ -13,6 +13,11 @@ Preserve its library contracts and schema0040/0041 bytes. Automatic updates use
 Core0.51/schema0042; native personal-data controls remain separate. Earlier
 automatic-source 0.50/schema0040 candidates and their CI evidence are retained
 without publishing or replacing any existing tag.
+Final extraction publication rechecks native authority in both serial and
+parallel paths. Pause/removal/revocation retire unpublished bytes, preserve
+complete documents and permit an explicit fresh resume with stable source IDs.
+Reserved stage markers cannot cancel an unrelated definition. Standalone package
+acceptance exercises this trusted publication context as well.
 Local development evidence on original main `6845d45`: the independent baseline
 passes1299 unit/source/worker checks. Candidate checks pass1283 unit cases,
 78 focused source/HTTP/MCP/worker cases, all six wheel/archive checks and three

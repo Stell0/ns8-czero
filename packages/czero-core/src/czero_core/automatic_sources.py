@@ -104,6 +104,7 @@ class AutomaticSourceService(SpaceBound):
                 old = self._row(c, identifier, lock=True)
                 if old['revision'] != expected_revision:
                     raise UpdateConflict('automatic_source_conflict')
+                cancel_staged(c, identifier)
                 c.execute(text("UPDATE c0_source_update_runs SET state='cancelled',finished_at=now(),lease=NULL,cursor='{}' WHERE definition_id=:id AND state IN ('queued','running','pending')"), {'id': identifier})
                 c.execute(text('''UPDATE c0_automatic_sources SET retry_count=0,name=:name,kind=:kind,config=CAST(:config AS jsonb),enabled=:enabled,
                     interval_seconds=:interval,revision=revision+1,owner_id=:owner,authority_revision=:authority,space_revision=:sr,grant_revision=:gr,
@@ -134,6 +135,7 @@ class AutomaticSourceService(SpaceBound):
                 # Manual work also requires a deliberately enabled background authority.
                 self._background_actor(c, row)
                 return {'id': str(self._enqueue(c, row))}
+            cancel_staged(c, identifier)
             c.execute(text("UPDATE c0_source_update_runs SET state='cancelled',finished_at=now(),lease=NULL,cursor='{}' WHERE definition_id=:id AND state IN ('queued','running','pending')"), {'id': identifier})
             c.execute(text("UPDATE c0_source_update_runs SET cursor='{}' WHERE definition_id=:id AND cursor<>'{}'"), {'id':identifier})
             if action == 'pause':
@@ -238,3 +240,52 @@ class AutomaticSourceService(SpaceBound):
                 or run['lease'] != row['lease'] or not run['lease_current']):
             raise UpdateConflict('source_run_superseded')
         return self._background_actor(c, current)
+
+
+def cancel_staged(c, identifier):
+    """Retire owned pending bytes while retaining complete documents and logical IDs."""
+    from .current_content import retire_versions
+    rows=c.execute(text('''SELECT i.version_id FROM c0_automatic_source_items i
+        JOIN c0_sources s ON s.id=i.source_id JOIN c0_source_versions v ON v.id=i.version_id
+        WHERE i.definition_id=:id AND i.version_id IS DISTINCT FROM s.current_version_id
+        AND CAST(v.publication_metadata AS jsonb) ? '_automatic_source_revision' '''), {'id':identifier}).scalars().all()
+    c.execute(text('''UPDATE c0_automatic_source_items i SET version_id=s.current_version_id,
+        content_hash=COALESCE(v.content_hash,''),source_revision=s.revision FROM c0_sources s
+        LEFT JOIN c0_source_versions v ON v.id=s.current_version_id
+        WHERE i.definition_id=:id AND i.source_id=s.id AND i.version_id=ANY(CAST(:versions AS uuid[]))
+        AND i.source_revision=s.revision'''), {'id':identifier,'versions':rows})
+    retire_versions(c,rows)
+
+
+def guard_publication(c, version, access):
+    """Recheck native authority at extraction's final atomic publication boundary."""
+    metadata=version['publication_metadata'] or {}
+    if '_automatic_source_revision' not in metadata:return True
+    identifier=UUID(metadata['automatic_source_id'])
+    managed=c.execute(text('''SELECT i.source_revision=s.revision AS unchanged
+        FROM c0_automatic_source_items i JOIN c0_sources s ON s.id=i.source_id
+        WHERE i.definition_id=:id AND i.source_id=:source AND i.version_id=:version'''),
+        {'id':identifier,'source':version['source_id'],'version':version['id']}).mappings().one_or_none()
+    if managed is None:
+        # An editable metadata field never authorizes touching another definition.
+        from .current_content import retire_versions
+        retire_versions(c,[version['id']])
+        return False
+    hold_authority(c)
+    service=AutomaticSourceService(None,access).in_space(version['space_id'])
+    try:
+        definition=service._row(c,identifier,lock=True)
+        if not managed['unchanged']:raise UpdateConflict('source_changed')
+        if access is None or definition['revision']!=metadata['_automatic_source_revision']:
+            raise PermissionDenied()
+        service._background_actor(c,definition)
+    except (PermissionDenied,UpdateNotFound,UpdateConflict) as failure:
+        cancel_staged(c,identifier)
+        from .current_content import retire_versions
+        retire_versions(c,[version['id']])
+        c.execute(text("UPDATE c0_source_update_runs SET state='blocked',error_code=:code,lease=NULL,cursor='{}',finished_at=now() WHERE definition_id=:id AND state IN ('queued','running','pending')"),{'id':identifier,'code':'source_changed' if isinstance(failure,UpdateConflict) else 'authority_changed'})
+        c.execute(text('UPDATE c0_automatic_sources SET next_run_at=NULL WHERE id=:id'),{'id':identifier})
+        return False
+    # The private stage marker must not become editable current-source metadata.
+    c.execute(text("UPDATE c0_source_versions SET publication_metadata=CAST(publication_metadata AS jsonb)-'_automatic_source_revision' WHERE id=:id"),{'id':version['id']})
+    return True
