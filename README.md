@@ -73,7 +73,7 @@ A Wiki can start as a small topic collection in an ordinary space. A protected r
 
 [Daily and weekly maintenance](docs/wiki-maintenance.md) uses an external assistant and scheduler. Downloading a package or copying a prompt installs no task. Compiler capabilities are implemented, but the [latest measured compiler study failed its quality gates](docs/knowledge-compilation/RESULTS.md); automatic compilation is not an accepted retrieval improvement or a default-on rollout.
 
-Automatic source updates are an implementation candidate; see the [contract](docs/automatic-sources.md) for configuration, permissions and acceptance.
+Automatic source updates support public GitHub repositories and websites through per-space UI/MCP definitions and the native worker. See the [contract](docs/automatic-sources.md) and [accepted deployment](PLAN.md#automatic-sources-accepted-deployment).
 
 ## How C0 works
 

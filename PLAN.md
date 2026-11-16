@@ -118,9 +118,60 @@ Preserve immutable main tag
 | `ghcr.io/stell0/czero-app` | `sha256:6719fdc34eb03bbdab36b8109427ac265ef5f9f802a39596afe09d2a84e03d1e` |
 | `ghcr.io/stell0/czero-postgres` | `sha256:d93f989691ddbb7a6db058ef46c195a01605b68a15b7f8cf3f74c1bb3526df3a` |
 
-This is source, consumer and publication acceptance. No live deployment or real-job
-migration was performed. The installed app0.67/Core0.49/schema0039 baseline,
-existing private ingestion jobs and production schedules remain unchanged.
+This is source, consumer and publication acceptance. At that checkpoint the
+installed app0.67/Core0.49/schema0039 baseline and existing jobs were unchanged.
+The separately authorized deployment is recorded below.
+
+## Automatic sources accepted deployment
+
+The operator separately authorizes the 16 November dedicated C0 update. The
+supported immutable-digest update installs app **0.69.0**, released Core **0.51.0**,
+schema **0042_automatic_sources**, source
+`803914b372df6d777ccfba453e27efa2a4a41fa1`. The installed immutable tag and all
+three digests are the accepted main identities above. Fresh exact-source full
+promotion passes before deployment. Actual installed module/app/database
+inspection and the released-Core Git/schema/API probe verify the complete image
+set and independently published Core commit `627604b`; no producer fallback or
+NS8 SDK is present in the application runtime.
+
+The genuine observed predecessor is app0.67/Core0.49/schema0039, source
+`72fbdfe7c9be13351359ae240ffc72dde654fab0`. Its frozen images remain in the
+[generic-table deployment](#generic-tables-accepted-deployment) record. The newly
+installed source803914b and its three digests are the next genuine predecessor;
+retain them rather than substituting documentation-marker images.
+
+A fresh supported C0-only backup and full Restic read-data integrity check pass;
+all16 backup definitions are restored exactly. New-Core preflight runs with old
+writers stopped, then passes again after upgrade and restart. A first operator
+preflight wrapper exits before update because the stopped app container is absent;
+old units are restored. The corrected database-pod lookup and final guarded update
+pass. Preserve that private failed evidence. The ingestion-job maintenance lock
+is released after acceptance; no external job is started or schedule installed.
+
+Read-only preservation snapshots bind65 existing tables and1,320,694 pre-update
+rows. All57 stored-data table hashes over original columns, old job history,
+current knowledge cursors/
+events, OAuth authority, credentials, API keys, space permissions, settings,
+schedules and mounts are preserved through update and supported restart. The eight
+new native-source/personal-library tables are empty, and existing spaces retain
+`personal=false`. No source definition, personal collection, role, consent scope
+or import is enabled. All19,568 private job/dataset/configuration files retain
+exact fingerprints. All13 unrelated module identities and all four C0 unit/timer
+states remain unchanged. The retained-original store is empty; nonempty database
+content is verified by the row hashes.
+
+The guarded update takes46.91 seconds and supported manager restart succeeds;
+actual app invocation identities change. Trusted HTTPS, route/certificate,
+container/service readiness and unchanged retrieval configuration pass. A fresh
+SDK catalog matches all130 operations allowed to its existing credential and
+performs an authorized automatic-source list read without creating definitions.
+Existing OAuth connection reads return the same account and seven authorized
+spaces. The cached client catalog needs refresh to expose new operations; no
+connection replacement or permission expansion is performed.
+A bounded root journald audit inspects44 actual application entries with successful
+health and MCP positive controls and zero credential/query/traceback candidates.
+Raw evidence and credentials remain private. This checked documentation closeout
+does not replace runtime images or claim a stable module release.
 
 
 ## API key expiration form — implementation candidate
@@ -2327,12 +2378,13 @@ evidence and repeats the required current-base checks before merge.
 
 ## Current baseline
 
-The accepted dedicated installation is app **0.67.0**, released Core **0.49.0**,
-schema **0039**, source `72fbdfe7c9be13351359ae240ffc72dde654fab0`.
-Its [accepted deployment record](#generic-tables-accepted-deployment)
+The accepted dedicated installation is app **0.69.0**, released Core **0.51.0**,
+schema **0042**, source `803914b372df6d777ccfba453e27efa2a4a41fa1`.
+Its [accepted deployment record](#automatic-sources-accepted-deployment)
 contains installed immutable tags/digests, supported update/restart acceptance and
 preservation evidence. Those installed images are the next genuine predecessor;
-retain the actual app0.66/Core0.48 predecessor in the
+retain actual app0.67/Core0.49 in the [table deployment](#generic-tables-accepted-deployment)
+record and app0.66/Core0.48 in the
 [self-service Read record](#self-service-read-accepted-deployment),
 app0.64/Core0.46, app0.63/Core0.45, historical
 app0.61/Core0.42 and all earlier frozen images and evidence.
