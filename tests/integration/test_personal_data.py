@@ -812,3 +812,37 @@ def test_late_provenance_updates_preserve_body_and_local_overrides(personal):
     selected.ingest_text(actor,idempotency_key='local-metadata',source_id=source['id'],title=source['title'],body='Original message body',metadata={'authored':'kept'},expected_revision=source['revision'])
     assert submit(personal,owner,metadata=linked)['state']=='overridden'
     assert selected.get(actor,source['id'])['metadata']=={'authored':'kept'}
+
+
+def test_unsupported_attachment_does_not_block_confirmed_other_message_removal(personal,monkeypatch):
+    import json
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Document,Unavailable
+    service,_,provider,instance,login,_=personal
+    owner=provision(personal)
+    missing=json.dumps(['INBOX',42,'missing'],separators=(',',':'))
+    old=service.submit(owner_id=owner['id'],generation=1,connector='webtop',instance_id=instance,
+        remote_key=missing,kind='message',title='Removed message',content=b'Synthetic old mail')
+    current=json.dumps(['INBOX',43,'current'],separators=(',',':'))
+    class Mail:
+        def __init__(self,*a,**kw):self.client=SimpleNamespace(close=lambda:None,read=self.read)
+        def folders(self):return [{'id':'INBOX'}]
+        def page(self,*a,**kw):return [Document(current,'message','Current mail',b'Synthetic current mail')],{
+            'complete':True,'issues':[{'attachment_id':'1','code':'unsupported_attachment'}]}
+        def read(self,path,*,params):
+            assert path=='/me/messages' and params=={'folder_id':'INBOX','uid':42,'set_seen':'false'}
+            raise Unavailable('source_not_found')
+    monkeypatch.setattr('czero_app.personal_data.runner.WebTop',Mail)
+    snapshot={'configuration':{'enabled':True,'webtop':str(instance)},'provider_id':str(provider),
+        'provider_verified':True,'directory_complete':True,
+        'directory':[{'directory_id':owner['directory_id'],'username':'person','active':True}],
+        'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
+    runner=Runner(service);secrets={'webtop':{str(instance):{'api_key':'synthetic-only'}}}
+    first=runner.tick(snapshot,secrets)
+    assert first['users'][0]['status']=='partial'
+    with service.database.engine.begin() as c:
+        c.execute(text("UPDATE c0_personal_checkpoints SET last_inventory=now()-interval '301 seconds' WHERE owner_id=:id"),{'id':UUID(owner['id'])})
+    second=runner.tick(snapshot,secrets)
+    assert second['users'][0]['status']=='partial'
+    assert service.sources.in_space(owner['space_id']).get(login(owner['directory_id']),old['source_id'])['deleted']

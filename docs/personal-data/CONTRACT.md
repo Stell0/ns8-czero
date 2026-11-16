@@ -154,7 +154,7 @@ products are unchanged; their broader credential permissions remain an upstream
 limit even though this collector issues only reads.
 
 Submit a private mode-0600 JSON file to
-`api-cli run module/<module-id>/set-personal-data-credential` on stdin. Required
+`api-cli run module/<module-id>/set-personal-data-credential --data -` on stdin. Required
 fields are `connector`, selected immutable `instance_id` and `secret`; NethCTI
 also requires the exact current `username`. Never put the secret in command
 arguments, environment variables or a checked-in file. NS8 masks the `secret`

@@ -266,3 +266,10 @@ def test_read_actions_accept_the_native_clients_default_null_input(action):
     jsonschema.validate({},schema)
     for value in ({'secret':'unexpected'},[],True,'invalid'):
         with pytest.raises(jsonschema.ValidationError):jsonschema.validate(value,schema)
+
+
+def test_private_runner_protocol_bypasses_the_container_log_driver():
+    runner=(ROOT/'imageroot/bin/czero-personal-data-run').read_text()
+    # Podman's logger sees container stdout even when the client uses a private pipe.
+    assert "command=['podman','run','--rm','--log-driver=none'" in runner
+    assert "process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)" in runner

@@ -207,7 +207,9 @@ class Runner:
             next_cursor['read_verified']=cursor.get('read_verified',False) or bool(documents)
             if 'inventory_hash' in cursor:next_cursor['inventory_hash']=cursor['inventory_hash']
             inventory_complete=coverage['complete'] and (kind!='nethvoice' or window_end>=current_end)
-            if inventory_complete and not next_cursor['scan_skipped']:
+            # Attachment payload failures do not invalidate a complete message inventory.
+            # Missing items still require a stable traversal and an exact source read.
+            if inventory_complete and (kind=='webtop' or not next_cursor['scan_skipped']):
                 digest,candidates=inventory_candidates(service,owner_id=owner['id'],generation=generation,
                     connector=kind,instance_id=instance,scan_id=scan_id)
                 # Missing API pages alone never authorize deletion, even after a stable traversal.

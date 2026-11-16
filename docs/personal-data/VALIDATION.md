@@ -83,8 +83,11 @@ message body was imported into production C0.
 The new native discovery helper ran read-only in the installed C0 environment
 and selected both test services as compatible through the canonical provider;
 WebTop's relationship was checked through Mail. No C0 configuration or imported
-content was changed. The new WebTop hostname still needs end-to-end DNS/TLS
-verification; loopback HTTP probes do not establish that gate.
+content was changed. The initial hostname lacked DNS. A free hostname already resolving to the test
+node was subsequently configured with a valid certificate. The actual C0 adapter
+now passes identity, eligible-folder, safe synthetic-message and unchanged unread
+checks using normal verified public HTTPS. Attachment download still returns500;
+no C0 publication is performed by these source probes.
 
 ## Remaining gates
 
@@ -170,3 +173,17 @@ in that run follow the aborted setup and are retained as failures, not acceptanc
 The successor accepts null or an empty object for both read actions and rejects
 unexpected fields/types;70 native configuration/backup unit cases pass. A new full
 native run must exercise the actual nonempty backup round trip after this fix.
+
+
+The final message-inventory check passes42 Core/runner cases. An unsupported or
+failed attachment does not prevent independently confirmed removal of another
+message after stable inventories; attachment failures remain visible as partial
+coverage. Source deletion still requires the exact authenticated read policy.
+The native credential command explicitly uses `--data -` to read private JSON
+from stdin rather than command arguments.
+
+The runner disables Podman's container logger for its private pipe. A real local
+Podman round trip verifies the actual `none` log driver and delivery of a
+synthetic binding request/reply without the marker appearing in container logs.
+This is additional private-protocol evidence, not a substitute for native root
+journald positive-control audits.71 native configuration/backup checks pass.

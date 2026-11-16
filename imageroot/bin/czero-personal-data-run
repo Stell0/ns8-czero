@@ -91,7 +91,7 @@ try:
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10)
     name='czero-personal-data-fence' if fence_only else ('czero-personal-data-configure' if '--configure-only' in sys.argv else 'czero-personal-data-run')
     cidfile=invocation.with_suffix('.cid')
-    command=['podman','run','--rm','--name',name,'--cidfile='+str(cidfile),
+    command=['podman','run','--rm','--log-driver=none','--name',name,'--cidfile='+str(cidfile),
         '--memory=1g','--memory-swap=2g','--pids-limit=256','--cap-drop=ALL','--security-opt=no-new-privileges',
         '--pod-id-file='+os.environ['XDG_RUNTIME_DIR']+'/czero.pod-id',
         '--env-file='+str(state/'passwords.env'),'--env-file='+str(state/'auth.env'),'--env-file='+str(state/'retrieval.env'),
