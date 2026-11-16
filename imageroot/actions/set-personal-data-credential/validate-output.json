@@ -1,0 +1,21 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "saved": {
+            "type": "boolean"
+        },
+        "verified": {
+            "type": "boolean"
+        },
+        "revocation_pending": {
+            "type": "boolean"
+        }
+    },
+    "required": [
+        "saved",
+        "verified",
+        "revocation_pending"
+    ],
+    "additionalProperties": false
+}

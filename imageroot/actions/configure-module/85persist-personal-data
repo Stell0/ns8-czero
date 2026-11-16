@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+import os,json,subprocess,sys
+from pathlib import Path
+import agent
+sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
+from czero_personal_data import read,private_write
+state=Path(os.environ['AGENT_STATE_DIR'])
+pending=state/'personal-data-pending.json'
+if pending.exists():
+    private_write(state/'personal-data.json',json.loads(pending.read_text()))
+    pending.unlink()
+# Configure/disable reaches the Core fence before successful task completion.
+agent.run_helper('czero-personal-data-run','--configure-only',stdout=sys.stderr).check_returncode()
+subprocess.run(['systemctl','--user','enable','--now','czero-personal-data.timer'],check=True,stdout=sys.stderr)

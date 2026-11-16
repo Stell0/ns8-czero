@@ -25,7 +25,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0039_space_audiences'
+assert SCHEMA_REVISION == '0041_personal_aliases'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
@@ -55,6 +55,10 @@ assert isinstance(application.state.cross_space_references, CrossSpaceReferenceS
 assert len([route for route in application.routes
             if route.path == '/api/v1/cross-space-references']) == 3
 from czero_core.spaces import SpaceService
+from czero_core.personal_data import PersonalDataService
+from czero_core.identity import Actor
+assert callable(PersonalDataService.reconcile_directory) and callable(PersonalDataService.submit)
+assert 'personal_editor' in Actor.__dataclass_fields__
 from czero_core.client_onboarding import ClientOnboardingService
 from czero_app.spaces import install_space_routes
 install_space_routes(application, None, None, lambda: None, lambda: None)

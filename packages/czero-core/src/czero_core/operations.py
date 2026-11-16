@@ -77,7 +77,7 @@ class OperationRegistry:
 
     def _current(self, actor: Actor, operation: Operation, scopes, arguments):
         self._validate_scopes(scopes)
-        current = self._authorize(actor, operation.role)
+        current = self._authorize(actor, Role.READER if operation.preauthorize else operation.role)
         try:
             if not isinstance(arguments, dict):
                 raise ValueError()
@@ -124,7 +124,8 @@ class OperationRegistry:
             try:
                 current.require(operation.role)
             except PermissionDenied:
-                continue
+                if not (operation.preauthorize is not None and operation.role is Role.EDITOR and current.personal_editor):
+                    continue
             if scopes is not None and not {operation.scope, *operation.additional_scopes} <= scopes:
                 continue
             result.append(self._metadata(operation))

@@ -1,5 +1,17 @@
 # C0 Core
 
+## Personal Data producer (0.50, schema0041)
+
+The native-only `PersonalDataService` binds private spaces to canonical directory
+providers and immutable user UUIDs before login, with personal Editor content
+authority and fixed non-sharing policy. Imported content uses the existing source
+pipeline, generation fences and payload-free receipts. Disable/lost directory
+authority retires imports while retaining spaces and authored content.
+See the [contract](../../docs/personal-data/CONTRACT.md) for API compromises and
+acceptance status. This is producer development; no Core release or released-app
+adoption is claimed. The consumer lock remains immutable until independent
+publication and consumer acceptance.
+
 ## Structured table browsing producer (0.49)
 
 `ObjectService.list_types(populated_only=True)` returns only types with records

@@ -129,7 +129,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0039_space_audiences'
+        assert results[0]==results[1] and results[0][1]=='0041_personal_aliases'
         reference_probe=directory/'core_references_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_references_probe.py',reference_probe)
         reference_evidence=command([str(python),'-I',str(reference_probe)],cwd=directory,
@@ -158,6 +158,26 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
             env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1',
                 'CZERO_COMPILATION_STATE':str(directory/'compiler-state.json')})
         assert json.loads(coordinated)['six_tables'] and json.loads(coordinated)['guarded_compilation']
+        personal_probe=directory/'core_personal_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_personal_probe.py',personal_probe)
+        personal=command([str(python),'-I',str(personal_probe)],cwd=directory,
+            env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
+        assert all(json.loads(personal).values())
+        personal_backup=directory/'core_personal_backup_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_personal_backup_probe.py',personal_backup)
+        personal_state=directory/'personal-state.json'
+        for stage in ('seed','verify'):
+            if stage=='verify':
+                # Same source-binding invalidation as the supported native restore.
+                command([str(python),'-I','-c',
+                    "from czero_core import Database;from sqlalchemy import text;d=Database();"
+                    "c=d.engine.begin();t=c.__enter__();t.execute(text('UPDATE c0_personal_config SET validated=false'));"
+                    "c.__exit__(None,None,None);d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
+            result=command([str(python),'-I',str(personal_backup)],cwd=directory,
+                env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1',
+                     'CZERO_PERSONAL_STAGE':stage,'CZERO_PERSONAL_STATE':str(personal_state)})
+            assert all(json.loads(result).values())
+        assert not personal_state.exists()
         shutil.copyfile(ROOT/'tests/integration/ocr_original.py',directory/'ocr_original.py')
         extraction_probe=directory/'core_extraction_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_extraction_probe.py',extraction_probe)

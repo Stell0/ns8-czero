@@ -358,7 +358,15 @@ def test_upgrade_from_schema0037_preserves_existing_constraints_and_rows():
                 migrate.migrate_database(db)
                 with db.engine.connect() as c:
                     after = c.execute(text("SELECT conname,pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace='public'::regnamespace ORDER BY conname")).all()
-                    assert set(before) <= set(after)
+                    # Personal spaces share a display name; ordinary names retain uniqueness.
+                    assert set(before)-set(after)=={('c0_spaces_name_key','UNIQUE (name)')}
+                    index=c.execute(text("SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='c0_spaces_ordinary_name'")).scalar_one()
+                    assert 'UNIQUE INDEX' in index and 'NOT personal' in index
+                    c.execute(text("INSERT INTO c0_spaces(id,name) VALUES(:id,'Unique ordinary name')"),{'id':uuid4()})
+                    from sqlalchemy.exc import IntegrityError
+                    with pytest.raises(IntegrityError):
+                        with c.begin_nested():
+                            c.execute(text("INSERT INTO c0_spaces(id,name) VALUES(:id,'Unique ordinary name')"),{'id':uuid4()})
                     assert c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one() == identity_before
                     assert c.execute(text('SELECT * FROM c0_sources')).all() == rows_before
                     assert c.execute(text('SELECT count(*) FROM c0_cross_space_references')).scalar_one() == 0

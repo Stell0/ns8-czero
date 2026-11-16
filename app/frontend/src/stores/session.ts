@@ -13,6 +13,8 @@ export interface Space {
   id: string
   name: string
   shared: boolean
+  personal?: boolean
+  personal_owner?: boolean
   readable_by_all: boolean
   role: 'reader' | 'editor' | 'admin'
   revision: number

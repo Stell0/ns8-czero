@@ -379,6 +379,7 @@ def test_accepted_am3_contracts_add_only_optional_lexical_metadata(annotation_ht
             if key=='input_schema' and expected['name'] in ('object_types_list','objects_list'):
                 observed=contract.legacy_table_input(observed, expected['name'])
             if key in ('input_schema','output_schema'):
+                observed=contract.legacy_personal_metadata(observed)
                 observed=contract.schema_hash(observed)
                 value=M17_CONTRACT[expected['name']]['input_sha256' if key=='input_schema' else 'output_sha256']
             assert observed==value,(expected['name'],key)

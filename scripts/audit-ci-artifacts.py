@@ -20,6 +20,7 @@ from workspace_access_evidence import require_stages as require_workspace_access
 from remembered_fixture import require_recovery as require_remembered_recovery
 from extraction_pool_evidence import require_reindexes
 from extraction_pool_evidence import require_stages as require_extraction_pool
+from personal_backup_evidence import require_proof as require_personal_backup
 
 
 REQUIRED_UI = {
@@ -63,7 +64,7 @@ def audit_reports(directory, source, images, logs):
     reports = sorted(directory.rglob('output.xml'))
     assert len(reports) == 2, 'Both native reports are required'
     actual_ui = set(); privacy = 0; audited = 0; summaries = []; renewal = []; cimd_recovery = []; persistent = []; background_recovery = []; remembered = []
-    pool_measurements=[]
+    pool_measurements=[];personal_backup=[]
     for report in reports:
         raw = report.read_text()
         measured = marker_values(html.unescape(raw), 'C0 renewable session: ')
@@ -85,6 +86,7 @@ def audit_reports(directory, source, images, logs):
         onboarding = marker_values(html.unescape(raw), 'C0 onboarding: ')
         assert onboarding == [{'core_seeded_approval': True, 'network_fetch_tested': False,
             'unknown_client_handoff': True, 'explicit_consent': True, 'replay_rejected': True}], 'Native first-connection proof missing'
+        personal_backup.append(require_personal_backup(marker_values(html.unescape(raw),'C0 personal backup: ')))
         root = ET.fromstring(raw)
         tests = list(root.iter('test'))
         assert tests and all(t.find('status').get('status') in {'PASS', 'SKIP'} for t in tests)
@@ -104,6 +106,9 @@ def audit_reports(directory, source, images, logs):
         for name, count in (('Prepare Disposable Identity Persistence', 1), ('Verify Disposable Identity Persistence', 2)):
             found = [kw for kw in root.iter('kw') if kw.get('name') == name]
             assert len(found) == count and all(kw.find('status').get('status') == 'PASS' for kw in found)
+        for name in ('Seed Disposable Personal Credentials','Verify Disposable Personal Credentials'):
+            found=[kw for kw in root.iter('kw') if kw.get('name')==name]
+            assert len(found)==1 and found[0].find('status').get('status')=='PASS', 'Private personal credential backup proof missing'
         guards = [kw for kw in root.iter('kw') if 'private' in kw.get('name', '').lower() and 'password' in kw.get('name', '').lower()]
         assert all(kw.find('status').get('status') == 'PASS' for kw in guards)
         privacy += len(guards)
@@ -148,7 +153,7 @@ def audit_reports(directory, source, images, logs):
             'renewal_measurements': renewal, 'cimd_recovery_measurements': cimd_recovery,
             'remembered_browser_recovery': remembered, 'persistent_measurements': persistent,'persistent_recovery_measurements':background_recovery,
             'workspace_access_measurements':access,'predecessor_background':predecessor_background,'predecessor_content':predecessor_content,
-            'extraction_pool_measurements':pool_measurements}
+            'extraction_pool_measurements':pool_measurements,'personal_backup_measurements':personal_backup}
 
 
 def main():

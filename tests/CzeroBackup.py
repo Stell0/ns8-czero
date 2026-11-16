@@ -6,11 +6,53 @@ import shlex
 from pathlib import Path
 from uuid import uuid4
 
+from personal_backup_evidence import validate as validate_personal_backup
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 
 
 class CzeroBackup:
+    @keyword
+    def verify_disposable_personal_state(self,output):
+        value=validate_personal_backup(json.loads(output))
+        message='C0 personal backup: '+json.dumps(value,sort_keys=True)
+        builtin=BuiltIn();builtin.log(message);builtin.log_to_console(message)
+
+    def _personal_credentials(self, module_id, *, seed=False):
+        # Generate in the disposable module; neither Robot nor argv gets a secret.
+        code="""import hashlib,os,stat,sys,uuid,secrets
+from pathlib import Path
+sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
+from czero_personal_data import private_read,private_write,read
+p=Path(os.environ['AGENT_STATE_DIR'])/'personal-data-secrets.json'
+"""
+        if seed:
+            code+="""assert not read()['enabled'], 'Only seed a disabled disposable collector'
+assert not p.exists() or private_read(p)=={}, 'Preserve existing credentials'
+private_write(p,{'webtop':{str(uuid.uuid4()):{'api_key':'synthetic-backup-'+secrets.token_urlsafe(32)}}})
+"""
+        code+="""value=private_read(p)
+assert value.get('webtop') and stat.S_IMODE(p.stat().st_mode)==0o600
+print(hashlib.sha256(p.read_bytes()).hexdigest())
+"""
+        builtin=BuiltIn();ssh=builtin.get_library_instance('SSHLibrary')
+        previous=builtin.set_log_level('NONE')
+        try:
+            output,rc=ssh.execute_command('runagent -m '+shlex.quote(module_id)+' python3 -c '+shlex.quote(code),return_rc=True,timeout='30 seconds')
+            if rc or len(output.strip())!=64 or any(c not in '0123456789abcdef' for c in output.strip()):
+                raise AssertionError('Disposable personal credential file was not verified')
+            return output.strip()
+        finally:builtin.set_log_level(previous)
+
+    @keyword
+    def seed_disposable_personal_credentials(self,module_id):
+        return self._personal_credentials(module_id,seed=True)
+
+    @keyword
+    def verify_disposable_personal_credentials(self,module_id,expected_hash):
+        if self._personal_credentials(module_id)!=expected_hash:
+            raise AssertionError('Native restore changed the private personal credential file')
+
     @keyword
     def begin_disposable_backup_observer(self, module_id):
         ssh = BuiltIn().get_library_instance('SSHLibrary')

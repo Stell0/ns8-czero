@@ -1022,6 +1022,91 @@
       "path": ".github/pull_request_template.md",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/16validate-personal-data",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/17fence-personal-data",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/configure-module/85persist-personal-data",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/get-personal-data-options/20read",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/get-personal-data-options/validate-input.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/get-personal-data-options/validate-output.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/get-personal-data-status/20read",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/get-personal-data-status/validate-input.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/get-personal-data-status/validate-output.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/set-personal-data-credential/20save",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/set-personal-data-credential/validate-input.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/set-personal-data-credential/validate-output.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-personal-data-run",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero_personal_data.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/systemd/user/czero-personal-data.service",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/systemd/user/czero-personal-data.timer",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/personal_backup_evidence.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }

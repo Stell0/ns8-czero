@@ -93,6 +93,7 @@ def test_settings_round_trip(monkeypatch, capsys, tmp_path):
             'max_queued_units':2000,'max_staging_bytes':33554432,'ocr_enabled':False,'ocr_language':'eng','cache_enabled':True},
         'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
         'connection_idle_seconds':2592000,
+        'personal_data':{'enabled':False,'nethvoice':None,'webtop':None},
         **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
     schema = json.loads((ACTIONS / 'get-configuration/validate-output.json').read_text())
     Draft7Validator(schema).validate(config)
@@ -110,6 +111,7 @@ def test_unconfigured_defaults_are_machine_readable(monkeypatch, capsys, tmp_pat
             'max_queued_units':2000,'max_staging_bytes':33554432,'ocr_enabled':False,'ocr_language':'eng','cache_enabled':True},
         'session_policy':{'absolute_seconds':28800,'idle_seconds':3600},
         'connection_idle_seconds':2592000,
+        'personal_data':{'enabled':False,'nethvoice':None,'webtop':None},
         **{key:'' for key in ('user_domain','idp','owner','owner_ldap_uuid')}}
 
 

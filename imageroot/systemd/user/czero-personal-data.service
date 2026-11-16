@@ -1,0 +1,16 @@
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+[Unit]
+Description=C0 personal data reconciliation
+PartOf=czero.service czero-pod.service
+Requisite=czero.service
+After=czero.service czero-postgres.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+TimeoutStartSec=150
+TimeoutStopSec=20
+ExecStart=/usr/local/bin/runagent %E/bin/czero-personal-data-run
+ExecStopPost=-/usr/bin/podman rm --ignore -f czero-personal-data-run
+SyslogIdentifier=%N

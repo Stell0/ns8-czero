@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+import json,os,sys
+from pathlib import Path
+import agent
+from agent.ldapproxy import Ldapproxy
+sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
+from czero_personal_data import read,validate,discover,private_write
+try:
+    request=json.load(sys.stdin)
+    config=validate(request.get('personal_data',read()))
+    domain=request.get('user_domain',os.environ.get('CZERO_USER_DOMAIN',''))
+    if config['enabled']:
+        _,options=discover(agent.redis_connect(use_replica=True),Ldapproxy(),domain)
+        for kind in ('nethvoice','webtop'):
+            if config[kind] and config[kind] not in {r['id'] for r in options[kind]}:
+                raise ValueError('personal_data_provider_mismatch')
+    private_write(Path(os.environ['AGENT_STATE_DIR'])/'personal-data-pending.json',config)
+except Exception:
+    agent.set_status('validation-failed')
+    json.dump([{'field':'personal_data','parameter':'personal_data','error':'personal_data_invalid_or_provider_mismatch'}],sys.stdout)
+    sys.exit(2)

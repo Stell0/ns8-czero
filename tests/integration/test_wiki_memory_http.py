@@ -97,7 +97,7 @@ def test_accepted_contracts_only_add_optional_space_and_lexical_metadata(applica
                     observed=contract.legacy_index_status_output(observed)
                 if key=='input_schema' and expected['name'] in ('object_types_list','objects_list'):
                     observed=contract.legacy_table_input(observed, expected['name'])
-                value_at_key=contract.schema_hash(observed)
+                value_at_key=contract.schema_hash(contract.legacy_personal_metadata(observed))
                 value=M17_CONTRACT[expected['name']]['input_sha256' if key=='input_schema' else 'output_sha256']
             else: value_at_key=actual[key]
             assert value_at_key==value, (expected['name'],key)

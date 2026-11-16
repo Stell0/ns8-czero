@@ -261,3 +261,18 @@ exclude stale parts while preserving old evidence. Read the full original using
 `source_version_document_get`; never join overlapping search chunks.
 
 For bounded external knowledge compilation and scheduling, see the [compiler runner](examples/compiler/README.md). It is not part of the C0 runtime and does not activate schedules.
+
+### Personal service ingestion
+
+The packaged [personal-service runner](../../app/src/czero_app/personal_data/runner.py)
+uses the existing Core publication and cleanup services; it is not a separate
+sample document store. See its [contract](../../docs/personal-data/CONTRACT.md)
+and [capability evidence](../../docs/personal-data/VALIDATION.md) before using it.
+Existing NethCTI personal tokens/sessions must be verified per user; a missing
+session never establishes source deletion. Its transcript endpoint serves one
+variant, so provenance must preserve that uncertainty. In installed WebTop tests,
+a newly created dedicated key without expiry worked after finite-key failures;
+that does not establish the cause of those failures. Message reads preserved the
+unread flag, while attachment downloads returned500 and must remain explicit
+failures with retries. Never guess a different MIME index or treat a partial
+inventory as authoritative absence. Real setup wrappers and evidence remain private.

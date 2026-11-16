@@ -44,7 +44,7 @@ def test_dump_failure_and_cold_database_leave_service_state_intact(monkeypatch,t
     else:
         runpy.run_path(script)
         assert (tmp_path/'czero.pg_dump').read_bytes().startswith(b'PGDMP')
-        assert json.loads((tmp_path/'backup-metadata.json').read_text()) == {'format':1,'app_active':False,'app_enabled':False,'scheduler_active':False,'extraction_active':False}
+        assert json.loads((tmp_path/'backup-metadata.json').read_text()) == {'format':1,'app_active':False,'app_enabled':False,'scheduler_active':False,'extraction_active':False,'personal_active':False}
     assert ['systemctl','--user','start','czero-postgres.service'] in calls
     assert ['systemctl','--user','stop','czero-postgres.service'] in calls
     assert ['systemctl','--user','stop','czero-pod.service'] in calls
