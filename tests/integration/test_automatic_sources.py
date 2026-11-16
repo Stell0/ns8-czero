@@ -346,9 +346,13 @@ def test_forged_stage_metadata_cannot_cancel_another_definition(automatic):
     automatic[1]._test_retained=UUID(forged['source_id'])
     with service.database.engine.begin() as c:
         version=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),{'id':forged['id']}).mappings().one()
-        assert guard_publication(c,version,service.access) is False
+        assert guard_publication(c,version,service.access) is None
+        assert c.execute(text('SELECT publication_metadata FROM c0_source_versions WHERE id=:id'),{'id':forged['id']}).scalar_one()==version['publication_metadata']
         assert c.execute(text('SELECT state FROM c0_source_versions WHERE id=(SELECT version_id FROM c0_automatic_source_items WHERE definition_id=:id)'),{'id':saved['id']}).scalar_one()=='queued'
     assert service.runs(owner,saved['id'])[0]['state']=='pending'
+    with service.database.engine.begin() as c:
+        registry.get('source.extract').execute(c,{'version_id':forged['id']})
+    assert sources.get(owner,forged['source_id'])['metadata']['_automatic_source_revision']==1
 
 
 @pytest.mark.parametrize('revoke',[False,True])

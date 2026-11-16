@@ -533,9 +533,9 @@ def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=T
     from .personal_data import guard_publication
     guard_publication(connection, row['source_id'], row['id'])
     from .automatic_sources import guard_publication as guard_automatic
-    automatic='_automatic_source_revision' in (row['publication_metadata'] or {})
+    automatic=guard_automatic(connection,row,access)
+    if automatic is False:return {'state':'cancelled'}
     if automatic:reuse_identical=False
-    if not guard_automatic(connection,row,access):return {'state':'cancelled'}
     if automatic:
         row={**row,'publication_metadata':{key:value for key,value in row['publication_metadata'].items() if key!='_automatic_source_revision'}}
     from .current_content import publish_versions

@@ -260,17 +260,16 @@ def cancel_staged(c, identifier):
 def guard_publication(c, version, access):
     """Recheck native authority at extraction's final atomic publication boundary."""
     metadata=version['publication_metadata'] or {}
-    if '_automatic_source_revision' not in metadata:return True
-    identifier=UUID(metadata['automatic_source_id'])
+    if '_automatic_source_revision' not in metadata:return None
+    try:identifier=UUID(metadata['automatic_source_id'])
+    except (ValueError,TypeError,KeyError,AttributeError):return None
     managed=c.execute(text('''SELECT i.source_revision=s.revision AS unchanged
         FROM c0_automatic_source_items i JOIN c0_sources s ON s.id=i.source_id
         WHERE i.definition_id=:id AND i.source_id=:source AND i.version_id=:version'''),
         {'id':identifier,'source':version['source_id'],'version':version['id']}).mappings().one_or_none()
     if managed is None:
-        # An editable metadata field never authorizes touching another definition.
-        from .current_content import retire_versions
-        retire_versions(c,[version['id']])
-        return False
+        # Ordinary user metadata never becomes a native authorization marker.
+        return None
     hold_authority(c)
     service=AutomaticSourceService(None,access).in_space(version['space_id'])
     try:
