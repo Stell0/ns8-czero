@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """One deterministic bounded native ingestion pass; no transport exposes this CLI."""
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -141,7 +142,11 @@ class Runner:
                 # The selected WebTop domain is bound by native configuration, not an email guess.
                 username=owner['username']+'@'+snapshot['mail_domain']
                 adapter=WebTop(endpoint,api_key=key,username=username)
-                folders=adapter.folders()
+                folders=sorted(adapter.folders(),key=lambda folder:folder['id'])
+                folder_hash=hashlib.sha256(json.dumps([folder['id'] for folder in folders],ensure_ascii=False).encode()).hexdigest()
+                if cursor.get('folder_hash')!=folder_hash:
+                    # Indices belong to one exact folder inventory, never a shifted list.
+                    cursor={};scan_id=str(uuid4())
                 index=cursor.get('folder_index',0);page=cursor.get('page',0)
                 if index>=len(folders):index=page=0
                 if not folders:
@@ -154,6 +159,7 @@ class Runner:
                                  'page':0 if coverage['complete'] else page+1,'documents':len(documents),
                                  'skipped':len(coverage['issues'])}
                     coverage['complete']=last
+            if kind=='webtop':next_cursor['folder_hash']=folder_hash
             # Refresh a bounded latest page while the historical cursor advances.
             # This is extra current evidence, never an authoritative inventory.
             head_error=None

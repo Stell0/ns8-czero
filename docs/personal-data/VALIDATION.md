@@ -143,3 +143,8 @@ passes both personal-space cases; Node24 website checks pass33 unit cases plus
 lint, formatting, types and build. Fresh full/native acceptance remains required.
 The installed attachment API also returned500 on four spaced retries with the
 machinery header; unread flags remained unchanged throughout.
+
+The folder-inventory successor passes39 Core lifecycle/runner cases, including
+stable resume after reordered folders and a fresh scan after folder-set changes.
+It does not alter the Core package tree. Full acceptance43786727000 remains
+frozen on393dedc; the folder-inventory successor requires its own full run.

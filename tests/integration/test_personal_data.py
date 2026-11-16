@@ -540,8 +540,10 @@ def test_backfill_reads_new_arrivals_without_losing_historical_progress(personal
     import czero_app.personal_data.runner as module
     service,_,provider,instance,_,_=personal
     row=provision(personal);scan=str(uuid4());calls=[]
+    import hashlib,json
+    folder_hash=hashlib.sha256(json.dumps(['INBOX','Sent']).encode()).hexdigest()
     record_checkpoint(service,owner_id=row['id'],generation=1,connector='webtop',instance_id=instance,
-        cursor={'page_size':5,'page':7,'folder_index':0,'head_folder_index':1,'scan_id':scan},status='backfill')
+        cursor={'page_size':5,'page':7,'folder_index':0,'head_folder_index':1,'scan_id':scan,'folder_hash':folder_hash},status='backfill')
     class Mail:
         def __init__(self,*args,**kwargs):self.client=SimpleNamespace(close=lambda:None)
         def folders(self):return [{'id':'INBOX'},{'id':'Sent'}]
@@ -734,3 +736,33 @@ def test_observed_alias_reuse_suspends_import_but_preserves_own_space(personal,m
               'directory_complete':True,'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
     result=Runner(service).tick(snapshot,{'webtop':{str(instance):{'api_key':'synthetic-only'}}})
     assert any(row['error_code']=='identity_ambiguous' for row in result['users'])
+
+
+@pytest.mark.parametrize('folders_changed',[False,True])
+def test_mail_inventory_resume_uses_stable_folder_set(personal,monkeypatch,folders_changed):
+    import hashlib,json
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_core.personal_data import record_checkpoint
+    service,_,provider,instance,_,_=personal
+    owner=provision(personal);scan=str(uuid4());calls=[]
+    digest=hashlib.sha256(json.dumps(['INBOX','Sent']).encode()).hexdigest()
+    record_checkpoint(service,owner_id=owner['id'],generation=1,connector='webtop',instance_id=instance,
+        cursor={'page_size':5,'page':4,'folder_index':1,'scan_id':scan,'folder_hash':digest},status='backfill')
+    class Mail:
+        def __init__(self,*a,**kw):self.client=SimpleNamespace(close=lambda:None)
+        def folders(self):return [{'id':'Sent'},{'id':'Archive' if folders_changed else 'INBOX'}]
+        def page(self,folder,*,page,size):
+            calls.append((folder,page))
+            return [],{'complete':False,'issues':[]}
+    monkeypatch.setattr('czero_app.personal_data.runner.WebTop',Mail)
+    snapshot={'configuration':{'enabled':True,'webtop':str(instance)},'provider_id':str(provider),
+        'provider_verified':True,'directory_complete':True,
+        'directory':[{'directory_id':owner['directory_id'],'username':'person','active':True}],
+        'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
+    result=Runner(service).tick(snapshot,{'webtop':{str(instance):{'api_key':'synthetic-only'}}})
+    cursor=result['users'][0]['cursor']
+    assert calls[0]==(('Archive',0) if folders_changed else ('Sent',4))
+    assert (cursor['scan_id']==scan) is not folders_changed
+    assert (cursor['folder_hash']==digest) is not folders_changed
+    assert result['users'][0]['last_inventory'] is None

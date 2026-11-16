@@ -171,3 +171,8 @@ reachable and never touches credentials saved for another instance. Local cleari
 source product's supported interface and retain private confirmation. This
 candidate does not claim unattended upstream creation or revocation. Switching
 ingestion off fences and cleans imports independently of credential validity.
+
+WebTop folder traversal uses a sorted folder inventory and persists its hash with
+the checkpoint. Adding, removing or renaming an eligible folder invalidates that
+scan's indices and restarts traversal with a fresh scan identity. A changed list
+cannot make a previously interrupted traversal appear complete.
