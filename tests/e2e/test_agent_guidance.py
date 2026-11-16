@@ -6,6 +6,24 @@ from playwright.sync_api import expect
 import pytest
 
 
+@pytest.mark.parametrize('role',['reader','admin'])
+def test_prompt_counts_wait_for_actual_compiler_context(live,browser,role):
+    if role=='admin':
+        browser.context.clear_cookies();browser.goto(live.origin+'/auth/login')
+    pending=[]
+    browser.route('**/api/v1/compilation/policy**',lambda route:pending.append(route))
+    browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
+    expect(browser.locator('details[data-task="read"]')).to_be_visible()
+    expect(browser.locator('details[data-task]')).to_have_count(1 if role=='reader' else 7)
+    assert len(pending)==1
+    pending.pop().continue_()
+    expect(browser.locator('details[data-task="status"]')).to_be_visible()
+    expect(browser.locator('details[data-task]')).to_have_count(2 if role=='reader' else 15)
+    expected={'status','read'}
+    if role=='admin':expected|={'compile','bootstrap','feedback','daily','weekly','chatgpt','external','create','update','ingest','evidence','investigation','consolidate'}
+    assert set(browser.locator('details[data-task]').evaluate_all('nodes => nodes.map(node => node.dataset.task)'))==expected
+
+
 @pytest.mark.parametrize('role',['reader','protected-reader','editor','admin'])
 def test_selective_context_guidance_and_stable_workflow_identity(live,browser,role):
     effective='reader' if role=='protected-reader' else role
