@@ -766,3 +766,49 @@ def test_mail_inventory_resume_uses_stable_folder_set(personal,monkeypatch,folde
     assert (cursor['scan_id']==scan) is not folders_changed
     assert (cursor['folder_hash']==digest) is not folders_changed
     assert result['users'][0]['last_inventory'] is None
+
+
+def test_summary_removal_preserves_the_participants_transcript(personal):
+    import json
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Unavailable
+    service,admin,provider,instance,_,_=personal
+    service.configure(admin,provider_id=provider,enabled=True,services={'nethvoice':str(instance)},expected_generation=1)
+    service.validate_binding(generation=2,provider_id=provider,services={'nethvoice':str(instance)})
+    owner=provision(personal)
+    args=dict(owner_id=owner['id'],generation=2,connector='nethvoice',instance_id=instance,
+        remote_key='101',title='Call',content=b'Existing participated evidence',metadata={'uniqueid':'call.101'})
+    transcript=service.submit(**args,kind='transcript')
+    summary=service.submit(**args,kind='summary')
+    def read(path,*,params):
+        assert path=='/summary/call.101' and params=={'id':101,'linkedid':''}
+        raise Unavailable('source_not_found')
+    adapter=SimpleNamespace(client=SimpleNamespace(read=read))
+    missing={'kind':'summary','remote_key':'101','slot_key':json.dumps(['call.101',''])}
+    Runner(service,before_publish=lambda current:current['id']==owner['id'])._confirm_missing(adapter,'nethvoice',missing,owner,2,instance)
+    with service.database.engine.connect() as c:
+        assert dict(c.execute(text('SELECT kind,state FROM c0_personal_imports')).all())=={'transcript':'managed','summary':'cleanup'}
+    service.cleanup()
+    with service.database.engine.connect() as c:
+        assert c.execute(text('SELECT count(*) FROM c0_source_versions WHERE source_id=:id'),{'id':UUID(transcript['source_id'])}).scalar_one()==1
+        assert c.execute(text('SELECT count(*) FROM c0_source_versions WHERE source_id=:id'),{'id':UUID(summary['source_id'])}).scalar_one()==0
+
+
+def test_late_provenance_updates_preserve_body_and_local_overrides(personal):
+    service,_,_,_,login,registry=personal
+    owner=provision(personal)
+    first=submit(personal,owner,metadata={'related_import_key':'101'})
+    with service.database.engine.begin() as c:
+        registry.get('source.extract').execute(c,{'version_id':first['version_id']})
+    linked={'related_import_key':'101','transcript_source_id':str(uuid4())}
+    updated=submit(personal,owner,metadata=linked)
+    assert updated['source_id']==first['source_id']
+    selected=service.sources.in_space(owner['space_id']);actor=login(owner['directory_id'])
+    source=selected.get(actor,first['source_id'])
+    assert source['metadata']['transcript_source_id']==linked['transcript_source_id']
+    assert submit(personal,owner,metadata=linked)['state']=='unchanged'
+    # An authored metadata edit retains priority over subsequent remote provenance.
+    selected.ingest_text(actor,idempotency_key='local-metadata',source_id=source['id'],title=source['title'],body='Original message body',metadata={'authored':'kept'},expected_revision=source['revision'])
+    assert submit(personal,owner,metadata=linked)['state']=='overridden'
+    assert selected.get(actor,source['id'])['metadata']=={'authored':'kept'}

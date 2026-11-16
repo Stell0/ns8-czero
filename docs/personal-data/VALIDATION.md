@@ -148,3 +148,17 @@ The folder-inventory successor passes39 Core lifecycle/runner cases, including
 stable resume after reordered folders and a fresh scan after folder-set changes.
 It does not alter the Core package tree. Full acceptance43786727000 remains
 frozen on393dedc; the folder-inventory successor requires its own full run.
+
+The next successor passes76 Core/runner/adapter/native-identity cases and68 native
+configuration/credential/backup cases (overlapping suites, not an aggregate).
+Six independently installed wheel/archive/OCR cases pass on its changed Core
+package. New cases cover exact summary-kind removal, late provenance updates with
+unchanged body bytes, preserved local edits, credential rotation/clearing during
+reads, and disconnection intent preceding a failed generation fence.
+
+A private diagnostic also runs the actual C0 WebTop adapter against the installed
+API through an SSH bridge: main identity, three eligible folders, safe synthetic
+message extraction and explicit failed/unsupported attachment observations pass.
+It performs GET reads only, publishes nothing in C0 and does not verify public
+DNS/TLS. No NethCTI JWT is transferred by the additional diagnostics; its installed
+proof remains the on-node profile and empty personal-history read.

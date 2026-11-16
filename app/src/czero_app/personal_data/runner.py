@@ -251,7 +251,8 @@ class Runner:
                     if not isinstance(unique,str) or not isinstance(linked,str):raise ValueError()
                 except (ValueError,TypeError):
                     raise Unavailable('identity_ambiguous') from None
-                detail=adapter.client.read('/transcripts/'+unique,params={'id':int(missing['remote_key']),'linkedid':linked})
+                endpoint='summary' if missing['kind']=='summary' else 'transcripts'
+                detail=adapter.client.read('/'+endpoint+'/'+unique,params={'id':int(missing['remote_key']),'linkedid':linked})
                 if isinstance(detail,dict):detail=detail.get('data',detail)
                 if isinstance(detail,dict) and detail.get('src') and detail.get('dst'):
                     confirmed=not adapter.numbers.intersection({detail['src'],detail['dst']})
@@ -262,7 +263,7 @@ class Runner:
             if self.before_publish is not None and not self.before_publish(owner):
                 raise PersonalDataConflict()
             queue_confirmed_removal(self.service,owner_id=owner['id'],generation=generation,connector=kind,
-                instance_id=instance,remote_key=missing['remote_key'])
+                instance_id=instance,remote_key=missing['remote_key'],kind=missing['kind'])
 
     def _cleanup(self):
         self.service.cleanup(limit=50)

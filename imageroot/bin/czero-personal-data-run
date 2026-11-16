@@ -15,11 +15,12 @@ from uuid import UUID,uuid4
 import agent
 from agent.ldapproxy import Ldapproxy
 from agent.ldapclient import Ldapclient
-from czero_personal_data import read,discover,private_write,private_read,identity_binding,directory_user,current_directory_owner
+from czero_personal_data import read,discover,private_write,private_read,identity_binding,directory_user,current_directory_owner,credentials_unchanged
 
 state=Path(os.environ['AGENT_STATE_DIR'])
 invocation=None
 credentials_copy=None
+credentials_snapshot=None
 signal.signal(signal.SIGTERM,lambda *_:sys.exit(143))
 try:
     # Copies can remain after SIGKILL. All runner invocations are bounded to 150s.
@@ -82,7 +83,8 @@ try:
     protected=[str(invocation)]
     if not fence_only and '--configure-only' not in sys.argv and config['enabled']:
         credentials_copy=invocation.with_suffix('.credentials.json')
-        private_write(credentials_copy,private_read(secret) if secret.exists() else {})
+        credentials_snapshot=private_read(secret) if secret.exists() else {}
+        private_write(credentials_copy,credentials_snapshot)
         protected.append(str(credentials_copy))
     # Match the existing image UID without changing host canonical-file ownership.
     subprocess.run(['podman','unshare','chown','10001:10001',*protected],check=True,
@@ -122,7 +124,7 @@ try:
                     allow=False
                     try:
                         actual,available=discover(agent.redis_connect(use_replica=True),Ldapproxy(),os.environ['CZERO_USER_DOMAIN'])
-                        allow=(read()==config and actual==snapshot['provider_id'] and all(
+                        allow=(read()==config and credentials_unchanged(secret,credentials_snapshot) and actual==snapshot['provider_id'] and all(
                             not config[k] or config[k] in {v['id'] for v in available[k]} for k in ('nethvoice','webtop')) and current_directory_owner(
                                 client,parameters['schema'],snapshot['directory'],message))
                     except (ValueError,TypeError,KeyError):pass

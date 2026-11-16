@@ -12,11 +12,12 @@ previous=read()
 identity_changed=any(request.get(field,os.environ.get(env,''))!=os.environ.get(env,'')
     for field,env in (('user_domain','CZERO_USER_DOMAIN'),('idp','CZERO_IDP_UUID')))
 if previous['enabled'] and (previous!=pending or identity_changed):
-    subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True,stdout=sys.stderr)
-    agent.run_helper('czero-personal-data-run','--fence-only',stdout=sys.stderr).check_returncode()
-    # Commit only disconnections before the rest of configuration can fail.
+    # Persist disconnections before the Core fence, so a stale native snapshot
+    # cannot adopt the new generation while the old selector is still current.
     # New sources become eligible only after85persist and fresh binding checks.
     retained={key:previous[key] if not identity_changed and previous[key]==pending[key] else None
         for key in ('nethvoice','webtop')}
     safe={'enabled':pending['enabled'] and any(retained.values()),**retained}
     private_write(Path(os.environ['AGENT_STATE_DIR'])/'personal-data.json',safe)
+    subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True,stdout=sys.stderr)
+    agent.run_helper('czero-personal-data-run','--fence-only',stdout=sys.stderr).check_returncode()

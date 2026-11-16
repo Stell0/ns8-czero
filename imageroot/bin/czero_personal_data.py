@@ -140,3 +140,8 @@ def current_directory_owner(client, schema, directory, message):
     expected={'directory_id':message['directory_id'],'username':message['username'],'active':True}
     if expected not in directory:return False
     return directory_user(client,schema,message['username'])==expected
+
+
+def credentials_unchanged(path, expected):
+    """An in-flight copy cannot regain authority after native clearing/rotation."""
+    return (private_read(path) if Path(path).exists() else {})==expected

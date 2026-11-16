@@ -2,6 +2,7 @@
 """Bounded existing-API readers. A failed read is never an authoritative inventory."""
 import base64
 from dataclasses import dataclass, field
+from datetime import datetime
 import hashlib
 import json
 import re
@@ -186,11 +187,18 @@ class NethVoice:
                 if (not isinstance(detail,dict) or {detail.get('src'),detail.get('dst')}!={src,dst}
                         or not isinstance(detail.get(field),str) or not detail[field].strip()):
                     skipped+=1; continue
+                timestamps={}
+                for key in ('call_timestamp','created_at','updated_at'):
+                    value=detail.get(key)
+                    if isinstance(value,str) and len(value)<=64:
+                        try:
+                            if datetime.fromisoformat(value).tzinfo is not None:timestamps[key]=value
+                        except ValueError:pass
                 documents.append(Document(str(identifier),kind,('Transcript ' if kind=='transcript' else 'Summary ')+str(identifier),
                     detail[field].encode('utf-8'), metadata={'transcript_id':identifier,'uniqueid':unique,
                     'linkedid':item.get('linkedid'), 'derived':True,
                     'derivation':'existing_summary' if kind=='summary' else 'middleware_selected_transcription_variant_unverified',
-                    'related_import_key':str(identifier)}))
+                    'related_import_key':str(identifier),**timestamps}))
         return documents, {'complete':page*size>=history['count'],'count':history['count'],'skipped':skipped,
                            'deletion_authoritative':False}
 

@@ -219,3 +219,39 @@ def test_native_directory_ad_uses_guid_byte_order():
     class Directory:
         def get_user_entry(self,name,**kwargs):return {'attributes':{'objectGUID':[identifier.bytes_le],'userAccountControl':[514]}}
     assert native.directory_user(Directory(),'ad','person')=={'directory_id':str(identifier),'username':'person','active':False}
+
+
+def test_inflight_credential_copy_cannot_follow_rotation_or_disconnect(tmp_path):
+    path=tmp_path/'personal-data-secrets.json'
+    assert native.credentials_unchanged(path,{})
+    instance=str(uuid4())
+    old={'webtop':{instance:{'api_key':'synthetic-dedicated-old'}}}
+    native.private_write(path,old)
+    assert native.credentials_unchanged(path,old)
+    native.private_write(path,{'webtop':{instance:{'api_key':'synthetic-dedicated-new'}}})
+    assert not native.credentials_unchanged(path,old)
+    native.private_write(path,{'webtop':{instance:{'revocation_pending':True}}})
+    assert not native.credentials_unchanged(path,old)
+    path.unlink()
+    assert not native.credentials_unchanged(path,old)
+
+
+def test_disconnect_intent_precedes_fence_even_when_the_helper_fails(monkeypatch,tmp_path):
+    import io,runpy,sys,subprocess
+    from types import SimpleNamespace
+    selected=str(uuid4())
+    previous={'enabled':True,'nethvoice':selected,'webtop':None}
+    pending={'enabled':False,'nethvoice':None,'webtop':None}
+    native.private_write(tmp_path/'personal-data.json',previous)
+    native.private_write(tmp_path/'personal-data-pending.json',pending)
+    monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path));monkeypatch.setenv('AGENT_INSTALL_DIR',str(ROOT/'imageroot'))
+    monkeypatch.setitem(sys.modules,'czero_personal_data',native)
+    def helper(*args,**kwargs):
+        assert native.read(tmp_path)==pending
+        raise RuntimeError('synthetic fence failure')
+    monkeypatch.setitem(sys.modules,'agent',SimpleNamespace(run_helper=helper))
+    monkeypatch.setattr(subprocess,'run',lambda *a,**k:None)
+    monkeypatch.setattr(sys,'stdin',io.StringIO(json.dumps({'personal_data':pending})))
+    with pytest.raises(RuntimeError,match='synthetic fence failure'):
+        runpy.run_path(str(ROOT/'imageroot/actions/configure-module/17fence-personal-data'))
+    assert native.read(tmp_path)==pending

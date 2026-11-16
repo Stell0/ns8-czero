@@ -37,10 +37,12 @@ def test_nethvoice_participation_ids_and_supervisor_exclusion():
                 {'uniqueid':'same','src_number':'201','dst_number':'202','state':'done','has_transcription':True}]})
         assert request.url.path=='/transcripts/same'
         assert request.url.params['id']=='1'
-        return httpx2.Response(200,json={'code':200,'data':{'src':'201','dst':'202','transcription':'Participated call'}})
+        return httpx2.Response(200,json={'code':200,'data':{'src':'201','dst':'202','transcription':'Participated call','call_timestamp':'2026-01-01T09:00:00Z','created_at':'2026-01-01T09:01:00+00:00'}})
     adapter=NethVoice('https://voice.example.test',token=token('alice'),username='alice',phone_numbers=['201'],transport=mail_transport(handle))
     docs,status=adapter.page(start='20200101',end='20261115')
     assert len(docs)==1 and docs[0].remote_key=='1' and docs[0].content==b'Participated call'
+    assert docs[0].metadata['call_timestamp']=='2026-01-01T09:00:00Z'
+    assert docs[0].metadata['created_at']=='2026-01-01T09:01:00+00:00'
     assert docs[0].metadata['derived'] is True
     assert docs[0].metadata['derivation']=='middleware_selected_transcription_variant_unverified'
     assert status['skipped']==2 and not status['deletion_authoritative']

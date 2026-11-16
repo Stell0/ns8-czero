@@ -271,12 +271,16 @@ class PersonalDataService:
                     WHERE owner_id=:owner AND connector=:connector AND instance_id=:instance AND remote_key=:remote AND kind=:kind'''),
                     {**values, 'state': state, 'scan': scan_id,'slot':slot})
                 return {'state': state, 'source_id': str(source['id']) if source else None}
-            staging=c.execute(text("""SELECT v.state,j.state AS job_state FROM c0_source_versions v
+            staging=c.execute(text("""SELECT v.state,v.media_type,v.publication_title,v.publication_metadata,j.state AS job_state FROM c0_source_versions v
                 LEFT JOIN c0_jobs j ON j.id=v.job_id WHERE v.id=:id"""),
                 {'id':previous['version_id']}).mappings().one_or_none() if previous else None
             refresh_staging=bool(staging and staging['state']=='queued' and
                 (previous['generation']!=generation or staging['job_state']=='failed'))
-            if previous and previous['content_hash'] == digest and state == 'managed' and previous['generation']==generation and not refresh_staging:
+            published=bool(source and previous and source['current_version_id']==previous['version_id'])
+            same_publication=bool(source and staging and staging['media_type']==media_type
+                and (source['title'] if published else staging['publication_title'])==title
+                and (source['metadata'] if published else staging['publication_metadata'])==json.loads(encoded))
+            if same_publication and previous and previous['content_hash'] == digest and state == 'managed' and previous['generation']==generation and not refresh_staging:
                 c.execute(text('''UPDATE c0_personal_imports SET last_seen_scan=:scan,slot_key=:slot WHERE owner_id=:owner
                     AND connector=:connector AND instance_id=:instance AND remote_key=:remote AND kind=:kind'''), {**values, 'scan': scan_id,'slot':slot})
                 return {'state': 'unchanged', 'source_id': str(previous['source_id'])}
@@ -414,16 +418,19 @@ def inventory_candidates(service, *, owner_id, generation, connector, instance_i
         return digest,[dict(r) for r in missing]
 
 
-def queue_confirmed_removal(service, *, owner_id, generation, connector, instance_id, remote_key):
+def queue_confirmed_removal(service, *, owner_id, generation, connector, instance_id, remote_key, kind=None):
     """Trusted collector confirmed exact source absence/loss after stable inventories."""
+    if kind not in (None,'message','attachment','transcript','summary'):
+        raise ValueError('invalid_personal_document_kind')
     with service.database.engine.begin() as c:
         hold_authority(c)
         service._fence(c,space_uuid(owner_id),generation,connector,space_uuid(instance_id))
         c.execute(text('''UPDATE c0_personal_imports SET state='cleanup' WHERE owner_id=:owner
             AND connector=:connector AND instance_id=:instance
             AND (remote_key=:remote OR (:connector='webtop' AND left(remote_key,length(:remote)+12)=:remote||'/attachment/'))
+            AND (CAST(:kind AS text) IS NULL OR kind=:kind OR (:connector='webtop' AND :kind='message' AND kind='attachment'))
             AND state IN ('managed','overridden')'''),
-            {'owner':space_uuid(owner_id),'connector':connector,'instance':space_uuid(instance_id),'remote':remote_key})
+            {'owner':space_uuid(owner_id),'connector':connector,'instance':space_uuid(instance_id),'remote':remote_key,'kind':kind})
 
 
 def record_attachment_issues(service, *, owner_id, generation, instance_id, remote_key, issues):

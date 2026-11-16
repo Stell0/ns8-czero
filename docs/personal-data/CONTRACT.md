@@ -176,3 +176,11 @@ WebTop folder traversal uses a sorted folder inventory and persists its hash wit
 the checkpoint. Adding, removing or renaming an eligible folder invalidates that
 scan's indices and restarts traversal with a fresh scan identity. A changed list
 cannot make a previously interrupted traversal appear complete.
+
+Confirmed removals target the exact document kind: loss of an existing summary
+does not remove a still-available transcript. Available source timestamps are
+preserved as provenance. Changes to provenance/title/type are reconciled even
+when body bytes are unchanged, using normal source publication and retaining
+local overrides. Native publication checks also reject an in-flight credential
+copy after its canonical credential has been cleared or rotated; disconnection
+intent is persisted before the Core generation fence.
