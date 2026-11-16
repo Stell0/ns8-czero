@@ -12,7 +12,12 @@ WebTop must use C0's provider through its selected Mail instance.
 The admitted owner has Editor content authority only in that personal space;
 application role, persistent blocks and delegated scopes remain authoritative.
 Admins retain access. Sharing and audience changes are forbidden. Renames retain
-the space; username reuse cannot inherit it. Directory disable/removal suspends
+the space; username reuse cannot inherit it. Core retains observed directory aliases.
+A name claimed by another immutable identity suspends ingestion with
+`identity_ambiguous`; renaming again does not silently clear that ambiguity.
+This does not prevent the new identity from using its own personal space.
+After source reads, the native runner rechecks that the destination username
+still resolves to the same active immutable directory ID before staging or removal. Directory disable/removal suspends
 access and retires imports, retaining separately authored knowledge.
 
 ## Existing NethCTI API
@@ -89,7 +94,7 @@ fixture and source-inspection results.
 
 ## Candidate implementation and release gates
 
-This candidate changes C0 only. Core producer 0.50 / schema0040 owns directory
+This candidate changes C0 only. Core producer 0.50 / schema0041 owns directory
 spaces, effective authorization, generation fencing, import receipts, exclusions,
 checkpoints and retirement. The released consumer lock remains on Core0.49 until
 independent publication and consumer adoption have passed; this branch is explicit
@@ -100,6 +105,8 @@ coverage. `set-personal-data-credential` accepts a dedicated WebTop domain API k
 or a per-user NethCTI token, stored privately by immutable directory identity.
 It accepts no passwords. Saving is explicitly **unverified** until authorized
 source reads succeed; clearing a local credential does not claim upstream revocation.
+Summaries link to the recipient’s local transcript source ID when that copy is
+available. Users not yet visited by the runner appear as unverified in coverage.
 Do not pass credentials as shell arguments; submit private JSON on stdin. Backups
 retain the private credential file and database state. Restore invalidates source
 bindings before workers resume. Canonical private files retain module ownership;
@@ -115,9 +122,15 @@ attachments and partial scans do not authorize removal. An entirely empty mailbo
 with no current positive message-read control is retained conservatively.
 
 The current bounded runner rotates at most five directory owners per pass and
-processes ten items per page. The status exposes overdue inventories instead of
-claiming daily coverage. Complete daily reconciliation at the target workload,
-new-arrival collection during long backfills, supported attachment retry coverage,
+uses five historical items plus a bounded refresh of five recent items.
+WebTop rotates the recent refresh across eligible folders; NethCTI refreshes
+the latest personal calls separately from the pinned historical window. A
+completed old NethCTI window is backfill progress, not a current inventory. The status exposes overdue inventories instead of
+claiming daily coverage. Reads remain bounded to32 requests and85 seconds
+per source adapter,10 MiB per response and320 MiB aggregate raw responses. The
+existing image runs with a1 GiB memory limit and a150-second native service
+deadline; publication still uses the normal C0 extraction limits. Complete daily reconciliation at the target workload,
+new-arrival throughput under load, supported attachment retry coverage,
 and full upstream credential provisioning/revocation remain acceptance work.
 NethCTI's served transcription variant is marked derived/variant-unverified, as
 accepted by the operator. The inspected endpoint returns cleaned text with a raw
@@ -150,7 +163,10 @@ input in task context. Saving resolves the directory UUID and reports
 coverage. No credential entry means suspended ingestion, not source removal.
 
 To disconnect a credential, submit the same selector with `clear=true` and no
-secret. NethCTI requires the username selector as well. Local clearing reports
+secret. For NethCTI, include a username to clear that current directory identity, or
+omit it to clear all saved user credentials for the specified source instance.
+Clearing an old disconnected source does not require it or its provider to be
+reachable and never touches credentials saved for another instance. Local clearing reports
 `revocation_pending=true`; revoke only the dedicated key/token through its
 source product's supported interface and retain private confirmation. This
 candidate does not claim unattended upstream creation or revocation. Switching

@@ -37,6 +37,7 @@ class SpaceView(BaseModel):
     name: str
     shared: bool
     personal: bool = False
+    personal_owner: bool = False
     readable_by_all: bool = False
     revision: int
     created_at: datetime

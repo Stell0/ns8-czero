@@ -26,6 +26,7 @@ try:
     actor=login(person,'person');space=spaces[0]['space_id']
     reader=SpaceService(db,access)
     assert reader.get(actor,space)['role']=='editor' and reader.get(actor,space)['personal']
+    assert reader.get(actor,space)['personal_owner'] and not reader.get(owner,space)['personal_owner']
     assert access.profile(actor)['role']=='reader'
     with db.engine.connect() as c:
         assert reader.authorize(c,actor,Role.EDITOR,space_id=space).role is Role.EDITOR

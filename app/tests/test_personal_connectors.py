@@ -41,6 +41,8 @@ def test_nethvoice_participation_ids_and_supervisor_exclusion():
     adapter=NethVoice('https://voice.example.test',token=token('alice'),username='alice',phone_numbers=['201'],transport=mail_transport(handle))
     docs,status=adapter.page(start='20200101',end='20261115')
     assert len(docs)==1 and docs[0].remote_key=='1' and docs[0].content==b'Participated call'
+    assert docs[0].metadata['derived'] is True
+    assert docs[0].metadata['derivation']=='middleware_selected_transcription_variant_unverified'
     assert status['skipped']==2 and not status['deletion_authoritative']
     assert all(r.method=='GET' or r.url.path=='/history/statuses' for r in requests)
 
@@ -152,3 +154,29 @@ def test_webtop_refuses_an_authenticated_but_wrong_mailbox_identity():
     source=WebTop('https://mail.example.test',api_key='dedicated-key',username='alice@example.test',transport=httpx2.MockTransport(handle))
     with pytest.raises(Unavailable) as error:source.folders()
     assert error.value.code=='identity_ambiguous' and calls==['/me/identities']
+
+
+def test_multiple_supported_attachments_do_not_starve_on_an_aggregate_byte_cap():
+    payload=b'x'*(6*1024*1024)
+    def handle(request):
+        if request.url.path=='/me/messages/list':return httpx2.Response(200,json=[{'uid':7}])
+        if request.url.path.endswith('/attachments/$value'):return httpx2.Response(200,content=payload)
+        return httpx2.Response(200,json={'uid':7,'id':'synthetic@example.test','body':'Synthetic message','attachments':[
+            {'id':str(i),'fileName':f'fixture-{i}.txt','mimeType':'text/plain','fileSize':len(payload)} for i in range(3)]})
+    source=WebTop('https://mail.example.test',api_key='synthetic-dedicated-key',username='alice@example.test',transport=mail_transport(handle))
+    documents,coverage=source.page('INBOX')
+    assert len(documents)==4 and all(len(d.content)==len(payload) for d in documents[1:])
+    assert coverage['issues']==[]
+
+
+def test_long_folded_mail_subject_has_a_valid_title_and_preserves_full_evidence():
+    from czero_core.sources import _label
+    subject='A long folded subject\r\n\t'+('evidence '*100)
+    def handle(request):
+        if request.url.path=='/me/messages/list':return httpx2.Response(200,json=[{'uid':1}])
+        return httpx2.Response(200,json={'uid':1,'id':'synthetic@example.test','subject':subject,'body':'<p>Body</p>','attachments':[]})
+    source=WebTop('https://mail.example.test',api_key='synthetic-dedicated-key',username='alice@example.test',transport=mail_transport(handle))
+    documents,coverage=source.page('INBOX')
+    assert len(documents)==1 and _label(documents[0].title,256)==documents[0].title
+    assert len(documents[0].title)<=256 and subject.encode() in documents[0].content
+    assert coverage['issues']==[]

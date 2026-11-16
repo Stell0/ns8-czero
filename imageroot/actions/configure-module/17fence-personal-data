@@ -5,7 +5,7 @@ import json,os,sys,subprocess
 from pathlib import Path
 import agent
 sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
-from czero_personal_data import read
+from czero_personal_data import read,private_write
 request=json.load(sys.stdin)
 pending=json.loads((Path(os.environ['AGENT_STATE_DIR'])/'personal-data-pending.json').read_text())
 previous=read()
@@ -14,3 +14,9 @@ identity_changed=any(request.get(field,os.environ.get(env,''))!=os.environ.get(e
 if previous['enabled'] and (previous!=pending or identity_changed):
     subprocess.run(['systemctl','--user','start','czero-postgres.service'],check=True,stdout=sys.stderr)
     agent.run_helper('czero-personal-data-run','--fence-only',stdout=sys.stderr).check_returncode()
+    # Commit only disconnections before the rest of configuration can fail.
+    # New sources become eligible only after85persist and fresh binding checks.
+    retained={key:previous[key] if not identity_changed and previous[key]==pending[key] else None
+        for key in ('nethvoice','webtop')}
+    safe={'enabled':pending['enabled'] and any(retained.values()),**retained}
+    private_write(Path(os.environ['AGENT_STATE_DIR'])/'personal-data.json',safe)

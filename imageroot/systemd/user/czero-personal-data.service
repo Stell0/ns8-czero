@@ -11,6 +11,6 @@ EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 TimeoutStartSec=150
 TimeoutStopSec=20
-ExecStart=%E/bin/czero-personal-data-run
+ExecStart=/usr/local/bin/runagent %E/bin/czero-personal-data-run
 ExecStopPost=-/usr/bin/podman rm --ignore -f czero-personal-data-run
 SyslogIdentifier=%N

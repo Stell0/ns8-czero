@@ -7,6 +7,7 @@ Remote inventories never confer authority. All publication uses SourceService st
 import hashlib
 from io import BytesIO
 import json
+import re
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
@@ -55,9 +56,10 @@ class PersonalDataService:
     def __init__(self, database, access, sources=None):
         self.database, self.access, self.sources = database, access, sources
 
-    def fence_native(self, *, disabled=False):
+    def fence_native(self, *, disabled=False, services=None):
         """Stop publication before NS8 changes services/authentication; no remote I/O."""
         if type(disabled) is not bool:raise ValueError('invalid_personal_config')
+        if services is not None:services=_services(services)
         with self.database.engine.begin() as c:
             _locks(c)
             if not c.execute(text("SELECT to_regclass('c0_personal_config') IS NOT NULL")).scalar_one():
@@ -68,6 +70,11 @@ class PersonalDataService:
             if disabled:
                 c.execute(text("""UPDATE c0_personal_imports i SET state='cleanup' FROM c0_personal_owners o
                     WHERE i.owner_id=o.id AND o.issuer=:issuer AND i.state NOT IN ('excluded','removed')"""),{'issuer':self.access.issuer})
+            if services is not None:
+                c.execute(text("""UPDATE c0_personal_imports i SET state='cleanup' FROM c0_personal_owners o
+                    WHERE i.owner_id=o.id AND o.issuer=:issuer AND i.state NOT IN ('excluded','removed')
+                    AND CAST(:services AS jsonb)->>i.connector IS DISTINCT FROM i.instance_id::text"""),
+                    {'issuer':self.access.issuer,'services':json.dumps(services)})
             count=c.execute(text("""SELECT count(*) FROM c0_personal_imports i JOIN c0_personal_owners o ON o.id=i.owner_id
                 WHERE o.issuer=:issuer AND i.state='cleanup'"""),{'issuer':self.access.issuer}).scalar_one()
             return {'status':'unverified','pending_cleanup':count}
@@ -139,20 +146,25 @@ class PersonalDataService:
             if config['provider_id'] != provider:
                 raise PersonalDataConflict()
             for directory, username, active in normalized:
-                values = dict(issuer=self.access.issuer, provider=provider, directory=directory, username=username, active=active)
+                values = dict(issuer=self.access.issuer, provider=provider, directory=directory, username=username, active=active, alias=username.casefold())
                 old = c.execute(text('''SELECT * FROM c0_personal_owners
                     WHERE provider_id=:provider AND directory_id=:directory'''), values).mappings().one_or_none()
                 if old is not None and old['issuer']!=self.access.issuer:
                     raise PersonalDataConflict()
+                ambiguous=c.execute(text('''SELECT EXISTS(SELECT 1 FROM c0_personal_owners
+                    WHERE provider_id=:provider AND directory_id<>:directory AND :alias=ANY(usernames))'''),values).scalar_one()
+                values['ambiguous']=ambiguous
                 if old is None:
                     if not active:
                         continue
                     space = uuid4()
                     c.execute(text("INSERT INTO c0_spaces(id,name,personal) VALUES (:space,'Personal Data',true)"), {'space': space})
-                    c.execute(text('''INSERT INTO c0_personal_owners(id,issuer,provider_id,directory_id,username,active,space_id)
-                        VALUES (:id,:issuer,:provider,:directory,:username,:active,:space)'''), {**values, 'id': uuid4(), 'space': space})
+                    c.execute(text('''INSERT INTO c0_personal_owners(id,issuer,provider_id,directory_id,username,active,space_id,usernames,source_identity_ambiguous)
+                        VALUES (:id,:issuer,:provider,:directory,:username,:active,:space,ARRAY[:alias],:ambiguous)'''), {**values, 'id': uuid4(), 'space': space})
                 else:
-                    c.execute(text('UPDATE c0_personal_owners SET username=:username,active=:active WHERE id=:id'), {**values, 'id': old['id']})
+                    c.execute(text('''UPDATE c0_personal_owners SET username=:username,active=:active,
+                        usernames=CASE WHEN :alias=ANY(usernames) THEN usernames ELSE array_append(usernames,:alias) END,
+                        source_identity_ambiguous=source_identity_ambiguous OR :ambiguous WHERE id=:id'''), {**values, 'id': old['id']})
                     if old['active'] and not active:
                         self._revoke(c, directory)
             if complete:
@@ -165,7 +177,7 @@ class PersonalDataService:
             c.execute(text('''UPDATE c0_personal_imports i SET state='cleanup' FROM c0_personal_owners o
                 WHERE i.owner_id=o.id AND o.issuer=:issuer AND NOT o.active AND i.state NOT IN ('excluded','removed')'''),
                 {'issuer': self.access.issuer})
-            return snapshot([dict(row) for row in c.execute(text('''SELECT id,space_id,directory_id,username,active
+            return snapshot([dict(row) for row in c.execute(text('''SELECT id,space_id,directory_id,username,active,source_identity_ambiguous
                 FROM c0_personal_owners WHERE issuer=:issuer AND provider_id=:provider ORDER BY directory_id'''),
                 {'issuer': self.access.issuer, 'provider': provider}).mappings()])
 
@@ -192,7 +204,7 @@ class PersonalDataService:
     def _fence(self, c, owner_id, generation, connector, instance_id):
         row = c.execute(text('''SELECT o.* FROM c0_personal_owners o
             JOIN c0_personal_config p ON p.issuer=o.issuer AND p.provider_id=o.provider_id
-            WHERE o.id=:owner AND o.issuer=:issuer AND o.active AND p.enabled AND p.validated
+            WHERE o.id=:owner AND o.issuer=:issuer AND o.active AND NOT o.source_identity_ambiguous AND p.enabled AND p.validated
             AND p.generation=:generation AND p.services->>:connector=:instance
             AND NOT EXISTS (SELECT 1 FROM c0_accounts a JOIN c0_account_blocks b ON b.account_id=a.id
                 WHERE a.issuer=o.issuer AND a.account_key=o.directory_id)'''),
@@ -213,6 +225,14 @@ class PersonalDataService:
         slot=(metadata or {}).get('personal_import_slot')
         identity_kind=(metadata or {}).get('personal_identity_kind')
         if slot is not None:slot=_label(slot,512)
+        if connector=='nethvoice':
+            unique=_label((metadata or {}).get('uniqueid'),128)
+            linked=(metadata or {}).get('linkedid') or ''
+            if (not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}',unique) or not isinstance(linked,str)
+                    or len(linked)>128 or any(ord(c)<32 for c in linked)):
+                raise ValueError('invalid_personal_identity')
+            # Call lookup identity belongs to the receipt, never editable source metadata.
+            slot=json.dumps([unique,linked],ensure_ascii=False,separators=(',',':'))
         if identity_kind not in (None,'message_id','content_hash'):raise ValueError('invalid_personal_identity')
         # Metadata is limited and validated by the existing source pipeline.
         encoded = _metadata({**(metadata or {}), 'personal_import': {'connector': connector, 'instance_id': str(instance_id),
@@ -247,9 +267,9 @@ class PersonalDataService:
             elif source and source['revision'] != previous['source_revision']:
                 state = 'overridden'
             if state in ('excluded', 'overridden', 'cleanup'):
-                c.execute(text('''UPDATE c0_personal_imports SET state=:state,last_seen_scan=:scan
+                c.execute(text('''UPDATE c0_personal_imports SET state=:state,last_seen_scan=:scan,slot_key=:slot
                     WHERE owner_id=:owner AND connector=:connector AND instance_id=:instance AND remote_key=:remote AND kind=:kind'''),
-                    {**values, 'state': state, 'scan': scan_id})
+                    {**values, 'state': state, 'scan': scan_id,'slot':slot})
                 return {'state': state, 'source_id': str(source['id']) if source else None}
             staging=c.execute(text("""SELECT v.state,j.state AS job_state FROM c0_source_versions v
                 LEFT JOIN c0_jobs j ON j.id=v.job_id WHERE v.id=:id"""),
@@ -257,8 +277,8 @@ class PersonalDataService:
             refresh_staging=bool(staging and staging['state']=='queued' and
                 (previous['generation']!=generation or staging['job_state']=='failed'))
             if previous and previous['content_hash'] == digest and state == 'managed' and previous['generation']==generation and not refresh_staging:
-                c.execute(text('''UPDATE c0_personal_imports SET last_seen_scan=:scan WHERE owner_id=:owner
-                    AND connector=:connector AND instance_id=:instance AND remote_key=:remote AND kind=:kind'''), {**values, 'scan': scan_id})
+                c.execute(text('''UPDATE c0_personal_imports SET last_seen_scan=:scan,slot_key=:slot WHERE owner_id=:owner
+                    AND connector=:connector AND instance_id=:instance AND remote_key=:remote AND kind=:kind'''), {**values, 'scan': scan_id,'slot':slot})
                 return {'state': 'unchanged', 'source_id': str(previous['source_id'])}
             selected = self.sources.in_space(owner['space_id'])
             result = selected._ingest(c, BytesIO(content), title=title, filename='personal-data', media_type=media_type,
@@ -304,7 +324,7 @@ def guard_publication(c, source_id, version_id=None):
         return
     hold_authority(c)
     row = c.execute(text('''SELECT i.version_id,i.generation,i.state,i.source_revision,s.revision,
-        o.active,o.provider_id,p.provider_id AS configured_provider,p.enabled,p.validated,
+        o.active,o.source_identity_ambiguous,o.provider_id,p.provider_id AS configured_provider,p.enabled,p.validated,
         EXISTS(SELECT 1 FROM c0_accounts a JOIN c0_account_blocks b ON b.account_id=a.id
             WHERE a.issuer=o.issuer AND a.account_key=o.directory_id) AS blocked,
         p.generation AS current_generation,p.services->>i.connector AS selected_instance,i.instance_id
@@ -313,7 +333,7 @@ def guard_publication(c, source_id, version_id=None):
         WHERE i.source_id=:id'''), {'id':source_id}).mappings().one_or_none()
     if row and version_id is not None and row['version_id']!=version_id:
         return
-    if row and (row['blocked'] or row['state']!='managed' or row['source_revision']!=row['revision'] or not row['active']
+    if row and (row['source_identity_ambiguous'] or row['blocked'] or row['state']!='managed' or row['source_revision']!=row['revision'] or not row['active']
         or not row['enabled'] or not row['validated'] or row['provider_id']!=row['configured_provider']
         or row['generation']!=row['current_generation'] or row['selected_instance']!=str(row['instance_id'])):
         from .current_content import ContentSuperseded
@@ -327,7 +347,7 @@ def record_checkpoint(service, *, owner_id, generation, connector, instance_id, 
             'inventory_incomplete','source_not_found','too_large','credentials_missing','provider_mismatch','account_blocked'}
     if status not in allowed or error_code not in errors or type(complete) is not bool or type(cursor) is not dict:
         raise ValueError('invalid_personal_checkpoint')
-    allowed_keys={'page','folder_index','window_start','window_end','documents','skipped','scan_id','inventory_hash','folder_hash','scan_skipped','read_verified'}
+    allowed_keys={'page_size','head_folder_index','page','folder_index','window_start','window_end','documents','skipped','scan_id','inventory_hash','folder_hash','scan_skipped','read_verified'}
     if set(cursor)-allowed_keys:
         raise ValueError('invalid_personal_cursor')
     encoded=json.dumps(cursor,sort_keys=True,allow_nan=False)
@@ -387,7 +407,7 @@ def inventory_candidates(service, *, owner_id, generation, connector, instance_i
                     and (previous['current_time']-previous['last_inventory']).total_seconds()>=300)
         if not stable:
             return digest,[]
-        missing=c.execute(text('''SELECT i.remote_key,i.kind,i.source_id,s.metadata FROM c0_personal_imports i
+        missing=c.execute(text('''SELECT i.remote_key,i.kind,i.source_id,i.slot_key FROM c0_personal_imports i
             JOIN c0_sources s ON s.id=i.source_id WHERE i.owner_id=:owner AND i.connector=:connector
             AND i.instance_id=:instance AND i.last_seen_scan IS DISTINCT FROM CAST(:scan AS uuid)
             AND i.state IN ('managed','overridden') ORDER BY i.remote_key,i.kind LIMIT 20'''),values).mappings().all()

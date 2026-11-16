@@ -354,10 +354,10 @@ def test_native_post_read_binding_check_denies_publication(personal,monkeypatch)
         'provider_verified':True,'directory_complete':True,'directory':[{'directory_id':row['directory_id'],'username':'person','active':True}],
         'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
     credentials={'webtop':{str(instance):{'api_key':'dedicated-key'}}}
-    with pytest.raises(PersonalDataConflict):Runner(service,before_publish=lambda:False).tick(snapshot,credentials)
+    with pytest.raises(PersonalDataConflict):Runner(service,before_publish=lambda owner:False).tick(snapshot,credentials)
     with service.database.engine.connect() as c:
         assert c.execute(text('SELECT count(*) FROM c0_sources')).scalar_one()==0
-    assert Runner(service,before_publish=lambda:True).tick(snapshot,credentials)['imports']['managed']==1
+    assert Runner(service,before_publish=lambda owner:True).tick(snapshot,credentials)['imports']['managed']==1
 
 
 def test_native_disable_is_not_blocked_by_running_collector_lock(personal):
@@ -444,7 +444,7 @@ def test_reused_username_cannot_inherit_old_directory_credentials(personal,monke
         'directory':[{'directory_id':str(replacement),'username':'person','active':True}],
         'endpoints':{'nethvoice':'https://voice.example.test'}}
     result=Runner(service).tick(snapshot,{'nethvoice':{str(voice):{'users':{previous['directory_id']:'synthetic-old-session'}}}})
-    assert result['users'][0]['status']=='suspended' and result['users'][0]['error_code']=='session_unavailable'
+    assert result['users'][0]['status']=='suspended' and result['users'][0]['error_code']=='identity_ambiguous'
     with service.database.engine.connect() as c:
         assert c.execute(text('SELECT count(*) FROM c0_personal_owners WHERE active')).scalar_one()==1
         assert c.execute(text('SELECT count(*) FROM c0_personal_imports')).scalar_one()==0
@@ -529,3 +529,208 @@ def test_fresh_read_recovers_exhausted_extraction_without_duplicate_source(perso
     versions=service.sources.in_space(row['space_id']).versions(login(row['directory_id']),first['source_id'])
     assert len(versions)==1 and versions[0]['number']==2 and versions[0]['state']=='ready'
     assert submit(personal,row)['state']=='unchanged'
+
+
+@pytest.mark.parametrize('head_unavailable',[False,True])
+def test_backfill_reads_new_arrivals_without_losing_historical_progress(personal,monkeypatch,head_unavailable):
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Document,Unavailable
+    from czero_core.personal_data import record_checkpoint
+    import czero_app.personal_data.runner as module
+    service,_,provider,instance,_,_=personal
+    row=provision(personal);scan=str(uuid4());calls=[]
+    record_checkpoint(service,owner_id=row['id'],generation=1,connector='webtop',instance_id=instance,
+        cursor={'page_size':5,'page':7,'folder_index':0,'head_folder_index':1,'scan_id':scan},status='backfill')
+    class Mail:
+        def __init__(self,*args,**kwargs):self.client=SimpleNamespace(close=lambda:None)
+        def folders(self):return [{'id':'INBOX'},{'id':'Sent'}]
+        def page(self,folder,*,page,size):
+            calls.append((folder,page,size))
+            if folder=='Sent' and head_unavailable:raise Unavailable('session_unavailable')
+            recent=folder=='Sent'
+            return [Document('recent' if recent else 'historical','message','Mail',b'Fresh body' if recent else b'Old body')],{'complete':False,'issues':[]}
+    monkeypatch.setattr(module,'WebTop',Mail)
+    snapshot={'configuration':{'enabled':True,'webtop':str(instance)},'provider_id':str(provider),
+        'provider_verified':True,'directory_complete':True,'directory':[{'directory_id':row['directory_id'],'username':'person','active':True}],
+        'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
+    result=Runner(service,before_publish=lambda owner:True).tick(snapshot,{'webtop':{str(instance):{'api_key':'synthetic-dedicated-key'}}})
+    assert calls==[('INBOX',7,5),('Sent',0,5)]
+    assert result['imports']['managed']==(1 if head_unavailable else 2)
+    checkpoint=result['users'][0]
+    assert checkpoint['cursor']['page']==8 and checkpoint['cursor']['scan_id']==scan
+    assert checkpoint['last_inventory'] is None
+    assert checkpoint['error_code']==('session_unavailable' if head_unavailable else None)
+    assert checkpoint['status']==('suspended' if head_unavailable else 'backfill')
+
+
+def test_status_includes_directory_people_before_their_first_ingestion_attempt(personal):
+    from czero_app.personal_data.runner import Runner
+    from pathlib import Path
+    import json,jsonschema
+    service,_,_,instance,_,_=personal
+    provision(personal,username='alice')
+    provision(personal,username='bob')
+    value=Runner(service).status()
+    assert [(r['username'],r['status'],r['inventory_overdue']) for r in value['users']]==[
+        ('alice','unverified',True),('bob','unverified',True)]
+    assert all(r['cursor']=={} and r['last_success'] is None for r in value['users'])
+    schema=json.loads((Path(__file__).resolve().parents[2]/'imageroot/actions/get-personal-data-status/validate-output.json').read_text())
+    jsonschema.validate(value,schema)
+
+
+@pytest.mark.parametrize('historical_complete',[False,True])
+def test_nethvoice_backfill_keeps_its_window_and_also_reads_current_calls(personal,monkeypatch,historical_complete):
+    from datetime import datetime,timedelta,timezone
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Document
+    from czero_core.personal_data import record_checkpoint
+    import czero_app.personal_data.runner as module
+    service,admin,provider,instance,_,_=personal
+    config=service.configure(admin,provider_id=provider,enabled=True,services={'nethvoice':str(instance)},expected_generation=1)
+    row=provision(personal);calls=[]
+    record_checkpoint(service,owner_id=row['id'],generation=config['generation'],connector='nethvoice',instance_id=instance,
+        cursor={'page_size':5,'page':3,'window_end':'20260101','scan_id':str(uuid4())},status='backfill')
+    class Voice:
+        def __init__(self,*args,**kwargs):self.client=SimpleNamespace(close=lambda:None)
+        def page(self,**kwargs):
+            calls.append(kwargs)
+            return [Document(str(kwargs['page']),'transcript','Call',b'Participated call',metadata={'uniqueid':'fixture-call'})],{'complete':historical_complete,'skipped':0}
+    monkeypatch.setattr(module,'NethVoice',Voice)
+    snapshot={'configuration':{'enabled':True,'nethvoice':str(instance)},'provider_id':str(provider),
+        'provider_verified':True,'directory_complete':True,'directory':[{'directory_id':row['directory_id'],'username':'person','active':True}],
+        'endpoints':{'nethvoice':'https://voice.example.test'}}
+    value=Runner(service,before_publish=lambda owner:True).tick(snapshot,{'nethvoice':{str(instance):{'users':{row['directory_id']:'synthetic-selected-session'}}}})
+    current_end=(datetime.now(timezone.utc)+timedelta(days=1)).strftime('%Y%m%d')
+    expected=[{'start':'19000101','end':'20260101','page':3,'size':5}]
+    if not historical_complete:expected.append({'start':'19000101','end':current_end,'page':1,'size':5})
+    assert calls==expected
+    assert value['imports']['managed']==(1 if historical_complete else 2)
+    checkpoint=value['users'][0]
+    assert checkpoint['cursor']['window_end']==(current_end if historical_complete else '20260101')
+    assert checkpoint['cursor']['page']==(1 if historical_complete else 4)
+    assert checkpoint['last_inventory'] is None and checkpoint['status']=='backfill'
+
+
+def test_call_participants_have_separate_locally_linked_transcript_and_summary_copies(personal,monkeypatch):
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Document
+    import czero_app.personal_data.runner as module
+    service,admin,provider,instance,_,_=personal
+    service.configure(admin,provider_id=provider,enabled=True,services={'nethvoice':str(instance)},expected_generation=1)
+    alice=provision(personal,username='alice');bob=provision(personal,username='bob')
+    class Voice:
+        def __init__(self,*args,**kwargs):self.client=SimpleNamespace(close=lambda:None)
+        def page(self,**kwargs):
+            return [Document('42','transcript','Call',b'Participated call',metadata={'uniqueid':'fixture-call'}),
+                    Document('42','summary','Summary',b'Existing summary',metadata={'related_import_key':'42','uniqueid':'fixture-call'})],{'complete':True,'skipped':0}
+    monkeypatch.setattr(module,'NethVoice',Voice)
+    snapshot={'configuration':{'enabled':True,'nethvoice':str(instance)},'provider_id':str(provider),
+        'provider_verified':True,'directory_complete':True,'directory':[
+            {'directory_id':row['directory_id'],'username':row['username'],'active':True} for row in (alice,bob)],
+        'endpoints':{'nethvoice':'https://voice.example.test'}}
+    secrets={'nethvoice':{str(instance):{'users':{row['directory_id']:'synthetic-selected-session' for row in (alice,bob)}}}}
+    assert Runner(service,before_publish=lambda owner:True).tick(snapshot,secrets)['imports']['managed']==4
+    with service.database.engine.connect() as c:
+        pairs=c.execute(text("""SELECT s.space_id,s.metadata->>'transcript_source_id' AS parent,t.source_id
+            FROM c0_personal_imports summary JOIN c0_sources s ON s.id=summary.source_id
+            JOIN c0_personal_imports t ON t.owner_id=summary.owner_id AND t.instance_id=summary.instance_id
+                AND t.connector=summary.connector AND t.remote_key=summary.remote_key AND t.kind='transcript'
+            WHERE summary.kind='summary'""")).mappings().all()
+    assert len(pairs)==2 and len({r['space_id'] for r in pairs})==2
+    assert all(r['parent']==str(r['source_id']) for r in pairs)
+    assert len({r['parent'] for r in pairs})==2
+
+
+def test_call_existence_checks_use_receipt_identity_after_a_local_metadata_override(personal):
+    import hashlib,json
+    from types import SimpleNamespace
+    from czero_core.personal_data import record_checkpoint,inventory_candidates
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Unavailable
+    service,admin,provider,instance,login,_=personal
+    service.configure(admin,provider_id=provider,enabled=True,services={'nethvoice':str(instance)},expected_generation=1)
+    service.validate_binding(generation=2,provider_id=provider,services={'nethvoice':str(instance)})
+    row=provision(personal);actor=login(row['directory_id'])
+    result=service.submit(owner_id=row['id'],generation=2,connector='nethvoice',instance_id=instance,
+        remote_key='42',kind='transcript',title='Call',content=b'Original call',metadata={'uniqueid':'original-call','linkedid':'transfer-root'})
+    source=service.sources.in_space(row['space_id'])
+    source.ingest_text(actor,title='My correction',body='Local correction',source_id=result['source_id'],
+        expected_revision=source.get(actor,result['source_id'])['revision'],metadata={'uniqueid':'edited-call'},idempotency_key='override')
+    digest=hashlib.sha256(b'[]').hexdigest()
+    record_checkpoint(service,owner_id=row['id'],generation=2,connector='nethvoice',instance_id=instance,
+        cursor={'inventory_hash':digest},status='reconciled',complete=True)
+    with service.database.engine.begin() as c:
+        c.execute(text("UPDATE c0_personal_checkpoints SET last_inventory=now()-interval '6 minutes' WHERE owner_id=:id"),{'id':UUID(row['id'])})
+    _,missing=inventory_candidates(service,owner_id=row['id'],generation=2,connector='nethvoice',instance_id=instance,scan_id=str(uuid4()))
+    assert len(missing)==1 and json.loads(missing[0]['slot_key'])==['original-call','transfer-root']
+    def read(path,*,params):
+        assert path=='/transcripts/original-call' and params=={'id':42,'linkedid':'transfer-root'}
+        raise Unavailable('source_not_found')
+    Runner(service,before_publish=lambda owner:True)._confirm_missing(SimpleNamespace(client=SimpleNamespace(read=read)),
+        'nethvoice',missing[0],row,2,str(instance))
+    with service.database.engine.connect() as c:
+        assert c.execute(text('SELECT state FROM c0_personal_imports WHERE source_id=:id'),{'id':UUID(result['source_id'])}).scalar_one()=='cleanup'
+
+
+def test_disconnect_intent_fences_and_queues_only_the_replaced_connection(personal):
+    from czero_core.personal_data import guard_publication
+    from czero_core.current_content import ContentSuperseded
+    service,admin,provider,instance,login,_=personal
+    row=provision(personal);first=submit(personal,row)
+    voice=str(uuid4());services={'webtop':str(instance),'nethvoice':voice}
+    service.configure(admin,provider_id=provider,enabled=True,services=services,expected_generation=1)
+    service.validate_binding(generation=2,provider_id=provider,services=services)
+    kept=service.submit(owner_id=row['id'],generation=2,connector='nethvoice',instance_id=voice,
+        remote_key='42',kind='transcript',title='Kept call',content=b'Synthetic kept call',metadata={'uniqueid':'kept-call'})
+    replacement=str(uuid4())
+    value=service.fence_native(services={'webtop':replacement,'nethvoice':voice})
+    assert value['pending_cleanup']==1
+    with service.database.engine.connect() as c:
+        config=c.execute(text('SELECT services,validated,generation FROM c0_personal_config WHERE issuer=:issuer'),{'issuer':service.access.issuer}).mappings().one()
+        assert config['services']==services and not config['validated'] and config['generation']==3
+        with pytest.raises(ContentSuperseded):guard_publication(c,UUID(first['source_id']))
+    service.cleanup()
+    sources=service.sources.in_space(row['space_id']);actor=login(row['directory_id'])
+    assert sources.get(actor,first['source_id'])['deleted']
+    assert not sources.get(actor,kept['source_id'])['deleted']
+    assert sources.get(actor,kept['source_id'])['managed_import']['state']=='managed'
+    assert sources.originals.path(kept['version_id']).exists()
+
+
+def test_administrator_can_identify_own_personal_space_without_matching_names(personal):
+    service,admin,_,_,_,_=personal
+    mine=provision(personal,key=service.access.owner_account_key,username='owner')
+    other=provision(personal,username='other')
+    spaces=SpaceService(service.database,service.access)
+    visible=spaces.list(admin)['spaces']
+    owned=[row for row in visible if row['personal_owner']]
+    assert len(owned)==1 and owned[0]['id']==mine['space_id'] and owned[0]['name']=='Personal Data'
+    assert not spaces.get(admin,other['space_id'])['personal_owner']
+    assert spaces.get(admin,mine['space_id'])['personal_owner']
+    assert service.access.profile(admin)['role']=='admin'
+
+
+def test_observed_alias_reuse_suspends_import_but_preserves_own_space(personal,monkeypatch):
+    from czero_app.personal_data.runner import Runner
+    service,_,provider,instance,login,_=personal
+    first=provision(personal,username='Person')
+    renamed=provision(personal,first['directory_id'],'renamed')
+    assert not renamed['source_identity_ambiguous']
+    replacement=provision(personal,username='PERSON')
+    assert replacement['source_identity_ambiguous']
+    with pytest.raises(PersonalDataConflict):submit(personal,replacement)
+    again=provision(personal,replacement['directory_id'],'fresh')
+    assert again['source_identity_ambiguous']
+    actor=login(again['directory_id'],'fresh')
+    assert SpaceService(service.database,service.access).get(actor,again['space_id'])['role']=='editor'
+    def forbidden(*args,**kwargs):raise AssertionError('ambiguous source identity must not be queried')
+    monkeypatch.setattr('czero_app.personal_data.runner.WebTop',forbidden)
+    snapshot={'issuer':service.access.issuer,'provider_id':str(provider),'provider_verified':True,
+              'configuration':{'enabled':True,'webtop':str(instance),'nethvoice':None},
+              'directory':[{'directory_id':again['directory_id'],'username':'fresh','active':True}],
+              'directory_complete':True,'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
+    result=Runner(service).tick(snapshot,{'webtop':{str(instance):{'api_key':'synthetic-only'}}})
+    assert any(row['error_code']=='identity_ambiguous' for row in result['users'])

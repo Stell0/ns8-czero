@@ -504,6 +504,16 @@ Verify deterministic worker and native timer
 
 Backup and restore into a clean disposable instance
     [Timeout]    10 minutes
+    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} systemctl --user start czero-personal-data.service
+    ...    return_rc=True    return_stdout=False    timeout=80s
+    Should Be Equal As Integers    ${rc}    0
+    ${output}    ${rc} =    Execute Command
+    ...    api-cli run module/${module_id}/get-personal-data-status
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0
+    ${collector} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${collector}[status]    disabled
     Log To Console    Backup phase: seed retained fixture
     ${before_identity}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
@@ -523,6 +533,12 @@ Backup and restore into a clean disposable instance
     ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_REFERENCE_STAGE=seed czero python - < /tmp/czero-core-references-probe.py
     ...    return_rc=True    timeout=80s
     Should Be Equal As Integers    ${rc}    0    msg=${output}
+    Put File    ${CURDIR}/packaging/core_personal_backup_probe.py    /tmp/czero-core-personal-backup-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_PERSONAL_STAGE=seed czero python - < /tmp/czero-core-personal-backup-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${personal_credentials_hash} =    Seed Disposable Personal Credentials    ${module_id}
     Log To Console    Backup phase: create native destination and schedule
     ${backup} =    Create Disposable Backup    ${module_id}
     Set Global Variable    ${backup_repository}    ${backup}[repository]
@@ -553,6 +569,12 @@ Backup and restore into a clean disposable instance
     ...    return_rc=True    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal    ${identity}    ${before_identity}
+    Verify Disposable Personal Credentials    ${module_id}    ${personal_credentials_hash}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_PERSONAL_STAGE=verify czero python - < /tmp/czero-core-personal-backup-probe.py
+    ...    return_rc=True    timeout=80s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    Verify Disposable Personal State    ${output}
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec -i -e CZERO_DISPOSABLE_TEST=1 -e CZERO_COMPILATION_STAGE=verify czero python - < /tmp/czero-core-compilation-probe.py
     ...    return_rc=True    timeout=80s

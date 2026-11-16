@@ -1,29 +1,39 @@
 #!/usr/bin/env python3
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Native Admin credential input; no personal passwords or source writes."""
-import base64,json,os,re,sys
+import base64,fcntl,json,os,re,sys
 from pathlib import Path
 from uuid import UUID
 import agent
 from agent.ldapclient import Ldapclient
 from agent.ldapproxy import Ldapproxy
 sys.path.insert(0,str(Path(os.environ['AGENT_INSTALL_DIR'])/'bin'))
-from czero_personal_data import read,private_write,discover
+from czero_personal_data import read,private_write,private_read,discover
+lock=None
 try:
     value=json.load(sys.stdin)
     kind=value['connector'];instance=str(UUID(value['instance_id']))
-    config=read()
-    if kind not in ('nethvoice','webtop') or config.get(kind)!=instance:raise ValueError()
-    _,options=discover(agent.redis_connect(use_replica=True),Ldapproxy(),os.environ['CZERO_USER_DOMAIN'])
-    if instance not in {v['id'] for v in options[kind]}:raise ValueError()
-    path=Path(os.environ['AGENT_STATE_DIR'])/'personal-data-secrets.json'
-    saved=json.loads(path.read_text()) if path.exists() else {}
-    entry=saved.setdefault(kind,{}).setdefault(instance,{})
+    if kind not in ('nethvoice','webtop'):raise ValueError()
     clear=value.get('clear',False)
+    if type(clear) is not bool:raise ValueError()
+    # Clearing our stored credentials must work after disconnect/provider loss.
+    if not clear:
+        config=read()
+        if config.get(kind)!=instance:raise ValueError()
+        _,options=discover(agent.redis_connect(use_replica=True),Ldapproxy(),os.environ['CZERO_USER_DOMAIN'])
+        if instance not in {v['id'] for v in options[kind]}:raise ValueError()
+    path=Path(os.environ['AGENT_STATE_DIR'])/'personal-data-secrets.json'
+    lock=os.open(path.with_suffix('.lock'),os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+    fcntl.flock(lock,fcntl.LOCK_EX)
+    saved=private_read(path) if path.exists() else {}
+    entry=saved.setdefault(kind,{}).setdefault(instance,{})
     secret=value.get('secret','')
     if not clear and (not isinstance(secret,str) or not secret or len(secret)>16384 or not secret.isascii() or any(c.isspace() for c in secret)):
         raise ValueError()
-    if kind=='nethvoice':
+    if kind=='nethvoice' and clear and not value.get('username'):
+        entry['users']={}
+        entry['revocation_pending']=True
+    elif kind=='nethvoice':
         username=value['username']
         parameters=Ldapproxy().get_domain(os.environ['CZERO_USER_DOMAIN'])
         attribute='objectGUID' if parameters['schema']=='ad' else 'entryUUID'
@@ -32,7 +42,9 @@ try:
         if isinstance(identifier,bytes):identifier=UUID(bytes_le=identifier) if attribute=='objectGUID' else UUID(identifier.decode('ascii'))
         else:identifier=UUID(str(identifier))
         users=entry.setdefault('users',{})
-        if clear:users.pop(str(identifier),None)
+        if clear:
+            users.pop(str(identifier),None)
+            entry['revocation_pending']=True
         else:
             if len(secret.split('.'))!=3:raise ValueError()
             payload=secret.split('.')[1]
@@ -51,8 +63,13 @@ try:
             entry['revocation_pending']=False
     if len(json.dumps(saved).encode())>1024*1024:raise ValueError()
     private_write(path,saved)
+    # Fence old private copies and queued publications before reporting success.
+    agent.run_helper('czero-personal-data-run','--fence-only',stdout=sys.stderr).check_returncode()
     json.dump({'saved':True,'verified':False,'revocation_pending':bool(clear)},sys.stdout)
 except Exception:
     agent.set_status('validation-failed')
     json.dump([{'field':'secret','parameter':'secret','error':'personal_credential_invalid_or_binding_changed'}],sys.stdout)
     sys.exit(2)
+
+finally:
+    if lock is not None:os.close(lock)

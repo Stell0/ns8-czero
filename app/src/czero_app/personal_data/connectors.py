@@ -51,7 +51,8 @@ class ReadClient:
         self._base=base_url.rstrip('/')
         self._deadline=time.monotonic()+85
         self._remaining_requests=32
-        self._remaining_bytes=16*1024*1024
+        # Every permitted response can reach the existing per-item upload limit.
+        self._remaining_bytes=self._remaining_requests*MAX_UPLOAD
         self._client=httpx2.Client(headers=headers, timeout=10, follow_redirects=False, transport=transport,
                                     trust_env=False)
 
@@ -276,10 +277,12 @@ class WebTop:
             identity,identity_kind=mail_identity(message)
             slot=json.dumps([folder,uid],ensure_ascii=False,separators=(',',':'))
             key=json.dumps([folder,uid,identity],ensure_ascii=False,separators=(',',':'))
-            title=message.get('subject') or 'Mail message'
+            subject=message.get('subject') or 'Mail message'
+            if not isinstance(subject,str):raise Unavailable('capability_unverified')
+            title=' '.join(re.sub(r'[\x00-\x1f\x7f]+',' ',subject).split())[:256].rstrip() or 'Mail message'
             metadata={'personal_import_slot':slot,'personal_identity_kind':identity_kind,'folder':folder,'uid':uid,'message_id':message.get('id'),'thread':message.get('threadId'),
                       'webtop_response_hash':raw_hash,'extraction':'webtop-html-to-text-v1','uidvalidity':'unavailable'}
-            text='Subject: '+title+'\n\n'+html_text(message['body'])
+            text='Subject: '+subject+'\n\n'+html_text(message['body'])
             if text.strip():
                 documents.append(Document(key,'message',title[:256],text.encode(),metadata=metadata))
             message_issues=[]

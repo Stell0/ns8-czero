@@ -1,6 +1,6 @@
 # C0 Core
 
-## Personal Data producer (0.50, schema0040)
+## Personal Data producer (0.50, schema0041)
 
 The native-only `PersonalDataService` binds private spaces to canonical directory
 providers and immutable user UUIDs before login, with personal Editor content

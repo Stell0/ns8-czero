@@ -58,7 +58,7 @@ def test_native_credential_store_accepts_only_selected_dedicated_key(monkeypatch
     monkeypatch.setenv('AGENT_INSTALL_DIR',str(ROOT/'imageroot'))
     monkeypatch.setenv('CZERO_USER_DOMAIN','example.test')
     monkeypatch.setitem(sys.modules,'czero_personal_data',native)
-    monkeypatch.setitem(sys.modules,'agent',SimpleNamespace(redis_connect=lambda **k:None,set_status=lambda s:None))
+    monkeypatch.setitem(sys.modules,'agent',SimpleNamespace(redis_connect=lambda **k:None,set_status=lambda s:None,run_helper=lambda *a,**k:SimpleNamespace(check_returncode=lambda:None)))
     monkeypatch.setitem(sys.modules,'agent.ldapproxy',SimpleNamespace(Ldapproxy=lambda:None))
     monkeypatch.setitem(sys.modules,'agent.ldapclient',SimpleNamespace(Ldapclient=object))
     monkeypatch.setattr(native,'discover',lambda *args:('provider',{'webtop':[{'id':instance}],'nethvoice':[]}))
@@ -125,3 +125,97 @@ def test_private_native_credentials_reject_symlinks_and_public_modes(tmp_path):
     with pytest.raises(OSError):native.private_read(link)
     path.chmod(0o644)
     with pytest.raises(ValueError):native.private_read(path)
+
+
+@pytest.mark.parametrize('kind',['webtop','nethvoice'])
+def test_clear_disconnected_credentials_needs_no_live_source_or_directory(monkeypatch,tmp_path,capsys,kind):
+    import io,runpy,sys
+    from types import SimpleNamespace
+    old,new=map(str,(uuid4(),uuid4()))
+    native.private_write(tmp_path/'personal-data.json',{'enabled':False,kind:new})
+    first={'api_key':'synthetic-old-dedicated-key'} if kind=='webtop' else {'users':{str(uuid4()):'synthetic-old-user-session'}}
+    other={'api_key':'synthetic-other-dedicated-key'} if kind=='webtop' else {'users':{str(uuid4()):'synthetic-other-user-session'}}
+    native.private_write(tmp_path/'personal-data-secrets.json',{kind:{old:first,new:other}})
+    monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path));monkeypatch.setenv('AGENT_INSTALL_DIR',str(ROOT/'imageroot'))
+    def unavailable(*args,**kwargs):raise AssertionError('Clearing must not contact the disconnected source')
+    monkeypatch.setitem(sys.modules,'czero_personal_data',native)
+    monkeypatch.setitem(sys.modules,'agent',SimpleNamespace(redis_connect=unavailable,set_status=lambda _:None,run_helper=lambda *a,**k:SimpleNamespace(check_returncode=lambda:None)))
+    monkeypatch.setitem(sys.modules,'agent.ldapproxy',SimpleNamespace(Ldapproxy=unavailable))
+    monkeypatch.setitem(sys.modules,'agent.ldapclient',SimpleNamespace(Ldapclient=object))
+    monkeypatch.setattr(sys,'stdin',io.StringIO(json.dumps({'connector':kind,'instance_id':old,'clear':True})))
+    runpy.run_path(str(ROOT/'imageroot/actions/set-personal-data-credential/20save'))
+    result=json.loads(capsys.readouterr().out)
+    assert result=={'saved':True,'verified':False,'revocation_pending':True}
+    state=native.private_read(tmp_path/'personal-data-secrets.json')[kind]
+    assert state[new]==other and state[old]['revocation_pending'] is True
+    assert 'api_key' not in state[old] if kind=='webtop' else state[old]['users']=={}
+
+
+def test_internal_directory_replica_endpoint_outage_preserves_registered_binding():
+    identities={name:str(uuid4()) for name in ('directory1','directory2')}
+    class Redis:
+        def hget(self,key,field):return identities.get(field)
+    configured={'location':'internal','schema':'rfc2307','base_dn':'dc=example,dc=test',
+        'providers':[{'id':'directory1','host':'directory-one.example.test','port':636},
+                     {'id':'directory2','host':'directory-two.example.test','port':636}]}
+    unavailable={**configured,'providers':[configured['providers'][0],{'id':'directory2','host':None,'port':None}]}
+    assert native.registered_binding(Redis(),{'directory':configured},'directory')==native.registered_binding(Redis(),{'directory':unavailable},'directory')
+    identities.pop('directory2')
+    with pytest.raises(ValueError):native.registered_binding(Redis(),{'directory':unavailable},'directory')
+
+
+def test_concurrent_private_snapshots_are_complete_and_leave_no_staging_files(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    path=tmp_path/'personal-data-status.json'
+    def write(writer):
+        for revision in range(10):native.private_write(path,{'writer':writer,'revision':revision,'body':'synthetic-value'*1000})
+    with ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(write,range(4)))
+    value=native.private_read(path)
+    assert value['writer'] in range(4) and value['revision']==9 and value['body']=='synthetic-value'*1000
+    assert list(tmp_path.iterdir())==[path]
+
+
+def test_failed_later_configuration_cannot_reenable_the_disconnected_source(monkeypatch,tmp_path):
+    import io,runpy,sys,subprocess
+    from types import SimpleNamespace
+    old,new,kept=map(str,(uuid4(),uuid4(),uuid4()))
+    previous={'enabled':True,'nethvoice':old,'webtop':kept}
+    pending={**previous,'nethvoice':new}
+    native.private_write(tmp_path/'personal-data.json',previous)
+    native.private_write(tmp_path/'personal-data-pending.json',pending)
+    monkeypatch.setenv('AGENT_STATE_DIR',str(tmp_path));monkeypatch.setenv('AGENT_INSTALL_DIR',str(ROOT/'imageroot'))
+    monkeypatch.setitem(sys.modules,'czero_personal_data',native)
+    calls=[]
+    monkeypatch.setitem(sys.modules,'agent',SimpleNamespace(run_helper=lambda *a,**k:(calls.append(a) or SimpleNamespace(check_returncode=lambda:None))))
+    monkeypatch.setattr(subprocess,'run',lambda *a,**k:None)
+    monkeypatch.setattr(sys,'stdin',io.StringIO(json.dumps({'personal_data':pending})))
+    runpy.run_path(str(ROOT/'imageroot/actions/configure-module/17fence-personal-data'))
+    assert native.read(tmp_path)=={'enabled':True,'nethvoice':None,'webtop':kept}
+    assert json.loads((tmp_path/'personal-data-pending.json').read_text())==pending
+    assert calls==[('czero-personal-data-run','--fence-only')]
+
+
+def test_post_read_owner_rechecks_immutable_id_and_disable_flags():
+    identifier=uuid4()
+    class Directory:
+        attributes={'entryUUID':[str(identifier)]}
+        def get_user_entry(self,name,**kwargs):return {'attributes':self.attributes}
+    client=Directory()
+    expected=native.directory_user(client,'rfc2307','person')
+    message={'binding_check':True,'directory_id':str(identifier),'username':'person'}
+    assert native.current_directory_owner(client,'rfc2307',[expected],message)
+    client.attributes={'entryUUID':[str(uuid4())]}
+    assert not native.current_directory_owner(client,'rfc2307',[expected],message)
+    client.attributes={'entryUUID':[str(identifier)],'nsAccountLock':['true']}
+    assert not native.current_directory_owner(client,'rfc2307',[expected],message)
+    client.attributes={'entryUUID':[str(identifier)]}
+    assert not native.current_directory_owner(client,'rfc2307',[],message)
+    assert not native.current_directory_owner(client,'rfc2307',[expected],{**message,'username':'another'})
+    assert not native.current_directory_owner(client,'rfc2307',[expected],{**message,'extra':'rejected'})
+
+
+def test_native_directory_ad_uses_guid_byte_order():
+    identifier=uuid4()
+    class Directory:
+        def get_user_entry(self,name,**kwargs):return {'attributes':{'objectGUID':[identifier.bytes_le],'userAccountControl':[514]}}
+    assert native.directory_user(Directory(),'ad','person')=={'directory_id':str(identifier),'username':'person','active':False}

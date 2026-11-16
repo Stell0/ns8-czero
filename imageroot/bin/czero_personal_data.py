@@ -4,7 +4,7 @@ import json
 import os
 import stat
 from pathlib import Path
-from uuid import UUID, uuid5, NAMESPACE_URL
+from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
 DEFAULT={'enabled':False,'nethvoice':None,'webtop':None}
 
@@ -29,13 +29,15 @@ def read(state=None):
 
 def private_write(path,value):
     path=Path(path)
-    temporary=path.with_suffix('.pending')
-    descriptor=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_TRUNC|os.O_NOFOLLOW,0o600)
-    with os.fdopen(descriptor,'w') as out:
-        json.dump(value,out,ensure_ascii=False)
-        out.flush();os.fsync(out.fileno())
-    os.chmod(temporary,0o600)
-    os.replace(temporary,path)
+    temporary=path.with_name('.'+path.name+'.'+uuid4().hex+'.pending')
+    descriptor=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    try:
+        with os.fdopen(descriptor,'w') as out:
+            os.fchmod(out.fileno(),0o600)
+            json.dump(value,out,ensure_ascii=False)
+            out.flush();os.fsync(out.fileno())
+        os.replace(temporary,path)
+    finally:temporary.unlink(missing_ok=True)
 
 
 def provider_binding(parameters):
@@ -115,3 +117,26 @@ def private_read(path,maximum=1024*1024):
         value=source.read(maximum+1)
     if len(value)>maximum:raise ValueError('invalid_personal_secret_file')
     return json.loads(value)
+
+
+def directory_user(client, schema, username):
+    """Normalize the same immutable identity and active flags before/after source I/O."""
+    attribute='objectGUID' if schema=='ad' else 'entryUUID'
+    attrs=client.get_user_entry(username,lextra_attributes=[attribute,'pwdAccountLockedTime','userAccountControl','nsAccountLock'])['attributes']
+    def first(key,default=None):
+        value=attrs.get(key,default)
+        return value[0] if isinstance(value,list) and value else value
+    value=first(attribute)
+    if isinstance(value,bytes):identifier=UUID(bytes_le=value) if attribute=='objectGUID' else UUID(value.decode('ascii'))
+    else:identifier=UUID(str(value))
+    locked=bool(first('pwdAccountLockedTime')) or str(first('nsAccountLock','false')).lower()=='true'
+    disabled=bool(int(first('userAccountControl',0)) & 2)
+    return {'directory_id':str(identifier),'username':username,'active':not locked and not disabled}
+
+
+def current_directory_owner(client, schema, directory, message):
+    if set(message)!={'binding_check','directory_id','username'} or message['binding_check'] is not True:
+        return False
+    expected={'directory_id':message['directory_id'],'username':message['username'],'active':True}
+    if expected not in directory:return False
+    return directory_user(client,schema,message['username'])==expected

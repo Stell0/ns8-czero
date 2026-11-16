@@ -176,6 +176,10 @@ class SpaceService:
             allowed = current.api_key_binding.validate(c)['space_ids'] if current.api_key_binding is not None else None
             rows = c.execute(text('''SELECT s.id,s.name,s.shared,s.readable_by_all,s.revision,s.created_at,
                 s.personal,
+                EXISTS(SELECT 1 FROM c0_personal_owners o JOIN c0_personal_config p
+                    ON p.issuer=o.issuer AND p.provider_id=o.provider_id
+                    JOIN c0_accounts a ON a.issuer=o.issuer AND a.account_key=o.directory_id
+                    WHERE o.space_id=s.id AND o.active AND a.id=:account) AS personal_owner,
                 CASE WHEN :admin THEN 'admin' WHEN s.personal THEN 'editor' WHEN s.shared THEN CAST(:role AS text)
                 WHEN CAST(:role AS text)='reader' THEN 'reader' ELSE COALESCE(g.role::text,'reader') END AS role
                 FROM c0_spaces s LEFT JOIN c0_space_grants g
@@ -186,7 +190,7 @@ class SpaceService:
                         JOIN c0_accounts a ON a.issuer=o.issuer AND a.account_key=o.directory_id
                         WHERE o.space_id=s.id AND o.active AND a.id=:account))
                 AND (CAST(:allowed AS uuid[]) IS NULL OR s.id=ANY(CAST(:allowed AS uuid[])))
-                ORDER BY s.shared DESC,s.name,s.id LIMIT :limit OFFSET :offset'''),
+                ORDER BY s.shared DESC,personal_owner DESC,s.name,s.id LIMIT :limit OFFSET :offset'''),
                 {'allowed': allowed, 'admin': current.role is Role.ADMIN, 'role': current.role.value,
                  'account': current.user_id, 'limit': limit, 'offset': offset}).mappings().all()
             return snapshot({'spaces': [dict(row) for row in rows]})
@@ -195,8 +199,13 @@ class SpaceService:
         identifier = space_uuid(space_id)
         with self.database.engine.connect() as c:
             current = self.authorize(c, actor, space_id=identifier)
-            row = c.execute(text('SELECT id,name,shared,readable_by_all,personal,revision,created_at FROM c0_spaces WHERE id=:id'),
-                            {'id': identifier}).mappings().one()
+            row = c.execute(text('''SELECT s.id,s.name,s.shared,s.readable_by_all,s.personal,s.revision,s.created_at,
+                EXISTS(SELECT 1 FROM c0_personal_owners o JOIN c0_personal_config p
+                    ON p.issuer=o.issuer AND p.provider_id=o.provider_id
+                    JOIN c0_accounts a ON a.issuer=o.issuer AND a.account_key=o.directory_id
+                    WHERE o.space_id=s.id AND o.active AND a.id=:account) AS personal_owner
+                FROM c0_spaces s WHERE s.id=:id'''),
+                            {'id': identifier,'account':current.user_id}).mappings().one()
             return snapshot({**row, 'role': current.role.value})
 
     def _mutate(self, actor, operation, payload, key, execute):

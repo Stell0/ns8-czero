@@ -151,9 +151,10 @@ def legacy_personal_metadata(schema):
     projected=deepcopy(schema)
     for shape in [projected,*projected.get('$defs',{}).values()]:
         properties=shape.get('properties',{})
-        if 'personal' in properties:
-            assert 'personal' not in shape.get('required',[])
-            assert structural_schema(properties.pop('personal'))=={'type':'boolean','default':False}
+        for field in ('personal','personal_owner'):
+            if field in properties:
+                assert field not in shape.get('required',[])
+                assert structural_schema(properties.pop(field))=={'type':'boolean','default':False}
         if 'managed_import' in properties:
             assert 'managed_import' not in shape.get('required',[])
             assert structural_schema(properties.pop('managed_import'))=={

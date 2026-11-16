@@ -17,6 +17,16 @@ capability is advertised as verified until an actual bound probe succeeds.
 The operator also accepts the single transcription variant served by NethCTI
 (cleaned when present, otherwise raw), with explicit provenance uncertainty.
 
+[Draft PR140](https://github.com/Stell0/ns8-czero/pull/140) preserves producer
+candidate `975bbd6`; its full workflow43770452775 passes, including Debian/Rocky.
+The current successor adds concurrent recent-item collection, complete unvisited-user
+coverage and nonempty personal backup/credential fixtures, and needs fresh exact-source
+acceptance. Installed test WebTop identity/folder/message reads work with a newly
+created dedicated key; a synthetic MIME message stays unread, but attachment download
+returns500. NethCTI's selected full personal transcript inventory is empty. These are
+observed limitations, not permission to change either source product or deploy C0.
+See the [validation record](docs/personal-data/VALIDATION.md) for the separate gates.
+
 
 ## API key expiration form — implementation candidate
 

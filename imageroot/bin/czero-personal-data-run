@@ -15,7 +15,7 @@ from uuid import UUID,uuid4
 import agent
 from agent.ldapproxy import Ldapproxy
 from agent.ldapclient import Ldapclient
-from czero_personal_data import read,discover,private_write,private_read,identity_binding
+from czero_personal_data import read,discover,private_write,private_read,identity_binding,directory_user,current_directory_owner
 
 state=Path(os.environ['AGENT_STATE_DIR'])
 invocation=None
@@ -23,14 +23,13 @@ credentials_copy=None
 signal.signal(signal.SIGTERM,lambda *_:sys.exit(143))
 try:
     # Copies can remain after SIGKILL. All runner invocations are bounded to 150s.
-    for stale in state.glob('personal-data-runtime-*.json'):
+    for stale in (*state.glob('personal-data-runtime-*.json'),*state.glob('.personal-data*.pending')):
         try:
             if time.time()-stale.stat().st_mtime>300:stale.unlink(missing_ok=True)
         except FileNotFoundError:pass
     fence_only='--fence-only' in sys.argv
-    config=json.loads((state/'personal-data-pending.json').read_text()) if fence_only else read()
-    rdb=agent.redis_connect(use_replica=True)
-    proxy=Ldapproxy()
+    pending_configuration=state/'personal-data-pending.json'
+    config=json.loads(pending_configuration.read_text()) if fence_only and pending_configuration.exists() else read()
     previous={}
     runtime=state/'personal-data-runtime.json'
     if runtime.exists():previous=json.loads(runtime.read_text())
@@ -40,6 +39,8 @@ try:
     if fence_only:
         snapshot['provider_id']=previous.get('provider_id') or str(UUID(int=0))
     elif config['enabled'] and not identity_changed:
+        rdb=agent.redis_connect(use_replica=True)
+        proxy=Ldapproxy()
         domain=os.environ['CZERO_USER_DOMAIN']
         parameters=proxy.get_domain(domain)
         provider,options=discover(rdb,proxy,domain)
@@ -64,19 +65,8 @@ try:
             names=[u if isinstance(u,str) else u.get('user') if isinstance(u,dict) else None for u in users]
         else:raise ValueError('directory_unavailable')
         if len(names)>1000 or any(not isinstance(n,str) or not n for n in names):raise ValueError('directory_unavailable')
-        attribute='objectGUID' if parameters['schema']=='ad' else 'entryUUID'
         for name in names:
-            entry=client.get_user_entry(name,lextra_attributes=[attribute,'pwdAccountLockedTime','userAccountControl','nsAccountLock'])
-            attrs=entry['attributes']
-            def first(key,default=None):
-                value=attrs.get(key,default)
-                return value[0] if isinstance(value,list) and value else value
-            value=first(attribute)
-            if isinstance(value,bytes):identifier=UUID(bytes_le=value) if attribute=='objectGUID' else UUID(value.decode('ascii'))
-            else:identifier=UUID(str(value))
-            locked=bool(first('pwdAccountLockedTime')) or str(first('nsAccountLock','false')).lower()=='true'
-            disabled=bool(int(first('userAccountControl',0)) & 2)
-            snapshot['directory'].append({'directory_id':str(identifier),'username':name,'active':not locked and not disabled})
+            snapshot['directory'].append(directory_user(client,parameters['schema'],name))
         snapshot['directory_complete']=True
     elif previous.get('provider_id'):
         snapshot['provider_id']=previous['provider_id']
@@ -87,13 +77,12 @@ try:
         snapshot['provider_id']=str(UUID(int=0))
     if not fence_only:private_write(runtime,snapshot)
     secret=state/'personal-data-secrets.json'
-    if not secret.exists():private_write(secret,{})
     invocation=state/('personal-data-runtime-'+uuid4().hex+'.json')
     private_write(invocation,snapshot)
     protected=[str(invocation)]
     if not fence_only and '--configure-only' not in sys.argv and config['enabled']:
         credentials_copy=invocation.with_suffix('.credentials.json')
-        private_write(credentials_copy,private_read(secret))
+        private_write(credentials_copy,private_read(secret) if secret.exists() else {})
         protected.append(str(credentials_copy))
     # Match the existing image UID without changing host canonical-file ownership.
     subprocess.run(['podman','unshare','chown','10001:10001',*protected],check=True,
@@ -124,16 +113,18 @@ try:
                 if pending:raise ValueError('invalid_personal_data_protocol')
                 break
             pending+=block
-            if len(pending)>1024*1024:raise ValueError('invalid_personal_data_protocol')
+            # Status can contain two bounded rows for each of1000 directory owners.
+            if len(pending)>16*1024*1024:raise ValueError('invalid_personal_data_protocol')
             while b'\n' in pending:
                 line,pending=pending.split(b'\n',1)
                 message=json.loads(line)
-                if message=={'binding_check':True}:
+                if isinstance(message,dict) and message.get('binding_check') is True:
                     allow=False
                     try:
                         actual,available=discover(agent.redis_connect(use_replica=True),Ldapproxy(),os.environ['CZERO_USER_DOMAIN'])
                         allow=(read()==config and actual==snapshot['provider_id'] and all(
-                            not config[k] or config[k] in {v['id'] for v in available[k]} for k in ('nethvoice','webtop')))
+                            not config[k] or config[k] in {v['id'] for v in available[k]} for k in ('nethvoice','webtop')) and current_directory_owner(
+                                client,parameters['schema'],snapshot['directory'],message))
                     except (ValueError,TypeError,KeyError):pass
                     process.stdin.write(json.dumps({'allow':allow}).encode()+b'\n');process.stdin.flush()
                 elif isinstance(message,dict):status=message

@@ -18,3 +18,7 @@ be shared. Existing OAuth scopes remain unchanged; request fresh Write consent
 when required, and never substitute Shared or another user's space. Native
 settings report actual source/session coverage; tool availability alone does
 not establish that ingestion has completed.
+
+For personal data, use `spaces_list` and select `personal_owner=true` explicitly.
+An administrator can see several spaces named Personal Data; the name alone
+does not identify their own space or grant authority.

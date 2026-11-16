@@ -1,6 +1,6 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """One deterministic bounded native ingestion pass; no transport exposes this CLI."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -106,10 +106,16 @@ class Runner:
                 AND connector=:kind AND instance_id=:instance AND generation=:generation'''),
                 {'owner':UUID(owner['id']),'kind':kind,'instance':UUID(instance),'generation':generation}).scalar_one_or_none()
         cursor=previous or {}
+        # Unreleased predecessor used ten-item offsets; restart rather than skip rows.
+        if cursor and cursor.get('page_size')!=5:cursor={}
         with service.database.engine.connect() as c:
             blocked=c.execute(text("""SELECT EXISTS(SELECT 1 FROM c0_accounts a JOIN c0_account_blocks b ON b.account_id=a.id
                 WHERE a.issuer=:issuer AND a.account_key=:directory)"""),
                 {'issuer':service.access.issuer,'directory':UUID(owner['directory_id'])}).scalar_one()
+        if owner['source_identity_ambiguous']:
+            record_checkpoint(service,owner_id=owner['id'],generation=generation,connector=kind,instance_id=instance,
+                cursor=cursor,status='suspended',error_code='identity_ambiguous')
+            return
         if blocked:
             record_checkpoint(service,owner_id=owner['id'],generation=generation,connector=kind,instance_id=instance,
                 cursor=cursor,status='suspended',error_code='account_blocked')
@@ -122,10 +128,12 @@ class Runner:
                 token=credentials.get('users',{}).get(owner['directory_id'])
                 if not token:raise Unavailable('session_unavailable')
                 adapter=NethVoice(endpoint,token=token,username=owner['username'])
-                today=datetime.now(timezone.utc).strftime('%Y%m%d')
+                # Cover source-local dates ahead of UTC without knowing its timezone.
+                current_end=(datetime.now(timezone.utc)+timedelta(days=1)).strftime('%Y%m%d')
                 page=cursor.get('page',1)
-                documents,coverage=adapter.page(start='19000101',end=cursor.get('window_end',today),page=page,size=10)
-                next_cursor={'page':1 if coverage['complete'] else page+1,'window_end':today,
+                window_end=cursor.get('window_end',current_end)
+                documents,coverage=adapter.page(start='19000101',end=window_end,page=page,size=5)
+                next_cursor={'page':1 if coverage['complete'] else page+1,'window_end':current_end if coverage['complete'] else window_end,
                              'documents':len(documents),'skipped':coverage['skipped']}
             else:
                 key=credentials.get('api_key')
@@ -140,33 +148,60 @@ class Runner:
                     documents=[];coverage={'complete':True,'issues':[]}
                     next_cursor={'folder_index':0,'page':0,'documents':0}
                 else:
-                    documents,coverage=adapter.page(folders[index]['id'],page=page,size=10)
+                    documents,coverage=adapter.page(folders[index]['id'],page=page,size=5)
                     last=coverage['complete'] and index==len(folders)-1
                     next_cursor={'folder_index':0 if last else (index+1 if coverage['complete'] else index),
                                  'page':0 if coverage['complete'] else page+1,'documents':len(documents),
                                  'skipped':len(coverage['issues'])}
                     coverage['complete']=last
+            # Refresh a bounded latest page while the historical cursor advances.
+            # This is extra current evidence, never an authoritative inventory.
+            head_error=None
+            if not coverage['complete']:
+                try:
+                    if kind=='nethvoice' and page>1:
+                        recent,recent_coverage=adapter.page(start='19000101',end=current_end,page=1,size=5)
+                    elif kind=='webtop' and folders:
+                        head_index=cursor.get('head_folder_index',0)%len(folders)
+                        next_cursor['head_folder_index']=(head_index+1)%len(folders)
+                        if head_index!=index or page>0:
+                            recent,recent_coverage=adapter.page(folders[head_index]['id'],page=0,size=5)
+                        else:recent,recent_coverage=[],{}
+                    else:recent,recent_coverage=[],{}
+                    documents+=recent
+                    coverage.setdefault('attachment_observations',[]).extend(recent_coverage.get('attachment_observations',[]))
+                    next_cursor['skipped']=next_cursor.get('skipped',0)+recent_coverage.get('skipped',0)+len(recent_coverage.get('issues',[]))
+                except Unavailable as error:
+                    # Preserve successful historical progress; an outage is not absence.
+                    head_error=error.code
+                    next_cursor['skipped']=next_cursor.get('skipped',0)+1
+            next_cursor['page_size']=5
+            next_cursor['documents']=len(documents)
             published={};excluded_parents=set()
             for document in documents:
                 if document.metadata.get('parent_import_key') in excluded_parents:continue
-                if self.before_publish is not None and not self.before_publish():
+                if self.before_publish is not None and not self.before_publish(owner):
                     raise PersonalDataConflict()
                 metadata=dict(document.metadata)
                 parent=published.get(metadata.get('parent_import_key'))
                 if parent:metadata['parent_source_id']=parent
+                if kind=='nethvoice' and document.kind=='summary':
+                    transcript=published.get(metadata.get('related_import_key'))
+                    if transcript:metadata['transcript_source_id']=transcript
                 receipt=service.submit(owner_id=owner['id'],generation=generation,connector=kind,instance_id=instance,
                     remote_key=document.remote_key,kind=document.kind,title=document.title,content=document.content,
                     media_type=document.media_type,metadata=metadata,scan_id=UUID(scan_id))
                 if receipt.get('source_id'):published[document.remote_key]=receipt['source_id']
                 if document.kind=='message' and receipt['state']=='excluded':excluded_parents.add(document.remote_key)
             for observation in coverage.get('attachment_observations',[]):
-                if self.before_publish is not None and not self.before_publish():raise PersonalDataConflict()
+                if self.before_publish is not None and not self.before_publish(owner):raise PersonalDataConflict()
                 record_attachment_issues(service,owner_id=owner['id'],generation=generation,instance_id=instance,**observation)
             next_cursor['scan_id']=scan_id
             next_cursor['scan_skipped']=cursor.get('scan_skipped',0)+next_cursor.get('skipped',0)
             next_cursor['read_verified']=cursor.get('read_verified',False) or bool(documents)
             if 'inventory_hash' in cursor:next_cursor['inventory_hash']=cursor['inventory_hash']
-            if coverage['complete'] and not next_cursor['scan_skipped']:
+            inventory_complete=coverage['complete'] and (kind!='nethvoice' or window_end>=current_end)
+            if inventory_complete and not next_cursor['scan_skipped']:
                 digest,candidates=inventory_candidates(service,owner_id=owner['id'],generation=generation,
                     connector=kind,instance_id=instance,scan_id=scan_id)
                 # Missing API pages alone never authorize deletion, even after a stable traversal.
@@ -179,9 +214,10 @@ class Runner:
                 next_cursor['scan_skipped']=0
                 next_cursor['read_verified']=False
             # Completion refers to API traversal only; neither source has an authoritative deletion inventory.
-            status='partial' if next_cursor.get('skipped') or (coverage['complete'] and cursor.get('scan_skipped')) else ('reconciled' if coverage['complete'] else 'backfill')
+            status='partial' if next_cursor.get('skipped') or (coverage['complete'] and cursor.get('scan_skipped')) else ('reconciled' if inventory_complete else 'backfill')
+            if head_error=='session_unavailable':status='suspended'
             record_checkpoint(service,owner_id=owner['id'],generation=generation,connector=kind,instance_id=instance,
-                cursor=next_cursor,status=status,complete=coverage['complete'])
+                cursor=next_cursor,status=status,error_code=head_error,complete=inventory_complete)
         except Unavailable as error:
             record_checkpoint(service,owner_id=owner['id'],generation=generation,connector=kind,instance_id=instance,
                 cursor=cursor,status='suspended' if error.code=='session_unavailable' else 'degraded',error_code=error.code)
@@ -204,8 +240,12 @@ class Runner:
                         if all(isinstance(a,dict) and isinstance(a.get('id'),str) for a in attachments):
                             confirmed=confirmed or attachment_id not in {a['id'] for a in attachments}
             else:
-                metadata=missing['metadata']
-                detail=adapter.client.read('/transcripts/'+metadata['uniqueid'],params={'id':int(missing['remote_key'])})
+                try:
+                    unique,linked=json.loads(missing['slot_key'])
+                    if not isinstance(unique,str) or not isinstance(linked,str):raise ValueError()
+                except (ValueError,TypeError):
+                    raise Unavailable('identity_ambiguous') from None
+                detail=adapter.client.read('/transcripts/'+unique,params={'id':int(missing['remote_key']),'linkedid':linked})
                 if isinstance(detail,dict):detail=detail.get('data',detail)
                 if isinstance(detail,dict) and detail.get('src') and detail.get('dst'):
                     confirmed=not adapter.numbers.intersection({detail['src'],detail['dst']})
@@ -213,7 +253,7 @@ class Runner:
             confirmed=error.code=='source_not_found'
             if not confirmed:raise
         if confirmed:
-            if self.before_publish is not None and not self.before_publish():
+            if self.before_publish is not None and not self.before_publish(owner):
                 raise PersonalDataConflict()
             queue_confirmed_removal(self.service,owner_id=owner['id'],generation=generation,connector=kind,
                 instance_id=instance,remote_key=missing['remote_key'])
@@ -236,10 +276,25 @@ class Runner:
                 WHERE o.issuer=:issuer AND i.state='managed' GROUP BY 1"""),{'issuer':service.access.issuer}).mappings().all()
             issues=c.execute(text('''SELECT i.code,count(*) AS count FROM c0_personal_issues i
                 JOIN c0_personal_owners o ON o.id=i.owner_id WHERE o.issuer=:issuer GROUP BY i.code'''),{'issuer':service.access.issuer}).mappings().all()
-            rows=c.execute(text('''SELECT o.username,p.connector,CASE WHEN o.active THEN p.status ELSE 'suspended' END AS status,p.last_success,p.last_inventory,
-                CASE WHEN o.active THEN p.error_code ELSE 'directory_inactive' END AS error_code,p.cursor,(p.last_inventory IS NULL OR p.last_inventory<now()-interval '24 hours') AS inventory_overdue
-                FROM c0_personal_checkpoints p JOIN c0_personal_owners o ON o.id=p.owner_id
-                WHERE o.issuer=:issuer ORDER BY o.username,p.connector LIMIT 1000'''),{'issuer':service.access.issuer}).mappings().all()
+            rows=c.execute(text("""SELECT o.username,selected.key AS connector,
+                CASE WHEN NOT o.active OR NOT cfg.enabled THEN 'suspended'
+                     WHEN o.source_identity_ambiguous THEN 'suspended'
+                     WHEN NOT cfg.validated OR p.generation IS DISTINCT FROM cfg.generation THEN 'unverified'
+                     ELSE COALESCE(p.status,'unverified') END AS status,p.last_success,
+                CASE WHEN p.generation=cfg.generation THEN p.last_inventory END AS last_inventory,
+                CASE WHEN NOT o.active THEN 'directory_inactive' WHEN NOT cfg.enabled THEN NULL
+                     WHEN o.source_identity_ambiguous THEN 'identity_ambiguous'
+                     WHEN NOT cfg.validated THEN 'source_unavailable'
+                     WHEN p.generation=cfg.generation THEN p.error_code END AS error_code,
+                CASE WHEN p.generation=cfg.generation THEN p.cursor ELSE '{}'::jsonb END AS cursor,
+                (p.generation IS DISTINCT FROM cfg.generation OR p.last_inventory IS NULL
+                    OR p.last_inventory<now()-interval '24 hours') AS inventory_overdue
+                FROM c0_personal_owners o JOIN c0_personal_config cfg ON cfg.issuer=o.issuer
+                CROSS JOIN LATERAL jsonb_each_text(cfg.services) selected
+                LEFT JOIN c0_personal_checkpoints p ON p.owner_id=o.id AND p.connector=selected.key
+                    AND p.instance_id=selected.value::uuid
+                WHERE o.issuer=:issuer ORDER BY o.username,selected.key LIMIT 2000"""),
+                {'issuer':service.access.issuer}).mappings().all()
         from czero_core.receipts import snapshot
         return snapshot({'extraction':{r['state']:r['count'] for r in extraction},'attachment_issues':{r['code']:r['count'] for r in issues},'imports':{r['state']:r['count'] for r in imports},'users':[dict(r) for r in rows],
             'deletion_coverage':'not_authoritative','pending_payload_cleanup':payload_cleanup,'pending_cleanup':payload_cleanup+sum(r['count'] for r in imports if r['state']=='cleanup')})
@@ -252,15 +307,24 @@ def main():
         db=Database()
         access=AccessService(db,snapshot['issuer'],UUID(os.environ.get('CZERO_OWNER_LDAP_UUID') or '00000000-0000-0000-0000-000000000000'))
         if '--fence-only' in sys.argv:
-            value=PersonalDataService(db,access).fence_native(disabled=not snapshot['configuration']['enabled'])
+            config=snapshot['configuration']
+            value=PersonalDataService(db,access).fence_native(disabled=not config['enabled'],
+                services={k:config[k] for k in ('nethvoice','webtop') if config.get(k)})
+            with db.engine.connect() as c:
+                available=c.execute(text("SELECT to_regclass('c0_personal_config') IS NOT NULL")).scalar_one()
+            if available:
+                originals=OriginalStore(os.environ.get('CZERO_SOURCE_DIR','/var/lib/czero/sources'))
+                service=PersonalDataService(db,access,SourceService(db,access,build_registry(db,originals),originals))
+                runner=Runner(service);runner._cleanup()
+                value={**runner.status(),'status':value['status']}
             print(json.dumps(value))
             return 0
         secrets={} if '--configure-only' in sys.argv or not snapshot['configuration']['enabled'] else private_json('/var/lib/czero/personal-data-secrets.json')
         originals=OriginalStore(os.environ.get('CZERO_SOURCE_DIR','/var/lib/czero/sources'))
         service=PersonalDataService(db,access,SourceService(db,access,build_registry(db,originals),originals))
-        def current_native_binding():
+        def current_native_binding(owner):
             # Fixed private-pipe protocol; no commands, endpoints, bodies or credentials.
-            print(json.dumps({'binding_check':True}),flush=True)
+            print(json.dumps({'binding_check':True,'directory_id':owner['directory_id'],'username':owner['username']}),flush=True)
             reply=sys.stdin.readline(128)
             try:return json.loads(reply)=={'allow':True}
             except ValueError:return False
