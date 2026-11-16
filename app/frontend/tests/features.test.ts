@@ -6,14 +6,15 @@ afterEach(() => {
 it('shows native source controls only for an installed server capability', () => {
   expect(automaticSourcesAvailable()).toBe(false)
   for (const [value, expected] of [
-    [true, true],
-    [false, false],
-    ['true', false],
+    ['true', true],
+    ['false', false],
+    ['TRUE', false],
+    ['1', false],
+    ['', false],
   ]) {
-    document.body.innerHTML = `<script type="application/json" id="c0-boot">${JSON.stringify({ features: { automatic_sources: value } })}</script>`
+    document.body.innerHTML = `<meta name="c0-automatic-sources" content="${value}">`
     expect(automaticSourcesAvailable()).toBe(expected)
   }
-  document.body.innerHTML =
-    '<script type="application/json" id="c0-boot">invalid</script>'
+  document.body.innerHTML = '<meta name="c0-automatic-sources">'
   expect(automaticSourcesAvailable()).toBe(false)
 })

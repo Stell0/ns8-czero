@@ -24,9 +24,10 @@ class Website:
         path = self.directory / 'index.html'
         if not path.is_file():
             raise HTTPException(503, 'website_build_unavailable')
-        boot = {**(boot or {}), 'features': {'automatic_sources': self.automatic_sources}}
-        value = json.dumps(boot, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+        value = json.dumps(boot or {}, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
         body = path.read_text().replace('<base href="/" />', '<base href="' + escape(self.base_path + '/', quote=True) + '" />')
+        available='true' if self.automatic_sources else 'false'
+        body = body.replace('</head>', '<meta name="c0-automatic-sources" content="'+available+'"></head>', 1)
         body = body.replace('<!--C0_BOOT-->', '<script id="c0-boot" type="application/json">' + value + '</script>')
         return HTMLResponse(body, status_code=status_code, headers={'Cache-Control': 'no-store', 'Content-Security-Policy': CSP,
             'Referrer-Policy': 'strict-origin', 'X-Content-Type-Options': 'nosniff'})
