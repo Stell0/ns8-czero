@@ -162,3 +162,11 @@ message extraction and explicit failed/unsupported attachment observations pass.
 It performs GET reads only, publishes nothing in C0 and does not verify public
 DNS/TLS. No NethCTI JWT is transferred by the additional diagnostics; its installed
 proof remains the on-node profile and empty personal-history read.
+
+Native Debian393dedc fails at the first status read: api-cli and the NS8 settings
+client omit task data (`null`), while both new read actions originally required an
+object. The runner service itself starts successfully. Subsequent backup failures
+in that run follow the aborted setup and are retained as failures, not acceptance.
+The successor accepts null or an empty object for both read actions and rejects
+unexpected fields/types;70 native configuration/backup unit cases pass. A new full
+native run must exercise the actual nonempty backup round trip after this fix.

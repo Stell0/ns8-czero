@@ -255,3 +255,14 @@ def test_disconnect_intent_precedes_fence_even_when_the_helper_fails(monkeypatch
     with pytest.raises(RuntimeError,match='synthetic fence failure'):
         runpy.run_path(str(ROOT/'imageroot/actions/configure-module/17fence-personal-data'))
     assert native.read(tmp_path)==pending
+
+
+@pytest.mark.parametrize('action',['get-personal-data-status','get-personal-data-options'])
+def test_read_actions_accept_the_native_clients_default_null_input(action):
+    import jsonschema
+    schema=json.loads((ROOT/'imageroot/actions'/action/'validate-input.json').read_text())
+    # Both api-cli without arguments and the settings UI omit task data.
+    jsonschema.validate(None,schema)
+    jsonschema.validate({},schema)
+    for value in ({'secret':'unexpected'},[],True,'invalid'):
+        with pytest.raises(jsonschema.ValidationError):jsonschema.validate(value,schema)
