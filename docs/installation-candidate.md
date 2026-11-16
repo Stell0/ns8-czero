@@ -4,6 +4,31 @@ C0 has no stable NS8 module release. Select an immutable candidate whose actual 
 
 ## Released-consumer candidate
 
+The accepted automatic-source consumer-main candidate in [PLAN](../PLAN.md#automatic-sources--accepted-source) selects released Core0.51.0/schema0042 with app0.69.0. Actual [full/native/publication43926696627](https://github.com/Stell0/ns8-czero/actions/runs/43926696627), independent artifact/image checks and exact-source promotion pass. The separately authorized backup/update/restart and preservation proof are in the [deployment closeout](../PLAN.md#automatic-sources-accepted-deployment).
+
+| Item | Accepted identity |
+| --- | --- |
+| Source | `803914b372df6d777ccfba453e27efa2a4a41fa1` |
+| Immutable tag | `ci-803914b372df6d777ccfba453e27efa2a4a41fa1-43926696627-1` |
+| Module | `sha256:76a5b992881b96b2b5d54e272276487a80fb1df31b0531d6547a02b76990d8f7` |
+| App | `sha256:6719fdc34eb03bbdab36b8109427ac265ef5f9f802a39596afe09d2a84e03d1e` |
+| PostgreSQL | `sha256:d93f989691ddbb7a6db058ef46c195a01605b68a15b7f8cf3f74c1bb3526df3a` |
+
+From the NS8 leader, replace `<node-id>` with your selected node:
+
+```sh
+add-module ghcr.io/stell0/czero:ci-803914b372df6d777ccfba453e27efa2a4a41fa1-43926696627-1 <node-id>
+```
+
+Follow [Administration](administration.md) for hostname, trusted HTTPS, sign-in provider/user domain and owner configuration. The measured native platform matrix is Debian13 and Rocky Linux9. Check the exact candidate's current acceptance and registry availability before installation. Existing instances require a supported backup and explicit update; the destructive latest-only migration needs [preflight](latest-only-migration.md). Do not mix independently selected module/app/database images.
+
+The accepted installed runtime is recorded separately in PLAN. This document selects an accepted source/publication candidate; it does not change any installed baseline, enable compilation/OCR or install schedules.
+
+<details>
+<summary>Preserved earlier installation evidence</summary>
+
+## Historical self-service Read candidate
+
 The accepted self-service Read consumer-main candidate in [PLAN](../PLAN.md#self-service-read-and-space-audiences--released-consumer-candidate) selects released Core0.48.0/schema0039 with app0.66.0. Its full/native/publication acceptance is recorded in [run43229872256](https://github.com/Stell0/ns8-czero/actions/runs/43229872256), and its separately authorized live update/restart is recorded in [the deployment closeout](../PLAN.md#self-service-read-accepted-deployment).
 
 | Item | Accepted identity |
@@ -13,19 +38,6 @@ The accepted self-service Read consumer-main candidate in [PLAN](../PLAN.md#self
 | Module | `sha256:64a02c825b7d32090e5727f0e95e967877a43394bc9b9183f54e22c6c692c612` |
 | App | `sha256:818c91c782471981d81349c01857366b10c1972677d02ff91887f8e49c782ffd` |
 | PostgreSQL | `sha256:12289c460619f3ff3ba47e761319e1cab3589e40e84ab05150bd5b82d5d2dec9` |
-
-From the NS8 leader, replace `<node-id>` with your selected node:
-
-```sh
-add-module ghcr.io/stell0/czero:ci-145d144725f748b8a168aefce72b0f866bbe820e-43229872256-1 <node-id>
-```
-
-Follow [Administration](administration.md) for hostname, trusted HTTPS, sign-in provider/user domain and owner configuration. The measured native platform matrix is Debian13 and Rocky Linux9. Check the exact candidate's current acceptance and registry availability before installation. Existing instances require a supported backup and explicit update; the destructive latest-only migration needs [preflight](latest-only-migration.md). Do not mix independently selected module/app/database images.
-
-The accepted installed runtime is recorded separately in PLAN. This document selects an accepted source/publication candidate; it does not change any installed baseline, enable compilation/OCR or install schedules.
-
-<details>
-<summary>Preserved earlier installation evidence</summary>
 
 ## Historical document-BM25 candidate
 
