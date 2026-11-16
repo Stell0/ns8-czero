@@ -3,9 +3,22 @@ import importlib.util
 import os
 import logging
 import sys
+import stat
 from uuid import UUID
 from czero_core.worker import main
 from czero_app.job_handlers import build_registry
+
+
+def github_token():
+    """Optional operator credential: never a source setting or a Redis value."""
+    path=os.getenv('CZERO_GITHUB_TOKEN_FILE')
+    if not path:return None
+    descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    with os.fdopen(descriptor,'rb') as secret:
+        info=os.fstat(secret.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_mode&0o077 or info.st_uid!=os.geteuid() or info.st_size>4096:
+            raise ValueError('invalid_github_credential_file')
+        return secret.read(4097).decode('ascii').strip()
 
 
 def update_sources():
@@ -15,6 +28,7 @@ def update_sources():
     from czero_core.automatic_sources import AutomaticSourceService
     from czero_core.sources import SourceService,OriginalStore
     from czero_core.source_updates import SourceUpdater
+    from czero_core.source_collectors import collect
     from czero_core.worker import deadline,JobTimedOut
     issuer=os.getenv('CZERO_OIDC_ISSUER');owner=os.getenv('CZERO_OWNER_LDAP_UUID')
     if not issuer or not owner:return
@@ -24,8 +38,10 @@ def update_sources():
         access=AccessService(database,issuer,UUID(owner))
         originals=OriginalStore(os.getenv('CZERO_SOURCE_DIR','/var/lib/czero/sources'))
         sources=SourceService(database,access,build_registry(database,originals,access=access),originals)
+        def registered(kind,config,cursor):
+            return collect(kind,config,cursor,github_token=github_token() if kind=='github' else None)
         with deadline(25):
-            SourceUpdater(AutomaticSourceService(database,access),sources).tick()
+            SourceUpdater(AutomaticSourceService(database,access),sources,collector=registered).tick()
     except JobTimedOut:
         # A claimed lease expires; the next invocation reconciles publication.
         pass

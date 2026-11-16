@@ -7,7 +7,10 @@ to current account/space grant revisions, fenced runs and document ownership.
 `AutomaticSourceService` exposes Reader inspection and Editor revision/replay
 operations. `SourceUpdater` collects outside transactions and publishes through
 existing staged source services. The registered adapters are public GitHub and
-websites; credentials, shell execution and model calls are not supported.
+websites; per-source credentials, shell execution and model calls are not supported.
+Trusted embeddings can pass `github_token=` for public GitHub API quota; the
+transport sends it only to the verified HTTPS GitHub API origin. Private
+repositories remain rejected before content collection.
 See the [contract](../../docs/automatic-sources.md). The app consumer remains on
 its immutable release until independent producer publication and adoption.
 

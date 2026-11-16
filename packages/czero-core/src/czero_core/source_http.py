@@ -1,5 +1,5 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
-"""Bounded public HTTP with pinned DNS peers, verified TLS and no proxy/credentials."""
+"""Bounded public HTTP, pinned peers and optional GitHub-only operator authority."""
 import http.client
 from datetime import datetime,timezone,timedelta
 from email.utils import parsedate_to_datetime
@@ -70,8 +70,12 @@ def public_addresses(host, port, timeout):
 
 
 class Fetcher:
-    def __init__(self, config, *, accept_json=False):
+    def __init__(self, config, *, accept_json=False, github_token=None):
         if type(accept_json) is not bool:raise C0Error('invalid_response_selection')
+        if github_token is not None and (type(github_token) is not str or not 1<=len(github_token)<=4096
+                or any(not 33<=ord(c)<=126 for c in github_token)):
+            raise C0Error('invalid_github_credential')
+        self._github_token=github_token if accept_json else None
         self.config=config
         self.requests=0
         self.downloaded=0
@@ -122,8 +126,10 @@ class Fetcher:
                 timer=Timer(self.config['timeout'],expire);timer.daemon=True;timer.start()
                 success=False
                 try:
+                    authorization=({'Authorization':'Bearer '+self._github_token}
+                        if self._github_token and parsed.scheme=='https' and parsed.hostname.lower()=='api.github.com' else {})
                     connection.request('GET',(parsed.path or '/')+('?' + parsed.query if parsed.query else ''),
-                        headers={'User-Agent':'c0-projects/0.3','Accept':self.accept,**(headers or {})})
+                        headers={'User-Agent':'c0-projects/0.3','Accept':self.accept,**(headers or {}),**authorization})
                     response=connection.getresponse()
                     if response.status in (301,302,303,307,308):
                         if redirect==3 or not response.getheader('Location'):

@@ -40,7 +40,7 @@ def test_automatic_source_form_theme_keyboard_and_real_persistence(live,browser)
     expect(browser.get_by_text('Public docs fixture',exact=False)).to_have_count(0)
 
 
-def test_native_worker_collects_pinned_public_github_original(live,browser):
+def test_native_worker_collects_pinned_public_github_original(live,browser,tmp_path):
     import os
     import subprocess
     import sys
@@ -62,9 +62,16 @@ def test_native_worker_collects_pinned_public_github_original(live,browser):
     assert result.status_code==200,result.text
     identifier=result.json()['id']
     try:
-        environment={**os.environ,'CZERO_DATABASE_URL':os.environ['CZERO_TEST_DATABASE_URL'],
+        environment={key:value for key,value in os.environ.items() if key!='CZERO_TEST_GITHUB_TOKEN'}
+        environment.update({'CZERO_DATABASE_URL':os.environ['CZERO_TEST_DATABASE_URL'],
             'CZERO_OIDC_ISSUER':identity['issuer'],'CZERO_OWNER_LDAP_UUID':str(identity['account_key']),
-            'CZERO_SOURCE_DIR':str(live.originals.root)}
+            'CZERO_SOURCE_DIR':str(live.originals.root)})
+        token=os.getenv('CZERO_TEST_GITHUB_TOKEN')
+        if token:
+            credential=tmp_path/'github-token'
+            descriptor=os.open(credential,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+            with os.fdopen(descriptor,'w') as stream:stream.write(token)
+            environment['CZERO_GITHUB_TOKEN_FILE']=str(credential)
         for _ in range(2):
             worker=subprocess.run([sys.executable,'-m','czero_app.worker'],env=environment,capture_output=True,text=True,timeout=130)
             assert worker.returncode==0,'Native source worker failed; keep its private diagnostics'
@@ -80,6 +87,7 @@ def test_native_worker_collects_pinned_public_github_original(live,browser):
         browser.goto(live.origin+'/sources/'+documents[0]['id']+'?'+urlencode({'space_id':live.space}))
         expect(browser.get_by_role('article')).to_contain_text('self-hosted knowledge service')
     finally:
+        (tmp_path/'github-token').unlink(missing_ok=True)
         response=live.rest.post('/api/v1/automatic-sources/'+identifier+'/actions',params={'space_id':live.space},json={'action':'remove','expected_revision':1,'idempotency_key':'remove-pinned-public-readme'})
         assert response.status_code==200
         live.resume_worker()

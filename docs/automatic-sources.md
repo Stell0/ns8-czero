@@ -15,8 +15,16 @@ explicitly creates a revocable background authorization for this selection and
 space, attributed to its saving account. It is independent of browser logout and
 limited to the saving account's current Editor access. Account or space grant
 revision changes invalidate that authority; renewed authority requires a save.
-Credentials, private repositories and automatic organization discovery are outside
-this first public-source implementation. Removing configuration retains documents.
+Per-source credentials, private repositories and automatic organization discovery
+are outside this first public-source implementation. Removing configuration retains documents.
+
+An operator can mount an owned mode0600 credential file into the worker and set
+`CZERO_GITHUB_TOKEN_FILE` to its path to avoid the shared anonymous GitHub API
+quota. The token is used only for `https://api.github.com`, never websites or
+cross-host redirects. Repositories must still be public. Neither the token nor
+its path is a source setting; tokens never enter definitions or receipts. Store
+credentials in a private file, never NS8 Redis configuration. CI supplies its
+temporary read token through the same worker path for the real public import.
 
 Definitions carry strict type-specific configuration, expected revisions and
 actor-scoped replay keys. Manual and scheduled execution share one durable run,

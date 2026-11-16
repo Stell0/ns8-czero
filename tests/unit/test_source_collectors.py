@@ -9,6 +9,7 @@ from czero_core.source_http import CollectionError
 @pytest.mark.parametrize('kind,config',[
     ('shell',{}),('github',{'repositories':['a/b'],'command':'touch anything'}),
     ('github',{'repositories':['a/b'],'include':['anything']}),
+    ('github',{'repositories':['a/b'],'github_token':'synthetic-unit-only-token'}),
     ('github',{'repositories':['a/b'],'max_requests':True}),
     ('github',{'repositories':['https://example.org']}),
     ('website',{'website':{'seeds':['https://example.org/docs'],'allowed_roots':['https://elsewhere.org']}}),
@@ -60,8 +61,15 @@ def test_website_robots_exclusion_and_bounded_resume():
 
 def test_private_repository_rejected():
     fetch=Fetch({'https://api.github.com/repos/a/b':encoded({'id':23,'private':True})})
-    with pytest.raises(CollectionError):collect('github',{'repositories':['a/b']},{},fetcher=fetch)
+    with pytest.raises(CollectionError,match='github_repository_unavailable'):
+        collect('github',{'repositories':['a/b']},{},fetcher=fetch,github_token='synthetic-unit-only-token')
     assert fetch.closed
+    class Missing(Fetch):
+        def get(self,url):raise CollectionError('source_http_404')
+    missing=Missing({})
+    with pytest.raises(CollectionError,match='github_repository_unavailable'):
+        collect('github',{'repositories':['a/b']},{},fetcher=missing,github_token='synthetic-unit-only-token')
+    assert missing.closed
 
 
 def test_core_public_transport_denies_any_private_dns_peer(monkeypatch):
@@ -114,3 +122,60 @@ def test_source_worker_failure_does_not_log_configuration_or_traceback(monkeypat
 @pytest.mark.parametrize('ref',['..','../other','refs//heads/main'])
 def test_github_reference_cannot_escape_its_api_namespace(ref):
     with pytest.raises(ValueError):validate('github',{'repositories':['synthetic/example'],'ref':ref})
+
+
+def test_operator_github_credential_never_reaches_other_origins(monkeypatch):
+    from czero_core.source_http import Fetcher
+    calls=[]
+    class Response:
+        status=200
+        def getheader(self,name,default=None):
+            return {'Content-Length':'2','Content-Type':'application/json','Location':'https://other.example.org/leak'}.get(name,default)
+        def read(self,limit):return b'{}'
+    class Connection:
+        sock=None
+        def __init__(self,host,*args,**kwargs):self.host=host
+        def request(self,method,path,headers):
+            self.path=path;calls.append((self.host,headers))
+        def getresponse(self):
+            response=Response()
+            if self.path=='/redirect':response.status=302
+            return response
+        def close(self):pass
+    monkeypatch.setattr('czero_core.source_http.public_addresses',lambda *args:['1.1.1.1'])
+    monkeypatch.setattr('czero_core.source_http.http.client.HTTPSConnection',Connection)
+    monkeypatch.setattr('czero_core.source_http.http.client.HTTPConnection',Connection)
+    config={'timeout':1,'max_requests':6,'max_bytes':128}
+    fetcher=Fetcher(config,accept_json=True,github_token='synthetic-unit-only-github-token')
+    try:
+        for url in ('https://api.github.com/repos/synthetic/example','https://example.org/docs',
+                    'http://api.github.com/repos/synthetic/example'):
+            fetcher.get(url)
+        with pytest.raises(CollectionError,match='source_cross_host_redirect_denied'):
+            fetcher.get('https://api.github.com/redirect')
+    finally:fetcher.close()
+    assert calls[0][1]['Authorization']=='Bearer synthetic-unit-only-github-token'
+    assert all('Authorization' not in headers for host,headers in calls if host!='api.github.com')
+    assert 'Authorization' not in calls[2][1]
+    assert not any(host=='other.example.org' for host,_ in calls)
+    website=Fetcher(config,github_token='synthetic-unit-only-github-token')
+    try:website.get('https://api.github.com/docs')
+    finally:website.close()
+    assert 'Authorization' not in calls[-1][1]
+
+
+def test_worker_github_credential_file_is_private_bounded_and_not_followed(tmp_path,monkeypatch):
+    from czero_app.worker import github_token
+    credential=tmp_path/'github-token'
+    credential.write_text('synthetic-unit-only-github-token\n');credential.chmod(0o600)
+    monkeypatch.setenv('CZERO_GITHUB_TOKEN_FILE',str(credential))
+    assert github_token()=='synthetic-unit-only-github-token'
+    credential.chmod(0o644)
+    with pytest.raises(ValueError,match='invalid_github_credential_file'):github_token()
+    credential.chmod(0o600);credential.write_text('x'*4097)
+    with pytest.raises(ValueError,match='invalid_github_credential_file'):github_token()
+    alias=tmp_path/'alias';alias.symlink_to(credential)
+    monkeypatch.setenv('CZERO_GITHUB_TOKEN_FILE',str(alias))
+    with pytest.raises(OSError):github_token()
+    monkeypatch.delenv('CZERO_GITHUB_TOKEN_FILE')
+    assert github_token() is None

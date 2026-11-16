@@ -58,9 +58,9 @@ def item(key, title, body, url, media='text/markdown', **provenance):
             'media_type':media, 'metadata':{'original_url':url, **provenance}}
 
 
-def collect(kind, config, cursor, *, fetcher=None, preview=False):
+def collect(kind, config, cursor, *, fetcher=None, preview=False, github_token=None):
     config=validate(kind,config)
-    fetcher=fetcher or Fetcher(config,accept_json=kind=='github')
+    fetcher=fetcher or Fetcher(config,accept_json=kind=='github',github_token=github_token if kind=='github' else None)
     try:
         return website(config,cursor,fetcher,preview=preview) if kind=='website' else github(config,cursor,fetcher)
     finally:
@@ -175,9 +175,12 @@ def github(config,cursor,fetcher):
         raw,_,media=fetcher.get(base+path)
         if media not in ('application/json','text/json'):raise CollectionError('github_response_invalid')
         return json.loads(raw)
-    metadata=get('')
+    try:metadata=get('')
+    except CollectionError as error:
+        if str(error)=='source_http_404':raise CollectionError('github_repository_unavailable') from None
+        raise
     if metadata.get('private') is not False or type(metadata.get('id')) is not int or metadata['id']<=0:
-        raise CollectionError('public_github_repository_required')
+        raise CollectionError('github_repository_unavailable')
     if state.get('repository_id',metadata['id'])!=metadata['id']:raise CollectionError('github_identity_changed')
     state['repository_id']=metadata['id'];stream=state.get('stream',0);kind=config['include'][stream]
     items=[]
