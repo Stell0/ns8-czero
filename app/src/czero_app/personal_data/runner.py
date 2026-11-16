@@ -76,8 +76,14 @@ class Runner:
                 if snapshot.get('directory_mismatch') is True:
                     lost=c.execute(text('UPDATE c0_personal_owners SET active=false WHERE issuer=:issuer AND active RETURNING directory_id'),{'issuer':service.access.issuer}).scalars().all()
                     for directory in lost:service._revoke(c,directory)
-                if snapshot.get('provider_mismatch') is True:
-                    c.execute(text("UPDATE c0_personal_imports SET state='cleanup' WHERE owner_id IN (SELECT id FROM c0_personal_owners WHERE issuer=:issuer) AND state NOT IN ('excluded','removed')"),{'issuer':service.access.issuer})
+                mismatches={kind:instance for kind,instance in services.items()
+                    if kind in snapshot.get('provider_mismatches',[])}
+                if snapshot.get('directory_mismatch') is True or mismatches:
+                    c.execute(text("""UPDATE c0_personal_imports i SET state='cleanup' FROM c0_personal_owners o
+                        WHERE i.owner_id=o.id AND o.issuer=:issuer AND i.state NOT IN ('excluded','removed')
+                        AND (:directory OR CAST(:mismatches AS jsonb)->>i.connector=i.instance_id::text)"""),
+                        {'issuer':service.access.issuer,'directory':snapshot.get('directory_mismatch') is True,
+                         'mismatches':json.dumps(mismatches)})
             self._cleanup()
             return {'status':'provider_mismatch' if snapshot.get('provider_mismatch') is True else 'source_unavailable',**self.status()}
         owners=service.reconcile_directory(provider_id=snapshot['provider_id'],entries=snapshot['directory'],complete=snapshot.get('directory_complete') is True)
@@ -328,7 +334,7 @@ def main():
                 value={**runner.status(),'status':value['status']}
             print(json.dumps(value))
             return 0
-        secrets={} if '--configure-only' in sys.argv or not snapshot['configuration']['enabled'] else private_json('/var/lib/czero/personal-data-secrets.json')
+        secrets={} if '--configure-only' in sys.argv or not snapshot['configuration']['enabled'] or not snapshot.get('provider_verified') else private_json('/var/lib/czero/personal-data-secrets.json')
         originals=OriginalStore(os.environ.get('CZERO_SOURCE_DIR','/var/lib/czero/sources'))
         service=PersonalDataService(db,access,SourceService(db,access,build_registry(db,originals),originals))
         def current_native_binding(owner):

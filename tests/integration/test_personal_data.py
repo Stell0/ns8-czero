@@ -846,3 +846,38 @@ def test_unsupported_attachment_does_not_block_confirmed_other_message_removal(p
     second=runner.tick(snapshot,secrets)
     assert second['users'][0]['status']=='partial'
     assert service.sources.in_space(owner['space_id']).get(login(owner['directory_id']),old['source_id'])['deleted']
+
+
+@pytest.mark.parametrize('scoped',[True,False])
+def test_runtime_source_mismatch_preserves_the_compatible_connection(personal,scoped,monkeypatch,capsys):
+    import json
+    import czero_app.personal_data.runner as module
+    service,admin,provider,mail,login,registry=personal
+    voice=uuid4();services={'webtop':str(mail),'nethvoice':str(voice)}
+    service.configure(admin,provider_id=provider,enabled=True,services=services,expected_generation=1)
+    service.validate_binding(generation=2,provider_id=provider,services=services)
+    owner=provision(personal)
+    args=dict(owner_id=owner['id'],generation=2,title='Synthetic source',content=b'Current source body')
+    wt=service.submit(**args,connector='webtop',instance_id=mail,remote_key='mail',kind='message')
+    nv=service.submit(**args,connector='nethvoice',instance_id=voice,remote_key='101',kind='transcript',metadata={'uniqueid':'call.101'})
+    for version in (wt,nv):
+        with service.database.engine.begin() as c:registry.get('source.extract').execute(c,{'version_id':version['version_id']})
+    snapshot={'issuer':service.access.issuer,'configuration':{'enabled':True,**services},
+        'provider_id':str(provider),'provider_verified':False,'provider_mismatch':True,
+        'provider_mismatches':['nethvoice'] if scoped else []}
+    def private(path):
+        assert path.endswith('runtime.json'),'Mismatch cleanup attempted to load unavailable credentials'
+        return snapshot
+    monkeypatch.setattr(module,'private_json',private)
+    monkeypatch.setattr(module,'Database',lambda:service.database)
+    monkeypatch.setenv('CZERO_SOURCE_DIR',str(service.sources.originals.root))
+    monkeypatch.setattr(module.sys,'argv',['runner'])
+    assert module.main()==0
+    assert json.loads(capsys.readouterr().out)['status']=='provider_mismatch'
+    selected=service.sources.in_space(owner['space_id']);actor=login(owner['directory_id'])
+    assert selected.get(actor,wt['source_id'])['deleted'] is False
+    assert selected.document(actor,wt['version_id'])['body']=='Current source body'
+    assert selected.get(actor,nv['source_id'])['deleted'] is scoped
+    with service.database.engine.connect() as c:
+        assert c.execute(text('SELECT active FROM c0_personal_owners WHERE id=:id'),{'id':UUID(owner['id'])}).scalar_one()
+        assert not c.execute(text('SELECT validated FROM c0_personal_config WHERE issuer=:issuer'),{'issuer':service.access.issuer}).scalar_one()

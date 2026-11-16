@@ -184,3 +184,10 @@ when body bytes are unchanged, using normal source publication and retaining
 local overrides. Native publication checks also reject an in-flight credential
 copy after its canonical credential has been cleared or rotated; disconnection
 intent is persisted before the Core generation fence.
+
+A runtime mismatch is scoped to the verified incompatible connector and instance.
+Other connections' imported content remains intact. Unknown/unscoped discovery
+errors fence publication without inferring removal. An authoritative change of
+C0's directory binding suspends the old identities and retires their imports.
+Mismatch fencing/cleanup does not depend on successful directory reads or access
+to the connector credential file.

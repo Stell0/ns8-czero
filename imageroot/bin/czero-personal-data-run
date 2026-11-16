@@ -36,7 +36,7 @@ try:
     if runtime.exists():previous=json.loads(runtime.read_text())
     auth=agent.read_envfile(str(state/'auth.env'))
     issuer,identity_changed=identity_binding(auth,previous)
-    snapshot={'issuer':issuer,'configuration':config,'directory':[],'directory_complete':False,'provider_verified':False}
+    snapshot={'issuer':issuer,'configuration':config,'directory':[],'directory_complete':False,'provider_verified':False,'provider_mismatches':[]}
     if fence_only:
         snapshot['provider_id']=previous.get('provider_id') or str(UUID(int=0))
     elif config['enabled'] and not identity_changed:
@@ -54,21 +54,24 @@ try:
             if found is None:
                 # Disappearance or temporary discovery failure is not verified mismatch.
                 snapshot['provider_verified']=False
-                if config[kind] in options['_mismatches'][kind]:snapshot['provider_mismatch']=True
+                if config[kind] in options['_mismatches'][kind]:
+                    snapshot['provider_mismatch']=True
+                    snapshot['provider_mismatches'].append(kind)
                 continue
             snapshot['endpoints'][kind]=found['endpoint']
             if kind=='webtop':
                 snapshot['mail_domain']=rdb.hget('module/'+found['label']+'/environment','MAIL_DOMAIN')
-        client=Ldapclient.factory(**parameters)
-        users=client.list_users()
-        if isinstance(users,dict):names=list(users)
-        elif isinstance(users,list):
-            names=[u if isinstance(u,str) else u.get('user') if isinstance(u,dict) else None for u in users]
-        else:raise ValueError('directory_unavailable')
-        if len(names)>1000 or any(not isinstance(n,str) or not n for n in names):raise ValueError('directory_unavailable')
-        for name in names:
-            snapshot['directory'].append(directory_user(client,parameters['schema'],name))
-        snapshot['directory_complete']=True
+        if snapshot['provider_verified']:
+            client=Ldapclient.factory(**parameters)
+            users=client.list_users()
+            if isinstance(users,dict):names=list(users)
+            elif isinstance(users,list):
+                names=[u if isinstance(u,str) else u.get('user') if isinstance(u,dict) else None for u in users]
+            else:raise ValueError('directory_unavailable')
+            if len(names)>1000 or any(not isinstance(n,str) or not n for n in names):raise ValueError('directory_unavailable')
+            for name in names:
+                snapshot['directory'].append(directory_user(client,parameters['schema'],name))
+            snapshot['directory_complete']=True
     elif previous.get('provider_id'):
         snapshot['provider_id']=previous['provider_id']
         if config['enabled'] and identity_changed:
@@ -81,7 +84,7 @@ try:
     invocation=state/('personal-data-runtime-'+uuid4().hex+'.json')
     private_write(invocation,snapshot)
     protected=[str(invocation)]
-    if not fence_only and '--configure-only' not in sys.argv and config['enabled']:
+    if not fence_only and '--configure-only' not in sys.argv and config['enabled'] and snapshot['provider_verified']:
         credentials_copy=invocation.with_suffix('.credentials.json')
         credentials_snapshot=private_read(secret) if secret.exists() else {}
         private_write(credentials_copy,credentials_snapshot)
@@ -98,7 +101,7 @@ try:
         '--volume=czero-sources:/var/lib/czero/sources:z',
         '--volume='+str(invocation)+':/var/lib/czero/personal-data-runtime.json:ro,Z',
         '--entrypoint=python',os.environ['CZERO_APP_IMAGE'],'-m','czero_app.personal_data.runner']
-    if not fence_only and '--configure-only' not in sys.argv and config['enabled']:
+    if credentials_copy is not None:
         command.insert(command.index('--entrypoint=python'),'--volume='+str(credentials_copy)+':/var/lib/czero/personal-data-secrets.json:ro,Z')
     if fence_only:command.append('--fence-only')
     elif '--configure-only' in sys.argv:command.append('--configure-only')

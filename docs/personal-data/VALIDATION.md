@@ -187,3 +187,16 @@ Podman round trip verifies the actual `none` log driver and delivery of a
 synthetic binding request/reply without the marker appearing in container logs.
 This is additional private-protocol evidence, not a substitute for native root
 journald positive-control audits.71 native configuration/backup checks pass.
+
+The scoped-mismatch successor passes44 Core/runner cases and71 native configuration/
+backup checks. A two-source fixture verifies that a known mismatch retires only
+the incompatible instance, preserves the healthy connection's published body and
+keeps personal ownership active. An unscoped mismatch retains both copies. The
+actual CLI executes this cleanup without opening the unavailable credential file;
+the native helper also skips directory/credential reads when bindings are unverified.
+
+NethCTI's configured public HTTPS API endpoint now passes an on-node probe with
+redirects refused: the selected user's profile and empty personal-history response
+match the connector contract. The session token stays on the node; no token is
+returned, printed or saved by that probe. Actual transcript/summary content remains
+unverified until a test record exists.
