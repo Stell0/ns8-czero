@@ -1,13 +1,14 @@
 # Automatic sources
 
-Implementation candidate: space-scoped native public GitHub and website updates.
+Space-scoped native public GitHub and website updates.
 A definition selects remote content; collected documents use existing C0 sources,
 extraction, latest-only publication and indexing. No model executes in the worker.
 
 Core 0.51 adds schema0042 after the immutable Core 0.50/schema0041 release.
 Its published personal-space services and migrations remain intact; this feature
-does not enable or install native personal-data collection. The app's released
-Core 0.49 lock remains unchanged until independent publication and adoption.
+does not enable or install native personal-data collection. App 0.69 consumes the
+immutable `core-v0.51.0` Git release and frozen lock,
+with compatible range `>=0.51.0,<0.52.0` and matching patch-only updater bounds.
 
 Readers inspect definitions and run status. Editors create, revise, pause, remove
 and run definitions in their selected space with c0:write. Enabling a definition
