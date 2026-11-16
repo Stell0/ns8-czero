@@ -182,3 +182,75 @@ def test_long_folded_mail_subject_has_a_valid_title_and_preserves_full_evidence(
     assert len(documents)==1 and _label(documents[0].title,256)==documents[0].title
     assert len(documents[0].title)<=256 and subject.encode() in documents[0].content
     assert coverage['issues']==[]
+
+
+def test_read_only_forward_template_recovers_an_unambiguous_attachment():
+    payload=b'Original attachment'
+    calls=[]
+    attachment={'id':'1','fileName':'fixture.txt','mimeType':'text/plain; charset=UTF-8','fileSize':len(payload)}
+    def handle(request):
+        calls.append(request)
+        if request.url.path=='/me/messages/list':return httpx2.Response(200,json=[{'uid':7}])
+        if request.url.path.endswith('/attachments/$value'):return httpx2.Response(500)
+        if request.url.path=='/me/messages/forward':
+            assert request.url.params['uid']=='7' and request.url.params['includeAttachments']=='true'
+            return httpx2.Response(200,json={'forwardedFolder':'INBOX','inReplyTo':'mail@example.test','attachmentsNew':[
+                {'fileName':'fixture.txt','mimeType':'text/plain','base64':base64.b64encode(payload).decode()}]})
+        assert request.url.params['set_seen']=='false'
+        return httpx2.Response(200,json={'uid':7,'id':'mail@example.test','body':'Original mail','attachments':[attachment]})
+    source=WebTop('https://mail.example.test',api_key='dedicated-key',username='alice@example.test',transport=mail_transport(handle))
+    docs,coverage=source.page('INBOX')
+    assert docs[1].content==payload and docs[1].metadata['attachment_id']=='1'
+    assert docs[1].metadata['attachment_read_method']=='read-only-forward-template'
+    assert coverage['issues']==[] and all(request.method=='GET' for request in calls)
+
+
+@pytest.mark.parametrize('problem',['message','folder','duplicates','original_duplicates','encoding','missing_message_id'])
+def test_forward_template_never_guesses_attachment_identity(problem):
+    from czero_app.personal_data.connectors import _forward_attachment
+    payload=b'Attachment';item={'id':'1','fileName':'file.txt','mimeType':'text/plain','fileSize':len(payload)}
+    message={'id':'mail@example.test','attachments':[item]}
+    candidate={'fileName':'file.txt','mimeType':'text/plain','base64':base64.b64encode(payload).decode()}
+    template={'inReplyTo':message['id'],'forwardedFolder':'INBOX','attachmentsNew':[candidate]}
+    if problem=='message':template['inReplyTo']='other@example.test'
+    if problem=='folder':template['forwardedFolder']='another'
+    if problem=='duplicates':template['attachmentsNew'].append(dict(candidate))
+    if problem=='original_duplicates':message['attachments'].append({**item,'id':'2'})
+    if problem=='encoding':candidate['base64']='!invalid!'
+    if problem=='missing_message_id':message['id']='uid:7';template['inReplyTo']='uid:7'
+    with pytest.raises(Unavailable):_forward_attachment(message,item,template,'INBOX')
+
+
+@pytest.mark.parametrize('status',[401,403,404])
+def test_forward_fallback_does_not_bypass_attachment_denial(status):
+    requests=[]
+    def handle(request):
+        requests.append(request.url.path)
+        if request.url.path=='/me/messages/list':return httpx2.Response(200,json=[{'uid':7}])
+        if request.url.path.endswith('/attachments/$value'):return httpx2.Response(status)
+        assert request.url.path=='/me/messages'
+        return httpx2.Response(200,json={'uid':7,'id':'mail@example.test','body':'Original','attachments':[
+            {'id':'1','fileName':'file.txt','mimeType':'text/plain','fileSize':10}]})
+    source=WebTop('https://mail.example.test',api_key='dedicated-key',username='alice@example.test',transport=mail_transport(handle))
+    documents,coverage=source.page('INBOX')
+    assert len(documents)==1 and '/me/messages/forward' not in requests
+    assert coverage['issues'][0]['code']==('source_not_found' if status==404 else 'session_unavailable')
+
+
+def test_forward_template_enforces_decoded_bytes_not_transfer_size_estimates():
+    from czero_app.personal_data.connectors import _forward_attachment
+    from czero_core.extraction import MAX_UPLOAD
+    payload=b'Synthetic supported attachment.\n'
+    item={'id':'1','fileName':'file.txt','mimeType':'text/plain','fileSize':46}
+    message={'id':'mail@example.test','attachments':[item]}
+    candidate={'fileName':'file.txt','mimeType':'text/plain','base64':base64.b64encode(payload).decode()}
+    template={'inReplyTo':message['id'],'forwardedFolder':'INBOX','attachmentsNew':[candidate]}
+    assert _forward_attachment(message,item,template,'INBOX')==payload
+    candidate['base64']=base64.b64encode(b'x'*(MAX_UPLOAD+1)).decode()
+    with pytest.raises(Unavailable):_forward_attachment(message,item,template,'INBOX')
+
+
+def test_read_client_larger_json_wrapper_still_has_an_explicit_bound():
+    from czero_core.extraction import MAX_UPLOAD
+    source=ReadClient('https://mail.example.test',{},transport=mail_transport(lambda request:httpx2.Response(200,json={})))
+    with pytest.raises(ValueError):source.read('/me/messages/forward',maximum=2*MAX_UPLOAD+1)

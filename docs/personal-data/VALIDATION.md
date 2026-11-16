@@ -1,6 +1,6 @@
 # Personal Data candidate validation
 
-This is producer development on original C0 main
+This candidate is based on original C0 main
 `6845d45252a73327b7eabce38fe28fdc81e3e5d0`. Core0.50/schema0041 is independently
 published; app0.68 stages its released tag/lock adoption, with consumer acceptance
 still pending. No production deployment,
@@ -92,16 +92,15 @@ no C0 publication is performed by these source probes.
 
 ## Remaining gates
 
-Resolve the installed WebTop attachment download failure without modifying the
-product, exercise actual NethCTI transcript/summary records (the full interval
+Exercise actual NethCTI transcript/summary records (the full interval
 from1900 through the inclusive current window is empty), finish daily inventory /
 backfill capacity and new-arrival throughput, and complete integration
 credential provisioning/revocation. Local credential clearing reports pending
 upstream revocation rather than claiming it happened.
 
-Full Debian/Rocky native configuration, backup/restore, scheduler, privacy and
-packaged-connector acceptance remain required. Then independently publish Core,
-adopt its immutable release/lock and verify the released consumer. The switch
+Exact released-consumer Debian/Rocky configuration, backup/restore, scheduler,
+privacy and packaged-connector acceptance remain required. Independent Core
+publication and immutable consumer adoption are recorded below. The switch
 must remain disabled on existing installations until those gates pass.
 
 ## Preserved first candidate and successor
@@ -239,3 +238,36 @@ All21 native Robot dry runs and706 maintained documentation links pass. The
 consumer lock changes only the application/Core versions and immutable Core source;
 other dependency bytes and published Core files remain unchanged. Current consumer
 full/native/image acceptance remains a separate outstanding gate.
+
+
+## Existing-API attachment recovery
+
+The installed binary attachment endpoint still returns500. A subsequent actual
+C0 adapter probe over verified public HTTPS recovers the synthetic supported
+attachment through GET `/me/messages/forward?includeAttachments=true`. This reads
+a template only; source inspection confirms a read-only mailbox open, and the
+installed probe confirms the message remains unread. Exact decoded bytes match
+the synthetic fixture; the unsupported attachment remains explicitly reported.
+No source product changes, draft saves, sends or C0 publications occur.
+
+The fallback requires the original Message-ID and folder, and a unique matching
+filename, normalized MIME type and content ID in both original and template
+responses. Missing identifiers, duplicate descriptors and authorization denials
+fail closed. Only source unavailability can trigger the extra read. Normal
+responses remain bounded to10MiB; the template wrapper may use20MiB and each
+decoded attachment must fit10MiB. Reported source sizes count MIME transfer
+octets: the installed fixture reports46 for32 decoded bytes. They are never
+used as decoded-content identity. Templates exceeding the bound remain visible
+as attachment failures. The focused source-adapter suite passes29 cases, including
+ambiguity, denial, invalid encoding and decoded-size limits. This app-only change
+leaves the published Core package bytes unchanged and requires its own exact
+consumer full/native evidence.
+
+
+A released-Core PostgreSQL workload test provisions six never-signed-in users,
+rotates at most five owners per pass, recreates the runner after every pass and
+adds messages during pagination. All72 distinct messages are staged in their
+respective spaces and every owner completes inventory within eight passes
+(40 minutes at the configured timer interval); no C0 login accounts are fabricated.
+This proves bounded restart/fairness behavior at that synthetic workload, not
+performance or daily coverage for an unspecified larger installation.

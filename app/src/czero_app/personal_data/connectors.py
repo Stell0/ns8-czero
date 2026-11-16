@@ -60,10 +60,11 @@ class ReadClient:
     def close(self):
         self._client.close()
 
-    def read(self, path, *, params=None, body=None, binary=False):
+    def read(self, path, *, params=None, body=None, binary=False, maximum=MAX_UPLOAD):
+        if type(maximum) is not int or not 0<maximum<=2*MAX_UPLOAD:raise ValueError('invalid_source_limit')
         # POST is a documented read only for NethCTI status lookup.
         permitted = (path in {'/user/me','/history/calls','/history/statuses','/me/folders','/me/folders/children',
-            '/me/messages/list','/me/messages','/me/identities','/me/messages/attachments/$value'}
+            '/me/messages/list','/me/messages','/me/identities','/me/messages/attachments/$value','/me/messages/forward'}
             or re.fullmatch(r'/(transcripts|summary)/[A-Za-z0-9_.-]{1,128}',path))
         if not permitted or (body is not None and path!='/history/statuses'):
             raise ValueError('source_write_forbidden')
@@ -85,7 +86,7 @@ class ReadClient:
                     self._remaining_bytes-=len(part)
                     if self._remaining_bytes<0 or time.monotonic()>=self._deadline:
                         raise Unavailable('inventory_incomplete')
-                    if len(content)>MAX_UPLOAD:
+                    if len(content)>maximum:
                         raise Unavailable('too_large')
                 if binary:
                     return bytes(content)
@@ -219,6 +220,44 @@ def mail_identity(message):
     return digest, 'message_id' if identified else 'content_hash'
 
 
+def _attachment_signature(value):
+    if not isinstance(value,dict) or not isinstance(value.get('fileName'),str) or not value['fileName']:
+        return None
+    media=value.get('mimeType')
+    if not isinstance(media,str):return None
+    cid=value.get('cidName') or None
+    if cid is not None and not isinstance(cid,str):return None
+    return value['fileName'],media.partition(';')[0].strip().lower(),cid
+
+
+def _forward_attachment(message,attachment,template,folder):
+    """The read-only forward template carries original bytes; never import its body."""
+    identifier=message.get('id');signature=_attachment_signature(attachment)
+    if (not isinstance(identifier,str) or not identifier or identifier.startswith('uid:') or signature is None
+            or not isinstance(template,dict) or template.get('inReplyTo')!=identifier
+            or template.get('forwardedFolder')!=folder):
+        raise Unavailable('identity_ambiguous')
+    original=message.get('attachments') or []
+    if sum(_attachment_signature(item)==signature
+           for item in original if isinstance(item,dict))!=1:
+        raise Unavailable('identity_ambiguous')
+    candidates=template.get('attachmentsNew')
+    if not isinstance(candidates,list):raise Unavailable('capability_unverified')
+    matches=[]
+    for candidate in candidates:
+        if _attachment_signature(candidate)!=signature:continue
+        encoded=candidate.get('base64')
+        if not isinstance(encoded,str) or len(encoded)>4*((MAX_UPLOAD+2)//3):
+            raise Unavailable('capability_unverified')
+        try:payload=base64.b64decode(encoded,validate=True)
+        except (ValueError,UnicodeError):raise Unavailable('capability_unverified') from None
+        # WebTop reports MIME transfer octets, not decoded attachment length.
+        if not 0<len(payload)<=MAX_UPLOAD:raise Unavailable('too_large')
+        matches.append(payload)
+    if len(matches)!=1:raise Unavailable('identity_ambiguous')
+    return matches[0]
+
+
 class WebTop:
     EXCLUDED={'drafts','trash','spam','junk','shared','public'}
     def __init__(self, base_url, *, api_key, username, transport=None):
@@ -293,7 +332,7 @@ class WebTop:
             text='Subject: '+subject+'\n\n'+html_text(message['body'])
             if text.strip():
                 documents.append(Document(key,'message',title[:256],text.encode(),metadata=metadata))
-            message_issues=[]
+            message_issues=[];forward_template=None;forward_attempted=False
             for attachment_index,attachment in enumerate(message.get('attachments') or []):
                 attachment_id=attachment.get('id') if isinstance(attachment,dict) else None
                 def issue(code):
@@ -303,13 +342,23 @@ class WebTop:
                     issue('unsupported_attachment');continue
                 media=attachment.get('mimeType');length=attachment.get('fileSize')
                 media=media.partition(';')[0].strip().lower() if isinstance(media,str) else None
-                if media not in MEDIA_TYPES or type(length) is not int or not 0<length<=MAX_UPLOAD:
-                    issue('too_large' if type(length) is int and length>MAX_UPLOAD else 'unsupported_attachment');continue
+                if media not in MEDIA_TYPES or type(length) is not int or not 0<length<=4*MAX_UPLOAD:
+                    issue('too_large' if type(length) is int and length>4*MAX_UPLOAD else 'unsupported_attachment');continue
+                method='attachment-api'
                 try:
                     data=self.client.read('/me/messages/attachments/$value',params={'folder_id':folder,'uid':uid,'index':attachment['id']},binary=True)
                 except Unavailable as error:
-                    issue(error.code);continue
+                    if error.code!='source_unavailable':issue(error.code);continue
+                    try:
+                        if not forward_attempted:
+                            forward_attempted=True
+                            forward_template=_data(self.client.read('/me/messages/forward',params={
+                                'folder_id':folder,'uid':uid,'includeAttachments':'true'},maximum=2*MAX_UPLOAD))
+                        data=_forward_attachment(message,attachment,forward_template,folder)
+                        method='read-only-forward-template'
+                    except Unavailable:
+                        issue(error.code);continue
                 documents.append(Document(key+'/attachment/'+attachment['id'],'attachment',str(attachment.get('fileName') or title)[:256],
-                    data,media,metadata={**metadata,'parent_import_key':key,'attachment_id':attachment['id']}))
+                    data,media,metadata={**metadata,'parent_import_key':key,'attachment_id':attachment['id'],'attachment_read_method':method}))
             observations.append({'remote_key':key,'issues':message_issues})
         return documents, {'complete':len(rows)<size,'count':len(rows),'attachment_observations':observations,'issues':issues,'deletion_authoritative':False}

@@ -45,7 +45,14 @@ No generated summaries, Satellite vectors or PostgreSQL source access.
 Read only the user's own mailbox; exclude Junk, Trash, Drafts and delegated/shared
 mailboxes. Use set_seen=false and existing attachment reads. Never fetch remote
 message images. Extract HTML safely; normal C0 extraction handles supported
-attachments and reports unsupported, oversized and failed ones explicitly.
+attachments and reports unsupported, oversized and failed ones explicitly. If the
+binary attachment endpoint is unavailable, a GET of the existing forward template
+may supply original bytes; it neither saves a draft nor sends mail. Require the
+original Message-ID, matching folder and a unique filename/MIME/content-ID match
+in both responses. Ambiguity or an authorization denial prevents this fallback.
+Never import the template body. Bound the JSON wrapper to20MiB and decoded
+attachments to10MiB; the source-reported size counts MIME transfer octets and is
+not proof of decoded length. Larger combined templates remain explicit failures.
 
 Date/page scans can shift under concurrent arrivals/deletions. Repeat scans and
 report incomplete/backfill coverage honestly. Never assume folder+UID means
@@ -128,7 +135,8 @@ WebTop rotates the recent refresh across eligible folders; NethCTI refreshes
 the latest personal calls separately from the pinned historical window. A
 completed old NethCTI window is backfill progress, not a current inventory. The status exposes overdue inventories instead of
 claiming daily coverage. Reads remain bounded to32 requests and85 seconds
-per source adapter,10 MiB per response and320 MiB aggregate raw responses. The
+per source adapter,10 MiB per ordinary response (20 MiB for the attachment
+template wrapper) and320 MiB aggregate raw responses. The
 existing image runs with a1 GiB memory limit and a150-second native service
 deadline; publication still uses the normal C0 extraction limits. Complete daily reconciliation at the target workload,
 new-arrival throughput under load, supported attachment retry coverage,

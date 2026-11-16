@@ -36,8 +36,9 @@ These changes do not replace the frozen Core release evidence.
 
 The new test WebTop installation now has verified public HTTPS. The actual C0
 adapter verifies identity/folders, safely extracts the synthetic message and
-preserves its unread flag. Supported attachment download returns500 and is recorded
-for retry. NethCTI's configured HTTPS profile/history works on-node without token
+preserves its unread flag. The binary attachment endpoint returns500, but the
+existing read-only forward-template endpoint supplies the supported attachment;
+strict message/folder and unique attachment matching verify its identity. NethCTI's configured HTTPS profile/history works on-node without token
 transfer, but its selected full personal transcript inventory is empty. Actual
 transcript/summary content, workload coverage and the first-version manual key
 lifecycle decision remain open. No source-product changes or C0 production

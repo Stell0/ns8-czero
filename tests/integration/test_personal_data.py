@@ -881,3 +881,48 @@ def test_runtime_source_mismatch_preserves_the_compatible_connection(personal,sc
     with service.database.engine.connect() as c:
         assert c.execute(text('SELECT active FROM c0_personal_owners WHERE id=:id'),{'id':UUID(owner['id'])}).scalar_one()
         assert not c.execute(text('SELECT validated FROM c0_personal_config WHERE issuer=:issuer'),{'issuer':service.access.issuer}).scalar_one()
+
+
+def test_bounded_inventory_rotates_owners_and_resumes_after_new_arrivals(personal,monkeypatch):
+    """A finite workload finishes without confusing recent reads with full scans."""
+    from types import SimpleNamespace
+    from czero_app.personal_data.runner import Runner
+    from czero_app.personal_data.connectors import Document
+    import czero_app.personal_data.runner as module
+    service,_,provider,instance,_,_=personal
+    entries=[{'directory_id':str(uuid4()),'username':f'person{i}','active':True} for i in range(6)]
+    messages={entry['username']:list(range(11,0,-1)) for entry in entries}
+    calls=[]
+    class Mail:
+        def __init__(self,*args,username,**kwargs):
+            self.username=username.split('@')[0];self.client=SimpleNamespace(close=lambda:None)
+        def folders(self):return [{'id':'INBOX'}]
+        def page(self,folder,*,page,size):
+            calls.append((self.username,page,size))
+            selected=messages[self.username][page*size:(page+1)*size]
+            return [Document(f'message-{uid}','message',f'Message {uid}',f'Body {uid}'.encode()) for uid in selected],{
+                'complete':len(selected)<size,'issues':[]}
+    monkeypatch.setattr(module,'WebTop',Mail)
+    snapshot={'configuration':{'enabled':True,'webtop':str(instance)},'provider_id':str(provider),
+        'provider_verified':True,'directory_complete':True,'directory':entries,
+        'endpoints':{'webtop':'https://mail.example.test'},'mail_domain':'example.test'}
+    secrets={'webtop':{str(instance):{'api_key':'synthetic-dedicated-key'}}}
+    for tick in range(8):
+        if tick==2:
+            for values in messages.values():values.insert(0,12)
+        # Recreate the runner each time: all progress must be persisted.
+        start=len(calls)
+        result=Runner(service,before_publish=lambda owner:True).tick(snapshot,secrets)
+        assert len({name for name,_,_ in calls[start:]})<=5
+        if tick==0:
+            assert len(result['users'])==6
+            assert sum(user['status']=='unverified' for user in result['users'])==1
+            assert all(user['inventory_overdue'] for user in result['users'])
+    assert all(user['last_inventory'] is not None and not user['inventory_overdue'] for user in result['users'])
+    assert all(size==5 for _,_,size in calls)
+    assert result['imports']['managed']==6*12
+    with service.database.engine.connect() as c:
+        rows=c.execute(text('''SELECT o.username,count(*) FROM c0_personal_imports i
+            JOIN c0_personal_owners o ON o.id=i.owner_id GROUP BY o.username''')).all()
+        assert dict(rows)=={entry['username']:12 for entry in entries}
+        assert c.execute(text('SELECT count(*) FROM c0_accounts')).scalar_one()==1
