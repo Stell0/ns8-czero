@@ -5,9 +5,14 @@
 Implement native space-owned public GitHub and website definitions, Editor
 REST/MCP operations, background authorization, bounded worker collection and a
 translated Nebula management page. See [contract](docs/automatic-sources.md).
-Schema0040 and shared public transport/conversion require producer and full
+Schema0042 and shared public transport/conversion require producer and full
 native acceptance, followed by independent Core publication and consumer adoption.
 Existing external jobs and production schedules are not migrated automatically.
+Core0.50 is already published by the separate personal-data work at `280ca06`.
+Preserve its library contracts and schema0040/0041 bytes. Automatic updates use
+Core0.51/schema0042; native personal-data controls remain separate. Earlier
+automatic-source 0.50/schema0040 candidates and their CI evidence are retained
+without publishing or replacing any existing tag.
 Local development evidence on original main `6845d45`: the independent baseline
 passes1299 unit/source/worker checks. Candidate checks pass1283 unit cases,
 78 focused source/HTTP/MCP/worker cases, all six wheel/archive checks and three

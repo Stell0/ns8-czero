@@ -123,7 +123,8 @@ class OAuthConsentService:
                 raise ConsentRejected()
             for scope, role in [('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
                 if scope in scopes:
-                    actor.require(role)
+                    from .personal_data import require_consent_role
+                    require_consent_role(actor, role)
             connection.execute(text('''UPDATE c0_oauth_consent SET background_requested=true,
                 expected_account_id=:account,scopes=CAST(:scopes AS jsonb) WHERE hash=:hash'''),
                 {'account':actor.user_id,'scopes':json.dumps(sorted(scopes)),'hash':row['hash']})

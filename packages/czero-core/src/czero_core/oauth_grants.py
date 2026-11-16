@@ -313,9 +313,10 @@ class OAuthGrantService:
                 raise GrantRejected()
             expires = None
         code = secrets.token_urlsafe(32)
+        from .personal_data import require_consent_role
         for scope, role in [('c0:write', Role.EDITOR), ('c0:admin', Role.ADMIN)]:
             if scope in scopes:
-                actor.require(role)
+                require_consent_role(actor, role)
         client = self.clients._registered(connection, client_id)
         if (client is None or not self.clients.redirect_uri_matches(callback, client['redirect_uris'])
                 or not scopes <= set(client['allowed_scopes'])):

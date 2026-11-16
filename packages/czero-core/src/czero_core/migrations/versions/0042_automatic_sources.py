@@ -1,8 +1,8 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 from alembic import op
 
-revision = '0040_automatic_sources'
-down_revision = '0039_space_audiences'
+revision = '0042_automatic_sources'
+down_revision = '0041_personal_aliases'
 branch_labels = depends_on = None
 
 

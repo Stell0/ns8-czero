@@ -65,7 +65,7 @@ Source/Wiki content is latest-only. Stage and validate replacements, atomically 
 
 ## Native automatic-source development
 
-The [Core 0.50 producer contract](https://github.com/Stell0/ns8-czero/blob/main/docs/automatic-sources.md) adds
+The [Core 0.51 producer contract](https://github.com/Stell0/ns8-czero/blob/main/docs/automatic-sources.md) adds
 space-scoped public GitHub/website definitions and explicit native scheduling.
 Use the actual catalogue when the installed server supports it. Enabling or
 changing a recurring definition requires the user's requested selection and

@@ -53,7 +53,7 @@ def test_distributions_have_license_runtime_metadata_and_complete_migrations(dis
         assert 'License-Expression: GPL-3.0-or-later' in metadata
         assert archive.read(f'czero_core-{version}.dist-info/licenses/LICENSE')==(ROOT/'LICENSE').read_bytes()
         expected={str(p.relative_to(ROOT/'packages/czero-core/src')) for p in (ROOT/'packages/czero-core/src/czero_core/migrations').rglob('*.py')}
-        assert expected <= set(names)
+        assert expected == {name for name in names if name.startswith('czero_core/migrations/') and name.endswith('.py')}
         assert {'czero_core/compilation_plans.py','czero_core/compilation_plan_schema.py',
                 'czero_core/compilation_content.py','czero_core/compilation_client.py',
                 'czero_core/automatic_sources.py','czero_core/source_updates.py','czero_core/source_collectors.py',
@@ -131,7 +131,7 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
                 "c=d.engine.connect();print(json.dumps([str(c.execute(text('SELECT knowledge_space_id FROM instance_metadata')).scalar_one()),"
                 "c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()]));c.close();d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
             results.append(json.loads(output))
-        assert results[0]==results[1] and results[0][1]=='0040_automatic_sources'
+        assert results[0]==results[1] and results[0][1]=='0042_automatic_sources'
         automatic_probe=directory/'core_automatic_sources_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_automatic_sources_probe.py',automatic_probe)
         automatic_evidence=command([str(python),'-I',str(automatic_probe)],cwd=directory,
@@ -165,6 +165,26 @@ def test_installed_package_migrates_fresh_database_and_preserves_identity(instal
             env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1',
                 'CZERO_COMPILATION_STATE':str(directory/'compiler-state.json')})
         assert json.loads(coordinated)['six_tables'] and json.loads(coordinated)['guarded_compilation']
+        personal_probe=directory/'core_personal_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_personal_probe.py',personal_probe)
+        personal=command([str(python),'-I',str(personal_probe)],cwd=directory,
+            env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1'})
+        assert all(json.loads(personal).values())
+        personal_backup=directory/'core_personal_backup_probe.py'
+        shutil.copyfile(ROOT/'tests/packaging/core_personal_backup_probe.py',personal_backup)
+        personal_state=directory/'personal-state.json'
+        for stage in ('seed','verify'):
+            if stage=='verify':
+                # Same source-binding invalidation as the supported native restore.
+                command([str(python),'-I','-c',
+                    "from czero_core import Database;from sqlalchemy import text;d=Database();"
+                    "c=d.engine.begin();t=c.__enter__();t.execute(text('UPDATE c0_personal_config SET validated=false'));"
+                    "c.__exit__(None,None,None);d.close()"],cwd=directory,env={**env,'CZERO_DATABASE_URL':target})
+            result=command([str(python),'-I',str(personal_backup)],cwd=directory,
+                env={**env,'CZERO_DATABASE_URL':target,'CZERO_DISPOSABLE_TEST':'1',
+                     'CZERO_PERSONAL_STAGE':stage,'CZERO_PERSONAL_STATE':str(personal_state)})
+            assert all(json.loads(result).values())
+        assert not personal_state.exists()
         shutil.copyfile(ROOT/'tests/integration/ocr_original.py',directory/'ocr_original.py')
         extraction_probe=directory/'core_extraction_probe.py'
         shutil.copyfile(ROOT/'tests/packaging/core_extraction_probe.py',extraction_probe)

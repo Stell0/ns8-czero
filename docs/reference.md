@@ -193,7 +193,7 @@ unavailable create target is `reference_target_unavailable`; conflict409 and inv
 request422 contain no target diagnostics. All responses are no-store.
 
 
-## Automatic source updates (Core 0.50 producer)
+## Automatic source updates (Core 0.51 producer)
 
 Discover actual server capabilities before using these operations. Select the
 exact space; Reader can inspect definitions/runs/documents and Editor with

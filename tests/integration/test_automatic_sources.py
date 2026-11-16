@@ -9,6 +9,7 @@ from czero_core.source_updates import SourceUpdater
 from czero_core.worker import Worker
 from test_access import access, owner_actor, record_unadmitted, account_named, identity
 from test_sources import sources
+from test_personal_core_compatibility import personal, provision
 
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='isolated PostgreSQL required')
 
@@ -276,3 +277,22 @@ def test_checkpoints_are_moved_and_old_run_metadata_is_bounded(automatic):
         c.execute(text("UPDATE c0_source_update_runs SET state='complete',cursor='{}',created_at=now()-interval '40 days' WHERE definition_id=:id"),{'id':saved['id']})
     service._prune_runs()
     assert len(service.runs(owner,saved['id']))==1
+
+
+def test_personal_editor_background_authority_stays_in_its_owned_space(personal):
+    native,admin,provider,_,login,_=personal
+    owner=provision(personal)
+    actor=login(owner['directory_id'])
+    service=AutomaticSourceService(native.database,native.access)
+    selected=service.in_space(owner['space_id'])
+    args=dict(name='Public original',kind='github',config={'repositories':['synthetic/example']},
+              enabled=True,interval_seconds=3600,idempotency_key=str(uuid4()))
+    with pytest.raises(PermissionDenied):service.save(actor,**args)
+    saved=selected.save(actor,**args)
+    claimed=service.claim()
+    with service.database.engine.begin() as c:
+        assert selected.fenced(c,claimed).role is Role.EDITOR
+    native.reconcile_directory(provider_id=provider,entries=[],complete=True)
+    with service.database.engine.begin() as c:
+        with pytest.raises(PermissionDenied):selected.fenced(c,claimed)
+    assert selected.runs(admin,saved['id'])[0]['state']=='running'
