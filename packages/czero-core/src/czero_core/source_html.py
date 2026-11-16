@@ -136,4 +136,3 @@ def extract(raw,url,config,*,extractor=None):
         **{key:config[key] for key in ('product','product_version','language','manual')},
         'path':[value for value in (config['manual'],*urlsplit(canonical).path.strip('/').split('/')) if value]}
     return title or canonical,body.encode(),canonical,links,metadata
-
