@@ -89,6 +89,7 @@ jobs:
         if: ${{ !inputs.feedback }}
         env:
           CZERO_BROWSER_ARTIFACTS: /tmp/c0-document-browser-failures
+          CZERO_TEST_GITHUB_TOKEN: ${{ github.token }}
         run: python -m pytest -q --tb=short -rA tests/e2e
       - name: Retain sanitized browser failures
         if: failure() && !inputs.feedback

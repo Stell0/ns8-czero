@@ -61,3 +61,13 @@ Queued/failed parts do not prove complete publication; retain the last complete
 generation while staging. After successful publication, obsolete bodies are removed and expired exact citations explicitly return content_superseded.
 
 Source/Wiki content is latest-only. Stage and validate replacements, atomically publish whole documents, and remove retired bodies/derivatives/receipt copies. Retired exact evidence and superseded replays return authorized `content_superseded` (410). Preserve authored text and mark expired evidence stale. Back up and run the [preflight](../../../docs/latest-only-migration.md) before a separately authorized production upgrade. Website collectors use the [existing ingestion recipe](../../../samples/ingestion/examples/website/README.md), private jobs and approved public boundaries; no new OAuth/client stack or automatic schedules.
+
+
+## Native automatic-source development
+
+The [Core 0.51 producer contract](https://github.com/Stell0/ns8-czero/blob/main/docs/automatic-sources.md) adds
+space-scoped public GitHub/website definitions and explicit native scheduling.
+Use the actual catalogue when the installed server supports it. Enabling or
+changing a recurring definition requires the user's requested selection and
+frequency; ordinary ingestion does not grant that authorization. Keep external
+jobs and their source identities until an explicit migration has been validated.

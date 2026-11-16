@@ -175,6 +175,8 @@ class SourceService(SpaceBound):
         with self.database.engine.begin() as connection:
             hold_authority(connection)
             self._authorize(connection, actor, Role.EDITOR)
+            from .personal_data import mark_local_change
+            mark_local_change(connection, source_id)
             return self._ingest(connection, stream, title=title, filename=filename,
                 media_type=media_type, retain_original=retain_original, encoded=encoded,
                 source_id=source_id, expected_revision=expected_revision)
@@ -207,6 +209,8 @@ class SourceService(SpaceBound):
             'media_type': media_type, 'metadata': json.loads(encoded),
             'source_id': str(source_id) if source_id else None, 'expected_revision': expected_revision}
         def execute(connection, current):
+            from .personal_data import mark_local_change
+            mark_local_change(connection, source_id)
             return self._ingest(connection, BytesIO(content), title=title,
                 filename='evidence.md' if media_type == 'text/markdown' else 'evidence.txt',
                 media_type=media_type, retain_original=False, encoded=encoded,
@@ -287,7 +291,7 @@ class SourceService(SpaceBound):
         if external_key is not None:external_key=_label(external_key,128)
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return [content_row(row) for row in connection.execute(text('''SELECT * FROM c0_sources
+            return [self._import_view(connection, content_row(row)) for row in connection.execute(text('''SELECT * FROM c0_sources
                 WHERE space_id=:space AND (:deleted OR NOT deleted) AND (CAST(:external AS text) IS NULL OR metadata->>'external_key'=:external)
                 ORDER BY created_at DESC,id LIMIT :limit OFFSET :offset'''),
                 {'space': self._space(connection), 'deleted': include_deleted,'external':external_key,'limit': limit, 'offset': offset}).mappings()]
@@ -295,7 +299,15 @@ class SourceService(SpaceBound):
     def get(self, actor, source_id):
         with self.database.engine.connect() as connection:
             self._authorize(connection, actor)
-            return self._source(connection, source_id)
+            return self._import_view(connection, self._source(connection, source_id))
+
+    @staticmethod
+    def _import_view(connection, row):
+        if connection.execute(text("SELECT to_regclass('c0_personal_imports') IS NOT NULL")).scalar_one():
+            status=connection.execute(text('SELECT connector,state FROM c0_personal_imports WHERE source_id=:id'), {'id':row['id']}).mappings().one_or_none()
+            if status is not None:
+                return {**row,'managed_import':dict(status)}
+        return row
 
     def versions(self, actor, source_id, *, limit=50, offset=0):
         self._page(limit, offset)
@@ -373,6 +385,8 @@ class SourceService(SpaceBound):
             row = self._source(connection, source_id, lock=True)
             if type(expected_revision) is not int or row['revision'] != expected_revision:
                 raise SourceConflict()
+            from .personal_data import mark_local_change
+            mark_local_change(connection, source_id, deleted=True)
             if not row['deleted']:
                 versions = connection.execute(text('SELECT id FROM c0_source_versions WHERE source_id=:id'), {'id':source_id}).scalars().all()
                 cancel_versions(connection, versions, 'source_deleted')
@@ -514,8 +528,16 @@ class SourceService(SpaceBound):
         return {'source': source, 'document': document, 'chunk': chunk}
 
 
-def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True,structure=None,chunking_profile='fixed-v1'):
+def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=True,structure=None,chunking_profile='fixed-v1',access=None):
     """Trusted complete evidence; caller owns the content lock/transaction."""
+    from .personal_data import guard_publication
+    guard_publication(connection, row['source_id'], row['id'])
+    from .automatic_sources import guard_publication as guard_automatic
+    automatic=guard_automatic(connection,row,access)
+    if automatic is False:return {'state':'cancelled'}
+    if automatic:reuse_identical=False
+    if automatic:
+        row={**row,'publication_metadata':{key:value for key,value in row['publication_metadata'].items() if key!='_automatic_source_revision'}}
     from .current_content import publish_versions
     version_id=row['id']
     source=connection.execute(text('SELECT * FROM c0_sources WHERE id=:id'),{'id':row['source_id']}).mappings().one()
@@ -546,7 +568,7 @@ def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=T
     return {'state': 'ready', 'document_id': str(document_id), 'chunks': len(segments)}
 
 
-def register_source_handlers(registry, database, originals):
+def register_source_handlers(registry, database, originals, *, access=None):
     jobs = JobService(database, registry)
 
     def extract(connection, payload):
@@ -568,7 +590,7 @@ def register_source_handlers(registry, database, originals):
             connection.execute(text("UPDATE c0_source_versions SET state='failed',error_code=:code WHERE id=:id"),
                 {'id': version_id, 'code': error.code})
             return {'state': 'failed', 'error_code': error.code}
-        return _publish_extracted(connection,row,evidence,segments,jobs,reuse_identical=not row['force_reindex'])
+        return _publish_extracted(connection,row,evidence,segments,jobs,reuse_identical=not row['force_reindex'],access=access)
 
     def cleanup(connection, payload):
         from .current_content import content_lock,retire_versions

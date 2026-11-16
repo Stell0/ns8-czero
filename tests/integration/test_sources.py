@@ -25,7 +25,7 @@ def sources(access, tmp_path):
     acl, database, _ = access
     registry = default_registry()
     originals = OriginalStore(tmp_path / 'originals')
-    register_source_handlers(registry, database, originals)
+    register_source_handlers(registry, database, originals,access=acl)
     service = SourceService(database, acl, registry, originals)
     created = []
     with database.engine.begin() as c:

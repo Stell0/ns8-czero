@@ -25,7 +25,7 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0039_space_audiences'
+assert SCHEMA_REVISION == '0042_automatic_sources'
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
@@ -62,4 +62,10 @@ assert isinstance(application.state.spaces, SpaceService)
 assert callable(SpaceService.set_access) and callable(ClientOnboardingService.register_reader)
 assert len([route for route in application.routes
             if route.path == '/api/v1/spaces/{space_id}/access']) == 1
+from czero_core.automatic_sources import AutomaticSourceService
+from czero_app.automatic_sources import install as install_automatic_sources
+install_automatic_sources(application, None, None, lambda: None, lambda: None)
+assert isinstance(application.state.automatic_sources, AutomaticSourceService)
+assert len([route for route in application.routes
+            if route.path.startswith('/api/v1/automatic-sources')]) == 6
 print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')

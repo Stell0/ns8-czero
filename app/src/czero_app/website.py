@@ -18,6 +18,7 @@ class Website:
     def __init__(self, directory: Path, base_path: str):
         self.directory = directory
         self.base_path = base_path
+        self.automatic_sources = False
 
     def render(self, boot=None, *, status_code=200):
         path = self.directory / 'index.html'
@@ -25,6 +26,8 @@ class Website:
             raise HTTPException(503, 'website_build_unavailable')
         value = json.dumps(boot or {}, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
         body = path.read_text().replace('<base href="/" />', '<base href="' + escape(self.base_path + '/', quote=True) + '" />')
+        available='true' if self.automatic_sources else 'false'
+        body = body.replace('</head>', '<meta name="c0-automatic-sources" content="'+available+'"></head>', 1)
         body = body.replace('<!--C0_BOOT-->', '<script id="c0-boot" type="application/json">' + value + '</script>')
         return HTMLResponse(body, status_code=status_code, headers={'Cache-Control': 'no-store', 'Content-Security-Policy': CSP,
             'Referrer-Policy': 'strict-origin', 'X-Content-Type-Options': 'nosniff'})
@@ -34,7 +37,7 @@ class Website:
             return self.render()
 
         for path in ('/', '/search', '/wiki', '/wiki/{identifier}', '/sources', '/sources/{identifier}',
-                     '/evidence/{identifier}', '/tables', '/tables/{identifier}', '/projects', '/explore', '/explore/{kind}', '/explore/{kind}/{identifier}',
+                     '/automatic-sources', '/evidence/{identifier}', '/tables', '/tables/{identifier}', '/projects', '/explore', '/explore/{kind}', '/explore/{kind}/{identifier}',
                      '/account', '/agents', '/admin', '/admin/spaces', '/admin/advanced', '/admin/work'):
             app.add_api_route(path, page, methods=['GET'], include_in_schema=False)
 

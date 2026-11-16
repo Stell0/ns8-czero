@@ -16,6 +16,7 @@ import {
   NeTableRow,
   NeTableCell,
 } from '@nethesis/vue-components'
+import { automaticSourcesAvailable } from '../api/features'
 import { ReplayIdentity } from '../api/replay'
 import { ApiError, request } from '../api/client'
 import {
@@ -213,6 +214,17 @@ async function uploaded(version: Version) {
 <template>
   <div class="space-y-6">
     <div class="flex flex-wrap gap-3">
+      <NeButton
+        kind="secondary"
+        v-if="automaticSourcesAvailable()"
+        @click="
+          router.push({
+            path: '/automatic-sources',
+            query: { space_id: route.query.space_id },
+          })
+        "
+        >{{ t('automatic.title') }}</NeButton
+      >
       <NeButton
         v-if="session.canWrite && (!id || source.data.value)"
         kind="primary"

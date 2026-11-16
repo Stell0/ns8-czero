@@ -1,5 +1,33 @@
 # C0 Core
 
+## Automatic source updates producer (0.51)
+
+Schema0042 adds space-owned public-source definitions, background grants bound
+to current account/space grant revisions, fenced runs and document ownership.
+`AutomaticSourceService` exposes Reader inspection and Editor revision/replay
+operations. `SourceUpdater` collects outside transactions and publishes through
+existing staged source services. The registered adapters are public GitHub and
+websites; per-source credentials, shell execution and model calls are not supported.
+Trusted embeddings can pass `github_token=` for public GitHub API quota; the
+transport sends it only to the verified HTTPS GitHub API origin. Private
+repositories remain rejected before content collection.
+See the [contract](../../docs/automatic-sources.md). The app consumer remains on
+its immutable release until independent producer publication and adoption.
+
+
+## Personal Data producer (0.50, schema0041)
+
+The native-only `PersonalDataService` binds private spaces to canonical directory
+providers and immutable user UUIDs before login, with personal Editor content
+authority and fixed non-sharing policy. Imported content uses the existing source
+pipeline, generation fences and payload-free receipts. Disable/lost directory
+authority retires imports while retaining spaces and authored content.
+These contracts and migrations are retained from immutable
+[Core 0.50.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.50.0),
+source `280ca06639bf6df55082aca397c2a6a585d988e0`. See the upstream
+[contract](https://github.com/Stell0/ns8-czero/blob/280ca06639bf6df55082aca397c2a6a585d988e0/docs/personal-data/CONTRACT.md).
+Native personal-data collection and application controls remain separate work.
+
 ## Structured table browsing producer (0.49)
 
 `ObjectService.list_types(populated_only=True)` returns only types with records

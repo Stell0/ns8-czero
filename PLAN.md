@@ -1,5 +1,74 @@
 # C0 roadmap
 
+## Automatic sources — released-consumer candidate
+
+Implement native space-owned public GitHub and website definitions, Editor
+REST/MCP operations, background authorization, bounded worker collection and a
+translated Nebula management page. See [contract](docs/automatic-sources.md).
+Schema0042 and shared public transport/conversion require producer and full
+native acceptance, followed by independent Core publication and consumer adoption.
+Existing external jobs and production schedules are not migrated automatically.
+Core0.50 is already published by the separate personal-data work at `280ca06`.
+Preserve its library contracts and schema0040/0041 bytes. Automatic updates use
+Core0.51/schema0042; native personal-data controls remain separate. Earlier
+automatic-source 0.50/schema0040 candidates and their CI evidence are retained
+without publishing or replacing any existing tag.
+Final extraction publication rechecks native authority in both serial and
+parallel paths. Pause/removal/revocation retire unpublished bytes, preserve
+complete documents and permit an explicit fresh resume with stable source IDs.
+Reserved stage markers cannot cancel an unrelated definition. Standalone package
+acceptance exercises this trusted publication context as well.
+Local development evidence on original main `6845d45`: the independent baseline
+passes1299 unit/source/worker checks. Candidate checks pass1283 unit cases,
+78 focused source/HTTP/MCP/worker cases, all six wheel/archive checks and three
+genuine-predecessor migration/recovery cases without database skips. The real
+HTTPS browser validates configuration, Reader access, light/dark phone/desktop
+controls and an actual CLI worker fetching a pinned public GitHub original with
+exact SHA256 readback. Node24.22.3 lint/format/types/tests/build pass.
+Initial failed ownership/PYTHONPATH fixtures, catalogue-count expectations and
+source-readback test mistakes remain private evidence; their38-case corrective
+rerun passes. These development counts overlap and are separate evidence.
+
+Producer `627604b87e524bbd30011068e5ab5bfce4f61eca` passes sensitive/full
+[43888685778](https://github.com/Stell0/ns8-czero/actions/runs/43888685778), the
+actual C0 merge gate and full exact-source promotion. CI passes3457 actual
+Python/PostgreSQL/packaging cases,47 document-browser cases (including the real
+public GitHub worker import),60 website interactions,34 frontend cases and21
+Robot dry runs. Independent downloaded reports verify Debian upgrade21,Rocky
+installation26/three expected skips,eight browser/privacy workflows,32 numeric
+accessibility contexts,five actual scan/SBOM pairs and zero OAuth-query candidates.
+Optional screenshot publication is nonblocking. Earlier boot-envelope, unmanaged
+metadata and anonymous GitHub quota failures and frozen candidates are retained;
+the corrected exact-source run passes without skips or weakened checks.
+
+Preserve immutable producer tag
+`ci-627604b87e524bbd30011068e5ab5bfce4f61eca-43888685778-1` and its images:
+
+| Image | Producer digest |
+| --- | --- |
+| `ghcr.io/stell0/czero` | `sha256:e89c70a633cda36bc5abcb553a53445df1e4dbd9a32a00b626b73c46d646cce6` |
+| `ghcr.io/stell0/czero-app` | `sha256:2c0f984e950939dd283e1572c440937a5f45d8a606d079b101af5494674fda82` |
+| `ghcr.io/stell0/czero-postgres` | `sha256:390f685312f987fbfd017ec64aec59cb428f260ac8a1426cbe4af61eeaa9c306` |
+
+[Core0.51.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.51.0) is
+independently published from that exact source by
+[43898153154](https://github.com/Stell0/ns8-czero/actions/runs/43898153154).
+Downloaded wheel SHA256
+`ec63d3d6be59cbf122551c726a0411e88d329c4b017bbdff4e11e75439a9cf04` and archive
+`02f1acf06a1c5b95cbeeeed8745cfdc8cac40d0225c45ccea3dc540bbc62d3da` match
+published checksums. All eight independent supplied-artifact checks pass,
+including clean wheel/archive installs, deterministic rebuilds and migrations.
+Core's published package tree stays unchanged on adoption.
+App0.69 pins that released Git source/lock with `>=0.51.0,<0.52.0` and matching
+patch-only updater bounds; native personal-data application0.68 remains separate.
+A clean frozen-lock environment verifies the actual released Git commit and passes
+108 focused app/source/transport cases,two actual HTTPS/browser cases and21 Robot
+dry runs. An initial local GitHub422 and its unchanged-source passing replay are
+retained privately; the intervening direct collector fetch also succeeds.
+Fresh released-consumer/full/native/image/artifact and current-source merge gates
+remain required. No live deployment or existing-job migration is authorized.
+
+
 ## API key expiration form — implementation candidate
 
 Based on original main `38c28bc`. Expose the existing nullable API key lifetime

@@ -16,13 +16,16 @@ def website(tmp_path):
     return Website(tmp_path, '/czero/czero17')
 
 
-def test_boot_data_is_inert_and_cannot_escape_the_script_element(website):
+@pytest.mark.parametrize('automatic_sources', [False, True])
+def test_boot_data_is_inert_and_cannot_escape_the_script_element(website, automatic_sources):
+    website.automatic_sources = automatic_sources
     hostile='</script><script src="https://example.org/x">&\u2028'
     response=website.render({'intent':hostile})
     body=response.body.decode()
     assert body.count('<script')==1 and hostile not in body
     assert 'type="application/json"' in body
     assert json.loads(body.split('type="application/json">')[1].split('</script>')[0])=={'intent':hostile}
+    assert '<meta name="c0-automatic-sources" content="'+str(automatic_sources).lower()+'">' in body
     assert '<base href="/czero/czero17/" />' in body
     assert "script-src 'self'" in response.headers['content-security-policy']
     assert 'unsafe-inline' not in response.headers['content-security-policy']
