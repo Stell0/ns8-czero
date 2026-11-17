@@ -394,13 +394,14 @@ class Host:
 			if not removed:
 				self.generate(record)
 				run('systemctl', '--user', 'disable', self.unit(app))
-			# Pull failures remain visible without starting a restored external writer.
-			try:
-				run('podman', 'pull', item['image'])
-			except HostingError:
-				record['status'] = 'image_unavailable'
-				self.write(record)
-				raise
+				# Removed registrations restore retained data only; no image or unit.
+				# Pull failures never start a restored external writer.
+				try:
+					run('podman', 'pull', item['image'])
+				except HostingError:
+					record['status'] = 'image_unavailable'
+					self.write(record)
+					raise
 		run('systemctl', '--user', 'daemon-reload')
 
 	def launch(self, app):

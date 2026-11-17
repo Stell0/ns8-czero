@@ -122,7 +122,9 @@ Restore validates the complete inventory and archive checksums before importing
 any app volume. It refuses to overwrite existing unreceipted volumes and records
 completed imports for retry. An interrupted import without a receipt requires
 operator investigation of that disposable destination; it is not blindly repeated.
-Exact images are pulled and unavailable images fail explicitly. The destination
+Active registrations require their exact image; unavailable images fail explicitly.
+Removed registrations restore their retained data without pulling an obsolete image
+or recreating a service. The destination
 gets its own port allocation and generated units; all restored apps remain disabled
 and stopped. No custom route is activated until `start`, preventing external writes
 from a restored copy before operator reconciliation. Choose unused destination

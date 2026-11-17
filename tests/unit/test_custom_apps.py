@@ -327,3 +327,22 @@ def test_recovery_waits_for_owner_then_restores_after_owner_exit(platform, monke
 	hosting.save(p.host.recovery, journal)
 	hosting.main()
 	assert not p.host.recovery.exists() and p.host.inspect('first')['ready']
+
+
+def test_removed_application_restore_needs_no_image_and_keeps_data(platform):
+	p = platform
+	p.host.deploy(manifest(), start=True)
+	p.volumes['c0app-first-data'] = b'retained after removal'
+	p.host.remove(p.host.record('first'))
+	p.host.quiesce('backup')
+	p.host.export()
+	p.host.recovery.unlink()
+	p.volumes.clear()
+	p.fail.add(('podman', 'pull', manifest()['image']))
+	p.calls.clear()
+	p.host.restore()
+	assert p.volumes['c0app-first-data'] == b'retained after removal'
+	assert p.host.inspect('first')['status'] == 'removed'
+	assert not p.running and not p.enabled
+	assert not (p.host.units / 'c0app-first.service').exists()
+	assert not any(c[:2] == ['podman', 'pull'] for c in p.calls)
