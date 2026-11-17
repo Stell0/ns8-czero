@@ -1022,6 +1022,91 @@
       "path": ".github/pull_request_template.md",
       "mode": null,
       "sha256": null
+    },
+    {
+      "path": "docs/custom-applications.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "examples/custom-app/manifest.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/create-module/45custom-apps",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/remove-module/05custom-apps",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/restore-module/45custom-apps",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/actions/restore-module/85custom-app-recovery",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-cleanup-database",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-custom-app",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero-dump-database",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/bin/czero_custom_apps.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/etc/custom-app-v1.schema.json",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/systemd/user/czero-custom-app-recovery.service",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/systemd/user/czero-custom-app-recovery.timer",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/update-module.d/05custom-apps",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "imageroot/update-module.d/90custom-apps",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/custom_apps_probe.py",
+      "mode": null,
+      "sha256": null
+    },
+    {
+      "path": "tests/unit/test_custom_apps.py",
+      "mode": null,
+      "sha256": null
     }
   ]
 }
