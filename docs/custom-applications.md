@@ -113,7 +113,8 @@ are unavailable from quiescing until the native backup copy and cleanup finish.
 Each app must honor its shutdown timeout; the container is terminated after the
 configured grace period. An application must recover interrupted work on startup.
 
-Cleanup restores prior service states and removes exports. Dump/export failures
+Cleanup restores prior service states, including pending automatic restarts, and
+removes exports. Explicitly stopped applications stay stopped. Dump/export failures
 attempt cleanup immediately. Some NS8 backup failures can exit before cleanup;
 the durable recovery record and timer handle the abandoned operation. A failed
 recovery keeps both the record and exports for inspection and retry.

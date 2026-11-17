@@ -32,16 +32,21 @@ def platform(monkeypatch, tmp_path):
 	monkeypatch.setenv('TCP_PORTS_RANGE', '20000-20032')
 	host = hosting.Host(state, tmp_path / 'units')
 	volumes, running, enabled, routes, calls = {}, set(), set(), {}, []
-	fail = set()
+	fail, activating = set(), set()
 	def run(command, **options):
 		calls.append(command)
 		if tuple(command) in fail:
 			return SimpleNamespace(returncode=1, stdout=b'private-error', stderr=b'secret')
 		if command[:3] == ['systemctl', '--user', 'is-active']:
 			return SimpleNamespace(returncode=0 if command[-1] in running else 3)
+		if command[:3] == ['systemctl', '--user', 'show']:
+			state = b'activating' if command[-1] in activating else b'active' if command[-1] in running else b'inactive'
+			return SimpleNamespace(returncode=0, stdout=state + b'\n')
 		if command[:3] == ['systemctl', '--user', 'start']:
+			activating.discard(command[-1])
 			running.add(command[-1])
 		if command[:3] == ['systemctl', '--user', 'stop']:
+			activating.discard(command[-1])
 			running.discard(command[-1])
 		if command[:3] == ['systemctl', '--user', 'enable']:
 			enabled.add(command[-1])
@@ -72,7 +77,7 @@ def platform(monkeypatch, tmp_path):
 	monkeypatch.setitem(sys.modules, 'agent', agent)
 	monkeypatch.setattr(subprocess, 'run', run)
 	monkeypatch.setattr(host, 'ready', lambda record, seconds=60: host.unit(record['id']) in running)
-	return SimpleNamespace(host=host, volumes=volumes, running=running, enabled=enabled, routes=routes, calls=calls, fail=fail, agent=agent)
+	return SimpleNamespace(host=host, volumes=volumes, running=running, enabled=enabled, routes=routes, calls=calls, fail=fail, activating=activating, agent=agent)
 
 
 @pytest.mark.parametrize('field,value', [
@@ -178,6 +183,23 @@ def test_cold_backup_blocks_changes_until_cleanup_and_restores_running_set(platf
 		p.host.resume()
 	assert p.running == {'c0app-first.service'}
 	assert not p.host.recovery.exists() and not p.host.exports.exists()
+
+
+@pytest.mark.parametrize('kind', ['backup', 'update'])
+def test_maintenance_resumes_pending_restart_and_preserves_stopped_app(platform, kind):
+	p = platform
+	p.host.deploy(manifest(), start=True)
+	p.host.deploy(manifest('second'))
+	p.running.remove('c0app-first.service')
+	p.activating.add('c0app-first.service')
+	p.host.quiesce(kind)
+	assert not p.running and not p.activating
+	assert hosting.read_json(p.host.recovery)['running'] == ['first']
+	p.host.resume()
+	assert p.running == {'c0app-first.service'}
+	assert p.host.inspect('first')['ready']
+	assert not p.host.inspect('second')['enabled']
+	assert not p.host.recovery.exists()
 
 
 def test_failed_recovery_retains_intent_for_retry(platform):
@@ -336,6 +358,7 @@ def test_removed_application_restore_needs_no_image_and_keeps_data(platform):
 	p.host.deploy(manifest(), start=True)
 	p.volumes['c0app-first-data'] = b'retained after removal'
 	p.host.remove(p.host.record('first'))
+	p.fail.add(('systemctl', '--user', 'show', '--property=ActiveState', '--value', 'c0app-first.service'))
 	p.host.quiesce('backup')
 	p.host.export()
 	p.host.recovery.unlink()

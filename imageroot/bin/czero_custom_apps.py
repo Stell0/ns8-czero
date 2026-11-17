@@ -318,7 +318,10 @@ class Host:
 	def quiesce(self, kind):
 		require(not self.recovery.exists(), 'maintenance_recovery_required')
 		records = self.records()
-		journal = {'kind': kind, 'owner': os.getppid(), 'identity': process_identity(os.getppid()), 'running': [r['id'] for r in records if active(self.unit(r['id']))]}
+		# An automatic restart is still pending work. Stopping the unit cancels it,
+		# so retain activating/reloading units as well as already active services.
+		running = [r['id'] for r in records if r['status'] != 'removed' and run('systemctl', '--user', 'show', '--property=ActiveState', '--value', self.unit(r['id'])).strip() in {b'active', b'activating', b'reloading'}]
+		journal = {'kind': kind, 'owner': os.getppid(), 'identity': process_identity(os.getppid()), 'running': running}
 		save(self.recovery, journal)
 		for record in records:
 			if record['status'] != 'removed':

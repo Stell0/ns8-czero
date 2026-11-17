@@ -8,8 +8,8 @@ and coordinated cold backup/restore. See [contract](docs/custom-applications.md)
 Implementation starts from original main `c2260d000621453307d938013a96ae8ac424bd62`.
 Core, application dependencies, schema and public knowledge tools are unchanged.
 The original upstream baseline passes 246 affected module, backup, updater, CI
-policy and documentation checks. The candidate passes those checks and 34 hosting
-regressions (280 total) on Python 3.13; its focused hosting/backup set has 62
+policy and documentation checks. The candidate passes those checks and 36 hosting
+regressions (282 total) on Python 3.13; its focused hosting/backup set has 64
 cases. The 21 existing Robot dry-run cases and 712 documentation links pass.
 The removed-registration restore regression verifies data recovery without
 pulling an obsolete image or recreating its service. Debian/Rocky lifecycle,
@@ -22,6 +22,14 @@ already registered volume. The successor requires the original volume to exist
 and reuses it, while missing data blocks the update. The platform fake now
 models that Podman behavior. Failed native evidence remains retained; no release
 or deployment acceptance is claimed.
+
+Frozen native run44072173248 reaches backup failure recovery after passing
+custom image updates and instance restart. It exposes lost pending systemd
+restarts during quiescing: active-state queries excluded `activating` units.
+The successor records pending starts/reloads before stopping them and resumes
+them after backup or update; explicitly stopped apps remain stopped. Both
+maintenance regressions fail before the fix and pass afterward. Full native
+backup/restore and the downstream identity/browser checks remain unaccepted.
 
 ## Automatic source validation correction
 
