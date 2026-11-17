@@ -18,7 +18,7 @@ import {
   NeTableCell,
   NeModal,
 } from '@nethesis/vue-components'
-import { request } from '../api/client'
+import { ApiError, errorKey, request } from '../api/client'
 import { ReplayIdentity } from '../api/replay'
 import { useResource } from '../api/queries'
 import { useSession } from '../stores/session'
@@ -75,6 +75,7 @@ const preview = ref<{
   complete: boolean
 }>()
 const invalid = ref(false)
+const mutationMode = ref<'save' | 'preview'>('save')
 const nameValid = computed(
   () =>
     v.safeParse(
@@ -111,7 +112,12 @@ const runs = useResource(
 )
 const contentKinds = ['files', 'issues', 'pull_requests', 'releases'] as const
 function toggleContent(value: string, checked: boolean) {
-  const selected = new Set(categories.value.split(',').map((v) => v.trim()))
+  const selected = new Set(
+    categories.value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean),
+  )
   if (checked) selected.add(value)
   else selected.delete(value)
   categories.value = [...selected].join(',')
@@ -131,6 +137,7 @@ function clear() {
   history.value = undefined
   removing.value = undefined
   preview.value = undefined
+  mutation.reset()
   replay.clear()
   commandReplay.clear()
 }
@@ -145,6 +152,7 @@ watch(
 )
 function edit(row?: Definition) {
   editorEpoch++
+  mutation.reset()
   invalid.value = false
   selected.value = row
   name.value = row?.name || ''
@@ -180,6 +188,19 @@ const lines = (value: string) =>
     .split(/\n/)
     .map((v) => v.trim())
     .filter(Boolean)
+const repositoriesValid = computed(() => {
+  const repositories = lines(locations.value)
+  return (
+    repositories.length >= 1 &&
+    repositories.length <= 100 &&
+    new Set(repositories).size === repositories.length &&
+    repositories.every((repository) =>
+      /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/.test(
+        repository,
+      ),
+    )
+  )
+})
 function config() {
   const previous =
     selected.value?.kind === kind.value ? selected.value.config : {}
@@ -187,7 +208,10 @@ function config() {
     return {
       ...previous,
       repositories: lines(locations.value),
-      include: categories.value.split(',').map((v) => v.trim()),
+      include: categories.value
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean),
       paths: lines(include.value).length
         ? lines(include.value)
         : ['README*', 'docs/*'],
@@ -226,13 +250,17 @@ watch(
   () => {
     editorEpoch++
     preview.value = undefined
+    if (mutation.error.value) mutation.reset()
   },
   { flush: 'sync' },
 )
 const mutation = useMutation({
   mutation: async (mode: 'save' | 'preview') => {
+    mutationMode.value = mode
     invalid.value =
       !lines(locations.value).length ||
+      (kind.value === 'github' &&
+        (!repositoriesValid.value || !categories.value)) ||
       (mode === 'save' && (!nameValid.value || !intervalValid.value))
     if (invalid.value) return
     const epoch = editorEpoch
@@ -263,6 +291,33 @@ const mutation = useMutation({
     }
   },
 })
+function fieldError(field: string) {
+  const error = mutation.error.value
+  return error instanceof ApiError && error.field === field
+    ? t(errorKey(error))
+    : ''
+}
+const nameError = computed(() =>
+  invalid.value && mutationMode.value === 'save' && !nameValid.value
+    ? t('automatic.errors.invalid_source_name')
+    : fieldError('name'),
+)
+const locationsError = computed(() =>
+  invalid.value && kind.value === 'github' && !repositoriesValid.value
+    ? t('automatic.errors.invalid_github_repositories')
+    : invalid.value && !lines(locations.value).length
+      ? t('automatic.seedsRequired')
+      : fieldError(
+          kind.value === 'github'
+            ? 'config.repositories'
+            : 'config.website.seeds',
+        ),
+)
+const intervalError = computed(() =>
+  invalid.value && mutationMode.value === 'save' && !intervalValid.value
+    ? t('automatic.errors.invalid_source_interval')
+    : fieldError('interval_seconds'),
+)
 const command = useMutation({
   mutation: async ({
     row,
@@ -433,12 +488,18 @@ const command = useMutation({
         <ErrorNotice
           v-if="mutation.error.value"
           :error="mutation.error.value"
+          :title-key="
+            mutationMode === 'save'
+              ? 'automatic.saveError'
+              : 'automatic.previewError'
+          "
         />
         <fieldset :disabled="mutation.isLoading.value" class="space-y-6">
           <NeTextInput
             v-model="name"
             :label="t('common.title')"
-            :invalid-message="invalid && !nameValid ? t('errors.invalid') : ''"
+            :invalid-message="nameError"
+            :aria-invalid="!!nameError || undefined"
           />
           <fieldset class="space-y-2">
             <legend>{{ t('automatic.type') }}</legend>
@@ -453,19 +514,28 @@ const command = useMutation({
           </fieldset>
           <NeTextArea
             v-model="locations"
-            :invalid-message="
-              invalid && !lines(locations).length ? t('errors.invalid') : ''
-            "
+            :invalid-message="locationsError"
+            :aria-invalid="!!locationsError || undefined"
             :label="
               t(kind === 'github' ? 'automatic.repositories' : 'automatic.urls')
             "
-            :helper-text="t('automatic.lines')"
+            :helper-text="
+              t(
+                kind === 'github'
+                  ? 'automatic.repositoriesHelp'
+                  : 'automatic.lines',
+              )
+            "
           />
           <NeTextArea
             v-if="kind === 'website'"
             v-model="rootURLs"
             :label="t('automatic.roots')"
             :helper-text="t('automatic.rootsHelp')"
+            :invalid-message="fieldError('config.website.allowed_roots')"
+            :aria-invalid="
+              !!fieldError('config.website.allowed_roots') || undefined
+            "
           />
           <NeTextArea
             v-if="kind === 'website'"
@@ -473,7 +543,13 @@ const command = useMutation({
             :label="t('automatic.sitemaps')"
             :helper-text="t('automatic.lines')"
           />
-          <fieldset v-if="kind === 'github'" class="space-y-3">
+          <fieldset
+            v-if="kind === 'github'"
+            class="space-y-3"
+            :aria-describedby="
+              invalid && !categories ? 'automatic-content-error' : undefined
+            "
+          >
             <legend>{{ t('automatic.categories') }}</legend>
             <NeCheckbox
               v-for="value in contentKinds"
@@ -487,11 +563,22 @@ const command = useMutation({
               :label="t(`automatic.contents.${value}`)"
               @update:model-value="toggleContent(value, $event)"
             />
+            <p
+              v-if="invalid && !categories"
+              id="automatic-content-error"
+              role="alert"
+              class="text-sm text-red-700 dark:text-red-400"
+            >
+              {{ t('automatic.errors.invalid_github_selection') }}
+            </p>
+            <p class="text-sm">{{ t('automatic.filesHelp') }}</p>
           </fieldset>
           <NeTextInput
             v-if="kind === 'github'"
             v-model="branch"
             :label="t('automatic.branch')"
+            :invalid-message="fieldError('config.ref')"
+            :aria-invalid="!!fieldError('config.ref') || undefined"
           />
           <NeTextArea
             v-model="include"
@@ -523,9 +610,8 @@ const command = useMutation({
           </fieldset>
           <NeTextInput
             v-model="interval"
-            :invalid-message="
-              invalid && !intervalValid ? t('automatic.intervalHelp') : ''
-            "
+            :invalid-message="intervalError"
+            :aria-invalid="!!intervalError || undefined"
             :label="t('automatic.interval')"
             :helper-text="t('automatic.intervalHelp')"
           />

@@ -1,5 +1,33 @@
 # C0 roadmap
 
+## Automatic source validation correction
+
+App0.69.1 corrects the ambiguous GitHub repository hint to
+`owner/repository_name`, explains per-file ingestion and preserves specific safe
+validation diagnostics through REST and MCP. Existing `detail` codes remain;
+additive reason/message/field values identify the correction without echoing
+submitted values or remote bodies. The translated form validates repositories
+and content selection and shows action-specific and field errors. Published
+Core0.51, schema0042, dependencies, authority and saved definitions are unchanged.
+
+Acceptance: exact latest original main baseline, focused PostgreSQL/REST/current
+and legacy SDK checks, EN/IT browser correction/retry/access tests, existing real
+HTTPS persistence/theme/keyboard workflows and complete frontend checks. The
+transport/UI change requires full/native CI under the current policy. Source
+review/merge and a separately authorized installed update remain separate gates.
+
+Latest original main `8f09bcc` passes the four existing focused REST/SDK cases.
+The frozen released-Core0.51 environment verifies commit `627604b` and passes177
+app/transport cases. Final focused checks pass12 REST/current+legacy SDK cases
+and three real HTTPS/browser persistence/theme/keyboard workflows; the rebuilt
+final form passes its persistence/Reader workflow again. These Python counts
+overlap. Node24 checks pass35 unit cases, all62 browser cases, lint/format/types
+and production build;21 Robot dry runs,709 documentation links and private-denylist
+public-diff checks pass. Earlier local database-port and browser fixture/ARIA
+failures remain private. The browser also catches and fixes an empty content
+selection entry when the last checkbox is deselected and selected again.
+Full/native and exact-source promotion are pending for this source candidate.
+
 <a id="automatic-sources--released-consumer-candidate"></a>
 
 ## Automatic sources — accepted source

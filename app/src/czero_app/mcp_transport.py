@@ -40,6 +40,7 @@ from czero_app.space_errors import SPACE_OPERATIONS, mcp_space_error
 from czero_app.reference_errors import REFERENCE_OPERATIONS, mcp_reference_error
 from czero_app.project_errors import PROJECT_OPERATIONS, mcp_project_error
 from czero_app.compilation_errors import COMPILATION_OPERATIONS, mcp_compilation_error
+from czero_app.automatic_source_errors import AUTOMATIC_SOURCE_OPERATIONS, AutomaticSourceError, source_error_payload
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 RESOURCES = {
@@ -223,6 +224,10 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
                 content=[types.TextContent(type='text', text='insufficient_scope')], meta=metadata)
         except (PermissionDenied, GrantRejected, TokenRejected):
             message, status = 'permission_denied', 403
+        except AutomaticSourceError as error:
+            return types.CallToolResult(is_error=True,
+                content=[types.TextContent(type='text',text=_json(error.payload))],
+                meta={'c0/error':{'code':error.detail,'status':error.status_code,**error.payload}})
         except HTTPException as error:
             if error.status_code==410 and error.detail=='content_superseded':
                 return types.CallToolResult(is_error=True,content=[types.TextContent(type='text',text='content_superseded')],
@@ -240,6 +245,11 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
                 or mcp_context_error(params.name,error.status_code,error.detail))
             message, status = mapped if mapped is not None else ('invalid_operation_request', 422)
         except (OperationRejected, ValueError):
+            if params.name in AUTOMATIC_SOURCE_OPERATIONS:
+                payload=source_error_payload()
+                return types.CallToolResult(is_error=True,
+                    content=[types.TextContent(type='text',text=_json(payload))],
+                    meta={'c0/error':{'code':payload['detail'],'status':422,**payload}})
             message = ('invalid_reference_request' if params.name in REFERENCE_OPERATIONS else 'invalid_compilation_request' if params.name in COMPILATION_OPERATIONS else 'invalid_space_request' if params.name in SPACE_OPERATIONS else
                 ('invalid_project_request' if params.name in PROJECT_OPERATIONS else
                  'invalid_source_request' if params.name in CONTEXT_OPERATIONS else

@@ -4,6 +4,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code = '',
+    public reason = '',
+    public field = '',
   ) {
     super('C0 request failed')
   }
@@ -103,13 +105,25 @@ export async function request<T>(
           ? error.response.data.detail
           : ''
       if (status === 401 || status === 403) boundary.invalidate()
-      throw new ApiError(status, code)
+      const data = error.response?.data
+      throw new ApiError(
+        status,
+        code,
+        typeof data?.reason === 'string' ? data.reason : '',
+        typeof data?.field === 'string' ? data.field : '',
+      )
     }
   })
 }
 
 export function errorKey(error: unknown) {
   if (error instanceof ApiError) {
+    if (error.code === 'invalid_automatic_source') {
+      const reason = automaticSourceReasons.includes(error.reason)
+        ? error.reason
+        : 'invalid_automatic_source'
+      return `automatic.errors.${reason}`
+    }
     if (
       ['connection_request_unavailable', 'invalid_consent'].includes(error.code)
     )
@@ -123,6 +137,33 @@ export function errorKey(error: unknown) {
   }
   return 'errors.unavailable'
 }
+
+const automaticSourceReasons = [
+  'invalid_automatic_source',
+  'invalid_github_repositories',
+  'invalid_github_selection',
+  'invalid_github_ref',
+  'invalid_source_configuration',
+  'invalid_source_selection',
+  'invalid_source_limit',
+  'invalid_source_name',
+  'invalid_source_kind',
+  'invalid_source_interval',
+  'invalid_source_enabled',
+  'invalid_revision',
+  'invalid_source_replay_key',
+  'invalid_source_action',
+  'invalid_website_configuration',
+  'invalid_website_selection',
+  'explicit_documentation_roots_required',
+  'website_destination_not_approved',
+  'invalid_public_url',
+  'github_repository_unavailable',
+  'source_http_403',
+  'source_http_429',
+  'source_http_404',
+  'source_transport_failed',
+]
 
 export async function endSession() {
   const csrf = context().csrf

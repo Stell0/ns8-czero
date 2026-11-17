@@ -122,3 +122,42 @@ it('does not redirect a new session when an old logout finishes', async () => {
   finish({ data: { logout_url: '/old-provider-logout' } })
   await rejected
 })
+
+it('uses localized allowlisted source corrections without displaying server text', async () => {
+  const { errorKey } = await import('../src/api/client')
+  transport.request.mockRejectedValue({
+    response: {
+      status: 422,
+      data: {
+        detail: 'invalid_automatic_source',
+        reason: 'invalid_github_repositories',
+        field: 'config.repositories',
+        message: 'PRIVATE_REMOTE_BODY',
+      },
+    },
+  })
+  try {
+    await request('automatic-sources', { method: 'POST', data: {} })
+    expect.fail('Expected a validation error')
+  } catch (error) {
+    expect(error).toMatchObject({
+      code: 'invalid_automatic_source',
+      reason: 'invalid_github_repositories',
+      field: 'config.repositories',
+    })
+    expect(errorKey(error)).toBe('automatic.errors.invalid_github_repositories')
+    expect(String(error)).not.toContain('PRIVATE_REMOTE_BODY')
+  }
+  expect(
+    errorKey(
+      new ApiError(
+        422,
+        'invalid_automatic_source',
+        'PRIVATE_UNRECOGNIZED_REASON',
+      ),
+    ),
+  ).toBe('automatic.errors.invalid_automatic_source')
+  expect(errorKey(new ApiError(422, 'invalid_automatic_source'))).toBe(
+    'automatic.errors.invalid_automatic_source',
+  )
+})
