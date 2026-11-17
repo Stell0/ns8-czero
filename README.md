@@ -117,6 +117,10 @@ C0 is packaged as a **NethServer 8 application**. Prepare an NS8 node, compatibl
 
 Follow [installation and administration](docs/administration.md) and the [candidate selection record](docs/installation-candidate.md). There is no stable NS8 module release tag. The source tree, released Core dependency and installed runtime can have different versions; a merge does not upgrade an instance. [PLAN](PLAN.md) retains exact acceptance and installed-image records.
 
+NS8 operators can also register trusted single-container applications using the
+[custom application hosting contract](docs/custom-applications.md). These share
+C0's Unix-account lifecycle and native backup; this candidate awaits native acceptance.
+
 ## Connect your AI assistant
 
 The native OAuth callback repair is delivered in released Core0.46.0 and the

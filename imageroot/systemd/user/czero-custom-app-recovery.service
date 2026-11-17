@@ -1,0 +1,7 @@
+[Unit]
+Description=Recover interrupted C0 custom application maintenance
+After=czero.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/runagent czero-custom-app recover --automatic

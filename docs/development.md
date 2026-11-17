@@ -84,6 +84,14 @@ pending acceptance belong in [PLAN](../PLAN.md#current-baseline). Consult
 [archived conventions](history/AGENTS.md) and [milestone evidence](history/PLAN.md)
 only for the relevant historical topic.
 
+### Custom application hosting
+
+Follow the [operator contract](custom-applications.md) for account trust, private
+configuration, port/route ownership and cold backup/recovery. Keep this CLI outside
+REST/MCP knowledge tools. Retain stopped restores and previous image identities;
+never automatically roll an application back after a possible data migration.
+Run focused hosting/backup tests and full native lifecycle acceptance.
+
 ### Identity and access
 
 Follow [workspace access](workspace-access.md) and [API-key contracts](api-keys.md).

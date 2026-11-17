@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C0 custom application hosting contract 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "id",
+    "image",
+    "http_port",
+    "readiness_path",
+    "data_path",
+    "memory_mb",
+    "pids_limit",
+    "shutdown_seconds"
+  ],
+  "properties": {
+    "version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    },
+    "image": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.:-]*/[a-z0-9][a-z0-9_./-]*@sha256:[a-f0-9]{64}$"
+    },
+    "http_port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "readiness_path": {
+      "type": "string",
+      "pattern": "^/(?!/)[a-zA-Z0-9_./-]*$"
+    },
+    "data_path": {
+      "type": "string",
+      "pattern": "^/[a-zA-Z0-9_/-]+$"
+    },
+    "hostname": {
+      "type": "string",
+      "maxLength": 253,
+      "format": "hostname"
+    },
+    "memory_mb": {
+      "type": "integer",
+      "minimum": 32,
+      "maximum": 1048576
+    },
+    "pids_limit": {
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 65536
+    },
+    "shutdown_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 300
+    },
+    "environment": {
+      "type": "object",
+      "maxProperties": 128,
+      "propertyNames": {
+        "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 65536,
+        "pattern": "^[^\\r\\n\\u0000]*$"
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "maxProperties": 128,
+      "propertyNames": {
+        "pattern": "^[A-Z_][A-Z0-9_]{0,127}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$"
+      }
+    }
+  }
+}

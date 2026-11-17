@@ -1,5 +1,20 @@
 # C0 roadmap
 
+## Custom application hosting candidate
+
+Contract 1 adds an operator-only CLI and rootless per-app services, private
+configuration, digest-pinned images, native port allocation, distinct TLS routes,
+and coordinated cold backup/restore. See [contract](docs/custom-applications.md).
+Implementation starts from original main `c2260d000621453307d938013a96ae8ac424bd62`.
+Core, application dependencies, schema and public knowledge tools are unchanged.
+The original upstream baseline passes 246 affected module, backup, updater, CI
+policy and documentation checks. The candidate passes those checks and 32 hosting
+regressions (278 total) on Python 3.13; its focused hosting/backup set has 60
+cases. The 21 existing Robot dry-run cases and 712 documentation links pass. Native
+Debian/Rocky lifecycle, release, installation and production acceptance remain
+pending. The support bot must consume an accepted released contract; no production
+migration or installed C0 update has occurred.
+
 ## Automatic source validation correction
 
 App0.69.1 corrects the ambiguous GitHub repository hint to

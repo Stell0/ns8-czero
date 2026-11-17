@@ -370,6 +370,11 @@ Reject invalid settings without changing configuration
     Check application route
 
 Restart the installed service
+    Put File    ${CURDIR}/custom_apps_probe.py    /tmp/czero-custom-app-probe.py    mode=0644
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py seed
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
     ${rc} =    Execute Command    runagent -m ${module_id} systemctl --user restart czero.service
     ...    return_rc=True    return_stdout=False
     Should Be Equal As Integers    ${rc}    0
@@ -404,6 +409,11 @@ Exercise the native module update
     Should Be Equal As Integers    ${rc}    0
 
 Verify protected Core spaces in the installed runtime
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py verify
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+
     [Timeout]    90 seconds
     # Owned trusted Core fixtures are separate from real SSO/SDK acceptance.
     Put File    ${CURDIR}/packaging/core_spaces_probe.py    /tmp/czero-core-spaces-probe.py    mode=0644
@@ -504,6 +514,23 @@ Verify deterministic worker and native timer
 
 Backup and restore into a clean disposable instance
     [Timeout]    10 minutes
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py backup-failure
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py interrupt
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} czero-custom-app recover
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py verify
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
+
     Log To Console    Backup phase: seed retained fixture
     ${before_identity}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
@@ -547,6 +574,10 @@ Backup and restore into a clean disposable instance
     ${restored_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${restored_id}
     Log To Console    Restore phase: verify health and data
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py restored
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
     Wait Until Keyword Succeeds    30s    2s    Check application route
     ${identity}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT knowledge_space_id FROM instance_metadata;"
@@ -602,6 +633,10 @@ Backup and restore into a clean disposable instance
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Log To Console    Restore phase: verify health and data
+    ${output}    ${rc} =    Execute Command
+    ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py restored
+    ...    return_rc=True    timeout=180s
+    Should Be Equal As Integers    ${rc}    0    msg=${output}
     Wait Until Keyword Succeeds    30s    2s    Check application route
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} podman exec czero-postgres psql -U czero -d czero -At -c "SELECT count(*) FROM czero_persistence_probe;"
