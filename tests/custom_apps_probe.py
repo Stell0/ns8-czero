@@ -40,49 +40,53 @@ def verify(restored=False):
 
 
 phase = sys.argv[1]
-if phase == 'seed':
-	with host.locked():
-		assert not host.records(), 'fixture requires a clean disposable registry'
-		for app in APPS:
-			manifest = {'version': 1, 'id': app, 'image': OLD, 'http_port': 8080,
-				'readiness_path': '/', 'data_path': '/usr/share/nginx/html', 'memory_mb': 128,
-				'pids_limit': 128, 'shutdown_seconds': 15, 'environment': {'SYNTHETIC_NAME': app}}
-			host.deploy(manifest, start=True)
-			hosting.run('podman', 'exec', '--user=0', host.name(app), 'sh', '-c', 'printf "%s" "$SYNTHETIC_NAME" > /usr/share/nginx/html/retained.txt')
-		host.stop(host.record(APPS[1]))
-		manifest = host.manifest(host.record(APPS[0]))
-		manifest['image'] = NEW
-		host.deploy(manifest, update=True)
-		verify()
-elif phase == 'verify':
-	with host.locked():
-		verify()
-elif phase == 'restored':
-	with host.locked():
-		verify(restored=True)
-elif phase == 'backup-failure':
-	original = subprocess.run
-	def fail_export(command, **options):
-		if command[:3] == ['podman', 'volume', 'export']:
-			raise OSError('synthetic full backup filesystem')
-		return original(command, **options)
-	subprocess.run = fail_export
-	try:
+try:
+	if phase == 'seed':
+		with host.locked():
+			assert not host.records(), 'fixture requires a clean disposable registry'
+			for app in APPS:
+				manifest = {'version': 1, 'id': app, 'image': OLD, 'http_port': 8080,
+					'readiness_path': '/', 'data_path': '/usr/share/nginx/html', 'memory_mb': 128,
+					'pids_limit': 128, 'shutdown_seconds': 15, 'environment': {'SYNTHETIC_NAME': app}}
+				host.deploy(manifest, start=True)
+				hosting.run('podman', 'exec', '--user=0', host.name(app), 'sh', '-c', 'printf "%s" "$SYNTHETIC_NAME" > /usr/share/nginx/html/retained.txt')
+			host.stop(host.record(APPS[1]))
+			manifest = host.manifest(host.record(APPS[0]))
+			manifest['image'] = NEW
+			host.deploy(manifest, update=True)
+			verify()
+	elif phase == 'verify':
+		with host.locked():
+			verify()
+	elif phase == 'restored':
+		with host.locked():
+			verify(restored=True)
+	elif phase == 'backup-failure':
+		original = subprocess.run
+		def fail_export(command, **options):
+			if command[:3] == ['podman', 'volume', 'export']:
+				raise OSError('synthetic full backup filesystem')
+			return original(command, **options)
+		subprocess.run = fail_export
 		try:
-			runpy.run_path(str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin/module-dump-state'))
-		except OSError:
-			pass
-		else:
-			raise AssertionError('expected synthetic backup failure')
-	finally:
-		subprocess.run = original
-	assert not host.recovery.exists()
-	assert host.inspect(APPS[0])['ready']
-elif phase == 'interrupt':
-	# Returning before cleanup simulates loss of the native backup parent process.
-	runpy.run_path(str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin/module-dump-state'))
-	assert host.recovery.exists()
-	assert not any(host.inspect(app)['running'] for app in APPS)
-else:
-	raise ValueError('unknown fixture phase')
-print(json.dumps({'phase': phase, 'verified': True}))
+			try:
+				runpy.run_path(str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin/module-dump-state'))
+			except OSError:
+				pass
+			else:
+				raise AssertionError('expected synthetic backup failure')
+		finally:
+			subprocess.run = original
+		assert not host.recovery.exists()
+		assert host.inspect(APPS[0])['ready']
+	elif phase == 'interrupt':
+		# Returning before cleanup simulates loss of the native backup parent process.
+		runpy.run_path(str(Path(os.environ['AGENT_INSTALL_DIR']) / 'bin/module-dump-state'))
+		assert host.recovery.exists()
+		assert not any(host.inspect(app)['running'] for app in APPS)
+	else:
+		raise ValueError('unknown fixture phase')
+	print(json.dumps({'phase': phase, 'verified': True}))
+except Exception as error:
+	print(json.dumps({"phase": phase, "error": str(error) if isinstance(error, hosting.HostingError) else type(error).__name__}))
+	raise

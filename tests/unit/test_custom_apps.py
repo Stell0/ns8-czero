@@ -50,7 +50,9 @@ def platform(monkeypatch, tmp_path):
 			if '--now' in command:
 				running.discard(command[-1])
 		if command[:3] == ['podman', 'volume', 'create']:
-			volumes.setdefault(command[-1], b'')
+			if command[-1] in volumes:
+				return SimpleNamespace(returncode=125, stdout=b'', stderr=b'volume already exists')
+			volumes[command[-1]] = b''
 		if command[:3] == ['podman', 'volume', 'export']:
 			options['stdout'].write(volumes[command[-1]])
 		if command[:3] == ['podman', 'volume', 'import']:
@@ -346,3 +348,16 @@ def test_removed_application_restore_needs_no_image_and_keeps_data(platform):
 	assert not p.running and not p.enabled
 	assert not (p.host.units / 'c0app-first.service').exists()
 	assert not any(c[:2] == ['podman', 'pull'] for c in p.calls)
+
+
+def test_update_never_recreates_missing_registered_data(platform):
+	p = platform
+	p.host.deploy(manifest(), start=True)
+	before = p.host.record('first')
+	p.volumes.clear()
+	p.calls.clear()
+	with pytest.raises(hosting.HostingError, match='registered_volume_unavailable'):
+		p.host.deploy(manifest(), update=True)
+	assert p.host.record('first') == before
+	assert not p.volumes
+	assert not any(c[:3] in (['podman', 'volume', 'create'], ['systemctl', '--user', 'stop']) for c in p.calls)

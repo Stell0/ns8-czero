@@ -233,12 +233,12 @@ class Host:
 			require(self.manifest(previous)['data_path'] == manifest['data_path'], 'data_mount_change_forbidden')
 		else:
 			require(len(self.records()) < CONTRACT['max_apps'], 'application_capacity_exceeded')
-		if not previous:
-			exists = subprocess.run(['podman', 'volume', 'exists', self.name(app) + '-data'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
-			require(exists == 1, 'unregistered_volume_exists')
+		exists = subprocess.run(['podman', 'volume', 'exists', self.name(app) + '-data'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+		require(exists == (0 if previous else 1), 'registered_volume_unavailable' if previous else 'unregistered_volume_exists')
 		generation = self.stage(manifest, secrets_dir)
 		run('podman', 'pull', manifest['image'])
-		run('podman', 'volume', 'create', self.name(app) + '-data')
+		if not previous:
+			run('podman', 'volume', 'create', self.name(app) + '-data')
 		if previous:
 			port = previous['port']
 		else:
