@@ -46,6 +46,39 @@ as `access=` to `register_source_handlers`; native staging fails closed without 
 
 GitHub file collection selects UTF-8 text/code; known binary assets and documents
 are excluded. Unsupported non-UTF-8 selections fail explicitly without truncation.
+Enter each repository as `owner/repository_name`, one per line. An organization
+name alone does not select all its repositories. **Text and code files** imports
+each file matching the include/exclude patterns as a separate source document,
+titled with its repository path and linked to the imported GitHub commit.
+The branch/reference and file patterns apply only to files, not issues, pull
+requests or releases. Empty file patterns in the form use `README*` and `docs/*`.
+Preview lists a bounded sample of titles and links; after collection, open the
+documents from the automatic source's details or Sources. Code is stored as text
+and is never executed.
+
+## Validation errors
+
+App0.69.1 preserves the HTTP `detail` code and adds allowlisted `reason`, `message`
+and `field` diagnostics. For an organization name entered as a repository:
+
+```json
+{
+  "detail": "invalid_automatic_source",
+  "reason": "invalid_github_repositories",
+  "message": "Enter 1–100 distinct repositories as owner/repository_name. An organization name alone is not supported.",
+  "field": "config.repositories"
+}
+```
+
+The response remains HTTP422 with `Cache-Control: no-store`. MCP returns the
+same diagnostics in an `isError` text result and `c0/error` metadata, including
+the status. Unknown failures use a fixed generic correction; submitted values,
+credentials and remote response bodies are never echoed. Role/space denials
+remain denials. The form translates recognized reasons into English or Italian,
+shows field corrections and names the failed action. No Core, schema, scope or
+stored definition changes are required.
+
+## Collection boundaries
 
 Website selection uses explicit public roots, seeds, include/exclude patterns,
 robots rules and bounded traversal. GitHub selection uses explicit public
