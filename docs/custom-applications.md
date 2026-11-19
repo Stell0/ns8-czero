@@ -70,11 +70,47 @@ module's actual native allocation before repairing that receipt; never deallocat
 all C0 ports to repair one app. Removing an app retains its slot and data; installing
 the same ID again reuses them. Module removal releases the module's native pool.
 
+## Private registry images
+
+Configure registry credentials in Podman under the C0 module account. C0's
+`CZERO_GITHUB_TOKEN_FILE` is for the source worker's GitHub API requests and does
+not authenticate image pulls.
+
+For a private GitHub Container Registry image, create a personal access token
+(classic) with only `read:packages`. The GitHub account must have read access to
+the package, either directly or through inherited repository access. Authorize
+the token for organization SSO when required. See [GitHub's registry authentication
+guide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-with-a-personal-access-token-classic).
+
+From the NS8 node, pass the token over standard input from a private file or a
+password manager. Replace `GITHUB_USERNAME` and the example path:
+
+```sh
+runagent -m czero1 sh -c '
+    umask 077
+    auth_dir="${XDG_CONFIG_HOME:-$HOME/.config}/containers"
+    mkdir -p "$auth_dir" &&
+        podman login --authfile "$auth_dir/auth.json" --username "$1" --password-stdin ghcr.io &&
+        chmod 0600 "$auth_dir/auth.json"
+' sh GITHUB_USERNAME < /path/to/private/ghcr-token
+```
+
+This uses Podman's persistent configuration directory. The default login file
+under the runtime directory is temporary. Keep registry credentials out of
+application manifests, container environments and the shared NS8 configuration.
+Provision the registry login again on a clean restore destination before
+restoring an app that uses a private image. See the [Podman login
+options](https://docs.podman.io/en/latest/markdown/podman-login.1.html) and
+[credential lookup order](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md).
+
 ## Updates and recovery
 
-Custom image updates are independent from C0 upgrades. An update pulls the exact
-new digest, stops the old container, and starts the replacement on the same
-volume. A stopped application stays stopped. A failed replacement retains its
+Custom image updates are independent from C0 upgrades. Install and update pull
+the manifest's pinned digest before starting or replacing the app. The pull can
+take up to ten minutes. An update completes the pull before stopping the old
+container, then starts the replacement on the same volume. Normal systemd starts
+use the pinned image in local storage when available. The readiness check after
+launch has its own 60-second window. A stopped application stays stopped. A failed replacement retains its
 deployment and reports failure. There is no automatic image rollback: a newer
 image may already have migrated its data. Reverting requires an explicit compatible
 manifest or a verified data restore chosen by the operator.
