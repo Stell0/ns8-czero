@@ -223,7 +223,7 @@ def test_protected_spaces_logout_and_late_revoked_response(live,browser):
     assert live.rest.put(live.grant_path,json={'role':None,'expected_revision':1,'idempotency_key':'revoke'}).status_code==200
     # A foreground visibility event invokes the same periodic authority check.
     browser.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
-    expect(browser.get_by_text('Sign in or choose a space you can access.',exact=True)).to_be_visible()
+    expect(browser.get_by_text('You do not have access to this space. Ask a C0 administrator for access.',exact=True)).to_be_visible()
     live.delay.release.set()
     expect(browser.get_by_role('article')).to_have_count(0)
     assert live.rest.put(live.grant_path,json={'role':'reader','expected_revision':2,'idempotency_key':'regrant'}).status_code==200
@@ -233,7 +233,7 @@ def test_protected_spaces_logout_and_late_revoked_response(live,browser):
     browser.get_by_role('button',name='Sign out',exact=True).click()
     expect(browser.get_by_role('heading',name='Signed out of disposable provider')).to_be_visible()
     browser.goto(live.origin+'/sources/'+private['source_id']+'?'+urlencode({'space_id':live.space}))
-    expect(browser.get_by_text('Sign in or choose a space you can access.',exact=True)).to_be_visible()
+    expect(browser.get_by_text('Sign in with your NethServer account to continue.',exact=True)).to_be_visible()
     expect(browser.get_by_role('article')).to_have_count(0)
 
 

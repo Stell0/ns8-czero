@@ -198,7 +198,7 @@ def test_vue_protected_denial_and_late_response(live,vue_browser):
     page.goto(live.origin+'/sources/'+version['source_id']+'?'+urlencode({'space_id':live.space}))
     assert live.delay.captured.wait(10)
     page.goto(live.origin+'/wiki?'+urlencode({'space_id':live.second}))
-    expect(page.get_by_text('Sign in or choose a space you can access.',exact=True)).to_be_visible()
+    expect(page.get_by_text('You do not have access to this space. Ask a C0 administrator for access.',exact=True)).to_be_visible()
     live.delay.release.set()
     expect(page.locator('main')).not_to_contain_text('PRIVATE-LATE-BODY')
     expect(page.get_by_role('heading',name='Knowledge sections',exact=True)).to_have_count(0)

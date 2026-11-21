@@ -42,6 +42,9 @@
     "overview": "Panoramica"
   },
   "errors": {
+    "spaceDenied": "Non hai accesso a questo spazio. Chiedi l’accesso a un amministratore di C0.",
+    "accountDenied": "Il tuo account non può accedere a C0. Chiedi a un amministratore di verificare l’accesso.",
+    "adminDenied": "Questa pagina è disponibile per gli amministratori di C0.",
     "title": "Impossibile caricare il contenuto",
     "unavailable": "Controlla la connessione e ricarica la pagina.",
     "access": "Accedi o scegli uno spazio a cui puoi accedere.",
@@ -134,6 +137,17 @@
     "failedHelp": "Elaborazione non riuscita. Un Editor può riprovare l’elaborazione dei file disponibili."
   },
   "account": {
+    "signInRequired": "Accedi con il tuo account NethServer per continuare.",
+    "keysHelp": "Crea una chiave per ogni automazione e seleziona solo gli spazi necessari.",
+    "rotationHelp": "Per sostituire una chiave, crea e verifica la nuova chiave nell’automazione prima di revocare quella precedente.",
+    "unavailableSpace": "Spazio non disponibile ({id})",
+    "keyExpired": "Scaduta il {date}",
+    "keyReadWrite": "Lettura e scrittura",
+    "keyReadOnly": "Sola lettura",
+    "secretHelp": "Salva subito la chiave nel gestore dei segreti. C0 la mostra una sola volta.",
+    "keyPermissionHelp": "Attiva questa opzione solo se l’automazione deve modificare i contenuti.",
+    "keySpaceHelp": "Seleziona gli spazi a cui può accedere questa chiave.",
+    "revokeKeyHelp": "Questa chiave smette di funzionare subito. Aggiorna le automazioni che la utilizzano.",
     "signin": "Accedi",
     "signout": "Esci",
     "language": "Lingua",
@@ -209,6 +223,7 @@
     "references": "Risorse collegate"
   },
   "agents": {
+    "automationKeys": "Crea chiavi API per l’automazione",
     "intro": "Collega il tuo assistente a questa istanza. Le istruzioni non concedono accesso e non installano pianificazioni.",
     "url": "URL del server MCP",
     "skill": "Scarica skill",
@@ -259,6 +274,7 @@
     }
   },
   "consent": {
+    "sessionHelp": "Questa connessione segue la sessione di accesso. Puoi disconnetterla da Le tue applicazioni connesse.",
     "unavailable": "Questa richiesta di connessione non è disponibile o è scaduta. Avvia di nuovo la connessione dal tuo assistente, poi verifica la nuova richiesta.",
     "back": "Torna alla configurazione",
     "title": "Autorizza applicazione",
@@ -276,6 +292,15 @@
     "readBoundary": "Leggere contenuti in tutti gli spazi a cui puoi accedere."
   },
   "admin": {
+    "registrationMethod": "Metodo di registrazione",
+    "manualRegistration": "Registrazione manuale",
+    "metadataRegistration": "Metadati client HTTPS",
+    "publicClientId": "ID client pubblico",
+    "publicClientHelp": "Inserisci questo ID nell’applicazione, poi avvia la connessione.",
+    "copyClientId": "Copia ID client",
+    "clientIdCopied": "ID client copiato",
+    "registrationSaved": "Client registrato",
+    "clientPermissions": "Permessi consentiti",
     "people": "Persone e applicazioni",
     "role": "Permesso",
     "readWrite": "Lettura e scrittura",

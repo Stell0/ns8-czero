@@ -1,5 +1,7 @@
 # C0 roadmap
 
+[Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
+
 ## Custom application hosting candidate
 
 Contract 1 adds an operator-only CLI and rootless per-app services, private

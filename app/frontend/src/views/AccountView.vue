@@ -41,6 +41,39 @@ interface Key {
   scopes: string[]
   revoked_at: string | null
   expires_at: string | null
+  space_ids: string[]
+  last_used_at: string | null
+}
+function scopeLabel(scope: string) {
+  return t(`account.${scope === 'c0:admin' ? 'manage' : scope.slice(3)}`)
+}
+function spaceLabel(id: string) {
+  return (
+    session.spaces.find((space) => space.id === id)?.name ||
+    t('account.unavailableSpace', { id })
+  )
+}
+function keyStatus(key: Key) {
+  if (key.revoked_at) return t('account.revoked')
+  if (!key.expires_at) return t('account.neverExpires')
+  return t(
+    Date.parse(key.expires_at) <= Date.now()
+      ? 'account.keyExpired'
+      : 'account.keyExpires',
+    {
+      date: date(key.expires_at),
+    },
+  )
+}
+function keyPermissions(scopes: string[]) {
+  if (scopes.includes('c0:read')) {
+    return t(
+      scopes.includes('c0:write')
+        ? 'account.keyReadWrite'
+        : 'account.keyReadOnly',
+    )
+  }
+  return scopes.map(scopeLabel).join(', ')
 }
 const connections = useResource(
   () => 'connections',
@@ -193,7 +226,7 @@ const removal = useMutation({
             <div>
               <h3>{{ connection.client_name }}</h3>
               <p class="text-sm text-text-secondary">
-                {{ connection.scopes.join(', ') }}
+                {{ connection.scopes.map(scopeLabel).join(', ') }}
               </p>
               <p class="text-sm text-text-secondary">
                 {{
@@ -234,6 +267,15 @@ const removal = useMutation({
     </section>
     <section class="space-y-4">
       <h2 class="text-xl font-medium">{{ t('account.keys') }}</h2>
+      <p class="max-w-prose text-sm text-text-secondary">
+        {{ t('account.keysHelp') }}
+      </p>
+      <p
+        v-if="keys.data.value?.api_keys.length"
+        class="max-w-prose text-sm text-text-secondary"
+      >
+        {{ t('account.rotationHelp') }}
+      </p>
       <NeButton kind="primary" @click="openCreate">{{
         t('account.createKey')
       }}</NeButton>
@@ -247,16 +289,24 @@ const removal = useMutation({
             :key="key.id"
             class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default p-4"
           >
-            <span
-              >{{ key.name }} · {{ key.scopes.join(', ') }} ·
-              {{
-                key.expires_at
-                  ? t('account.keyExpires', { date: date(key.expires_at) })
-                  : t('account.neverExpires')
-              }}<span v-if="key.revoked_at">
-                · {{ t('account.revoked') }}</span
-              ></span
-            ><NeButton
+            <div class="min-w-0 space-y-1 break-words">
+              <h3 class="font-medium">{{ key.name }}</h3>
+              <p class="text-sm text-text-secondary">
+                {{ keyPermissions(key.scopes) }}
+              </p>
+              <p
+                v-for="id in key.space_ids"
+                :key="id"
+                class="text-sm text-text-secondary"
+              >
+                {{ spaceLabel(id) }}
+              </p>
+              <p class="text-sm text-text-secondary">{{ keyStatus(key) }}</p>
+              <p class="text-sm text-text-secondary">
+                {{ t('account.lastUsed', { date: date(key.last_used_at) }) }}
+              </p>
+            </div>
+            <NeButton
               v-if="!key.revoked_at"
               kind="secondary"
               @click="confirm = { id: key.id, kind: 'key', name: key.name }"
@@ -273,6 +323,7 @@ const removal = useMutation({
       @close="closeCreate"
     >
       <div v-if="secret" class="space-y-5">
+        <p>{{ t('account.secretHelp') }}</p>
         <NeTextInput
           data-c0-secret
           :model-value="secret"
@@ -317,11 +368,16 @@ const removal = useMutation({
         </NeCheckbox>
         <NeCheckbox
           v-model="write"
-          :label="t('account.write')"
+          :label="t('account.keyReadWrite')"
           :disabled="creation.isLoading.value"
-        />
+        >
+          <template #description>{{ t('account.keyPermissionHelp') }}</template>
+        </NeCheckbox>
         <fieldset class="space-y-3">
           <legend class="mb-3 font-medium">{{ t('nav.space') }}</legend>
+          <p class="text-sm text-text-secondary">
+            {{ t('account.keySpaceHelp') }}
+          </p>
           <NeCheckbox
             v-for="space in session.spaces"
             :key="space.id"
@@ -360,6 +416,7 @@ const removal = useMutation({
       <p v-if="confirm?.kind === 'connection'">
         {{ t('account.disconnectHelp') }}
       </p>
+      <p v-else>{{ t('account.revokeKeyHelp') }}</p>
       <ErrorNotice v-if="removal.error.value" :error="removal.error.value"
     /></NeModal>
   </div>

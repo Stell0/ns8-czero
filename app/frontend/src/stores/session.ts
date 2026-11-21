@@ -125,7 +125,9 @@ export const useSession = defineStore('session', () => {
         )
       }
     } catch (cause) {
-      if (!(cause instanceof StaleResponse)) error.value = cause
+      if (current !== sequence || cause instanceof StaleResponse) return
+      if (cause instanceof ApiError && cause.status === 403) await load()
+      else error.value = cause
     }
   }
 

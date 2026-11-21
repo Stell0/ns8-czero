@@ -14,7 +14,8 @@ GUIDES = ('byoa', 'llm-wiki', 'wiki-maintenance', 'architecture', 'documentation
           'installation-candidate', 'index', 'user-guide', 'administration', 'chatgpt', 'plugin',
           'development', 'reference', 'workspace-access', 'release-readiness', 'ci-policy',
           'tool-evaluations', 'retrieval-benchmark', 'agentic-retrieval', 'c0-agent-memory-baseline',
-          'm14-readiness', 'm14-release-notes')
+          'm14-readiness', 'm14-release-notes', 'api-keys', 'custom-applications',
+          'automatic-sources', 'support-integration-plan')
 MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',
                'samples/ingestion/README.md', 'samples/ingestion/examples/compiler/README.md',
                'docs/knowledge-compilation/M5.md', 'samples/ingestion/examples/website/README.md',
