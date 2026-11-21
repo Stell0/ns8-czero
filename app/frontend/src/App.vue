@@ -72,9 +72,21 @@ watch(
     () => route.query.space_id,
     () => route.meta.public,
     () => route.meta.optionalSession,
+    () => route.fullPath.split('#')[0],
   ],
-  ([value]) => {
-    if (!route.meta.public || route.meta.optionalSession)
+  (
+    [value, isPublic, optional],
+    [oldValue, wasPublic, wasOptional, previousLocation],
+  ) => {
+    if (isPublic && !optional) return
+    if (
+      previousLocation === undefined ||
+      value !== oldValue ||
+      isPublic !== wasPublic ||
+      optional !== wasOptional ||
+      (!session.ready &&
+        (session.loading || (session.profile && session.space)))
+    )
       void session.load(value ?? null)
   },
   { immediate: true },
@@ -310,20 +322,25 @@ function search() {
         </template>
         <template
           v-else-if="
-            session.error instanceof ApiError && session.error.status === 403
+            !session.profile &&
+            session.error instanceof ApiError &&
+            session.error.status === 403
           "
         >
           <p role="alert">{{ t('errors.accountDenied') }}</p>
         </template>
-        <template v-else-if="session.error">
-          <ErrorNotice :error="session.error" />
+        <template
+          v-else-if="session.ready && route.meta.admin && !session.isAdmin"
+        >
+          <p role="alert">{{ t('errors.adminDenied') }}</p>
+          <a :href="localURL('/')" class="text-link">{{ t('nav.home') }}</a>
+        </template>
+        <template v-else>
+          <ErrorNotice v-if="session.error" :error="session.error" />
+          <p v-else role="alert">{{ t('errors.access') }}</p>
           <NeButton kind="secondary" @click="session.load()">{{
             t('common.reload')
           }}</NeButton>
-        </template>
-        <template v-else>
-          <p role="alert">{{ t('errors.adminDenied') }}</p>
-          <a :href="localURL('/')" class="text-link">{{ t('nav.home') }}</a>
         </template>
       </main>
     </div>

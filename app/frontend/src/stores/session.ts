@@ -28,6 +28,20 @@ export interface Profile {
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+function sameAuthority(
+  me: Profile,
+  found: Space,
+  previous?: Profile,
+  selected?: Space,
+) {
+  return (
+    me.id === previous?.id &&
+    me.role === previous?.role &&
+    me.csrf_token === previous?.csrf_token &&
+    found.role === selected?.role
+  )
+}
+
 export const useSession = defineStore('session', () => {
   const profile = ref<Profile>()
   const spaces = ref<Space[]>([])
@@ -50,15 +64,29 @@ export const useSession = defineStore('session', () => {
     space: space.value?.id,
     ready: ready.value,
   }))
-  boundary.onClear(() => {
+  boundary.onClear((rejection) => {
+    const previous =
+      ready.value && rejection
+        ? { profile: profile.value, space: space.value, rejection }
+        : undefined
+    const epoch = boundary.epoch
     generation.value++
     ready.value = false
     profile.value = undefined
     space.value = undefined
     spaces.value = []
+    if (previous) {
+      // Let every boundary listener erase its private state before rechecking.
+      queueMicrotask(() => {
+        if (boundary.epoch === epoch) void load(selector, previous)
+      })
+    }
   })
 
-  async function load(selected: string | null | (string | null)[] = selector) {
+  async function load(
+    selected: string | null | (string | null)[] = selector,
+    previous?: { profile?: Profile; space?: Space; rejection: ApiError },
+  ) {
     const current = ++sequence
     boundary.invalidate()
     loading.value = true
@@ -90,6 +118,12 @@ export const useSession = defineStore('session', () => {
           ? collected.find((s) => s.shared)
           : collected.find((s) => s.id === selected.toLowerCase())
       if (!space.value) throw new ApiError(403, 'space_unavailable')
+      // Remounting a view with unchanged authority can repeat the rejected request.
+      if (
+        previous &&
+        sameAuthority(me, space.value, previous.profile, previous.space)
+      )
+        throw previous.rejection
       ready.value = true
     } catch (cause) {
       if (current === sequence && !(cause instanceof StaleResponse))
@@ -109,14 +143,8 @@ export const useSession = defineStore('session', () => {
         request<Profile>('me', {}, false),
         request<Space>(`spaces/${selected!.id}`, {}, false),
       ])
-      if (current !== sequence) return
-      if (
-        me.id !== previous?.id ||
-        me.role !== previous?.role ||
-        me.csrf_token !== previous?.csrf_token ||
-        found.role !== selected?.role
-      )
-        await load()
+      if (current !== sequence || !ready.value) return
+      if (!sameAuthority(me, found, previous, selected)) await load()
       else if (found.revision > (space.value?.revision || 0)) {
         // Refresh policy metadata without discarding an unchanged-authority draft.
         space.value = found
@@ -125,9 +153,13 @@ export const useSession = defineStore('session', () => {
         )
       }
     } catch (cause) {
-      if (current !== sequence || cause instanceof StaleResponse) return
-      if (cause instanceof ApiError && cause.status === 403) await load()
-      else error.value = cause
+      if (
+        current !== sequence ||
+        !ready.value ||
+        cause instanceof StaleResponse
+      )
+        return
+      error.value = cause
     }
   }
 

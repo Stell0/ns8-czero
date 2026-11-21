@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { api } from './fixtures'
+import { api, article, privateSpace, shared } from './fixtures'
 const person = {
   id: 'person',
   username: '<img> Person',
@@ -162,6 +162,94 @@ test('Reader and Editor never request administrator lists or expose controls', a
     expect(reads).toEqual([])
     page.off('request', observe)
   }
+})
+
+test('a denied Wiki request during revalidation clears the article and confirms revocation', async ({
+  page,
+}) => {
+  await api(page)
+  let revoked = false
+  let denyClaims!: () => void
+  const claimsPending = new Promise<void>((resolve) => {
+    denyClaims = resolve
+  })
+  let finishVerification!: () => void
+  const verificationPending = new Promise<void>((resolve) => {
+    finishVerification = resolve
+  })
+  await page.route('**/api/v1/spaces?**', (route) => {
+    const available = [
+      { id: shared, name: 'Shared', shared: true, role: 'reader' },
+    ]
+    if (!revoked)
+      available.push({
+        id: privateSpace,
+        name: 'Protected',
+        shared: false,
+        role: 'reader',
+      })
+    return route.fulfill({ json: { spaces: available } })
+  })
+  await page.route(`**/api/v1/spaces/${privateSpace}`, async (route) => {
+    await verificationPending
+    await route.fulfill({ status: 403 })
+  })
+  await page.route('**/api/v1/claims?**', async (route) => {
+    await claimsPending
+    await route.fulfill({ status: 403, json: { detail: 'permission_denied' } })
+  })
+
+  const claimsRequest = page.waitForRequest('**/api/v1/claims?**')
+  const path = `/wiki/${article}?space_id=${privateSpace}`
+  await page.goto(path)
+  await expect(page.locator('article')).toContainText('Retained knowledge.')
+  await claimsRequest
+  const verifyRequest = page.waitForRequest(`**/api/v1/spaces/${privateSpace}`)
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  )
+  await verifyRequest
+  revoked = true
+  denyClaims()
+
+  try {
+    await expect(page.locator('article')).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveText(
+      'You do not have access to this space. Ask a C0 administrator for access.',
+    )
+    await expect(page).toHaveURL((url) => url.pathname + url.search === path)
+  } finally {
+    finishVerification()
+  }
+})
+
+test('a denied request permits reload or navigation to another page in the same space', async ({
+  page,
+}) => {
+  await api(page)
+  let requests = 0
+  await page.route(`**/api/v1/wiki/pages/${article}?**`, (route) => {
+    requests++
+    return route.fulfill({ status: 403, json: { detail: 'permission_denied' } })
+  })
+  await page.goto(`/wiki/${article}?space_id=${privateSpace}`)
+  await expect(
+    page.getByRole('button', { name: 'Reload', exact: true }),
+  ).toBeVisible()
+  await expect(page.locator('article')).toHaveCount(0)
+  await page
+    .getByRole('navigation')
+    .getByRole('link', { name: 'Wiki', exact: true })
+    .click()
+  await expect(page).toHaveURL(
+    (url) =>
+      url.pathname === '/wiki' &&
+      url.searchParams.get('space_id') === privateSpace,
+  )
+  const main = page.getByRole('main')
+  await main.getByText('manual', { exact: true }).click()
+  await expect(main.getByRole('link', { name: 'Fixture manual' })).toBeVisible()
+  expect(requests).toBe(1)
 })
 
 test('role changes preserve expected revision and CSRF, suppress duplicate writes and show a safe conflict', async ({
