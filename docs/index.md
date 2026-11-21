@@ -10,8 +10,9 @@ C0 (CZero) is a self-hosted knowledge service and Agentic RAG platform. Bring Yo
 | Read knowledge or upload sources | [User guide](user-guide.md), [complete documents](full-documents.md) |
 | Connect ChatGPT or package instructions | [ChatGPT setup](chatgpt.md), [plugin packages](plugin.md) |
 | Install or operate an instance | [Administration](administration.md), [candidate selection](installation-candidate.md) |
-| Manage people, applications and spaces | [Workspace access](workspace-access.md) |
-| Use REST/MCP or automation keys | [Interface reference](reference.md), [API keys](api-keys.md) |
+| Manage people, applications and spaces | [Workspace access](workspace-access.md), [register a public OAuth client](workspace-access.md#register-a-public-oauth-client) |
+| Connect an automation | [Create and verify an API key](api-keys.md), [REST and MCP reference](reference.md) |
+| Host an application on C0 | [Custom application hosting](custom-applications.md) |
 | Understand storage, ingestion and retrieval | [Architecture](architecture.md), [retrieval behavior and measurements](retrieval-benchmark.md) |
 | Collect source data | [Ingestion samples](../samples/ingestion/README.md), [website recipe](../samples/ingestion/examples/website/README.md) |
 | Configure protected research workflows | [Projects](projects/PROJECTS.md), [monitoring](projects/MONITORING.md), [reports](projects/REPORTING.md) |

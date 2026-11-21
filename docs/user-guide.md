@@ -4,7 +4,7 @@
 
 Open the instance URL provided by your administrator and sign in with your domain account. The C0 application account is separate from NS8 cluster administration. A new verified account receives Reader access to Shared. If access is denied, ask the C0 owner/Admin to check Workspace access for an explicit block or retained earlier denial; repeat login after a role change. Approval of a ChatGPT connection does not grant membership.
 
-Use the space picker to choose the intended knowledge space. Shared is the legacy common space. Protected spaces need explicit grants, capped by your application role; application Admins can access all spaces. A failed or revoked selection is not permission to switch to Shared. Check the account and space again when changing connections.
+Use the space picker to choose the intended knowledge space. Shared is the legacy common space. A space can allow all signed-in users to read or restrict access to selected people. Individual grants are capped by your workspace role. Workspace Admins can access all spaces. A failed or revoked selection is not permission to switch to Shared. Check the account and space again when changing connections.
 
 | Role | Typical access |
 | --- | --- |
@@ -79,7 +79,7 @@ Original download and reprocessing require retention. On a source, **Upload
 replacement** keeps its current complete document readable while extraction and
 whole-document validation run. **Reprocess original**, **Retry processing** and
 **Cancel processing** appear when supported and authorized. Reload only refreshes
-the displayed state. External collectors remain assistant/script workflows.
+the displayed state. If an administrator has enabled Automatic sources, authorized users can follow collection status from Sources. External assistants and scripts can also collect and ingest material. [Automatic sources](automatic-sources.md)
 
 Before changing a page, read its current revision. A conflict means another change occurred: reload, reconcile both observations and retry with the new revision. An unchanged request with an idempotency key keeps that key after an uncertain reply. Not every mutation has replay protection; inspect saved results before repeating an ordinary create.
 

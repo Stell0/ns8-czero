@@ -69,12 +69,64 @@ test('long client names and details stay within the phone layout', async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true)
-  await page.locator('summary').click()
+  await expect(
+    page.getByText('https://client.example.test/callback'),
+  ).toBeVisible()
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true)
+})
+
+test('manual registration returns the public ID and exact callback', async ({
+  page,
+}) => {
+  await api(page, 'admin')
+  await page.route('**/oauth/cimd', (route) =>
+    route.fulfill({ json: { clients: [], enabled: false } }),
+  )
+  const client = {
+    client_id: '11111111-1111-4111-8111-111111111115',
+    client_name: 'Support console',
+    redirect_uris: ['https://client.example.test/callback'],
+    allowed_scopes: ['c0:read'],
+    enabled: true,
+    revision: 1,
+  }
+  let saved = false
+  await page.route('**/oauth/clients', async (route) => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({
+        client_name: client.client_name,
+        redirect_uris: client.redirect_uris,
+        allowed_scopes: client.allowed_scopes,
+      })
+      saved = true
+      return route.fulfill({ status: 201, json: client })
+    }
+    return route.fulfill({ json: { clients: saved ? [client] : [] } })
+  })
+  await page.goto('/admin/advanced')
+  await page
+    .getByRole('button', { name: 'Register client', exact: true })
+    .click()
+  const dialog = page.getByRole('dialog')
+  await dialog
+    .getByRole('textbox', { name: 'Name', exact: true })
+    .fill(client.client_name)
+  await dialog
+    .getByRole('textbox', { name: 'Callback', exact: true })
+    .fill(client.redirect_uris[0])
+  await dialog
+    .getByRole('button', { name: 'Register client', exact: true })
+    .click()
+  await expect(
+    page.getByRole('textbox', { name: 'Public client ID' }),
+  ).toHaveValue(client.client_id)
+  await expect(
+    page.getByText(client.redirect_uris[0], { exact: true }),
+  ).toBeVisible()
 })
 
 test('Reader and Editor never request administrator lists or expose controls', async ({
@@ -101,7 +153,7 @@ test('Reader and Editor never request administrator lists or expose controls', a
     ]) {
       await page.goto(path)
       await expect(
-        page.getByText('Sign in or choose a space you can access.'),
+        page.getByText('This page is available to C0 administrators.'),
       ).toBeVisible()
       await expect(
         page.getByRole('button', { name: /Approve|Create|Save access/ }),
@@ -426,8 +478,12 @@ test('closing a metadata preview cannot populate a newly opened client form', as
     .getByRole('button', { name: 'Register client', exact: true })
     .click()
   let dialog = page.getByRole('dialog')
-  await dialog.getByRole('button', { name: 'Clients', exact: false }).click()
-  await page.getByRole('option', { name: 'HTTPS', exact: true }).click()
+  await dialog
+    .getByRole('button', { name: 'Registration method', exact: false })
+    .click()
+  await page
+    .getByRole('option', { name: 'HTTPS client metadata', exact: true })
+    .click()
   await dialog
     .getByRole('textbox', { name: 'Client metadata URL', exact: true })
     .fill(descriptor.client_id)

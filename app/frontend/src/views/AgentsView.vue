@@ -298,7 +298,11 @@ const download = useMutation({
       ></template>
       <p v-else>{{ t('agents.unavailable') }}</p></ResourceState
     >
-    <p>{{ t('agents.compiler.install') }}</p>
+    <p v-if="session.ready">
+      <RouterLink to="/account" class="text-link">
+        {{ t('agents.automationKeys') }}
+      </RouterLink>
+    </p>
     <a
       v-if="!session.ready"
       :href="localURL('auth/sign-in?return_to=agents')"
@@ -337,20 +341,21 @@ const download = useMutation({
           </ol>
         </details>
       </section>
-      <p
-        v-if="
-          !compilerAvailable || (session.canWrite && compilerTasks.length < 8)
-        "
-      >
-        {{ t('agents.compiler.upgrade') }}
-      </p>
-      <ResourceState
-        v-else
-        :error="compilerContext.error.value"
-        :loading="compilerContext.isPending.value"
-      />
       <section class="space-y-4">
         <h2 class="text-xl font-medium">{{ t('agents.tasks') }}</h2>
+        <p>{{ t('agents.compiler.install') }}</p>
+        <p
+          v-if="
+            !compilerAvailable || (session.canWrite && compilerTasks.length < 8)
+          "
+        >
+          {{ t('agents.compiler.upgrade') }}
+        </p>
+        <ResourceState
+          v-else
+          :error="compilerContext.error.value"
+          :loading="compilerContext.isPending.value"
+        />
         <details
           v-for="task in tasks"
           :key="task.id"

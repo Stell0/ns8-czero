@@ -343,12 +343,12 @@ class NativeWebsite:
         self.run('Switch Context',owner_context);self.goto('/admin/spaces?space_id='+space);self.grant('No additional grant')
         self.run('Switch Context',member_context)
         self.browser.evaluate_javascript(None,"() => document.dispatchEvent(new Event('visibilitychange'))")
-        self.run('Get Text','main','contains','Sign in or choose a space you can access.')
+        self.run('Get Text','main','contains','You do not have access to this space. Ask a C0 administrator for access.')
         self.run('Get Element Count','article, main a[download]','==',0)
         assert 'space_id='+space in self.browser.get_url()
         self.run('Reload');self.run('Get Element Count','article','==',0)
         self.run('Go To',self.origin+'/projects?space_id='+space)
-        self.run('Get Text','main','contains','Sign in or choose a space you can access.')
+        self.run('Get Text','main','contains','You do not have access to this space. Ask a C0 administrator for access.')
         self.run('Get Element Count','main li','==',0)
 
     def discovery(self, module_id):
@@ -409,7 +409,7 @@ class NativeWebsite:
     def admin(self, role, module_id):
         self.goto('/admin')
         if role!='admin':
-            self.run('Get Text','main','contains','Sign in or choose a space you can access.')
+            self.run('Get Text','main','contains','This page is available to C0 administrators.')
             self.run('Get Element Count','[role="grid"], aside a:text-is("Administration")','==',0)
             self.accessible('admin',role)
             return

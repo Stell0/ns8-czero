@@ -40,7 +40,7 @@
       "locale": "en",
       "ticket": {
         "id": 910001,
-        "subject": "How was the Juniper batch handover verified?",
+        "subject": "NethServer 8 · How was the Juniper batch handover verified?",
         "description_text": "What should appear on the dispatch slip, and where did the receiving clerk file it during the rehearsal?",
         "status": 2,
         "priority": 1,
@@ -57,7 +57,7 @@
       "locale": "it",
       "ticket": {
         "id": 910002,
-        "subject": "Come è stata verificata la consegna del Lotto Corallo?",
+        "subject": "NethServer 8 · Come è stata verificata la consegna del Lotto Corallo?",
         "description_text": "Quale segno deve comparire sulla distinta e dove è stata archiviata durante la prova?",
         "status": 2,
         "priority": 1,
@@ -74,7 +74,7 @@
       "locale": "en",
       "ticket": {
         "id": 910003,
-        "subject": "Who signed for the Cobalt parcel?",
+        "subject": "NethServer 8 · Who signed for the Cobalt parcel?",
         "description_text": "Please identify the person who signed for this training parcel.",
         "status": 2,
         "priority": 1,
@@ -88,7 +88,7 @@
       "locale": "it",
       "ticket": {
         "id": 910004,
-        "subject": "Chi ha firmato per il Plico Ocra?",
+        "subject": "NethServer 8 · Chi ha firmato per il Plico Ocra?",
         "description_text": "Vorrei sapere chi ha firmato per questo plico durante la prova.",
         "status": 2,
         "priority": 1,

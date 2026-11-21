@@ -233,8 +233,7 @@ for (const theme of ['light', 'dark']) {
         }),
       ).toBeFocused()
       await page.keyboard.press('Tab')
-      await expect(page.locator('summary')).toBeFocused()
-      await page.keyboard.press('Tab')
+      await expect(page.getByText(callback, { exact: true })).toBeVisible()
       await expect(authorize).toBeFocused()
     })
   }

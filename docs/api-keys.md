@@ -1,16 +1,19 @@
 # Personal API keys
 
-Core 0.38 provides the reusable key service. This guide describes the matching
-reference application; standalone forks provide their own transport and account UI.
+An API key lets an automation call REST and MCP using the access of the person
+who created it. Open **Account → API keys → Create API key**. Use a name that
+identifies the automation and select only the spaces it needs. Keep the default
+Read permission for search and citations. Select **Read and write** only for an
+automation that changes knowledge. Use one key per workflow and permission set.
 
-API keys let automation call REST and MCP without an interactive login or token
-refresh. Sign in and open **Account → API keys**. Enter a name, choose Read or
-Read and write, explicitly select allowed spaces, and choose an expiration.
-The default is 90 days. Enter a whole number from 1 to 365 or select **Never
-expires**. The form shows this range and rejects blank or out-of-range values;
-only the explicit checkbox creates a key without expiration. The list shows each
-key's expiration date or **Never expires**.
-Copy the new key immediately. C0 stores its hash and cannot show it again.
+Keys expire after 90 days by default. Enter a whole number from 1 to 365 or
+explicitly select **Never expires**. Save the one-time key in the automation’s
+secret manager. Check the key list for its permissions, selected spaces,
+expiration or revocation, and last use.
+
+To verify a reader connection, explicitly select its space, search for a known
+document or Wiki page, and open the returned citation or revision. A successful
+login or tool list alone does not verify that the expected knowledge can be read.
 
 The 365-day maximum is a validation policy shared by Core, REST and the website,
 not a database limit. Increasing finite lifetimes requires changing those checks

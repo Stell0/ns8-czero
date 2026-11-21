@@ -103,3 +103,18 @@ On 21 November the planning pass verified both upstream revisions, inspected the
 The C0 frontend passed lint, formatting, type checks, the production build, 35 Vitest cases and 62 Playwright interactions using controlled API responses. The C0 documentation checker passed 712 local links. Its coverage excludes the cross-repository fragment and the consumer’s MCP request shape. The full Support suite initially passed 651 tests. All three image-dependent tests then passed against a local image built from the exact tracked Support revision, giving 654 passing cases across both runs. Authenticated makako enrollment, the Support bot’s own credentials, a deployed Support investigation, candidate upgrades and restore are execution milestones.
 
 The bilingual fixture check passed locally against C0 and PostgreSQL with two private spaces and two read-only keys. Both positive tickets resolved the expected citation and Wiki revision, both missing-evidence tickets returned zero hits in both spaces, and C0 denied both cross-space requests. The Support catalog accepted all four ticket payloads. The hosted **Simulated investigation** and its console readback are pending makako execution.
+
+## Implementation evidence
+
+The implementation started from C0 `e3aade2` and Support `8bd250c`. C0 now shows
+the spaces, permissions and status of issued API keys. It also provides the
+registered client ID, distinguishes sign-in from access denial and preserves
+supported exact evidence destinations across sign-in.
+
+The Support `check-c0` command verified both reader keys against a disposable
+C0 instance over HTTPS, including exact English and Italian readback, empty
+searches, a misassigned writer, revocation and rotation. Four tickets also ran
+through the real Support supervisor and agent SDK using scripted ticket and
+inference providers. The positive runs saved citations, the negative runs
+reported insufficient evidence, and the saved summaries were labeled
+**Simulated investigation**. These runs used local C0 with PostgreSQL.

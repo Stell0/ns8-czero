@@ -57,5 +57,5 @@ def test_question_search_opens_complete_current_document_and_loses_access(live,b
     expect(document).not_to_contain_text('END-COMPLETE-PROCEDURE')
     assert live.rest.put(live.grant_path,json={'role':None,'expected_revision':1,'idempotency_key':'question-revoke'}).status_code==200
     browser.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
-    expect(browser.get_by_text('Sign in or choose a space you can access.',exact=True)).to_be_visible()
+    expect(browser.get_by_text('You do not have access to this space. Ask a C0 administrator for access.',exact=True)).to_be_visible()
     expect(document).to_have_count(0)

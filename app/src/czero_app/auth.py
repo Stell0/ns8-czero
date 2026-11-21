@@ -6,7 +6,7 @@ import logging
 import os
 import re
 from uuid import UUID
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, urlencode
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -21,6 +21,40 @@ from czero_core.oidc import OidcClient, OidcConfig, OidcUnavailable, OfflineUnav
 from czero_core.sessions import LoginStateRejected, SessionRejected, SessionService, REMEMBER_SECONDS
 from czero_core.oauth_grants import GrantRejected
 from czero_core.renewal import ConnectionPolicy, NativeAuthorityService, RenewalRejected, RenewalUnavailable, SessionPolicy
+
+
+LOGIN_PATHS = frozenset(('account', 'agents', 'admin', 'admin/advanced', 'admin/spaces',
+                         'admin/work', 'wiki', 'sources', 'search', 'automatic-sources',
+                         'tables', 'projects', 'explore'))
+UUID_ROUTE = r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
+LOGIN_DETAIL = re.compile(
+    rf'(?:wiki|sources|evidence)/{UUID_ROUTE}|'
+    rf'tables/[A-Za-z0-9_.-]{{1,128}}|explore/[A-Za-z0-9_-]{{1,32}}(?:/{UUID_ROUTE})?'
+)
+LOGIN_QUERY = frozenset(('space_id', 'revision', 'version', 'revision_id', 'reference',
+                         'query', 'kind', 'mode', 'rerank', 'graph_depth', 'offset',
+                         'facts_offset', 'related_offset', 'type', 'sort', 'direction',
+                         'tag', 'where'))
+
+
+def login_return(value: str | None) -> str:
+    if not value or len(value) > 1600:
+        return ''
+    path, separator, selector = value.partition('?')
+    if path and path not in LOGIN_PATHS and not LOGIN_DETAIL.fullmatch(path):
+        return ''
+    if path.endswith(('/.', '/..')):
+        return ''
+    if not separator:
+        return path
+    try:
+        pairs = parse_qsl(selector, keep_blank_values=True, max_num_fields=32, errors='strict')
+    except ValueError:
+        return ''
+    query = urlencode([(name, item) for name, item in pairs if name in LOGIN_QUERY])
+    if len(query) > 1600:
+        return ''
+    return path + ('?' + query if query else '')
 
 
 class SafeAccessLog(logging.Filter):
@@ -241,8 +275,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     def sign_in(request: Request):
         active = configured()
         intent, browser = active.sessions.begin_sign_in()
-        target = request.query_params.get('return_to', '')
-        target = target if target in ('agents', 'admin') else ''
+        target = login_return(request.query_params.get('return_to'))
         response = app.state.website.render({'intent': intent, 'return_to': target})
         response.set_cookie('c0_signin', browser, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
         return response
@@ -282,8 +315,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
                 raise
             return await to_thread.run_sync(remembered_unavailable, request)
         response.delete_cookie('c0_signin', path=cookie_path, secure=True, httponly=True, samesite='lax')
-        target = form.get('return_to')
-        if target in ('agents', 'admin'):
+        target = login_return(form.get('return_to'))
+        if target:
             response.set_cookie('c0_login_return', target, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
         else:
             response.delete_cookie('c0_login_return', path=cookie_path, secure=True, httponly=True, samesite='lax')
@@ -303,8 +336,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         response = start_login(request, pending)
         response.delete_cookie('c0_background_login', path=cookie_path,
             secure=True, httponly=True, samesite='lax')
-        target = request.query_params.get('return_to')
-        if target in ('agents', 'admin'):
+        target = login_return(request.query_params.get('return_to'))
+        if target:
             response.set_cookie('c0_login_return', target, max_age=300,
                 secure=True, httponly=True, samesite='lax', path=cookie_path)
         else:
@@ -344,8 +377,7 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             return response
         active.sessions.replace_browser(request.cookies.get('c0_session'))
         destination = cookie_path
-        if request.cookies.get('c0_login_return') in ('agents', 'admin'):
-            destination += request.cookies['c0_login_return']
+        destination += login_return(request.cookies.get('c0_login_return'))
         onboarding = getattr(app.state, 'client_onboarding', None)
         if onboarding is not None and request.cookies.get('c0_onboarding'):
             # The destination is fixed: original OAuth state stays server-side.

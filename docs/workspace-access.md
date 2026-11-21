@@ -84,11 +84,11 @@ does not claim a durable connection history.
 ## Register a public OAuth client
 
 1. Open **Administration → Technical clients** and select **Register client**.
-2. Set **Clients** to **OAuth** for a manual registration. Enter the application's **Name** and paste each exact **Callback** URL on its own line. Use HTTPS for a web callback. A local helper can use HTTP on a loopback address, for example `http://127.0.0.1:8767/callback`.
-3. Select the permissions the application needs. **Read** is `c0:read`, **Write** is `c0:write`, and **Manage** is `c0:admin`. The checkboxes are independent. Select **Approve application** in the registration form.
-4. Open **Details** on the new application's card and copy its public `client_id` into that application's setup. Start the OAuth flow from the application. On C0's consent page, select the permissions you want to grant. For an unattended application, select **Allow background access**. If C0 shows **Continue to background sign-in**, follow that prompt and then choose **Authorize**.
+2. Set **Registration method** to **Manual registration**. Enter the application's **Name** and paste each exact **Callback** URL on its own line. Use HTTPS for a web callback. A local helper can use HTTP on a loopback address, for example `http://127.0.0.1:8767/callback`.
+3. Select the permissions the application needs. **Read** is `c0:read`, **Write** is `c0:write`, and **Manage** is `c0:admin`. The checkboxes are independent. Select **Register client** in the registration form.
+4. Copy the **Public client ID** from the registration receipt into the application’s setup. The client card also shows this ID alongside its callbacks and permission ceiling. Start the OAuth flow from the application. On C0's consent page, select the permissions you want to grant. For an unattended application, select **Allow background access**. If C0 shows **Continue to background sign-in**, follow that prompt and then choose **Authorize**.
 
-Use **HTTPS** under **Clients** when the application supplies a client metadata URL. The **Approve application** button on an existing card opens that application's approval form. To create a separate client, use **Register client** at the top of the page.
+Use **HTTPS client metadata** when the application supplies a verified metadata URL. That URL is its public client ID. The **Approve application** button on an existing card opens that application's approval form. To create a separate client, use **Register client** at the top of the page.
 
 ## Other administration
 
