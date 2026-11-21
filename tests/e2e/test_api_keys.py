@@ -84,4 +84,6 @@ def test_reader_and_editor_key_creation_respects_current_permissions(live,browse
     browser.get_by_role('button',name='I saved the key',exact=True).click()
     browser.reload()
     expect(browser.get_by_text(role+' workflow',exact=False)).to_be_visible()
-    if role=='editor':expect(browser.get_by_text(role+' workflow',exact=False)).to_contain_text('c0:write')
+    key=browser.get_by_role('listitem').filter(has=browser.get_by_role('heading',name=role+' workflow',exact=True))
+    expect(key.get_by_text('Read and write' if role=='editor' else 'Read only',exact=True)).to_be_visible()
+    expect(key.get_by_text('Shared',exact=True)).to_be_visible()
