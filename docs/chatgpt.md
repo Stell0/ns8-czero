@@ -35,7 +35,7 @@ On an empty new instance, first follow the [first-content walkthrough](user-guid
 
 Confirm the correct connected-account name and real citations. A successful tool refresh alone does not prove an authenticated content read. Repeat a read after more than five minutes to exercise normal renewal. [Official connection/testing guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
 
-For a connection that should keep working between visits, select **Keep this connection working in the background** on the C0 consent page. If needed, continue through sign-in with the same account, then return and choose **Authorize**. A changed administrator inactivity setting can require a new sign-in for a new connection. The pending request still expires after five minutes. Grant write permission only when you intend to let the assistant maintain knowledge and both your C0 role and the approved client permit it.
+For a connection that should keep working between visits, select **Allow background access** on the C0 consent page. If C0 shows **Continue to background sign-in**, follow that prompt with the same account, then return and choose **Authorize**. C0 can ask you to confirm your identity to enable background access even when you are already signed in. The pending request still expires after five minutes. Grant write permission only when you intend to let the assistant maintain knowledge and both your C0 role and the approved client permit it.
 
 Background connections use short access tokens and rotating refresh credentials. By default they end after thirty days without use; regular use keeps them active without a fixed end date. Your browser still signs out after its usual idle or maximum duration. C0 **Account → Your connected apps → Disconnect** stops a connection, including access it already holds. Client/account revocation and sign-in-provider rejection also stop access. Existing connections keep their original limits until you reconnect and explicitly choose background access.
 
@@ -43,7 +43,7 @@ Background authorization lets a compatible client renew access unattended. Wheth
 
 ### Reconnect while already signed in
 
-If ChatGPT asks for access while you are already signed in to C0, the prompt can be about the ChatGPT connection. In ChatGPT, choose **Reconnect** on the affected C0 app. Review the application and requested permissions on the C0 consent page. If the connection needs to run while you are away, select **Keep this connection working in the background**, then choose **Authorize**. Use your existing C0 session when the consent page opens directly. Sign in only if your identity provider asks.
+If ChatGPT asks for access while you are already signed in to C0, the prompt can be about the ChatGPT connection. In ChatGPT, choose **Reconnect** on the affected C0 app and review the C0 consent page. Use **Allow background access** if the connection needs to run while you are away, then choose **Authorize**. Use your existing C0 session when the consent page opens directly. Sign in only if your identity provider asks.
 
 Retry the requested operation once. If ChatGPT asks for access again, report which operation triggered the prompt and whether a profile or knowledge read works. A working read verifies the connection for that operation. For an administrative operation, check that the account has Manage, the application is approved for Manage, and the connection has consent for it. A separate application or server job needs its own grant.
 
@@ -60,7 +60,7 @@ An application Admin must approve the necessary write scope, and the user needs 
 | Symptom | Check and next step |
 | --- | --- |
 | Initial `invalid_request` | Confirm this instance runs the self-service Read update with configured HTTPS and sign-in. Valid new CIMD requests proceed to consent; malformed callbacks, duplicate parameters, wrong resources and disabled applications still fail. Start Connect afresh; keep its full URL private. |
-| Login succeeds but C0 denies access | Ask the owner/Admin to check Workspace access for an explicit block or retained earlier denial. New verified users receive Shared Reader access by default; client approval grants no additional role. |
+| Login succeeds but C0 denies access | Ask the owner/Admin to check **Administration → People and applications** for an explicit block or retained earlier denial. New verified users receive Shared Reader access by default; client approval grants no additional role. |
 | OAuth `invalid_scope` during reconnect | Continue with requested Read when available, or ask an Admin to review additional scopes. A Write-only request cannot receive unrequested Read. Existing UUID clients retain strict scope errors. Do not grant Admin merely to silence an error. |
 | `insufficient_scope` | Request fresh explicit consent only if your role and approved client permit the operation. Refresh cannot add scope. |
 | Permission denied for a space | Request an authorized grant; do not switch to Shared to bypass denial. |
