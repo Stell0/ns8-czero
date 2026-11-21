@@ -1,6 +1,6 @@
 # Manage workspace access
 
-Open **Administration → Workspace access** with your C0 administrator account.
+Open **Administration → People and applications** with your C0 administrator account.
 The table groups each person with their application requests and connections.
 People with pending requests appear first. Self-service Read discovery is enabled whenever the configured authenticated HTTPS endpoint is available. Use **Next people** or **More
 applications** when the table has another page.
@@ -81,16 +81,24 @@ invalid. Refresh the table after an uncertain operation before trying again.
 Disconnected or expired records may disappear during normal cleanup; this page
 does not claim a durable connection history.
 
-## Advanced and other administration
+## Register a public OAuth client
 
-**Advanced** contains exact metadata/manual client configuration and diagnostics.
+1. Open **Administration → Technical clients** and select **Register client**.
+2. Set **Clients** to **OAuth** for a manual registration. Enter the application's **Name** and paste each exact **Callback** URL on its own line. Use HTTPS for a web callback. A local helper can use HTTP on a loopback address, for example `http://127.0.0.1:8767/callback`.
+3. Select the permissions the application needs. **Read** is `c0:read`, **Write** is `c0:write`, and **Manage** is `c0:admin`. The checkboxes are independent. Select **Approve application** in the registration form.
+4. Open **Details** on the new application's card and copy its public `client_id` into that application's setup. Start the OAuth flow from the application. On C0's consent page, select the permissions you want to grant. For an unattended application, select **Allow background access**. If C0 shows **Continue to background sign-in**, follow that prompt and then choose **Authorize**.
+
+Use **HTTPS** under **Clients** when the application supplies a client metadata URL. The **Approve application** button on an existing card opens that application's approval form. To create a separate client, use **Register client** at the top of the page.
+
+## Other administration
+
 **Disable application for everyone** is explicitly global: it stops all of that
 application's connections, without blocking its users. Enabling it later permits
 fresh consent and does not revive old credentials. Manually approved UUID clients
 remain independent of self-service metadata clients.
 
 Use **Spaces** for space-specific grants and **Background work** for
-jobs and schedules. The Workspace access page does not load background tasks. The **Skip to content**
+jobs and schedules. The **People and applications** page does not load background tasks. The **Skip to content**
 link keeps you on the current page and preserves the selected space.
 A user's **Account → Your connected apps** still manages their own connections.
 
