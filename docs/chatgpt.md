@@ -41,6 +41,12 @@ Background connections use short access tokens and rotating refresh credentials.
 
 Background authorization lets a compatible client renew access unattended. Whether a particular ChatGPT scheduled task can use the connection must be verified in that client; enabling background access does not create a schedule or authorize unspecified knowledge changes.
 
+### Reconnect while already signed in
+
+If ChatGPT asks for access while you are already signed in to C0, the prompt can be about the ChatGPT connection. In ChatGPT, choose **Reconnect** on the affected C0 app. Review the application and requested permissions on the C0 consent page. If the connection needs to run while you are away, select **Keep this connection working in the background**, then choose **Authorize**. Use your existing C0 session when the consent page opens directly. Sign in only if your identity provider asks.
+
+Retry the requested operation once. If ChatGPT asks for access again, report which operation triggered the prompt and whether a profile or knowledge read works. A working read verifies the connection for that operation. For an administrative operation, check that the account has Manage, the application is approved for Manage, and the connection has consent for it. A separate application or server job needs its own grant.
+
 ## 5. Add reusable workflow skills
 
 On **Use with AI**, download the generated **.skill** and upload it at [ChatGPT Skills](https://chatgpt.com/skill), where your account supports skill upload. It contains this instance’s hostname and MCP URL. Alternatively, paste your ChatGPT connection page address or technical app ID and download the generated **plugin .zip** for the five setup/research/maintenance/project-discovery/compiler workflows. See [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
