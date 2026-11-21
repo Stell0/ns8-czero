@@ -17,14 +17,14 @@ export class StaleResponse extends Error {}
 export class AccessBoundary {
   epoch = 0
   private controllers = new Set<AbortController>()
-  private listeners = new Set<() => void>()
-  invalidate() {
+  private listeners = new Set<(rejection?: ApiError) => void>()
+  invalidate(rejection?: ApiError) {
     this.epoch++
     for (const controller of this.controllers) controller.abort()
     this.controllers.clear()
-    for (const listener of this.listeners) listener()
+    for (const listener of this.listeners) listener(rejection)
   }
-  onClear(listener: () => void) {
+  onClear(listener: (rejection?: ApiError) => void) {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
@@ -104,14 +104,15 @@ export async function request<T>(
         typeof error.response?.data?.detail === 'string'
           ? error.response.data.detail
           : ''
-      if (status === 401 || status === 403) boundary.invalidate()
       const data = error.response?.data
-      throw new ApiError(
+      const failure = new ApiError(
         status,
         code,
         typeof data?.reason === 'string' ? data.reason : '',
         typeof data?.field === 'string' ? data.field : '',
       )
+      if (status === 401 || status === 403) boundary.invalidate(failure)
+      throw failure
     }
   })
 }

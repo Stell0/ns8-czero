@@ -272,6 +272,9 @@ const submit = useMutation({
           "
         />
       </fieldset>
+      <p v-if="!connecting && !background" class="text-sm text-text-secondary">
+        {{ t('consent.sessionHelp') }}
+      </p>
       <div v-if="data.background_supported" class="space-y-3">
         <NeCheckbox
           v-model="background"
@@ -286,14 +289,10 @@ const submit = useMutation({
           }}
         </p>
       </div>
-      <details>
-        <summary class="cursor-pointer text-link">
-          {{ t('common.details') }}
-        </summary>
-        <p class="mt-3 break-all text-sm">
-          {{ t('consent.callback') }}: {{ data.callback }}
-        </p>
-      </details>
+      <dl class="space-y-1 text-sm">
+        <dt class="font-medium">{{ t('consent.callback') }}</dt>
+        <dd class="break-all">{{ data.callback }}</dd>
+      </dl>
       <ErrorNotice
         v-if="submit.error.value || preview.error.value"
         :error="submit.error.value || preview.error.value"

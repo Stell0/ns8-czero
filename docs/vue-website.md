@@ -31,9 +31,12 @@ Core 0.38.0, schema 0032 and all REST/MCP contracts remain unchanged.
 The selected space and applicable filters stay in the URL. Explicit invalid or
 denied spaces never fall back to Shared. Query identities include the account,
 space and resource/filter. Account/space/access changes abort work and erase
-protected cache and DOM state before loading another identity. Browser storage
-contains only language and theme preferences. Cookies and X-C0-CSRF remain the
-authentication contract. Conflicts require a reload; HTTP 410 never substitutes
+protected cache and DOM state before loading another identity. A rejected
+request rechecks the signed-in account and selected space before remounting the
+view. If access to the space has ended, the view explains how to request it.
+Browser storage contains only language and theme preferences. Cookies and
+X-C0-CSRF remain the authentication contract.
+Conflicts require a reload; HTTP 410 never substitutes
 current text for expired exact evidence.
 
 Knowledge creation, editing, annotation, archive and deletion controls are

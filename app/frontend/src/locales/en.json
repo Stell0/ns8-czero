@@ -42,6 +42,9 @@
     "overview": "Overview"
   },
   "errors": {
+    "spaceDenied": "You do not have access to this space. Ask a C0 administrator for access.",
+    "accountDenied": "Your account cannot access C0. Ask a C0 administrator to check your access.",
+    "adminDenied": "This page is available to C0 administrators.",
     "title": "Cannot load content",
     "unavailable": "Check your connection and reload the page.",
     "access": "Sign in or choose a space you can access.",
@@ -134,6 +137,17 @@
     "failedHelp": "Processing failed. An Editor can retry available source files."
   },
   "account": {
+    "signInRequired": "Sign in with your NethServer account to continue.",
+    "keysHelp": "Give an automation its own key and select only the spaces it needs.",
+    "rotationHelp": "To replace a key, create and verify its replacement in your automation before revoking the old key.",
+    "unavailableSpace": "Unavailable space ({id})",
+    "keyExpired": "Expired {date}",
+    "keyReadWrite": "Read and write",
+    "keyReadOnly": "Read only",
+    "secretHelp": "Save this key in your secret manager now. C0 displays it only once.",
+    "keyPermissionHelp": "Turn this on only if the automation needs to change knowledge.",
+    "keySpaceHelp": "Select the spaces this key can access.",
+    "revokeKeyHelp": "This key stops working immediately. Update any automation that still uses it.",
     "signin": "Sign in",
     "signout": "Sign out",
     "language": "Language",
@@ -209,6 +223,7 @@
     "references": "Linked resources"
   },
   "agents": {
+    "automationKeys": "Create API keys for automation",
     "intro": "Connect your assistant to this instance. Instructions do not grant access or install schedules.",
     "url": "MCP server URL",
     "skill": "Download skill",
@@ -259,6 +274,7 @@
     }
   },
   "consent": {
+    "sessionHelp": "This connection follows your sign-in session. You can disconnect it from Your connected apps.",
     "unavailable": "This connection request is unavailable or expired. Start Connect again in your assistant, then review the new request.",
     "back": "Back to setup",
     "title": "Authorize application",
@@ -276,6 +292,15 @@
     "readBoundary": "Read content in all spaces you can access."
   },
   "admin": {
+    "registrationMethod": "Registration method",
+    "manualRegistration": "Manual registration",
+    "metadataRegistration": "HTTPS client metadata",
+    "publicClientId": "Public client ID",
+    "publicClientHelp": "Enter this ID in the application, then start its connection flow.",
+    "copyClientId": "Copy client ID",
+    "clientIdCopied": "Client ID copied",
+    "registrationSaved": "Client registered",
+    "clientPermissions": "Allowed permissions",
     "people": "People and applications",
     "role": "Permission",
     "readWrite": "Read and write",

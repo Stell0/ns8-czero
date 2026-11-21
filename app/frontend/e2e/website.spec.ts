@@ -1,4 +1,19 @@
 import { expect, test } from '@playwright/test'
+
+test('signed-out administration offers a single sign-in action and an internal return', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/me', (route) =>
+    route.fulfill({ status: 401, json: {} }),
+  )
+  await page.goto('/admin/advanced')
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Sign in' }),
+  ).toHaveAttribute('href', /return_to=admin%2Fadvanced$/)
+  await expect(
+    page.getByRole('main').getByRole('button', { name: 'Reload' }),
+  ).toHaveCount(0)
+})
 import {
   api,
   shared,
@@ -298,7 +313,9 @@ test('closing key creation discards a late one-time secret', async ({
   await drawer
     .getByRole('textbox', { name: 'Name', exact: true })
     .fill('Cancelled disclosure')
-  await drawer.getByRole('checkbox', { name: 'Write', exact: true }).check()
+  await drawer
+    .getByRole('checkbox', { name: 'Read and write', exact: true })
+    .check()
   await drawer.getByRole('checkbox', { name: 'Shared', exact: true }).check()
   await drawer
     .getByRole('button', { name: 'Create API key', exact: true })
@@ -321,7 +338,7 @@ test('closing key creation discards a late one-time secret', async ({
     drawer.getByRole('textbox', { name: 'Name', exact: true }),
   ).toHaveValue('')
   await expect(
-    drawer.getByRole('checkbox', { name: 'Write', exact: true }),
+    drawer.getByRole('checkbox', { name: 'Read and write', exact: true }),
   ).not.toBeChecked()
   await expect(
     drawer.getByRole('checkbox', {

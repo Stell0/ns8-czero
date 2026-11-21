@@ -1,5 +1,36 @@
 import { expect, test } from '@playwright/test'
-import { api, shared } from './fixtures'
+import { api, privateSpace, shared } from './fixtures'
+
+test('shows reader scope and bound spaces in the key list', async ({
+  page,
+}) => {
+  await api(page)
+  await page.route('**/api/v1/api-keys', (route) =>
+    route.fulfill({
+      json: {
+        api_keys: [
+          {
+            id: 'reader-key',
+            name: 'Documentation reader',
+            scopes: ['c0:read'],
+            space_ids: [shared, privateSpace],
+            expires_at: '2020-01-01T00:00:00Z',
+            last_used_at: null,
+            revoked_at: null,
+          },
+        ],
+      },
+    }),
+  )
+  await page.goto('/account')
+  const key = page
+    .getByRole('listitem')
+    .filter({ hasText: 'Documentation reader' })
+  await expect(key.getByText('Read only', { exact: true })).toBeVisible()
+  await expect(key.getByText('Shared', { exact: true })).toBeVisible()
+  await expect(key.getByText(/^Expired /)).toBeVisible()
+  await expect(key.getByText(/^Last used:/)).toBeVisible()
+})
 
 for (const language of ['en', 'it'])
   for (const theme of ['light', 'dark'])

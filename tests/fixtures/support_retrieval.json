@@ -1,0 +1,102 @@
+{
+  "investigation_label": "Simulated investigation",
+  "providers": {
+    "ticket_service": "fixture",
+    "inference_service": "fixture"
+  },
+  "documentation": [
+    {
+      "idempotency_key": "fixture-juniper-guide-en",
+      "title": "Checking a Juniper batch handover",
+      "body": "Training guide for the fictional Juniper batch. The handover is complete when the receiving clerk records a violet stamp on the dispatch slip."
+    },
+    {
+      "idempotency_key": "fixture-corallo-guide-it",
+      "title": "Verifica della consegna del Lotto Corallo",
+      "body": "Guida di esercitazione per il Lotto Corallo. La consegna è completa quando il destinatario annota un sigillo verde sulla distinta."
+    },
+    {
+      "idempotency_key": "fixture-packing-slip",
+      "title": "Packing slips for training deliveries · Distinte per le consegne di prova",
+      "body": "The packing slip lists the number of boxes. La distinta di imballaggio riporta il numero dei colli."
+    }
+  ],
+  "intelligence": [
+    {
+      "idempotency_key": "fixture-juniper-case-en",
+      "slug": "training/juniper-handover",
+      "title": "Juniper batch handover observed in rehearsal",
+      "body": "In the Juniper batch rehearsal, slip JN-24 carried the violet stamp. The receiving clerk filed it in drawer C. This observation applies to the rehearsal."
+    },
+    {
+      "idempotency_key": "fixture-corallo-case-it",
+      "slug": "training/consegna-corallo",
+      "title": "Consegna del Lotto Corallo durante la prova",
+      "body": "Durante la prova del Lotto Corallo, la distinta LC-38 riportava il sigillo verde. Il destinatario ha archiviato la distinta nel cassetto F. L’osservazione riguarda quella prova."
+    }
+  ],
+  "cases": [
+    {
+      "locale": "en",
+      "ticket": {
+        "id": 910001,
+        "subject": "NethServer 8 · How was the Juniper batch handover verified?",
+        "description_text": "What should appear on the dispatch slip, and where did the receiving clerk file it during the rehearsal?",
+        "status": 2,
+        "priority": 1,
+        "updated_at": "2026-11-21T08:00:00Z",
+        "custom_fields": {"tipo_intervento": "Informazione"}
+      },
+      "search": "\"Juniper batch\"",
+      "expected": {
+        "documentation": {"seed": "fixture-juniper-guide-en", "passage": "a violet stamp on the dispatch slip"},
+        "intelligence": {"slug": "training/juniper-handover", "passage": "The receiving clerk filed it in drawer C."}
+      }
+    },
+    {
+      "locale": "it",
+      "ticket": {
+        "id": 910002,
+        "subject": "NethServer 8 · Come è stata verificata la consegna del Lotto Corallo?",
+        "description_text": "Quale segno deve comparire sulla distinta e dove è stata archiviata durante la prova?",
+        "status": 2,
+        "priority": 1,
+        "updated_at": "2026-11-21T08:01:00Z",
+        "custom_fields": {"tipo_intervento": "Informazione"}
+      },
+      "search": "\"Lotto Corallo\"",
+      "expected": {
+        "documentation": {"seed": "fixture-corallo-guide-it", "passage": "un sigillo verde sulla distinta"},
+        "intelligence": {"slug": "training/consegna-corallo", "passage": "Il destinatario ha archiviato la distinta nel cassetto F."}
+      }
+    },
+    {
+      "locale": "en",
+      "ticket": {
+        "id": 910003,
+        "subject": "NethServer 8 · Who signed for the Cobalt parcel?",
+        "description_text": "Please identify the person who signed for this training parcel.",
+        "status": 2,
+        "priority": 1,
+        "updated_at": "2026-11-21T08:02:00Z",
+        "custom_fields": {"tipo_intervento": "Informazione"}
+      },
+      "search": "\"Cobalt parcel\"",
+      "expected": {}
+    },
+    {
+      "locale": "it",
+      "ticket": {
+        "id": 910004,
+        "subject": "NethServer 8 · Chi ha firmato per il Plico Ocra?",
+        "description_text": "Vorrei sapere chi ha firmato per questo plico durante la prova.",
+        "status": 2,
+        "priority": 1,
+        "updated_at": "2026-11-21T08:03:00Z",
+        "custom_fields": {"tipo_intervento": "Informazione"}
+      },
+      "search": "\"Plico Ocra\"",
+      "expected": {}
+    }
+  ]
+}
