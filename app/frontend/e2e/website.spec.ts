@@ -338,7 +338,7 @@ test('closing key creation discards a late one-time secret', async ({
     drawer.getByRole('textbox', { name: 'Name', exact: true }),
   ).toHaveValue('')
   await expect(
-    drawer.getByRole('checkbox', { name: 'Write', exact: true }),
+    drawer.getByRole('checkbox', { name: 'Read and write', exact: true }),
   ).not.toBeChecked()
   await expect(
     drawer.getByRole('checkbox', {

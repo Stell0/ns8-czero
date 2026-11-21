@@ -420,7 +420,7 @@ class NativeWebsite:
         assert rc==0;assert 'cimd_enabled' not in json.loads(output)
         try:
             self.discovery(module_id);self.run('Reload');self.click('Register client')
-            self.select('Clients','HTTPS')
+            self.select('Registration method','HTTPS client metadata')
             for url in ('https://127.0.0.1/client.json','https://localhost/client.json'):
                 self.fill('Client metadata URL',url);self.click('Load application','[role="dialog"] ')
                 self.run('Wait For Elements State','[role="dialog"] [role="alert"]','visible','timeout=30s')
@@ -430,7 +430,7 @@ class NativeWebsite:
         self.run('Reload');self.click('Register client')
         name='browser-client-'+secrets.token_hex(4)
         self.fill('Name',name);self.fill('Callback','https://client.example.test/callback')
-        self.click('Approve application','[role="dialog"] ')
+        self.click('Register client','[role="dialog"] ')
         row='main li:has(h2:text-is('+json.dumps(name)+')) '
         self.click('Disable',row)
         self.run('Wait For Elements State',self.button('Enable',row),'visible','timeout=30s')
