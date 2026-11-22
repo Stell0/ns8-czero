@@ -55,8 +55,13 @@ def recover_consent_session(module_id, browser, client, *, expire_session=None):
     assert status == 200, 'Installed recovered profile unavailable'
     profile = json.loads(body)
     status, body, _ = browser.api('/oauth/consent/request')
-    assert status == 200 and json.loads(body)['client_id'] == client['client_id'], 'Installed recovery lost pending consent'
-    assert browser.api('/oauth/consent', {'approve':True}, 'POST')[0] == 403, 'Installed recovery bypassed explicit CSRF consent'
+    assert status == 200, 'Installed recovery lost pending consent'
+    view = json.loads(body)
+    assert view['client_id'] == client['client_id'], 'Installed recovery changed the consent client'
+    choice = {'approve': True}
+    if 'draft_id' in view:
+        choice['draft_id'] = view['draft_id']
+    assert browser.api('/oauth/consent', choice, 'POST')[0] == 403, 'Installed recovery bypassed explicit CSRF consent'
     print('Disposable expired consent session recovered through real SSO; explicit consent still required')
     return profile
 
@@ -95,8 +100,12 @@ def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None,
     assert status==200,'Installed consent details unavailable'
     view=json.loads(body)
     assert view['client_id']==client['client_id'] and view['profile']['id']==profile['id'],'Installed consent identity mismatch'
-    assert browser.api('/oauth/consent',{'approve':True},'POST')[0]==403,'Installed consent CSRF bypass'
-    status, body, _=browser.api('/oauth/consent',{'approve':True,'scopes':scope.split()},'POST',profile['csrf_token'])
+    choice = {'approve': True, 'scopes': scope.split()}
+    # The native upgrade suite also seeds grants on a frozen predecessor.
+    if 'draft_id' in view:
+        choice['draft_id'] = view['draft_id']
+    assert browser.api('/oauth/consent', choice, 'POST')[0] == 403, 'Installed consent CSRF bypass'
+    status, body, _ = browser.api('/oauth/consent', choice, 'POST', profile['csrf_token'])
     assert status==200,'Installed explicit consent failed'
     values=parse_qs(urlsplit(json.loads(body)['redirect_uri']).query)
     assert values['state']==[state],'Installed OAuth state mismatch'

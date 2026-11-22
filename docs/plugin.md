@@ -18,11 +18,15 @@ For web-capable GitHub imports, the package references that existing app through
 
 ## Download from your instance
 
-Open **Use with AI** (`/agents`). **Download .skill** generates a ZIP-based skill archive containing `SKILL.md`, `agents/openai.yaml`, `references/compiler.md` and the GPL license. Its name and instructions include the configured hostname and canonical MCP URL. Upload it at [ChatGPT Skills](https://chatgpt.com/skill) where that control is available. It uses the connection you created; it does not install or authorize an MCP server by itself.
+For a standalone skill, use the [ChatGPT setup guide](chatgpt.md#install-the-skill).
 
-For the five-workflow plugin, sign in, paste the ordinary ChatGPT connection management-page address or technical app ID, and choose **Download plugin .zip**. Check the instance URL in ChatGPT before downloading. The page accepts a connection-page address, never a full OAuth authorization URL. The generated ZIP contains one plugin at its root, the existing app reference, personalized instance guidance, five skills and their references/license. No password, session or access token is included. Generation cannot prove the app ID belongs to this server; verify it in ChatGPT.
-
-Upload only the generated single-plugin ZIP where ChatGPT offers plugin archive upload. Other installation routes below remain available when your account provides them. Start a new conversation and test an actual read after installing either artifact. Upload acceptance and automatic skill use must be checked on your account.
+For the five-workflow plugin, sign in to C0 and open **Use with AI → ChatGPT**.
+Open the advanced plugin options, paste the ChatGPT app's management-page
+address or technical app ID, and download the plugin ZIP. Before downloading,
+check that the app's server URL is your C0 instance. Use the ordinary
+management-page address and keep OAuth authorization URLs private. The ZIP
+contains one plugin, its existing app reference and the five instance-bound
+skills with their references and license.
 
 ## Generate offline
 
@@ -76,15 +80,7 @@ Do not import a template with an example app ID. Do not replace or delete an exi
 
 Test both explicit skill selection and ordinary requests that should activate it, plus unrelated requests that should not. Keep private traces and credentials outside Git. Record actual web behavior for private Creator setup and managed import separately. No public directory submission or workspace-wide rollout is performed by the packager.
 
-Plugin 1.4 adds conditional selective-context research instructions for the
-selective-context APIs. Discover actual tools first, retain exact revision IDs, read
-only selected spans and respect explicit omissions/410. The registered App
-binding, scopes and archive inventory remain unchanged; source/package checks
-do not establish installed ChatGPT packaged-skill acceptance.
-
-Plugin 1.5 adds the conditional compiler skill and its shared reference to generic,
-instance and project packages. Existing app identity and scopes stay unchanged.
-Generated-archive and MCP checks do not prove installation or execution on a
-particular ChatGPT account; M2 does not install a plugin or schedule.
-
-[LLM Wiki](llm-wiki.md) explains manual edits, compiler policy and post-answer feedback. [Recurring maintenance](wiki-maintenance.md) explains host setup and verification. This documentation review changes no plugin package content, version, registered connection or scopes.
+[LLM Wiki](llm-wiki.md) explains manual edits, compiler policy and post-answer feedback.
+[Recurring maintenance](wiki-maintenance.md) covers host setup and verification.
+See the [assistant acceptance record](../PLAN.md#assistant-setup-and-first-use-experience)
+for tested web combinations.

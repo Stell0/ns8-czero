@@ -63,6 +63,38 @@ async def authorization_request(client, method, parameters):
         headers={'Content-Type':'application/x-www-form-urlencoded'})
 
 
+def test_registered_read_only_uuid_client_can_request_the_full_discovery_catalog(oauth_app):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        with grants.access.database.engine.begin() as connection:
+            connection.execute(text("""UPDATE c0_oauth_clients SET scopes='["c0:read"]'::jsonb
+                WHERE id=:id"""), {'id': UUID(saved['client_id'])})
+        child = app.state.mcp_app
+        async with child.router.lifespan_context(child):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+                catalog = (await client.get('/.well-known/oauth-protected-resource/mcp')).json()['scopes_supported']
+                for attempt in range(2):
+                    verifier, state = await authorize(client, saved, scope=' '.join(catalog))
+                    if attempt == 0:
+                        profile = await login(client)
+                    view = (await client.get('/oauth/consent/request')).json()
+                    assert view['scopes'] == view['eligible_scopes'] == ['c0:read']
+                    consent = await client.post('/oauth/consent',
+                        json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
+                        headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
+                    callback = parse_qs(urlsplit(consent.json()['redirect_uri']).query)
+                    assert callback['state'] == [state]
+                    result = await client.post('/oauth/token', data={'grant_type': 'authorization_code',
+                        'client_id': saved['client_id'], 'code': callback['code'][0], 'redirect_uri': CALLBACK,
+                        'code_verifier': verifier, 'resource': RESOURCE})
+                    assert result.status_code == 200 and result.json()['scope'] == 'c0:read'
+                    async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
+                            headers={'Authorization': 'Bearer ' + result.json()['access_token']}) as http:
+                        async with Client(streamable_http_client(RESOURCE, http_client=http)) as sdk:
+                            assert not (await sdk.call_tool('get_profile', {})).is_error
+    asyncio.run(check())
+
+
 @pytest.mark.parametrize('method', ['GET', 'POST'])
 @pytest.mark.parametrize('optional', [
     [('ui_locales', 'en-US')],
@@ -90,7 +122,8 @@ def test_optional_authorization_fields_are_ignored_before_core(oauth_app, monkey
             view = (await client.get('/oauth/consent/request')).json()
             assert set(view['scopes']) == set(scope.split())
             assert set(view['eligible_scopes']) == set(scope.split())
-            response = await client.post('/oauth/consent', json={'approve':True, 'scopes':['c0:read']},
+            response = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
                 headers={'Origin':ORIGIN, 'X-C0-CSRF':profile['csrf_token']})
             assert response.status_code == 200
             callback = urlsplit(response.json()['redirect_uri'])
@@ -178,7 +211,9 @@ def test_optional_fields_remain_rejected_on_token_and_revocation(oauth_app):
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             verifier, _ = await authorize(client, saved)
             profile = await login(client)
-            response = await client.post('/oauth/consent', json={'approve':True, 'scopes':['c0:read']},
+            view = (await client.get('/oauth/consent/request')).json()
+            response = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
                 headers={'Origin':ORIGIN, 'X-C0-CSRF':profile['csrf_token']})
             code = parse_qs(urlsplit(response.json()['redirect_uri']).query)['code'][0]
             token = {'grant_type':'authorization_code', 'client_id':saved['client_id'], 'redirect_uri':CALLBACK,
@@ -209,7 +244,9 @@ async def login(client, *, code='unit-only-code'):
 async def issued_pair(client, saved, *, scope='c0:read', login_code='unit-only-code'):
     verifier,_ = await authorize(client,saved,scope=scope)
     profile = await login(client,code=login_code)
-    response = await client.post('/oauth/consent',json={'approve':True,'scopes':scope.split()},
+    view = (await client.get('/oauth/consent/request')).json()
+    response = await client.post('/oauth/consent',
+        json={'draft_id': view['draft_id'], 'approve': True, 'scopes': scope.split()},
         headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
     assert response.status_code == 200
     code=parse_qs(urlsplit(response.json()['redirect_uri']).query)['code'][0]
@@ -226,6 +263,7 @@ def test_consent_get_recovers_stale_cookie_through_explicit_login(oauth_app, sta
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             verifier, state = await authorize(client, saved)
             await login(client)
+            draft = (await client.get('/oauth/consent/request')).json()['draft_id']
             old_cookie = client.cookies.get('c0_session')
             pending_cookie = client.cookies.get('c0_consent')
             with grants.access.database.engine.begin() as connection:
@@ -236,7 +274,7 @@ def test_consent_get_recovers_stale_cookie_through_explicit_login(oauth_app, sta
             cookie = old_cookie if stale == 'expired' else ('x'*43 if stale == 'unknown' else 'malformed!')
             client.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
             assert (await client.get('/oauth/consent/request')).status_code == 401
-            assert (await client.post('/oauth/consent', json={'approve':True},
+            assert (await client.post('/oauth/consent', json={'draft_id': draft, 'approve': True},
                 headers={'Origin':ORIGIN})).status_code == 401
             response = await client.get('/oauth/consent')
             assert response.status_code == 302 and response.headers['location'] == '/auth/login'
@@ -251,8 +289,10 @@ def test_consent_get_recovers_stale_cookie_through_explicit_login(oauth_app, sta
             assert (await client.get('/oauth/consent')).status_code == 200
             view = (await client.get('/oauth/consent/request')).json()
             assert view['client_id'] == saved['client_id'] and view['scopes'] == ['c0:read']
-            assert (await client.post('/oauth/consent', json={'approve':True})).status_code == 403
-            response = await client.post('/oauth/consent', json={'approve':True,'scopes':['c0:read']},
+            assert (await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True})).status_code == 403
+            response = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
                 headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
             assert response.status_code == 200
             callback = parse_qs(urlsplit(response.json()['redirect_uri']).query)
@@ -384,7 +424,8 @@ def test_scope_upgrade_requires_new_role_eligible_explicit_consent(oauth_app, ap
             view = (await client.get('/oauth/consent/request')).json()
             assert set(view['eligible_scopes']) == ({'c0:read'} if role is Role.READER else {'c0:read','c0:write'})
             profile = (await client.get('/api/v1/me')).json()
-            response = await client.post('/oauth/consent', json={'approve':True,'scopes':['c0:read','c0:write']},
+            response = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read','c0:write']},
                 headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
             if role is Role.READER:
                 assert response.status_code == 403
@@ -417,9 +458,11 @@ def test_explicit_cookie_csrf_consent_s256_token_refresh_replay_and_metadata(oau
             view = (await client.get('/oauth/consent/request')).json()
             assert view['client_name'] == saved['client_name'] and view['eligible_scopes'] == ['c0:read']
             assert not {'state','challenge','binding'} & view.keys()
-            assert (await client.post('/oauth/consent',json={'approve':True})).status_code == 403
+            assert (await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True})).status_code == 403
             headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']}
-            response = await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},headers=headers)
+            response = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']}, headers=headers)
             assert response.status_code == 200
             values = parse_qs(urlsplit(response.json()['redirect_uri']).query)
             assert values['state'] == [state]
@@ -452,7 +495,9 @@ def test_denial_duplicate_raw_parameters_oversize_and_no_public_registration(oau
         async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             _,state=await authorize(client,saved)
             profile=await login(client)
-            response=await client.post('/oauth/consent',json={'approve':False,'scopes':[]},
+            view = (await client.get('/oauth/consent/request')).json()
+            response = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': False, 'scopes': []},
                 headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
             assert response.status_code==200
             values=parse_qs(urlsplit(response.json()['redirect_uri']).query)
@@ -522,9 +567,12 @@ def test_reader_can_narrow_client_consent_and_cannot_grant_write(oauth_app, appl
             view=(await client.get('/oauth/consent/request')).json()
             assert view['profile']['role']=='reader' and view['eligible_scopes']==['c0:read']
             headers={'Origin':ORIGIN,'X-C0-CSRF':view['csrf_token']}
-            assert (await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:write']},headers=headers)).status_code==403
+            choice = {'draft_id': view['draft_id'], 'approve': True}
+            assert (await client.post('/oauth/consent',
+                json={**choice, 'scopes': ['c0:write']}, headers=headers)).status_code == 403
             assert (await client.get('/oauth/consent/request')).status_code==200
-            assert (await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},headers=headers)).status_code==200
+            assert (await client.post('/oauth/consent',
+                json={**choice, 'scopes': ['c0:read']}, headers=headers)).status_code == 200
     asyncio.run(check())
 
 
@@ -542,7 +590,8 @@ def test_callback_comparison_preserves_exact_raw_spelling_before_sdk_normalizati
             response=await client.get('/oauth/authorize',params=parameters)
             assert response.status_code==302
             profile=await login(client)
-            response=await client.post('/oauth/consent',json={'approve':True},
+            view = (await client.get('/oauth/consent/request')).json()
+            response = await client.post('/oauth/consent', json={'draft_id': view['draft_id'], 'approve': True},
                 headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
             code=parse_qs(urlsplit(response.json()['redirect_uri']).query)['code'][0]
             token={'client_id':saved['client_id'],'grant_type':'authorization_code','code':code,
@@ -573,7 +622,9 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
                 response=await browser.get(url + '&' + urlencode({'ui_locales':'en-US', 'future_extension':'ignored'}))
                 assert response.status_code==302
                 profile=await login(browser)
-                response=await browser.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},
+                view = (await browser.get('/oauth/consent/request')).json()
+                response = await browser.post('/oauth/consent',
+                    json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
                     headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
                 assert response.status_code==200
                 values=parse_qs(urlsplit(response.json()['redirect_uri']).query)
@@ -741,7 +792,12 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                 value=json.loads(request_path.read_text())
                 assert request_path.stat().st_mode & 0o777 == 0o600
                 assert browser.request(value['authorization_url'])[0]==200
-                status,body,_=browser.api('/oauth/consent',{'approve':True,'scopes':['c0:read','c0:write','c0:admin']},'POST',profile['csrf_token'])
+                status, body, _ = browser.api('/oauth/consent/request')
+                assert status == 200
+                draft = json.loads(body)['draft_id']
+                status, body, _ = browser.api('/oauth/consent',
+                    {'draft_id': draft, 'approve': True, 'scopes': ['c0:read', 'c0:write', 'c0:admin']},
+                    'POST', profile['csrf_token'])
                 assert status==200
                 value['returned_callback']=json.loads(body)['redirect_uri']
                 request_path.write_text(json.dumps(value))

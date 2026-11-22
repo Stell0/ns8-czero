@@ -86,7 +86,7 @@ does not claim a durable connection history.
 1. Open **Administration → Technical clients** and select **Register client**.
 2. Set **Registration method** to **Manual registration**. Enter the application's **Name** and paste each exact **Callback** URL on its own line. Use HTTPS for a web callback. A local helper can use HTTP on a loopback address, for example `http://127.0.0.1:8767/callback`.
 3. Select the permissions the application needs. **Read** is `c0:read`, **Write** is `c0:write`, and **Manage** is `c0:admin`. The checkboxes are independent. Select **Register client** in the registration form.
-4. Copy the **Public client ID** from the registration receipt into the application’s setup. The client card also shows this ID alongside its callbacks and permission ceiling. Start the OAuth flow from the application. On C0's consent page, select the permissions you want to grant. For an unattended application, select **Allow background access**. If C0 shows **Continue to background sign-in**, follow that prompt and then choose **Authorize**.
+4. Copy the **Public client ID** from the registration receipt into the application's setup. The client card also shows this ID alongside its callbacks and permission ceiling. Start the OAuth flow from the application and [review its permissions and background access](byoa.md#sign-in-and-choose-permissions).
 
 Use **HTTPS client metadata** when the application supplies a verified metadata URL. That URL is its public client ID. The **Approve application** button on an existing card opens that application's approval form. To create a separate client, use **Register client** at the top of the page.
 
@@ -102,9 +102,9 @@ jobs and schedules. The **People and applications** page does not load backgroun
 link keeps you on the current page and preserves the selected space.
 A user's **Account → Your connected apps** still manages their own connections.
 
-The supported legacy NS8 URL still offers first-party people and permission
-management. Connecting ChatGPT requires the configured application hostname;
-this page does not enable OAuth or MCP on a legacy path.
+The supported legacy NS8 URL offers first-party people and permission management.
+For assistant connections, use the MCP URL shown by **Use with AI** on the
+configured application hostname.
 
 ## Space audiences
 

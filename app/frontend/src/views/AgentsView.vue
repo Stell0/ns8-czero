@@ -2,7 +2,13 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
-import { NeButton, NeTextInput, NeTextArea } from '@nethesis/vue-components'
+import {
+  NeButton,
+  NeLink,
+  NeRadioSelection,
+  NeTextInput,
+  NeTextArea,
+} from '@nethesis/vue-components'
 import { useSession } from '../stores/session'
 import { useDraftGuard } from '../composables/draft'
 import { ApiError, request, localURL } from '../api/client'
@@ -12,6 +18,38 @@ import ErrorNotice from '../components/ErrorNotice.vue'
 const session = useSession()
 const { t } = useI18n(),
   appId = ref('')
+const assistants = [
+  {
+    id: 'chatgpt',
+    label: 'ChatGPT',
+    url: 'https://chatgpt.com/plugins?directoryTab=personal',
+    skills: 'https://chatgpt.com/skills',
+    download: 'agents/c0-memory.skill',
+  },
+  {
+    id: 'claude',
+    label: 'Claude',
+    url: 'https://claude.ai/',
+    download: 'agents/c0-skill.zip',
+  },
+  {
+    id: 'grok',
+    label: 'Grok',
+    url: 'https://grok.com/connectors',
+    download: 'agents/c0-skill.md',
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini',
+    url: 'https://gemini.google.com/',
+    download: 'agents/c0-skill.md',
+  },
+]
+const assistant = ref('')
+const provider = computed(() =>
+  assistants.find(({ id }) => id === assistant.value),
+)
+const advanced = ref(false)
 const { data, error, isPending } = useResource(
   () => 'agent-connection',
   () =>
@@ -19,10 +57,20 @@ const { data, error, isPending } = useResource(
       available: boolean
       mcp_url: string | null
       name: string
-      description: string
     }>('/agents/connection.json', {}, false),
   () => true,
   true,
+)
+const firstQuestion = computed(() =>
+  t('agents.setup.firstQuestion', {
+    url: data.value?.mcp_url || '',
+    space: session.space
+      ? t('agents.setup.useSpace', {
+          name: session.space.name,
+          id: session.space.id,
+        })
+      : t('agents.setup.chooseSpace'),
+  }),
 )
 interface Workflow {
   id: string
@@ -36,6 +84,7 @@ const capabilities = useResource(
       operations: { name: string }[]
       guidance: { rules: string[]; workflows: Workflow[] }
     }>('/agents/capabilities.json', {}, false),
+  () => advanced.value,
 )
 const workflows = computed(
   () =>
@@ -102,7 +151,7 @@ const compilerContext = useResource(
       project,
     }
   },
-  () => compilerAvailable.value,
+  () => advanced.value && compilerAvailable.value,
 )
 const compilerTasks = computed(() => {
   if (
@@ -216,24 +265,29 @@ function instructions(body: string) {
     t('agents.taskRules')
   )
 }
-const copied = ref(false)
+const copied = ref('')
 watch(
-  () => [session.space?.id, session.account, session.generation],
+  () => [
+    session.space?.id,
+    session.account,
+    session.generation,
+    assistant.value,
+  ],
   () => {
-    copied.value = false
+    copied.value = ''
   },
 )
-async function copy(body: string, task = true) {
-  copied.value = false
+async function copy(body: string, target: string) {
+  copied.value = ''
   const current = draft.current()
   try {
-    await navigator.clipboard.writeText(task ? instructions(body) : body)
-    if (current()) copied.value = true
+    await navigator.clipboard.writeText(body)
+    if (current()) copied.value = target
   } catch {
     /* The read-only field remains selectable. */
   }
 }
-const draft = useDraftGuard([appId])
+const draft = useDraftGuard([appId, assistant, advanced])
 const download = useMutation({
   mutation: async () => {
     const current = draft.current()
@@ -258,124 +312,214 @@ const download = useMutation({
 })
 </script>
 <template>
-  <div class="space-y-6">
-    <p>{{ t('agents.intro') }}</p>
-    <ResourceState :error="error" :loading="isPending"
-      ><template v-if="data?.available">
-        <NeTextInput
-          :model-value="data.name"
-          :label="t('agents.connectionName')"
-          readonly />
-        <NeTextInput
-          :model-value="data.description"
-          :label="t('agents.connectionDescription')"
-          readonly />
-        <NeTextInput
-          :model-value="data.mcp_url || ''"
-          :label="t('agents.url')"
-          readonly />
-        <NeButton kind="secondary" @click="copy(data.mcp_url || '', false)">{{
-          t('agents.copyURL')
-        }}</NeButton>
-        <a :href="localURL('agents/c0-memory.skill')" class="text-link">{{
-          t('agents.skill')
-        }}</a>
-        <form
-          v-if="session.ready"
-          class="max-w-xl space-y-4"
-          @submit.prevent="!download.isLoading.value && download.mutate()"
+  <div class="max-w-3xl space-y-6">
+    <ResourceState :error="error" :loading="isPending">
+      <template v-if="data?.available && data.mcp_url">
+        <NeRadioSelection
+          v-model="assistant"
+          :label="t('agents.setup.assistant')"
+          :options="assistants"
+          card
+          grid-style="grid-cols-2 gap-3 sm:grid-cols-4"
+        />
+        <ol
+          v-if="provider"
+          class="mt-6 space-y-6 rounded-lg border border-default p-4 sm:p-6"
         >
-          <NeTextInput v-model="appId" :label="t('agents.appId')" /><NeButton
-            type="submit"
-            kind="primary"
-            :loading="download.isLoading.value"
-            :disabled="download.isLoading.value"
-            >{{ t('agents.plugin') }}</NeButton
-          ><ErrorNotice
-            v-if="download.error.value"
-            :error="download.error.value"
-          /></form
-      ></template>
-      <p v-else>{{ t('agents.unavailable') }}</p></ResourceState
-    >
-    <p v-if="session.ready">
-      <RouterLink to="/account" class="text-link">
-        {{ t('agents.automationKeys') }}
-      </RouterLink>
-    </p>
+          <li class="space-y-3">
+            <h2 class="text-lg">{{ t('agents.setup.connect') }}</h2>
+            <p>
+              {{ t(`agents.setup.${assistant}.connect`, { name: data.name }) }}
+            </p>
+            <NeLink
+              :href="provider.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ t('agents.setup.open', { name: provider.label }) }}
+            </NeLink>
+            <NeTextInput
+              :model-value="data.mcp_url"
+              :label="t('agents.url')"
+              readonly
+            />
+            <div class="flex flex-wrap items-center gap-3">
+              <NeButton kind="secondary" @click="copy(data.mcp_url, 'url')">
+                {{ t('agents.copyURL') }}
+              </NeButton>
+              <p role="status" class="text-sm">
+                {{ copied === 'url' ? t('agents.setup.urlCopied') : '' }}
+              </p>
+            </div>
+            <p class="text-sm text-text-secondary">
+              {{ t('agents.setup.authorize') }}
+            </p>
+            <p class="text-sm text-text-secondary">
+              {{ t(`agents.setup.${assistant}.requirements`) }}
+            </p>
+          </li>
+          <li class="space-y-3 border-t border-default pt-4">
+            <h2 class="text-lg">{{ t('agents.setup.installSkill') }}</h2>
+            <p>{{ t(`agents.setup.${assistant}.install`) }}</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-2">
+              <NeLink :href="localURL(provider.download)">{{
+                t('agents.skill')
+              }}</NeLink>
+              <NeLink
+                v-if="provider.skills"
+                :href="provider.skills"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ t('agents.setup.openSkills') }}
+              </NeLink>
+            </div>
+          </li>
+          <li class="space-y-3 border-t border-default pt-4">
+            <h2 class="text-lg">{{ t('agents.setup.try') }}</h2>
+            <p>{{ t('agents.setup.tryDescription') }}</p>
+            <NeTextArea
+              :model-value="firstQuestion"
+              :label="t('agents.setup.question')"
+              readonly
+              :rows="5"
+            />
+            <div class="flex flex-wrap items-center gap-3">
+              <NeButton
+                kind="secondary"
+                @click="copy(firstQuestion, 'question')"
+              >
+                {{ t('agents.setup.copyQuestion') }}
+              </NeButton>
+              <p role="status" class="text-sm">
+                {{
+                  copied === 'question' ? t('agents.setup.questionCopied') : ''
+                }}
+              </p>
+            </div>
+          </li>
+        </ol>
+      </template>
+      <p v-else>{{ t('agents.unavailable') }}</p>
+    </ResourceState>
+    <RouterLink v-if="session.ready" to="/account" class="text-link">
+      {{ t('agents.setup.manage') }}
+    </RouterLink>
     <a
-      v-if="!session.ready"
+      v-else
       :href="localURL('auth/sign-in?return_to=agents')"
       class="text-link"
-      >{{ t('account.signin') }}</a
     >
-    <ResourceState
+      {{ t('account.signin') }}
+    </a>
+    <details
       v-if="session.ready"
-      :error="capabilities.error.value"
-      :loading="capabilities.isPending.value"
+      :open="advanced"
+      class="rounded-lg border border-default p-4"
+      @toggle="advanced = ($event.target as HTMLDetailsElement).open"
     >
-      <section class="space-y-4">
-        <h2 class="text-xl font-medium">{{ t('agents.rules') }}</h2>
-        <ul class="list-disc space-y-2 pl-5" lang="en">
-          <li
-            v-for="rule in capabilities.data.value?.guidance.rules"
-            :key="rule"
+      <summary>{{ t('agents.setup.advanced') }}</summary>
+      <div v-if="advanced" class="mt-4 space-y-6">
+        <form
+          v-if="assistant === 'chatgpt' && data?.available"
+          class="max-w-xl space-y-3"
+          @submit.prevent="!download.isLoading.value && download.mutate()"
+        >
+          <h2 class="text-lg">{{ t('agents.setup.chatgpt.packageTitle') }}</h2>
+          <p>{{ t('agents.setup.chatgpt.packageHelp') }}</p>
+          <NeTextInput v-model="appId" :label="t('agents.appId')" />
+          <NeButton
+            type="submit"
+            kind="secondary"
+            :loading="download.isLoading.value"
+            :disabled="download.isLoading.value || !appId.trim()"
           >
-            {{ rule }}
-          </li>
-        </ul>
-      </section>
-      <section class="space-y-4">
-        <h2 class="text-xl font-medium">{{ t('agents.workflows') }}</h2>
-        <p>{{ t('agents.currentAccess', { role: session.space?.role }) }}</p>
-        <details
-          v-for="flow in workflows"
-          :key="flow.id"
-          :data-workflow="flow.id"
-          class="rounded-lg border border-default p-4"
-          lang="en"
-        >
-          <summary>{{ flow.title }}</summary>
-          <ol class="mt-3 list-decimal space-y-3 pl-5">
-            <li v-for="step in flow.steps" :key="step">{{ step }}</li>
-          </ol>
-        </details>
-      </section>
-      <section class="space-y-4">
-        <h2 class="text-xl font-medium">{{ t('agents.tasks') }}</h2>
-        <p>{{ t('agents.compiler.install') }}</p>
-        <p
-          v-if="
-            !compilerAvailable || (session.canWrite && compilerTasks.length < 8)
-          "
-        >
-          {{ t('agents.compiler.upgrade') }}
-        </p>
+            {{ t('agents.plugin') }}
+          </NeButton>
+          <ErrorNotice
+            v-if="download.error.value"
+            :error="download.error.value"
+          />
+        </form>
+        <RouterLink to="/account" class="text-link">
+          {{ t('agents.automationKeys') }}
+        </RouterLink>
         <ResourceState
-          v-else
-          :error="compilerContext.error.value"
-          :loading="compilerContext.isPending.value"
-        />
-        <details
-          v-for="task in tasks"
-          :key="task.id"
-          :data-task="task.id"
-          class="rounded-lg border border-default p-4"
+          :error="capabilities.error.value"
+          :loading="capabilities.isPending.value"
         >
-          <summary>{{ task.title }}</summary>
-          <div class="mt-4 space-y-3">
-            <NeTextArea
-              :model-value="instructions(task.body)"
-              readonly
-              :label="t('agents.instructions')"
-              :rows="8"
-            /><NeButton kind="secondary" @click="copy(task.body)">{{
-              t('agents.copy')
-            }}</NeButton>
-          </div>
-        </details>
-        <p v-if="copied" role="status">{{ t('agents.copied') }}</p>
-      </section>
-    </ResourceState>
+          <section class="mt-4 space-y-4">
+            <h2 class="text-lg">{{ t('agents.rules') }}</h2>
+            <ul class="list-disc space-y-2 pl-5" lang="en">
+              <li
+                v-for="rule in capabilities.data.value?.guidance.rules"
+                :key="rule"
+              >
+                {{ rule }}
+              </li>
+            </ul>
+          </section>
+          <section class="mt-4 space-y-4">
+            <h2 class="text-lg">{{ t('agents.workflows') }}</h2>
+            <p>
+              {{ t('agents.currentAccess', { role: session.space?.role }) }}
+            </p>
+            <details
+              v-for="flow in workflows"
+              :key="flow.id"
+              :data-workflow="flow.id"
+              class="rounded-lg border border-default p-4"
+              lang="en"
+            >
+              <summary>{{ flow.title }}</summary>
+              <ol class="mt-3 list-decimal space-y-3 pl-5">
+                <li v-for="step in flow.steps" :key="step">{{ step }}</li>
+              </ol>
+            </details>
+          </section>
+          <section class="mt-4 space-y-4">
+            <h2 class="text-lg">{{ t('agents.tasks') }}</h2>
+            <p
+              v-if="
+                !compilerAvailable ||
+                (session.canWrite && compilerTasks.length < 8)
+              "
+            >
+              {{ t('agents.compiler.upgrade') }}
+            </p>
+            <ResourceState
+              v-else
+              :error="compilerContext.error.value"
+              :loading="compilerContext.isPending.value"
+            />
+            <details
+              v-for="task in tasks"
+              :key="task.id"
+              :data-task="task.id"
+              class="rounded-lg border border-default p-4"
+            >
+              <summary>{{ task.title }}</summary>
+              <div class="mt-4 space-y-3">
+                <NeTextArea
+                  :model-value="instructions(task.body)"
+                  readonly
+                  :label="t('agents.instructions')"
+                  :rows="8"
+                />
+                <NeButton
+                  kind="secondary"
+                  @click="copy(instructions(task.body), task.id)"
+                >
+                  {{ t('agents.copy') }}
+                </NeButton>
+                <p role="status" class="text-sm">
+                  {{ copied === task.id ? t('agents.copied') : '' }}
+                </p>
+              </div>
+            </details>
+          </section>
+        </ResourceState>
+      </div>
+    </details>
   </div>
 </template>

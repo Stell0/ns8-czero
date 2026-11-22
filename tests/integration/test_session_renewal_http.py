@@ -134,7 +134,9 @@ async def login(client, state):
 async def pair(client, saved, state):
     profile = await login(client, state)
     verifier, _ = await authorize(client, saved, scope='c0:read c0:write')
-    accepted = await client.post('/oauth/consent', json={'approve':True,'scopes':['c0:read']},
+    view = (await client.get('/oauth/consent/request')).json()
+    accepted = await client.post('/oauth/consent',
+        json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
         headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
     assert accepted.status_code == 200
     code = parse_qs(urlsplit(accepted.json()['redirect_uri']).query)['code'][0]

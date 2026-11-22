@@ -497,29 +497,34 @@ class NativeWebsite:
             if role=='admin':self.login(remember=True)
             self.browser.go_to(value['authorization_url'])
             if role!='admin':self.provider('c0member')
-            self.run('Wait For Elements State',self.button('Authorize'),'enabled','timeout=30s')
+            self.run('Wait For Elements State',self.button('Continue to background sign-in'),'enabled','timeout=30s')
             self.run('Get Text','main h2','==',value['client']['client_name'])
             self.run('Get Element Count','main img','==',0)
             disabled={'admin':0,'editor':1,'reader':2}[role]
             self.run('Get Element Count','main fieldset input:disabled','==',disabled)
             self.run('Get Element Count','main fieldset input:checked','==',3-disabled)
-            self.run('Get Property',self.role('checkbox','Allow background access'),'checked','==',False)
+            self.run('Get Property',self.role('checkbox','Allow background access'),'checked','==',True)
             self.run('Get Text','main','contains','30 days')
             if role=='admin':
-                self.checked('Allow background access');self.click('Continue to background sign-in')
+                self.click('Continue to background sign-in')
                 self.provider('c0owner')
                 self.run('Wait For Elements State','main button:has-text("Authorize"), [name="accept"]','visible','timeout=30s')
                 if self.browser.get_element_count('[name="accept"]'):self.run('Click','[name="accept"]')
                 self.run('Wait For Elements State',self.button('Authorize'),'enabled','timeout=30s')
                 self.run('Get Property',self.role('checkbox','Allow background access'),'checked','==',True)
                 value['persistent']=True
+            else:
+                self.run('Uncheck Checkbox',self.role('checkbox','Allow background access'))
             self.click('Authorize');self.run('Get Text','h1','==','Use with AI')
+            self.run('Click','main >> text="ChatGPT"')
+            self.run('Get Property',self.role('radio','ChatGPT'),'checked','==',True)
             self.run('Get Property',self.role('textbox','MCP server URL'),'value','==',self.origin+'/mcp')
             with tempfile.TemporaryDirectory(prefix='czero-agent-download-') as directory:
                 path=Path(directory)/'memory.skill'
                 promise=self.browser.promise_to_wait_for_download(saveAs=str(path))
                 self.run('Click',self.role('link','Download skill'));self.browser.wait_for(promise)
                 self.owner._verify_agent_archive(path,self.host)
+                self.run('Click','summary:text-is("Advanced setup and workflows")')
                 self.fill('Registered ChatGPT app ID','asdk_app_disposable')
                 path=Path(directory)/'plugin.zip'
                 promise=self.browser.promise_to_wait_for_download(saveAs=str(path))
@@ -540,6 +545,7 @@ class NativeWebsite:
             self.keys(role)
             self.goto('/');self.accessible('home',role)
             self.goto('/agents')
+            self.run('Click','summary:text-is("Advanced setup and workflows")')
             self.run('Wait For Elements State','details[data-task="status"]','visible','timeout=30s')
             self.run('Get Element Count','details[data-task]','==',2 if role=='reader' else 15)
             expected={'research','structured-research','selective-context','cross-space-navigation'}

@@ -914,6 +914,11 @@
       "sha256": null
     },
     {
+      "path": ".agents/skills/c0-test-assistant-setup/SKILL.md",
+      "mode": null,
+      "sha256": null
+    },
+    {
       "path": "tests/evaluation/fixture.py",
       "mode": null,
       "sha256": null

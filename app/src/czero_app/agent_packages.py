@@ -115,7 +115,7 @@ def plugin_payload(url, connection, name, *, template=TEMPLATE, license_file=Non
     return payload
 
 
-def skill_payload(url, *, template=TEMPLATE, license_file=None):
+def skill_markdown(url, *, template=TEMPLATE):
     url = mcp_url(url)
     host = urlsplit(url).hostname
     name = package_name(url, 'c0-memory')
@@ -123,6 +123,12 @@ def skill_payload(url, *, template=TEMPLATE, license_file=None):
     for key, value in {'SKILL_NAME': name, 'INSTANCE_HOST': host,
                        'INSTANCE_URL': url.removesuffix('/mcp'), 'MCP_URL': url}.items():
         skill = skill.replace('{{' + key + '}}', value)
+    return skill
+
+
+def skill_payload(url, *, template=TEMPLATE, license_file=None):
+    skill = skill_markdown(url, template=template)
+    host = urlsplit(url).hostname
     # JSON string quoting is valid YAML scalar quoting, including non-ASCII.
     metadata = ('interface:\n  display_name: ' + json.dumps('C0 — ' + host) + '\n'
         '  short_description: "Search and maintain this C0 knowledge memory"\n'
@@ -133,6 +139,13 @@ def skill_payload(url, *, template=TEMPLATE, license_file=None):
             'references/compiler.md': asset(template, 'references/compiler.md'),
             'references/scheduling.md': asset(template, 'references/scheduling.md'),
             'LICENSE': license_bytes(template, license_file)}
+
+
+def portable_skill_payload(url):
+    files = skill_payload(url)
+    del files['agents/openai.yaml']
+    name = package_name(url, 'c0-memory')
+    return {f'{name}/{path}': content for path, content in files.items()}
 
 
 def zip_bytes(payload):

@@ -10,7 +10,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from czero_core.identity import Role
-from czero_app.agent_packages import connection_reference, package_name, plugin_payload, skill_payload, zip_bytes
+from czero_app.agent_packages import (connection_reference, package_name, plugin_payload,
+    portable_skill_payload, skill_markdown, skill_payload, zip_bytes)
 
 
 class PluginDownload(BaseModel):
@@ -57,6 +58,22 @@ def install_agent_downloads(app, connection_metadata, read_context, write_contex
     def skill():
         mcp = url()
         return response(skill_payload(mcp), package_name(mcp, 'c0-memory') + '.skill')
+
+    @app.get('/agents/c0-skill.zip', include_in_schema=False)
+    def portable_skill():
+        mcp = url()
+        return response(portable_skill_payload(mcp), package_name(mcp, 'c0-memory') + '.zip')
+
+    @app.get('/agents/c0-skill.md', include_in_schema=False)
+    def markdown_skill():
+        content = skill_markdown(url())
+        for reference in ('compiler', 'scheduling'):
+            path = f'references/{reference}.md'
+            source = 'https://github.com/Stell0/ns8-czero/blob/main/plugins/c0-knowledge/'
+            content = content.replace(f']({path}', f']({source}{path}')
+        return Response(content, media_type='text/markdown; charset=utf-8', headers={
+            'Content-Disposition': 'attachment; filename="SKILL.md"',
+            'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
 
     @app.post('/agents/plugin.zip', include_in_schema=False)
     def plugin(data: PluginDownload, request: Request, context=Depends(write_context)):

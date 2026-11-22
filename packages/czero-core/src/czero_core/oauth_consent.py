@@ -10,14 +10,28 @@ from sqlalchemy import text
 
 from .oauth_grants import GrantRejected, _date, _digest
 from .oauth_clients import redirect_uri, internal_id
-from .identity import Role
+from .identity import PermissionDenied, Role
 from .operations import SCOPES
+from .personal_data import require_consent_role
 from .sessions import SessionContext
 
 
 class ConsentRejected(ValueError):
     def __init__(self):
         super().__init__('invalid_consent')
+
+
+def eligible_consent_scopes(actor, requested):
+    eligible = []
+    for scope, role in (('c0:read', Role.READER), ('c0:write', Role.EDITOR),
+                        ('c0:admin', Role.ADMIN)):
+        if scope in requested:
+            try:
+                require_consent_role(actor, role)
+            except PermissionDenied:
+                continue
+            eligible.append(scope)
+    return eligible
 
 
 @dataclass(frozen=True)
@@ -123,7 +137,6 @@ class OAuthConsentService:
                 raise ConsentRejected()
             for scope, role in [('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
                 if scope in scopes:
-                    from .personal_data import require_consent_role
                     require_consent_role(actor, role)
             connection.execute(text('''UPDATE c0_oauth_consent SET background_requested=true,
                 expected_account_id=:account,scopes=CAST(:scopes AS jsonb) WHERE hash=:hash'''),

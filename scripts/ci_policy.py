@@ -24,7 +24,7 @@ DOCS = frozenset({
     *('.agents/skills/'+name+'/SKILL.md' for name in (
         'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream', 'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources',
         'c0-project-workflows', 'c0-benchmark-agentic-retrieval',
-        'c0-generate-retrieval-questions', 'c0-maintain-semantic-layer')),
+        'c0-generate-retrieval-questions', 'c0-maintain-semantic-layer', 'c0-test-assistant-setup')),
 })
 SHA = re.compile(r'[0-9a-f]{40}\Z')
 EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'

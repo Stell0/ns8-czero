@@ -12,6 +12,7 @@ from pydantic import Field
 from czero_core.oauth_grants import GrantRejected
 from czero_core.oauth_consent import ConsentRejected
 from czero_core.cimd import CimdRejected
+from czero_core.operations import SCOPES
 from czero_app.cimd_fetch import FetchRejected
 
 raw_request = ContextVar('c0_oauth_raw_request', default=None)
@@ -35,6 +36,10 @@ class PrivateAccess(AccessToken):
 class PrivateTokenResponse(OAuthToken):
     access_token: str = Field(repr=False)
     refresh_token: str | None = Field(default=None, repr=False)
+
+
+class RegisteredClient(OAuthClientInformationFull):
+    approved_scopes: frozenset[str] = Field(exclude=True)
 
 
 class OAuthProvider:
@@ -70,8 +75,15 @@ class OAuthProvider:
                 and matcher is not None and matcher(raw.get('redirect_uri'), callbacks)):
             # Project Core's approved callback into the SDK's exact request-local descriptor.
             callbacks = [raw['redirect_uri']]
-        return OAuthClientInformationFull(client_id=value['client_id'], client_name=value['client_name'],
-            redirect_uris=callbacks, scope=' '.join(value['allowed_scopes']),
+        approved = frozenset(value['allowed_scopes'])
+        supported = approved
+        if (request_kind.get() == 'authorize' and raw is not None and raw.get('client_id') == client_id
+                and value.get('registration_kind') != 'cimd' and 'c0:read' in approved
+                and sorted(raw.get('scope', '').split()) == sorted(SCOPES)):
+            # Established UUID clients can still use a request copied from discovery.
+            supported = SCOPES
+        return RegisteredClient(client_id=value['client_id'], client_name=value['client_name'],
+            redirect_uris=callbacks, scope=' '.join(sorted(supported)), approved_scopes=approved,
             token_endpoint_auth_method='none', grant_types=value.get('grant_types', ['authorization_code','refresh_token']), response_types=['code'])
 
     async def register_client(self, client_info):
@@ -84,7 +96,8 @@ class OAuthProvider:
         try:
             verification = await self.cimd.verification(client.client_id) if self.cimd is not None else None
             pending = await to_thread.run_sync(partial(self.consent.begin, client.client_id,
-                callback=raw['redirect_uri'], scopes=set(params.scopes or ['c0:read']),
+                callback=raw['redirect_uri'],
+                scopes=set(params.scopes or ['c0:read']) & client.approved_scopes,
                 challenge=params.code_challenge, state=params.state, resource=params.resource, verification=verification))
         except (ConsentRejected, CimdRejected, FetchRejected):
             raise AuthorizeError('invalid_request') from None

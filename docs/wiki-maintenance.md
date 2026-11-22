@@ -10,16 +10,14 @@ This guide covers ChatGPT, OpenAI Codex, Claude and a custom cron/systemd host. 
 2. Use effective Editor access and actual Read+Write. Ordinary maintenance does not require Admin. An Admin separately configures project manifests/compiler policy; a scheduled agent must not enable policy or broaden scopes.
 3. Choose ordinary requested edits or the compiler workflow explicitly. Compiler work needs enabled policy, allowed targets and advertised operations. Start with queue-only review. Automatic-supported policy is a separate deliberate choice.
 4. Test the complete daily and weekly prompts manually in an authorized disposable space. Verify positive read/write and denied/read-only cases. Do not test destructive recovery on production knowledge.
-5. Select authentication the host can retain. Interactive OAuth grants keep finite idle/absolute bounds. Explicit background consent permits supported clients to renew under the snapshotted inactivity window; it does not guarantee that a host preserves credentials. A selected-space personal API key is the alternative used by the reference runner. Agent/model login is a separate credential.
+5. Select authentication the host can retain. If using OAuth, review the background access setting and inactivity window in [connection consent](byoa.md#sign-in-and-choose-permissions). Confirm the task can actually renew the C0 connection. The reference runner uses a selected-space personal API key and a separate login for the model.
 6. Inspect existing equivalent tasks. Use one scheduler for the chosen scope. For a configured research project, use its bound package, existing daily/weekly host tasks, manifest and project lease; do not add an ordinary-space compiler cron beside them.
 
 ## ChatGPT
 
-Connect through [C0's ChatGPT setup](chatgpt.md). Attach/select the instance skill or registered-app plugin. For protected projects, use the exact project-bound package. Verify profile, space and actual tools; complete explicit background consent if the chosen host requires unattended renewal.
+Connect and install the skill through [ChatGPT setup](chatgpt.md). For protected projects, use the exact project-bound package. In the available scheduling surface, select the C0 app and skill, enter the bounded maintenance prompt and save the schedule with its local time and time zone. Verify the authentication mode and app binding on the saved task. [ChatGPT scheduled tasks](https://learn.chatgpt.com/docs/automations) · [Team tasks](https://help.openai.com/en/articles/20001540-creating-and-managing-team-tasks-in-chatgpt)
 
-In an account that offers scheduled tasks, open **Scheduled** or ask ChatGPT to schedule the prepared daily/weekly prompt with explicit local times and timezone. Bind the connection and durable skill/prompt context. Inspect the saved task, run it manually, then observe a real due run. Web tasks can use available connected tools/skills; desktop tasks that need local files require the machine and app to stay available. See [official scheduled-task guidance](https://learn.chatgpt.com/docs/automations).
-
-Use the selected-space **Use with AI** daily, weekly and scheduling prompts as the starting point. They carry account/space/policy context. Generated text is not evidence that a task was installed. If the host cannot retain the C0 connector, required instructions or renewable authority, keep the handoff and use an appropriate external host. C0-specific packaged-skill web acceptance and unattended writes remain separate release gates.
+Use the selected-space **Use with AI** prompts for account, space and policy context. Run a manual check, then observe the task executing when due and independently read back the C0 result.
 
 ## OpenAI Codex
 
@@ -31,11 +29,19 @@ Prefer [the repository's bounded compiler runner](../samples/ingestion/examples/
 
 ## Claude
 
-Connect the remote MCP endpoint through the intended Claude connector or [Claude Code setup](byoa.md#claude-and-claude-code). Grant effective Editor plus Read/Write only in the target space. Attach the scope and compiler/project instructions in a format the selected host retains. C0 has no complete recorded Claude acceptance; first verify current reads, a disposable write and renewed authentication.
+Follow [Claude setup](byoa.md#choose-your-assistant) for the web connector. If using Claude Code as the host, start with its [HTTP setup](byoa.md#claude-and-claude-code). Verify current reads, a disposable edit and renewed authentication on the exact host that will run the task. Attach the scope and compiler/project instructions in a format that host retains.
 
 For recurring cloud work, use Claude Code **Scheduled** tasks where available. Create the task with the prepared prompt and cadence, select only its required C0 connector, and test **Run now** before a due run. Follow [official cloud-task instructions](https://code.claude.com/docs/en/routines). This feature retains tasks on the vendor host; confirm the exact account's C0 tool permissions and credentials.
 
 For local work, Claude Code Desktop offers **Scheduled → New task** (older app labels can say Routines). Supply the prompt, folder, permissions and cadence; keep the computer available. See [official Desktop task instructions](https://code.claude.com/docs/en/desktop-scheduled-tasks). CLI `/loop` is a session scheduling mechanism, with [its own lifecycle limits](https://code.claude.com/docs/en/scheduled-tasks); use a durable host for an unattended Wiki service. `claude -p` also supports [programmatic execution](https://code.claude.com/docs/en/headless) under an external scheduler. Test approvals without disabling them globally.
+
+## Grok
+
+Complete [Grok setup](byoa.md#choose-your-assistant). In Grok web, create an automation and attach the C0 connector and installed skill. Set the approved prompt and schedule, run a manual check and observe an actual due invocation. Confirm the saved result in C0. [Grok Automations](https://x.ai/news/grok-automations)
+
+## Gemini
+
+Complete [Gemini setup](byoa.md#choose-your-assistant). If the account offers a schedule that can use the C0 custom app and skill, bind both to the task, confirm the next occurrence and observe an actual due run. Check the C0 result independently. Record which task surface ran it. [Gemini tasks and workflows](https://support.google.com/gemini/answer/17094507) · [Gemini schedules](https://support.google.com/gemini/answer/17094710)
 
 ## Custom agents, cron or systemd
 

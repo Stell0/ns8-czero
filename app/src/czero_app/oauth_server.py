@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Bounded app adapter around official OAuth handlers and verified NS8 SSO."""
 from functools import partial
+import hashlib
+import hmac
 import logging
 import re
 from urllib.parse import urlencode, urlsplit
 from uuid import UUID
 
 from anyio import to_thread
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 from mcp.server.auth.handlers.authorize import AuthorizationHandler
@@ -21,10 +23,10 @@ from pydantic import BaseModel, ConfigDict, Field, AnyHttpUrl
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.datastructures import FormData
 
-from czero_core.identity import PermissionDenied, Role
+from czero_core.identity import PermissionDenied
 from czero_app.cimd_server import install_cimd_routes
 from czero_core.oauth_grants import OAuthGrantService, GrantRejected
-from czero_core.oauth_consent import ConsentRejected, OAuthConsentService
+from czero_core.oauth_consent import ConsentRejected, OAuthConsentService, eligible_consent_scopes
 from czero_core.operations import SCOPES
 from czero_core.client_onboarding import ClientOnboardingService, OnboardingRejected
 from czero_core.sessions import SessionRejected
@@ -40,6 +42,7 @@ REVOKE_FIELDS = {'client_id','token','token_type_hint','client_secret','resource
 
 class ConsentChoice(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
+    draft_id: str = Field(pattern=r'^[0-9a-f]{64}$')
     approve: bool
     scopes: list[str] | None = Field(default=None, max_length=3)
     persistent: bool = False
@@ -47,6 +50,7 @@ class ConsentChoice(BaseModel):
 
 class BackgroundChoice(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
+    draft_id: str = Field(pattern=r'^[0-9a-f]{64}$')
     scopes: list[str] = Field(min_length=1, max_length=3)
 
 
@@ -55,6 +59,17 @@ def pending_cookie(request):
     if match is None:
         raise ConsentRejected()
     return match.groups()
+
+
+def consent_draft_id(pending, session):
+    return hashlib.sha256(f'{pending[0]}:{session.actor.user_id}'.encode('ascii')).hexdigest()
+
+
+def reviewed_pending(request, session, draft_id):
+    pending = pending_cookie(request)
+    if not hmac.compare_digest(draft_id, consent_draft_id(pending, session)):
+        raise ConsentRejected()
+    return pending
 
 
 class PublicRevocationRequest:
@@ -74,7 +89,8 @@ def install_oauth_server(app, auth, read_context, write_context):
 
     @app.exception_handler(RequestValidationError)
     async def private_oauth_validation(request, error):
-        if request.url.path in ('/oauth/consent', '/oauth/consent/background'):
+        if request.url.path in ('/oauth/consent', '/oauth/consent/background',
+                                '/oauth/connect/approve', '/oauth/connect/continue'):
             return JSONResponse({'detail':'invalid_consent'}, status_code=422, headers={'Cache-Control':'no-store'})
         if request.url.path.startswith('/api/v1/oauth/connections/'):
             return JSONResponse({'detail':'invalid_connection'}, status_code=422, headers={'Cache-Control':'no-store'})
@@ -209,7 +225,6 @@ def install_oauth_server(app, auth, read_context, write_context):
             grants.disconnect(session.actor, identifier)
         except GrantRejected:
             raise HTTPException(404, 'connection_not_found') from None
-        from fastapi import Response
         return Response(status_code=204)
 
     @app.get('/oauth/consent', include_in_schema=False)
@@ -230,24 +245,20 @@ def install_oauth_server(app, auth, read_context, write_context):
         return app.state.website.render()
 
     @app.get('/oauth/consent/request', include_in_schema=False)
-    def consent_request(request: Request):
+    def consent_request(request: Request, response: Response):
+        response.headers['Cache-Control'] = 'no-store'
         session = browser_session(request)
-        view = consent.view(*pending_cookie(request))
-        eligible = []
-        for scope, role in [('c0:read',Role.READER),('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
-            try:
-                session.actor.require(role)
-                if scope in view['scopes']:
-                    eligible.append(scope)
-            except PermissionDenied:
-                pass
+        tokens = pending_cookie(request)
+        view = consent.view(*tokens)
+        draft_id = consent_draft_id(tokens, session)
+        eligible = eligible_consent_scopes(session.actor, view['scopes'])
         authority = auth.sessions.authority
         client = grants.clients._lookup(view['client_id'])
         supported = (grants.background_enabled and client is not None
             and 'refresh_token' in client.get('grant_types', ['authorization_code', 'refresh_token']))
         seconds = authority.connection_policy.idle_seconds if supported else None
         ready = bool(supported and background_ready(session))
-        return {**view, 'eligible_scopes':eligible, 'csrf_token':session.csrf_token,
+        return {**view, 'eligible_scopes':eligible, 'csrf_token':session.csrf_token, 'draft_id':draft_id,
                 'background_supported': bool(supported), 'background_ready': ready,
                 'connection_idle_seconds': seconds,
                 'profile':auth.access.profile(session.actor)}
@@ -255,7 +266,8 @@ def install_oauth_server(app, auth, read_context, write_context):
     @app.post('/oauth/consent/background', include_in_schema=False)
     async def consent_background(request: Request, choice: BackgroundChoice, context=Depends(write_context)):
         session = await to_thread.run_sync(partial(browser_session, request))
-        await to_thread.run_sync(partial(consent.prepare_background, session, *pending_cookie(request),
+        pending_request = reviewed_pending(request, session, choice.draft_id)
+        await to_thread.run_sync(partial(consent.prepare_background, session, *pending_request,
             scopes=set(choice.scopes)))
         pending = await to_thread.run_sync(partial(auth.sessions.begin_login, background=True, session=session))
         response = JSONResponse({'next': '/auth/login'},
@@ -266,12 +278,12 @@ def install_oauth_server(app, auth, read_context, write_context):
 
     @app.post('/oauth/consent', include_in_schema=False)
     async def consent_complete(request: Request, choice: ConsentChoice, context=Depends(write_context)):
-        pending = pending_cookie(request)
+        session = await to_thread.run_sync(partial(browser_session, request))
+        pending = reviewed_pending(request, session, choice.draft_id)
         verification = None
         if choice.approve:
             view = await to_thread.run_sync(partial(consent.view, *pending))
             verification = await cimd.verification(view['client_id'])
-        session = await to_thread.run_sync(partial(browser_session, request))
         if choice.approve and choice.persistent and not await to_thread.run_sync(partial(background_ready, session)):
             raise ConsentRejected()
         try:

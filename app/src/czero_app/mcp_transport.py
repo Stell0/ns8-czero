@@ -308,10 +308,9 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
             validate_token_resource=True, required_scopes=[]), token_verifier=Verifier(),
         transport_security=TransportSecuritySettings(allowed_hosts=[parsed.netloc],
             allowed_origins=[parsed.scheme + '://' + parsed.netloc]))
-    # Start discovery with basic read access. Per-tool requirements/challenges
-    # describe upgrades; no scope is globally mandatory for write/admin tokens.
+    # Advertise the catalog without making any one scope globally mandatory.
     metadata = create_protected_resource_routes(AnyHttpUrl(resource), [AnyHttpUrl(issuer_url)],
-        scopes_supported=['c0:read'], resource_name='Czero')
+        scopes_supported=sorted(SCOPES), resource_name='Czero')
     path = metadata[0].path
     child.router.routes = [route for route in child.router.routes if route.path != path] + metadata
     child.add_middleware(TransportLimits)
