@@ -72,7 +72,9 @@ def test_new_reader_gets_signin_visible_approval_then_explicit_consent_and_real_
                     assert connection.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE account_id=:id'), {'id': profile['id']}).scalar_one() == 0
                 consent = await user.get('/oauth/consent/request')
                 assert consent.status_code == 200 and consent.json()['eligible_scopes'] == ['c0:read']
-                result = await user.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']}, headers=headers(profile))
+                result = await user.post('/oauth/consent',
+                    json={'draft_id': consent.json()['draft_id'], 'approve': True, 'scopes': ['c0:read']},
+                    headers=headers(profile))
                 assert result.status_code == 200
                 callback = parse_qs(urlsplit(result.json()['redirect_uri']).query)
                 assert callback['state'] == [raw['state']]
@@ -87,17 +89,45 @@ def test_new_reader_gets_signin_visible_approval_then_explicit_consent_and_real_
 
 @pytest.mark.parametrize('expand', [False, True])
 def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(cimd_http, monkeypatch, certificates, expand):
+    async def consent_token(client, profile, consent, raw, verifier, scopes):
+        accepted = await client.post('/oauth/consent', json={
+            'draft_id': consent['draft_id'], 'approve': True, 'scopes': scopes}, headers=headers(profile))
+        assert accepted.status_code == 200
+        values = parse_qs(urlsplit(accepted.json()['redirect_uri']).query)
+        assert values['state'] == [raw['state']]
+        token = await client.post('/oauth/token', data={
+            'grant_type': 'authorization_code', 'client_id': URL, 'redirect_uri': CALLBACK,
+            'code': values['code'][0], 'code_verifier': verifier, 'resource': RESOURCE})
+        assert token.status_code == 200
+        pair = token.json()
+        assert set(pair['scope'].split()) == set(scopes)
+        return pair
+
+    async def reader_token(reader, profile):
+        raw, verifier = parameters()
+        response = await reader.get('/oauth/authorize', params=raw)
+        assert response.status_code == 302 and response.headers['location'] == ORIGIN + '/oauth/consent'
+        consent = (await reader.get('/oauth/consent/request')).json()
+        assert consent['scopes'] == consent['eligible_scopes'] == ['c0:read']
+        return await consent_token(reader, profile, consent, raw, verifier, ['c0:read'])
+
     async def check():
-        app, owner, _ = cimd_http
+        app, owner, registry = cimd_http
+        registry.access.admit_readers = True
         async with Harness(monkeypatch, certificates) as harness:
             app.state.cimd.fetcher = harness.fetcher
-            async with browser(app) as user, browser(app) as admin:
+            async with browser(app) as user, browser(app) as admin, browser(app) as reader:
                 admin.headers['Authorization'] = 'Bearer ' + owner
                 application = await approve(admin)
-                raw, _ = parameters(scope='c0:read c0:write c0:admin')
+                reader_profile = await signin(reader, code='unit-only-forbidden-code')
+                assert reader_profile['role'] == 'reader'
+                original = await reader_token(reader, reader_profile)
+                reader_bearer = {'Authorization': 'Bearer ' + original['access_token']}
+                raw, verifier = parameters(scope='c0:read c0:write c0:admin')
                 response = await user.get('/oauth/authorize', params=raw)
                 assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
                 profile = await signin(user, target='/oauth/connect')
+                assert profile['id'] != reader_profile['id']
                 result = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
                 assert result.status_code == 200
                 view = result.json()
@@ -116,6 +146,7 @@ def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(ci
                     assert (await user.post('/oauth/connect/approve', json=same, headers=headers(profile))).status_code == 204
                     current = app.state.cimd.service.approval(URL)
                     assert current['revision'] == application['revision']
+                    assert (await admin.get('/api/v1/profile', headers=reader_bearer)).json()['id'] == reader_profile['id']
                     assert (await user.post('/oauth/connect/approve', json=approval,
                         headers=headers(profile))).status_code == 204
                     assert 'c0_consent' not in user.cookies
@@ -123,6 +154,18 @@ def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(ci
                 assert response.status_code == 200 and response.json() == {'next': '/oauth/consent'}
                 consent = (await user.get('/oauth/consent/request')).json()
                 assert set(consent['scopes']) == set(scopes)
+                owner_pair = await consent_token(user, profile, consent, raw, verifier, scopes)
+                if expand:
+                    assert (await admin.get('/api/v1/profile', headers=reader_bearer)).status_code == 401
+                    refresh = await reader.post('/oauth/token', data={
+                        'grant_type': 'refresh_token', 'client_id': URL,
+                        'refresh_token': original['refresh_token'], 'resource': RESOURCE})
+                    assert refresh.status_code == 400
+                    reader_pair = await reader_token(reader, reader_profile)
+                    reader_bearer = {'Authorization': 'Bearer ' + reader_pair['access_token']}
+                assert (await admin.get('/api/v1/profile', headers=reader_bearer)).json()['id'] == reader_profile['id']
+                owner_bearer = {'Authorization': 'Bearer ' + owner_pair['access_token']}
+                assert (await admin.get('/api/v1/profile', headers=owner_bearer)).json()['id'] == profile['id']
     asyncio.run(check())
 
 

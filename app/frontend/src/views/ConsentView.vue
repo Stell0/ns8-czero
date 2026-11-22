@@ -221,6 +221,8 @@ const submit = useMutation({
     const current = draft.current()
     const value = data.value
     if (!value) return
+    if (!connecting.value && !value.draft_id)
+      throw new Error('Missing consent draft')
     if (approve && expanding.value) {
       await approveApplication()
       if (!current()) return
@@ -239,10 +241,12 @@ const submit = useMutation({
       path,
       {
         method: 'POST',
-        data:
-          connecting.value || signIn
-            ? { scopes: selected.value }
+        data: connecting.value
+          ? { scopes: selected.value }
+          : signIn
+            ? { draft_id: value.draft_id, scopes: selected.value }
             : {
+                draft_id: value.draft_id,
                 approve,
                 scopes: selected.value,
                 persistent: approve && background.value,

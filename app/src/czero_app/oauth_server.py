@@ -3,6 +3,7 @@
 """Bounded app adapter around official OAuth handlers and verified NS8 SSO."""
 from functools import partial
 import hashlib
+import hmac
 import logging
 import re
 from urllib.parse import urlencode, urlsplit
@@ -41,6 +42,7 @@ REVOKE_FIELDS = {'client_id','token','token_type_hint','client_secret','resource
 
 class ConsentChoice(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
+    draft_id: str = Field(pattern=r'^[0-9a-f]{64}$')
     approve: bool
     scopes: list[str] | None = Field(default=None, max_length=3)
     persistent: bool = False
@@ -48,6 +50,7 @@ class ConsentChoice(BaseModel):
 
 class BackgroundChoice(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
+    draft_id: str = Field(pattern=r'^[0-9a-f]{64}$')
     scopes: list[str] = Field(min_length=1, max_length=3)
 
 
@@ -56,6 +59,17 @@ def pending_cookie(request):
     if match is None:
         raise ConsentRejected()
     return match.groups()
+
+
+def consent_draft_id(pending, session):
+    return hashlib.sha256(f'{pending[0]}:{session.actor.user_id}'.encode('ascii')).hexdigest()
+
+
+def reviewed_pending(request, session, draft_id):
+    pending = pending_cookie(request)
+    if not hmac.compare_digest(draft_id, consent_draft_id(pending, session)):
+        raise ConsentRejected()
+    return pending
 
 
 class PublicRevocationRequest:
@@ -236,7 +250,7 @@ def install_oauth_server(app, auth, read_context, write_context):
         session = browser_session(request)
         tokens = pending_cookie(request)
         view = consent.view(*tokens)
-        draft_id = hashlib.sha256(f'{tokens[0]}:{session.actor.user_id}'.encode('ascii')).hexdigest()
+        draft_id = consent_draft_id(tokens, session)
         eligible = eligible_consent_scopes(session.actor, view['scopes'])
         authority = auth.sessions.authority
         client = grants.clients._lookup(view['client_id'])
@@ -252,7 +266,8 @@ def install_oauth_server(app, auth, read_context, write_context):
     @app.post('/oauth/consent/background', include_in_schema=False)
     async def consent_background(request: Request, choice: BackgroundChoice, context=Depends(write_context)):
         session = await to_thread.run_sync(partial(browser_session, request))
-        await to_thread.run_sync(partial(consent.prepare_background, session, *pending_cookie(request),
+        pending_request = reviewed_pending(request, session, choice.draft_id)
+        await to_thread.run_sync(partial(consent.prepare_background, session, *pending_request,
             scopes=set(choice.scopes)))
         pending = await to_thread.run_sync(partial(auth.sessions.begin_login, background=True, session=session))
         response = JSONResponse({'next': '/auth/login'},
@@ -263,12 +278,12 @@ def install_oauth_server(app, auth, read_context, write_context):
 
     @app.post('/oauth/consent', include_in_schema=False)
     async def consent_complete(request: Request, choice: ConsentChoice, context=Depends(write_context)):
-        pending = pending_cookie(request)
+        session = await to_thread.run_sync(partial(browser_session, request))
+        pending = reviewed_pending(request, session, choice.draft_id)
         verification = None
         if choice.approve:
             view = await to_thread.run_sync(partial(consent.view, *pending))
             verification = await cimd.verification(view['client_id'])
-        session = await to_thread.run_sync(partial(browser_session, request))
         if choice.approve and choice.persistent and not await to_thread.run_sync(partial(background_ready, session)):
             raise ConsentRejected()
         try:

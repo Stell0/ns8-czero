@@ -10,6 +10,7 @@ const descriptor = {
 }
 const digest = 'a'.repeat(64)
 const reviewId = 'b'.repeat(64)
+const draftId = 'c'.repeat(64)
 const client = {
   client_id: 'fixture-client',
   metadata_url: identity,
@@ -146,6 +147,7 @@ test('administrator can approve and continue without opening Details', async ({
         scopes: ['c0:read', 'c0:write'],
         eligible_scopes: ['c0:read', 'c0:write'],
         csrf_token: 'fixture-csrf',
+        draft_id: draftId,
       },
     }),
   )
@@ -210,6 +212,7 @@ for (const theme of ['light', 'dark']) {
             scopes: ['c0:read', 'c0:write', 'c0:admin'],
             eligible_scopes: ['c0:read', 'c0:write', 'c0:admin'],
             csrf_token: 'fixture-csrf',
+            draft_id: draftId,
             background_supported: true,
             connection_idle_seconds: 2592000,
           },
@@ -252,6 +255,51 @@ for (const theme of ['light', 'dark']) {
       await expect(authorize).toBeFocused()
     })
   }
+}
+
+for (const ready of [false, true]) {
+  test(`personal consent sends the displayed draft when background access is ${ready ? 'ready' : 'requested'}`, async ({
+    page,
+  }) => {
+    await api(page, 'admin')
+    await page.route('**/oauth/consent/request', (route) =>
+      route.fulfill({
+        json: {
+          client_name: descriptor.client_name,
+          callback,
+          scopes: ['c0:read'],
+          eligible_scopes: ['c0:read'],
+          draft_id: draftId,
+          csrf_token: 'fixture-csrf',
+          background_supported: true,
+          background_ready: ready,
+          connection_idle_seconds: 2592000,
+        },
+      }),
+    )
+    const path = ready ? '/oauth/consent' : '/oauth/consent/background'
+    await page.route(`**${path}`, (route) =>
+      route.request().method() === 'POST'
+        ? route.fulfill({ status: 400, json: { detail: 'invalid_consent' } })
+        : route.fallback(),
+    )
+    await page.goto('/oauth/consent')
+    const posted = page.waitForRequest(
+      (request) =>
+        request.method() === 'POST' && new URL(request.url()).pathname === path,
+    )
+    await page
+      .getByRole('button', {
+        name: ready ? 'Authorize' : 'Continue to background sign-in',
+        exact: true,
+      })
+      .click()
+    expect((await posted).postDataJSON()).toEqual({
+      draft_id: draftId,
+      scopes: ['c0:read'],
+      ...(ready ? { approve: true, persistent: true } : {}),
+    })
+  })
 }
 
 test('invalid callback metadata never enables approval or advances the connection', async ({
@@ -324,6 +372,7 @@ for (const theme of ['light', 'dark']) {
           scopes: ['c0:read'],
           eligible_scopes: ['c0:read'],
           csrf_token: 'fixture-csrf',
+          draft_id: draftId,
         },
       }),
     )

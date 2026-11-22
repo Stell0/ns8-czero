@@ -144,7 +144,10 @@ def test_background_consent_preserves_remembered_browser_and_profile_isolation(r
             from test_oauth_server_http import authorize,CALLBACK,RESOURCE
             verifier,_=await authorize(client,saved,scope='c0:read')
             profile=(await client.get('/api/v1/me')).json()
-            result=await client.post('/oauth/consent/background',json={'scopes':['c0:read']},headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
+            view = (await client.get('/oauth/consent/request')).json()
+            result = await client.post('/oauth/consent/background',
+                json={'draft_id': view['draft_id'], 'scopes': ['c0:read']},
+                headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
             assert result.status_code==200
             started=await client.get('/auth/login');fields=parse_qs(urlsplit(started.headers['location']).query)
             assert 'consent' in fields['prompt'][0]
@@ -152,7 +155,10 @@ def test_background_consent_preserves_remembered_browser_and_profile_isolation(r
             completed=await client.get('/auth/callback',params={'code':'private-code','state':fields['state'][0]})
             assert completed.status_code==302 and 'Max-Age=604800' in completed.headers['set-cookie']
             profile=(await client.get('/api/v1/me')).json();assert profile['browser_session']['remembered']
-            accepted=await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read'],'persistent':True},headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
+            view = (await client.get('/oauth/consent/request')).json()
+            accepted = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read'], 'persistent': True},
+                headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
             assert accepted.status_code==200
             code=parse_qs(urlsplit(accepted.json()['redirect_uri']).query)['code'][0]
             pair=(await client.post('/oauth/token',data={'grant_type':'authorization_code','client_id':saved['client_id'],'code':code,'redirect_uri':CALLBACK,'code_verifier':verifier,'resource':RESOURCE})).json()
@@ -181,7 +187,9 @@ def test_reauthentication_retires_old_cookie_and_retains_existing_connection(ren
             profile=await remembered_login(client,state)
             old=next(c.value for c in client.cookies.jar if c.name=='c0_session')
             verifier,_=await authorize(client,saved,scope='c0:read')
-            accepted=await client.post('/oauth/consent',json={'approve':True,'scopes':['c0:read']},
+            view = (await client.get('/oauth/consent/request')).json()
+            accepted = await client.post('/oauth/consent',
+                json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
                 headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})
             assert accepted.status_code==200
             code=parse_qs(urlsplit(accepted.json()['redirect_uri']).query)['code'][0]

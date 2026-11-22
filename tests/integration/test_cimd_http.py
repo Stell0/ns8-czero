@@ -56,7 +56,8 @@ async def connect(http, public_id=URL):
     profile = await login(http)
     view = await http.get('/oauth/consent/request')
     assert view.status_code == 200 and view.json()['client_id'] == public_id
-    response = await http.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']},
+    response = await http.post('/oauth/consent',
+        json={'draft_id': view.json()['draft_id'], 'approve': True, 'scopes': ['c0:read']},
         headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
     assert response.status_code == 200, response.status_code
     values = parse_qs(urlsplit(response.json()['redirect_uri']).query)
@@ -200,9 +201,10 @@ def test_no_store_refreshes_after_login_and_denial_does_not_fetch(cimd_http, mon
                 assert renewed.status_code == 200 and renewed.json()['scope'] == 'c0:read'
                 await authorize(http, {'client_id': URL})
                 profile = (await http.get('/api/v1/me')).json()
+                view = (await http.get('/oauth/consent/request')).json()
                 before = len(h.requests)
                 h.status = 503
-                denied = await http.post('/oauth/consent', json={'approve': False},
+                denied = await http.post('/oauth/consent', json={'draft_id': view['draft_id'], 'approve': False},
                     headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
                 assert denied.status_code == 200 and 'access_denied' in denied.json()['redirect_uri']
                 assert len(h.requests) == before
@@ -436,7 +438,9 @@ def test_sdk_automatically_selects_cimd_from_empty_storage_and_renews_without_fe
                     continued = await browser.post('/oauth/connect/continue',
                         json={'scopes': ['c0:read']}, headers=headers(profile))
                     assert continued.status_code == 200 and continued.json() == {'next': '/oauth/consent'}
-                    response = await browser.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']},
+                    view = (await browser.get('/oauth/consent/request')).json()
+                    response = await browser.post('/oauth/consent',
+                        json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},
                         headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
                     assert response.status_code == 200
                     values = parse_qs(urlsplit(response.json()['redirect_uri']).query)
