@@ -63,6 +63,37 @@ async def authorization_request(client, method, parameters):
         headers={'Content-Type':'application/x-www-form-urlencoded'})
 
 
+def test_registered_read_only_uuid_client_can_request_the_full_discovery_catalog(oauth_app):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        with grants.access.database.engine.begin() as connection:
+            connection.execute(text("""UPDATE c0_oauth_clients SET scopes='["c0:read"]'::jsonb
+                WHERE id=:id"""), {'id': UUID(saved['client_id'])})
+        child = app.state.mcp_app
+        async with child.router.lifespan_context(child):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+                catalog = (await client.get('/.well-known/oauth-protected-resource/mcp')).json()['scopes_supported']
+                for attempt in range(2):
+                    verifier, state = await authorize(client, saved, scope=' '.join(catalog))
+                    if attempt == 0:
+                        profile = await login(client)
+                    view = (await client.get('/oauth/consent/request')).json()
+                    assert view['scopes'] == view['eligible_scopes'] == ['c0:read']
+                    consent = await client.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']},
+                        headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
+                    callback = parse_qs(urlsplit(consent.json()['redirect_uri']).query)
+                    assert callback['state'] == [state]
+                    result = await client.post('/oauth/token', data={'grant_type': 'authorization_code',
+                        'client_id': saved['client_id'], 'code': callback['code'][0], 'redirect_uri': CALLBACK,
+                        'code_verifier': verifier, 'resource': RESOURCE})
+                    assert result.status_code == 200 and result.json()['scope'] == 'c0:read'
+                    async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=ORIGIN,
+                            headers={'Authorization': 'Bearer ' + result.json()['access_token']}) as http:
+                        async with Client(streamable_http_client(RESOURCE, http_client=http)) as sdk:
+                            assert not (await sdk.call_tool('get_profile', {})).is_error
+    asyncio.run(check())
+
+
 @pytest.mark.parametrize('method', ['GET', 'POST'])
 @pytest.mark.parametrize('optional', [
     [('ui_locales', 'en-US')],

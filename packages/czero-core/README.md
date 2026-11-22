@@ -1,5 +1,13 @@
 # C0 Core
 
+## Assistant connection approval (0.51.1)
+
+The client onboarding service can approve an explicitly selected scope increase
+against a live browser-bound request. It rechecks current administrator access,
+client identity, callback, verified metadata and client revision in the same
+transaction. Repeating an unchanged approval does not revoke existing grants.
+Personal consent remains a separate action. Schema 0042 is unchanged.
+
 ## Automatic source updates producer (0.51)
 
 Schema0042 adds space-owned public-source definitions, background grants bound

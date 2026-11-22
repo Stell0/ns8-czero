@@ -9,6 +9,7 @@ const descriptor = {
   scope_ceiling: ['c0:read', 'c0:write'],
 }
 const digest = 'a'.repeat(64)
+const reviewId = 'b'.repeat(64)
 const client = {
   client_id: 'fixture-client',
   metadata_url: identity,
@@ -105,8 +106,11 @@ async function connect(page: Page, role = 'admin') {
         metadata_url: identity,
         callback,
         scopes: ['c0:read', 'c0:write', 'c0:admin'],
+        eligible_scopes:
+          role === 'admin' ? ['c0:read', 'c0:write', 'c0:admin'] : ['c0:read'],
         approved: false,
         allowed_scopes: [],
+        review_id: reviewId,
         csrf_token: 'fixture-csrf',
       },
     }),
@@ -117,18 +121,20 @@ test('administrator can approve and continue without opening Details', async ({
 }) => {
   await connect(page)
   const writes: string[] = []
-  await page.route('**/oauth/cimd/clients', async (route) => {
+  await page.route('**/oauth/connect/approve', async (route) => {
     writes.push('approve')
     expect(route.request().postDataJSON()).toEqual({
-      metadata_url: identity,
       metadata_digest: digest,
-      allowed_scopes: ['c0:read'],
+      review_id: reviewId,
+      scopes: ['c0:read', 'c0:write'],
     })
     await route.fulfill({ json: client })
   })
   await page.route('**/oauth/connect/continue', async (route) => {
     writes.push('continue')
-    expect(route.request().postDataJSON()).toEqual({ scopes: ['c0:read'] })
+    expect(route.request().postDataJSON()).toEqual({
+      scopes: ['c0:read', 'c0:write'],
+    })
     await route.fulfill({ json: { next: '/oauth/consent' } })
   })
   await page.route('**/oauth/consent/request', (route) =>
@@ -137,8 +143,8 @@ test('administrator can approve and continue without opening Details', async ({
         client_name: descriptor.client_name,
         client_id: identity,
         callback,
-        scopes: ['c0:read'],
-        eligible_scopes: ['c0:read'],
+        scopes: ['c0:read', 'c0:write'],
+        eligible_scopes: ['c0:read', 'c0:write'],
         csrf_token: 'fixture-csrf',
       },
     }),
@@ -152,7 +158,7 @@ test('administrator can approve and continue without opening Details', async ({
   ).toBeDisabled()
   await expect(
     page.getByRole('checkbox', { name: 'Write', exact: true }),
-  ).not.toBeChecked()
+  ).toBeChecked()
   expect(writes).toEqual([])
   await page
     .getByRole('button', { name: 'Approve and continue', exact: true })
@@ -173,12 +179,18 @@ test('ordinary user waits for approval and never fetches administrator metadata'
   })
   await page.goto('/oauth/connect')
   await expect(
-    page.getByText('This connection needs administrator approval.', {
-      exact: false,
-    }),
+    page.getByText(
+      'An administrator needs to approve additional app permissions.',
+      {
+        exact: false,
+      },
+    ),
   ).toBeVisible()
   await expect(
-    page.getByRole('button', { name: 'Authorize', exact: true }),
+    page.getByRole('button', {
+      name: 'Continue with selected permissions',
+      exact: true,
+    }),
   ).toBeDisabled()
   expect(adminRequests).toEqual([])
 })
@@ -205,10 +217,13 @@ for (const theme of ['light', 'dark']) {
       )
       await page.goto('/oauth/consent')
       const authorize = page.getByRole('button', {
-        name: 'Authorize',
+        name: 'Continue to background sign-in',
         exact: true,
       })
       await expect(authorize).toBeEnabled()
+      await expect(
+        page.getByRole('checkbox', { name: 'Allow background access' }),
+      ).toBeChecked()
       await expect(page.getByRole('search')).toHaveCount(0)
       await expect(page.locator('[data-c0-navigation]')).toHaveCount(0)
       expect(
@@ -256,7 +271,7 @@ test('invalid callback metadata never enables approval or advances the connectio
   )
   const writes: string[] = []
   page.on('request', (request) => {
-    if (/oauth\/(cimd\/clients|connect\/continue)/.test(request.url()))
+    if (/oauth\/connect\/(approve|continue)/.test(request.url()))
       writes.push(request.url())
   })
   await page.goto('/oauth/connect')
@@ -271,7 +286,7 @@ test('failed application save shows an error and never continues OAuth', async (
   page,
 }) => {
   await connect(page)
-  await page.route('**/oauth/cimd/clients', (route) =>
+  await page.route('**/oauth/connect/approve', (route) =>
     route.fulfill({ status: 409, json: { detail: 'private backend detail' } }),
   )
   let continued = false
@@ -337,6 +352,7 @@ test('a Write-only request never selects an unrequested Read scope', async ({
         metadata_url: identity,
         callback,
         scopes: ['c0:write'],
+        eligible_scopes: ['c0:write'],
         approved: true,
         allowed_scopes: ['c0:read'],
         csrf_token: 'fixture-csrf',
@@ -354,6 +370,9 @@ test('a Write-only request never selects an unrequested Read scope', async ({
     page.getByRole('checkbox', { name: 'Write', exact: true }),
   ).toBeDisabled()
   await expect(
-    page.getByRole('button', { name: 'Authorize', exact: true }),
+    page.getByRole('button', {
+      name: 'Continue with selected permissions',
+      exact: true,
+    }),
   ).toBeDisabled()
 })

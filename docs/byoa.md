@@ -1,27 +1,59 @@
-# Bring Your Own Agent (BYOA)
+# Connect an AI assistant to C0
 
-C0 is the persistent knowledge side of an Agentic RAG system. Your external agent supplies conversation, reasoning, research, planning and tool orchestration. C0 supplies stored evidence, retrieval, knowledge operations, permissions and workflow coordination. Multiple agents can use the same authorized space without copying a chat's memory into each model.
+Open **Use with AI** on your C0 site and choose your assistant. The page gives you this instance's MCP URL and an instruction download. Connect the app first, then install the instructions and try a cited read.
 
-The agent can change models without moving the knowledge store. People can read the same sources and Wiki in a browser. Roles, spaces and delegated scopes remain server-enforced even when an agent has different instructions. Optional embedding and relevance services process configured retrieval requests; C0 hosts no general-purpose conversational engine.
+You need a C0 HTTPS address that the assistant can reach, a C0 account with access to a space, and a vendor account that permits custom connections. For a new instance, follow [installation and sign-in setup](administration.md).
 
-## Prepare the connection
+<a id="prepare-the-connection"></a>
+## Choose your assistant
 
-1. Obtain your instance's trusted HTTPS URL and sign in. Open **Use with AI** (`/agents`) and copy its canonical MCP URL.
-2. Choose an existing authorized space. Ask an Admin for a grant if needed. An application approval does not grant a user a role.
-3. Configure the client's remote HTTP MCP connection. C0 requires approved exact OAuth client identities and callbacks. It does not provide open dynamic client registration.
-4. Sign in as the intended account and consent to Read. For writes, both effective Editor access and `c0:write` are required. Ordinary content work needs no Manage scope.
-5. Read `get_profile`, `spaces_list` and `spaces_get`. Keep the returned space UUID for every content operation. A denied space never falls back to Shared.
-6. Read `c0://capabilities` through MCP, or the authenticated `/agents/capabilities.json`. Use the installed tool schemas, not a historical tool count.
+| Assistant | Connect in the web app | Add C0 instructions |
+| --- | --- | --- |
+| ChatGPT | Add a custom MCP server with OAuth and Client ID Metadata Document (CIMD) if offered. [ChatGPT steps](chatgpt.md) | Upload the `.skill` from Use with AI in ChatGPT Skills. An existing app can also be packaged with five C0 workflows. [Plugin packaging](plugin.md) |
+| Claude | In **Customize → Connectors**, add a **Custom → Web** connector using the C0 URL. Choose OAuth and try Claude's published client identity. [Custom connectors](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) | Download the Claude skill ZIP. In **Customize → Skills**, upload the ZIP and enable the skill if needed. [Claude skills](https://support.claude.com/en/articles/12512180-use-skills-in-claude) |
+| Grok | In **Connectors → New Connector → Custom**, add the C0 URL and connect. A managed team may need an administrator to provision it first. [Grok connectors](https://docs.x.ai/grok/connectors) | Create a Grok skill with the C0 Markdown instructions. Upload the file in the creation conversation or paste its contents if the editor asks for text. [Grok skills](https://x.ai/news/grok-skills) |
+| Gemini | Open **Customize → Connectors** or **Settings → Connected Apps** and look for **Add a custom app**. Google lists an adult US personal account, English and Keep Activity as prerequisites. If prompted for a registered client, give your C0 administrator the supported client requirements and exact callback. [Gemini custom apps](https://support.google.com/gemini/answer/17209137) | In **Customize → Skills**, choose **Create → Upload**. Select the downloaded `SKILL.md` file, then save the skill. [Gemini skills](https://support.google.com/gemini/answer/17094296?hl=en) |
 
-Install the instance's generated instructions where the client supports that format. The ChatGPT plugin uses an existing app reference; it is not a universal MCP installer. A skill or plugin grants no authority. See [plugin packaging](plugin.md).
+Menus depend on the account, organization settings and rollout. The vendor instructions describe available setup mechanisms. See the [C0 browser test record](../PLAN.md#assistant-setup-and-first-use-experience) for the results of testing this combination. If automatic registration fails, use a separately [registered public OAuth client](workspace-access.md#register-a-public-oauth-client) where the vendor accepts one. Use the exact supported callback and leave the secret blank for a public client.
 
-## ChatGPT
+## Sign in and choose permissions
 
-Use [the C0 ChatGPT guide](chatgpt.md) for the custom MCP connection, optional client-metadata approval, user consent and generated packages. Account/workspace controls must permit those operations. Interactive access, packaged-skill web use and unattended writes require separate checks.
+1. Start **Connect** in the assistant. Confirm the C0 hostname and app name, then sign in with your own C0 account.
+2. Review the selected permissions before choosing **Authorize**. C0 suggests the permissions the app requests, the client is approved to use, and your account can grant. Clear any permissions you want to omit.
+
+   | Permission | What it allows |
+   | --- | --- |
+   | Read | Browse and search spaces you can read, including restricted spaces you have access to. |
+   | Write | Edit knowledge in spaces where you have permission to write. |
+   | Manage | Administer C0 where your account permits it, including client or space access. |
+
+3. If the app requests more than its current approval permits, continue with **Read** when offered or ask a C0 administrator to review the app. You still authorize your own connection after the review. Changing approval on a shared app can require others using it to reconnect.
+4. Review **Allow background access**, selected by default for a new connection when supported. Keep it selected if the assistant needs to renew access while you are away. Clear it for interactive use, or continue to background sign-in with the same C0 account if prompted, then authorize. The consent page shows the inactivity window. Existing connections require fresh consent to add permissions or background access.
+
+The permissions on the connected app and the account's current access to the selected space both apply. Adding a skill installs instructions. To stop an existing grant, go to **Account → Your connected apps → Disconnect**. For unattended runs, complete [scheduler setup and verification](wiki-maintenance.md).
+
+## First read and authorized edit
+
+1. Start a fresh conversation with the installed instructions and C0 connection. Ask the assistant to identify the connected account and list accessible spaces. Select the intended space. If it is empty, follow [first content](user-guide.md#first-content-on-a-new-instance).
+2. Ask the assistant to find the demonstration gauge observation in that space, read its complete source, and cite the exact passage without changing knowledge. Open the citation in C0 and check that the source records the synthetic 37-kilopascal reading.
+3. To test Write, explicitly ask for an edit to a test Wiki page in the same space. Ask the assistant to read the current revision, preserve citations, use the expected revision and a stable retry key, then read back the saved page. Open it in C0 and check the new revision. After a conflict or an uncertain response, inspect the current page before trying the edit again.
+
+## Reconnect or get help
+
+| What happened | What to do |
+| --- | --- |
+| The request expired | Start **Connect** again from the assistant. |
+| Login succeeded but C0 denied access | Confirm the intended C0 account, then have an administrator check account status and app approval. [Workspace access](workspace-access.md) |
+| Read works but Write or Manage fails | Check the account role, target space, application's approval and permissions shown for the connection in C0 Account. Reconnect for fresh consent after any approval or scope change. |
+| The assistant reports a denied space | Ask a C0 administrator to check that space's grants. Keep the request scoped to the intended space. |
+| Tools or instructions are missing | Select the intended app and skill, refresh the app's tool list if available, then retry a read in a new conversation. |
+| The expected setup control is missing | Check the vendor account, workspace policy and available rollout for that control. |
+
+When asking for help, include the step, approximate time and displayed error code. Keep passwords, browser cookies, tokens and full OAuth URLs private.
 
 ## OpenAI Codex
 
-For a Codex CLI version with HTTP MCP support, add the endpoint and authenticate:
+Use the canonical MCP URL from C0. For a Codex CLI version with remote HTTP MCP:
 
 ```sh
 codex mcp add c0 --url https://c0.example.org/mcp
@@ -29,32 +61,18 @@ codex mcp login c0
 codex mcp list
 ```
 
-Replace the example hostname. Follow [official Codex MCP guidance](https://learn.chatgpt.com/docs/extend/mcp). If automatic registration is incompatible, have the C0 Admin approve the exact public client/callback and use the installed CLI's supported OAuth configuration. Do not guess callback ports or broaden server validation. In a session, `/mcp` shows connection status. Verify profile, space, search and a current citation after connection; a server list alone proves no content access.
-
-The repository records C0-specific Codex OAuth/read tests in [PLAN](../PLAN.md). Use only the scopes granted to that connection. The separate [reference compiler runner](../samples/ingestion/examples/compiler/README.md) uses a C0 API key and its own Codex model login; it is not this interactive MCP connection.
+In a session, use `/mcp` to check the connection and run the [first read](#first-read-and-authorized-edit). If OAuth needs a registered client, use the client's supported configuration with the exact emitted callback. [Codex MCP instructions](https://learn.chatgpt.com/docs/extend/mcp)
 
 ## Claude and Claude Code
 
-Claude supports remote MCP connectors. In Claude Code, a basic HTTP entry is:
+[Claude web setup](#choose-your-assistant) uses a remote connector. To connect Claude Code over HTTP:
 
 ```sh
 claude mcp add --transport http c0 https://c0.example.org/mcp
 ```
 
-Use `/mcp` to authenticate. For a C0-approved public client, the vendor also supports `--client-id` and a fixed `--callback-port`. Have the Admin approve the callback actually emitted by your installed version. See [official Claude Code MCP instructions](https://code.claude.com/docs/en/mcp). A client that cannot supply an approved identity cannot connect merely because it supports MCP. The repository does not establish complete C0 acceptance for Claude; verify a real authorized operation before relying on it.
+Use `/mcp` to authenticate. With a preapproved public client, Claude Code supports `--client-id` and a fixed `--callback-port`. Use the exact callback emitted by your installed client. [Claude Code MCP instructions](https://code.claude.com/docs/en/mcp)
 
 ## Custom agents and scripts
 
-Use REST at `/api/v1` or Streamable HTTP MCP at `/mcp`. The instance's `/openapi.json` and capability resource describe available inputs. OAuth provides explicit per-user consent. [Personal API keys](api-keys.md) support automation in explicit spaces with Read/Write ceilings and no administration scope.
-
-Keep credentials in the chosen host's private secret storage. Reuse [the ingestion client's authentication and verification helpers](../samples/ingestion/README.md) rather than adding a parallel login stack. File upload uses multipart REST; MCP text ingestion accepts at most 131072 UTF-8 bytes.
-
-## First read and authorized edit
-
-1. Follow [first content](user-guide.md#first-content-on-a-new-instance) if the space is empty.
-2. Ask: “Use only C0 space `<space-uuid>` on this connection. Find the demonstration gauge observation. Read its complete document and exact passage. State its provenance and cite it. Make no changes.”
-3. Check that the answer identifies the synthetic 37-kilopascal observation and the actual source/version/document/chunk. A Wiki summary alone is not original evidence.
-4. With effective Write access and explicit consent, ask: “In that same space, read `quickstart/first-read` and its current revision. Update it to clarify that the observation is synthetic, using only the selected evidence. Preserve current citations. Use the current expected revision and a stable retry key. Read back the saved page.”
-5. Inspect the saved page in Wiki. On a revision conflict, reconcile before retrying. After an uncertain write, inspect the saved result before repeating it. Reader credentials must leave knowledge unchanged.
-
-For unattended use, follow [recurring Wiki maintenance](wiki-maintenance.md). C0 workers and deterministic job schedules do not execute conversational agent prompts.
+Use REST at `/api/v1` or Streamable HTTP MCP at `/mcp`. Use the instance's `/openapi.json`, `c0://capabilities` and installed MCP tool schemas. Pass the selected space to every scoped operation. For seed data and automated reads or writes in specific spaces, use [personal API keys](api-keys.md) and the [ingestion client helpers](../samples/ingestion/README.md).

@@ -53,6 +53,7 @@ and the explicit `c0-upstream.json` registry. See [fork and publishing rules](do
 | Managed semantic knowledge | [c0-maintain-semantic-layer](.agents/skills/c0-maintain-semantic-layer/SKILL.md) |
 | Agentic retrieval benchmark | [c0-benchmark-agentic-retrieval](.agents/skills/c0-benchmark-agentic-retrieval/SKILL.md) |
 | Tool-use evaluation | [c0-evaluate-tools](.agents/skills/c0-evaluate-tools/SKILL.md) |
+| Assistant setup and scheduled browser verification | [c0-test-assistant-setup](.agents/skills/c0-test-assistant-setup/SKILL.md) |
 | External-source ingestion | [c0-ingest-sources](.agents/skills/c0-ingest-sources/SKILL.md) |
 | Protected projects and agent handoff | [c0-project-workflows](.agents/skills/c0-project-workflows/SKILL.md) |
 

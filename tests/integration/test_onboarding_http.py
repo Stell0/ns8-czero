@@ -85,22 +85,75 @@ def test_new_reader_gets_signin_visible_approval_then_explicit_consent_and_real_
     asyncio.run(check())
 
 
-def test_registered_read_client_can_explicitly_narrow_a_broader_reconnect_request(cimd_http, monkeypatch, certificates):
+@pytest.mark.parametrize('expand', [False, True])
+def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(cimd_http, monkeypatch, certificates, expand):
     async def check():
         app, owner, _ = cimd_http
         async with Harness(monkeypatch, certificates) as harness:
             app.state.cimd.fetcher = harness.fetcher
             async with browser(app) as user, browser(app) as admin:
                 admin.headers['Authorization'] = 'Bearer ' + owner
-                await approve(admin)
+                application = await approve(admin)
                 raw, _ = parameters(scope='c0:read c0:write c0:admin')
                 response = await user.get('/oauth/authorize', params=raw)
                 assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
                 profile = await signin(user, target='/oauth/connect')
                 result = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                assert result.status_code == 200 and result.json() == {'next': '/oauth/consent'}
+                assert result.status_code == 200
+                view = result.json()
+                assert view['allowed_scopes'] == ['c0:read']
+                assert set(view['eligible_scopes']) == {'c0:read', 'c0:write', 'c0:admin'}
+                scopes = ['c0:read', 'c0:write', 'c0:admin'] if expand else ['c0:read']
+                if expand:
+                    approval = {'scopes': scopes, 'metadata_digest': application['metadata_digest'],
+                        'expected_revision': application['revision'], 'review_id': view['review_id']}
+                    assert (await user.post('/oauth/connect/approve', json={
+                        **approval, 'review_id': '0' * 64}, headers=headers(profile))).status_code == 410
+                    same = {**approval, 'scopes': ['c0:read']}
+                    assert (await user.post('/oauth/connect/approve', json=same, headers=headers(profile))).status_code == 204
+                    current = app.state.cimd.service.approval(URL)
+                    assert current['revision'] == application['revision']
+                    assert (await user.post('/oauth/connect/approve', json=approval,
+                        headers=headers(profile))).status_code == 204
+                    assert 'c0_consent' not in user.cookies
+                response = await user.post('/oauth/connect/continue', json={'scopes': scopes}, headers=headers(profile))
+                assert response.status_code == 200 and response.json() == {'next': '/oauth/consent'}
                 consent = (await user.get('/oauth/consent/request')).json()
-                assert consent['scopes'] == ['c0:read']
+                assert set(consent['scopes']) == set(scopes)
+    asyncio.run(check())
+
+
+def test_application_approval_does_not_apply_after_the_handoff_expires_during_metadata_io(
+        cimd_http, monkeypatch, certificates):
+    async def check():
+        app, owner, registry = cimd_http
+        async with Harness(monkeypatch, certificates) as harness:
+            app.state.cimd.fetcher = harness.fetcher
+            async with browser(app) as user, browser(app) as admin:
+                admin.headers['Authorization'] = 'Bearer ' + owner
+                original = await approve(admin)
+                await user.get('/oauth/authorize', params=parameters(scope='c0:read c0:write')[0])
+                profile = await signin(user, target='/oauth/connect')
+                view = (await user.post('/oauth/connect/request', json={}, headers=headers(profile))).json()
+                preview = app.state.cimd.preview
+
+                async def expire_after_fetch(*args):
+                    result = await preview(*args)
+                    with registry.access.database.engine.begin() as connection:
+                        connection.execute(text("""UPDATE c0_client_onboarding
+                            SET expires_at=now()-interval '1 second' WHERE issuer=:issuer"""),
+                            {'issuer': registry.access.issuer})
+                    return result
+
+                monkeypatch.setattr(app.state.cimd, 'preview', expire_after_fetch)
+                response = await user.post('/oauth/connect/approve', json={
+                    'scopes': ['c0:read', 'c0:write'], 'metadata_digest': original['metadata_digest'],
+                    'expected_revision': original['revision'], 'review_id': view['review_id']},
+                    headers=headers(profile))
+                assert response.status_code == 410
+                current = registry.approval(URL)
+                assert current['allowed_scopes'] == ['c0:read'] and current['revision'] == original['revision']
+                assert 'c0_consent' not in user.cookies
     asyncio.run(check())
 
 

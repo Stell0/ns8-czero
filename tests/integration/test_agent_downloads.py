@@ -53,6 +53,15 @@ def test_stale_cookie_keeps_simple_guide_and_canonical_skill_download_available(
             assert b'{{' not in payload['SKILL.md'] and b'untrusted.example.test' not in one.content
             assert b'PRIVATE_DOWNLOAD_CANARY' not in one.content
             assert payload['LICENSE'] == (ROOT / 'LICENSE').read_bytes()
+            portable = unpack(await http.get('/agents/c0-skill.zip'), '.zip')
+            name = package_name(ORIGIN + '/mcp', 'c0-memory')
+            assert portable == {f'{name}/{path}': content for path, content in payload.items()
+                                if path != 'agents/openai.yaml'}
+            markdown = await http.get('/agents/c0-skill.md', headers={'Host': 'untrusted.example.test'})
+            assert markdown.status_code == 200
+            assert markdown.headers['content-disposition'] == 'attachment; filename="SKILL.md"'
+            assert (ORIGIN + '/mcp').encode() in markdown.content
+            assert b'](references/' not in markdown.content
     monkeypatch.setenv('CZERO_PRIVATE_DOWNLOAD_CANARY', 'PRIVATE_DOWNLOAD_CANARY')
     asyncio.run(check())
 

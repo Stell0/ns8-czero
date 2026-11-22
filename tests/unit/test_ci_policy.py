@@ -632,7 +632,7 @@ def test_registry_document_exemption_uses_committed_content(tmp_path, damage):
 def test_developer_instructions_are_docs_but_packaged_skills_are_runtime():
     p=policy()
     for name in ('c0-project-workflows','c0-benchmark-agentic-retrieval',
-                 'c0-generate-retrieval-questions','c0-maintain-semantic-layer'):
+                 'c0-generate-retrieval-questions','c0-maintain-semantic-layer','c0-test-assistant-setup'):
         assert p['classify']([change('.agents/skills/'+name+'/SKILL.md')])['kind']=='docs'
     assert p['classify']([change('.github/pull_request_template.md','A',old_mode='000000')])['kind']=='docs'
     assert p['classify']([change('plugins/c0-knowledge/skills/c0-research/SKILL.md')])['native_required']

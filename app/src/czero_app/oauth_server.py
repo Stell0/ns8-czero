@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Bounded app adapter around official OAuth handlers and verified NS8 SSO."""
 from functools import partial
+import hashlib
 import logging
 import re
 from urllib.parse import urlencode, urlsplit
 from uuid import UUID
 
 from anyio import to_thread
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 from mcp.server.auth.handlers.authorize import AuthorizationHandler
@@ -21,10 +22,10 @@ from pydantic import BaseModel, ConfigDict, Field, AnyHttpUrl
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.datastructures import FormData
 
-from czero_core.identity import PermissionDenied, Role
+from czero_core.identity import PermissionDenied
 from czero_app.cimd_server import install_cimd_routes
 from czero_core.oauth_grants import OAuthGrantService, GrantRejected
-from czero_core.oauth_consent import ConsentRejected, OAuthConsentService
+from czero_core.oauth_consent import ConsentRejected, OAuthConsentService, eligible_consent_scopes
 from czero_core.operations import SCOPES
 from czero_core.client_onboarding import ClientOnboardingService, OnboardingRejected
 from czero_core.sessions import SessionRejected
@@ -209,7 +210,6 @@ def install_oauth_server(app, auth, read_context, write_context):
             grants.disconnect(session.actor, identifier)
         except GrantRejected:
             raise HTTPException(404, 'connection_not_found') from None
-        from fastapi import Response
         return Response(status_code=204)
 
     @app.get('/oauth/consent', include_in_schema=False)
@@ -230,24 +230,20 @@ def install_oauth_server(app, auth, read_context, write_context):
         return app.state.website.render()
 
     @app.get('/oauth/consent/request', include_in_schema=False)
-    def consent_request(request: Request):
+    def consent_request(request: Request, response: Response):
+        response.headers['Cache-Control'] = 'no-store'
         session = browser_session(request)
-        view = consent.view(*pending_cookie(request))
-        eligible = []
-        for scope, role in [('c0:read',Role.READER),('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
-            try:
-                session.actor.require(role)
-                if scope in view['scopes']:
-                    eligible.append(scope)
-            except PermissionDenied:
-                pass
+        tokens = pending_cookie(request)
+        view = consent.view(*tokens)
+        draft_id = hashlib.sha256(f'{tokens[0]}:{session.actor.user_id}'.encode('ascii')).hexdigest()
+        eligible = eligible_consent_scopes(session.actor, view['scopes'])
         authority = auth.sessions.authority
         client = grants.clients._lookup(view['client_id'])
         supported = (grants.background_enabled and client is not None
             and 'refresh_token' in client.get('grant_types', ['authorization_code', 'refresh_token']))
         seconds = authority.connection_policy.idle_seconds if supported else None
         ready = bool(supported and background_ready(session))
-        return {**view, 'eligible_scopes':eligible, 'csrf_token':session.csrf_token,
+        return {**view, 'eligible_scopes':eligible, 'csrf_token':session.csrf_token, 'draft_id':draft_id,
                 'background_supported': bool(supported), 'background_ready': ready,
                 'connection_idle_seconds': seconds,
                 'profile':auth.access.profile(session.actor)}

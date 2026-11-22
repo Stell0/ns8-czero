@@ -2,6 +2,78 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## Assistant setup and first-use experience
+
+Development plan, 22 November 2026. Start from original main `0a88801782d9eb17d8a5fa5d19a1d108c8cabafe`. This run covers the C0 website, its guides and skills, and the actual ChatGPT, Claude, Grok and Gemini web interfaces. Use the operator-designated Support lab on makako. Coordinate shared sign-in, Account and administration work with the [Support integration plan](docs/support-integration-plan.md).
+
+### First browser walkthrough
+
+The signed-out lab **Use with AI** page showed three fields (connection name, description and MCP server URL), a URL copy button, a skill download and Sign in. It gave no destination for the URL or the download. On current main, signing in adds a ChatGPT app-ID/package form, automation keys, rules, workflows and compiler tasks to the same page. The [ChatGPT guide](docs/chatgpt.md) describes copy icons for all three fields, while the Vue page has one copy button for the URL.
+
+The lab's public MCP resource metadata advertised only `c0:read`. Its OAuth authorization server advertised `c0:read`, `c0:write` and `c0:admin`. This difference affects what a discovery-driven assistant initially asks for.
+
+The planning browser reached ChatGPT's Plugins sign-in and Claude's sign-in. Grok Connectors and Gemini loaded page titles but showed no usable controls on retry. Account eligibility, installations, tool calls and scheduled runs still need signed-in verification.
+
+### 1. Measure the current journeys
+
+1. Match the lab module to its configured HTTPS route in NS8. Record the installed image digests, readiness and current configuration privately. Use the designated lab for reconfiguration, removal and reinstall when a clean-install test needs them. Capture the supported backup and identify hosted Support state before replacement.
+2. Start at C0 Home in a clean browser. Walk sign-in, find a space, read a cited source, connect an assistant, find its connection on Account, and recover from an expired or denied connection. Walk the editor and administrator views too. Inventory visible controls and documentation links by task, including phone-width navigation.
+3. For each assistant, record the account/workspace type, setup actions, repeated inputs, page switches, first successful cited read and any point that needed operator help. Compare before/after on the same provider route. Keep timestamps, sanitized observations and the first failing step. The operator enters credentials and MFA directly in the visible browser when prompted.
+
+### 2. Make the permission request match the work
+
+- Advertise supported Read, Write and Manage, and give C0-controlled assistant setup paths those defaults. At personal consent, preselect the intersection of what the assistant actually requested, its approved permissions, and the account's current eligibility. If the provider explicitly requests Read alone, show that limit. Test a registered Read-only UUID client that derives its request from discovery on both initial login and reconnect. If universal scope advertising breaks that client, use provider-specific scope configuration or the existing per-tool scope challenge for elevation and keep its working discovery path.
+- When a new verified client requests more than its automatic Read approval, retain the original request. Give an eligible non-admin a way to request that approval or continue with Read. An administrator can approve additional application permissions within the flow, followed by the user's separate personal consent. Bind the approval to the live request, account, verified metadata and client revision. Expiry, decline or an account switch during review must leave application permissions unchanged. Provide a fresh Connect action when the five-minute request expires. Existing client reapproval disconnects other users of that client. Explain who must reconnect before confirmation and test recovery with two accounts. Connecting another user to an already approved application must leave other grants intact.
+- Describe each choice by its effect. Write allows changes in spaces where the account can edit. Manage can administer the C0 instance, including client or space access. Use Core's grant-eligibility rules for both the view and issuance, including personal-space editing. Keep per-operation checks on current roles and the explicitly selected space.
+- Preselect **Allow background access** on fresh eligible assistant consent. Show what it permits, when inactivity ends the connection and where to disconnect it. Let the user turn it off or deselect individual scopes. Preserve selections during a refresh or same-account identity-provider round trip for that request. Require the final Authorize action. Unsupported clients get interactive consent. Existing grants keep their original scopes and lifetime until fresh consent.
+- Start in the [MCP transport](app/src/czero_app/mcp_transport.py), [onboarding handoff](app/src/czero_app/onboarding.py), [OAuth consent route](app/src/czero_app/oauth_server.py) and [Vue consent view](app/frontend/src/views/ConsentView.vue). Reuse the existing Core services. Follow the independent Core publication and consumer-lock process if a reusable service must change.
+
+### 3. Shorten the website and documentation
+
+- Start **Use with AI** with the assistant choice. Show its shortest verified path to open the right settings, connect this instance, install its instructions and try a first question. Prefer a provider-supported combined installation when it works. Otherwise offer the specific URL or file at the step that needs it. Show the ChatGPT app-ID field only on a route that requires it. Keep advanced packaging, automation keys and compiler tasks reachable from their appropriate pages or disclosures.
+- Make Home, account connections and access errors point to the next useful action. Review reading, source, space and administration pages against the inventory. Remove redundant controls and copy, hide actions the current user cannot use, and keep advanced controls available to their intended users. Preserve deep links, selected space and return after sign-in. Check English and Italian, keyboard focus, accessible names, zoom/reflow, phone and desktop layouts, and light/dark themes.
+- Give readers one current assistant quick start, linked from the README, docs index and installed UI. Consolidate overlapping setup instructions in the [BYOA](docs/byoa.md), [ChatGPT](docs/chatgpt.md), [packaging](docs/plugin.md) and [maintenance](docs/wiki-maintenance.md) guides. Retire obsolete instructions, repair incoming anchors, and keep historical release evidence outside the first-use path. Walk the revised guide in a fresh profile without maintainer coaching.
+- Share one instance-bound source for assistant instructions and adapt its packaging to each verified host. Update the [setup skill](plugins/c0-knowledge/skills/c0-setup/SKILL.md) and affected workflow references. Add a repository testing skill for future operators covering lab identification, login handoff, synthetic fixtures, retries, scheduled-run readback and cleanup. Verify the generated artifacts and their inventory. Keep private account details and test records out of distributed skills.
+
+### 4. Install and prove each web assistant
+
+These are starting points for the signed-in tests. Record the exact product surface, dated account prerequisites and outcome of each capability.
+
+| Assistant | First route to exercise |
+| --- | --- |
+| ChatGPT | Start with the personal custom MCP app and instance skill. Verify they are available together in a fresh web chat. Exercise the private plugin and managed import routes where offered, and compare which working route is shortest. [MCP apps](https://help.openai.com/en/articles/12584461-developer-mode-and-full-mcp-connectors-in-chatgpt-beta) · [Skills](https://help.openai.com/en/articles/20001066-skills-in-chatgpt) |
+| Claude | Use the remote web connector, try Claude's published client identity, and install the C0 skill from a supported ZIP or combined plugin. Confirm the enabled skill uses the same lab connection in a fresh Claude chat. [Custom connectors](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) · [Skills](https://support.claude.com/en/articles/12512180-use-skills-in-claude) |
+| Grok | Open Connectors and add a Custom MCP server. Check team provisioning where applicable. Install the C0 web skill through upload or conversational creation. Attach the connector and skill to a temporary Grok web automation and observe its scheduled invocation. [Connectors](https://docs.x.ai/grok/connectors) · [Web skills](https://x.ai/news/grok-skills) · [Automations](https://x.ai/news/grok-automations) |
+| Gemini | Open Connected Apps in Gemini web and test a custom app, including the documented advanced client configuration if needed. Install the skill using the supported file or folder route. Google's published custom-app prerequisites include a US adult personal account, English and Keep Activity enabled. Check the account's actual controls before setup. [Custom apps](https://support.google.com/gemini/answer/17209137) · [Skills](https://support.google.com/gemini/answer/17094296?hl=en) |
+
+For **each** host, retain the requested working installation. Use a second disposable connection for denial, revocation or disconnect checks that would interrupt it.
+
+1. Complete the vendor login, installation and C0 consent. Record offered, chosen and granted capabilities. Start a fresh conversation, invoke the installed instructions, identify the connected C0 account, and select the intended synthetic space.
+2. Ask for a fact known only from a seeded source. Open the current citation in C0. With Write, request one fixture Wiki edit and independently confirm the content and exactly one new revision. With Manage, use a harmless administrative read. Check a reader's denied edit and a space the account cannot access. A tool error inside an HTTP 200 counts as a failed operation.
+3. Exercise background opt-out and opt-in. Verify actual logout of the owned lab identity-provider session, then try the host after access-token expiry. The opted-in connection must renew and the interactive control must require sign-in. Where the host supports tasks, run a time-bounded scheduled read and a fixture edit, inspect the actual host invocation and verify the C0 result. Disable the temporary test schedule afterward. Disconnect the disposable grant, confirm access is denied and verify the retained connection still works. Record connection, skill use, read, write, manage, renewal and scheduled execution separately.
+4. If a provider blocks a path, record the account type, missing control or observed error, last successful step and tested recovery. Where supported, test an alternative such as saved project instructions and label the actual mechanism. Keep the native skill or scheduling result open until proved in that web product.
+
+### 5. Acceptance and delivery
+
+Compare first-use action counts and time to the cited read against the baseline. Each supported path should take a fresh user from the provider choice to a verified read without an undocumented admin visit, guessing a URL or entering the same value twice. Record unavoidable vendor steps. Publish the shortest passing recipe for each provider and the prerequisites for each unavailable feature.
+
+Extend the existing PostgreSQL OAuth/onboarding, current/legacy MCP, installed HTTPS, package and real browser suites. Cover unchanged Read-only clients, personal-only editing, administrator approval, downgraded roles, opted-out scopes, expired consent, blocked clients, wrong account on background sign-in and exact disconnect. Verify existing installations survive upgrade. Run the frontend checks, docs links, native Debian/Rocky install and upgrade, and obtain an independent security review of the permission changes. Deliver reusable changes through the upstream PR and required merge gate; verify the exact promoted build on the authorized lab. Publish a dated, sanitized compatibility table and repeat the four public guides against the installed candidate. A provider limitation stays visible in the handoff.
+
+### Implementation evidence
+
+The producer introduces Core 0.51.1 with request-bound application approval and
+the existing schema 0042. Independently publish Core from the fully verified
+source before adopting its immutable tag in the application's release lock.
+The website chooser, permission defaults, portable skill formats, consolidated
+guides and browser-testing skill are implemented in this candidate.
+
+The signed-in ChatGPT account exposed private MCP setup and discovered the lab's
+CIMD support. Its Skills tab reported that Skills were unavailable for the
+account. The signed-in Gemini account installed the generated instance-bound
+Markdown skill through Customize. Its Connectors view did not offer a custom MCP
+control. A saved skill is recorded separately from a connected read. The full
+provider installation and scheduling matrix remains open.
+
 ## Custom application hosting candidate
 
 Contract 1 adds an operator-only CLI and rootless per-app services, private

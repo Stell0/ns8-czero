@@ -277,7 +277,7 @@ def test_protected_metadata_host_origin_body_and_cookie_do_not_bypass_bearer(tra
                 assert response.status_code == 401 and response.headers['cache-control'] == 'no-store'
                 metadata = (await http.get('/.well-known/oauth-protected-resource/mcp')).json()
                 assert metadata['resource'] == RESOURCE and metadata['authorization_servers'] == [ISSUER]
-                assert metadata['scopes_supported'] == ['c0:read']
+                assert set(metadata['scopes_supported']) == {'c0:read', 'c0:write', 'c0:admin'}
                 assert (await http.post('/mcp', json={}, headers={'Cookie':'c0_session=unverified'})).status_code == 401
                 http.headers['Authorization'] = 'Bearer ' + pair.access_token
                 for headers in [{'Host':'unauthorized.invalid'}, {'Origin':'https://unauthorized.invalid'}]:

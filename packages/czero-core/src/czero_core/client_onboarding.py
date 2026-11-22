@@ -1,6 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Browser-bound client approval handoff; no fetching or delegated authority."""
+import hashlib
 import json
 import re
 import secrets
@@ -11,7 +12,7 @@ from .cimd import CimdRejected
 from .cimd_metadata import metadata_url
 from .identity import PermissionDenied, Role
 from .oauth_clients import redirect_uri
-from .oauth_consent import ConsentRejected, OAuthConsentService, PendingConsent
+from .oauth_consent import ConsentRejected, OAuthConsentService, PendingConsent, eligible_consent_scopes
 from .oauth_grants import GrantRejected, _date, _digest
 from .operations import SCOPES
 from .sessions import SessionContext
@@ -20,6 +21,10 @@ from .sessions import SessionContext
 class OnboardingRejected(ValueError):
     def __init__(self):
         super().__init__('connection_request_unavailable')
+
+
+def _review_id(row):
+    return hashlib.sha256(row['hash'].encode('ascii')).hexdigest()
 
 
 class ClientOnboardingService:
@@ -116,13 +121,18 @@ class ClientOnboardingService:
                 'self_service_allowed': known is None,
                 'approved': approved, 'allowed_scopes': client['allowed_scopes'] if approved else []}
 
+    def _view_for_actor(self, connection, row, actor):
+        view = self._view(connection, row)
+        return {**view, 'eligible_scopes': eligible_consent_scopes(actor, view['scopes']),
+                'review_id': _review_id(row), 'review_requested': row['review_requested']}
+
     def view(self, session, request, binding):
         with self.grants.access.database.engine.connect() as connection:
             actor = self._session(connection, session)
             row = self._request(connection, request, binding)
             if row['account_id'] is not None and row['account_id'] != actor.user_id:
                 raise OnboardingRejected()
-            return self._view(connection, row)
+            return self._view_for_actor(connection, row, actor)
 
     def submit(self, session, request, binding, *, review_requested=True):
         """Bind a first-party request; automatic Read preparation stays out of review."""
@@ -143,7 +153,45 @@ class ClientOnboardingService:
                                    {'id': actor.user_id, 'hash': row['hash'], 'review': review_requested})
             elif review_requested and not row['review_requested']:
                 connection.execute(text('UPDATE c0_client_onboarding SET review_requested=true WHERE hash=:hash'), {'hash': row['hash']})
-            return self._view(connection, row)
+            return {**self._view_for_actor(connection, row, actor),
+                    'review_requested': review_requested or row['review_requested']}
+
+    def approve(self, session, request, binding, metadata, *, scopes, expected_digest,
+                expected_revision, review_id, cache_seconds):
+        """Review the live onboarding request without issuing personal consent."""
+        from .cimd_metadata import ClientMetadata
+        with self.grants.access.database.engine.begin() as connection:
+            self._lock(connection)
+            actor = self._session(connection, session)
+            actor.require(Role.ADMIN)
+            row = self._request(connection, request, binding)
+            if (not isinstance(metadata, ClientMetadata) or row['account_id'] != actor.user_id
+                    or not row['review_requested'] or row['metadata_url'] != metadata.client_id
+                    or _review_id(row) != review_id
+                    or not self.grants.clients.redirect_uri_matches(
+                        row['parameters']['redirect_uri'], metadata.redirect_uris)
+                    or type(scopes) not in (set, frozenset) or not scopes
+                    or not scopes <= set(eligible_consent_scopes(
+                        actor, row['parameters'].get('scope', 'c0:read').split()))):
+                raise OnboardingRejected()
+            client = self.grants.clients._registered(connection, metadata.client_id)
+            if client is None:
+                # A disabled or concurrently registered identity requires separate technical review.
+                if expected_revision is not None or not self._view(connection, row)['self_service_allowed']:
+                    raise OnboardingRejected()
+                identifier = None
+            else:
+                if (client['review_required'] or client['revision'] != expected_revision
+                        or client['metadata_digest'] != metadata.digest
+                        or metadata.digest != expected_digest):
+                    raise OnboardingRejected()
+                if scopes <= set(client['allowed_scopes']):
+                    return
+                identifier = client['internal_id']
+                scopes = scopes | set(client['allowed_scopes'])
+            self.grants.cimd._approve(connection, actor, metadata,
+                scopes=scopes, expected_digest=expected_digest, client_id=identifier,
+                expected_revision=expected_revision, cache_seconds=cache_seconds)
 
     def register_reader(self, session, request, binding, metadata, *, cache_seconds=0):
         """Register only a new validated identity for Read; never repair a disabled client."""

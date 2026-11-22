@@ -6,6 +6,10 @@ from playwright.sync_api import expect
 import pytest
 
 
+def open_advanced(browser):
+    browser.get_by_text('Advanced setup and workflows',exact=True).click()
+
+
 @pytest.mark.parametrize('role',['reader','admin'])
 def test_prompt_counts_wait_for_actual_compiler_context(live,browser,role):
     if role=='admin':
@@ -13,6 +17,7 @@ def test_prompt_counts_wait_for_actual_compiler_context(live,browser,role):
     pending=[]
     browser.route('**/api/v1/compilation/policy**',lambda route:pending.append(route))
     browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
+    open_advanced(browser)
     expect(browser.locator('details[data-task="read"]')).to_be_visible()
     expect(browser.locator('details[data-task]')).to_have_count(1 if role=='reader' else 7)
     assert len(pending)==1
@@ -39,6 +44,7 @@ def test_selective_context_guidance_and_stable_workflow_identity(live,browser,ro
         browser.goto(live.origin+'/auth/login')
         expect(browser.get_by_role('button',name='Knowledge space Shared',exact=True)).to_be_visible()
     browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
+    open_advanced(browser)
     expect(browser.get_by_text('Your current access: '+effective+'.',exact=True)).to_have_text('Your current access: '+effective+'.')
     expected={'research','structured-research','selective-context','cross-space-navigation'}
     if effective!='reader':expected|={'knowledge-compiler','evidence','update','investigation','consolidate'}
@@ -79,6 +85,7 @@ def test_stale_session_keeps_public_connection_and_skill_available(live,browser)
     browser.context.add_cookies([{'name':'c0_session','value':'x'*43,'url':live.origin,'secure':True}])
     browser.goto(live.origin+'/agents')
     expect(browser.get_by_role('heading',name='Use with AI',exact=True)).to_be_visible()
+    browser.get_by_text('ChatGPT',exact=True).click()
     expect(browser.get_by_role('textbox',name='MCP server URL',exact=True)).to_have_value(live.origin+'/mcp')
     expect(browser.get_by_role('link',name='Download skill',exact=True)).to_be_visible()
     expect(browser.get_by_role('button',name='Download ChatGPT plugin',exact=True)).to_have_count(0)
@@ -91,6 +98,7 @@ def test_compiler_prompts_follow_selected_space_languages_and_clipboard_fallback
     requests=[]
     browser.on('request',lambda request: requests.append((request.method,request.url)))
     browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
+    open_advanced(browser)
     prompts=browser.locator('details[data-task]')
     expect(prompts).to_have_count(15)
     for language in ('en','it'):
@@ -98,6 +106,7 @@ def test_compiler_prompts_follow_selected_space_languages_and_clipboard_fallback
         browser.locator('main').get_by_role('button',name=re.compile(r'^(Language|Lingua) ')).click()
         browser.get_by_role('option',name='Italiano' if language=='it' else 'English',exact=True).click()
         browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
+        browser.get_by_text('Configurazione e flussi avanzati' if language=='it' else 'Advanced setup and workflows',exact=True).click()
         for theme in ('light','dark'):
             browser.emulate_media(color_scheme=theme)
             for width in (1280,390):
@@ -136,6 +145,7 @@ def test_compiler_prompts_bind_project_manifest_timezone_and_schedule(live,brows
         'authorization_ref':'synthetic:operator','idempotency_key':'prompt-project'})
     assert response.status_code==200,response.text
     browser.goto(live.origin+'/agents?'+urlencode({'space_id':live.space}))
+    open_advanced(browser)
     entry=browser.locator('details[data-task="chatgpt"]');entry.locator('summary').click()
     value=entry.get_by_role('textbox').input_value()
     assert all(s in value for s in ('Europe/Rome','06:17','08:29','sunday','"enabled": false','manifest_version',live.space))

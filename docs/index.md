@@ -4,11 +4,11 @@ C0 (CZero) is a self-hosted knowledge service and Agentic RAG platform. Bring Yo
 
 | I want to… | Read |
 | --- | --- |
-| Understand the product and BYOA | [README](../README.md), [agent connection guide](byoa.md) |
+| Understand the product | [README](../README.md) |
+| Connect ChatGPT, Claude, Grok or Gemini | [Assistant setup and first cited read](byoa.md) |
 | Create a Wiki and understand when it changes | [LLM Wiki](llm-wiki.md) |
 | Arrange daily/weekly external maintenance | [Scheduling, verification and prompts](wiki-maintenance.md) |
 | Read knowledge or upload sources | [User guide](user-guide.md), [complete documents](full-documents.md) |
-| Connect ChatGPT or package instructions | [ChatGPT setup](chatgpt.md), [plugin packages](plugin.md) |
 | Install or operate an instance | [Administration](administration.md), [candidate selection](installation-candidate.md) |
 | Manage people, applications and spaces | [Workspace access](workspace-access.md), [register a public OAuth client](workspace-access.md#register-a-public-oauth-client) |
 | Connect an automation | [Create and verify an API key](api-keys.md), [REST and MCP reference](reference.md) |

@@ -26,7 +26,8 @@ MAINTAINED = ('README.md', 'AGENTS.md', 'PLAN.md',
                    'c0-create-feature', 'c0-develop-core', 'c0-contribute-upstream',
                    'c0-upgrade-from-upstream', 'c0-evaluate-tools', 'c0-ingest-sources',
                    'c0-project-workflows','c0-generate-retrieval-questions',
-                   'c0-maintain-semantic-layer','c0-benchmark-agentic-retrieval')))
+                   'c0-maintain-semantic-layer','c0-benchmark-agentic-retrieval',
+                   'c0-test-assistant-setup')))
 
 
 def prose(text):
