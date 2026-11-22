@@ -107,6 +107,9 @@ def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(ci
                 if expand:
                     approval = {'scopes': scopes, 'metadata_digest': application['metadata_digest'],
                         'expected_revision': application['revision'], 'review_id': view['review_id']}
+                    invalid = await user.post('/oauth/connect/approve', json={
+                        **approval, 'review_id': 'private-approval-input'}, headers=headers(profile))
+                    assert invalid.status_code == 422 and invalid.json() == {'detail': 'invalid_consent'}
                     assert (await user.post('/oauth/connect/approve', json={
                         **approval, 'review_id': '0' * 64}, headers=headers(profile))).status_code == 410
                     same = {**approval, 'scopes': ['c0:read']}

@@ -75,7 +75,8 @@ def install_oauth_server(app, auth, read_context, write_context):
 
     @app.exception_handler(RequestValidationError)
     async def private_oauth_validation(request, error):
-        if request.url.path in ('/oauth/consent', '/oauth/consent/background'):
+        if request.url.path in ('/oauth/consent', '/oauth/consent/background',
+                                '/oauth/connect/approve', '/oauth/connect/continue'):
             return JSONResponse({'detail':'invalid_consent'}, status_code=422, headers={'Cache-Control':'no-store'})
         if request.url.path.startswith('/api/v1/oauth/connections/'):
             return JSONResponse({'detail':'invalid_connection'}, status_code=422, headers={'Cache-Control':'no-store'})
