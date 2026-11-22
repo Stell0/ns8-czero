@@ -62,8 +62,10 @@ Extend the existing PostgreSQL OAuth/onboarding, current/legacy MCP, installed H
 ### Implementation evidence
 
 The producer introduces Core 0.51.1 with request-bound application approval and
-the existing schema 0042. Independently publish Core from the fully verified
-source before adopting its immutable tag in the application's release lock.
+the existing schema 0042. [Core 0.51.1](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.51.1)
+was published from `9ccb159` after [full native acceptance](https://github.com/Stell0/ns8-czero/actions/runs/45053989832).
+The published wheel and source archive match the release checksums. The
+application lock selects that immutable tag.
 The website chooser, permission defaults, portable skill formats, consolidated
 guides and browser-testing skill are implemented in this candidate.
 
@@ -89,9 +91,14 @@ parser rejected. Core now excludes that advertised grant from the approval
 descriptor. Tests confirm code exchange and refresh while JWT bearer remains
 unavailable at the token endpoint. Grok saved and selected a skill through its
 editor. The tested account exposed no custom MCP add control in Connect Apps.
-ChatGPT returned from the lab's consent screen and C0 showed its Read,
-session-only grant. A connected grant and a provider response alone do not
-verify a tool call.
+ChatGPT completed a fresh cited Wiki read with its Read, session-only grant
+and the five-workflow plugin installed through the personal archive importer.
+The same chat returned exact wording from the installed `c0-research` skill.
+Claude completed fresh sign-in with Read and background access, invoked its
+installed skill and returned the same current Wiki passage. Both citations
+matched the synthetic lab page and revision on independent readback. The
+operator skipped Claude scheduling. Connected Grok and Gemini reads and live
+assistant Write and Manage remain unverified.
 
 ## Custom application hosting candidate
 
