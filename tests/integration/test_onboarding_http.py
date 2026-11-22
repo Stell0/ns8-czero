@@ -193,7 +193,10 @@ def test_handoff_policy_change_binding_and_expired_page_are_human_readable(cimd_
         async with browser(app) as user, browser(app) as other:
             await user.get('/oauth/authorize', params=parameters(scope='c0:write')[0])
             profile = await signin(user, target='/oauth/connect')
-            await user.post('/oauth/connect/request', json={}, headers=headers(profile))
+            view = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
+            assert view.status_code == 200 and view.json()['review_requested'] is True
+            pending = (await user.get('/api/v1/oauth/connection-requests')).json()['requests']
+            assert len(pending) == 1 and pending[0]['scopes'] == ['c0:write']
             other.cookies.set('c0_onboarding', user.cookies.get('c0_onboarding'), domain='c0.example.test', path='/')
             assert (await other.post('/oauth/connect/request', json={}, headers=headers(profile))).status_code == 401
             registry.sync_policy(False); registry.sync_policy(True)

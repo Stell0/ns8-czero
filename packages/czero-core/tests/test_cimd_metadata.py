@@ -38,6 +38,14 @@ def test_chatgpt_plural_negotiation_selects_none_over_legacy_jwt_preference():
     assert value.digest == other.digest
 
 
+def test_claude_jwt_bearer_advertisement_does_not_change_c0_approval():
+    c0_grants = ['authorization_code', 'refresh_token']
+    ordinary = parse_metadata(URL, document(grant_types=c0_grants))
+    published = parse_metadata(URL, document(grant_types=[
+        *c0_grants, 'urn:ietf:params:oauth:grant-type:jwt-bearer']))
+    assert published == ordinary and published.digest == ordinary.digest
+
+
 @pytest.mark.parametrize('url', [
     'http://client.example.test/x', 'https://client.example.test',
     'https://client.example.test/x?', 'https://client.example.test/x#',
@@ -64,6 +72,7 @@ def test_metadata_identity_rejects_ambiguous_or_unsafe_urls(url):
     {'token_endpoint_auth_methods_supported': 'none'},
     {'token_endpoint_auth_methods_supported': ['none', 'none']},
     {'grant_types': ['refresh_token']}, {'grant_types': ['authorization_code', 'implicit']},
+    {'grant_types': ['urn:ietf:params:oauth:grant-type:jwt-bearer']},
     {'grant_types': []}, {'response_types': ['token']}, {'response_types': []},
     {'scope': ''}, {'scope': 'c0:read  c0:write'}, {'scope': 'c0:read\tc0:write'},
     {'scope': 'other'}, {'scope': 'c0:read c0:read'},

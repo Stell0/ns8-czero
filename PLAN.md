@@ -74,6 +74,25 @@ Markdown skill through Customize. Its Connectors view did not offer a custom MCP
 control. A saved skill is recorded separately from a connected read. The full
 provider installation and scheduling matrix remains open.
 
+The full run for `0f8f776` passed Debian. Rocky found that the native browser
+fixture needed to select an assistant before checking the setup downloads. The
+full integration checks also caught the SDK's broader discovery request and a
+missing administrator queue entry when no eligible approved scope was
+available. The successor preserves explicit Read fallback and queues requests
+with no eligible approved scope. The focused PostgreSQL checks and the native
+fixture's browser and dry-run checks pass locally.
+
+In the signed-in browser, Claude installed the generated ZIP through
+**Plugins → Add → Upload plugin**. Its published OAuth metadata includes the
+JWT bearer grant alongside authorization code and refresh, which the prior
+parser rejected. Core now excludes that advertised grant from the approval
+descriptor. Tests confirm code exchange and refresh while JWT bearer remains
+unavailable at the token endpoint. Grok saved and selected a skill through its
+editor. The tested account exposed no custom MCP add control in Connect Apps.
+ChatGPT returned from the lab's consent screen and C0 showed its Read,
+session-only grant. A connected grant and a provider response alone do not
+verify a tool call.
+
 ## Custom application hosting candidate
 
 Contract 1 adds an operator-only CLI and rootless per-app services, private

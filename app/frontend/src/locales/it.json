@@ -273,14 +273,14 @@
         "packageHelp": "Usa questo pacchetto per associare i flussi di C0 a un’app ChatGPT già collegata. Incolla l’ID dell’app o l’URL della sua pagina di gestione."
       },
       "claude": {
-        "connect": "In Customize → Connectors, seleziona Add, poi Custom → Web. Incolla l’URL MCP e scegli l’identità pubblicata da Claude per OAuth.",
+        "connect": "In Plugins → Connectors, seleziona Add → Add custom connector. Incolla l’URL MCP e scegli l’identità pubblicata da Claude per OAuth.",
         "requirements": "Con un piano Team o Enterprise, può servire che il proprietario dell’organizzazione aggiunga prima il connettore.",
-        "install": "In Customize → Skills, seleziona Create skill, poi Upload a skill. Carica il file ZIP."
+        "install": "In Plugins, seleziona Add → Upload plugin. Carica il file ZIP della skill di C0."
       },
       "grok": {
-        "connect": "In Connectors, seleziona New Connector → Custom, poi incolla l’URL MCP.",
+        "connect": "In Connectors, cerca New Connector → Custom. Se l’opzione è disponibile, incolla l’URL MCP.",
         "requirements": "Con un piano Business o Enterprise, l’amministratore del team deve aggiungere prima il connettore.",
-        "install": "Allega il file scaricato in una nuova conversazione con Grok e chiedi di salvarlo come skill. Se l’editor chiede il testo, incolla il contenuto del file."
+        "install": "In una chat di Grok, apri Add files, skills, and connectors → Skills → Manage skills. Seleziona New Skill e incolla le istruzioni di C0 dal file scaricato."
       },
       "gemini": {
         "connect": "Apri Personalizza → Connettori oppure Impostazioni → App collegate. Se puoi aggiungere un’app personalizzata, incolla lì l’URL MCP. Se servono i dati del client OAuth, chiedili all’amministratore di C0.",

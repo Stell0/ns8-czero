@@ -11,6 +11,9 @@ from urllib.parse import unquote, urlsplit
 from .oauth_clients import redirect_uri
 from .operations import SCOPES
 
+_C0_GRANTS = {'authorization_code', 'refresh_token'}
+_JWT_BEARER = 'urn:ietf:params:oauth:grant-type:jwt-bearer'
+
 
 class MetadataRejected(ValueError):
     def __init__(self):
@@ -130,9 +133,11 @@ def parse_metadata(url, body):
         elif value.get('token_endpoint_auth_method') != 'none':
             raise MetadataRejected()
         grants = _strings(value.get('grant_types', ['authorization_code']),
-                          {'authorization_code', 'refresh_token'}, maximum=2)
+                          _C0_GRANTS | {_JWT_BEARER}, maximum=3)
         if 'authorization_code' not in grants:
             raise MetadataRejected()
+        # Claude also advertises JWT bearer. That flow is outside this C0 binding.
+        grants = tuple(grant for grant in grants if grant in _C0_GRANTS)
         _strings(value.get('response_types', ['code']), {'code'}, maximum=1)
         ceiling = None
         if 'scope' in value:

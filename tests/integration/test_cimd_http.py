@@ -182,13 +182,22 @@ def test_no_store_refreshes_after_login_and_denial_does_not_fetch(cimd_http, mon
         app, owner, registry = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             h.headers = [(b'Cache-Control', b'no-store')]
+            h.body = document(token_endpoint_auth_method='none',
+                grant_types=['authorization_code', 'refresh_token', 'urn:ietf:params:oauth:grant-type:jwt-bearer'])
             app.state.cimd.fetcher = h.fetcher
             async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 await approve(http)
                 http.headers.pop('Authorization')
-                await connect(http)
+                pair, _ = await connect(http)
                 assert len(h.requests) == 4  # Two Admin, begin, fresh approval after SSO.
+                unsupported = await http.post('/oauth/token', data={
+                    'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                    'client_id': URL, 'resource': RESOURCE})
+                assert unsupported.status_code == 400 and 'access_token' not in unsupported.json()
+                renewed = await http.post('/oauth/token', data={'grant_type': 'refresh_token',
+                    'client_id': URL, 'refresh_token': pair['refresh_token'], 'resource': RESOURCE})
+                assert renewed.status_code == 200 and renewed.json()['scope'] == 'c0:read'
                 await authorize(http, {'client_id': URL})
                 profile = (await http.get('/api/v1/me')).json()
                 before = len(h.requests)
