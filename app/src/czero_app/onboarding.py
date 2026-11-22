@@ -63,19 +63,20 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
             await to_thread.run_sync(partial(service.register_reader, session, *tokens,
                 fetched.metadata, cache_seconds=fetched.remaining))
             view = await to_thread.run_sync(partial(service.view, session, *tokens))
-        if view['approved']:
-            eligible = set(view['eligible_scopes'])
-            scopes = eligible & set(view['allowed_scopes'])
-            if scopes and eligible == scopes:
-                verification = await cimd.verification(view['metadata_url'])
-                session = await to_thread.run_sync(partial(browser_session, request))
-                consent = await to_thread.run_sync(partial(service.complete, session, *tokens,
-                    scopes=scopes, verification=verification))
-                response = JSONResponse({'next': '/oauth/consent'}, headers={'Cache-Control': 'no-store'})
-                response.set_cookie('c0_consent', consent.request + '.' + consent.binding,
-                    max_age=300, secure=True, httponly=True, samesite='lax', path='/')
-                response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
-                return response
+        eligible = set(view['eligible_scopes'])
+        scopes = eligible & set(view['allowed_scopes'])
+        if view['approved'] and scopes and eligible == scopes:
+            verification = await cimd.verification(view['metadata_url'])
+            session = await to_thread.run_sync(partial(browser_session, request))
+            consent = await to_thread.run_sync(partial(service.complete, session, *tokens,
+                scopes=scopes, verification=verification))
+            response = JSONResponse({'next': '/oauth/consent'}, headers={'Cache-Control': 'no-store'})
+            response.set_cookie('c0_consent', consent.request + '.' + consent.binding,
+                max_age=300, secure=True, httponly=True, samesite='lax', path='/')
+            response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
+            return response
+        if not scopes and not view['review_requested']:
+            view = await to_thread.run_sync(partial(service.submit, session, *tokens))
         return JSONResponse(jsonable_encoder({
             **view, 'profile': auth.access.profile(session.actor), 'csrf_token': session.csrf_token}),
             headers={'Cache-Control': 'no-store'})

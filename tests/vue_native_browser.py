@@ -516,6 +516,8 @@ class NativeWebsite:
             else:
                 self.run('Uncheck Checkbox',self.role('checkbox','Allow background access'))
             self.click('Authorize');self.run('Get Text','h1','==','Use with AI')
+            self.run('Click','main >> text="ChatGPT"')
+            self.run('Get Property',self.role('radio','ChatGPT'),'checked','==',True)
             self.run('Get Property',self.role('textbox','MCP server URL'),'value','==',self.origin+'/mcp')
             with tempfile.TemporaryDirectory(prefix='czero-agent-download-') as directory:
                 path=Path(directory)/'memory.skill'

@@ -154,7 +154,8 @@ class ClientOnboardingService:
             elif review_requested and not row['review_requested']:
                 connection.execute(text('UPDATE c0_client_onboarding SET review_requested=true WHERE hash=:hash'), {'hash': row['hash']})
             return {**self._view_for_actor(connection, row, actor),
-                    'review_requested': review_requested or row['review_requested']}
+                    'review_requested': review_requested or (
+                        row['account_id'] is not None and row['review_requested'])}
 
     def approve(self, session, request, binding, metadata, *, scopes, expected_digest,
                 expected_revision, review_id, cache_seconds):

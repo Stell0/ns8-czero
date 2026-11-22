@@ -417,9 +417,16 @@ def test_sdk_automatically_selects_cimd_from_empty_storage_and_renews_without_fe
                 await approve(browser)
                 browser.headers.pop('Authorization')
                 async def redirect(url):
+                    from test_onboarding_http import signin, headers
                     response = await browser.get(url)
-                    assert response.status_code == 302
-                    profile = await login(browser)
+                    assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
+                    profile = await signin(browser, target='/oauth/connect')
+                    handoff = await browser.post('/oauth/connect/request', json={}, headers=headers(profile))
+                    assert handoff.status_code == 200 and handoff.json()['allowed_scopes'] == ['c0:read']
+                    assert set(handoff.json()['eligible_scopes']) == {'c0:read','c0:write','c0:admin'}
+                    continued = await browser.post('/oauth/connect/continue',
+                        json={'scopes': ['c0:read']}, headers=headers(profile))
+                    assert continued.status_code == 200 and continued.json() == {'next': '/oauth/consent'}
                     response = await browser.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']},
                         headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
                     assert response.status_code == 200
