@@ -22,6 +22,7 @@ def test_drive_consent_preview_save_and_disconnect(request, monkeypatch, tmp_pat
     configuration.chmod(0o600)
     monkeypatch.setenv('CZERO_GOOGLE_DRIVE_FILE', str(configuration))
     pdf = (Path(__file__).resolve().parents[1] / 'fixtures/evidence/sample.pdf').read_bytes()
+    mixed = (Path(__file__).resolve().parents[1] / 'fixtures/evidence/pipeline/mixed-scan.pdf').read_bytes()
     children = ['Notes', 'Archive']
     challenge = {}
     seen = set()
@@ -56,10 +57,11 @@ def test_drive_consent_preview_save_and_disconnect(request, monkeypatch, tmp_pat
                 if parse_qs(endpoint.query).get('alt') == ['media']:
                     assert identifier in ('Notes','Later')
                     seen.add('file')
-                    return pdf if identifier == 'Later' else f'Complete {identifier} document'.encode()
+                    body = pdf if identifier == 'Later' else mixed
+                    return _['sink'].write(body) if 'sink' in _ else body
                 result = {'id': identifier, 'name': identifier, 'version': '1', 'parents': ['MyFolder'],
                           'trashed': False, 'capabilities': {'canDownload': True},
-                          'mimeType': FOLDER if identifier == 'Archive' else ('application/pdf' if identifier == 'Later' else 'text/plain')}
+                          'mimeType': FOLDER if identifier == 'Archive' else 'application/pdf'}
             else:
                 raise AssertionError('Unexpected Drive endpoint')
         return json.dumps(result).encode()
@@ -93,7 +95,7 @@ def test_drive_consent_preview_save_and_disconnect(request, monkeypatch, tmp_pat
     drawer.get_by_role('button', name='Preview', exact=True).press('Enter')
     expect(drawer.get_by_role('heading', name='Folder preview · Fixture folder')).to_be_focused()
     expect(drawer.get_by_text('Skip · Subfolder', exact=True)).to_be_visible()
-    expect(drawer.get_by_text('Include', exact=True)).to_be_visible()
+    expect(drawer.get_by_text('Pages without extractable text (1): 2', exact=True)).to_be_visible()
     expect(drawer.get_by_role('textbox', name='Title', exact=True)).to_have_value('Fixture folder')
     if screenshots := os.getenv('CZERO_NEBULA_SCREENSHOTS'):
         directory = Path(screenshots)
@@ -157,7 +159,7 @@ def test_drive_consent_preview_save_and_disconnect(request, monkeypatch, tmp_pat
     assert [doc['title'] for doc in docs] == ['Notes']
     first = docs[0]['id']
     body = read('source-documents/' + first)
-    assert body['state'] == 'ready' and body['body'] == 'Complete Notes document'
+    assert body['state'] == 'ready' and body['body'].strip() and body['metadata']['pdf_textless_pages'] == [2]
     assert 'MyFolder' not in json.dumps(body['metadata'])
     # A new child arrives after the previous scan. The next run refreshes
     # Google credentials and imports it after genuine C0 browser logout.

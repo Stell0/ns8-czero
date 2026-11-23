@@ -84,7 +84,8 @@ Saving paused keeps a configuration for later. To collect while signed out,
 explicitly allow Google background access and enable updates. Manual frequency
 supports **Update now** without scheduling subsequent runs. Each Google connection
 belongs to one C0 account in one space. Replacing the connection pauses its sources
-until the owner previews and saves again. Other Editors can pause/remove a source.
+until the owner previews and saves again. A change to the selected space’s
+audience also requires a fresh preview before further collection. Other Editors can pause/remove a source.
 Disconnecting retires that connection in C0. Google Account's third-party access
 controls can revoke the client grant across spaces. Reader-facing source metadata
 contains an opaque C0 item identity. Google credentials and folder IDs stay private.

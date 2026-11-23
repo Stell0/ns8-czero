@@ -74,6 +74,9 @@ jobs:
           npx playwright install --with-deps chromium
           npm run test:e2e
       - if: inputs.feedback
+        name: Install bounded native PDF parser for feedback tests
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils util-linux
+      - if: inputs.feedback
         run: python scripts/run-ci-feedback.py ci-selection.json
       - name: Install local OCR for full acceptance
         if: ${{ !inputs.feedback }}

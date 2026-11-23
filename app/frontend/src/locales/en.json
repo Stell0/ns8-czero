@@ -521,7 +521,9 @@
       "drive_preview_required": "Preview the folder again before saving.",
       "drive_item_unavailable": "Check that your Google account can access the selected folder.",
       "drive_provider_error": "Google Drive could not complete this request. Try again.",
-      "drive_scope_mismatch": "Reconnect Google and grant the requested Drive permission."
+      "drive_scope_mismatch": "Reconnect Google and grant the requested Drive permission.",
+      "drive_preview_busy": "Another folder preview is running. Try again shortly.",
+      "drive_audience_changed": "The space audience changed. Preview this folder again before enabling updates."
     },
     "saveError": "Cannot save source",
     "previewError": "Cannot preview source",
@@ -561,7 +563,8 @@
       "pdf_needs_ocr": "PDF needs text recognition",
       "pdf_parser_limit": "PDF processing limit reached",
       "invalid_pdf": "Unreadable PDF",
-      "pdf_too_many_pages": "More than 2,000 PDF pages"
+      "pdf_too_many_pages": "More than 2,000 PDF pages",
+      "text_processing_limit": "Text exceeds the document processing limits"
     },
     "driveConnectFirst": "Connect your Google account to preview a folder.",
     "driveRequireOffline": "Authorize background updates before enabling this source.",
@@ -572,6 +575,7 @@
     "driveReturnError": "The Google connection could not be completed. Try connecting again.",
     "advanced": "Advanced selection",
     "driveReconnectEffect": "Reconnecting pauses your Drive sources in this space. Preview and enable them again to resume updates.",
-    "driveIncludeTextLayer": "Include · Text extracted from text-bearing pages. Open the original for image-only pages."
+    "driveIncludeTextLayer": "Include · Text extracted from text-bearing pages. Open the original for image-only pages.",
+    "driveTextlessPages": "Pages without extractable text ({count}): {pages}"
   }
 }

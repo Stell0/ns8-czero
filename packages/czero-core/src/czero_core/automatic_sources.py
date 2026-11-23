@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from .identity import Actor, Role, PermissionDenied
 from .receipts import mutate
-from .drive_sources import DriveSources
+from .drive_sources import DriveAudienceChanged, DriveSources
 from .spaces import SpaceBound, hold_authority, _paging
 from .jobs import bounded_json
 
@@ -137,9 +137,10 @@ class AutomaticSourceService(DriveSources, SpaceBound):
                     {'id': result_id, 'space': self._space(c), 'name': name, 'kind': kind, 'config': json.dumps(config),
                      'enabled': enabled, 'interval': interval_seconds, 'owner': current.user_id, 'authority': authority, 'sr': space_revision, 'gr': grant_revision})
             if binding is not None:
-                c.execute(text("""INSERT INTO c0_drive_bindings(definition_id,account_id,space_id,generation,folder_id)
-                    VALUES (:id,:account,:space,:generation,:folder_id) ON CONFLICT(definition_id) DO UPDATE SET
-                    generation=excluded.generation,folder_id=excluded.folder_id"""), {**binding, 'id': result_id})
+                c.execute(text("""INSERT INTO c0_drive_bindings(definition_id,account_id,space_id,generation,folder_id,approved_audience)
+                    VALUES (:id,:account,:space,:generation,:folder_id,:audience) ON CONFLICT(definition_id) DO UPDATE SET
+                    generation=excluded.generation,folder_id=excluded.folder_id,approved_audience=excluded.approved_audience"""),
+                    {**binding, 'id': result_id})
             return {'id': str(result_id), 'revision': self._row(c, result_id)['revision']}
         authorize = self._authorize_drive_mutation if proof_hash is not None else self._authorize
         return mutate(self.database, authorize, actor, 'automatic_source.save', payload, idempotency_key, execute, conflict=UpdateConflict)
@@ -161,7 +162,12 @@ class AutomaticSourceService(DriveSources, SpaceBound):
                 if private_run != (row['kind'] == 'google_drive') or (private_run and row['owner_id'] != current.user_id):
                     raise PermissionDenied()
                 # Manual work also requires a deliberately enabled background authority.
-                self._background_actor(c, row)
+                try:
+                    self._background_actor(c, row)
+                except DriveAudienceChanged:
+                    run_id = self._enqueue(c,row)
+                    self._finish(c,{**row,'run_id':run_id},'blocked','drive_audience_changed')
+                    return {'id':str(run_id)}
                 return {'id': str(self._enqueue(c, row))}
             cancel_staged(c, identifier)
             c.execute(text("UPDATE c0_source_update_runs SET state='cancelled',finished_at=now(),lease=NULL,cursor='{}' WHERE definition_id=:id AND state IN ('queued','running','pending')"), {'id': identifier})
@@ -235,6 +241,9 @@ class AutomaticSourceService(DriveSources, SpaceBound):
             row = dict(row)
             try:
                 self._background_actor(c, row)
+            except DriveAudienceChanged:
+                self._finish(c, row, 'blocked', 'drive_audience_changed')
+                return None
             except PermissionDenied:
                 self._finish(c, row, 'blocked', 'authority_changed')
                 return None
@@ -257,6 +266,10 @@ class AutomaticSourceService(DriveSources, SpaceBound):
         c.execute(text('''UPDATE c0_source_update_runs SET state=CAST(:state AS varchar),error_code=:error,lease=NULL,available_at=now(),cursor=CAST(:cursor AS jsonb),
             finished_at=CASE WHEN :state='pending' THEN NULL ELSE now() END WHERE id=:id'''),
             {'id': row['run_id'], 'state': state, 'error': error, 'cursor': json.dumps({} if state in ('complete','blocked','cancelled') else (cursor if cursor is not None else row.get('cursor',{})))})
+        if error == 'drive_audience_changed':
+            c.execute(text('''UPDATE c0_automatic_sources SET enabled=false,revision=revision+1,
+                next_run_at=NULL,updated_at=now() WHERE id=:id'''),{'id':row['id']})
+            return
         if state != 'pending':
             c.execute(text('''UPDATE c0_automatic_sources SET next_run_at=CASE WHEN interval_seconds IS NOT NULL
                 AND :state<>'blocked' THEN GREATEST(now()+make_interval(secs=>CASE WHEN CAST(:error AS text) IS NULL OR retry_count>=4 THEN interval_seconds ELSE 30*CAST(power(2,retry_count) AS integer) END),COALESCE(CAST(:retry_at AS timestamptz),now())) END,

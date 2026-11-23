@@ -49,6 +49,21 @@ function skipped(reason: string) {
               )
             : t('automatic.driveSkip', { reason: skipped(item.reason) })
         }}</span>
+        <span
+          v-if="item.textless_pages?.length"
+          class="w-full text-sm text-text-secondary"
+        >
+          {{
+            t('automatic.driveTextlessPages', {
+              count: item.textless_page_count,
+              pages:
+                item.textless_pages.join(', ') +
+                ((item.textless_page_count ?? 0) > item.textless_pages.length
+                  ? '…'
+                  : ''),
+            })
+          }}
+        </span>
       </li>
     </ul>
   </section>

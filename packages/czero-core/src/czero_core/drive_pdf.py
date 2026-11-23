@@ -16,5 +16,9 @@ def prepare_pdf(body: bytes):
     with TemporaryDirectory(prefix='c0-drive-pdf-') as directory:
         path = Path(directory) / 'source.pdf'
         path.write_bytes(body)
-        document = extract_isolated(path, 'application/pdf', allow_mixed_pdf=True)
+        return prepare_pdf_file(path)
+
+
+def prepare_pdf_file(path: Path):
+    document = extract_isolated(path, 'application/pdf', allow_mixed_pdf=True)
     return document, chunks(document)

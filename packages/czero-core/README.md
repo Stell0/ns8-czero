@@ -14,6 +14,10 @@ Schema 0044 accepts PDF originals up to 100 MiB. PDF ingestion supports up to 2,
 pages. Other original formats retain their 10 MiB limit. Extracted documents retain
 the existing one-million-character and 2 MiB bounds.
 
+Schema 0045 records the destination audience approved when saving each folder.
+A change to space access policy or explicit grants pauses further imports until
+the owner previews and saves again. Earlier folder bindings also require a fresh preview.
+
 ## Assistant connection approval (0.51.1)
 
 The client onboarding service can approve an explicitly selected scope increase

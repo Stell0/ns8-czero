@@ -23,20 +23,25 @@ def _lock(c):
     content_lock(c)
 
 
-def _audience_proof(proof_hash, scope):
-    """A changed space audience requires a new preview even for the same owner."""
-    return _hash(f"{proof_hash}:{scope['space_revision']}:{scope['grant_hash']}")
+class DriveAudienceChanged(PermissionDenied):
+    pass
+
+
+def _audience_digest(c, space):
+    scope = c.execute(text("""SELECT s.revision,
+        (SELECT encode(sha256(convert_to(coalesce(string_agg(account_id::text || ':' || revision::text,
+          ',' ORDER BY account_id),''),'UTF8')),'hex') FROM c0_space_grants WHERE space_id=s.id) AS grants
+        FROM c0_spaces s WHERE s.id=:space"""), {'space':space}).mappings().one()
+    return _hash(f"{scope['revision']}:{scope['grants']}")
 
 
 def _credential(c, keys):
-    row = c.execute(text("""SELECT g.generation,g.credential,g.offline,s.revision AS space_revision
-        ,(SELECT encode(sha256(convert_to(coalesce(string_agg(account_id::text || ':' || revision::text,
-          ',' ORDER BY account_id),''),'UTF8')),'hex') FROM c0_space_grants WHERE space_id=g.space_id) AS grant_hash
-        FROM c0_drive_connections g JOIN c0_spaces s ON s.id=g.space_id
+    row = c.execute(text("""SELECT g.generation,g.credential,g.offline
+        FROM c0_drive_connections g
         WHERE g.account_id=:account AND g.space_id=:space AND g.credential IS NOT NULL"""), keys).mappings().one_or_none()
     if row is None:
         raise CollectionError('drive_reconnect_required')
-    return row
+    return {**row,'audience':_audience_digest(c,keys['space'])}
 
 
 class DriveSources:
@@ -186,8 +191,7 @@ class DriveSources:
             self._drive_actor(c, actor)
             self._drive_target(c, actor, identifier, expected_revision)
             current = _credential(c, keys)
-            if (current['generation'] != generation or current['space_revision'] != connection['space_revision']
-                    or current['grant_hash'] != connection['grant_hash']):
+            if current['generation'] != generation or current['audience'] != connection['audience']:
                 raise PermissionDenied()
             c.execute(text("DELETE FROM c0_drive_previews WHERE expires_at<=now()"))
             c.execute(text("""INSERT INTO c0_drive_previews(account_id,space_id,generation,folder_id,
@@ -195,7 +199,7 @@ class DriveSources:
                 :proof,:id,:revision,now()+interval '10 minutes') ON CONFLICT(account_id,space_id)
                 DO UPDATE SET generation=excluded.generation,folder_id=excluded.folder_id,proof_hash=excluded.proof_hash,
                 definition_id=excluded.definition_id,revision=excluded.revision,expires_at=excluded.expires_at"""),
-                {**keys, 'generation': generation, 'folder': folder, 'proof': _audience_proof(_hash(proof), current),
+                {**keys, 'generation': generation, 'folder': folder, 'proof': _hash(f"{_hash(proof)}:{current['audience']}"),
                  'id': identifier, 'revision': expected_revision})
         return {**result, 'preview_token': proof}
 
@@ -214,11 +218,11 @@ class DriveSources:
             AND generation=:generation AND proof_hash=:hash AND expires_at>now()
             AND definition_id IS NOT DISTINCT FROM CAST(:id AS uuid)
             AND revision IS NOT DISTINCT FROM CAST(:revision AS bigint) RETURNING generation,folder_id"""),
-            {**keys, 'hash': _audience_proof(proof_hash,connection), 'generation': connection['generation'],
+            {**keys, 'hash': _hash(f"{proof_hash}:{connection['audience']}"), 'generation': connection['generation'],
              'id': identifier, 'revision': revision}).mappings().one_or_none()
         if preview is None:
             raise ValueError('drive_preview_required')
-        return {**keys, **preview}
+        return {**keys, **preview, 'audience':connection['audience']}
 
     def command_drive(self, actor, identifier, *, expected_revision, idempotency_key, action):
         if action != 'run':
@@ -228,10 +232,12 @@ class DriveSources:
 
     @staticmethod
     def _drive_worker_binding(c, definition):
-        binding = c.execute(text("""SELECT b.folder_id,g.credential,g.generation
+        binding = c.execute(text("""SELECT b.folder_id,b.approved_audience,g.credential,g.generation
             FROM c0_drive_bindings b JOIN c0_drive_connections g USING(account_id,space_id)
             WHERE b.definition_id=:id AND b.account_id=:owner_id AND b.space_id=:space_id
             AND g.generation=b.generation AND g.credential IS NOT NULL AND g.offline"""), definition).mappings().one_or_none()
         if binding is None:
             raise PermissionDenied()
+        if binding['approved_audience'] != _audience_digest(c,definition['space_id']):
+            raise DriveAudienceChanged()
         return binding

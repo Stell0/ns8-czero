@@ -128,6 +128,76 @@ def test_source_roles_revocation_cookie_csrf_and_failed_original_retry(source_ht
     asyncio.run(check())
 
 
+def test_unauthorized_uploads_never_read_the_multipart_body(source_http):
+    from uuid import uuid4
+
+    async def check():
+        app, owner, member, *_ = source_http[0]
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url=ORIGIN) as browser:
+            async def reject(status, *, authorization=None, params=None, csrf=None):
+                consumed = []
+                async def unread():
+                    consumed.append(True)
+                    yield b'--fixture--\r\n'
+                headers = {'Content-Type':'multipart/form-data; boundary=fixture',
+                           'Content-Length':str(100 * 1024 * 1024)}
+                if authorization:
+                    headers['Authorization'] = 'Bearer ' + authorization
+                if csrf:
+                    headers.update(csrf)
+                response = await browser.post('/api/v1/sources/upload', params=params,
+                                              content=unread(), headers=headers)
+                assert response.status_code == status
+                assert not consumed
+
+            await reject(401)
+            await reject(401, authorization='invalid')
+            await reject(403, authorization=member)
+            await reject(403, authorization=owner, params={'space_id':str(uuid4())})
+            await reject(422, authorization=owner, params={'space_id':'malformed'})
+            start = await browser.get('/auth/login')
+            state = parse_qs(urlsplit(start.headers['location']).query)['state'][0]
+            await browser.get('/auth/callback', params={'state':state,'code':'fixture-only'})
+            me = (await browser.get('/api/v1/me')).json()
+            csrf = {'Origin':ORIGIN, 'X-C0-CSRF':me['csrf_token']}
+            await reject(403)
+            await reject(403, csrf={**csrf, 'Origin':'https://other.example.test'})
+
+            # A signed Reader still lacks the selected space's Editor grant.
+            accounts = (await browser.get('/api/v1/access/accounts')).json()['accounts']
+            account = next(record for record in accounts if record['username']=='member')
+            access_path = '/api/v1/access/accounts/' + account['id']
+            assert (await browser.put(access_path, json={'role':'reader'}, headers=csrf)).status_code == 204
+            await reject(403, authorization=member)
+
+            shared = next(space['id'] for space in (await browser.get('/api/v1/spaces')).json()['spaces']
+                          if space['shared'])
+            response = await browser.post('/api/v1/api-keys', headers=csrf, json={
+                'name':'Read-only upload fixture', 'scopes':['c0:read'], 'space_ids':[shared],
+                'lifetime_days':1})
+            assert response.status_code == 201
+            await reject(403, authorization=response.json()['key'], params={'space_id':shared})
+            # An Editor can start a transfer, but loses write authority before
+            # the form is complete. The normal handler must recheck membership.
+            assert (await browser.put(access_path, json={'role':'editor'}, headers=csrf)).status_code == 204
+            async def revoke_then_send():
+                assert (await browser.put(access_path, json={'role':'reader'}, headers=csrf)).status_code == 204
+                yield (b'--fixture\r\nContent-Disposition: form-data; name="title"\r\n\r\nExample\r\n'
+                       b'--fixture\r\nContent-Disposition: form-data; name="media_type"\r\n\r\ntext/plain\r\n'
+                       b'--fixture\r\nContent-Disposition: form-data; name="file"; filename="a.txt"\r\n'
+                       b'\r\nexample\r\n--fixture--\r\n')
+            result = await browser.post('/api/v1/sources/upload', headers={
+                'Content-Type':'multipart/form-data; boundary=fixture','Authorization':'Bearer '+member},
+                content=revoke_then_send())
+            assert result.status_code == 403
+            schema = (await browser.get('/openapi.json')).json()
+            upload = schema['paths']['/api/v1/sources/upload']['post']['requestBody']
+            form = upload['content']['multipart/form-data']['schema']['$ref'].split('/')[-1]
+            assert set(schema['components']['schemas'][form]['required']) == {'file','title','media_type'}
+    asyncio.run(check())
+
+
 def test_upload_limits_invalid_boolean_and_chunked_body(source_http, monkeypatch):
     import starlette.formparsers
     real_spool = starlette.formparsers.SpooledTemporaryFile
@@ -279,28 +349,39 @@ def test_original_revalidates_bounded_bytes_before_delivery(source_http,monkeypa
     asyncio.run(check())
 
 
-def test_pdf_upload_limit_and_retained_original(source_http, tmp_path):
-    """Exercise multipart streaming, the PostgreSQL size constraint and bounded readback."""
+def combined_limit_pdf(path):
+    from io import BytesIO
     from pathlib import Path
-    from czero_core import extraction
+    from pypdf import PdfReader, PdfWriter
+    from czero_core.extraction import MAX_PDF_BYTES, MAX_PDF_PAGES
+
+    seed = PdfReader(Path(__file__).resolve().parents[1]/'fixtures/evidence/pipeline/readable-100.pdf')
+    writer = PdfWriter()
+    for index in range(MAX_PDF_PAGES):
+        writer.add_page(seed.pages[index % len(seed.pages)])
+    encoded = BytesIO()
+    writer.write(encoded)
+    data = encoded.getvalue()
+    xref = data.index(b'\nxref\n') + 1
+    eof = data.rindex(b'startxref\n') + len(b'startxref\n')
+    tail = b'\n%%EOF\n'
+    offset = MAX_PDF_BYTES - (eof - xref + len(tail) + len(str(MAX_PDF_BYTES)))
+    # Sparse PDF whitespace between objects and the offset table keeps the
+    # combined boundary fixture cheap to generate without expanding RAM.
+    with path.open('wb') as stream:
+        stream.write(data[:xref])
+        stream.seek(offset - 1)
+        stream.write(b'\n' + data[xref:eof] + str(offset).encode() + tail)
+    assert path.stat().st_size == MAX_PDF_BYTES
+    return path
+
+
+def test_pdf_upload_limit_and_retained_original(source_http, tmp_path):
+    from czero_core.extraction import MAX_PDF_BYTES
     app, owner, *_, database, _ = source_http[0]
     created = source_http[1]
-    maximum = extraction.MAX_PDF_BYTES
-    assert maximum == 100 * 1024 * 1024
-    seed = (Path(__file__).resolve().parents[1] / 'fixtures/evidence/sample.pdf').read_bytes()
-    prefix, suffix = seed.rsplit(b'startxref', 1)
-    original = tmp_path / 'large.pdf'
-    with original.open('wb') as stream:
-        stream.write(prefix)
-        stream.write(b'%')
-        # PDF comments before startxref leave object offsets and the xref table intact.
-        padding = maximum - len(seed) - 2
-        while padding:
-            length = min(padding, 65536)
-            stream.write(b'x' * length)
-            padding -= length
-        stream.write(b'\nstartxref' + suffix)
-    assert original.stat().st_size == maximum
+    maximum = MAX_PDF_BYTES
+    original = combined_limit_pdf(tmp_path/'large.pdf')
 
     async def check():
         from czero_core.worker import Worker
@@ -315,6 +396,22 @@ def test_pdf_upload_limit_and_retained_original(source_http, tmp_path):
             created.append(version['source_id'])
             assert version['size_bytes'] == maximum
             Worker(database, app.state.jobs.registry).tick()
+            doc = await client.get('/api/v1/source-versions/' + version['id'] + '/document')
+            assert doc.status_code == 200
+            document = doc.json()
+            assert [item['index'] for item in document['locations']] == list(range(1,2001))
+            endpoint = '/api/v1/documents/' + document['id'] + '/chunks'
+            offset = 0
+            while True:
+                page = (await client.get(endpoint, params={'offset':offset, 'limit':100})).json()['chunks']
+                assert page
+                if page[-1]['end_offset'] == len(document['body']):
+                    break
+                offset += len(page)
+            citation = await client.get('/api/v1/chunks/' + page[-1]['id'] + '/citation')
+            assert citation.status_code == 200
+            assert citation.json()['locations'][-1]['index'] == 2000
+            assert citation.json()['source_hash'] == version['content_hash']
             response = await client.get('/api/v1/source-versions/' + version['id'] + '/original',
                                         headers={'Range': 'bytes=0-4'})
             assert response.status_code == 206 and response.content == b'%PDF-'

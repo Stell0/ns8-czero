@@ -54,7 +54,9 @@ def update_sources():
                 logging.getLogger('czero.worker').warning('Invalid Google Drive configuration')
             if provider:
                 options.update(drive_collector=provider.collect, drive_recheck=provider.recheck)
-        with deadline(85 if options else 25):
+        # Two 25-second parsers, 40 seconds of Google I/O and a 9-second
+        # permission recheck fit before the 120-second lease expires.
+        with deadline(110 if options else 25):
             SourceUpdater(service, sources, collector=registered, **options).tick()
     except JobTimedOut:
         # A claimed lease expires; the next invocation reconciles publication.

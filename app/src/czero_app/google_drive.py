@@ -9,6 +9,9 @@ import re
 import stat
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from threading import BoundedSemaphore
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -52,18 +55,19 @@ def folder_id_from_link(link):
 class GoogleHTTP:
     """Exact provider origins only, no redirects, proxy credentials or URL logging."""
     def __init__(self):
-        self.deadline = time.monotonic() + 58
+        self.network_seconds = 40
         self.remaining = PAGE_SIZE * PDF_LIMIT + 2 * 1024 * 1024
         self.requests = 0
 
-    def fetch(self, host, path, *, token=None, form=None, limit=128 * 1024):
+    def fetch(self, host, path, *, token=None, form=None, limit=128 * 1024, sink=None):
         if host not in (TOKEN_HOST, DRIVE_HOST, DOCS_HOST) or not path.startswith('/'):
             raise ValueError('invalid_google_endpoint')
         if self.requests >= 18 or limit > self.remaining:
             raise CollectionError('source_run_item_limit')
         self.requests += 1
+        started = time.monotonic()
         def timeout():
-            remaining = self.deadline - time.monotonic()
+            remaining = self.network_seconds - (time.monotonic() - started)
             if remaining <= 0:
                 raise CollectionError('source_transport_failed')
             return min(remaining, 5)
@@ -79,24 +83,31 @@ class GoogleHTTP:
             connection.request('POST' if form is not None else 'GET', path, body=body, headers=headers)
             response = connection.getresponse()
             chunks = bytearray()
-            while len(chunks) <= limit:
+            received = 0
+            to_disk = sink is not None and response.status == 200
+            body_limit = limit if response.status == 200 else min(limit, 128 * 1024)
+            while received <= body_limit:
                 if connection.sock:
                     connection.sock.settimeout(timeout())
                 else:
                     timeout()
-                chunk = response.read1(min(65536, limit + 1 - len(chunks)))
+                chunk = response.read1(min(65536, body_limit + 1 - received))
                 if not chunk:
                     break
-                chunks.extend(chunk)
-            self.remaining -= len(chunks)
-            if len(chunks) > limit:
-                raise CollectionError('drive_size_limit')
+                received += len(chunk)
+                self.remaining -= len(chunk)
+                if received > body_limit:
+                    raise CollectionError('drive_size_limit' if response.status == 200 else 'drive_provider_error')
+                if to_disk:
+                    sink.write(chunk)
+                else:
+                    chunks.extend(chunk)
             if response.status == 200:
                 if response.length not in (0, None):
                     raise CollectionError('source_transport_failed')
                 if response.getheader('Content-Encoding', 'identity').lower() != 'identity':
                     raise CollectionError('source_transport_failed')
-                return bytes(chunks)
+                return received if to_disk else bytes(chunks)
             if response.status == 401:
                 raise CollectionError('drive_reconnect_required')
             if (response.status == 400 and host == DRIVE_HOST and path.startswith('/drive/v3/files?')
@@ -131,6 +142,7 @@ class GoogleHTTP:
         except (OSError, http.client.HTTPException, UnicodeError, ValueError):
             raise CollectionError('source_transport_failed') from None
         finally:
+            self.network_seconds -= time.monotonic() - started
             connection.close()
 
     def document(self, host, path, **kwargs):
@@ -154,6 +166,7 @@ class GoogleDrive:
     cipher: Fernet
     transport: object = field(default=GoogleHTTP)
     instance_uri: str | None = None
+    preview_slot: BoundedSemaphore = field(default_factory=lambda: BoundedSemaphore(1), compare=False)
 
     @classmethod
     def configured(cls, instance_uri=None):
@@ -229,8 +242,13 @@ class GoogleDrive:
         return payload['access']
 
     def preview(self, credential, folder_id):
-        result, _, complete, folder = self._page(credential, folder_id, {}, preview=True)
-        return {'items': result, 'complete': complete, 'folder_name': folder}
+        if not self.preview_slot.acquire(blocking=False):
+            raise CollectionError('drive_preview_busy')
+        try:
+            result, _, complete, folder = self._page(credential, folder_id, {}, preview=True)
+            return {'items': result, 'complete': complete, 'folder_name': folder}
+        finally:
+            self.preview_slot.release()
 
     def collect(self, credential, folder_id, cursor):
         items, next_cursor, complete, _ = self._page(credential, folder_id, cursor, preview=False)
@@ -241,6 +259,8 @@ class GoogleDrive:
         if not isinstance(folder_id, str) or not FILE_ID.fullmatch(folder_id) or len(items) > PAGE_SIZE:
             raise CollectionError('invalid_drive_folder')
         http = self.transport()
+        if isinstance(http, GoogleHTTP):
+            http.network_seconds = 9
         token = self._access(credential, http)
         _root(_metadata(http, token, folder_id), folder_id)
         for item in items:
@@ -299,17 +319,12 @@ class GoogleDrive:
                     raise CollectionError('drive_item_unavailable')
                 reason = _skip(current)
                 body = None
-                note = None
+                textless = ()
                 if not reason:
-                    reason, body = _read(http, token, current)
-                    if preview and not reason and current['mimeType'] == PDF:
-                        from czero_core.source_updates import prepare_drive_document
-                        try:
-                            document, _ = prepare_drive_document(body, PDF)
-                            if getattr(document, 'textless_pages', ()):
-                                note = 'pdf_text_layer_only'
-                        except ExtractionError as error:
-                            reason = _pdf_skip(error.code)
+                    if preview:
+                        reason, textless = _preview_file(http, token, current)
+                    else:
+                        reason, body = _read(http, token, current)
                 # A move, edit or download restriction during export invalidates the bytes.
                 final = _metadata(http, token, item_id)
                 if not _inside(final, item_id, folder_id):
@@ -321,7 +336,11 @@ class GoogleDrive:
                 reason = _skip(final) or reason
                 title = _title(final.get('name'))
                 if preview:
-                    output.append({'title': title, 'outcome': 'skip' if reason else 'include', 'reason': reason or note or 'supported'})
+                    item = {'title': title, 'outcome': 'skip' if reason else 'include', 'reason': reason or 'supported'}
+                    if not reason and textless:
+                        item.update(reason='pdf_text_layer_only', textless_page_count=len(textless),
+                                    textless_pages=list(textless[:8]))
+                    output.append(item)
                 elif not reason:
                     media = _media(final, title)
                     output.append({'key': item_id, 'title': title, 'media_type': media, 'body': body,
@@ -397,7 +416,7 @@ def _skip(record):
     return None
 
 
-def _read(http, token, record):
+def _read(http, token, record, *, sink=None):
     fid = record['id']
     if record['mimeType'] == DOC:
         tabs = http.document(DOCS_HOST, '/v1/documents/' + fid + '?' + urlencode({
@@ -409,14 +428,20 @@ def _read(http, token, record):
     else:
         path = '/drive/v3/files/' + fid + '?alt=media'
     try:
-        body = http.fetch(DRIVE_HOST, path, token=token, limit=PDF_LIMIT if record['mimeType'] == PDF else FILE_LIMIT)
+        options = {'sink': sink} if sink is not None else {}
+        body = http.fetch(DRIVE_HOST, path, token=token, limit=PDF_LIMIT if record['mimeType'] == PDF else FILE_LIMIT, **options)
     except CollectionError as error:
         if error.args == ('drive_size_limit',):
             return 'too_large', None
         raise
-    if record['mimeType'] != DOC and 'size' in record and len(body) != int(record['size']):
+    size = body if sink is not None else len(body)
+    if record['mimeType'] != DOC and 'size' in record and size != int(record['size']):
         raise CollectionError('source_transport_failed')
     if record['mimeType'] == PDF:
+        if sink is not None:
+            sink.flush()
+            sink.seek(0)
+            return (None, None) if sink.read(5) == b'%PDF-' else ('invalid_pdf', None)
         return (None, body) if body.startswith(b'%PDF-') else ('invalid_pdf', None)
     try:
         if not body.decode('utf-8').strip():
@@ -426,3 +451,25 @@ def _read(http, token, record):
     except UnicodeError:
         return 'not_utf8', None
     return None, body
+
+
+def _preview_file(http, token, record):
+    from czero_core.source_updates import prepare_drive_document
+    media = _media(record, _title(record.get('name')))
+    try:
+        if media == PDF:
+            from czero_core.drive_pdf import prepare_pdf_file
+            with NamedTemporaryFile(prefix='c0-drive-preview-') as original:
+                reason, _ = _read(http, token, record, sink=original)
+                if reason:
+                    return reason, None
+                document, _ = prepare_pdf_file(Path(original.name))
+                return None, document.textless_pages
+        reason, body = _read(http, token, record)
+        if not reason:
+            prepare_drive_document(body, media)
+        return reason, None
+    except ExtractionError as error:
+        if media == PDF:
+            return _pdf_skip(error.code), None
+        return 'too_large' if error.code == 'too_large' else 'text_processing_limit', None

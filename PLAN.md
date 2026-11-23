@@ -4,7 +4,7 @@
 
 ## Personal Google Drive automatic sources
 
-Producer development on original main `a5758ad`. App 0.70 and Core 0.52/schema0044 add
+Producer development on original main `a5758ad`. App 0.70 and Core 0.52/schema0045 add
 session-bound private Drive connections, fenced folder previews, account/space
 bindings and owner-only native collection. The reference app adds the source
 type dropdown and a bounded preview that explains skipped direct children.

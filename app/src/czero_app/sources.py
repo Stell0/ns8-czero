@@ -9,16 +9,19 @@ import weakref
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import Depends, File, Form, HTTPException, UploadFile
+from fastapi import Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 
 from czero_core.documents import DocumentService
 from czero_core import extraction
 from czero_core.extraction import ExtractionError
 from czero_core.identity import PermissionDenied, Role
+from czero_core.spaces import SpaceService
 from czero_core.sources import MAX_INGEST_TEXT_BYTES, SourceService, SourceConflict, SourceNotFound
 from czero_app.auth import RequestAccess
 
@@ -296,7 +299,30 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     def ingest_text(data: IngestTextRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         return invoke(selected(space_id).ingest_text, context.actor, **data.model_dump())
 
-    @app.post('/api/v1/sources/upload', response_model=VersionView, status_code=202)
+    def admit_upload(request):
+        context = write_context(request)
+        selector = request.query_params.get('space_id')
+        try:
+            space_id = UUID(selector) if selector is not None else None
+        except ValueError:
+            raise HTTPException(422, 'invalid_space_request') from None
+        with database.engine.connect() as connection:
+            SpaceService(database, auth.access).authorize(connection, context.actor, Role.EDITOR,
+                                                          space_id=space_id)
+
+    class AuthorizedUpload(APIRoute):
+        def get_route_handler(self):
+            parse_and_dispatch = super().get_route_handler()
+
+            async def handle(request: Request):
+                # FastAPI parses multipart before resolving dependencies. Check
+                # current authority before reading a byte; normal dependencies
+                # and the Core transaction recheck it after the transfer.
+                await run_in_threadpool(admit_upload, request)
+                return await parse_and_dispatch(request)
+
+            return handle
+
     def upload(file: Annotated[UploadFile, File()], title: Annotated[str, Form(max_length=256)],
                media_type: Annotated[str, Form(max_length=128)],
                retain_original: Annotated[Literal['true', 'false'], Form()] = 'false',
@@ -312,6 +338,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             filename=file.filename or 'document', media_type=media_type,
             retain_original=retain_original == 'true', metadata=value,
             source_id=source_id, expected_revision=expected_revision)
+
+    app.router.add_api_route('/api/v1/sources/upload', upload, methods=['POST'],
+        response_model=VersionView, status_code=202, route_class_override=AuthorizedUpload)
 
     @app.get('/api/v1/source-documents', response_model=SourceDocumentsView)
     @operation('source_documents_list', 'Browse complete source document summaries without loading bodies; verified multipart sources appear once.',

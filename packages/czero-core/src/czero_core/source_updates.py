@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 
 from sqlalchemy import text
 from .automatic_sources import UpdateConflict, UpdateNotFound
+from .drive_sources import DriveAudienceChanged
 from .identity import PermissionDenied
 from .source_collectors import collect
 from .source_http import CollectionError
@@ -19,7 +20,8 @@ from .spaces import hold_authority
 
 
 DRIVE_FILENAMES = {'text/markdown':'source.md','text/plain':'source.txt','application/pdf':'source.pdf'}
-UNSUPPORTED_PDF = frozenset({'invalid_pdf','encrypted_pdf','unsupported_scan','too_large','pdf_too_many_pages','no_text'})
+SKIPPED_DRIVE_ERRORS = frozenset({'invalid_text','no_text','too_large','invalid_pdf','encrypted_pdf',
+    'unsupported_scan','pdf_too_many_pages','parser_timeout','resource_limit','parser_failed'})
 
 
 def prepare_drive_document(body, media_type):
@@ -52,12 +54,11 @@ class SourceUpdater:
         if row is None:return 0
         sources=self.sources.in_space(row['space_id'])
         drive = None
-        parser_error = None
         try:
             # Finish extraction from the preceding batch before advancing collection.
             with service.database.engine.begin() as c:
                 hold_authority(c);content_lock(c);service.fenced(c,row)
-                pending=c.execute(text('''SELECT i.*,v.state,s.revision,s.current_version_id FROM c0_automatic_source_items i
+                pending=c.execute(text('''SELECT i.*,v.state,v.media_type,s.revision,s.current_version_id FROM c0_automatic_source_items i
                     LEFT JOIN c0_source_versions v ON v.id=i.version_id AND v.source_id=i.source_id JOIN c0_sources s ON s.id=i.source_id
                     WHERE i.definition_id=:id'''),{'id':row['id']}).mappings().all()
                 if any(v['state'] is None and v['version_id'] is not None for v in pending):raise UpdateConflict('source_changed')
@@ -78,7 +79,7 @@ class SourceUpdater:
                 if self.drive_collector is None or self.drive_recheck is None:
                     raise CollectionError('drive_unavailable')
                 fetched, cursor, complete = self.drive_collector(drive['credential'], drive['folder_id'], row['cursor'])
-                items, checked, parser_error = self._prepare_drive_items(row, fetched, pending)
+                items, checked = self._prepare_drive_items(row, fetched, pending)
                 self.drive_recheck(drive['credential'],drive['folder_id'],checked)
             else:
                 items,cursor,complete=self.collector(row['kind'],row['config'],row['cursor'])
@@ -86,14 +87,16 @@ class SourceUpdater:
             with service.database.engine.begin() as c:
                 hold_authority(c);content_lock(c);service.fenced(c,row)
                 for item in items:
-                    old=c.execute(text('SELECT * FROM c0_automatic_source_items WHERE definition_id=:id AND external_key=:key'),
+                    old=c.execute(text('''SELECT i.*,v.media_type FROM c0_automatic_source_items i
+                        LEFT JOIN c0_source_versions v ON v.id=i.version_id WHERE definition_id=:id AND external_key=:key'''),
                                   {'id':row['id'],'key':item['key']}).mappings().one_or_none()
-                    digest=hashlib.sha256(item['body']).hexdigest()
+                    digest=item['digest'] if drive is not None else hashlib.sha256(item['body']).hexdigest()
+                    reindex = drive is not None and old is not None and old['media_type'] != item['media_type']
                     if old:
                         saved=sources._source(c,old['source_id'],lock=True)
                         if saved['deleted'] or saved['revision']!=old['source_revision']:
                             raise UpdateConflict('source_changed')
-                        if old['content_hash'] == digest:
+                        if old['content_hash'] == digest and not reindex:
                             if drive is not None and saved['title'] != item['title']:
                                 revision = sources._update_current_metadata(c, saved['id'], item['title'], json.dumps(saved['metadata']))
                                 c.execute(text('''UPDATE c0_automatic_source_items SET source_revision=:revision
@@ -106,7 +109,7 @@ class SourceUpdater:
                         media_type=item['media_type'],retain_original=drive is not None and bool(metadata.get('pdf_textless_pages')),
                         encoded=json.dumps(metadata),
                         source_id=old['source_id'] if old else None,expected_revision=old['source_revision'] if old else None,
-                        queue_extraction=drive is None)
+                        force_reindex=reindex,queue_extraction=drive is None)
                     c.execute(text("UPDATE c0_source_versions SET publication_metadata=CAST(publication_metadata AS jsonb) || jsonb_build_object('_automatic_source_revision',CAST(:revision AS bigint)) WHERE id=:id"),{'id':version['id'],'revision':row['revision']})
                     revision=sources._source(c,version['source_id'])['revision']
                     c.execute(text('''INSERT INTO c0_automatic_source_items(definition_id,external_key,source_id,source_revision,version_id,content_hash)
@@ -126,15 +129,12 @@ class SourceUpdater:
                 if len(json.dumps(cursor).encode())>2*1024*1024:raise CollectionError('source_cursor_limit')
                 service.fenced(c,row)
                 c.execute(text('UPDATE c0_source_update_runs SET processed=processed+:count WHERE id=:id'),{'id':row['run_id'],'count':len(items)})
-                if drive is not None and parser_error:
-                    # A later attempt repeats this page. Completed siblings use the
-                    # same logical identity and content hash on the retry.
-                    service._finish(c,row,'partial',parser_error,cursor=row['cursor'])
-                else:
-                    service._finish(c,row,'complete' if drive is not None and complete else 'pending',cursor=cursor)
+                service._finish(c,row,'complete' if drive is not None and complete else 'pending',cursor=cursor)
             return 1
         except (UpdateConflict,UpdateNotFound):
             self._fail(row,'blocked','source_changed')
+        except DriveAudienceChanged:
+            self._fail(row,'blocked','drive_audience_changed')
         except PermissionDenied:
             self._fail(row,'blocked','authority_changed')
         except CollectionError as error:
@@ -165,12 +165,12 @@ class SourceUpdater:
         return {'key':opaque, 'title':title, 'body':item['body'], 'media_type':item['media_type'], 'metadata':{}}
 
     def _prepare_drive_items(self, row, fetched, pending):
-        hashes = {old['external_key']:old['content_hash'] for old in pending}
+        previous = {old['external_key']:(old['content_hash'],old['media_type']) for old in pending}
         ready, checked = [], []
-        parser_error = None
         for raw in fetched:
             item = self._drive_item(row,raw)
-            if hashes.get(item['key']) != hashlib.sha256(item['body']).hexdigest():
+            item['digest'] = hashlib.sha256(item['body']).hexdigest()
+            if previous.get(item['key']) != (item['digest'],item['media_type']):
                 try:
                     item['extracted'] = prepare_drive_document(item['body'],item['media_type'])
                     missing = getattr(item['extracted'][0], 'textless_pages', ())
@@ -178,15 +178,12 @@ class SourceUpdater:
                         item['metadata']['pdf_textless_pages'] = list(missing)
                         item['metadata']['pdf_textless_page_count'] = len(missing)
                 except ExtractionError as failure:
-                    if item['media_type']=='application/pdf' and failure.code in UNSUPPORTED_PDF:
-                        continue
-                    if item['media_type']=='application/pdf' and failure.code in ('parser_timeout','resource_limit','parser_failed'):
-                        parser_error = 'drive_pdf_' + failure.code
+                    if failure.code in SKIPPED_DRIVE_ERRORS:
                         continue
                     raise CollectionError('source_extraction_failed') from None
             ready.append(item)
             checked.append(raw)
-        return ready,checked,parser_error
+        return ready,checked
 
     def _fail(self,row,state,code,retry_after=''):
         with self.definitions.database.engine.begin() as c:

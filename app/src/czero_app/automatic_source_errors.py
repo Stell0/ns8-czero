@@ -11,6 +11,7 @@ AUTOMATIC_SOURCE_OPERATIONS = frozenset({
 # Field paths describe the request, not values supplied by a caller or remote host.
 ERRORS = {
     'invalid_drive_folder': ('folder_url', 'Enter a folder link from your own My Drive.'),
+    'drive_preview_busy': (None, 'Another folder preview is in progress. Try again shortly.'),
     'drive_unavailable': (None, 'Google Drive is unavailable on this instance.'),
     'drive_reconnect_required': (None, 'Reconnect your Google account.'),
     'drive_offline_required': (None, 'Connect Google with background access before enabling updates.'),

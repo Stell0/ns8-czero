@@ -63,17 +63,52 @@ def test_drive_schema_retains_public_definitions_runs_and_receipts(current_core_
         runtime = {**env, 'CZERO_DATABASE_URL':target.render_as_string(hide_password=False)}
         run([str(prior),'-I','-c',SEED], runtime=runtime)
         def public_state():
+            queries = ('SELECT * FROM c0_automatic_sources WHERE kind<>\'google_drive\'',
+                       'SELECT r.* FROM c0_source_update_runs r JOIN c0_automatic_sources d ON d.id=r.definition_id WHERE d.kind<>\'google_drive\'',
+                       'SELECT * FROM c0_knowledge_receipts')
             with db.connect() as c:
-                return tuple(c.exec_driver_sql('SELECT jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text) FROM '+table+' t').scalar_one()
-                             for table in ('c0_automatic_sources','c0_source_update_runs','c0_knowledge_receipts'))
+                return tuple(c.exec_driver_sql('SELECT jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text) FROM ('+query+') t').scalar_one()
+                             for query in queries)
         before = public_state()
         assert len(before[0]) == 2 and before[1][0]['state'] == 'cancelled'
+        run([str(current_core_python),'-I','-c',"""
+from pathlib import Path
+from alembic import command
+from alembic.config import Config
+from czero_core import migrate
+from czero_core.database import Database
+db=Database()
+config=Config()
+config.set_main_option('script_location',str(Path(migrate.__file__).with_name('migrations')))
+with db.engine.begin() as c:
+    config.attributes['connection']=c
+    command.upgrade(config,'0044_pdf_limits')
+db.close()
+"""], runtime=runtime)
+        legacy = uuid4()
+        with db.begin() as c:
+            c.execute(text("""INSERT INTO c0_automatic_sources(id,space_id,name,kind,config,enabled,owner_id,
+                authority_revision,space_revision,grant_revision) SELECT :id,space_id,'Legacy folder',
+                'google_drive','{}',true,owner_id,authority_revision,space_revision,grant_revision
+                FROM c0_automatic_sources WHERE kind='github'"""),{'id':legacy})
+            c.execute(text("""INSERT INTO c0_drive_connections(account_id,space_id,subject_hash,credential,offline)
+                SELECT owner_id,space_id,repeat('0',64),'sealed-fixture',true FROM c0_automatic_sources WHERE id=:id"""),
+                {'id':legacy})
+            c.execute(text("""INSERT INTO c0_drive_bindings(definition_id,account_id,space_id,generation,folder_id)
+                SELECT id,owner_id,space_id,1,'fixture-folder' FROM c0_automatic_sources WHERE id=:id"""),{'id':legacy})
+            c.execute(text("""INSERT INTO c0_source_update_runs(id,definition_id,number,revision,state)
+                VALUES (:run,:id,1,1,'pending')"""),{'run':uuid4(),'id':legacy})
         for _ in range(2):
             run([str(current_core_python),'-I','-m','czero_core.migrate'], runtime=runtime)
             assert public_state() == before
             with db.connect() as c:
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0044_pdf_limits'
-                assert c.execute(text('SELECT count(*) FROM c0_drive_connections')).scalar_one() == 0
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0045_drive_audience'
+                assert c.execute(text('SELECT enabled,revision,next_run_at FROM c0_automatic_sources WHERE id=:id'),
+                                 {'id':legacy}).one()==(False,2,None)
+                assert c.execute(text('SELECT state,error_code FROM c0_source_update_runs WHERE definition_id=:id'),
+                                 {'id':legacy}).one()==('blocked','drive_audience_changed')
+                assert c.execute(text('SELECT approved_audience FROM c0_drive_bindings WHERE definition_id=:id'),
+                                 {'id':legacy}).scalar_one() is None
     finally:
         db.dispose()
         with admin.connect() as c:

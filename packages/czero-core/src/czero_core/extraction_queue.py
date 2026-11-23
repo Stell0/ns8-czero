@@ -237,19 +237,20 @@ class ExtractionQueue(SpaceBound):
             if changed.rowcount!=1:
                 raise SourceConflict()
             manifest = _manifest(v,current.space_id,profile)
+            manifest_hash = _hash(manifest)
             run_id = uuid5(v['id'], 'extraction:'+str(expected_generation))
             row = c.execute(text("""INSERT INTO c0_extraction_runs
                 (id,space_id,version_id,actor_id,processing_generation,original_sha256,manifest_sha256,
                  profile,expected_units,state,expires_at) VALUES
                 (:id,:space,:version,:actor,:generation,:hash,:manifest,CAST(:profile AS jsonb),:count,'extracting',:expiry) RETURNING *"""),
                 {'id':run_id,'space':current.space_id,'version':v['id'],'actor':current.user_id,
-                 'generation':expected_generation,'hash':v['content_hash'],'manifest':_hash(manifest),
+                 'generation':expected_generation,'hash':v['content_hash'],'manifest':manifest_hash,
                  'profile':json.dumps(profile),'count':len(manifest['units']),'expiry':expiry}).mappings().one()
             c.execute(text("""INSERT INTO c0_extraction_units(id,space_id,run_id,ordinal,locator,input_sha256)
                 VALUES (:id,:space,:run,:ordinal,CAST(:locator AS jsonb),:hash)"""),
                 [{'id':uuid5(run_id,str(unit['ordinal'])),'space':current.space_id,'run':run_id,
                   'ordinal':unit['ordinal'],'locator':json.dumps(unit['locator']),
-                  'hash':_fingerprint(_hash(manifest),profile,unit['ordinal'],unit['locator'])} for unit in manifest['units']])
+                  'hash':_fingerprint(manifest_hash,profile,unit['ordinal'],unit['locator'])} for unit in manifest['units']])
             return self._summary(row)
 
     @staticmethod

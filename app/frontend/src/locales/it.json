@@ -521,7 +521,9 @@
       "drive_preview_required": "Visualizza di nuovo l’anteprima della cartella prima di salvare.",
       "drive_item_unavailable": "Verifica che il tuo account Google possa accedere alla cartella selezionata.",
       "drive_provider_error": "Google Drive non è riuscito a completare la richiesta. Riprova.",
-      "drive_scope_mismatch": "Riconnetti Google e concedi l’autorizzazione richiesta per Drive."
+      "drive_scope_mismatch": "Riconnetti Google e concedi l’autorizzazione richiesta per Drive.",
+      "drive_preview_busy": "È in corso un’altra anteprima. Riprova tra poco.",
+      "drive_audience_changed": "I destinatari dello spazio sono cambiati. Visualizza di nuovo l’anteprima prima di attivare gli aggiornamenti."
     },
     "saveError": "Impossibile salvare la fonte",
     "previewError": "Impossibile visualizzare l’anteprima della fonte",
@@ -561,7 +563,8 @@
       "pdf_needs_ocr": "Il PDF richiede il riconoscimento del testo",
       "pdf_parser_limit": "Limite di elaborazione del PDF raggiunto",
       "invalid_pdf": "PDF illeggibile",
-      "pdf_too_many_pages": "Il PDF supera le 2.000 pagine"
+      "pdf_too_many_pages": "Il PDF supera le 2.000 pagine",
+      "text_processing_limit": "Il testo supera i limiti di elaborazione del documento"
     },
     "driveConnectFirst": "Connetti il tuo account Google per visualizzare l’anteprima di una cartella.",
     "driveRequireOffline": "Autorizza gli aggiornamenti in background prima di abilitare la fonte.",
@@ -572,6 +575,7 @@
     "driveReturnError": "Impossibile completare la connessione a Google. Riprova a connetterti.",
     "advanced": "Selezione avanzata",
     "driveReconnectEffect": "La riconnessione mette in pausa le tue fonti Drive in questo spazio. Visualizza l’anteprima e riabilitale per riprendere gli aggiornamenti.",
-    "driveIncludeTextLayer": "Includi · Testo estratto dalle pagine con testo. Apri l’originale per le pagine composte da immagini."
+    "driveIncludeTextLayer": "Includi · Testo estratto dalle pagine con testo. Apri l’originale per le pagine composte da immagini.",
+    "driveTextlessPages": "Pagine senza testo estraibile ({count}): {pages}"
   }
 }

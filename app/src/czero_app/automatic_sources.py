@@ -126,7 +126,7 @@ def install(app,database,auth,read_context,write_context):
         except UpdateConflict:raise AutomaticSourceError('automatic_source_conflict',409) from None
         except (ValueError,RuntimeError) as error:
             reason=error.args[0] if len(error.args)==1 and type(error.args[0]) is str else 'invalid_automatic_source'
-            raise AutomaticSourceError(reason) from None
+            raise AutomaticSourceError(reason, 429 if reason == 'drive_preview_busy' else 422) from None
 
     from czero_app.google_drive_routes import install as install_google_drive
     install_google_drive(app, auth, service, invoke, read_context, write_context)

@@ -10,7 +10,13 @@ export interface DrivePreview {
   folder_name: string
   complete: boolean
   preview_token: string
-  items: { title: string; outcome: 'include' | 'skip'; reason: string }[]
+  items: {
+    title: string
+    outcome: 'include' | 'skip'
+    reason: string
+    textless_page_count?: number
+    textless_pages?: number[]
+  }[]
 }
 
 // Only the C0 editing context crosses the Google redirect. The folder link,

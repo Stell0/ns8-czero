@@ -54,7 +54,7 @@ interface Run {
   processed: number
   error_code: string | null
 }
-const { t, locale } = useI18n(),
+const { t, te, locale } = useI18n(),
   session = useSession()
 const offset = ref(0)
 const listing = useResource(
@@ -635,8 +635,15 @@ const command = useMutation({
         ><ul>
           <li v-for="run in runs.data.value?.runs" :key="run.id">
             {{ t(`automatic.states.${run.state}`) }} ·
-            {{ t('automatic.processed', { count: run.processed }) }} ·
-            {{ run.error_code }}
+            {{ t('automatic.processed', { count: run.processed }) }}
+            <template v-if="run.error_code">
+              ·
+              {{
+                te('automatic.errors.' + run.error_code)
+                  ? t('automatic.errors.' + run.error_code)
+                  : run.error_code
+              }}</template
+            >
           </li>
         </ul></ResourceState
       >

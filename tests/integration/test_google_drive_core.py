@@ -250,7 +250,7 @@ def test_pdf_collection_rechecks_after_parsing_and_skips_invalid_siblings(drive)
     assert service.runs(actor,created['id'])[0]['state'] == 'complete'
 
 
-def test_transient_pdf_parser_failure_retries_same_page_and_preserves_complete_siblings(drive,monkeypatch):
+def test_pdf_parser_timeout_advances_to_later_pages_and_retries_on_next_scan(drive,monkeypatch):
     service,sources,actor,_ = drive
     import czero_core.source_updates as updates
     provider = Provider()
@@ -262,23 +262,96 @@ def test_transient_pdf_parser_failure_retries_same_page_and_preserves_complete_s
             raise ExtractionError('parser_timeout')
         return original(body,media_type)
     pdf = (Path(__file__).parents[1]/'fixtures/evidence/sample.pdf').read_bytes()
+    page_calls = []
     def collect(credential,folder,cursor):
-        assert cursor == {}
+        page_calls.append(cursor.get('page'))
         items,_,_ = provider.collect(credential,folder,cursor)
-        return items+[{'key':'delayed-pdf','media_type':'application/pdf','title':'Delayed','body':pdf}],{},True
+        if cursor.get('page')==2:
+            return [{**items[0],'key':'later-file','title':'Next page'}],{},True
+        return items+[{'key':'delayed-pdf','media_type':'application/pdf','title':'Delayed','body':pdf}],{'page':2},False
     monkeypatch.setattr(updates,'prepare_drive_document',temporary_failure)
     worker = SourceUpdater(service,sources,drive_collector=collect,drive_recheck=provider.recheck)
     worker.tick()
-    assert service.runs(actor,created['id'])[0]['state']=='partial'
+    assert service.runs(actor,created['id'])[0]['state']=='pending'
     first = service.documents(actor,created['id'])
     assert len(first)==1 and first[0]['title']==provider.title
     first_version = sources.get(actor,first[0]['id'])['current_version_id']
-    monkeypatch.setattr(updates,'prepare_drive_document',original)
-    service.command_drive(actor,created['id'],action='run',expected_revision=1,idempotency_key=str(uuid4()))
     worker.tick()
     assert service.runs(actor,created['id'])[0]['state']=='complete'
     assert len(service.documents(actor,created['id']))==2
+    monkeypatch.setattr(updates,'prepare_drive_document',original)
+    service.command_drive(actor,created['id'],action='run',expected_revision=1,idempotency_key=str(uuid4()))
+    worker.tick()
+    worker.tick()
+    assert service.runs(actor,created['id'])[0]['state']=='complete'
+    assert len(service.documents(actor,created['id']))==3
+    assert page_calls == [None,2,None,2]
     assert sources.get(actor,first[0]['id'])['current_version_id']==first_version
+
+
+@pytest.mark.parametrize('grant_timing',['before_claim','during_fetch','manual_run'])
+def test_new_reader_pauses_drive_and_requires_new_preview(drive,grant_timing):
+    service,sources,actor,_ = drive
+    spaces = SpaceService(service.database,service.access)
+    space = spaces.create(actor,'Folder access '+uuid4().hex,idempotency_key=uuid4().hex)
+    service = service.in_space(space['id'])
+    record_unadmitted(service.access,uuid4(),'another-reader')
+    reader = account_named(service.access,actor,'another-reader')
+    service.access.set_role(actor,reader['id'],Role.READER)
+    def grant():
+        spaces.set_grant(actor,space['id'],reader['id'],Role.READER,expected_revision=0,idempotency_key=uuid4().hex)
+    connect(service,actor)
+    provider = Provider()
+    created = save(service,actor,preview(service,actor,provider)['preview_token'],enabled=True)
+    called = []
+    def collect(*args):
+        called.append(True)
+        grant()
+        return provider.collect(*args)
+    if grant_timing != 'during_fetch':
+        grant()
+    worker = SourceUpdater(service,sources,drive_collector=collect,drive_recheck=provider.recheck)
+    if grant_timing == 'manual_run':
+        service.command_drive(actor,created['id'],action='run',expected_revision=1,idempotency_key=uuid4().hex)
+    worker.tick()
+    assert bool(called) == (grant_timing == 'during_fetch')
+    assert not service.documents(actor,created['id'])
+    row, = service.list(actor)
+    assert not row['enabled'] and row['revision'] == 2
+    run, = service.runs(actor,created['id'])
+    assert (run['state'],run['error_code']) == ('blocked','drive_audience_changed')
+    target = {'identifier':created['id'],'expected_revision':row['revision']}
+    proof = service.preview_drive(actor,folder_id=None,provider=provider,**target)
+    save(service,actor,proof['preview_token'],enabled=True,**target)
+    worker.drive_collector = provider.collect
+    worker.tick()
+    assert len(service.documents(actor,created['id'])) == 1
+
+
+def test_drive_reindexes_unchanged_bytes_with_new_media_and_skips_large_text(drive):
+    service,sources,actor,_ = drive
+    connect(service,actor)
+    provider = Provider()
+    created = save(service,actor,preview(service,actor,provider)['preview_token'],enabled=True)
+    item = {'key':'stable','body':b'# Procedure\n\nFirst step','media_type':'text/plain','title':'Procedure.txt'}
+    oversized = {'key':'big','body':b'x'*1_000_001,'media_type':'text/plain','title':'Large file'}
+    collector = lambda *args: ([oversized,item],{},True)
+    worker = SourceUpdater(service,sources,drive_collector=collector,drive_recheck=provider.recheck)
+    worker.tick()
+    doc, = service.documents(actor,created['id'])
+    first = sources.get(actor,doc['id'])
+    item.update(media_type='text/markdown',title='Procedure.md')
+    service.command_drive(actor,created['id'],action='run',expected_revision=1,idempotency_key=uuid4().hex)
+    worker.tick()
+    latest = sources.get(actor,doc['id'])
+    assert latest['title']=='Procedure.md' and latest['current_version_id']!=first['current_version_id']
+    with sources.database.engine.connect() as conn:
+        assert conn.execute(text('SELECT media_type,force_reindex FROM c0_source_versions WHERE id=:id'),
+                            {'id':latest['current_version_id']}).one()==('text/markdown',True)
+    with pytest.raises(ContentSuperseded):
+        sources.document(actor,first['current_version_id'])
+    assert len(service.documents(actor,created['id']))==1
+    assert service.runs(actor,created['id'])[0]['state']=='complete'
 
 
 def test_mixed_pdf_retains_omitted_pages_and_supersedes_the_original(drive):

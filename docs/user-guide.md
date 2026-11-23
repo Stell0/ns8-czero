@@ -74,7 +74,9 @@ and retain only current content. Article slugs such as `product/install` form
 the navigation tree; existing slugs are fixed.
 
 Editors can use **Sources → Upload source** for TXT, Markdown, PDF or DOCX, with
-a title and optional provenance. **Retain the original file** starts unchecked.
+a title and optional provenance. A PDF may contain up to 2,000 pages and be up
+to 100 MiB. Other upload formats have a 10 MiB limit. **Retain the original
+file** starts unchecked.
 Original download and reprocessing require retention. On a source, **Upload
 replacement** keeps its current complete document readable while extraction and
 whole-document validation run. **Reprocess original**, **Retry processing** and

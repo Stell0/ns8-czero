@@ -45,6 +45,8 @@ class GoogleFixture:
     def fetch(self, host, path, **kwargs):
         self.calls.append((host, path, kwargs))
         self.on_read()
+        if sink := kwargs.get('sink'):
+            return sink.write(self.content)
         return self.content
 
 
@@ -245,25 +247,115 @@ def test_pdf_preview_explains_unreadable_file(drive):
 def test_preview_includes_mixed_pdf_and_explains_missing_text(drive, monkeypatch):
     from types import SimpleNamespace
     from czero_app.google_drive import PDF
-    from czero_core import source_updates
+    from czero_core import drive_pdf
     service, api, credential = drive
     api.content = b'%PDF-synthetic'
     api.records = [record('mixed', PDF, size=str(len(api.content)))]
-    monkeypatch.setattr(source_updates, 'prepare_drive_document',
-                        lambda body, media: (SimpleNamespace(textless_pages=(1,)), []))
+    monkeypatch.setattr(drive_pdf, 'prepare_pdf_file',
+                        lambda path: (SimpleNamespace(textless_pages=(1,)), []))
     assert service.preview(credential, FOLDER_ID)['items'] == [
-        {'title': 'mixed', 'outcome': 'include', 'reason': 'pdf_text_layer_only'}]
+        {'title': 'mixed', 'outcome': 'include', 'reason': 'pdf_text_layer_only', 'textless_page_count': 1, 'textless_pages': [1]}]
 
 
 def test_preview_skips_pdf_over_page_limit(drive, monkeypatch):
     from czero_app.google_drive import PDF
-    from czero_core import source_updates
+    from czero_core import drive_pdf
     from czero_core.extraction import ExtractionError
     service, api, credential = drive
     api.content = b'%PDF-synthetic'
     api.records = [record('long', PDF, size=str(len(api.content)))]
     def over_limit(*_):
         raise ExtractionError('pdf_too_many_pages')
-    monkeypatch.setattr(source_updates, 'prepare_drive_document', over_limit)
+    monkeypatch.setattr(drive_pdf, 'prepare_pdf_file', over_limit)
     assert service.preview(credential, FOLDER_ID)['items'] == [
         {'title': 'long', 'outcome': 'skip', 'reason': 'pdf_too_many_pages'}]
+
+
+def test_preview_skips_text_exceeding_extracted_document_bounds(drive):
+    service, api, credential = drive
+    api.content = b'x' * 1_000_001
+    api.records = [record('long', size=str(len(api.content)))]
+    assert service.preview(credential, FOLDER_ID)['items'] == [
+        {'title': 'long', 'outcome': 'skip', 'reason': 'too_large'}]
+
+
+def test_concurrent_large_previews_limit_memory_and_clean_up(drive, monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path
+    from czero_app.google_drive import GoogleHTTP, PDF, PDF_LIMIT
+    from czero_core import drive_pdf
+
+    service, api, credential = drive
+    api.records = [record('large', PDF, size=str(PDF_LIMIT))]
+    entered, resume = threading.Event(), threading.Event()
+    files = []
+
+    class Response:
+        status = 200
+        length = PDF_LIMIT
+        def read1(self, limit):
+            assert limit <= 65536
+            n = min(self.length, limit)
+            block = b'%PDF-' + bytes(n - 5) if self.length == PDF_LIMIT else bytes(n)
+            self.length -= n
+            return block
+        def getheader(self, key, default=None):
+            return default
+
+    class Connection:
+        sock = None
+        def __init__(self, *args, **kwargs): pass
+        def request(self, *args, **kwargs): pass
+        def getresponse(self): return Response()
+        def close(self): pass
+
+    def parse(path):
+        assert path.stat().st_size == PDF_LIMIT
+        assert path.stat().st_mode & 0o077 == 0
+        files.append(path)
+        entered.set()
+        assert resume.wait(10)
+        raise drive_pdf.ExtractionError('invalid_pdf')
+
+    monkeypatch.setattr('http.client.HTTPSConnection', Connection)
+    monkeypatch.setattr(api, 'fetch', GoogleHTTP().fetch)
+    monkeypatch.setattr(drive_pdf, 'prepare_pdf_file', parse)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(service.preview, credential, FOLDER_ID)
+        try:
+            assert entered.wait(10)
+            with pytest.raises(CollectionError, match='drive_preview_busy'):
+                service.preview(credential, FOLDER_ID)
+        finally:
+            resume.set()
+        assert first.result()['items'][0]['reason'] == 'invalid_pdf'
+    assert files and all(not path.exists() for path in files)
+
+
+def test_google_network_budget_excludes_parser_time(monkeypatch):
+    """Two 25s parses still leave network time to verify membership after extraction."""
+    import czero_app.google_drive as module
+    from types import SimpleNamespace
+    clock = [0.0]
+    monkeypatch.setattr(module, 'time', SimpleNamespace(monotonic=lambda: clock[0]))
+
+    class Connection:
+        sock = None
+        def __init__(self, host, timeout):
+            assert 0 < timeout <= 5
+        def request(self, *args, **kwargs):
+            clock[0] += 2
+        def getresponse(self):
+            return SimpleNamespace(read1=lambda _: b'', status=200, length=0,
+                                   getheader=lambda key, default=None: default)
+        def close(self): pass
+
+    monkeypatch.setattr(module.http.client, 'HTTPSConnection', Connection)
+    http = module.GoogleHTTP()
+    for _ in range(2):
+        http.fetch(module.DRIVE_HOST, '/drive/v3/files/example')
+        clock[0] += 25
+    http.fetch(module.DRIVE_HOST, '/drive/v3/files/folder')
+    assert clock[0] == 56
+    assert http.network_seconds == 34
