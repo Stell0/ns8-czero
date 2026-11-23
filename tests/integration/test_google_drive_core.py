@@ -7,7 +7,8 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 
 from czero_core.automatic_sources import UpdateConflict
@@ -24,6 +25,25 @@ from test_automatic_sources import automatic
 from test_sources import sources
 
 pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason='isolated PostgreSQL required')
+
+
+@pytest.fixture(autouse=True)
+def drive_database(monkeypatch):
+    # Audience changes and worker claims affect the whole instance. Establish
+    # the test instance before the ordinary access, source and worker fixtures.
+    suite_url = make_url(os.environ['CZERO_TEST_DATABASE_URL'])
+    name = 'c0_drive_case_' + uuid4().hex
+    admin = create_engine(suite_url,isolation_level='AUTOCOMMIT',hide_parameters=True)
+    try:
+        with admin.connect() as connection:
+            connection.exec_driver_sql('CREATE DATABASE ' + name)
+            try:
+                monkeypatch.setenv('CZERO_TEST_DATABASE_URL',suite_url.set(database=name).render_as_string(hide_password=False))
+                yield
+            finally:
+                connection.exec_driver_sql('DROP DATABASE ' + name + ' WITH (FORCE)')
+    finally:
+        admin.dispose()
 
 
 @pytest.fixture
