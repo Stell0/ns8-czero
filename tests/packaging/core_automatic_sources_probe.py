@@ -61,6 +61,35 @@ try:
         assert service.runs(owner,saved['id'])[0]['state']=='complete'
         assert service.documents(owner,saved['id'])[0]['id']==source_id
         assert sources.get(owner,source_id)['current_version_id'] is not None
+        from czero_core.sessions import SessionService
+        browser=SessionService(access,'package-drive')
+        cookie=browser.create(VerifiedIdentity(issuer,'synthetic-owner',str(key),'owner','Owner',time.time()+300))
+        editor=browser.get(cookie).actor
+        state=service.begin_drive_oauth(editor,session_key='browser',verifier='v'*64,offline=True)
+        service.take_drive_oauth(editor,session_key='browser',state=state)
+        service.finish_drive_oauth(editor,session_key='browser',state=state,subject='fixture',
+            credential='sealed-fixture',offline=True)
+        class DriveFixture:
+            def preview(self,credential,folder):
+                assert credential=='sealed-fixture' and folder=='fixture-folder'
+                return {'folder_name':'Native folder','items':[],'complete':False}
+            def collect(self,credential,folder,cursor):
+                assert credential=='sealed-fixture' and folder=='fixture-folder'
+                body=Path(__file__).with_name('drive-sample.pdf').read_bytes()
+                return [{'key':'fixture-file','media_type':'application/pdf','title':'Folder PDF','body':body}],{},True
+            def recheck(self,credential,folder,items):
+                assert credential=='sealed-fixture' and folder=='fixture-folder' and items[0]['key']=='fixture-file'
+        provider=DriveFixture()
+        preview=service.preview_drive(editor,folder_id='fixture-folder',provider=provider)
+        target=service.save_drive(editor,preview_token=preview['preview_token'],name='Native folder',
+            interval_seconds=None,enabled=True,idempotency_key=uuid4().hex)
+        drive_worker=SourceUpdater(service,sources,drive_collector=provider.collect,drive_recheck=provider.recheck)
+        drive_worker.tick()
+        document=service.documents(editor,target['id'])[0]
+        assert document['title']=='Folder PDF'
+        assert 'fixture-file' not in json.dumps(sources.get(editor,document['id'])['metadata'])
+        service.disconnect_drive(editor)
+        assert not service.drive_status(editor)['connected']
     print(json.dumps({'installed_automatic_sources':True,'background_fence':True,'source_configuration_replay':True,
-                      'installed_staged_publication_fence':True,'installed_source_resume':True}))
+                      'installed_staged_publication_fence':True,'installed_source_resume':True,'installed_drive_source':True}))
 finally:database.close()

@@ -146,7 +146,9 @@ def test_upload_limits_invalid_boolean_and_chunked_body(source_http, monkeypatch
             assert (await client.post('/api/v1/sources/upload', data=fields, files={'file': ('file', b'x' * (10 * 1024 * 1024 + 1))})).status_code == 413
             async def oversized():
                 yield b'--fixture\r\nContent-Disposition: form-data; name="file"; filename="file"\r\n\r\n'
-                for _ in range(162):
+                from czero_core import extraction
+                maximum = getattr(extraction, 'MAX_PDF_BYTES', extraction.MAX_UPLOAD)
+                for _ in range(maximum // 65536 + 2):
                     yield b'x' * 65536
                 yield b'\r\n--fixture--\r\n'
             response = await client.post('/api/v1/sources/upload', content=oversized(), headers={'Content-Type': 'multipart/form-data; boundary=fixture'})
@@ -274,4 +276,52 @@ def test_original_revalidates_bounded_bytes_before_delivery(source_http,monkeypa
             failed=await http.get('/api/v1/source-versions/'+initial['id']+'/original')
             assert failed.status_code==409 and failed.json()['detail']=='source_original_changed'
             assert (await http.get('/api/v1/source-versions/'+initial['id']+'/document')).json()['body']=='ORIGINAL-INTEGRITY-BODY'
+    asyncio.run(check())
+
+
+def test_pdf_upload_limit_and_retained_original(source_http, tmp_path):
+    """Exercise multipart streaming, the PostgreSQL size constraint and bounded readback."""
+    from pathlib import Path
+    from czero_core import extraction
+    app, owner, *_, database, _ = source_http[0]
+    created = source_http[1]
+    maximum = extraction.MAX_PDF_BYTES
+    assert maximum == 100 * 1024 * 1024
+    seed = (Path(__file__).resolve().parents[1] / 'fixtures/evidence/sample.pdf').read_bytes()
+    prefix, suffix = seed.rsplit(b'startxref', 1)
+    original = tmp_path / 'large.pdf'
+    with original.open('wb') as stream:
+        stream.write(prefix)
+        stream.write(b'%')
+        # PDF comments before startxref leave object offsets and the xref table intact.
+        padding = maximum - len(seed) - 2
+        while padding:
+            length = min(padding, 65536)
+            stream.write(b'x' * length)
+            padding -= length
+        stream.write(b'\nstartxref' + suffix)
+    assert original.stat().st_size == maximum
+
+    async def check():
+        from czero_core.worker import Worker
+        fields = {'title': 'Large PDF', 'media_type': 'application/pdf', 'retain_original': 'true'}
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                               headers={'Authorization': 'Bearer ' + owner}) as client:
+            with original.open('rb') as stream:
+                result = await client.post('/api/v1/sources/upload', data=fields,
+                                           files={'file': ('large.pdf', stream, 'application/pdf')})
+            assert result.status_code == 202
+            version = result.json()
+            created.append(version['source_id'])
+            assert version['size_bytes'] == maximum
+            Worker(database, app.state.jobs.registry).tick()
+            response = await client.get('/api/v1/source-versions/' + version['id'] + '/original',
+                                        headers={'Range': 'bytes=0-4'})
+            assert response.status_code == 206 and response.content == b'%PDF-'
+            with original.open('ab') as stream:
+                stream.write(b' ')
+            with original.open('rb') as stream:
+                result = await client.post('/api/v1/sources/upload', data=fields,
+                                           files={'file': ('large.pdf', stream, 'application/pdf')})
+            assert result.status_code == 413
     asyncio.run(check())

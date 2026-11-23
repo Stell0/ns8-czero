@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import text
 
 from .current_content import ContentSuperseded
-from .extraction import Extracted,ExtractionError
+from .extraction import MAX_PDF_PAGES, Extracted,ExtractionError
 from .structure import derive
 from .sources import SourceConflict,SourceNotFound
 from .local_ocr import validate_profile,validate_provenance
@@ -90,12 +90,12 @@ def _structure(value,body):
         for page in value['pages']:
             if (set(page)!={'kind','index','start','end'} or page['kind']!='page'
                 or any(type(page[key]) is not int for key in ('index','start','end'))
-                or not 1<=page['index']<=200 or page['index'] in pages
+                or not 1<=page['index']<=MAX_PDF_PAGES or page['index'] in pages
                 or not 0<=page['start']<page['end']<=len(body)): raise ValueError()
             pages.add(page['index'])
         if 'ocr' in value:
             ocr=value['ocr']
-            if set(ocr)!={'profile','pages'} or type(ocr['pages']) is not list or not 1<=len(ocr['pages'])<=200: raise ValueError()
+            if set(ocr)!={'profile','pages'} or type(ocr['pages']) is not list or not 1<=len(ocr['pages'])<=MAX_PDF_PAGES: raise ValueError()
             validate_profile(ocr['profile']); seen=set()
             for page in ocr['pages']:
                 if page['page'] not in pages or page['page'] in seen: raise ValueError()

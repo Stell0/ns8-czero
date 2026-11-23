@@ -2,6 +2,22 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## Personal Google Drive automatic sources
+
+Producer development on original main `a5758ad`. App 0.70 and Core 0.52/schema0044 add
+session-bound private Drive connections, fenced folder previews, account/space
+bindings and owner-only native collection. The reference app adds the source
+type dropdown and a bounded preview that explains skipped direct children.
+PDFs, Google Docs, UTF-8 text and Markdown form the initial import set.
+PDF originals support up to 2,000 pages and 100 MiB in Drive and ordinary uploads. See the
+[operator and user guide](docs/automatic-sources.md#add-a-folder-from-your-google-account).
+
+Chrome/PostgreSQL acceptance uses synthetic Google responses through the real
+C0 callback, worker and extraction pipeline. Live Google client consent and
+unattended renewal, immutable Core publication, released-consumer lock adoption
+and native acceptance remain distinct gates. The released app lock still targets
+Core 0.51.1 until Core 0.52.0 is independently published.
+
 ## Assistant setup and first-use experience
 
 Development plan, 22 November 2026. Start from original main `0a88801782d9eb17d8a5fa5d19a1d108c8cabafe`. This run covers the C0 website, its guides and skills, and the actual ChatGPT, Claude, Grok and Gemini web interfaces. Use the operator-designated Support lab on makako. Coordinate shared sign-in, Account and administration work with the [Support integration plan](docs/support-integration-plan.md).

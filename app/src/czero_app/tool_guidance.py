@@ -7,9 +7,9 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
-    'automatic_sources_list': 'List native public-source definitions in the explicitly selected space. Definitions configure collection; their documents remain normal source evidence.',
+    'automatic_sources_list': 'List native source definitions in the explicitly selected space. Private Google connections and folder selection use the owning Editor’s browser. Definitions configure collection; their documents remain normal source evidence.',
     'automatic_sources_save': 'Create or revise a public GitHub or website source definition with current Editor/c0:write, expected revision and replay key. enabled=true explicitly grants background collection for this selection and space under your current editing authority. Saving replaces the complete configuration; read it before editing. Browser logout does not stop it; pause revokes it.',
-    'automatic_sources_command': 'Run now, pause or remove a selected-space definition with current Editor/c0:write, expected revision and replay key. Running requires enabled background authority. Removal retains collected documents. Read status after uncertain responses.',
+    'automatic_sources_command': 'Run a public source, or pause or remove a selected-space definition with current Editor/c0:write, expected revision and replay key. A personal Drive source can run only from its owner’s browser or its enabled worker. Running requires enabled background authority. Removal retains collected documents. Read status after uncertain responses.',
     'automatic_sources_preview': 'Fetch one bounded public-source preview with selected-space Editor/c0:write. No definitions, source content or schedules are saved. A sample is not exhaustive coverage.',
     'automatic_source_runs_list': 'Inspect current native collection and extraction run status in the selected space. Pending or partial work is not successful completion.',
     'automatic_source_documents_list': 'List documents collected by a selected-space definition. Follow source IDs with current complete-document reads; definition/run metadata is not evidence.',

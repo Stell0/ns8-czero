@@ -239,10 +239,11 @@ wheels = [
 
 [[package]]
 name = "czero-app"
-version = "0.69.1"
+version = "0.70.0"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
+    { name = "cryptography" },
     { name = "czero-core" },
     { name = "fastapi" },
     { name = "httpcore" },
@@ -262,6 +263,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "certifi", specifier = "==2026.10.19" },
+    { name = "cryptography", specifier = "==50.0.2" },
     { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.51.1" },
     { name = "fastapi", specifier = "==0.143.0" },
     { name = "httpcore", specifier = "==1.0.9" },

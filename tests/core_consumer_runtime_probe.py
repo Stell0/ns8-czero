@@ -66,6 +66,8 @@ from czero_core.automatic_sources import AutomaticSourceService
 from czero_app.automatic_sources import install as install_automatic_sources
 install_automatic_sources(application, None, None, lambda: None, lambda: None)
 assert isinstance(application.state.automatic_sources, AutomaticSourceService)
-assert len([route for route in application.routes
-            if route.path.startswith('/api/v1/automatic-sources')]) == 6
+public_routes=[route for route in application.routes if route.path.startswith('/api/v1/automatic-sources')
+               and not route.path.startswith('/api/v1/automatic-sources/google-drive/')]
+assert len(public_routes) == 6
+assert application.state.google_drive is None
 print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')

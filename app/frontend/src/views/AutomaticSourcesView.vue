@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import * as v from 'valibot'
@@ -9,6 +9,7 @@ import {
   NeTextInput,
   NeTextArea,
   NeCheckbox,
+  NeListbox,
   NeSideDrawer,
   NeTable,
   NeTableHead,
@@ -24,11 +25,22 @@ import { useResource } from '../api/queries'
 import { useSession } from '../stores/session'
 import ResourceState from '../components/ResourceState.vue'
 import ErrorNotice from '../components/ErrorNotice.vue'
+import DriveFolderFields from '../components/DriveFolderFields.vue'
+import DriveFolderPreview from '../components/DriveFolderPreview.vue'
+import {
+  drivePath,
+  takeDriveEditor,
+  type DriveConnection,
+  type DrivePreview,
+} from '../api/googleDrive'
+
+type SourceKind = 'github' | 'website' | 'google_drive'
 interface Definition {
+  owner_id: string
   status: string | null
   id: string
   name: string
-  kind: 'github' | 'website'
+  kind: SourceKind
   config: Record<string, unknown>
   enabled: boolean
   interval_seconds: number | null
@@ -52,6 +64,13 @@ const listing = useResource(
       `automatic-sources?offset=${offset.value}`,
     ),
 )
+const route = useRoute()
+const router = useRouter()
+const connection = useResource(
+  () => 'google-drive-connection',
+  () => request<DriveConnection>(`${drivePath}/connection`),
+  () => session.canWrite,
+)
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleString(locale.value) : t('automatic.never')
 const entries = computed(() => listing.data.value?.definitions || [])
@@ -59,17 +78,45 @@ const drawer = ref(false),
   selected = ref<Definition>(),
   history = ref<Definition>(),
   removing = ref<Definition>()
-const name = ref(''),
-  kind = ref<'github' | 'website'>('website'),
-  locations = ref(''),
-  rootURLs = ref(''),
-  sitemaps = ref(''),
-  include = ref(''),
-  exclude = ref(''),
-  categories = ref('files'),
-  branch = ref('HEAD'),
-  enabled = ref(false),
-  interval = ref('86400')
+function emptyDraft() {
+  return {
+    name: '',
+    locations: '',
+    rootURLs: '',
+    sitemaps: '',
+    include: '',
+    exclude: '',
+    categories: 'files',
+    branch: 'HEAD',
+    enabled: false,
+    interval: '',
+  }
+}
+function emptyDrafts() {
+  return {
+    website: emptyDraft(),
+    github: emptyDraft(),
+    google_drive: emptyDraft(),
+  }
+}
+const kind = ref<SourceKind>('website')
+const drafts = ref(emptyDrafts())
+const form = computed(() => drafts.value[kind.value])
+const drivePreview = ref<DrivePreview>()
+const driveBusy = ref(false)
+const advanced = ref(false)
+const returnNotice = ref('')
+const owns = (row: Definition) =>
+  row.kind !== 'google_drive' || row.owner_id === session.account
+const sourceOptions = computed(() => {
+  const kinds: SourceKind[] =
+    selected.value?.kind === 'google_drive'
+      ? ['google_drive']
+      : ['website', 'github']
+  if (!selected.value && connection.data.value?.available)
+    kinds.push('google_drive')
+  return kinds.map((id) => ({ id, label: t(`automatic.${id}`) }))
+})
 const preview = ref<{
   items: { title: string; url: string }[]
   complete: boolean
@@ -80,15 +127,15 @@ const nameValid = computed(
   () =>
     v.safeParse(
       v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(256)),
-      name.value,
+      form.value.name,
     ).success,
 )
 const intervalValid = computed(
   () =>
-    !interval.value ||
-    (Number.isInteger(Number(interval.value)) &&
-      Number(interval.value) >= 300 &&
-      Number(interval.value) <= 2678400),
+    !form.value.interval ||
+    (Number.isInteger(Number(form.value.interval)) &&
+      Number(form.value.interval) >= 300 &&
+      Number(form.value.interval) <= 2678400),
 )
 const replay = new ReplayIdentity(),
   commandReplay = new ReplayIdentity()
@@ -113,26 +160,33 @@ const runs = useResource(
 const contentKinds = ['files', 'issues', 'pull_requests', 'releases'] as const
 function toggleContent(value: string, checked: boolean) {
   const selected = new Set(
-    categories.value
+    form.value.categories
       .split(',')
       .map((v) => v.trim())
       .filter(Boolean),
   )
   if (checked) selected.add(value)
   else selected.delete(value)
-  categories.value = [...selected].join(',')
+  form.value.categories = [...selected].join(',')
 }
-function chooseKind(value: 'github' | 'website') {
-  kind.value = value
-  preview.value = undefined
+function chooseKind(value: unknown) {
+  advanced.value = !!selected.value
+  const option = sourceOptions.value.find((option) => option.id === value)
+  if (option) kind.value = option.id
+  invalid.value = false
 }
 function reload() {
   void listing.refetch()
+  if (session.canWrite) void connection.refetch()
   if (history.value) void runs.refetch()
 }
 function clear() {
   editorEpoch++
   drawer.value = false
+  drafts.value = emptyDrafts()
+  drivePreview.value = undefined
+  driveBusy.value = false
+  returnNotice.value = ''
   selected.value = undefined
   history.value = undefined
   removing.value = undefined
@@ -151,34 +205,40 @@ watch(
   clear,
 )
 function edit(row?: Definition) {
+  advanced.value = !!row
   editorEpoch++
   mutation.reset()
   invalid.value = false
   selected.value = row
-  name.value = row?.name || ''
+  drafts.value = emptyDrafts()
+  drivePreview.value = undefined
+  returnNotice.value = ''
   kind.value = row?.kind || 'website'
+  form.value.name = row?.name || ''
   const config = row?.config || {},
     website = (config.website || {}) as Record<string, unknown>
-  locations.value = (
+  form.value.locations = (
     ((kind.value === 'github'
       ? config.repositories
       : website.seeds) as string[]) || []
   ).join('\n')
-  rootURLs.value = ((website.allowed_roots || []) as string[]).join('\n')
-  sitemaps.value = ((website.sitemaps || []) as string[]).join('\n')
-  include.value = (
+  form.value.rootURLs = ((website.allowed_roots || []) as string[]).join('\n')
+  form.value.sitemaps = ((website.sitemaps || []) as string[]).join('\n')
+  form.value.include = (
     ((kind.value === 'github' ? config.paths : config.include) as string[]) ||
     []
   ).join('\n')
-  exclude.value = (
+  form.value.exclude = (
     ((kind.value === 'github'
       ? config.exclude
       : website.exclude) as string[]) || []
   ).join('\n')
-  categories.value = ((config.include as string[]) || ['files']).join(', ')
-  branch.value = String(config.ref || 'HEAD')
-  enabled.value = row?.enabled || false
-  interval.value = String(row?.interval_seconds || '')
+  form.value.categories = (
+    (row?.kind === 'github' && (config.include as string[])) || ['files']
+  ).join(', ')
+  form.value.branch = String(config.ref || 'HEAD')
+  form.value.enabled = row?.enabled || false
+  form.value.interval = String(row?.interval_seconds || '')
   preview.value = undefined
   replay.clear()
   drawer.value = true
@@ -189,7 +249,7 @@ const lines = (value: string) =>
     .map((v) => v.trim())
     .filter(Boolean)
 const repositoriesValid = computed(() => {
-  const repositories = lines(locations.value)
+  const repositories = lines(form.value.locations)
   return (
     repositories.length >= 1 &&
     repositories.length <= 100 &&
@@ -207,82 +267,116 @@ function config() {
   if (kind.value === 'github')
     return {
       ...previous,
-      repositories: lines(locations.value),
-      include: categories.value
+      repositories: lines(form.value.locations),
+      include: form.value.categories
         .split(',')
         .map((v) => v.trim())
         .filter(Boolean),
-      paths: lines(include.value).length
-        ? lines(include.value)
+      paths: lines(form.value.include).length
+        ? lines(form.value.include)
         : ['README*', 'docs/*'],
-      exclude: lines(exclude.value),
-      ref: branch.value,
+      exclude: lines(form.value.exclude),
+      ref: form.value.branch,
     }
-  const seeds = lines(locations.value)
+  const seeds = lines(form.value.locations)
   return {
     ...previous,
     website: {
       ...((previous.website || {}) as Record<string, unknown>),
       seeds,
-      allowed_roots: lines(rootURLs.value).length
-        ? lines(rootURLs.value)
+      allowed_roots: lines(form.value.rootURLs).length
+        ? lines(form.value.rootURLs)
         : seeds,
-      sitemaps: lines(sitemaps.value),
-      exclude: lines(exclude.value),
+      sitemaps: lines(form.value.sitemaps),
+      exclude: lines(form.value.exclude),
     },
-    include: lines(include.value),
+    include: lines(form.value.include),
   }
 }
 watch(
-  [
-    name,
-    kind,
-    locations,
-    rootURLs,
-    sitemaps,
-    include,
-    exclude,
-    categories,
-    branch,
-    enabled,
-    interval,
-  ],
+  form,
   () => {
     editorEpoch++
     preview.value = undefined
     if (mutation.error.value) mutation.reset()
   },
-  { flush: 'sync' },
+  { deep: true, flush: 'sync' },
 )
+watch(
+  [kind, () => form.value.locations, () => connection.data.value?.connected],
+  () => {
+    drivePreview.value = undefined
+  },
+)
+function driveConnectionChanged() {
+  drivePreview.value = undefined
+  reload()
+}
+function driveProblem(mode: 'save' | 'preview') {
+  if (kind.value !== 'google_drive') return ''
+  if (!connection.data.value?.connected) return 'automatic.driveConnectFirst'
+  if (!form.value.locations.trim() && !selected.value)
+    return 'automatic.driveEnterFolder'
+  if (mode === 'save') {
+    if (form.value.enabled && !connection.data.value.offline)
+      return 'automatic.driveRequireOffline'
+    if (!drivePreview.value) return 'automatic.drivePreviewFirst'
+  }
+  return ''
+}
 const mutation = useMutation({
   mutation: async (mode: 'save' | 'preview') => {
     mutationMode.value = mode
     invalid.value =
-      !lines(locations.value).length ||
+      (kind.value === 'google_drive'
+        ? !!driveProblem(mode)
+        : !lines(form.value.locations).length) ||
       (kind.value === 'github' &&
-        (!repositoriesValid.value || !categories.value)) ||
+        (!repositoriesValid.value || !form.value.categories)) ||
       (mode === 'save' && (!nameValid.value || !intervalValid.value))
     if (invalid.value) return
     const epoch = editorEpoch
-    const draft = { kind: kind.value, config: config() }
+    const identity = {
+      identifier: selected.value?.id || null,
+      expected_revision: selected.value?.revision || null,
+    }
+    const drive = kind.value === 'google_drive'
+    if (mode === 'preview' && drive) {
+      drivePreview.value = undefined
+      const result = await request<DrivePreview>(`${drivePath}/preview`, {
+        method: 'POST',
+        data: { ...identity, folder_url: form.value.locations.trim() || null },
+      })
+      if (active && drawer.value && editorEpoch === epoch) {
+        if (!form.value.name.trim()) form.value.name = result.folder_name
+        returnNotice.value = ''
+        drivePreview.value = result
+      }
+      return
+    }
+    const selection = drive
+      ? { preview_token: drivePreview.value!.preview_token }
+      : { kind: kind.value, config: config() }
     if (mode === 'preview') {
       const result = await request<{
         items: { title: string; url: string }[]
         complete: boolean
-      }>('automatic-sources/preview', { method: 'POST', data: draft })
+      }>('automatic-sources/preview', { method: 'POST', data: selection })
       if (active && drawer.value && editorEpoch === epoch)
         preview.value = result
       return
     }
-    await request('automatic-sources', {
+    const path = drive ? `${drivePath}/save` : 'automatic-sources'
+    await request(path, {
       method: 'POST',
-      data: replay.data('automatic-sources', {
-        ...draft,
-        name: name.value,
-        enabled: enabled.value,
-        interval_seconds: interval.value ? Number(interval.value) : null,
-        identifier: selected.value?.id || null,
-        expected_revision: selected.value?.revision || null,
+      data: replay.data(path, {
+        ...selection,
+        name: form.value.name,
+        enabled: form.value.enabled,
+        interval_seconds: form.value.interval
+          ? Number(form.value.interval)
+          : null,
+        ...identity,
       }),
     })
     if (active && editorEpoch === epoch) {
@@ -290,6 +384,62 @@ const mutation = useMutation({
       await listing.refetch()
     }
   },
+})
+// A callback carries a fixed status. Refresh the owner-scoped connection before
+// resuming; a query parameter alone cannot establish a Google connection.
+watch(
+  [connection.data, listing.data, () => route.query.google_drive],
+  ([account, list, status]) => {
+    if (
+      !session.canWrite ||
+      !session.space ||
+      !account?.available ||
+      !list ||
+      !['connected', 'cancelled', 'error'].includes(String(status))
+    )
+      return
+    const sourceId = takeDriveEditor(session.account, session.space.id)
+    const row = list.definitions.find(
+      (row) => row.id === sourceId && row.kind === 'google_drive' && owns(row),
+    )
+    if (!sourceId || row) {
+      edit(row)
+      kind.value = 'google_drive'
+    }
+    returnNotice.value =
+      status === 'connected' && account.connected
+        ? 'automatic.driveReturnConnected'
+        : status === 'cancelled'
+          ? 'automatic.driveReturnCancelled'
+          : 'automatic.driveReturnError'
+    const query = { ...route.query }
+    delete query.google_drive
+    delete query.offline
+    void router.replace({ query })
+  },
+  { immediate: true },
+)
+watch(mutation.error, (error) => {
+  if (
+    error instanceof ApiError &&
+    [
+      'config.ref',
+      'config.website.allowed_roots',
+      'config.include',
+      'config.exclude',
+      'config.paths',
+    ].includes(error.field)
+  )
+    advanced.value = true
+  if (
+    error instanceof ApiError &&
+    [error.code, error.reason].some((code) =>
+      ['drive_preview_required', 'drive_reconnect_required'].includes(code),
+    )
+  ) {
+    drivePreview.value = undefined
+    void connection.refetch()
+  }
 })
 function fieldError(field: string) {
   const error = mutation.error.value
@@ -305,7 +455,7 @@ const nameError = computed(() =>
 const locationsError = computed(() =>
   invalid.value && kind.value === 'github' && !repositoriesValid.value
     ? t('automatic.errors.invalid_github_repositories')
-    : invalid.value && !lines(locations.value).length
+    : invalid.value && !lines(form.value.locations).length
       ? t('automatic.seedsRequired')
       : fieldError(
           kind.value === 'github'
@@ -313,6 +463,10 @@ const locationsError = computed(() =>
             : 'config.website.seeds',
         ),
 )
+const driveError = computed(() => {
+  const key = invalid.value && driveProblem(mutationMode.value)
+  return key ? t(key) : ''
+})
 const intervalError = computed(() =>
   invalid.value && mutationMode.value === 'save' && !intervalValid.value
     ? t('automatic.errors.invalid_source_interval')
@@ -326,12 +480,15 @@ const command = useMutation({
     row: Definition
     action: 'run' | 'pause' | 'remove'
   }) => {
-    const path = `automatic-sources/${row.id}/actions`
+    const driveRun = row.kind === 'google_drive' && action === 'run'
+    const path = driveRun
+      ? `${drivePath}/${row.id}/run`
+      : `automatic-sources/${row.id}/actions`
     await request(path, {
       method: 'POST',
       data: commandReplay.data(path, {
         expected_revision: row.revision,
-        action,
+        ...(driveRun ? {} : { action }),
       }),
     })
     if (active) {
@@ -348,6 +505,7 @@ const command = useMutation({
 <template>
   <div class="space-y-6">
     <p>{{ t('automatic.help') }}</p>
+    <p v-if="returnNotice && !drawer" role="status">{{ t(returnNotice) }}</p>
     <div class="flex flex-wrap gap-3">
       <NeButton
         v-if="session.canWrite"
@@ -401,12 +559,22 @@ const command = useMutation({
                 }}</NeButton>
                 <template v-if="session.canWrite">
                   <NeButton
+                    v-if="owns(row)"
                     kind="tertiary"
                     :disabled="mutation.isLoading.value"
                     @click="edit(row)"
-                    >{{ t('automatic.edit') }}</NeButton
+                    >{{
+                      t(
+                        row.kind === 'google_drive' &&
+                          connection.data.value &&
+                          !connection.data.value.connected
+                          ? 'automatic.driveReconnect'
+                          : 'automatic.edit',
+                      )
+                    }}</NeButton
                   >
                   <NeButton
+                    v-if="owns(row)"
                     kind="tertiary"
                     :disabled="!row.enabled || command.isLoading.value"
                     @click="command.mutate({ row, action: 'run' })"
@@ -479,11 +647,13 @@ const command = useMutation({
       :title="t(selected ? 'automatic.edit' : 'automatic.add')"
       :close-aria-label="t('common.close')"
       :close-on-click-outside="false"
-      @close="!mutation.isLoading.value && clear()"
+      @close="!mutation.isLoading.value && !driveBusy && clear()"
     >
       <form
         class="space-y-6"
-        @submit.prevent="!mutation.isLoading.value && mutation.mutate('save')"
+        @submit.prevent="
+          !mutation.isLoading.value && !driveBusy && mutation.mutate('save')
+        "
       >
         <ErrorNotice
           v-if="mutation.error.value"
@@ -494,129 +664,169 @@ const command = useMutation({
               : 'automatic.previewError'
           "
         />
-        <fieldset :disabled="mutation.isLoading.value" class="space-y-6">
+        <fieldset
+          :disabled="mutation.isLoading.value || driveBusy"
+          class="space-y-6"
+        >
+          <NeListbox
+            :model-value="kind"
+            :label="t('automatic.type')"
+            :options="sourceOptions"
+            :no-options-label="t('common.options')"
+            :optional-label="t('common.optional')"
+            :disabled="sourceOptions.length === 1"
+            @update:model-value="chooseKind"
+          />
           <NeTextInput
-            v-model="name"
+            v-model="form.name"
             :label="t('common.title')"
             :invalid-message="nameError"
             :aria-invalid="!!nameError || undefined"
           />
-          <fieldset class="space-y-2">
-            <legend>{{ t('automatic.type') }}</legend>
-            <NeButton
-              v-for="value in ['website', 'github'] as const"
-              :key="value"
-              kind="secondary"
-              :aria-pressed="kind === value"
-              @click="chooseKind(value)"
-              >{{ t(`automatic.${value}`) }}</NeButton
-            >
-          </fieldset>
-          <NeTextArea
-            v-model="locations"
-            :invalid-message="locationsError"
-            :aria-invalid="!!locationsError || undefined"
-            :label="
-              t(kind === 'github' ? 'automatic.repositories' : 'automatic.urls')
-            "
-            :helper-text="
-              t(
-                kind === 'github'
-                  ? 'automatic.repositoriesHelp'
-                  : 'automatic.lines',
-              )
-            "
-          />
-          <NeTextArea
-            v-if="kind === 'website'"
-            v-model="rootURLs"
-            :label="t('automatic.roots')"
-            :helper-text="t('automatic.rootsHelp')"
-            :invalid-message="fieldError('config.website.allowed_roots')"
-            :aria-invalid="
-              !!fieldError('config.website.allowed_roots') || undefined
-            "
-          />
-          <NeTextArea
-            v-if="kind === 'website'"
-            v-model="sitemaps"
-            :label="t('automatic.sitemaps')"
-            :helper-text="t('automatic.lines')"
-          />
-          <fieldset
-            v-if="kind === 'github'"
-            class="space-y-3"
-            :aria-describedby="
-              invalid && !categories ? 'automatic-content-error' : undefined
-            "
-          >
-            <legend>{{ t('automatic.categories') }}</legend>
-            <NeCheckbox
-              v-for="value in contentKinds"
-              :key="value"
-              :model-value="
-                categories
-                  .split(',')
-                  .map((v) => v.trim())
-                  .includes(value)
+          <template v-if="kind === 'google_drive'">
+            <p v-if="returnNotice" role="status">{{ t(returnNotice) }}</p>
+            <DriveFolderFields
+              v-model="form.locations"
+              :source-id="selected?.id"
+              :connection="connection.data.value"
+              :enabled="form.enabled"
+              :invalid-message="fieldError('folder_url')"
+              :disconnect-names="
+                entries
+                  .filter(
+                    (row) =>
+                      row.kind === 'google_drive' && owns(row) && row.enabled,
+                  )
+                  .map((row) => row.name)
               "
-              :label="t(`automatic.contents.${value}`)"
-              @update:model-value="toggleContent(value, $event)"
+              @busy="driveBusy = $event"
+              @refresh="driveConnectionChanged"
             />
-            <p
-              v-if="invalid && !categories"
-              id="automatic-content-error"
-              role="alert"
-              class="text-sm text-red-700 dark:text-red-400"
+          </template>
+          <template v-else>
+            <NeTextArea
+              v-model="form.locations"
+              :invalid-message="locationsError"
+              :aria-invalid="!!locationsError || undefined"
+              :label="
+                t(
+                  kind === 'github'
+                    ? 'automatic.repositories'
+                    : 'automatic.urls',
+                )
+              "
+              :helper-text="
+                t(
+                  kind === 'github'
+                    ? 'automatic.repositoriesHelp'
+                    : 'automatic.lines',
+                )
+              "
+            />
+            <fieldset
+              v-if="kind === 'github'"
+              class="space-y-3"
+              :aria-describedby="
+                invalid && !form.categories
+                  ? 'automatic-content-error'
+                  : undefined
+              "
             >
-              {{ t('automatic.errors.invalid_github_selection') }}
-            </p>
-            <p class="text-sm">{{ t('automatic.filesHelp') }}</p>
-          </fieldset>
-          <NeTextInput
-            v-if="kind === 'github'"
-            v-model="branch"
-            :label="t('automatic.branch')"
-            :invalid-message="fieldError('config.ref')"
-            :aria-invalid="!!fieldError('config.ref') || undefined"
-          />
-          <NeTextArea
-            v-model="include"
-            :label="t('automatic.include')"
-            :helper-text="t('automatic.lines')"
-          />
-          <NeTextArea
-            v-model="exclude"
-            :label="t('automatic.exclude')"
-            :helper-text="t('automatic.lines')"
-          />
-          <fieldset class="space-y-2">
-            <legend>{{ t('automatic.frequency') }}</legend>
-            <div class="flex flex-wrap gap-2">
-              <NeButton
-                v-for="(seconds, label) in {
-                  manual: '',
-                  hourly: '3600',
-                  daily: '86400',
-                  weekly: '604800',
-                }"
-                :key="label"
-                kind="secondary"
-                :aria-pressed="interval === seconds"
-                @click="interval = seconds"
-                >{{ t(`automatic.${label}`) }}</NeButton
+              <legend>{{ t('automatic.categories') }}</legend>
+              <NeCheckbox
+                v-for="value in contentKinds"
+                :key="value"
+                :model-value="
+                  form.categories
+                    .split(',')
+                    .map((v) => v.trim())
+                    .includes(value)
+                "
+                :label="t(`automatic.contents.${value}`)"
+                @update:model-value="toggleContent(value, $event)"
+              />
+              <p
+                v-if="invalid && !form.categories"
+                id="automatic-content-error"
+                role="alert"
+                class="text-sm text-red-700 dark:text-red-400"
               >
-            </div>
-          </fieldset>
-          <NeTextInput
-            v-model="interval"
-            :invalid-message="intervalError"
-            :aria-invalid="!!intervalError || undefined"
-            :label="t('automatic.interval')"
-            :helper-text="t('automatic.intervalHelp')"
-          />
-          <NeCheckbox v-model="enabled" :label="t('automatic.enable')" />
+                {{ t('automatic.errors.invalid_github_selection') }}
+              </p>
+              <p class="text-sm">{{ t('automatic.filesHelp') }}</p>
+            </fieldset>
+            <details
+              :open="advanced"
+              class="space-y-4"
+              @toggle="advanced = ($event.target as HTMLDetailsElement).open"
+            >
+              <summary>{{ t('automatic.advanced') }}</summary>
+              <NeTextArea
+                v-if="kind === 'website'"
+                v-model="form.rootURLs"
+                :label="t('automatic.roots')"
+                :helper-text="t('automatic.rootsHelp')"
+                :invalid-message="fieldError('config.website.allowed_roots')"
+                :aria-invalid="
+                  !!fieldError('config.website.allowed_roots') || undefined
+                "
+              />
+              <NeTextArea
+                v-if="kind === 'website'"
+                v-model="form.sitemaps"
+                :label="t('automatic.sitemaps')"
+                :helper-text="t('automatic.lines')"
+              />
+              <NeTextInput
+                v-if="kind === 'github'"
+                v-model="form.branch"
+                :label="t('automatic.branch')"
+                :invalid-message="fieldError('config.ref')"
+                :aria-invalid="!!fieldError('config.ref') || undefined"
+              />
+              <NeTextArea
+                v-model="form.include"
+                :label="t('automatic.include')"
+                :helper-text="t('automatic.lines')"
+              />
+              <NeTextArea
+                v-model="form.exclude"
+                :label="t('automatic.exclude')"
+                :helper-text="t('automatic.lines')"
+              />
+            </details>
+          </template>
+          <NeCheckbox v-model="form.enabled" :label="t('automatic.enable')" />
+          <template v-if="kind !== 'google_drive' || form.enabled">
+            <fieldset class="space-y-2">
+              <legend>{{ t('automatic.frequency') }}</legend>
+              <div class="flex flex-wrap gap-2">
+                <NeButton
+                  v-for="(seconds, label) in {
+                    manual: '',
+                    hourly: '3600',
+                    daily: '86400',
+                    weekly: '604800',
+                  }"
+                  :key="label"
+                  kind="secondary"
+                  :aria-pressed="form.interval === seconds"
+                  @click="form.interval = seconds"
+                  >{{ t(`automatic.${label}`) }}</NeButton
+                >
+              </div>
+            </fieldset>
+            <NeTextInput
+              v-model="form.interval"
+              :invalid-message="intervalError"
+              :aria-invalid="!!intervalError || undefined"
+              :label="t('automatic.interval')"
+              :helper-text="t('automatic.intervalHelp')"
+            />
+          </template>
           <p>{{ t('automatic.authority') }}</p>
+          <p v-if="driveError" role="alert">{{ driveError }}</p>
+          <DriveFolderPreview v-if="drivePreview" :preview="drivePreview" />
           <div v-if="preview">
             <p>{{ t('automatic.previewHelp') }}</p>
             <ul>

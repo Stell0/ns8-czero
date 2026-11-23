@@ -16,7 +16,8 @@ from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from czero_core.documents import DocumentService
-from czero_core.extraction import ExtractionError, MAX_UPLOAD
+from czero_core import extraction
+from czero_core.extraction import ExtractionError
 from czero_core.identity import PermissionDenied, Role
 from czero_core.sources import MAX_INGEST_TEXT_BYTES, SourceService, SourceConflict, SourceNotFound
 from czero_app.auth import RequestAccess
@@ -216,7 +217,7 @@ class UploadBodyLimit:
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
         limited = scope['type'] == 'http' and scope.get('method') == 'POST' and path.endswith('/api/v1/sources/upload')
-        maximum = MAX_UPLOAD + 65536
+        maximum = getattr(extraction, 'MAX_PDF_BYTES', extraction.MAX_UPLOAD) + 65536
         if scope['type'] == 'http' and scope.get('method') in ('POST','PUT','PATCH'):
             resource = path.split('/api/v1/', 1)[-1]
             if resource in ('entities', 'sources/ingest-text') or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
@@ -394,8 +395,18 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             invoke(selected(space_id).original,context.actor,version_id)
             raise HTTPException(409,'source_original_changed') from None
         try:
-            body=stream.read(MAX_UPLOAD+1)
-            if len(body)!=version['size_bytes'] or hashlib.sha256(body).hexdigest()!=version['content_hash']:
+            expected_size = version['size_bytes']
+            if os.fstat(stream.fileno()).st_size != expected_size:
+                raise HTTPException(409, 'source_original_changed')
+            checksum = hashlib.sha256()
+            remaining = expected_size
+            while remaining:
+                block = stream.read(min(remaining, 1024 * 1024))
+                if not block:
+                    raise HTTPException(409, 'source_original_changed')
+                checksum.update(block)
+                remaining -= len(block)
+            if stream.read(1) or checksum.hexdigest() != version['content_hash']:
                 raise HTTPException(409,'source_original_changed')
             stream.seek(0)
             return OriginalFileResponse(stream,media_type='application/octet-stream',filename=filename,

@@ -14,7 +14,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
-from .extraction import Extracted,ExtractionError,valid_text
+from .extraction import MAX_PDF_PAGES, Extracted,ExtractionError,valid_text
 from .pdf_units import _reader,validate_page
 
 LANGUAGES=('eng','ita','eng+ita')
@@ -99,8 +99,8 @@ def _tsv(raw):
 def _parse(path,page,profile):
     validate_profile(profile)
     if profile!=preflight(profile['language']): raise ExtractionError('ocr_unavailable')
-    reader=_reader(path)
-    if type(page) is not int or not 1<=page<=len(reader.pages): raise ExtractionError('invalid_pdf')
+    with _reader(path) as reader:
+        if type(page) is not int or not 1<=page<=len(reader.pages): raise ExtractionError('invalid_pdf')
     with TemporaryDirectory(prefix='c0-ocr-') as directory:
         environment={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','OMP_THREAD_LIMIT':'1','HOME':directory,'TMPDIR':directory}
         prefix=str(Path(directory)/'page')
@@ -127,7 +127,7 @@ class ParsedPage:
 def extract_unit(path,page,profile):
     """Fixed adapter call; kill descendants as well as their coordinator."""
     validate_profile(profile)
-    if type(page) is not int or not 1<=page<=200: raise ValueError('invalid_page')
+    if type(page) is not int or not 1<=page<=MAX_PDF_PAGES: raise ValueError('invalid_page')
     environment={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','OMP_THREAD_LIMIT':'1'}
     if 'PYTHONPATH' in os.environ: environment['PYTHONPATH']=os.environ['PYTHONPATH']
     child=subprocess.Popen([sys.executable,'-m','czero_core.local_ocr',str(path),str(page),json.dumps(profile)],

@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from .identity import Actor, Role, PermissionDenied
 from .receipts import mutate
+from .drive_sources import DriveSources
 from .spaces import SpaceBound, hold_authority, _paging
 from .jobs import bounded_json
 
@@ -25,7 +26,7 @@ def configuration(kind, value):
     return validate(kind, value)
 
 
-class AutomaticSourceService(SpaceBound):
+class AutomaticSourceService(DriveSources, SpaceBound):
     def __init__(self, database, access):
         self.database, self.access = database, access
 
@@ -85,6 +86,12 @@ class AutomaticSourceService(SpaceBound):
 
     def save(self, actor, *, name, kind, config, enabled, interval_seconds, idempotency_key,
              identifier=None, expected_revision=None):
+        return self._save(actor, name=name, kind=kind, config=config,
+                          enabled=enabled, interval_seconds=interval_seconds, idempotency_key=idempotency_key,
+                          identifier=identifier, expected_revision=expected_revision)
+
+    def _save(self, actor, *, name, kind, config, enabled, interval_seconds, idempotency_key,
+              identifier=None, expected_revision=None, proof_hash=None):
         if (type(name) is not str or not name.strip() or len(name)>256 or not name.isprintable()
                 or type(enabled) is not bool or (interval_seconds is not None and
                 (type(interval_seconds) is not int or not 300<=interval_seconds<=2678400))):
@@ -93,15 +100,25 @@ class AutomaticSourceService(SpaceBound):
             raise ValueError('invalid_revision')
         if (identifier is None) != (expected_revision is None):
             raise ValueError('invalid_revision')
-        config = configuration(kind, config)
+        if proof_hash is None:
+            config = configuration(kind, config)
         payload = dict(name=name, kind=kind, config=config, enabled=enabled, interval_seconds=interval_seconds,
                        identifier=str(identifier) if identifier else None, expected_revision=expected_revision)
+        if proof_hash is not None:
+            payload['preview_hash'] = proof_hash
+
         def execute(c, current):
+            binding = None
+            if proof_hash is not None:
+                binding = self._use_drive_preview(c, actor, proof_hash, identifier, expected_revision, enabled)
             authority = c.execute(text('SELECT access_revision FROM c0_accounts WHERE id=:id'), {'id': current.user_id}).scalar_one()
             space_revision = c.execute(text('SELECT revision FROM c0_spaces WHERE id=:id'), {'id': self._space(c)}).scalar_one()
             grant_revision = c.execute(text('SELECT revision FROM c0_space_grants WHERE space_id=:space AND account_id=:id'), {'space': self._space(c), 'id': current.user_id}).scalar_one_or_none() or 0
             if identifier:
                 old = self._row(c, identifier, lock=True)
+                if old['kind'] == 'google_drive' or binding is not None:
+                    if old['kind'] != 'google_drive' or binding is None or old['owner_id'] != current.user_id:
+                        raise PermissionDenied()
                 if old['revision'] != expected_revision:
                     raise UpdateConflict('automatic_source_conflict')
                 cancel_staged(c, identifier)
@@ -119,10 +136,19 @@ class AutomaticSourceService(SpaceBound):
                     VALUES (:id,:space,:name,:kind,CAST(:config AS jsonb),:enabled,:interval,:owner,:authority,:sr,:gr,CASE WHEN :enabled THEN now() END)'''),
                     {'id': result_id, 'space': self._space(c), 'name': name, 'kind': kind, 'config': json.dumps(config),
                      'enabled': enabled, 'interval': interval_seconds, 'owner': current.user_id, 'authority': authority, 'sr': space_revision, 'gr': grant_revision})
+            if binding is not None:
+                c.execute(text("""INSERT INTO c0_drive_bindings(definition_id,account_id,space_id,generation,folder_id)
+                    VALUES (:id,:account,:space,:generation,:folder_id) ON CONFLICT(definition_id) DO UPDATE SET
+                    generation=excluded.generation,folder_id=excluded.folder_id"""), {**binding, 'id': result_id})
             return {'id': str(result_id), 'revision': self._row(c, result_id)['revision']}
-        return mutate(self.database, self._authorize, actor, 'automatic_source.save', payload, idempotency_key, execute, conflict=UpdateConflict)
+        authorize = self._authorize_drive_mutation if proof_hash is not None else self._authorize
+        return mutate(self.database, authorize, actor, 'automatic_source.save', payload, idempotency_key, execute, conflict=UpdateConflict)
 
     def command(self, actor, identifier, *, expected_revision, idempotency_key, action):
+        return self._command(actor, identifier, expected_revision=expected_revision,
+                             idempotency_key=idempotency_key, action=action, private_run=False)
+
+    def _command(self, actor, identifier, *, expected_revision, idempotency_key, action, private_run):
         if type(expected_revision) is not int or not 1<=expected_revision<9223372036854775807:
             raise ValueError('invalid_revision')
         if action not in ('run','pause','remove'):
@@ -132,6 +158,8 @@ class AutomaticSourceService(SpaceBound):
             if row['revision'] != expected_revision:
                 raise UpdateConflict('automatic_source_conflict')
             if action == 'run':
+                if private_run != (row['kind'] == 'google_drive') or (private_run and row['owner_id'] != current.user_id):
+                    raise PermissionDenied()
                 # Manual work also requires a deliberately enabled background authority.
                 self._background_actor(c, row)
                 return {'id': str(self._enqueue(c, row))}
@@ -143,12 +171,16 @@ class AutomaticSourceService(SpaceBound):
             else:
                 c.execute(text('DELETE FROM c0_automatic_sources WHERE id=:id'), {'id': identifier})
             return {'id': str(identifier)}
-        return mutate(self.database, self._authorize, actor, 'automatic_source.'+action,
+        authorize = self._authorize_drive_mutation if private_run else self._authorize
+        operation = 'automatic_source.drive_run' if private_run else 'automatic_source.' + action
+        return mutate(self.database, authorize, actor, operation,
                       {'id': str(identifier), 'revision': expected_revision}, idempotency_key, execute, conflict=UpdateConflict)
 
     def _background_actor(self, c, definition):
         if not definition['enabled']:
             raise PermissionDenied()
+        if definition['kind'] == 'google_drive':
+            self._drive_worker_binding(c, definition)
         current = self.access.checked_actor(c, Actor(definition['owner_id'], Role.READER))
         revision = c.execute(text('SELECT access_revision FROM c0_accounts WHERE id=:id'), {'id': current.user_id}).scalar_one()
         sr = c.execute(text('SELECT revision FROM c0_spaces WHERE id=:id'), {'id': definition['space_id']}).scalar_one()
