@@ -15,6 +15,8 @@ pytestmark = pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'), reason
 PREDECESSOR = '9ccb159fa0c6e4a99e32130b424b97f06516f402'
 
 SEED = """
+from importlib.metadata import distribution
+import json
 import time
 from uuid import uuid4
 from czero_core import Database
@@ -24,6 +26,8 @@ from czero_core.identity import VerifiedIdentity
 from czero_core.health import core_version
 from czero_core.migrate import migrate_database
 assert core_version == '0.51.1'
+installation = json.loads(distribution('czero-core').read_text('direct_url.json'))
+assert installation['vcs_info']['commit_id'] == '9ccb159fa0c6e4a99e32130b424b97f06516f402'
 db=Database()
 migrate_database(db)
 key=uuid4()

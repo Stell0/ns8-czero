@@ -78,14 +78,19 @@ two entries per page with durable continuation. Content is checked against the
 file’s current parent, version and download permission before and after reading.
 Renaming preserves a document's logical identity. Removal from Drive or a later
 disconnect retains previously published C0 documents. C0 source management is
-the place to remove those copies.
+the place to remove those copies. If the parser runs out of time or is unavailable,
+C0 continues through the folder, reports partial coverage and retries on the next update.
 
 Saving paused keeps a configuration for later. To collect while signed out,
 explicitly allow Google background access and enable updates. Manual frequency
 supports **Update now** without scheduling subsequent runs. Each Google connection
 belongs to one C0 account in one space. Replacing the connection pauses its sources
-until the owner previews and saves again. A change to the selected space’s
-audience also requires a fresh preview before further collection. Other Editors can pause/remove a source.
+until the owner previews and saves again. Changes to the space’s access policy or explicit grants
+also require a fresh preview. In a restricted space, C0 pauses imports when the set of people
+who can read changes. This includes unblocking a person with a retained grant and admitting
+a new instance Admin. The configured instance owner always has access. For Shared and spaces
+readable by all, the approval includes people who gain C0 access later.
+Other Editors can pause/remove a source.
 Disconnecting retires that connection in C0. Google Account's third-party access
 controls can revoke the client grant across spaces. Reader-facing source metadata
 contains an opaque C0 item identity. Google credentials and folder IDs stay private.

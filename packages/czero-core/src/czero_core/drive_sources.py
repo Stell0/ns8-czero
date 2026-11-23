@@ -27,21 +27,44 @@ class DriveAudienceChanged(PermissionDenied):
     pass
 
 
-def _audience_digest(c, space):
-    scope = c.execute(text("""SELECT s.revision,
+def _audience_digest(c, space, access):
+    """Snapshot the approved destination while the caller holds native authority."""
+    scope = c.execute(text("""SELECT s.revision,s.shared,s.readable_by_all,s.personal,
         (SELECT encode(sha256(convert_to(coalesce(string_agg(account_id::text || ':' || revision::text,
           ',' ORDER BY account_id),''),'UTF8')),'hex') FROM c0_space_grants WHERE space_id=s.id) AS grants
         FROM c0_spaces s WHERE s.id=:space"""), {'space':space}).mappings().one()
-    return _hash(f"{scope['revision']}:{scope['grants']}")
+    policy = f"{scope['revision']}:{scope['grants']}"
+    if scope['shared'] or scope['readable_by_all']:
+        return _hash(policy)
+    # Match AccessService._actor and SpaceService._policy: the configured owner
+    # always has Admin authority, including before the owner's first sign-in.
+    # All other restricted-space readers require a current instance membership.
+    readers = c.execute(text("""SELECT encode(sha256(convert_to(
+        string_agg(account_key::text,',' ORDER BY account_key),'UTF8')),'hex')
+        FROM (
+            SELECT CAST(:owner AS uuid) AS account_key
+            UNION
+            SELECT a.account_key FROM c0_accounts a JOIN c0_memberships m ON m.account_id=a.id
+            WHERE a.issuer=:issuer AND (
+                m.role='admin' OR
+                (NOT :personal AND EXISTS(SELECT 1 FROM c0_space_grants g
+                    WHERE g.space_id=:space AND g.account_id=a.id AND g.role IS NOT NULL)) OR
+                (:personal AND EXISTS(SELECT 1 FROM c0_personal_owners o JOIN c0_personal_config p
+                    ON p.issuer=o.issuer AND p.provider_id=o.provider_id WHERE o.issuer=a.issuer
+                    AND o.directory_id=a.account_key AND o.space_id=:space AND o.active)))
+        ) eligible"""),
+        {'owner':access.owner_account_key,'issuer':access.issuer,'personal':scope['personal'],'space':space}).scalar_one()
+    issuer = hashlib.sha256(access.issuer.encode()).hexdigest()
+    return _hash(f"{policy}:{issuer}:{readers}")
 
 
-def _credential(c, keys):
+def _credential(c, keys, access):
     row = c.execute(text("""SELECT g.generation,g.credential,g.offline
         FROM c0_drive_connections g
         WHERE g.account_id=:account AND g.space_id=:space AND g.credential IS NOT NULL"""), keys).mappings().one_or_none()
     if row is None:
         raise CollectionError('drive_reconnect_required')
-    return {**row,'audience':_audience_digest(c,keys['space'])}
+    return {**row,'audience':_audience_digest(c,keys['space'],access)}
 
 
 class DriveSources:
@@ -172,9 +195,10 @@ class DriveSources:
 
     def preview_drive(self, actor, *, folder_id, provider, identifier=None, expected_revision=None):
         with self.database.engine.begin() as c:
+            hold_authority(c)
             keys = self._drive_actor(c, actor)
             stored = self._drive_target(c, actor, identifier, expected_revision)
-            connection = _credential(c, keys)
+            connection = _credential(c, keys, self.access)
             generation = connection['generation']
         folder = stored if folder_id is None else folder_id
         if not isinstance(folder, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,256}',folder):
@@ -190,7 +214,7 @@ class DriveSources:
             _lock(c)
             self._drive_actor(c, actor)
             self._drive_target(c, actor, identifier, expected_revision)
-            current = _credential(c, keys)
+            current = _credential(c, keys, self.access)
             if current['generation'] != generation or current['audience'] != connection['audience']:
                 raise PermissionDenied()
             c.execute(text("DELETE FROM c0_drive_previews WHERE expires_at<=now()"))
@@ -211,7 +235,7 @@ class DriveSources:
 
     def _use_drive_preview(self, c, actor, proof_hash, identifier, revision, enabled):
         keys = self._drive_actor(c, actor)
-        connection = _credential(c,keys)
+        connection = _credential(c,keys,self.access)
         if enabled and not connection['offline']:
             raise ValueError('drive_offline_required')
         preview = c.execute(text("""DELETE FROM c0_drive_previews WHERE account_id=:account AND space_id=:space
@@ -230,14 +254,13 @@ class DriveSources:
         return self._command(actor,identifier,expected_revision=expected_revision,
                              idempotency_key=idempotency_key,action=action,private_run=True)
 
-    @staticmethod
-    def _drive_worker_binding(c, definition):
+    def _drive_worker_binding(self, c, definition):
         binding = c.execute(text("""SELECT b.folder_id,b.approved_audience,g.credential,g.generation
             FROM c0_drive_bindings b JOIN c0_drive_connections g USING(account_id,space_id)
             WHERE b.definition_id=:id AND b.account_id=:owner_id AND b.space_id=:space_id
             AND g.generation=b.generation AND g.credential IS NOT NULL AND g.offline"""), definition).mappings().one_or_none()
         if binding is None:
             raise PermissionDenied()
-        if binding['approved_audience'] != _audience_digest(c,definition['space_id']):
+        if binding['approved_audience'] != _audience_digest(c,definition['space_id'],self.access):
             raise DriveAudienceChanged()
         return binding

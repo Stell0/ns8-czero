@@ -222,6 +222,7 @@ class AutomaticSourceService(DriveSources, SpaceBound):
 
     def claim(self):
         with self.database.engine.begin() as c:
+            hold_authority(c)
             # Serialize scheduling and recovery independently of ordinary extraction.
             c.execute(text('SELECT pg_advisory_xact_lock(49410)'))
             c.execute(text("""WITH expired AS MATERIALIZED (SELECT r.id FROM c0_automatic_sources d

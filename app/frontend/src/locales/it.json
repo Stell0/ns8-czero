@@ -523,7 +523,8 @@
       "drive_provider_error": "Google Drive non è riuscito a completare la richiesta. Riprova.",
       "drive_scope_mismatch": "Riconnetti Google e concedi l’autorizzazione richiesta per Drive.",
       "drive_preview_busy": "È in corso un’altra anteprima. Riprova tra poco.",
-      "drive_audience_changed": "I destinatari dello spazio sono cambiati. Visualizza di nuovo l’anteprima prima di attivare gli aggiornamenti."
+      "drive_audience_changed": "I destinatari dello spazio sono cambiati. Visualizza di nuovo l’anteprima prima di attivare gli aggiornamenti.",
+      "drive_parser_incomplete": "Alcuni file non sono stati elaborati. Il prossimo aggiornamento riproverà."
     },
     "saveError": "Impossibile salvare la fonte",
     "previewError": "Impossibile visualizzare l’anteprima della fonte",

@@ -219,6 +219,12 @@ for (const language of ['en', 'it']) {
     expect(saved).toBe(false)
     await link.fill(folder)
     await preview.click()
+    // The new folder proof is returned asynchronously; keyboard activation
+    // must wait until the user can review the replacement preview.
+    await expect(
+      dialog.getByRole('heading', { name: /My notes/ }),
+    ).toBeFocused()
+    await expect(save).toBeEnabled()
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

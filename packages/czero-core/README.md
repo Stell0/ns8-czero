@@ -16,7 +16,11 @@ the existing one-million-character and 2 MiB bounds.
 
 Schema 0045 records the destination audience approved when saving each folder.
 A change to space access policy or explicit grants pauses further imports until
-the owner previews and saves again. Earlier folder bindings also require a fresh preview.
+the owner previews and saves again. Restricted destinations also bind the set of
+effective readers, including instance Admins, the configured instance owner and
+eligible personal owners. Shared and readable-by-all approvals cover future
+admitted accounts. Upgrading from schema 0044 pauses existing folders. Restricted
+folder bindings saved before effective-reader checks also require a fresh preview.
 
 ## Assistant connection approval (0.51.1)
 

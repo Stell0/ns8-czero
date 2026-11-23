@@ -21,7 +21,8 @@ from .spaces import hold_authority
 
 DRIVE_FILENAMES = {'text/markdown':'source.md','text/plain':'source.txt','application/pdf':'source.pdf'}
 SKIPPED_DRIVE_ERRORS = frozenset({'invalid_text','no_text','too_large','invalid_pdf','encrypted_pdf',
-    'unsupported_scan','pdf_too_many_pages','parser_timeout','resource_limit','parser_failed'})
+    'unsupported_scan','pdf_too_many_pages'})
+DRIVE_PARSER_FAILURES = frozenset({'parser_timeout','resource_limit','parser_failed'})
 
 
 def prepare_drive_document(body, media_type):
@@ -79,7 +80,9 @@ class SourceUpdater:
                 if self.drive_collector is None or self.drive_recheck is None:
                     raise CollectionError('drive_unavailable')
                 fetched, cursor, complete = self.drive_collector(drive['credential'], drive['folder_id'], row['cursor'])
-                items, checked = self._prepare_drive_items(row, fetched, pending)
+                items, checked, parser_failed = self._prepare_drive_items(row, fetched, pending)
+                if parser_failed or row['cursor'].get('parser_incomplete'):
+                    cursor = {**cursor, 'parser_incomplete': True}
                 self.drive_recheck(drive['credential'],drive['folder_id'],checked)
             else:
                 items,cursor,complete=self.collector(row['kind'],row['config'],row['cursor'])
@@ -129,7 +132,11 @@ class SourceUpdater:
                 if len(json.dumps(cursor).encode())>2*1024*1024:raise CollectionError('source_cursor_limit')
                 service.fenced(c,row)
                 c.execute(text('UPDATE c0_source_update_runs SET processed=processed+:count WHERE id=:id'),{'id':row['run_id'],'count':len(items)})
-                service._finish(c,row,'complete' if drive is not None and complete else 'pending',cursor=cursor)
+                if drive is not None and complete and cursor.get('parser_incomplete'):
+                    # All pages were visited. Retry failures from a fresh traversal.
+                    service._finish(c, row, 'partial', 'drive_parser_incomplete', cursor={})
+                else:
+                    service._finish(c,row,'complete' if drive is not None and complete else 'pending',cursor=cursor)
             return 1
         except (UpdateConflict,UpdateNotFound):
             self._fail(row,'blocked','source_changed')
@@ -167,6 +174,7 @@ class SourceUpdater:
     def _prepare_drive_items(self, row, fetched, pending):
         previous = {old['external_key']:(old['content_hash'],old['media_type']) for old in pending}
         ready, checked = [], []
+        parser_failed = False
         for raw in fetched:
             item = self._drive_item(row,raw)
             item['digest'] = hashlib.sha256(item['body']).hexdigest()
@@ -178,12 +186,15 @@ class SourceUpdater:
                         item['metadata']['pdf_textless_pages'] = list(missing)
                         item['metadata']['pdf_textless_page_count'] = len(missing)
                 except ExtractionError as failure:
+                    if failure.code in DRIVE_PARSER_FAILURES:
+                        parser_failed = True
+                        continue
                     if failure.code in SKIPPED_DRIVE_ERRORS:
                         continue
                     raise CollectionError('source_extraction_failed') from None
             ready.append(item)
             checked.append(raw)
-        return ready,checked
+        return ready, checked, parser_failed
 
     def _fail(self,row,state,code,retry_after=''):
         with self.definitions.database.engine.begin() as c:

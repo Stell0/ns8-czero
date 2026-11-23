@@ -277,7 +277,9 @@ def test_pdf_parser_timeout_advances_to_later_pages_and_retries_on_next_scan(dri
     assert len(first)==1 and first[0]['title']==provider.title
     first_version = sources.get(actor,first[0]['id'])['current_version_id']
     worker.tick()
-    assert service.runs(actor,created['id'])[0]['state']=='complete'
+    run = service.runs(actor,created['id'])[0]
+    assert (run['state'],run['error_code']) == ('partial','drive_parser_incomplete')
+    assert service.list(actor)[0]['last_success_at'] is None
     assert len(service.documents(actor,created['id']))==2
     monkeypatch.setattr(updates,'prepare_drive_document',original)
     service.command_drive(actor,created['id'],action='run',expected_revision=1,idempotency_key=str(uuid4()))
@@ -401,3 +403,88 @@ def test_source_version_database_enforces_distinct_pdf_upload_bound(drive):
             update('application/pdf',MAX_PDF_BYTES+1)
         with pytest.raises(IntegrityError),connection.begin_nested():
             update('text/plain',MAX_UPLOAD+1)
+
+
+def test_operational_parser_failure_alone_cannot_report_coverage(drive, monkeypatch):
+    import czero_core.source_updates as updates
+    service, sources, actor, _ = drive
+    provider = Provider()
+    connect(service, actor)
+    saved = save(service, actor, preview(service, actor, provider)['preview_token'], enabled=True)
+    def unavailable(*_):
+        raise ExtractionError('parser_failed')
+    monkeypatch.setattr(updates, 'prepare_drive_document', unavailable)
+    SourceUpdater(service, sources, drive_collector=provider.collect, drive_recheck=lambda *_: None).tick()
+    row = service.runs(actor, saved['id'])[0]
+    assert (row['state'], row['processed'], row['error_code']) == ('partial', 0, 'drive_parser_incomplete')
+    assert service.list(actor)[0]['last_success_at'] is None
+
+
+@pytest.mark.parametrize('change',['unblock_grantee','promote_admin','configured_owner'])
+def test_restricted_drive_rechecks_effective_readers_during_fetch(drive,change):
+    service,sources,admin,_ = drive
+    access = service.access
+    spaces = SpaceService(service.database,access)
+    space = spaces.create(admin,'Restricted '+uuid4().hex,idempotency_key=uuid4().hex)
+    service = service.in_space(space['id'])
+
+    editor_key = uuid4()
+    record_unadmitted(access,editor_key,'folder-editor')
+    editor_id = account_named(access,admin,'folder-editor')['id']
+    access.set_role(admin,editor_id,Role.EDITOR)
+    spaces.set_grant(admin,space['id'],editor_id,Role.EDITOR,expected_revision=0,idempotency_key=uuid4().hex)
+    sessions = SessionService(access,'drive-test')
+    editor = sessions.get(sessions.create(identity(access,editor_key,'folder-editor'))).actor
+
+    key = uuid4()
+    record_unadmitted(access,key,'new-reader')
+    account = account_named(access,admin,'new-reader')['id']
+    access.set_role(admin,account,Role.READER)
+    candidate = access.resolve(identity(access,key,'new-reader'))
+    if change == 'unblock_grantee':
+        spaces.set_grant(admin,space['id'],account,Role.READER,expected_revision=0,idempotency_key=uuid4().hex)
+    if change != 'promote_admin':
+        access.set_role(admin,account,None)
+    with pytest.raises(PermissionDenied):
+        spaces.get(candidate,space['id'])
+
+    connect(service,editor)
+    provider = Provider()
+    saved = save(service,editor,preview(service,editor,provider)['preview_token'],enabled=True)
+    def collect(*args):
+        if change == 'configured_owner':
+            access.owner_account_key = key
+            with service.database.engine.connect() as c:
+                assert c.execute(text('SELECT 1 FROM c0_account_blocks WHERE account_id=:id'),
+                                 {'id':account}).scalar_one() == 1
+        else:
+            access.set_role(admin,account,Role.ADMIN if change == 'promote_admin' else Role.READER)
+        assert spaces.get(candidate,space['id'])['role'] in ('admin','reader')
+        return provider.collect(*args)
+    SourceUpdater(service,sources,drive_collector=collect,drive_recheck=provider.recheck).tick()
+    run, = service.runs(editor,saved['id'])
+    assert (run['state'],run['error_code']) == ('blocked','drive_audience_changed')
+    assert not service.list(editor)[0]['enabled']
+    assert not service.documents(editor,saved['id'])
+
+
+@pytest.mark.parametrize('destination',['shared','readable_by_all'])
+def test_open_drive_audience_includes_later_eligible_accounts(drive,destination):
+    service,sources,admin,_ = drive
+    spaces = SpaceService(service.database,service.access)
+    if destination == 'readable_by_all':
+        space = spaces.create(admin,'Open '+uuid4().hex,idempotency_key=uuid4().hex)
+        spaces.set_access(admin,space['id'],readable_by_all=True,expected_revision=space['revision'],idempotency_key=uuid4().hex)
+        service = service.in_space(space['id'])
+    connect(service,admin)
+    provider = Provider()
+    saved = save(service,admin,preview(service,admin,provider)['preview_token'],enabled=True)
+    def collect(*args):
+        key = uuid4()
+        record_unadmitted(service.access,key,'later-signin')
+        account = account_named(service.access,admin,'later-signin')
+        service.access.set_role(admin,account['id'],Role.READER)
+        return provider.collect(*args)
+    SourceUpdater(service,sources,drive_collector=collect,drive_recheck=provider.recheck).tick()
+    assert len(service.documents(admin,saved['id'])) == 1
+    assert service.runs(admin,saved['id'])[0]['state'] == 'complete'
