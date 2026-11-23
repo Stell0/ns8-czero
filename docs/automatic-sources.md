@@ -1,14 +1,13 @@
 # Automatic sources
 
-Space-scoped native GitHub and website updates, with an optional personal Google Drive folder collector in the Core 0.52 producer candidate.
+Automatic sources update a selected C0 space from public GitHub repositories, websites and folders owned by a connected Google account.
 A definition selects remote content; collected documents use existing C0 sources,
 extraction, latest-only publication and indexing. No model executes in the worker.
 
-Core 0.51 adds schema0042 after the immutable Core 0.50/schema0041 release.
-Its published personal-space services and migrations remain intact; this feature
-does not enable or install native personal-data collection. App 0.69 consumes the
-immutable `core-v0.51.0` Git release and frozen lock,
-with compatible range `>=0.51.0,<0.52.0` and matching patch-only updater bounds.
+App 0.70 uses the published Core 0.52.0 Git release and schema 0045. The
+forward migrations add private Google connection and folder records and raise
+the size limit for PDF originals. Existing GitHub and website definitions keep
+their space, schedule and document identities.
 
 Readers inspect definitions and run status. Editors create, revise, pause, remove
 and run definitions in their selected space with c0:write. Enabling a definition
