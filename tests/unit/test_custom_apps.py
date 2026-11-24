@@ -47,6 +47,30 @@ def test_hosted_dashboard_rejects_invalid_data():
 			hosting.validate(manifest(grafana_dashboard=value))
 
 
+def test_dashboard_restore_changes_module_namespace_and_stays_stopped(platform, monkeypatch):
+	from unittest.mock import MagicMock
+	p = platform
+	connection = MagicMock()
+	monkeypatch.setattr(p.agent, 'redis_connect', lambda privileged: connection, raising=False)
+	writes = connection.pipeline.return_value.hset
+	p.host.deploy(manifest(grafana_dashboard={'title': 'Example', 'panels': []}), start=True)
+	source_uid = json.loads(writes.call_args.args[2])['uid']
+	p.host.quiesce('backup')
+	p.host.export()
+	p.host.recovery.unlink()
+	p.volumes.clear()
+	(p.host.state / 'custom-app-ports.json').unlink()
+	p.host.module = 'czero10'
+	p.host.restore()
+	key, _, dashboard = writes.call_args.args
+	assert key == 'module/czero10/metrics_dashboards'
+	assert json.loads(dashboard)['uid'] != source_uid
+	assert not p.running and not p.enabled
+	p.host.regenerate()
+	assert writes.call_args.args[2] == dashboard
+	assert not p.running
+
+
 @pytest.fixture
 def platform(monkeypatch, tmp_path):
 	state = tmp_path / 'state'
