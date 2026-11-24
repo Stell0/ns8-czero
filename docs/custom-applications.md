@@ -181,3 +181,14 @@ one image, preserves both through C0 update and user-manager restart, injects an
 export failure, abandons a prepared backup, then restores a native encrypted
 backup into a clean module slot and verifies retained data/configuration.
 Robot dry runs and mocked tests do not establish that native acceptance.
+
+## Node Grafana dashboard
+
+An operator can include one exported Grafana dashboard object in the optional
+`grafana_dashboard` manifest field. The host registers this object in the NS8
+metrics module dashboard registry on install, update and restore. Give the
+dashboard a title and panels, use datasources available on the node, and keep
+its serialized size within 256 KiB. The node generates a stable UID for each
+module and application pair. Omitting the field on a later update or removing
+the application withdraws its dashboard. Dashboard JSON is visible to Grafana
+users. Keep credentials in the application's secret files.

@@ -22,6 +22,31 @@ def manifest(app='first', **changes):
 		pids_limit=128, shutdown_seconds=30, **changes)
 
 
+def test_hosted_dashboard_lifecycle(platform, monkeypatch):
+	from unittest.mock import MagicMock
+	connection = MagicMock()
+	monkeypatch.setattr(platform.agent, 'redis_connect', lambda privileged: connection, raising=False)
+	pipe = connection.pipeline.return_value
+	dashboard = {'title': 'Demo', 'panels': []}
+	host = platform.host
+	host.deploy(manifest(grafana_dashboard=dashboard))
+	key, field, body = pipe.hset.call_args.args
+	assert (key, field) == ('module/czero9/metrics_dashboards', 'c0app-first')
+	assert json.loads(body)['title'] == 'Demo'
+	assert pipe.publish.call_args.args == ('module/czero9/event/metrics-dashboard-changed', '{}')
+	host.deploy(manifest(), update=True)
+	pipe.hdel.assert_called_with(key, field)
+	host.deploy(manifest(grafana_dashboard=dashboard), update=True)
+	host.remove(host.record('first'))
+	assert pipe.hdel.call_count == 2
+
+
+def test_hosted_dashboard_rejects_invalid_data():
+	for value in ({}, {'title': 'x', 'panels': 'bad'}, {'title': 'x', 'panels': ['x' * 262144]}):
+		with pytest.raises(hosting.HostingError):
+			hosting.validate(manifest(grafana_dashboard=value))
+
+
 @pytest.fixture
 def platform(monkeypatch, tmp_path):
 	state = tmp_path / 'state'

@@ -38,7 +38,12 @@ def identifier(value):
 
 def validate(manifest):
 	required = {'version', 'id', 'image', 'http_port', 'readiness_path', 'data_path', 'memory_mb', 'pids_limit', 'shutdown_seconds'}
-	require(isinstance(manifest, dict) and required <= manifest.keys() and not manifest.keys() - required - {'hostname', 'environment', 'secrets'}, 'invalid_manifest_fields')
+	require(isinstance(manifest, dict) and required <= manifest.keys() and not manifest.keys() - required - {'hostname', 'environment', 'secrets', 'grafana_dashboard'}, 'invalid_manifest_fields')
+	if 'grafana_dashboard' in manifest:
+		dashboard = manifest['grafana_dashboard']
+		require(isinstance(dashboard, dict) and isinstance(dashboard.get('title'), str)
+			and 0 < len(dashboard['title']) <= 128 and isinstance(dashboard.get('panels'), list)
+			and len(json.dumps(dashboard).encode()) <= 262144, 'invalid_grafana_dashboard')
 	require(type(manifest['version']) is int and manifest['version'] == 1, 'unsupported_contract')
 	identifier(manifest['id'])
 	require(isinstance(manifest['image'], str) and IMAGE.fullmatch(manifest['image']), 'digest_required')
@@ -197,6 +202,25 @@ class Host:
 		unit.write_text('[Unit]\nDescription=C0 custom application ' + record['id'] + '\nWants=czero.service\nAfter=czero.service\n\n[Service]\nType=simple\nExecStart=/usr/local/bin/runagent czero-custom-app launch ' + record['id'] + '\nExecStop=/usr/bin/podman stop --ignore --time=' + str(manifest['shutdown_seconds']) + ' ' + self.name(record['id']) + '\nRestart=on-failure\nRestartSec=10\nTimeoutStopSec=' + str(manifest['shutdown_seconds'] + 15) + '\nSyslogIdentifier=' + self.name(record['id']) + '\n\n[Install]\nWantedBy=default.target\n')
 		unit.chmod(0o600)
 
+	def dashboard(self, record, remove=False):
+		"""Publish only the operator-supplied manifest to this module's own namespace."""
+		if not record.get('dashboard_managed'):
+			return
+		import agent
+		require(re.fullmatch(r'[a-z][a-z0-9]*[0-9]+', self.module), 'invalid_module_identity')
+		namespace = 'module/' + self.module
+		name = self.name(record['id'])
+		dashboard = self.manifest(record).get('grafana_dashboard')
+		pipe = agent.redis_connect(privileged=True).pipeline()
+		if remove or dashboard is None:
+			pipe.hdel(namespace + '/metrics_dashboards', name)
+		else:
+			# A restored app can run beside its source on the same cluster.
+			uid = hashlib.sha256((namespace + '/' + name).encode()).hexdigest()[:32]
+			pipe.hset(namespace + '/metrics_dashboards', name, json.dumps({**dashboard, 'id': None, 'uid': uid}))
+		pipe.publish(namespace + '/event/metrics-dashboard-changed', '{}')
+		pipe.execute()
+
 	def stage(self, manifest, secrets_dir):
 		manifest = validate(manifest)
 		generation = uuid.uuid4().hex
@@ -247,6 +271,8 @@ class Host:
 		if previous:
 			save(self.root / app / previous['generation'] / 'deployment.json', previous)
 		record = {'id': app, 'generation': generation, 'port': port, 'enabled': previous['enabled'] if update else start, 'status': 'deploying', 'previous_generation': previous['generation'] if previous else None}
+		if 'grafana_dashboard' in manifest or (previous and previous.get('dashboard_managed')):
+			record['dashboard_managed'] = True
 		# Stop the old image before changing the generation that launches on restart.
 		if previous:
 			run('systemctl', '--user', 'stop', self.unit(app))
@@ -255,6 +281,7 @@ class Host:
 			self.generate(record)
 			run('systemctl', '--user', 'daemon-reload')
 			self.route(record, manifest)
+			self.dashboard(record)
 			if record['enabled']:
 				self.start(record)
 			else:
@@ -304,6 +331,7 @@ class Host:
 	def remove(self, record):
 		self.stop(record)
 		self.route(record, self.manifest(record), remove=True)
+		self.dashboard(record, remove=True)
 		(self.units / self.unit(record['id'])).unlink(missing_ok=True)
 		run('systemctl', '--user', 'daemon-reload')
 		record['status'] = 'removed'
@@ -362,6 +390,7 @@ class Host:
 		for record in self.records():
 			if record['status'] != 'removed':
 				self.generate(record)
+				self.dashboard(record)
 		run('systemctl', '--user', 'daemon-reload')
 
 	def restore(self):
@@ -396,6 +425,7 @@ class Host:
 			self.write(record)
 			if not removed:
 				self.generate(record)
+				self.dashboard(record)
 				run('systemctl', '--user', 'disable', self.unit(app))
 				# Removed registrations restore retained data only; no image or unit.
 				# Pull failures never start a restored external writer.
