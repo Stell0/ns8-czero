@@ -26,7 +26,12 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0045_drive_audience'
+assert SCHEMA_REVISION == '0046_pdf_authorization'
+from czero_core.pdf_access import PdfAccess
+from czero_core.protected_pdf import inspect_pdf
+from czero_core.sources import SourceService
+assert callable(PdfAccess.check) and callable(inspect_pdf)
+assert callable(SourceService.ingest_manual) and callable(SourceService.retry_pdf)
 assert (MAX_PDF_BYTES, MAX_PDF_PAGES) == (104857600, 2000)
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)

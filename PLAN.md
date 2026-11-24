@@ -2564,9 +2564,11 @@ Manual PDF uploads and retries check passwords and request explicit per-file
 extraction approval before queueing. Editors with current Write access can
 reprocess the same retained original using saved authorization. The PDF key is
 private NS8 state included in native backups. Automatic imports keep their
-existing policy. Core 0.53.0 and schema `0046_pdf_authorization` stage the
-producer change. Released Core publication, app pin adoption, full native
-acceptance and a separately authorized C01 rollout are delivery gates.
+existing policy. Core 0.53.0 and schema `0046_pdf_authorization` provide this feature. The
+[published Core source](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.53.0)
+is frozen at `88b0635d0bc588d7048f09822019e5f22817bfc8`. The reference app adopts the released tag
+and frozen lock with a patch-only update range. Full native acceptance
+and the dedicated C01 rollout are checked separately.
 
 ## Current baseline
 
