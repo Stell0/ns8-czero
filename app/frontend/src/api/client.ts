@@ -6,6 +6,7 @@ export class ApiError extends Error {
     public code = '',
     public reason = '',
     public field = '',
+    public approvalToken = '',
   ) {
     super('C0 request failed')
   }
@@ -110,6 +111,12 @@ export async function request<T>(
         code,
         typeof data?.reason === 'string' ? data.reason : '',
         typeof data?.field === 'string' ? data.field : '',
+        status === 422 &&
+          code === 'pdf_extraction_approval_required' &&
+          typeof data?.approval_token === 'string' &&
+          data.approval_token.length <= 80
+          ? data.approval_token
+          : '',
       )
       if (status === 401 || status === 403) boundary.invalidate(failure)
       throw failure
@@ -134,6 +141,10 @@ export function errorKey(error: unknown) {
     if (error.status === 409) return 'errors.conflict'
     if (error.status === 401 || error.status === 403) return 'errors.access'
     if (error.status === 404) return 'errors.missing'
+    if (error.code === 'pdf_unlock_unavailable')
+      return 'sources.pdf.pdf_unlock_unavailable'
+    if (error.status === 422 && error.code === 'invalid_pdf')
+      return 'sources.pdf.invalid_pdf'
     if (error.status === 422) return 'errors.invalid'
   }
   return 'errors.unavailable'

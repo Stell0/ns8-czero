@@ -22,6 +22,8 @@ ExecStart=/usr/bin/podman run --rm --name=czero-extraction \
     --env=CZERO_EXTRACTION_DOCUMENT_WORKERS --env=CZERO_EXTRACTION_SPACE_WORKERS \
     --env=CZERO_EXTRACTION_CACHE_ENABLED --env=CZERO_EXTRACTION_OCR_ENABLED --env=CZERO_EXTRACTION_OCR_LANGUAGE \
     --env=CZERO_EXTRACTION_MAX_QUEUED_UNITS --env=CZERO_EXTRACTION_MAX_STAGING_BYTES \
+    --secret=czero-pdf-unlock,target=/run/czero-pdf-unlock.key,uid=10001,gid=10001,mode=0400 \
+    --env=CZERO_PDF_UNLOCK_KEY_FILE=/run/czero-pdf-unlock.key \
     --volume=czero-sources:/var/lib/czero/sources:z \
     --entrypoint=python ${CZERO_APP_IMAGE} -m czero_app.extraction_worker
 ExecStop=/usr/bin/podman stop --ignore -t 30 czero-extraction

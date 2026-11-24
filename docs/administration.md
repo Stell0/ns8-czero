@@ -60,6 +60,8 @@ C0 uses journald. Empty Podman logs or an inaccessible module-user journal do no
 ## Update, backup and restore
 
 Use native NS8 backup for the C0 instance and check completion/integrity before an update. Retained source files and logical database state must remain coordinated; do not copy a live PostgreSQL data directory as a logical backup substitute. Backups retain private data and require appropriate storage/access policy.
+The C0 backup includes the instance key for saved PDF unlocking and its sealed
+password records so retained originals can be reprocessed after a restore.
 
 Use the canonical verified candidate tag with the supported targeted update:
 

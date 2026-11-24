@@ -4,6 +4,7 @@
 import json
 import os
 from pathlib import Path
+import stat
 import sys
 
 state = Path(os.environ['AGENT_STATE_DIR'])
@@ -15,6 +16,12 @@ try:
         raise ValueError('Invalid C0 scheduler state')
     if 'extraction_active' in metadata and type(metadata['extraction_active']) is not bool:
         raise ValueError('Invalid C0 extraction state')
+    if 'pdf_unlock_key' in metadata:
+        if metadata['pdf_unlock_key'] is not True:
+            raise ValueError('Invalid PDF unlock key metadata')
+        info = (state / 'pdf-unlock.key').lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size != 32 or info.st_mode & 0o077:
+            raise ValueError('Invalid PDF unlock key')
     with (state / 'czero.pg_dump').open('rb') as source:
         if source.read(5) != b'PGDMP':
             raise ValueError('Invalid C0 PostgreSQL archive')

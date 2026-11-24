@@ -11,6 +11,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory, TemporaryFile
 
+from .protected_pdf import MAX_WORKING_PDF_BYTES, WorkingPDF, native_input, parser_input, receive_parser_input
 from .extraction import (
     Extracted, ExtractionError, MAX_PDF_BYTES, MAX_PDF_PAGES, MAX_TEXT_BYTES,
     PYTHON_PDF_PAGES, _has_images, parser_output, valid_text,
@@ -20,9 +21,14 @@ from .extraction import (
 @contextmanager
 def _reader(path):
     from pypdf import PdfReader
-    path = Path(path)
-    if not stat.S_ISREG(path.lstat().st_mode): raise ExtractionError('invalid_file')
-    if path.stat().st_size > MAX_PDF_BYTES: raise ExtractionError('too_large')
+    if isinstance(path, WorkingPDF):
+        maximum = MAX_WORKING_PDF_BYTES
+    else:
+        path = Path(path)
+        maximum = MAX_PDF_BYTES
+    info = path.lstat()
+    if not stat.S_ISREG(info.st_mode): raise ExtractionError('invalid_file')
+    if info.st_size > maximum: raise ExtractionError('too_large')
     logging.getLogger('pypdf').setLevel(logging.CRITICAL)
     with path.open('rb') as original:
         reader = PdfReader(original, strict=True)
@@ -37,15 +43,16 @@ def native_pages(path, page_count, *, page=None):
     selection = [] if page is None else ['-f', str(page), '-l', str(page)]
     # prlimit execs the fixed tool. Limits precede opening the PDF; the
     # threaded web/worker process never runs a Python preexec callback.
+    argument, pass_fds = native_input(path)
     command = ['/usr/bin/prlimit', '--as=536870912', '--cpu=15:16', f'--fsize={limit + 1}',
                '--core=0', '--', '/usr/bin/pdftotext', '-enc', 'UTF-8', '-eol', 'unix',
-               *selection, str(Path(path).resolve()), '-']
+               *selection, argument, '-']
     try:
         with TemporaryDirectory(prefix='c0-pdf-text-') as directory, \
              TemporaryFile(dir=directory) as output, TemporaryFile(dir=directory) as errors:
             child = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=output, stderr=errors,
                 env={'LC_ALL':'C', 'HOME':directory, 'TMPDIR':directory},
-                cwd=directory, timeout=18, check=False)
+                cwd=directory, timeout=18, check=False, pass_fds=pass_fds)
             if output.tell() > limit or child.returncode == -signal.SIGXFSZ:
                 raise ExtractionError('too_large')
             if child.returncode < 0 or errors.tell() > 65536:
@@ -121,9 +128,10 @@ def _parse_reader(reader, path, mode, page):
 
 
 def _isolated(path,mode,page=None):
-    command=[sys.executable,'-m','czero_core.pdf_units',str(path),mode]
+    argument, pass_fds = parser_input(path)
+    command=[sys.executable,'-m','czero_core.pdf_units',argument,mode]
     if page is not None: command.append(str(page))
-    output = parser_output(command)
+    output = parser_output(command, pass_fds=pass_fds)
     try:
         payload=json.loads(output)
         if 'error' in payload: raise ExtractionError(payload['error'])
@@ -191,7 +199,7 @@ def main():
     resource.setrlimit(resource.RLIMIT_FSIZE,(write_limit,write_limit))
     try:
         if len(sys.argv) not in (3,4): raise ExtractionError('invalid_file')
-        result=_parse(sys.argv[1],sys.argv[2],int(sys.argv[3]) if len(sys.argv)==4 else None)
+        result=_parse(receive_parser_input(sys.argv[1]),sys.argv[2],int(sys.argv[3]) if len(sys.argv)==4 else None)
         print(json.dumps(result,ensure_ascii=False))
     except ExtractionError as error: print(json.dumps({'error':error.code}))
     except MemoryError: print(json.dumps({'error':'resource_limit'}))

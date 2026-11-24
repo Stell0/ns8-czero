@@ -123,6 +123,21 @@
     "invalidFile": "Scegli un file supportato",
     "required": "Inserisci un titolo",
     "confirmReprocess": "Rielabora ogni parte dell’originale conservato. Le citazioni esatte cambiano solo alla pubblicazione della sostituzione completa.",
+    "pdf": {
+      "password": "Password del PDF",
+      "showPassword": "Mostra password",
+      "hidePassword": "Nascondi password",
+      "pdf_password_required": "Inserisci la password per aprire il PDF.",
+      "pdf_password_incorrect": "La password non consente di aprire il PDF. Riprova.",
+      "invalid_pdf": "Impossibile leggere il PDF. Apri il file, esporta una nuova copia e caricala.",
+      "pdf_unlock_unavailable": "L’accesso salvato al PDF non è disponibile. Verifica il PDF e riprova.",
+      "restriction": "Questo PDF limita l’estrazione del testo. Chi ha accesso in lettura a {space} potrà leggere il testo estratto da {file}.",
+      "approve": "Ho l’autorizzazione a estrarre il testo da questo PDF",
+      "retentionHelp": "Se C0 conserva l’originale, salva la password e l’autorizzazione richieste per consentire una nuova elaborazione.",
+      "reviewRetry": "Verifica il PDF e riprova",
+      "continue": "Continua",
+      "retryHelp": "Verifica le impostazioni di protezione di {file} e riprova a elaborarlo."
+    },
     "states": {
       "queued": "In coda",
       "processing": "Elaborazione",

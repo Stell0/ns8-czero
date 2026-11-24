@@ -26,6 +26,7 @@ export interface Source {
 export interface Version {
   id: string
   source_id: string
+  filename: string
   number: number
   state: string
   original_present: boolean
