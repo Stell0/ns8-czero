@@ -2,6 +2,20 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## C0 Grafana monitoring
+
+Ship an instance-scoped dashboard through the NS8 Metrics application.
+Use the native node collector for aggregate C0 metrics and the existing
+Traefik, container, and volume series for platform observations. Measure
+MCP outcomes at C0's tool boundary. Keep names, arguments, content, and
+credentials outside telemetry.
+
+Verify lifecycle registration, per-instance isolation, data collection on
+clean and upgraded installations, and a successful and failed SDK call.
+Live acceptance checks the authenticated Grafana route, provisioning, and
+fresh Prometheus samples for each authorized instance after its native
+backup, upgrade, and restart.
+
 ## Protected PDF upload and recovery
 
 Source details show the failed file and its ingestion error after

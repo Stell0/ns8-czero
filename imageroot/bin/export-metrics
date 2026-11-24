@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+"""Publish bounded, non-identifying C0 statistics to the NS8 node collector."""
+
+import json
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+
+METRICS = {
+    'inventory': ('kind', ('sources', 'documents', 'wiki_pages', 'entities', 'browser_sessions',
+                            'assistant_connections', 'schedules')),
+    'source_versions': ('state', ('queued', 'ready', 'failed')),
+    'source_failures': ('reason', ('protected_pdf', 'unreadable', 'no_text', 'limits', 'other')),
+    'jobs': ('state', ('queued', 'running', 'succeeded', 'failed')),
+    'extraction_runs': ('state', ('staging', 'extracting', 'assembling', 'ready', 'failed', 'superseded')),
+}
+SERVICES = {
+    'app': 'czero.service',
+    'database': 'czero-postgres.service',
+    'scheduler': 'czero-worker.timer',
+    'extraction': 'czero-extraction.timer',
+}
+
+
+def command(args, *, data=None, timeout=3):
+    return subprocess.run(args, input=data, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                          timeout=timeout, check=False, text=True)
+
+
+def counts(payload, kind, labels):
+    values = payload[kind]
+    if values is None:
+        values = {}
+    series = {}
+    for label in labels:
+        value = values.get(label, 0)
+        if type(value) is not int or value < 0:
+            raise ValueError('invalid metric count')
+        series[label] = value
+    return series
+
+
+def database_metrics():
+    query = (Path(__file__).resolve().parent.parent / 'etc' / 'metrics' / 'czero.sql').read_text()
+    result = command(['podman', 'exec', '-i', 'czero-postgres', 'psql', '-XAtq',
+                      '-v', 'ON_ERROR_STOP=1', '-U', 'czero', '-d', 'czero'], data=query, timeout=8)
+    if result.returncode:
+        raise ValueError('statistics query failed')
+    snapshot = json.loads(result.stdout)
+    return {kind: counts(snapshot, kind, labels) for kind, (_, labels) in METRICS.items()}
+
+
+def service_metrics():
+    result = command(['systemctl', '--user', 'is-active', *SERVICES.values()])
+    states = result.stdout.splitlines()
+    if len(states) != len(SERVICES):
+        return {}
+    return {name: int(state == 'active') for name, state in zip(SERVICES, states)}
+
+
+def mcp_metrics():
+    result = command(['podman', 'exec', 'czero', 'cat', '/tmp/czero-mcp-counts.json'])
+    if result.returncode:
+        return {}
+    return counts({'calls': json.loads(result.stdout)}, 'calls', ('success', 'error'))
+
+
+def emit(name, kind, value, label=None):
+    print(f'# TYPE czero_{name} {kind}')
+    if label is None:
+        print(f'czero_{name} {value}')
+    else:
+        for key, sample in value.items():
+            print(f'czero_{name}{{{label}="{key}"}} {sample}')
+
+
+def collect():
+    services, database, calls = {}, None, {}
+    try:
+        services = service_metrics()
+    except (OSError, subprocess.TimeoutExpired):
+        print('C0 service states unavailable', file=sys.stderr)
+    try:
+        database = database_metrics()
+    except (AttributeError, KeyError, ValueError, OSError, subprocess.TimeoutExpired):
+        print('C0 database metrics unavailable', file=sys.stderr)
+    if services.get('app'):
+        try:
+            calls = mcp_metrics()
+        except (AttributeError, KeyError, ValueError, OSError, subprocess.TimeoutExpired):
+            print('C0 MCP metrics unavailable', file=sys.stderr)
+    emit('collection_timestamp_seconds', 'gauge', int(time.time()))
+    emit('database_metrics_up', 'gauge', int(database is not None))
+    if services:
+        emit('service_up', 'gauge', services, 'service')
+    if database is not None:
+        for key, (label, _) in METRICS.items():
+            emit(key, 'gauge', database[key], label)
+    if calls:
+        emit('mcp_calls_total', 'counter', calls, 'outcome')
+
+
+if __name__ == '__main__':
+    collect()

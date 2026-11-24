@@ -31,6 +31,15 @@ CALLBACK = 'https://client.example.test/callback'
 
 
 @pytest.fixture
+def metrics_file(tmp_path, monkeypatch):
+    from czero_app import mcp_metrics
+    path = tmp_path / 'tool-counts.json'
+    monkeypatch.setenv('CZERO_MODULE_ID', 'czero1')
+    monkeypatch.setattr(mcp_metrics, 'METRICS_FILE', path)
+    return path
+
+
+@pytest.fixture
 def transport(application):
     app, owner_token, member_token, _, _, _ = application
     access = app.state.auth.access
@@ -77,9 +86,15 @@ def transport(application):
         connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id': UUID(client['client_id'])})
 
 
-def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
+@pytest.fixture
+def recorded_transport(metrics_file, request):
+    # Set up recording before the imported transport creates the app.
+    return request.getfixturevalue('transport')
+
+
+def test_official_sdk_current_legacy_tools_resources_match_real_rest(recorded_transport, metrics_file):
     async def check():
-        app, child, _, _, pair, _, owner_token, _ = transport
+        app, child, _, _, pair, _, owner_token, _ = recorded_transport
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
                 headers={'Authorization': 'Bearer ' + owner_token}) as rest:
             response = await rest.get('/api/v1/object-types')
@@ -118,6 +133,8 @@ def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport):
                         with pytest.raises(MCPError, match='invalid_resource_request'):
                             await client.read_resource('https://unauthorized.invalid/resource')
     asyncio.run(check())
+    assert json.loads(metrics_file.read_text()) == {'success': 6, 'error': 4}
+    assert metrics_file.stat().st_mode & 0o777 == 0o600
 
 
 def test_reader_scope_and_current_revocation_are_enforced_by_real_sdk(transport):
