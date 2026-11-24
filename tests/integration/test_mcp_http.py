@@ -40,7 +40,7 @@ def metrics_file(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def transport(metrics_file, application):
+def transport(application):
     app, owner_token, member_token, _, _, _ = application
     access = app.state.auth.access
     owner_identity = app.state.auth.oidc.verify_access_token(owner_token)
@@ -86,9 +86,15 @@ def transport(metrics_file, application):
         connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'), {'id': UUID(client['client_id'])})
 
 
-def test_official_sdk_current_legacy_tools_resources_match_real_rest(transport, metrics_file):
+@pytest.fixture
+def recorded_transport(metrics_file, request):
+    # Set up recording before the imported transport creates the app.
+    return request.getfixturevalue('transport')
+
+
+def test_official_sdk_current_legacy_tools_resources_match_real_rest(recorded_transport, metrics_file):
     async def check():
-        app, child, _, _, pair, _, owner_token, _ = transport
+        app, child, _, _, pair, _, owner_token, _ = recorded_transport
         async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
                 headers={'Authorization': 'Bearer ' + owner_token}) as rest:
             response = await rest.get('/api/v1/object-types')
