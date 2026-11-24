@@ -11,7 +11,7 @@ from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import text
 
-from .extraction import MEDIA_TYPES, MAX_UPLOAD, ExtractionError, extract_isolated, chunks
+from .extraction import MEDIA_TYPES, MAX_UPLOAD, ExtractionError, extract_isolated, chunks, upload_limit
 from .identity import PermissionDenied, Role
 from .spaces import SpaceBound, SpaceService, content_row, hold_authority
 from .jobs import Handler, JobService, bounded_json
@@ -89,11 +89,12 @@ class OriginalStore:
         self._prepare()
         return self.root / _uuid(version_id).hex
 
-    def write(self, version_id, stream):
+    def write(self, version_id, stream, *, media_type=None):
         target = self.path(version_id)
         staging = self.root / ('.' + _uuid(version_id).hex)
         digest = hashlib.sha256()
         size = 0
+        maximum = upload_limit(media_type)
         try:
             with staging.open('xb') as output:
                 os.chmod(staging, 0o600)
@@ -104,7 +105,7 @@ class OriginalStore:
                     if not isinstance(part, bytes):
                         raise ValueError('invalid_upload')
                     size += len(part)
-                    if size > MAX_UPLOAD:
+                    if size > maximum:
                         raise ExtractionError('too_large')
                     digest.update(part)
                     output.write(part)
@@ -166,6 +167,13 @@ class SourceService(SpaceBound):
             raise SourceNotFound()
         return content_row(row)
 
+    @staticmethod
+    def _update_current_metadata(connection, source_id, title, encoded):
+        """Caller holds the live source row and verified its expected revision."""
+        return connection.execute(text("""UPDATE c0_sources SET title=:title,metadata=CAST(:metadata AS jsonb),
+            revision=revision+1,updated_at=now() WHERE id=:id RETURNING revision"""),
+            {'id':source_id,'title':title,'metadata':encoded}).scalar_one()
+
     def ingest(self, actor, stream, *, title, filename, media_type, retain_original=False,
                metadata=None, source_id=None, expected_revision=None):
         title, filename = _label(title, 256), _label(filename, 255)
@@ -219,7 +227,7 @@ class SourceService(SpaceBound):
                       idempotency_key, execute, conflict=SourceConflict)
 
     def _ingest(self, connection, stream, *, title, filename, media_type,
-                retain_original, encoded, source_id, expected_revision, force_reindex=False):
+                retain_original, encoded, source_id, expected_revision, force_reindex=False, queue_extraction=True):
         """Trusted writer; callers own validation, authorization and transaction."""
         from .current_content import content_lock,retire_versions
         content_lock(connection)
@@ -238,7 +246,7 @@ class SourceService(SpaceBound):
         with self.database.engine.begin() as intent:
             intent.execute(text("INSERT INTO c0_original_cleanup(version_id,space_id,available_at) VALUES (:id,:space,now()+interval '1 hour')"),
                 {'id':version_id,'space':self._space(connection)})
-        digest, size = self.originals.write(version_id, stream)
+        digest, size = self.originals.write(version_id, stream, media_type=media_type)
         if source_id is None:
             # Identical first uploads with the same provenance deduplicate,
             # including concurrent deliveries. Different provenance stays
@@ -260,8 +268,7 @@ class SourceService(SpaceBound):
             if existing['media_type'] != media_type or existing['retain_original'] != retain_original:
                 raise SourceConflict()
             if existing['id']==source['current_version_id'] and (source['title']!=title or source['metadata']!=json.loads(encoded)):
-                connection.execute(text('UPDATE c0_sources SET title=:title,metadata=CAST(:metadata AS jsonb),revision=revision+1,updated_at=now() WHERE id=:id'),
-                    {'id':source_id,'title':title,'metadata':encoded})
+                self._update_current_metadata(connection,source_id,title,encoded)
             elif existing['id']!=source['current_version_id'] and (existing['publication_title']!=title or existing['publication_metadata']!=json.loads(encoded)):
                 connection.execute(text('UPDATE c0_source_versions SET publication_title=:title,publication_metadata=CAST(:metadata AS jsonb) WHERE id=:id'),
                     {'id':existing['id'],'title':title,'metadata':encoded})
@@ -272,13 +279,15 @@ class SourceService(SpaceBound):
             {'source':source_id,'current':source['current_version_id']}).scalars().all()
         retire_versions(connection,pending)
         number=connection.execute(text('UPDATE c0_sources SET next_version_number=next_version_number+1 WHERE id=:id RETURNING next_version_number-1'),{'id':source_id}).scalar_one()
-        job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(version_id)},
-            'source:' + str(version_id) + ':extract:1', space_id=self._space(connection))
+        job_id = None
+        if queue_extraction:
+            job_id = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(version_id)},
+                'source:' + str(version_id) + ':extract:1', space_id=self._space(connection))['id']
         row = connection.execute(text('''INSERT INTO c0_source_versions
             (space_id,id,source_id,number,filename,media_type,content_hash,size_bytes,retain_original,job_id,publication_title,publication_metadata,force_reindex)
             VALUES (:space,:id,:source,:number,:filename,:media,:hash,:size,:retain,:job,:title,CAST(:metadata AS jsonb),:reindex) RETURNING *'''),
             {'space': self._space(connection), 'id': version_id, 'source': source_id, 'number': number, 'filename': filename,
-             'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job['id'],'title':title,'metadata':encoded,'reindex':force_reindex}).mappings().one()
+             'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job_id,'title':title,'metadata':encoded,'reindex':force_reindex}).mappings().one()
         if number > 1:
             connection.execute(text('UPDATE c0_sources SET revision=revision+1,updated_at=now() WHERE id=:id'), {'id': source_id})
         connection.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=:id'),{'id':version_id})

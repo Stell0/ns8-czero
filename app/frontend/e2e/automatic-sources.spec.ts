@@ -58,9 +58,12 @@ for (const language of ['en', 'it'])
       .click()
     const dialog = page.getByRole('dialog')
     await dialog
+      .getByRole('button', { name: en ? /Source type/ : /Tipo di fonte/ })
+      .click()
+    await page.getByRole('option', { name: 'GitHub', exact: true }).click()
+    await dialog
       .getByRole('textbox', { name: en ? 'Title' : 'Titolo', exact: true })
       .fill('Public documentation')
-    await dialog.getByRole('button', { name: 'GitHub', exact: true }).click()
     const repositories = dialog.getByRole('textbox', {
       name: en
         ? 'Repositories (owner/repository_name)'

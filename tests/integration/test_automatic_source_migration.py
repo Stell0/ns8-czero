@@ -71,9 +71,12 @@ def test_published_personal_upgrade_preserves_all_rows_and_import_fences(
                 return {table:c.exec_driver_sql('SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),\'[]\'::jsonb) FROM "'+table+'" t').scalar_one() for table in names}
             before=snapshot()
             for _ in range(2):
+                # Release the snapshot's read locks before a separate connection
+                # replaces the PDF size constraint on the populated table.
+                c.commit()
                 run(current_core_python,'-m','czero_core.migrate')
                 assert snapshot()==before
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0042_automatic_sources'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0045_drive_audience'
                 assert c.execute(text('SELECT count(*) FROM c0_automatic_sources')).scalar_one()==0
         with database.begin() as c:c.execute(text('UPDATE c0_personal_config SET validated=false'))
         run(current_core_python,probe,CZERO_PERSONAL_STAGE='verify')

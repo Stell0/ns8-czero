@@ -358,8 +358,16 @@ def test_upgrade_from_schema0037_preserves_existing_constraints_and_rows():
                 migrate.migrate_database(db)
                 with db.engine.connect() as c:
                     after = c.execute(text("SELECT conname,pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace='public'::regnamespace ORDER BY conname")).all()
+                    # Only ordinary-space naming and the PDF upload limit change.
+                    size_constraint = 'c0_source_versions_size_bytes_check'
+                    assert set(before)-set(after) == {
+                        ('c0_spaces_name_key', 'UNIQUE (name)'),
+                        (size_constraint, 'CHECK (((size_bytes >= 1) AND (size_bytes <= 10485760)))'),
+                    }
+                    limit = ' '.join(dict(after)[size_constraint].split())
+                    assert 'size_bytes >= 1' in limit and 'size_bytes <= CASE' in limit
+                    assert "'application/pdf'" in limit and 'THEN 104857600 ELSE 10485760 END' in limit
                     # Personal spaces share a display name; ordinary names retain uniqueness.
-                    assert set(before)-set(after)=={('c0_spaces_name_key','UNIQUE (name)')}
                     index=c.execute(text("SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='c0_spaces_ordinary_name'")).scalar_one()
                     assert 'UNIQUE INDEX' in index and 'NOT personal' in index
                     c.execute(text("INSERT INTO c0_spaces(id,name) VALUES(:id,'Unique ordinary name')"),{'id':uuid4()})

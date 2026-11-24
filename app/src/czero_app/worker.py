@@ -2,6 +2,7 @@
 import importlib.util
 import os
 import logging
+import time
 import sys
 import stat
 from uuid import UUID
@@ -40,8 +41,23 @@ def update_sources():
         sources=SourceService(database,access,build_registry(database,originals,access=access),originals)
         def registered(kind,config,cursor):
             return collect(kind,config,cursor,github_token=github_token() if kind=='github' else None)
-        with deadline(25):
-            SourceUpdater(AutomaticSourceService(database,access),sources,collector=registered).tick()
+        service = AutomaticSourceService(database, access)
+        options = {}
+        if hasattr(service, 'drive_status'):
+            from czero_app.google_drive import GoogleDrive
+            try:
+                origin = os.getenv('CZERO_AUTH_PUBLIC_ORIGIN', '').rstrip('/')
+                callback = origin + os.getenv('CZERO_BASE_PATH', '') + '/auth/google-drive/callback'
+                provider = GoogleDrive.configured(callback) if origin else None
+            except (ValueError, OSError):
+                provider = None
+                logging.getLogger('czero.worker').warning('Invalid Google Drive configuration')
+            if provider:
+                options.update(drive_collector=provider.collect, drive_recheck=provider.recheck)
+        # Two 25-second parsers, 40 seconds of Google I/O and a 9-second
+        # permission recheck fit before the 120-second lease expires.
+        with deadline(110 if options else 25):
+            SourceUpdater(service, sources, collector=registered, **options).tick()
     except JobTimedOut:
         # A claimed lease expires; the next invocation reconciles publication.
         pass
@@ -53,7 +69,9 @@ def update_sources():
 
 if __name__ == '__main__':
     if importlib.util.find_spec('czero_core.automatic_sources') is not None:
+        started = time.monotonic()
         update_sources()
-        # Leave room for collection and the final job under the native lifetime guard.
-        sys.exit(main(build_registry(), budget_seconds=60))
+        # Reserve one 30-second handler and shutdown time inside TimeoutStartSec=150.
+        remaining = max(1, min(60, 110 - int(time.monotonic() - started)))
+        sys.exit(main(build_registry(), budget_seconds=remaining))
     sys.exit(main(build_registry()))

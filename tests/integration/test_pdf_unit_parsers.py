@@ -61,7 +61,7 @@ def test_assembly_fails_closed_on_missing_duplicate_or_corrupt_unit(change):
     with pytest.raises(ExtractionError): assemble_pdf(rows,2)
 
 
-@pytest.mark.parametrize('page', [True,0,-1,201,'1'])
+@pytest.mark.parametrize('page', [True,0,-1,2001,'1'])
 def test_page_selection_is_bounded_and_strict(page):
     with pytest.raises((ValueError,ExtractionError)):
         extract_page_isolated(FIXTURES/'readable-100.pdf',page)

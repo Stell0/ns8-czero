@@ -73,7 +73,7 @@ A Wiki can start as a small topic collection in an ordinary space. A protected r
 
 [Daily and weekly maintenance](docs/wiki-maintenance.md) uses an external assistant and scheduler. Downloading a package or copying a prompt installs no task. Compiler capabilities are implemented, but the [latest measured compiler study failed its quality gates](docs/knowledge-compilation/RESULTS.md); automatic compilation is not an accepted retrieval improvement or a default-on rollout.
 
-Automatic source updates support public GitHub repositories and websites through per-space UI/MCP definitions and the native worker. See the [contract](docs/automatic-sources.md) and [accepted deployment](PLAN.md#automatic-sources-accepted-deployment).
+Automatic sources can update from public GitHub repositories, websites and folders you own in Google Drive. Connect a Google account in the browser to preview which files a folder will import and why any files are skipped. The native worker runs enabled updates. See the [automatic sources guide](docs/automatic-sources.md), [Drive validation](PLAN.md#personal-google-drive-automatic-sources) and [earlier public-source deployment](PLAN.md#automatic-sources-accepted-deployment).
 
 ## How C0 works
 

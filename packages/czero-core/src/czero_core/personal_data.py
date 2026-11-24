@@ -15,7 +15,7 @@ from sqlalchemy import text
 from .identity import PermissionDenied, Role
 from .spaces import SPACE_LOCK, hold_authority, require_scope, space_uuid
 from .sources import _label, _metadata
-from .extraction import MEDIA_TYPES, MAX_UPLOAD
+from .extraction import MEDIA_TYPES, upload_limit
 from .receipts import snapshot
 
 
@@ -217,7 +217,8 @@ class PersonalDataService:
     def submit(self, *, owner_id, generation, connector, instance_id, remote_key, kind,
                title, content, media_type='text/plain', scan_id=None, metadata=None):
         """Remote content is already read; the same transaction fences and stages it."""
-        if connector not in ('nethvoice', 'webtop') or not isinstance(content, bytes) or not 0 < len(content) <= MAX_UPLOAD or media_type not in MEDIA_TYPES:
+        if (connector not in ('nethvoice', 'webtop') or not isinstance(content, bytes)
+                or not isinstance(media_type, str) or media_type not in MEDIA_TYPES or not 0 < len(content) <= upload_limit(media_type)):
             raise ValueError('invalid_personal_document')
         owner_id, instance_id = space_uuid(owner_id), space_uuid(instance_id)
         remote_key, kind, title = _label(remote_key, 512), _label(kind, 32), _label(title, 256)

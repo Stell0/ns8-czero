@@ -13,7 +13,7 @@ from uuid import UUID, uuid4, uuid5
 from sqlalchemy import text
 
 from .current_content import check_retired, content_lock
-from .extraction import Extracted, ExtractionError, MAX_LOCATIONS, extract_isolated, valid_text, chunks
+from .extraction import MAX_PDF_PAGES, Extracted, ExtractionError, MAX_LOCATIONS, extract_isolated, valid_text, chunks
 from .pdf_units import inventory_isolated, extract_page_isolated, validate_page, assemble_pdf
 from .document_units import (DOCX,inventory_isolated as document_inventory,
     extract_unit_isolated,validate_spec,validate_fragment,locators as document_locators,assemble as assemble_document)
@@ -48,7 +48,7 @@ def _profile(partitioner='whole-document-v1',pages=None,*,spec=None,chunking=Non
         if partitioner!='pdf-page-v1': raise ValueError('invalid_ocr_profile')
         result['ocr']=validate_ocr(ocr)
     if partitioner=='pdf-page-v1':
-        if type(pages) is not int or not 1<=pages<=200: raise ValueError('invalid_manifest')
+        if type(pages) is not int or not 1<=pages<=MAX_PDF_PAGES: raise ValueError('invalid_manifest')
         result['pages']=pages
     elif partitioner in FORMATS:
         result['spec']=validate_spec(FORMATS[partitioner],spec)
@@ -71,6 +71,8 @@ def _manifest(source, space, profile):
 
 
 def _locator(profile,ordinal):
+    if profile['partitioner']=='pdf-page-v1':
+        return {'kind':'page','first':ordinal,'last':ordinal} if 1<=ordinal<=profile['pages'] else {}
     values=_locators(profile)
     return values[ordinal-1] if 1<=ordinal<=len(values) else {}
 
@@ -222,7 +224,8 @@ class ExtractionQueue(SpaceBound):
                 WHERE r.state IN ('extracting','assembling','failed') AND r.expires_at>clock_timestamp()
                 AND u.state IN ('queued','leased','retry_wait')"""),{'space':current.space_id}).mappings().one()
             count=len(_locators(profile))
-            if counts['total']+count>self.max_queued_units or counts['selected']+count>max(200,self.max_queued_units//2):
+            space_limit = max(200, self.max_queued_units // 2)
+            if counts['total'] + count > self.max_queued_units or (counts['selected'] and counts['selected'] + count > space_limit):
                 raise ValueError('extraction_queue_full')
             now = c.execute(text('SELECT clock_timestamp()')).scalar_one()
             expiry = now+timedelta(hours=24)
@@ -234,19 +237,20 @@ class ExtractionQueue(SpaceBound):
             if changed.rowcount!=1:
                 raise SourceConflict()
             manifest = _manifest(v,current.space_id,profile)
+            manifest_hash = _hash(manifest)
             run_id = uuid5(v['id'], 'extraction:'+str(expected_generation))
             row = c.execute(text("""INSERT INTO c0_extraction_runs
                 (id,space_id,version_id,actor_id,processing_generation,original_sha256,manifest_sha256,
                  profile,expected_units,state,expires_at) VALUES
                 (:id,:space,:version,:actor,:generation,:hash,:manifest,CAST(:profile AS jsonb),:count,'extracting',:expiry) RETURNING *"""),
                 {'id':run_id,'space':current.space_id,'version':v['id'],'actor':current.user_id,
-                 'generation':expected_generation,'hash':v['content_hash'],'manifest':_hash(manifest),
+                 'generation':expected_generation,'hash':v['content_hash'],'manifest':manifest_hash,
                  'profile':json.dumps(profile),'count':len(manifest['units']),'expiry':expiry}).mappings().one()
             c.execute(text("""INSERT INTO c0_extraction_units(id,space_id,run_id,ordinal,locator,input_sha256)
                 VALUES (:id,:space,:run,:ordinal,CAST(:locator AS jsonb),:hash)"""),
                 [{'id':uuid5(run_id,str(unit['ordinal'])),'space':current.space_id,'run':run_id,
                   'ordinal':unit['ordinal'],'locator':json.dumps(unit['locator']),
-                  'hash':_fingerprint(_hash(manifest),profile,unit['ordinal'],unit['locator'])} for unit in manifest['units']])
+                  'hash':_fingerprint(manifest_hash,profile,unit['ordinal'],unit['locator'])} for unit in manifest['units']])
             return self._summary(row)
 
     @staticmethod
@@ -581,8 +585,8 @@ class ExtractionQueue(SpaceBound):
             if run is None: return False
             if run['state']=='ready': return True
             if run['state']!='assembling': return False
-            units=[dict(row) for row in c.execute(text('SELECT * FROM c0_extraction_units WHERE run_id=:id ORDER BY ordinal LIMIT 201'),
-                {'id':identifier}).mappings()]
+            units=[dict(row) for row in c.execute(text('SELECT * FROM c0_extraction_units WHERE run_id=:id ORDER BY ordinal LIMIT :limit'),
+                {'id':identifier, 'limit':run['expected_units'] + 1}).mappings()]
             source=c.execute(text('SELECT * FROM c0_source_versions WHERE id=:id'),{'id':run['version_id']}).mappings().one_or_none()
             if source is None: return False
             run=dict(run); source=dict(source)

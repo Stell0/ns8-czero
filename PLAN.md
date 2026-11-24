@@ -2,6 +2,29 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## Personal Google Drive automatic sources
+
+Developed on original main `a5758ad`. App 0.70 and Core 0.52/schema0045 add
+session-bound private Drive connections, fenced folder previews, account/space
+bindings and owner-only native collection. The reference app adds the source
+type dropdown and a bounded preview that explains skipped direct children.
+PDFs, Google Docs, UTF-8 text and Markdown form the initial import set.
+PDF originals support up to 2,000 pages and 100 MiB in Drive and ordinary uploads. See the
+[operator and user guide](docs/automatic-sources.md#add-a-folder-from-your-google-account).
+
+The [producer validation](https://github.com/Stell0/ns8-czero/actions/runs/45278822036)
+passed 3,576 Python/PostgreSQL/packaging cases, 74 Vue browser cases, 50 application
+browser cases and both native suites. The boundary upload retained a 100 MiB PDF
+and resolved a citation to page 2,000. Browser tests exercised the C0 callback,
+worker and extraction with a simulated Google provider. Live consent and
+background renewal require a configured instance OAuth client.
+
+[Core 0.52.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.52.0)
+was independently published from `0e2930f7ec73123486d42ab2327eaa0c21e3b3b9` by the
+[Core publisher](https://github.com/Stell0/ns8-czero/actions/runs/45288164767).
+App 0.70 pins this immutable Git source with a `>=0.52.0,<0.53.0` range.
+The released application image and its native acceptance are checked separately.
+
 ## Assistant setup and first-use experience
 
 Development plan, 22 November 2026. Start from original main `0a88801782d9eb17d8a5fa5d19a1d108c8cabafe`. This run covers the C0 website, its guides and skills, and the actual ChatGPT, Claude, Grok and Gemini web interfaces. Use the operator-designated Support lab on makako. Coordinate shared sign-in, Account and administration work with the [Support integration plan](docs/support-integration-plan.md).

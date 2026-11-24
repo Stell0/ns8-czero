@@ -19,7 +19,7 @@ Use `knowledge_bundle_apply` only for an explicitly requested group of related c
 Applicability and verification are separate annotations on an exact content revision. Missing metadata means unknown; changed content does not inherit verification. Annotation revision zero creates only. Preserve exact citation identities, authored contradictions and quotations; superseded automatic content is deleted and its evidence explicitly becomes unavailable/stale. Do not mark a claim verified merely because a write succeeded.
 
 
-## Automatic public-source updates
+## Automatic source updates
 
 When the connected catalogue exposes `automatic_sources_list`, discover the exact
 selected space and inspect existing definitions before proposing an update.
@@ -32,5 +32,12 @@ user requests automatic updates for that selection/space. Use
 `automatic_sources_command` to run now, pause or remove configuration; removal
 retains documents. Inspect `automatic_source_runs_list` and read the current
 complete documents before reporting success. Partial/queued work is incomplete.
+If an Editor wants to add a personal Google Drive folder, direct them to
+**Sources → Automatic sources → Add automatic source → Google Drive folder** when
+the instance offers it. The owner connects Google, checks the sample and the C0
+destination audience, and chooses whether to enable background updates. A Drive
+connection in this assistant is separate from the instance's Google authorization.
+Use the website for Drive preview, configuration and Run now. Existing selected-space
+list, history, document, pause and remove operations also apply to Drive.
 Missing operations mean the installed server has not adopted this capability;
 keep using the existing ingestion workflow, without installing another schedule.

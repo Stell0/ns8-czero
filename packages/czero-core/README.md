@@ -1,5 +1,27 @@
 # C0 Core
 
+## Personal Google Drive folders (0.52 producer)
+
+Schema 0043 keeps each selected folder, preview proof and sealed Google connection
+private to its owning C0 account and space. A browser-bound Editor can preview
+the folder and confirm its audience before saving. Background work also requires
+offline authority and rechecks the saved connection generation before publication.
+The worker accepts a trusted Drive collector and exposes ordinary source documents
+with opaque item keys. Pause and disconnect retain published evidence and cancel
+pending replacements. Website and GitHub definitions retain their existing format.
+
+Schema 0044 accepts PDF originals up to 100 MiB. PDF ingestion supports up to 2,000
+pages. Other original formats retain their 10 MiB limit. Extracted documents retain
+the existing one-million-character and 2 MiB bounds.
+
+Schema 0045 records the destination audience approved when saving each folder.
+A change to space access policy or explicit grants pauses further imports until
+the owner previews and saves again. Restricted destinations also bind the set of
+effective readers, including instance Admins, the configured instance owner and
+eligible personal owners. Shared and readable-by-all approvals cover future
+admitted accounts. Upgrading from schema 0044 pauses existing folders. Restricted
+folder bindings saved before effective-reader checks also require a fresh preview.
+
 ## Assistant connection approval (0.51.1)
 
 The client onboarding service can approve an explicitly selected scope increase
