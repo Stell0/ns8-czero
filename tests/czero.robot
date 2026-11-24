@@ -202,6 +202,20 @@ Configure and reconfigure the hostname service
     Should Be Equal    ${service}[enabled]    ${True}
     Should Be Equal    ${service}[failed]    ${False}
 
+Verify the module ships its Grafana dashboard and exports instance statistics
+    ${output}    ${rc} =    Execute Command    redis-cli --raw HGET module/${module_id}/metrics_dashboards czero-overview
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${dashboard} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${dashboard}[uid]    czero-${module_id}
+    Should Contain    ${dashboard}[title]    ${module_id}
+    ${metrics}    ${rc} =    Execute Command    runagent -m ${module_id} export-metrics
+    ...    return_rc=True    timeout=25s
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${metrics}    czero_database_metrics_up 1
+    Should Contain    ${metrics}    czero_service_up{service="app"} 1
+    Should Contain    ${metrics}    czero_source_versions{state="failed"}
+
 Verify HTTPS redirect and replace the hostname route
     ${code}    ${rc} =    Execute Command
     ...    curl --silent --max-time 10 --output /dev/null --write-out '\%{http_code}' --resolve ${host}:80:127.0.0.1 http://${host}/api/v1/health

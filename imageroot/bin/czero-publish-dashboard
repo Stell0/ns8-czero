@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+"""Publish the shipped dashboard via NS8 Metrics."""
+
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+import agent
+
+
+def publish(redis, module_id):
+    if not re.fullmatch(r'[a-z][a-z0-9-]{0,33}[0-9]', module_id):
+        raise ValueError('invalid module id')
+    template = Path(__file__).resolve().parent.parent / 'etc' / 'metrics' / 'czero.json'
+    dashboard = template.read_text().replace('__MODULE_ID__', module_id)
+    json.loads(dashboard)
+    key = f'module/{module_id}/metrics_dashboards'
+    current = redis.hget(key, 'czero-overview')
+    if current in (dashboard, dashboard.encode()):
+        return
+    with redis.pipeline() as transaction:
+        transaction.hset(key, 'czero-overview', dashboard)
+        transaction.publish(f'module/{module_id}/event/metrics-dashboard-changed', '{}')
+        transaction.execute()
+
+
+if __name__ == '__main__':
+    try:
+        publish(agent.redis_connect(privileged=True), os.environ['MODULE_ID'])
+    except Exception:
+        # Optional monitoring must not block C0 installation, update, or restore.
+        print('C0 Grafana dashboard could not be published', file=sys.stderr)
