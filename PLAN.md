@@ -2,6 +2,59 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## Protected PDF upload and recovery
+
+Source details show the failed file and its ingestion error after
+[PR 153](https://github.com/Stell0/ns8-czero/pull/153). The protected PDF
+workflow in [PR 155](https://github.com/Stell0/ns8-czero/pull/155) checks
+encryption before queuing. It requests an opening password when needed and
+requires separate approval for each extraction-restricted PDF. Editors can
+review and retry previously failed originals. Extraction preserves the
+encrypted original bytes.
+
+The producer passed [full acceptance](https://github.com/Stell0/ns8-czero/actions/runs/45418392746).
+[Core 0.53.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.53.0)
+was independently published from `88b0635d0bc588d7048f09822019e5f22817bfc8`.
+App 0.70 adopted the immutable released Core source in
+[PR 157](https://github.com/Stell0/ns8-czero/pull/157). Its
+[full native run](https://github.com/Stell0/ns8-czero/actions/runs/45430403893)
+passed the Debian upgrade from the installed predecessor, Rocky installation,
+eight browser workflows, and five image/filesystem scan pairs. The candidate
+and regular merge `1287e89b9490bdc3e5f958525e68fc26801887ba` have identical
+tracked trees.
+
+### Installed baseline
+
+The authorized dedicated instance now runs app 0.70.0, released Core 0.53.0,
+and schema `0046_pdf_authorization`. The frozen predecessor ran Core 0.52.0
+and schema `0045_drive_audience` from
+`450b9b385ed2ee2d9b29da280fa1c67f9d5513b9`. The installed source is
+`cc4f8165b069fbf35c1f5b03cdfae683e2a363b0` under immutable tag
+`ci-cc4f8165b069fbf35c1f5b03cdfae683e2a363b0-45430403893-1`.
+
+| Image | Installed digest |
+| --- | --- |
+| `czero` | `sha256:ebcb1211428036b4ed2767521b16d301b40d3f51e6ba297005c90b467e1783f6` |
+| `czero-app` | `sha256:55c74ada192ff94ed87365495111eca8e6bb87c8e59e21a3d184559bb6928492` |
+| `czero-postgres` | `sha256:c993d88e95e7688fe1c710dc6ff943d4178d29f2d4a4cc89bee4c4351504a815` |
+
+A scoped backup passed a full Restic data read. The supported module update
+and restart passed HTTPS, image and released package checks. Preservation
+checks covered 77 prior tables, 54 originals, authority, scheduled tasks,
+settings and 13 unrelated modules. The existing connected account and natural
+worker invocation passed. The root journal audit observed health and denied
+MCP controls with zero detected credentials or OAuth query parameters.
+Retention dry run reported zero original files to remove.
+
+Synthetic PDF checks passed after the instance settled, both after update
+and after restart. They covered password-only, extraction-restricted, and
+combined cases, identical encrypted original bytes, and the same instance key.
+Some checks during startup reached the five-second inspection deadline.
+Separately measured parser imports implicated eager initialization of the
+database library. The installed build and failed probe evidence retain their
+original identities. Existing protected originals still require individual
+editor approval to retry.
+
 ## Personal Google Drive automatic sources
 
 Developed on original main `a5758ad`. App 0.70 and Core 0.52/schema0045 add
