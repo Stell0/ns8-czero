@@ -422,3 +422,171 @@ def test_pdf_upload_limit_and_retained_original(source_http, tmp_path):
                                            files={'file': ('large.pdf', stream, 'application/pdf')})
             assert result.status_code == 413
     asyncio.run(check())
+
+
+@pytest.fixture
+def pdf_key(monkeypatch, tmp_path):
+    key = tmp_path / 'pdf.key'
+    key.touch(mode=0o600)
+    key.write_bytes(os.urandom(32))
+    monkeypatch.setenv('CZERO_PDF_UNLOCK_KEY_FILE', str(key))
+
+
+@pytest.fixture
+def protected_source_http(pdf_key, source_http):
+    return source_http
+
+
+def protected_pdf_bytes(password, *, restricted):
+    from io import BytesIO
+    from pathlib import Path
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.constants import UserAccessPermissions
+
+    reader = PdfReader(Path(__file__).resolve().parents[1] / 'fixtures/evidence/pipeline/readable-100.pdf')
+    writer = PdfWriter()
+    writer.add_page(reader.pages[0])
+    permissions = UserAccessPermissions(-1)
+    writer.encrypt(password, owner_password='synthetic-owner-credential', algorithm='AES-256',
+        permissions_flag=permissions & ~UserAccessPermissions.EXTRACT if restricted else permissions)
+    result = BytesIO()
+    writer.write(result)
+    return result.getvalue()
+
+
+def test_protected_upload_approval_publication_and_reprocessing(protected_source_http):
+    async def check():
+        (app, owner, member, *_), created = protected_source_http
+        database = protected_source_http[0][4]
+        password = 'synthetic-open-password'
+        original = protected_pdf_bytes(password, restricted=True)
+        other = protected_pdf_bytes(password, restricted=True)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                               headers={'Authorization': 'Bearer ' + owner}) as client:
+            fields = {'title': 'Protected fixture', 'media_type': 'application/pdf', 'retain_original': 'true'}
+
+            async def upload(body=original, **extras):
+                return await client.post('/api/v1/sources/upload', data={**fields, **extras},
+                    files={'file': ('protected.pdf', body, 'application/pdf')})
+
+            assert (await upload()).json() == {'detail': 'pdf_password_required'}
+            assert (await upload(pdf_password='incorrect')).json() == {'detail': 'pdf_password_incorrect'}
+            challenge = await upload(pdf_password=password)
+            assert challenge.status_code == 422 and challenge.json()['detail'] == 'pdf_extraction_approval_required'
+            token = challenge.json()['approval_token']
+            assert (await upload(other, pdf_password=password, pdf_approval_token=token)).status_code == 422
+            with database.engine.connect() as c:
+                assert c.execute(text('SELECT count(*) FROM c0_pdf_authorizations')).scalar_one() == 0
+
+            response = await upload(pdf_password=password, pdf_approval_token=token)
+            assert response.status_code == 202, response.json()
+            version = response.json()
+            created.append(version['source_id'])
+            duplicate = await upload(pdf_password=password, pdf_approval_token=token)
+            assert duplicate.json()['id'] == version['id']
+            with database.engine.connect() as c:
+                saved = c.execute(text('SELECT sealed_password,restricted FROM c0_pdf_authorizations')).one()
+                assert saved.restricted and password not in saved.sealed_password
+                assert password not in str(c.execute(text('SELECT payload FROM c0_jobs WHERE id=:id'),
+                    {'id': version['job_id']}).scalar_one())
+            Worker(database, app.state.jobs.registry).tick()
+            endpoint = '/api/v1/source-versions/' + version['id']
+            assert (await client.get(endpoint + '/document')).status_code == 200
+            assert (await client.get(endpoint + '/original')).content == original
+
+            source_endpoint = '/api/v1/sources/' + version['source_id']
+            source = (await client.get(source_endpoint)).json()
+            member_headers = {'Authorization': 'Bearer ' + member}
+            await client.get('/api/v1/me', headers=member_headers)
+            accounts = (await client.get('/api/v1/access/accounts')).json()['accounts']
+            member_id = next(row['id'] for row in accounts if row['username'] == 'member')
+            account = '/api/v1/access/accounts/' + member_id
+            request = {'expected_revision': source['revision'], 'idempotency_key': 'fixture-protected-reindex'}
+            assert (await client.put(account, json={'role': 'reader'})).status_code == 204
+            assert (await client.post(source_endpoint + '/reindex', json=request, headers=member_headers)).status_code == 403
+            assert (await client.put(account, json={'role': 'editor'})).status_code == 204
+            reindex = await client.post(source_endpoint + '/reindex', json=request, headers=member_headers)
+            assert reindex.status_code == 202, reindex.json()
+            Worker(database, app.state.jobs.registry).tick()
+            new_endpoint = '/api/v1/source-versions/' + reindex.json()['id']
+            assert (await client.get(new_endpoint + '/document')).status_code == 200
+            assert (await client.get(new_endpoint + '/original')).content == original
+            with database.engine.connect() as c:
+                assert c.execute(text('SELECT version_id::text FROM c0_pdf_authorizations')).scalar_one() == reindex.json()['id']
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('partitioned', [False, True])
+def test_retained_legacy_pdf_review_and_extraction(protected_source_http, partitioned):
+    from io import BytesIO
+    from czero_core.extraction_queue import ExtractionQueue, ExtractionWorker
+    from czero_core.identity import Actor, Role
+
+    async def check():
+        (app, owner, *_), created = protected_source_http
+        database = protected_source_http[0][4]
+        service = app.state.sources
+        original = protected_pdf_bytes('', restricted=True)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                               headers={'Authorization': 'Bearer ' + owner}) as client:
+            profile = (await client.get('/api/v1/me')).json()
+            actor = Actor(UUID(profile['id']), Role.READER)
+            version = service.ingest(actor, BytesIO(original), title='Legacy restricted PDF',
+                media_type='application/pdf', filename='legacy.pdf', retain_original=True)
+            created.append(version['source_id'])
+            Worker(database, app.state.jobs.registry).tick()
+            assert service.versions(actor, version['source_id'])[0]['error_code'] == 'encrypted_pdf'
+            with database.engine.begin() as c:
+                c.execute(text("UPDATE c0_source_versions SET created_at=now()-interval '2 days' WHERE id=:id"),
+                    {'id': version['id']})
+
+            endpoint = '/api/v1/source-versions/' + str(version['id'])
+            payload = {'expected_generation': version['generation']}
+            assert (await client.post(endpoint + '/retry', json=payload)).status_code == 422
+            approval = await client.post(endpoint + '/pdf-retry', json=payload)
+            assert approval.status_code == 422
+            assert approval.json()['detail'] == 'pdf_extraction_approval_required'
+            payload['pdf_approval_token'] = approval.json()['approval_token']
+            retry = await client.post(endpoint + '/pdf-retry', json=payload)
+            assert retry.status_code == 202, retry.json()
+            assert (await client.post(endpoint + '/pdf-retry', json=payload)).status_code == 409
+            with database.engine.connect() as c:
+                grant = c.execute(text('SELECT restricted,sealed_password FROM c0_pdf_authorizations WHERE version_id=:id'),
+                    {'id': version['id']}).one()
+                assert grant == (True, None)
+
+            if partitioned:
+                queue = ExtractionQueue(database, service.access, service.originals, enabled=True, pdf_access=service.pdf_access)
+                queue.enqueue(actor, version['id'], expected_generation=retry.json()['generation'])
+                assert ExtractionWorker(queue).tick() == 1
+            else:
+                Worker(database, app.state.jobs.registry).tick()
+            assert (await client.get(endpoint + '/document')).status_code == 200
+            assert (await client.get(endpoint + '/original')).content == original
+    asyncio.run(check())
+
+
+def test_archived_pending_protected_pdf_does_not_publish(protected_source_http):
+    async def check():
+        (app, owner, *_), created = protected_source_http
+        database = protected_source_http[0][4]
+        original = protected_pdf_bytes('synthetic-password', restricted=False)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                               headers={'Authorization': 'Bearer ' + owner}) as client:
+            upload = await client.post('/api/v1/sources/upload',
+                data={'title': 'Archive before extraction', 'media_type': 'application/pdf',
+                      'pdf_password': 'synthetic-password'},
+                files={'file': ('archive.pdf', original, 'application/pdf')})
+            assert upload.status_code == 202, upload.json()
+            version = upload.json()
+            created.append(version['source_id'])
+            source = '/api/v1/sources/' + version['source_id']
+            revision = (await client.get(source)).json()['revision']
+            assert (await client.delete(source, params={'expected_revision':revision})).status_code == 200
+            Worker(database, app.state.jobs.registry).tick()
+            with database.engine.connect() as c:
+                assert c.execute(text('SELECT current_version_id FROM c0_sources WHERE id=:id'),
+                    {'id': version['source_id']}).scalar_one() is None
+                assert c.execute(text('SELECT count(*) FROM c0_documents WHERE version_id=:id'),
+                    {'id': version['id']}).scalar_one() == 0
+    asyncio.run(check())

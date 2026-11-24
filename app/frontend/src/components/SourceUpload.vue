@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import {
@@ -13,6 +13,8 @@ import * as v from 'valibot'
 import { request } from '../api/client'
 import type { Source, Version } from '../api/knowledge'
 import ErrorNotice from './ErrorNotice.vue'
+import PdfReviewFields from './PdfReviewFields.vue'
+import { usePdfReview } from '../api/pdfReview'
 const props = defineProps<{ source?: Source }>()
 const emit = defineEmits<{ close: []; uploaded: [version: Version] }>()
 const { t } = useI18n()
@@ -22,9 +24,13 @@ const title = ref(props.source?.title || ''),
   retain = ref(false),
   invalid = ref(false),
   progress = ref(0)
+const review = usePdfReview()
+const { password, passwordError, approved, approvalToken, canSubmit } = review
 let active = true
+let draft = 0
 onBeforeUnmount(() => {
   active = false
+  review.clear()
 })
 const types: Record<string, string> = {
   txt: 'text/plain',
@@ -35,6 +41,8 @@ const types: Record<string, string> = {
 }
 const mutation = useMutation({
   mutation: async () => {
+    if (!canSubmit.value) return
+    const attempt = draft
     const valid = v.safeParse(
       v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(256)),
       title.value,
@@ -58,16 +66,38 @@ const mutation = useMutation({
       form.append('source_id', props.source.id)
       form.append('expected_revision', String(props.source.revision))
     }
-    const version = await request<Version>('sources/upload', {
-      method: 'POST',
-      data: form,
-      onUploadProgress: (event) => {
-        progress.value = Math.round((event.progress || 0) * 100)
-      },
-    })
-    if (active) emit('uploaded', version)
+    if (media === 'application/pdf') {
+      for (const [key, value] of Object.entries(review.fields())) {
+        form.append(key, value)
+      }
+    }
+    try {
+      const version = await request<Version>('sources/upload', {
+        method: 'POST',
+        data: form,
+        onUploadProgress: (event) => {
+          if (active && draft === attempt)
+            progress.value = Math.round((event.progress || 0) * 100)
+        },
+      })
+      if (active && draft === attempt) {
+        review.clear()
+        emit('uploaded', version)
+      }
+    } catch (error) {
+      if (active && draft === attempt && !review.prompt(error)) throw error
+    }
   },
 })
+watch(
+  [file, () => props.source?.id, () => props.source?.revision],
+  () => {
+    draft++
+    review.clear()
+    mutation.reset()
+  },
+  { flush: 'sync' },
+)
 </script>
 <template>
   <NeSideDrawer
@@ -119,11 +149,20 @@ const mutation = useMutation({
       <p class="text-sm text-text-secondary">
         {{ t('sources.retentionHelp') }}
       </p>
+      <PdfReviewFields
+        v-if="file"
+        v-model:password="password"
+        v-model:approved="approved"
+        :filename="file.name"
+        :password-error="passwordError"
+        :approval-required="!!approvalToken"
+        :disabled="mutation.isLoading.value"
+      />
       <NeButton
         kind="primary"
         type="submit"
         :loading="mutation.isLoading.value"
-        :disabled="mutation.isLoading.value"
+        :disabled="mutation.isLoading.value || !canSubmit"
         >{{ t(source ? 'sources.replace' : 'sources.upload') }}</NeButton
       >
     </form>

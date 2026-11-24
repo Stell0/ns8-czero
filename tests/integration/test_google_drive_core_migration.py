@@ -106,7 +106,7 @@ db.close()
             run([str(current_core_python),'-I','-m','czero_core.migrate'], runtime=runtime)
             assert public_state() == before
             with db.connect() as c:
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0045_drive_audience'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0046_pdf_authorization'
                 assert c.execute(text('SELECT enabled,revision,next_run_at FROM c0_automatic_sources WHERE id=:id'),
                                  {'id':legacy}).one()==(False,2,None)
                 assert c.execute(text('SELECT state,error_code FROM c0_source_update_runs WHERE definition_id=:id'),

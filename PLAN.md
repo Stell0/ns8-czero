@@ -2558,6 +2558,16 @@ successful full43126746286 and its exact-source promotion proof. The successor
 resolves instruction conflicts against that closeout, retains its deployment
 evidence and repeats the required current-base checks before merge.
 
+## Protected PDF uploads and retries
+
+Manual PDF uploads and retries check passwords and request explicit per-file
+extraction approval before queueing. Editors with current Write access can
+reprocess the same retained original using saved authorization. The PDF key is
+private NS8 state included in native backups. Automatic imports keep their
+existing policy. Core 0.53.0 and schema `0046_pdf_authorization` stage the
+producer change. Released Core publication, app pin adoption, full native
+acceptance and a separately authorized C01 rollout are delivery gates.
+
 ## Current baseline
 
 The accepted dedicated installation is app **0.69.0**, released Core **0.51.0**,

@@ -26,6 +26,7 @@ MEDIA_TYPES={'text/plain','text/markdown','application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
 ERRORS={'unsupported_format','too_large','invalid_text','invalid_pdf','invalid_docx',
     'encrypted_pdf','no_text','unsupported_scan','archive_limit','unsupported_xml',
+    'pdf_password_required','pdf_password_incorrect','pdf_extraction_approval_required','pdf_unlock_unavailable',
     'resource_limit','parser_timeout','pdf_too_many_pages','parser_failed','invalid_file','unsupported_docx','ocr_unavailable'}
 
 
@@ -226,11 +227,17 @@ def _short_pdf_pages(reader):
 def extract_file(path: Path,media_type: str,*,allow_mixed_pdf=False):
     """Pure parser entry point; untrusted uploads call the isolated wrapper."""
     if media_type not in MEDIA_TYPES:raise ExtractionError('unsupported_format')
-    path=Path(path)
+    from .protected_pdf import MAX_WORKING_PDF_BYTES, WorkingPDF
+    if isinstance(path, WorkingPDF):
+        if media_type != 'application/pdf':raise ExtractionError('invalid_file')
+        maximum = MAX_WORKING_PDF_BYTES
+    else:
+        path = Path(path)
+        maximum = upload_limit(media_type)
     try: info=path.lstat()
     except OSError:raise ExtractionError('invalid_file') from None
     if not stat.S_ISREG(info.st_mode):raise ExtractionError('invalid_file')
-    if info.st_size>upload_limit(media_type):raise ExtractionError('too_large')
+    if info.st_size>maximum:raise ExtractionError('too_large')
     if media_type=='application/pdf':return _pdf(path,allow_mixed_pdf=allow_mixed_pdf)
     if media_type.endswith('wordprocessingml.document'):return _docx(path)
     try:text=valid_text(path.read_bytes().decode('utf-8-sig').replace('\r\n','\n').replace('\r','\n'))
@@ -259,13 +266,15 @@ def chunks(document: Extracted,*,size=1200,overlap=150):
     return result
 
 
-def parser_output(command):
+def parser_output(command, *, pass_fds=(), input_data=None, timeout=25, env=None):
     with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                          start_new_session=True) as parser:
+                          stdin=subprocess.DEVNULL if input_data is None else subprocess.PIPE,
+                          pass_fds=pass_fds, start_new_session=True, env=env) as parser:
         try:
-            output, _ = parser.communicate(timeout=25)
+            output, _ = parser.communicate(input=input_data, timeout=timeout)
         except subprocess.TimeoutExpired:
-            os.killpg(parser.pid, signal.SIGKILL)
+            try: os.killpg(parser.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
             parser.communicate()
             raise ExtractionError('parser_timeout') from None
         finally:
@@ -277,15 +286,17 @@ def parser_output(command):
     return output
 
 
-def extract_isolated(path: Path,media_type: str,*,allow_mixed_pdf=False):
+def extract_isolated(path: Path,media_type: str,*,allow_mixed_pdf=False,timeout=25):
     """Trusted fixed parser command, bounded by child rlimits and parent time."""
     if media_type not in MEDIA_TYPES:raise ExtractionError('unsupported_format')
-    command = [sys.executable, '-m', 'czero_core.extraction', str(path), media_type]
+    from .protected_pdf import parser_input
+    argument, pass_fds = parser_input(path)
+    command = [sys.executable, '-m', 'czero_core.extraction', argument, media_type]
     if allow_mixed_pdf:
         if media_type != 'application/pdf':
             raise ExtractionError('unsupported_format')
         command.append('text-layer')
-    output = parser_output(command)
+    output = parser_output(command, pass_fds=pass_fds, timeout=timeout)
     try:
         payload=json.loads(output)
         if 'error' in payload:raise ExtractionError(payload['error'])
@@ -315,7 +326,8 @@ def main():
     try:
         allow_mixed_pdf = pdf and sys.argv[3:] == ['text-layer']
         if len(sys.argv)!=3 and not allow_mixed_pdf:raise ExtractionError('invalid_file')
-        result=extract_file(Path(sys.argv[1]),sys.argv[2],allow_mixed_pdf=allow_mixed_pdf)
+        from .protected_pdf import receive_parser_input
+        result=extract_file(receive_parser_input(sys.argv[1]),sys.argv[2],allow_mixed_pdf=allow_mixed_pdf)
         output = {'text':result.text,'locations':result.locations}
         if allow_mixed_pdf:
             output['textless_pages'] = result.textless_pages
