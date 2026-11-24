@@ -16,6 +16,40 @@ Live acceptance checks the authenticated Grafana route, provisioning, and
 fresh Prometheus samples for each authorized instance after its native
 backup, upgrade, and restart.
 
+### Installed monitoring baseline
+
+[PR 160](https://github.com/Stell0/ns8-czero/pull/160) merged as
+`4f2447d45fc331b53deabb39c37e60a7af02cf69`. The
+[accepted candidate run](https://github.com/Stell0/ns8-czero/actions/runs/45456339586)
+passed the Python/PostgreSQL suite, 22 Debian upgrade cases and 27 Rocky cases
+with three expected skips. The independently downloaded reports include eight
+browser workflows and five scan pairs. The
+[merged main run](https://github.com/Stell0/ns8-czero/actions/runs/45465993753)
+also passed. The installed app reports released Core 0.53.0 and
+schema `0046_pdf_authorization`.
+
+The three authorized C0 instances use source `4172d37da936647ef6b3decea045dd4304e17c93` and
+immutable tag `ci-4172d37da936647ef6b3decea045dd4304e17c93-45456339586-1`.
+
+| Image | Installed digest |
+| --- | --- |
+| `czero` | `sha256:0333ca60c458d2cad60bf5fd9c978f4631d9419a0a40d690071ec47e29b62853` |
+| `czero-app` | `sha256:fe41e4a620fab01dd7a674c7e13479a40403675da33c56b99e053c8e5b69deba` |
+| `czero-postgres` | `sha256:4896eed333507dd35a7b169f588e2736c0dc8059ad4baa3bcca36a529c0a95cb` |
+
+All three C0-only backups passed a full Restic read. Supported updates and
+restarts preserved source originals, stable content and authority fingerprints,
+scheduled definitions, and 11 unrelated modules. The existing custom
+application returned to ready with its image, mounts and nine registered
+files preserved. Root journal checks observed health and denied MCP controls
+with zero OAuth query or credential candidates.
+
+Grafana provisioned all three dashboards through NS8 Metrics. Each of the
+21 queries per dashboard ran through Grafana, with data in all 16 panels and
+a fresh post-restart sample from the expected node. The public route required
+cluster administrator authentication. MCP outcome grading used the real SDK
+in the disposable acceptance suite.
+
 ## Protected PDF upload and recovery
 
 Source details show the failed file and its ingestion error after
