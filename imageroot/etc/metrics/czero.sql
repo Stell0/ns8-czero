@@ -21,12 +21,17 @@ WITH live_versions AS (
 SELECT json_build_object(
     'inventory', json_build_object(
         'sources', (SELECT count(*) FROM c0_sources WHERE NOT deleted),
-        'documents', (SELECT count(*) FROM c0_documents),
+        'documents', (SELECT count(*) FROM c0_sources s
+            JOIN c0_documents d ON d.version_id = s.current_version_id WHERE NOT s.deleted),
         'wiki_pages', (SELECT count(*) FROM c0_wiki_pages WHERE NOT deleted),
         'entities', (SELECT count(*) FROM c0_entities WHERE NOT deleted),
-        'browser_sessions', (SELECT count(*) FROM c0_sessions WHERE expires_at > now()),
-        'assistant_connections', (SELECT count(*) FROM c0_oauth_grants
-            WHERE CASE WHEN persistent THEN idle_until ELSE expires_at END > now()),
+        'browser_sessions', (SELECT count(*) FROM c0_sessions WHERE expires_at > now()
+            AND (browser_idle_until IS NULL OR browser_idle_until > now())),
+        'assistant_connections', (SELECT count(*) FROM c0_oauth_grants g
+            JOIN c0_oauth_clients c ON c.id = g.client_id
+            WHERE c.enabled AND c.revision = g.client_revision
+            AND CASE WHEN g.persistent THEN g.idle_until ELSE g.expires_at END > now()
+            AND EXISTS (SELECT 1 FROM c0_oauth_tokens t WHERE t.grant_id = g.id)),
         'schedules', (SELECT count(*) FROM c0_scheduled_tasks WHERE enabled)
     ),
     'source_versions', (SELECT json_object_agg(key, value)

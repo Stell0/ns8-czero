@@ -78,7 +78,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_service_up{module=\"__MODULE_ID__\"} and on (module) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
+          "expr": "czero_service_up{module=\"__MODULE_ID__\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{service}}",
           "instant": true,
           "range": false
@@ -147,7 +147,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_database_metrics_up{module=\"__MODULE_ID__\"} and on (module) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
+          "expr": "czero_database_metrics_up{module=\"__MODULE_ID__\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "Database",
           "instant": true,
           "range": false
@@ -303,7 +303,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "60 * sum by (outcome) (rate(czero_mcp_calls_total{module=\"__MODULE_ID__\"}[15m]))",
+          "expr": "60 * sum by (outcome) (rate(czero_mcp_calls_total{module=\"__MODULE_ID__\"}[15m]) and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900))",
           "legendFormat": "{{outcome}}",
           "instant": false,
           "range": true
@@ -643,7 +643,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_inventory{module=\"__MODULE_ID__\",kind=~\"sources|documents|wiki_pages|entities\"}",
+          "expr": "czero_inventory{module=\"__MODULE_ID__\",kind=~\"sources|documents|wiki_pages|entities\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{kind}}",
           "instant": false,
           "range": true
@@ -654,7 +654,7 @@
       "id": 9,
       "type": "timeseries",
       "title": "Connections and schedules",
-      "description": "Current browser sessions, authorized assistant connections, and enabled schedules.",
+      "description": "Locally unexpired browser sessions, OAuth connections with issued tokens and a current enabled client, and enabled C0 schedules. Session and connection counts do not verify the external identity provider.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -699,7 +699,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_inventory{module=\"__MODULE_ID__\",kind=~\"browser_sessions|assistant_connections|schedules\"}",
+          "expr": "czero_inventory{module=\"__MODULE_ID__\",kind=~\"browser_sessions|assistant_connections|schedules\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{kind}}",
           "instant": false,
           "range": true
@@ -801,7 +801,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_source_versions{module=\"__MODULE_ID__\"}",
+          "expr": "czero_source_versions{module=\"__MODULE_ID__\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{state}}",
           "instant": false,
           "range": true
@@ -857,7 +857,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_source_failures{module=\"__MODULE_ID__\"}",
+          "expr": "czero_source_failures{module=\"__MODULE_ID__\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{reason}}",
           "instant": false,
           "range": true
@@ -974,7 +974,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_jobs{module=\"__MODULE_ID__\"}",
+          "expr": "czero_jobs{module=\"__MODULE_ID__\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{state}}",
           "instant": false,
           "range": true
@@ -1061,7 +1061,7 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "czero_extraction_runs{module=\"__MODULE_ID__\"}",
+          "expr": "czero_extraction_runs{module=\"__MODULE_ID__\"} and on (module, node, job) (time() - czero_collection_timestamp_seconds{module=\"__MODULE_ID__\"} < 900)",
           "legendFormat": "{{state}}",
           "instant": false,
           "range": true

@@ -19,10 +19,10 @@ def publish(redis, module_id):
     json.loads(dashboard)
     key = f'module/{module_id}/metrics_dashboards'
     current = redis.hget(key, 'czero-overview')
-    if current in (dashboard, dashboard.encode()):
-        return
     with redis.pipeline() as transaction:
-        transaction.hset(key, 'czero-overview', dashboard)
+        if current not in (dashboard, dashboard.encode()):
+            transaction.hset(key, 'czero-overview', dashboard)
+        # The consumer may have missed a prior event or been disabled.
         transaction.publish(f'module/{module_id}/event/metrics-dashboard-changed', '{}')
         transaction.execute()
 

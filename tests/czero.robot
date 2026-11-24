@@ -65,6 +65,20 @@ Check application route
     Should Be Equal    ${health}[core_version]    ${expected_core}
     Should Be Equal    ${health}[app_version]    ${expected_app}
 
+Check C0 dashboard registration
+    ${output}    ${rc} =    Execute Command    redis-cli --raw HGET module/${module_id}/metrics_dashboards czero-overview
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${dashboard} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${dashboard}[uid]    czero-${module_id}
+    Should Contain    ${dashboard}[title]    ${module_id}
+
+Check C0 metrics textfile
+    ${scrape}    ${rc} =    Execute Command    cat /var/lib/nethserver/node/state/node_exporter/module-${module_id}.prom
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${scrape}    czero_database_metrics_up{module="${module_id}"} 1
+
 Check worker timer recovered
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
     ...    return_rc=True    timeout=30s
@@ -203,18 +217,16 @@ Configure and reconfigure the hostname service
     Should Be Equal    ${service}[failed]    ${False}
 
 Verify the module ships its Grafana dashboard and exports instance statistics
-    ${output}    ${rc} =    Execute Command    redis-cli --raw HGET module/${module_id}/metrics_dashboards czero-overview
-    ...    return_rc=True
-    Should Be Equal As Integers    ${rc}    0
-    ${dashboard} =    Evaluate    json.loads($output)    modules=json
-    Should Be Equal    ${dashboard}[uid]    czero-${module_id}
-    Should Contain    ${dashboard}[title]    ${module_id}
+    Check C0 dashboard registration
     ${metrics}    ${rc} =    Execute Command    runagent -m ${module_id} export-metrics
     ...    return_rc=True    timeout=25s
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${metrics}    czero_database_metrics_up 1
     Should Contain    ${metrics}    czero_service_up{service="app"} 1
     Should Contain    ${metrics}    czero_source_versions{state="failed"}
+    ${rc} =    Execute Command    runagent -m node refresh-module-metrics
+    ...    return_rc=True    return_stdout=False    timeout=45s
+    Wait Until Keyword Succeeds    45s    2s    Check C0 metrics textfile
 
 Verify HTTPS redirect and replace the hostname route
     ${code}    ${rc} =    Execute Command
@@ -588,6 +600,7 @@ Backup and restore into a clean disposable instance
     ${restored_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${restored_id}
     Log To Console    Restore phase: verify health and data
+    Check C0 dashboard registration
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py restored
     ...    return_rc=True    timeout=180s
@@ -647,6 +660,7 @@ Backup and restore into a clean disposable instance
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Log To Console    Restore phase: verify health and data
+    Check C0 dashboard registration
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py restored
     ...    return_rc=True    timeout=180s

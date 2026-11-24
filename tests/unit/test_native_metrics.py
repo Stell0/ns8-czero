@@ -57,6 +57,7 @@ class DashboardRegistry:
     def __init__(self):
         self.dashboards = {}
         self.events = []
+        self.writes = []
 
     def hget(self, key, field):
         return self.dashboards.get((key, field))
@@ -71,6 +72,7 @@ class DashboardRegistry:
         pass
 
     def hset(self, key, field, value):
+        self.writes.append((key, field))
         self.dashboards[key, field] = value.encode()
 
     def publish(self, name, payload):
@@ -80,14 +82,15 @@ class DashboardRegistry:
         pass
 
 
-def test_dashboard_instances_are_isolated_and_republish_only_on_change(monkeypatch):
+def test_dashboard_instances_are_isolated_and_can_replay_notification(monkeypatch):
     monkeypatch.setitem(sys.modules, 'agent', SimpleNamespace())
     publish = runpy.run_path(str(ROOT / 'bin/czero-publish-dashboard'))['publish']
     registry = DashboardRegistry()
     registry.dashboards['module/czero2/metrics_dashboards', 'custom'] = b'{ }'
     for module_id in ('czero2', 'czero2', 'czero3'):
         publish(registry, module_id)
-    assert registry.events == [(f'module/czero{n}/event/metrics-dashboard-changed', {}) for n in (2, 3)]
+    assert registry.events == [(f'module/czero{n}/event/metrics-dashboard-changed', {}) for n in (2, 2, 3)]
+    assert registry.writes == [(f'module/czero{n}/metrics_dashboards', 'czero-overview') for n in (2, 3)]
     assert registry.dashboards['module/czero2/metrics_dashboards', 'custom'] == b'{ }'
     with pytest.raises(ValueError):
         publish(registry, 'czero2"}')
@@ -97,6 +100,10 @@ def test_dashboard_instances_are_isolated_and_republish_only_on_change(monkeypat
         assert module_id in dashboard['uid'] and module_id in dashboard['title']
         expressions = [target['expr'] for panel in dashboard['panels'] for target in panel.get('targets', ())]
         assert len(expressions) >= 10 and all(module_id in expr for expr in expressions)
+        for expr in expressions:
+            if expr.startswith('czero_') or 'rate(czero_' in expr:
+                assert 'and on (module, node, job)' in expr
+                assert 'czero_collection_timestamp_seconds' in expr
         assert b'__MODULE_ID__' not in configured
     for path in ('actions/create-module', 'actions/restore-module', 'update-module.d'):
         assert (ROOT / path / '95grafana-dashboard').resolve().is_file()
