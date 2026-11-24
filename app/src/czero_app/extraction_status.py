@@ -22,7 +22,8 @@ def install(app,auth,sources,read_context,write_context):
     # Released consumers keep their original routes until adopting new Core.
     if not hasattr(sources,'reindex'): return
     from czero_core.extraction_queue import ExtractionQueue
-    queue=ExtractionQueue(sources.database,sources.access,sources.originals)
+    options = {'pdf_access': sources.pdf_access} if hasattr(sources, 'retry_pdf') else {}
+    queue=ExtractionQueue(sources.database,sources.access,sources.originals,**options)
     app.state.extraction_queue=queue
     def selected(space_id): return queue.in_space(space_id) if space_id is not None else queue
     def invoke(operation,*args,**kwargs):

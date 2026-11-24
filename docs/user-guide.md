@@ -77,6 +77,15 @@ Editors can use **Sources → Upload source** for TXT, Markdown, PDF or DOCX, wi
 a title and optional provenance. A PDF may contain up to 2,000 pages and be up
 to 100 MiB. Other upload formats have a 10 MiB limit. **Retain the original
 file** starts unchecked.
+
+C0 checks PDF protection before processing. Enter the opening password if
+requested. If the PDF restricts text copying, confirm that you are authorized
+to extract its text into the selected space. People who can read that space can
+read the extracted text. Use **Review PDF and retry** for a failed protected
+PDF whose upload is still available. If the original was discarded, upload a
+replacement. For a retained PDF, C0 saves its authorization and any required
+password securely so an editor can reprocess the same file later.
+
 Original download and reprocessing require retention. On a source, **Upload
 replacement** keeps its current complete document readable while extraction and
 whole-document validation run. **Reprocess original**, **Retry processing** and

@@ -206,6 +206,11 @@ class RetryRequest(BaseModel):
     expected_generation: int = Field(ge=1, le=2147483646)
 
 
+class PdfRetryRequest(RetryRequest):
+    pdf_password: str | None = Field(default=None, max_length=1024, repr=False)
+    pdf_approval_token: str | None = Field(default=None, max_length=80, repr=False)
+
+
 class _UploadLimitExceeded(BaseException):
     # Bypass FastAPI's generic body-parse Exception -> HTTP 400 conversion.
     # Starlette closes multipart temporary files on every BaseException.
@@ -227,7 +232,7 @@ class UploadBodyLimit:
                 limited, maximum = True, 1048576
             if resource in ('context-bundles', 'api-keys') or resource.startswith('source-documents/'):
                 limited,maximum=True,16384
-            if resource.startswith('extraction-runs/') or resource.startswith('sources/') and resource.endswith('/reindex'):
+            if resource.startswith('extraction-runs/') or resource.startswith('sources/') and resource.endswith('/reindex') or resource.endswith('/pdf-retry'):
                 limited,maximum=True,4096
             if resource.startswith(('oauth/', '/oauth/')):
                 limited, maximum = True, 16384
@@ -250,7 +255,11 @@ class UploadBodyLimit:
 
 def install_source_routes(app, database, auth, read_context, write_context, registry, originals):
     operation = app.state.operation_catalog.bind
-    service = SourceService(database, auth.access if auth else None, registry, originals)
+    options = {}
+    if hasattr(SourceService, 'ingest_manual'):
+        from czero_core.pdf_access import PdfAccess
+        options['pdf_access'] = PdfAccess.configured()
+    service = SourceService(database, auth.access if auth else None, registry, originals, **options)
     app.state.sources = service
     documents = DocumentService(database, auth.access if auth else None)
     app.state.source_documents = documents
@@ -273,6 +282,8 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
         except SourceNotFound:
             raise HTTPException(404, 'source_not_found') from None
         except ExtractionError as error:
+            if error.code == 'pdf_extraction_approval_required':
+                return JSONResponse({'detail': error.code, 'approval_token': error.token}, status_code=422)
             raise HTTPException(413 if error.code == 'too_large' else 422, error.code) from None
         except ValueError as error:
             if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
@@ -282,7 +293,7 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     async def text_validation_error(request, error):
         # FastAPI's default errors contain submitted input. Keep text evidence
         # out of every validation response, including malformed JSON/Unicode.
-        if (request.url.path.endswith('/api/v1/sources/ingest-text')
+        if (request.url.path.endswith(('/api/v1/sources/ingest-text', '/api/v1/sources/upload', '/pdf-retry'))
             or ('/api/v1/source-documents/' in request.url.path and request.url.path.endswith(('/outline','/sections','/references')))
             or request.url.path.endswith('/api/v1/context-bundles')
             or '/api/v1/extraction-runs/' in request.url.path
@@ -329,15 +340,22 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
                metadata: Annotated[str, Form(max_length=16384)] = '{}',
                source_id: Annotated[UUID | None, Form()] = None,
                expected_revision: Annotated[int | None, Form(ge=1)] = None,
+               pdf_password: Annotated[str | None, Form(max_length=1024)] = None,
+               pdf_approval_token: Annotated[str | None, Form(max_length=80)] = None,
                space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         try:
             value = json.loads(metadata)
         except (ValueError, RecursionError):
             raise HTTPException(422, 'invalid_metadata') from None
-        return invoke(selected(space_id).ingest, context.actor, file.file, title=title,
+        if not hasattr(service, 'ingest_manual') and (pdf_password is not None or pdf_approval_token is not None):
+            raise HTTPException(503, 'pdf_unlock_unavailable')
+        scoped = selected(space_id)
+        ingest = getattr(scoped, 'ingest_manual', scoped.ingest)
+        options = {'pdf_password': pdf_password, 'pdf_approval_token': pdf_approval_token} if hasattr(scoped, 'ingest_manual') else {}
+        return invoke(ingest, context.actor, file.file, title=title,
             filename=file.filename or 'document', media_type=media_type,
             retain_original=retain_original == 'true', metadata=value,
-            source_id=source_id, expected_revision=expected_revision)
+            source_id=source_id, expected_revision=expected_revision, **options)
 
     app.router.add_api_route('/api/v1/sources/upload', upload, methods=['POST'],
         response_model=VersionView, status_code=202, route_class_override=AuthorizedUpload)
@@ -401,6 +419,12 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     @operation('source_versions_retry', 'Queue retry of retained failed evidence', Role.EDITOR, VersionView, read_only=False, space_field='space_id')
     def retry(version_id: UUID, data: RetryRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         return invoke(selected(space_id).retry, context.actor, version_id, expected_generation=data.expected_generation)
+
+    if hasattr(service, 'retry_pdf'):
+        @app.post('/api/v1/source-versions/{version_id}/pdf-retry', response_model=VersionView, status_code=202)
+        def retry_pdf(version_id: UUID, data: PdfRetryRequest, space_id: UUID | None = None,
+                      context: RequestAccess = Depends(write_context)):
+            return invoke(selected(space_id).retry_pdf, context.actor, version_id, **data.model_dump())
 
     @app.get('/api/v1/source-versions/{version_id}/document', response_model=DocumentView)
     @operation('documents_get', 'Read complete retained extracted text', Role.READER, DocumentView, read_only=True, space_field='space_id')

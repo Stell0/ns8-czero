@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0045_drive_audience"
+SCHEMA_REVISION = "0046_pdf_authorization"
 
 
 class Database:

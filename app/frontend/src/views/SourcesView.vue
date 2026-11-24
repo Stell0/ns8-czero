@@ -30,6 +30,7 @@ import { useSession } from '../stores/session'
 import SourceUpload from '../components/SourceUpload.vue'
 import ResourceState from '../components/ResourceState.vue'
 import SourceDocument from '../components/SourceDocument.vue'
+import PdfRetry from '../components/PdfRetry.vue'
 import ErrorNotice from '../components/ErrorNotice.vue'
 const route = useRoute(),
   router = useRouter(),
@@ -41,6 +42,7 @@ const query = computed(() => String(route.query.query || ''))
 const filter = ref(query.value),
   upload = ref(false),
   confirm = ref(false)
+const reviewVersion = ref<Version>()
 const list = useResource(
   () => `sources:${offset.value}`,
   () => knowledge.sources(offset.value),
@@ -147,7 +149,26 @@ const extractionFailure = computed(() => {
   return viewed.error_code || undefined
 })
 const latest = computed(() => versions.data.value?.versions[0])
+const needsPdfReview = computed(() =>
+  [
+    'encrypted_pdf',
+    'pdf_password_required',
+    'pdf_password_incorrect',
+    'pdf_extraction_approval_required',
+    'pdf_unlock_unavailable',
+  ].includes(latest.value?.error_code || progress.data.value?.error_code || ''),
+)
 const replay = new ReplayIdentity()
+watch([id, () => session.generation], () => {
+  upload.value = false
+  confirm.value = false
+  reviewVersion.value = undefined
+  replay.clear()
+})
+async function retryQueued() {
+  reviewVersion.value = undefined
+  await reload()
+}
 const recovery = useMutation({
   mutation: async (action: 'reprocess' | 'retry' | 'cancel') => {
     const run = progress.data.value?.run
@@ -412,8 +433,14 @@ async function uploaded(version: Version) {
             kind="secondary"
             :loading="recovery.isLoading.value"
             :disabled="recovery.isLoading.value"
-            @click="recovery.mutate('retry')"
-            >{{ t('sources.retry') }}</NeButton
+            @click="
+              needsPdfReview
+                ? (reviewVersion = latest)
+                : recovery.mutate('retry')
+            "
+            >{{
+              t(needsPdfReview ? 'sources.pdf.reviewRetry' : 'sources.retry')
+            }}</NeButton
           >
           <NeButton
             v-if="
@@ -440,10 +467,17 @@ async function uploaded(version: Version) {
       </template>
     </ResourceState>
     <SourceUpload
-      v-if="upload"
+      v-if="upload && session.canWrite"
       :source="id ? source.data.value : undefined"
       @close="upload = false"
       @uploaded="uploaded"
+    />
+    <PdfRetry
+      v-if="reviewVersion && session.canWrite"
+      :version="reviewVersion"
+      :title="source.data.value?.title || ''"
+      @close="reviewVersion = undefined"
+      @queued="retryQueued"
     />
     <NeModal
       :visible="confirm"
