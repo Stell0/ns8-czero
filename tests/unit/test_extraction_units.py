@@ -1,4 +1,7 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
+import subprocess
+import sys
+
 import pytest
 
 from czero_core.extraction import Extracted, ExtractionError
@@ -35,3 +38,19 @@ def test_app_worker_requires_explicit_opt_in_before_opening_database(monkeypatch
     assert main()==0 and '"processed": 0' in capsys.readouterr().out
     monkeypatch.setenv('CZERO_EXTRACTION_UNITS','yes')
     assert main()==1 and capsys.readouterr().err=='C0 extraction worker failed\n'
+
+
+def test_parser_import_skips_the_database_driver():
+    subprocess.run([sys.executable, '-c', """
+import sys
+import czero_core
+from czero_core.protected_pdf import inspect_pdf
+
+assert callable(inspect_pdf)
+assert 'czero_core.database' not in sys.modules
+assert 'sqlalchemy' not in sys.modules
+assert 'Database' in dir(czero_core)
+from czero_core import Database
+from czero_core.database import Database as implementation
+assert Database is implementation and czero_core.Database is implementation
+"""], check=True, timeout=10)
