@@ -133,8 +133,28 @@
       "cancelled": "Cancelled"
     },
     "units": "{completed} of {total} units complete",
-    "expired": "Saved extraction results expired. Retry processing to restart the full extraction.",
-    "failedHelp": "Processing failed. An Editor can retry available source files."
+    "extractionFailed": "Cannot process source file",
+    "extractionErrors": {
+      "encrypted_pdf": "The PDF is encrypted. Upload an unencrypted copy.",
+      "unsupported_scan": "The PDF contains scanned pages without searchable text. Upload a copy with a searchable text layer.",
+      "invalid_pdf": "The PDF could not be read. Open and export a new copy, then upload it.",
+      "pdf_too_many_pages": "The PDF exceeds the page limit. Split it into smaller files and upload them.",
+      "too_large": "The file or its extracted text exceeds a processing limit. Split it into smaller files or upload a shorter version.",
+      "no_text": "No text could be extracted. Upload a copy with selectable text.",
+      "invalid_text": "The text could not be read. Save it as UTF-8 and upload it again.",
+      "invalid_docx": "The Word document could not be read. Save a new DOCX copy and upload it.",
+      "unsupported_docx": "The Word document contains elements that cannot be processed. Save a simplified copy and upload it.",
+      "unsupported_format": "This file format cannot be processed. Upload the document in a supported format.",
+      "invalid_file": "The original file could not be read. Upload it again.",
+      "archive_limit": "The expanded Word document exceeds a processing limit. Simplify or split the document and upload it again.",
+      "unsupported_xml": "The document contains unsupported XML. Export a new copy and upload it.",
+      "resource_limit": "Processing exceeded the available resources. Split the file or upload a simpler copy.",
+      "parser_timeout": "Processing took too long. Split the file or upload a simpler copy.",
+      "lease_expired": "Processing was interrupted before it could finish.",
+      "ocr_unavailable": "Text recognition was unavailable. Upload a copy with a searchable text layer.",
+      "staging_expired": "Saved extraction results expired. Retry processing to restart the full extraction."
+    },
+    "failedHelp": "The file could not be processed. If you have Write access, retry processing or upload a new copy."
   },
   "account": {
     "signInRequired": "Sign in with your NethServer account to continue.",

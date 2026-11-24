@@ -114,6 +114,7 @@ const versions = useResource(
   () => !!sourceId.value,
 )
 interface Progress {
+  version_id: string
   state: string
   error_code: string | null
   current_available: boolean
@@ -132,6 +133,19 @@ const progress = useResource(
   () => request<Progress>(`sources/${sourceId.value}/extraction`),
   () => !!sourceId.value,
 )
+const extractionFailure = computed(() => {
+  const viewed = document.data.value
+  if (!viewed || viewed.multipart) return
+  const current = progress.data.value
+  const exact =
+    route.query.version || route.query.reference || route.query.revision_id
+  if (current && (!exact || current.version_id === viewed.revision_id)) {
+    return current.state === 'failed'
+      ? current.error_code || viewed.error_code || ''
+      : undefined
+  }
+  return viewed.error_code || undefined
+})
 const latest = computed(() => versions.data.value?.versions[0])
 const replay = new ReplayIdentity()
 const recovery = useMutation({
@@ -340,16 +354,19 @@ async function uploaded(version: Version) {
               })
             }}
           </p>
-          <p v-if="progress.data.value.state === 'failed'">
-            {{
-              t(
-                progress.data.value.error_code === 'staging_expired'
-                  ? 'sources.expired'
-                  : 'sources.failedHelp',
-              )
-            }}
-          </p>
         </div>
+        <NeInlineNotification
+          v-if="extractionFailure !== undefined"
+          role="alert"
+          kind="error"
+          :title="t('sources.extractionFailed')"
+          :description="
+            t(
+              `sources.extractionErrors.${extractionFailure}`,
+              t('sources.failedHelp'),
+            )
+          "
+        />
         <NeInlineNotification
           v-if="
             progress.data.value?.current_available &&
