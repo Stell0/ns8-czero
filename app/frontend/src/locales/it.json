@@ -133,8 +133,28 @@
       "cancelled": "Annullato"
     },
     "units": "{completed} unità completate su {total}",
-    "expired": "I risultati di estrazione salvati sono scaduti. Riprova per riavviare l’estrazione completa.",
-    "failedHelp": "Elaborazione non riuscita. Un Editor può riprovare l’elaborazione dei file disponibili."
+    "extractionFailed": "Impossibile elaborare il file",
+    "extractionErrors": {
+      "encrypted_pdf": "Il PDF è crittografato. Carica una copia non crittografata.",
+      "unsupported_scan": "Il PDF contiene pagine scansionate senza testo ricercabile. Carica una copia con testo ricercabile.",
+      "invalid_pdf": "Impossibile leggere il PDF. Apri il file, esporta una nuova copia e caricala.",
+      "pdf_too_many_pages": "Il PDF supera il limite di pagine. Dividilo in file più piccoli e caricali.",
+      "too_large": "Il file o il testo estratto supera un limite di elaborazione. Dividi il file o carica una versione più breve.",
+      "no_text": "Impossibile estrarre il testo. Carica una copia con testo selezionabile.",
+      "invalid_text": "Impossibile leggere il testo. Salvalo in formato UTF-8 e caricalo di nuovo.",
+      "invalid_docx": "Impossibile leggere il documento Word. Salva una nuova copia in formato DOCX e caricala.",
+      "unsupported_docx": "Il documento Word contiene elementi che non possono essere elaborati. Salva una copia semplificata e caricala.",
+      "unsupported_format": "Impossibile elaborare questo formato di file. Carica il documento in un formato supportato.",
+      "invalid_file": "Impossibile leggere il file originale. Caricalo di nuovo.",
+      "archive_limit": "Il documento Word decompresso supera un limite di elaborazione. Semplifica o dividi il documento e caricalo di nuovo.",
+      "unsupported_xml": "Il documento contiene codice XML non supportato. Esporta una nuova copia e caricala.",
+      "resource_limit": "L’elaborazione ha esaurito le risorse disponibili. Dividi il file o carica una copia più semplice.",
+      "parser_timeout": "L’elaborazione ha richiesto troppo tempo. Dividi il file o carica una copia più semplice.",
+      "lease_expired": "L’elaborazione si è interrotta prima del completamento.",
+      "ocr_unavailable": "Il riconoscimento del testo non era disponibile. Carica una copia con testo ricercabile.",
+      "staging_expired": "I risultati dell’estrazione salvati sono scaduti. Riprova per riavviare l’estrazione completa."
+    },
+    "failedHelp": "Impossibile elaborare il file. Se hai accesso in scrittura, riprova o carica una nuova copia."
   },
   "account": {
     "signInRequired": "Accedi con il tuo account NethServer per continuare.",
