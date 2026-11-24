@@ -700,12 +700,16 @@ def register_source_handlers(registry, database, originals, *, access=None, pdf_
             return {'state':'extraction_staged'}
         try:
             saved = PdfAccess.get(connection, row) if row['media_type'] == 'application/pdf' else None
-            started = time.monotonic()
-            with pdf_input(originals.check(row), row, saved, pdf_access) as parser_path:
-                timeout = min(25, 27 - (time.monotonic() - started)) if saved is not None else 25
-                if timeout <= 0:
-                    raise ExtractionError('parser_timeout')
-                evidence = extract_isolated(parser_path, row['media_type'], timeout=timeout)
+            original = originals.check(row)
+            if saved is None:
+                evidence = extract_isolated(original, row['media_type'])
+            else:
+                started = time.monotonic()
+                with pdf_input(original, row, saved, pdf_access) as parser_path:
+                    timeout = min(25, 27 - (time.monotonic() - started))
+                    if timeout <= 0:
+                        raise ExtractionError('parser_timeout')
+                    evidence = extract_isolated(parser_path, row['media_type'], timeout=timeout)
             segments = chunks(evidence)
         except ExtractionError as error:
             connection.execute(text("UPDATE c0_source_versions SET state='failed',error_code=:code WHERE id=:id"),
