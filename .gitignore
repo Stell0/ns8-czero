@@ -118,3 +118,5 @@ __pycache__/
 .venv-benchmark/
 .local/cross-space-references/
 .local/released-consumer/
+
+auth.json
