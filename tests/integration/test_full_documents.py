@@ -53,14 +53,14 @@ from test_ingestion_samples_http import sample_connection
 from test_knowledge_http import knowledge_http
 from test_spaces_http import space_http
 from test_mcp_http import transport
-from test_auth_http import application
+from test_auth_http import ORIGIN, application
 from c0_projects.model import Item, sha
 from c0_projects.publish import parts, sync_part, save_snapshot
 from czero_core.sources import SourceConflict, SourceNotFound
 
 
-def publish(client, definition, tmp_path, body):
-    item = Item('documents', 'manual.md', 'Synthetic full manual', body.encode(), 'text/markdown',
+def publish(client, definition, tmp_path, body, *, external_id='manual.md'):
+    item = Item('documents', external_id, 'Synthetic full manual', body.encode(), 'text/markdown',
         canonical_url='https://example.org/documentation/manual',
         provenance={'product':'Synthetic product','version':'8','path':['Administrator Manual','Configuration']})
     receipts = [sync_part(client, part, tmp_path/'journal.json', definition_hash=sha(definition), attempts=4, seconds=0)
@@ -128,23 +128,37 @@ def test_multipart_exact_order_shrink_repeat_history_and_old_citation(logical):
     assert len(service.browse_documents(actor)) == 1
 
 
-@pytest.mark.parametrize('fault', ['missing', 'queued', 'hash', 'order', 'parent', 'space', 'offset'])
-def test_snapshot_fail_closed_without_partial_body(logical, fault):
+@pytest.mark.parametrize('fault', ['missing', 'malformed', 'queued', 'missing_document', 'hash', 'order', 'parent', 'space', 'offset', 'range_size', 'total_size'])
+def test_snapshot_fail_closed_without_partial_body(logical, knowledge_http, fault):
     client, definition, service, actor, path = logical
     body = '# Complete\n\n' + 'Fabricated original paragraph.\n\n' * 9500
     saved, receipts = publish(client, definition, path, body)
-    full = service.read_document(actor, saved['id'])
+    initial = service.browse_documents(actor)
+    assert len(initial) == 1 and initial[0]['id'] == UUID(saved['id']) and initial[0]['state'] == 'ready'
     with service.database.engine.begin() as connection:
-        if fault == 'missing':
-            # A dangling receipt must never return the remaining body as complete.
+        if fault in ('missing', 'malformed'):
+            # A missing later receipt is invisible to a first-part-only check.
+            ids = list(saved['data']['part_receipt_ids'])
+            ids[1] = str(uuid4()) if fault == 'missing' else 'invalid stored receipt ID'
             connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids}', CAST(:ids AS jsonb)) WHERE id=CAST(:id AS uuid)"),
-                {'ids':__import__('json').dumps([str(uuid4()), *saved['data']['part_receipt_ids'][1:]]), 'id':saved['id']})
+                {'ids':__import__('json').dumps(ids), 'id':saved['id']})
         elif fault == 'queued':
             connection.execute(text("UPDATE c0_source_versions SET state='queued' WHERE id=CAST(:id AS uuid)"), {'id':receipts[1]['version_id']})
+        elif fault == 'missing_document':
+            parameters = {'id':receipts[1]['version_id']}
+            connection.execute(text("DELETE FROM c0_chunks WHERE document_id IN (SELECT id FROM c0_documents WHERE version_id=CAST(:id AS uuid))"), parameters)
+            connection.execute(text("DELETE FROM c0_documents WHERE version_id=CAST(:id AS uuid)"), parameters)
         elif fault == 'hash':
             connection.execute(text("UPDATE c0_documents SET body='Corrupt synthetic original' WHERE version_id=CAST(:id AS uuid)"), {'id':receipts[1]['version_id']})
-        elif fault == 'offset':
-            connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{start_byte}','999') WHERE id=CAST(:id AS uuid)"),{'id':saved['data']['part_receipt_ids'][1]})
+        elif fault in ('offset', 'range_size'):
+            # A displaced range can have the correct length while starting at the wrong offset.
+            connection.execute(text('''UPDATE c0_objects SET data=data || jsonb_build_object(
+                'start_byte', (data->>'start_byte')::int + :start_delta, 'end_byte', (data->>'end_byte')::int + 1)
+                WHERE id=CAST(:id AS uuid)'''), {'id':saved['data']['part_receipt_ids'][1],
+                'start_delta':1 if fault == 'offset' else 0})
+        elif fault == 'total_size':
+            connection.execute(text('''UPDATE c0_objects SET data=jsonb_set(data,'{total_bytes}',to_jsonb((data->>'total_bytes')::int+1))
+                WHERE id=CAST(:id AS uuid)'''), {'id':saved['id']})
         elif fault == 'order':
             connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids}', CAST(:ids AS jsonb)) WHERE id=CAST(:id AS uuid)"),
                 {'ids':__import__('json').dumps(list(reversed(saved['data']['part_receipt_ids']))), 'id':saved['id']})
@@ -156,15 +170,94 @@ def test_snapshot_fail_closed_without_partial_body(logical, fault):
                 # A receipt from an unrelated space cannot be joined through UUID alone.
                 connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{version_id}', to_jsonb(CAST(:version AS text))) WHERE id=CAST(:id AS uuid)"),
                     {'id':receipt,'version':str(uuid4())})
-    if fault in ('missing', 'queued', 'space'):
+    summary = service.browse_documents(actor)[0]
+    assert summary['id'] == UUID(saved['id'])
+    if fault in ('missing', 'queued', 'missing_document', 'space'):
+        assert summary['state'] == 'incomplete' and summary['error_code'] == 'missing_or_unready_part'
+        if fault == 'missing':
+            listed = client.call('source_documents_list')['documents'][0]
+            assert listed['id'] == saved['id'] and listed['error_code'] == summary['error_code']
         incomplete = service.read_document(actor, saved['id'])
         assert incomplete['state'] == 'incomplete' and incomplete['body'] is None
     elif fault == 'order':
         # Ordered receipt metadata, rather than the caller's array order, is authoritative.
+        assert summary['state'] == 'ready' and summary['error_code'] is None
         assert service.read_document(actor, saved['id'])['body'] == body
     else:
+        if fault in ('malformed', 'parent', 'offset', 'range_size', 'total_size'):
+            assert summary['state'] == 'incomplete' and summary['error_code'] == 'invalid_part_membership'
         with pytest.raises(SourceConflict):
             service.read_document(actor, saved['id'])
+        if fault == 'malformed':
+            from fastapi.testclient import TestClient
+            api = TestClient(knowledge_http[0], base_url=ORIGIN)
+            rest = api.get('/api/v1/source-documents/' + saved['id'],
+                params={'space_id':client.space_id}, headers={'Authorization':'Bearer ' + knowledge_http[1]})
+            assert rest.status_code == 409 and rest.json() == {'detail':'source_conflict'}
+            mcp = client.transport.call('source_documents_get', {
+                'logical_document_id':saved['id'],'space_id':client.space_id})
+            assert mcp['isError'] and mcp['_meta']['c0/error'] == {'code':'source_conflict','status':409}
+
+
+def test_snapshot_repair_proves_membership_keeps_versions_and_fences_writes(logical):
+    from czero_core.identity import Role
+    from czero_core.projects import ProjectConflict, ProjectService
+    from czero_core.spaces import SpaceService
+    from test_access import account_named, identity, record_unadmitted
+
+    client, definition, documents, owner, path = logical
+    space_id = UUID(client.space_id)
+    projects = ProjectService(documents.database, documents.access).in_space(space_id)
+    spaces = SpaceService(documents.database, documents.access)
+    body = '# Complete\n\n' + 'Synthetic independently acquired original.\n\n' * 4100
+    previous, receipts = publish(client, definition, path, body)
+    intact = documents.read_document(owner, previous['id'])
+    chunk = client.call('document_chunks_list', document_id=str(intact['parts'][-1]['document_id']), limit=1)['chunks'][0]
+    citation = client.call('citations_get', chunk_id=chunk['id'])
+    unrelated, _ = publish(client, definition, path, 'Independent evidence.\n', external_id='other.md')
+    independent = documents.read_document(owner, unrelated['id'])
+    request = {'connector_id':'documents','external_id':'manual.md',
+        'content_hash':sha(body.encode()),'part_receipt_ids':[row['receipt_id'] for row in receipts],
+        'expected_revision':previous['revision']}
+    assert client.call('project_source_snapshot_set', data={**request,'idempotency_key':uuid4().hex}) == previous
+    with documents.database.engine.begin() as connection:
+        # This reference cannot become deletion authority over a different parent.
+        connection.execute(text('''UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids,1}',
+            to_jsonb(CAST(:foreign_part AS text))) WHERE id=CAST(:id AS uuid)'''),
+            {'id':previous['id'],'foreign_part':unrelated['data']['part_receipt_ids'][0]})
+    with pytest.raises(SourceConflict):
+        documents.read_document(owner, previous['id'])
+    with pytest.raises(ProjectConflict):
+        projects.save_source_snapshot(owner, **{**request,'expected_revision':0}, idempotency_key=uuid4().hex)
+
+    editor_key = uuid4()
+    record_unadmitted(documents.access, editor_key, 'repair-editor')
+    account = account_named(documents.access, owner, 'repair-editor')
+    documents.access.set_role(owner, account['id'], Role.EDITOR)
+    spaces.set_grant(owner, space_id, account['id'], Role.EDITOR, expected_revision=0, idempotency_key=uuid4().hex)
+    editor = documents.access.resolve(identity(documents.access, editor_key, 'repair-editor'))
+    assert spaces.get(editor, space_id)['role'] == 'editor'
+    spaces.set_grant(owner, space_id, account['id'], None, expected_revision=1, idempotency_key=uuid4().hex)
+    with pytest.raises(PermissionDenied):
+        projects.save_source_snapshot(editor, **request, idempotency_key=uuid4().hex)
+
+    # Execute and replay the supported operation with the exact verified receipt IDs.
+    data = {**request,'idempotency_key':uuid4().hex}
+    saved = client.call('project_source_snapshot_set', data=data)
+    assert saved['id'] == previous['id'] and saved['revision'] == previous['revision'] + 1
+    assert saved['data']['content_hash'] == previous['data']['content_hash']
+    assert client.call('project_source_snapshot_set', data=data) == saved
+    recovered = documents.read_document(owner, previous['id'])
+    assert recovered['body'] == body and recovered['parts'] == intact['parts']
+    assert client.call('citations_get', chunk_id=chunk['id']) == citation
+    assert documents.read_document(owner, unrelated['id']) == independent
+    with pytest.raises(ContentSuperseded):
+        documents.read_document(owner, previous['id'], revision_id=intact['revision_id'])
+    with documents.database.engine.connect() as connection:
+        assert connection.execute(text('''SELECT count(*) FROM c0_objects WHERE space_id=:space
+            AND id=ANY(CAST(:ids AS uuid[]))'''),{'space':space_id,'ids':previous['data']['part_receipt_ids']}).scalar_one() == 0
+    assert client.call('project_source_snapshot_set', data={**request,'expected_revision':saved['revision'],
+        'idempotency_key':uuid4().hex}) == saved
 
 
 def test_uncommitted_new_parts_do_not_replace_last_complete_snapshot(logical):
@@ -236,24 +329,34 @@ def test_part_identity_resolves_whole_parent_and_pending_parent_has_no_body(logi
 
 
 def test_legacy_snapshot_reuses_its_explicit_old_immutable_receipt(logical):
-    import json
     from czero_core.projects import logical_key
     client,definition,service,actor,path=logical
     original='# Legacy beginning\n\n'+'Unchanged legacy paragraph.\n\n'*10000
-    first,_=publish(client,definition,path,original)
+    publish(client,definition,path,original)
     changed=original+'\nUpdated legacy ending.\n'
     second,_=publish(client,definition,path,changed)
     full=service.read_document(actor,second['id'])
-    old_id=second['data']['part_receipt_ids'][0]
+    old_id=second['data']['part_receipt_ids'][1]
     with service.database.engine.begin() as connection:
         row=connection.execute(text('SELECT data FROM c0_objects WHERE id=CAST(:id AS uuid)'),{'id':old_id}).scalar_one()
         legacy_key=logical_key('source_sync_history_v1',row['connector_id']+':'+row['external_id']+':'+row['version_id'])
-        connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{key}',to_jsonb(CAST(:key AS text))) WHERE id=CAST(:id AS uuid)"),{'id':old_id,'key':legacy_key})
-        ids=[old_id,*second['data']['part_receipt_ids'][1:]]
-        for identifier in (second['id'],):
-            connection.execute(text("UPDATE c0_objects SET data=jsonb_set(data,'{part_receipt_ids}',CAST(:ids AS jsonb)) WHERE id=CAST(:id AS uuid)"),{'id':identifier,'ids':json.dumps(ids)})
+        connection.execute(text('''UPDATE c0_objects SET data=data || jsonb_build_object('key',CAST(:key AS text),
+            'parent_content_hash',CAST(:previous_hash AS text),'start_byte',(data->>'start_byte')::int+1,
+            'end_byte',(data->>'end_byte')::int+1) WHERE id=CAST(:id AS uuid)'''),
+            {'id':old_id,'key':legacy_key,'previous_hash':sha(original.encode())})
+        connection.execute(text('''UPDATE c0_object_keys SET value=to_jsonb(CAST(:key AS text))
+            WHERE object_id=CAST(:id AS uuid) AND field='key' '''),
+            {'id':old_id,'key':legacy_key})
+    summary=service.browse_documents(actor)[0]
+    assert summary['id']==UUID(second['id']) and summary['state']=='ready' and summary['error_code'] is None
     assert service.read_document(actor,second['id'])['body']==changed
     assert service.read_document(actor,second['id'],revision_id=full['revision_id'])['body']==changed
+    replacement, _ = publish(client, definition, path, '# Updated successor\n')
+    assert replacement['id'] == second['id']
+    assert service.read_document(actor,replacement['id'])['body'] == '# Updated successor\n'
+    with service.database.engine.connect() as connection:
+        assert connection.execute(text('SELECT id FROM c0_objects WHERE id=CAST(:id AS uuid)'),
+            {'id':old_id}).scalar_one_or_none() is None
 
 
 def test_thousands_of_document_summaries_remain_bounded_without_bodies(sources,capsys):

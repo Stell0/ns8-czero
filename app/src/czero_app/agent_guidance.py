@@ -73,6 +73,16 @@ GUIDANCE = {
             ],
         },
         {
+            'id': 'automatic-source-evidence', 'title': 'Verify automatic source publication',
+            'tools': ['automatic_sources_list', 'automatic_source_runs_list',
+                      'automatic_source_documents_list', 'source_documents_get'],
+            'steps': [
+                'Check installed capabilities and select the exact space and definition. Website PDF collection requires explicit approved attachment roots, independent of HTML traversal, and is off until an Editor selects it.',
+                'Inspect run outcomes and current complete documents. Preview, pending and partial work do not establish publication. Use the returned logical document ID for whole-document reads and the technical source ID for version diagnostics.',
+                'Follow existing recovery actions only with authorization and a current generation. Reacquire official bytes after expiry. Repair managed multipart evidence as a complete import from verified original parts.',
+            ],
+        },
+        {
             'id': 'evidence', 'title': 'Save selected text evidence',
             'tools': ['sources_ingest_text', 'source_versions_list', 'documents_get', 'document_chunks_list', 'citations_get'],
             'steps': [

@@ -42,6 +42,7 @@ export interface SourceDocument {
   updated_at: string
   metadata: Record<string, unknown>
   multipart: boolean
+  error_code?: string | null
 }
 export interface FullDocument extends SourceDocument {
   body: string | null

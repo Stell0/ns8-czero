@@ -57,6 +57,28 @@ Use the configured module ID, not one copied from another operator. For direct a
 
 C0 uses journald. Empty Podman logs or an inaccessible module-user journal do not prove privacy. An authorized log audit must use bounded actual application entries, the verified UID/container and positive request controls. Keep raw journals, cookies and tokens private. Share fixed status/error codes, not complete OAuth authorization URLs or credential-bearing traces.
 
+### Inspect incomplete source work
+
+Open **Sources → Inspect ingestion** in the selected space. Use **Recent runs**
+on an automatic source to see collection coverage, pending work and unresolved
+reasons. These views report current metadata. Confirm evidence through a current
+complete document, original and exact citation.
+
+- Wait for queued or running work. A valid collection checkpoint resumes under
+  the saved authority. Use **Update now** for an enabled manual source.
+- For an eligible retained failed version or page run, open the source and use
+  the existing retry action as an Editor. Review protected originals separately.
+  If staging expired, reacquire the official original.
+- For missing or inconsistent multipart membership, locate the verified
+  original part set and rebuild the complete import with its publisher. Search
+  chunks are excerpts and cannot reconstruct an original.
+- If the inventory cannot distinguish a legacy or damaged record, collect the
+  logical ID, selected space, revision and structured diagnostic using an
+  authorized account. Keep the original titles and URLs out of public reports.
+
+The NS8 metrics exporter adds aggregate collection states, oldest queued work
+and failed/retried extraction attempts. It uses fixed state and outcome labels.
+
 ### Grafana
 
 Enable Grafana in the NS8 Metrics application, then sign in with a cluster

@@ -14,7 +14,9 @@ ROOT = Path(__file__).resolve().parents[2] / 'imageroot'
 def test_export_only_emits_known_aggregate_labels(monkeypatch, capsys):
     snapshot = {'inventory': {'sources': 12, 'private account': 999},
                 'source_versions': {'failed': 3}, 'source_failures': {'protected_pdf': 1},
-                'jobs': {'queued': 7}, 'extraction_runs': None}
+                'jobs': {'queued': 7}, 'extraction_runs': None,
+                'collection_runs': {'partial': 2, 'private source': 27},
+                'queue_age_seconds': {'collection': 45}, 'extraction_attempts': {'retried': 2}}
 
     def run(args, **kwargs):
         if args[0] == 'systemctl':
@@ -33,6 +35,9 @@ def test_export_only_emits_known_aggregate_labels(monkeypatch, capsys):
     assert 'czero_source_failures{reason="protected_pdf"} 1' in output
     assert 'czero_source_versions{state="queued"} 0' in output
     assert 'czero_jobs{state="queued"} 7' in output
+    assert 'czero_collection_runs{state="partial"} 2' in output
+    assert 'czero_queue_age_seconds{kind="collection"} 45' in output
+    assert 'czero_extraction_attempts{outcome="retried"} 2' in output
     assert 'czero_service_up{service="extraction"} 0' in output
     assert '# TYPE czero_mcp_calls_total counter' in output
     assert 'czero_mcp_calls_total{outcome="error"} 1' in output

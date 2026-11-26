@@ -150,7 +150,7 @@ class TransportLimits:
                 await JSONResponse({'error': 'service_unavailable'}, status_code=503)(scope, receive, private_send)
 
 
-def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
+def create_mcp_app(registry, grants, *, issuer_url, api_keys=None, features=None):
     resource = grants.resource
     parsed = urlsplit(resource)
     if parsed.path != '/mcp':
@@ -270,6 +270,11 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
         result = await call(ctx, params)
         if tool_counts is not None:
             tool_counts.record(is_error=result.is_error)
+        request = ctx.request
+        reference = getattr(getattr(request, 'state', None), 'c0_request_id', None)
+        if result.is_error and reference:
+            result.meta = {**(result.meta or {}), 'c0/request_id': reference}
+            logging.getLogger('czero.requests').info('mcp operation error request %s', reference)
         return result
 
     async def resources(ctx, params):
@@ -290,6 +295,8 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
             if uri == 'c0://capabilities':
                 operations = presented_operations(await describe())
                 result = {'operations': operations, 'guidance': agent_guidance(operations)}
+                if features is not None:
+                    result['features'] = features
             else:
                 match = re.fullmatch(r'c0://(wiki/pages|source-versions|entities)/([0-9a-fA-F-]{36})', uri)
                 if match is not None:

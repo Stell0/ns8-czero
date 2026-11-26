@@ -1,11 +1,13 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import logging
 import os
 import re
 from pathlib import Path
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Literal
+from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
 from pydantic import BaseModel
@@ -98,6 +100,22 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     instance_app.state.website = Website(frontend_dir, base_path)
     instance_app.state.website.install(instance_app)
     instance_app.add_middleware(ExactSpaceSelector)
+
+    @instance_app.middleware('http')
+    async def correlate(request, call_next):
+        path = request.url.path.removeprefix(base_path)
+        transport = 'mcp' if path == '/mcp' else 'rest' if path.startswith('/api/v1/') else None
+        if transport is None:
+            return await call_next(request)
+        reference = uuid4().hex
+        request.state.c0_request_id = reference
+        response = await call_next(request)
+        response.headers['X-C0-Request-ID'] = reference
+        if response.status_code >= 400:
+            logging.getLogger('czero.requests').info('%s response %s request %s',
+                transport, response.status_code, reference)
+        return response
+
     # Keep the body guard inside the existing response-header middleware;
     # multipart errors are handled before crossing its task-group boundary.
     instance_app.add_middleware(UploadBodyLimit)
@@ -150,6 +168,9 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     from czero_app.agent_downloads import install_agent_downloads
     install_agent_downloads(instance_app, connection_metadata, read_context, write_context)
 
+    features = {'website_pdf_attachments': instance_app.state.website.website_pdf_attachments,
+                'ingestion_diagnostics': instance_app.state.website.ingestion_diagnostics}
+
     def capabilities(request):
         context = read_context(request) if (request.headers.get('authorization') is not None
             or request.cookies.get('c0_session')) else None
@@ -159,6 +180,7 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
         return {'version': 1, 'authenticated': context is not None,
                 'role': auth.access.authorize(context.actor, Role.READER).role.value if context else None,
                 **connection_metadata(),
+                'features': features,
                 'operations': operations, 'guidance': agent_guidance(operations),
                 'rest_attachments': ['multipart source upload', 'retained original download', 'Markdown export']}
 
@@ -183,7 +205,8 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
         from czero_app.mcp_transport import create_mcp_app
         grants, _ = install_oauth_server(instance_app, auth, read_context, write_context)
         mcp_child = create_mcp_app(catalog.registry, grants,
-            issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth', api_keys=getattr(instance_app.state, 'api_keys', None))
+            issuer_url=auth.oidc.config.public_origin.rstrip('/') + '/oauth', api_keys=getattr(instance_app.state, 'api_keys', None),
+            features=features)
         instance_app.state.mcp_app = mcp_child
         instance_app.mount('/', mcp_child, name='mcp')
     elif auth is not None:

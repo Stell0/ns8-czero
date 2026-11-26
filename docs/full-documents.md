@@ -31,6 +31,20 @@ for different product versions and separately authored reports remain distinct
 current documents. Authored quotations remain authored text; expired evidence is
 marked stale instead of deleting the author's work.
 
+Multipart inventory checks the structure of the full recorded membership.
+`missing_or_unready_part` indicates that a listed part lacks a ready receipt,
+version or extracted document. `invalid_part_membership` indicates inconsistent
+membership metadata. Exact reads additionally verify complete bodies and
+hashes. Use the logical parent ID for whole-document reads and the individual
+technical source IDs for version diagnostics. Repair a managed import using
+verified original parts and the whole-document publication workflow. For a
+damaged membership list with every original part and current verified receipt
+still intact, use the existing `project_source_snapshot_set` operation with
+the same complete content hash, the full current part receipt set, the current
+snapshot revision and a fresh replay key. A successful repair preserves the
+logical ID and exact part citations. If a current part cannot be verified,
+review the source and reacquire the original evidence before reimporting.
+
 ## Interfaces and expired evidence
 
 | Read | REST | MCP tool |

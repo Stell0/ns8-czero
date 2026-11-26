@@ -39,7 +39,11 @@ def test_metrics_sql_excludes_expired_leases_and_unexchanged_grants():
                 CREATE TEMP VIEW c0_scheduled_tasks AS SELECT true AS enabled;
                 CREATE TEMP VIEW c0_jobs AS SELECT 'queued' AS state;
                 CREATE TEMP VIEW c0_extraction_runs AS SELECT 'extracting' AS state,
-                    now()+interval '1 hour' AS expires_at;
+                    now()+interval '1 hour' AS expires_at, now()-interval '30 seconds' AS created_at,
+                    2 AS failed, 1 AS retried;
+                CREATE TEMP VIEW c0_source_update_runs AS SELECT * FROM
+                    (VALUES ('queued',now()-interval '20 seconds'),('partial',now()-interval '1 hour'))
+                    AS runs(state,created_at);
             """)
             cur.execute(METRICS_SQL.read_text())
             while cur.description is None:
@@ -51,3 +55,6 @@ def test_metrics_sql_excludes_expired_leases_and_unexchanged_grants():
             assert output['source_failures'] == {'protected_pdf': 1}
             assert output['jobs'] == {'queued': 1}
             assert output['extraction_runs'] == {'extracting': 1}
+            assert output['collection_runs'] == {'queued': 1, 'partial': 1}
+            assert output['queue_age_seconds'] == {'collection': 20, 'extraction': 30}
+            assert output['extraction_attempts'] == {'failed': 2, 'retried': 1}

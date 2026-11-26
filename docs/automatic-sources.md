@@ -55,6 +55,72 @@ Preview lists a bounded sample of titles and links; after collection, open the
 documents from the automatic source's details or Sources. Code is stored as text
 and is never executed.
 
+## Collect PDF attachments from a public website
+
+Choose **Website** and enter the HTML listing URLs and HTML roots. Under
+**PDF attachments**, select **Collect PDF attachments** and enter the HTTPS
+prefixes where the publisher stores files. Selecting attachments retains the
+official original PDF for each completed source. Existing definitions retain
+their HTML behavior until an Editor selects attachments and saves the change.
+
+This example follows HTML under `/notices` and accepts PDF links under the
+independently approved `/files` prefix.
+
+```json
+{
+  "website": {
+    "seeds": ["https://publisher.example.org/notices"],
+    "allowed_roots": ["https://publisher.example.org/notices"]
+  },
+  "attachments": {
+    "allowed_roots": ["https://publisher.example.org/files"],
+    "seeds": [],
+    "include": ["/files/*.pdf"],
+    "media_types": ["application/pdf"],
+    "max_depth": 10,
+    "page_queue": false
+  }
+}
+```
+
+PDF links are recognized by their path suffix. An explicit attachment filter
+can select an extensionless download, and an extra PDF starting URL can select
+a file directly. Attachment filters also constrain redirect destinations. Use
+the narrowest eligible HTTPS prefix on each publisher or file host.
+
+Preview shows a bounded sample with selected or skipped PDF links. It checks
+public transport, robots, media type and file signature. A selected preview
+item still needs full extraction and publication. Preview only inspects the
+selection. Run **Update now**, inspect **Recent runs**, and
+open the completed documents. A partial run records unresolved reasons. A
+completed run covers the recorded frontier under the saved definition. Coverage
+depends on what the publisher exposes through the selected website paths.
+
+Collection is serial. Each batch uses the existing website limits of up to
+20 items, 30 HTTP requests, three redirects per request and 2 MiB per file.
+Batch downloads also obey the configured website byte budget and a 20-second
+collection deadline. HTML link depth defaults to 10 and can be set from 0 to
+20 for attachment-enabled definitions. Eligible links remaining after a batch
+cap persist in a checkpoint. Frontier and depth limits report incomplete
+coverage. The existing PDF parser and page count limits apply. HTTPS peers are
+validated and pinned, and redirect and robots decisions are rechecked.
+
+Repeated links and identical content preserve the logical document and its
+current citation. C0 can use a strong ETag at the original HTTPS URL after
+verifying the current local original. It downloads and checks bytes when the
+origin has no suitable validator or the retained original is unavailable.
+A changed PDF replaces the current publication only after
+complete extraction and indexing. A failed replacement leaves the last complete
+original and its citations available. An identical verified download can repair
+a missing retained original without advancing its generation. Remote removal
+does not archive a saved source.
+
+Encrypted, unsupported, or textless pages report an unresolved result. **Use
+page extraction** opts this definition into the instance’s existing enabled page
+queue. Local OCR is available only when the instance already enables it. It uses
+the existing page provenance and extraction limits. A PDF with omitted textless
+pages is not published as complete. Pause, edit and revocation fence staged work.
+
 ## Add a folder from your Google account
 
 In the destination space, open **Sources → Automatic sources → Add automatic source**.

@@ -132,6 +132,8 @@ class SourceDocumentSummary(BaseModel):
     state: str
     media_type: str
     multipart: bool
+    error_code: str | None = Field(default=None,
+        description='Structural multipart error, when detected. Read the current document to verify complete bytes and hashes.')
 
 
 class SourceDocumentsView(BaseModel):
@@ -297,7 +299,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
         # FastAPI's default errors contain submitted input. Keep text evidence
         # out of every validation response, including malformed JSON/Unicode.
         if (request.url.path.endswith(('/api/v1/sources/ingest-text', '/api/v1/sources/upload', '/pdf-retry'))
-            or ('/api/v1/source-documents/' in request.url.path and request.url.path.endswith(('/outline','/sections','/references')))
+            or request.url.path.endswith('/api/v1/source-documents')
+            or '/api/v1/source-documents/' in request.url.path
+            or ('/api/v1/source-versions/' in request.url.path and request.url.path.endswith('/full-document'))
             or request.url.path.endswith('/api/v1/context-bundles')
             or '/api/v1/extraction-runs/' in request.url.path
             or request.url.path.endswith('/reindex')):
@@ -364,7 +368,7 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
         response_model=VersionView, status_code=202, route_class_override=AuthorizedUpload)
 
     @app.get('/api/v1/source-documents', response_model=SourceDocumentsView)
-    @operation('source_documents_list', 'Browse complete source document summaries without loading bodies; verified multipart sources appear once.',
+    @operation('source_documents_list', 'Browse source document summaries without loading bodies. Multipart parents appear once with structural readiness and any detected membership error.',
         Role.READER, SourceDocumentsView, read_only=True, space_field='space_id')
     def source_documents(limit: int = 50, offset: int = 0, space_id: UUID | None = None,
                          context: RequestAccess = Depends(read_context)):

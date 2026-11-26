@@ -402,3 +402,185 @@ def test_manual_metadata_edit_before_extraction_cannot_be_overwritten(automatic)
     assert sources.get(owner,stored['id'])['title']=='Manually retitled'
     assert sources.get(owner,stored['id'])['current_version_id']==previous['current_version_id']
     assert service.runs(owner,saved['id'])[0]['state']=='blocked'
+
+
+@pytest.fixture
+def website_pdf(tmp_path):
+    from pathlib import Path
+    from runpy import run_path
+    from czero_core.source_collectors import collect
+
+    origin = 'https://publisher.example.org'
+    listing = origin + '/notices'
+    notice = origin + '/files/notice.pdf'
+    second = origin + '/files/other.pdf'
+    generate = run_path(str(Path(__file__).resolve().parents[1] / 'fixtures/evidence/pipeline/generate.py'))['pdf']
+    files = {}
+    etags = {}
+    requests = []
+
+    def update(label, pages, *, url=notice, etag=None):
+        path = tmp_path / label
+        generate(path, pages)
+        files[url] = path.read_bytes()
+        if etag:
+            etags[url] = etag
+        else:
+            etags.pop(url, None)
+        return files[url]
+
+    class Fetch:
+        requests = 0
+        downloaded = 0
+
+        def response(self, url, *, validate_url=None, **options):
+            if validate_url:
+                validate_url(url)
+            self.requests += 1
+            requests.append(url)
+            if url == origin + '/robots.txt':
+                body, media = b'User-agent: *\nAllow: /', 'text/plain'
+            elif url == listing:
+                links = ''.join(f'<a href="{target}">Notice</a>' for target in [notice, '/files/notice.pdf#featured', *[target for target in files if target != notice]])
+                body, media = f'<article><h1>Notices</h1>{links}</article>'.encode(), 'text/html'
+            else:
+                body, media = files[url], 'application/pdf'
+                validator = (options.get('first_request_headers') or {}).get('If-None-Match')
+                if validator and validator == etags.get(url):
+                    return b'', url, '', {'status': 304, 'etag': validator}
+            self.downloaded += len(body)
+            return body, url, media, {'status': 200, 'etag': etags.get(url)}
+
+        def close(self):
+            pass
+
+    def collector(kind, config, cursor, **options):
+        return collect(kind, config, cursor, fetcher=Fetch(), **options)
+
+    config = {'website': {'seeds': [listing], 'allowed_roots': [listing]}, 'max_items': 1,
+              'attachments': {'allowed_roots': [origin + '/files']}}
+    return config, collector, update, notice, second, requests
+
+
+def published_run(service, sources, owner, registry, definition_id, collect_pdf, *, queue=None):
+    from czero_core.extraction_queue import ExtractionWorker
+
+    # Recreate the updater between ticks to exercise persisted continuation.
+    for _ in range(14):
+        SourceUpdater(service, sources, collector=collect_pdf, extraction_queue=queue).tick()
+        Worker(sources.database, registry).tick()
+        if queue:
+            ExtractionWorker(queue).tick(max_units=4)
+        result = service.runs(owner, definition_id)[0]
+        if result['state'] not in ('queued', 'running', 'pending'):
+            return result
+    pytest.fail('Automatic publication failed to reach a terminal state')
+
+
+def test_website_pdf_continuation_readback_and_failed_replacement(automatic, website_pdf, monkeypatch):
+    import hashlib
+    from czero_core.current_content import ContentSuperseded
+    from czero_core.extraction_queue import ExtractionQueue
+    from czero_core.extraction_status import reconciliation
+
+    service, sources, owner, registry = automatic
+    config, collect_pdf, update, notice, second, requests = website_pdf
+    first = update('first.pdf', ['Synthetic notice original'], etag='"synthetic-v1"')
+    update('other.pdf', ['Independent synthetic act'], url=second)
+    saved = definition(automatic, kind='website', config=config, interval_seconds=None)
+    params = (service, sources, owner, registry, saved['id'], collect_pdf)
+    run = published_run(*params)
+    assert run['state'] == 'complete'
+    assert run['diagnostics']['pdf'] == {'new': 2, 'fetched': 2, 'published': 2, 'selected': 2}
+    assert requests.count(notice) == 1
+    assert len(service.documents(owner, saved['id'])) == 3
+    doc = next(row for row in service.documents(owner, saved['id']) if row['title'] == 'notice.pdf')
+    before = sources.get(owner, doc['id'])
+    current = before['current_version_id']
+    path, version = sources.original(owner, current)
+    assert path.read_bytes() == first and version['content_hash'] == hashlib.sha256(first).hexdigest()
+    evidence = sources.document(owner, current)
+    assert 'Synthetic notice original' in evidence['body']
+    citation = sources.citation(owner, sources.chunks(owner, evidence['id'])[0]['id'])
+    assert citation['version_id'] == current and citation['locations'][0]['index'] == 1
+
+    def run_again():
+        service.command(owner, saved['id'], expected_revision=1, action='run', idempotency_key=str(uuid4()))
+        return published_run(*params)
+
+    assert run_again()['diagnostics']['pdf'] == {'fetched': 1, 'not_modified': 1, 'unchanged': 2, 'selected': 2}
+    assert sources.get(owner, doc['id']) == before
+    check_original = sources.originals.check
+    missing = False
+
+    def lose_after_first_check(row):
+        nonlocal missing
+        original = check_original(row)
+        if not missing and row['id'] == current:
+            original.unlink()
+            missing = True
+        return original
+
+    with monkeypatch.context() as patch:
+        patch.setattr(sources.originals, 'check', lose_after_first_check)
+        assert run_again()['error_code'] == 'website_retained_original_missing'
+    assert run_again()['diagnostics']['pdf']['restored_original'] == 1
+    assert sources.get(owner, doc['id']) == before
+    assert sources.original(owner, current)[0].read_bytes() == first
+
+    update('mixed.pdf', ['Synthetic unpublished marker', 'SCAN'])
+    failed = run_again()
+    assert failed['state'] == 'partial'
+    assert failed['diagnostics']['reasons']['unsupported_scan'] == 1
+    assert sources.get(owner, doc['id'])['current_version_id'] == current
+    assert not any('unpublished marker' in hit['body'] for hit in sources.search(owner, 'Synthetic unpublished marker'))
+    queue = ExtractionQueue(sources.database, sources.access, sources.originals)
+    diagnostic = next(row for row in reconciliation(queue, owner) if row['source_id'] == UUID(str(doc['id'])))
+    assert diagnostic['state'] == 'failed' and diagnostic['current_available']
+    assert diagnostic['next_step'] == 'reacquire_original'
+    assert run_again()['state'] == 'partial'
+
+    updated = update('replacement.pdf', ['Synthetic replacement evidence'])
+    assert run_again()['state'] == 'complete'
+    new_version = sources.get(owner, doc['id'])['current_version_id']
+    assert new_version != current
+    assert sources.original(owner, new_version)[0].read_bytes() == updated
+    with pytest.raises(ContentSuperseded):
+        sources.citation(owner, citation['chunk_id'])
+
+
+@pytest.mark.parametrize('pause', [False, True])
+def test_website_pdf_page_queue_handoff_and_pause(automatic, website_pdf, pause):
+    from czero_core.extraction_queue import ExtractionQueue, ExtractionWorker
+
+    service, sources, owner, registry = automatic
+    config, collect_pdf, update, *_ = website_pdf
+    config['attachments']['page_queue'] = True
+    update('first.pdf', ['Native page one', 'Native page two'])
+    saved = definition(automatic, kind='website', config=config, interval_seconds=None)
+    queue = ExtractionQueue(sources.database, sources.access, sources.originals, enabled=True)
+    params = (service, sources, owner, registry, saved['id'], collect_pdf)
+    updater = SourceUpdater(service, sources, collector=collect_pdf, extraction_queue=queue)
+    updater.tick()  # Commit the listing.
+    Worker(sources.database, registry).tick()
+    updater.tick()  # Commit a queue-only PDF version.
+    doc = next(row for row in service.documents(owner, saved['id']) if row['title'] == 'notice.pdf')
+    assert sources.get(owner, doc['id'])['current_version_id'] is None
+    Worker(sources.database, registry).tick()
+    assert sources.get(owner, doc['id'])['current_version_id'] is None
+    updater.tick()  # Resume and hand off the staged original.
+    claim = queue.claim()
+    assert claim is not None
+    if pause:
+        service.command(owner, saved['id'], expected_revision=1, action='pause', idempotency_key=str(uuid4()))
+        assert not queue.fail(claim, 'parser_failed')
+        assert service.runs(owner, saved['id'])[0]['state'] == 'cancelled'
+        assert sources.get(owner, doc['id'])['current_version_id'] is None
+    else:
+        from czero_core.pdf_units import extract_page_isolated
+        assert queue.complete(claim, extract_page_isolated(sources.originals.path(claim.version_id), claim.ordinal))
+        ExtractionWorker(queue).tick(max_units=2)
+        assert published_run(*params, queue=queue)['state'] == 'complete'
+        current = sources.get(owner, doc['id'])['current_version_id']
+        evidence = sources.document(owner, current)
+        assert [location['index'] for location in evidence['locations']] == [1, 2]

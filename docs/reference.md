@@ -214,3 +214,31 @@ authorizes background collection for the exact definition and space. Null
 interval means manual updates; intervals range from300 to2678400 seconds.
 Removal retains documents. Pending/partial states do not prove successful
 publication. See [configuration and authority](automatic-sources.md).
+
+
+### Website attachments and ingestion reconciliation
+
+Check `features.website_pdf_attachments` and `features.ingestion_diagnostics`
+in installed capabilities before sending the new fields. See
+[website PDF selection](automatic-sources.md#collect-pdf-attachments-from-a-public-website).
+The existing public-source preview accepts `attachments` in its configuration.
+It returns optional item `kind`, `selection`, and fixed `reason` fields. The
+run list adds per-kind diagnostics, a checkpoint indicator and when applicable
+the next available attempt time. The definition still reports its latest
+successful completion and next scheduled attempt.
+
+`GET /api/v1/ingestion-diagnostics?space_id=…&limit=50&offset=0` previews
+reconciliation as authorized Read in the explicit space. The response describes
+technical source state and whether a separate current publication is readable.
+A retained original is checked for presence and size during inspection. Recovery
+verifies the content hash. Technical staging identifiers and generations in this
+view require effective Editor access and delegated Write when applicable.
+Possible duplicates are flagged within the current page by equal original bytes.
+
+Use `source_documents_list` for logical identities and multipart membership
+diagnostics. Use `source_versions_list` with the technical source ID for
+eligible staging. Whole-document REST and MCP reads share fixed source errors.
+Send the opaque `X-C0-Request-ID` response header or MCP tool-error
+`c0/request_id` metadata to the operator when investigating a specific call.
+Server logs can correlate these IDs using the `czero.requests` logger at INFO.
+Request arguments, tokens and source content are excluded from this logger.

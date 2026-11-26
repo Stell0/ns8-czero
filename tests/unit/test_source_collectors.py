@@ -179,3 +179,99 @@ def test_worker_github_credential_file_is_private_bounded_and_not_followed(tmp_p
     with pytest.raises(OSError):github_token()
     monkeypatch.delenv('CZERO_GITHUB_TOKEN_FILE')
     assert github_token() is None
+
+
+def test_pdf_sitemap_discovery_uses_attachment_roots():
+    origin = 'https://example.org'
+    listing = origin + '/notices'
+    sitemap = origin + '/sitemap.xml'
+    denied = origin + '/notices/inside-html-only.pdf'
+    selected = origin + '/files/notice.pdf'
+    fetch = Fetch({
+        origin + '/robots.txt': (b'User-agent: *\nAllow: /', 'text/plain'),
+        sitemap: (f'<urlset><url><loc>{denied}</loc></url><url><loc>{selected}</loc></url></urlset>'.encode(), 'application/xml'),
+        listing: (b'<article><h1>Official notices</h1></article>', 'text/html'),
+        selected: (b'%PDF-1.4 fixture', 'application/pdf'),
+    })
+    config = {'website': {'seeds': [listing], 'allowed_roots': [listing], 'sitemaps': [sitemap]},
+              'attachments': {'allowed_roots': [origin + '/files']}}
+    items, _, done = collect('website', config, {}, fetcher=fetch)
+    assert done and [item['media_type'] for item in items] == ['text/markdown', 'application/pdf']
+    assert items[1]['metadata']['parent_discovery_url'] == sitemap
+
+
+@pytest.mark.parametrize('remaining,reason', [
+    (20, 'source_byte_budget_exhausted'), (128, 'source_content_too_large'),
+])
+def test_chunked_body_distinguishes_remaining_batch_from_file_limit(monkeypatch, remaining, reason):
+    from czero_core.source_http import Fetcher
+
+    class Response:
+        status = 200
+
+        def getheader(self, name, default=None):
+            return {'Content-Type': 'application/pdf'}.get(name, default)
+
+        def read(self, size):
+            return b'x' * size
+
+    class Connection:
+        sock = None
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def request(self, *args, **kwargs):
+            pass
+
+        def getresponse(self):
+            return Response()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr('czero_core.source_http.public_addresses', lambda *a: ['1.1.1.1'])
+    monkeypatch.setattr('czero_core.source_http.http.client.HTTPSConnection', Connection)
+    fetch = Fetcher({'max_requests': 4, 'timeout': 1, 'max_bytes': 128})
+    with pytest.raises(CollectionError, match=reason):
+        fetch.response('https://example.org/attachment', remaining_bytes=remaining, batch_limit=512)
+    assert fetch.downloaded == remaining + 1
+
+
+@pytest.mark.parametrize('variant', ['weak', 'redirect'])
+def test_pdf_revalidates_exact_strong_etag_and_never_caches_redirect_alias(variant):
+    origin = 'https://example.org'
+    listing = origin + '/notices'
+    pdf = origin + '/files/notice.pdf'
+    seen = []
+
+    class Publisher(Fetch):
+        def response(self, url, **options):
+            if url != pdf:
+                return super().response(url, **options)
+            self.requests += 1
+            headers = options.get('first_request_headers') or {}
+            seen.append(headers)
+            if variant == 'weak' and headers:
+                return b'', url, '', {'status': 304, 'etag': 'W/"old"'}
+            if variant == 'redirect':
+                destination = url + '?utm_source=listing'
+                options['validate_url'](destination)
+                return b'%PDF-1.4 fixture', destination, 'application/pdf', {'status': 200, 'etag': '"new"', 'redirects': 1}
+            return b'%PDF-1.4 fixture', url, 'application/pdf', {'status': 200, 'etag': '"new"'}
+
+    fetch = Publisher({
+        origin + '/robots.txt': (b'User-agent: *\nAllow: /', 'text/plain'),
+        listing: (b'<article><h1>Official notices</h1><a href="/files/notice.pdf">Notice</a></article>', 'text/html'),
+    })
+    config = {'website': {'seeds': [listing], 'allowed_roots': [listing]},
+              'attachments': {'allowed_roots': [origin + '/files']}}
+    items, _, done = collect('website', config, {}, fetcher=fetch,
+        attachment_validator=(lambda _: '"old"') if variant == 'weak' else None)
+    assert done
+    assert items[-1]['metadata']['canonical_url'] == pdf
+    if variant == 'weak':
+        assert seen == [{'If-None-Match': '"old"'}, {}]
+        assert items[-1]['metadata']['http_etag'] == '"new"'
+    else:
+        assert seen == [{}] and 'http_etag' not in items[-1]['metadata']

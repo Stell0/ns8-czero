@@ -52,7 +52,14 @@ const originals = computed(() =>
       class="whitespace-pre-wrap break-words font-sans"
       role="article"
       >{{ document.body }}</pre>
-    <p v-else>{{ t('sources.states.incomplete') }}</p>
+    <p v-else>
+      {{
+        t(
+          `sources.documentDiagnostics.${document.error_code}`,
+          t('sources.states.incomplete'),
+        )
+      }}
+    </p>
     <details class="rounded-lg border border-default p-4">
       <summary>{{ t('reader.provenance') }}</summary>
       <dl class="mt-4 space-y-3">

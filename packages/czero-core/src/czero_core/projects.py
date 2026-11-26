@@ -445,6 +445,64 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
             return self._save(connection,current,'connector_sync_v1',values['connector_id'],{k:v for k,v in saved.items() if k!='key'},previous=previous)
         return self._mutate(actor,'connector_status',{'data':data,'verified_receipt_ids':verified_receipt_ids,'expected_revision':expected_revision},idempotency_key,execute,lease=lease)
 
+    def _owned_snapshot_parts(self, connection, previous, connector_id, external_id, *, repair):
+        from .sources import _uuid
+
+        error = 'current_source_snapshot_incomplete'
+        identity = f'{connector_id}:{external_id}'
+        generation = previous['revision']
+        saved = previous['data']
+        if saved.get('connector_id') != connector_id or saved.get('external_id') != external_id:
+            raise ValueError(error)
+        # Current memberships have immutable keys independent of the snapshot's
+        # reference array. Older memberships must also prove their legacy key.
+        generation_keys = {
+            logical_key('source_part_v1', f'{identity}:{generation}:{number}'): number
+            for number in range(1, 101)
+        }
+        ids = set()
+        if not repair:
+            references = saved.get('part_receipt_ids')
+            if not isinstance(references, list) or not 1 <= len(references) <= 100:
+                raise ValueError(error)
+            try:
+                ids = {_uuid(reference) for reference in references}
+            except ValueError:
+                raise ValueError(error) from None
+            if len(ids) != len(references):
+                raise ValueError(error)
+        rows = connection.execute(text('''SELECT o.id,o.data,v.id AS version_id,s.current_version_id,s.deleted
+            FROM c0_object_keys k JOIN c0_objects o ON o.space_id=k.space_id AND o.id=k.object_id
+            LEFT JOIN c0_source_versions v ON v.space_id=o.space_id
+                AND v.id=CASE WHEN pg_input_is_valid(o.data->>'version_id','uuid') THEN CAST(o.data->>'version_id' AS uuid) END
+                AND v.source_id::text=o.data->>'source_id' AND v.content_hash=o.data->>'last_content_hash'
+            LEFT JOIN c0_sources s ON s.space_id=v.space_id AND s.id=v.source_id
+            WHERE k.space_id=:space AND k.type_name=:type AND k.field='key' AND o.type_name=k.type_name
+                AND (k.value IN (SELECT to_jsonb(g.key) FROM unnest(CAST(:keys AS text[])) g(key))
+                    OR o.id=ANY(CAST(:ids AS uuid[])))
+                AND k.value=to_jsonb(o.data->>'key')
+                AND o.data->>'connector_id'=:connector AND o.data->>'parent_external_id'=:external'''),
+            {'space':self._space_id,'type':PREFIX+'source_part_v1','keys':list(generation_keys),
+             'ids':list(ids),'connector':connector_id,'external':external_id}).mappings().all()
+        if not 1 <= len(rows) <= 100 or (not repair and {row['id'] for row in rows} != ids):
+            raise ValueError(error)
+        ordered = {}
+        for row in rows:
+            data = row['data']
+            number = data.get('part_number')
+            key = data.get('key')
+            if (type(number) is not int or not 1 <= number <= len(rows) or number in ordered
+                    or row['version_id'] is None):
+                raise ValueError(error)
+            if generation_keys.get(key) != number:
+                legacy_identity = f"{connector_id}:{data.get('external_id', '')}:{row['version_id']}"
+                if repair or key != logical_key('source_sync_history_v1', legacy_identity):
+                    raise ValueError(error)
+            if repair and (row['deleted'] or row['current_version_id'] != row['version_id']):
+                raise ValueError(error)
+            ordered[number] = row
+        return [ordered[number] for number in range(1, len(rows)+1)]
+
     def save_source_snapshot(self, actor, connector_id, external_id, content_hash, part_receipt_ids, *, expected_revision=0, lease=None, idempotency_key):
         identifier(connector_id)
         if type(external_id) is not str or not 1<=len(external_id)<=4096:
@@ -500,12 +558,27 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                 total=data['end_byte']
                 if total>16777216:raise ValueError('source_snapshot_too_large')
             if not binary and digest.hexdigest()!=content_hash:raise ValueError('source_snapshot_hash_mismatch')
-            if previous and previous['data']['content_hash']==content_hash:
-                # Observation/provenance changes do not create a content generation.
-                from .documents import DocumentService
-                checked=DocumentService(self.database,self.access).in_space(self._space_id)._composite(connection,previous,previous,previous['id'])
-                if checked['state']!='ready':raise ValueError('current_source_snapshot_incomplete')
-                return previous
+            old_parts = []
+            if previous:
+                repair = previous['data'].get('content_hash') == content_hash
+                if repair:
+                    # Intact same-content publication keeps its existing revision.
+                    from .documents import DocumentService
+                    from .sources import SourceConflict
+                    try:
+                        checked = DocumentService(self.database,self.access).in_space(self._space_id)._composite(
+                            connection,previous,previous,previous['id'])
+                    except SourceConflict:
+                        pass
+                    else:
+                        if checked['state']=='ready':
+                            return previous
+                    if binary:
+                        raise ValueError('current_source_snapshot_incomplete')
+                old_parts = self._owned_snapshot_parts(connection, previous, connector_id, external_id, repair=repair)
+                if repair and [part['version_id'] for part in old_parts] != versions:
+                    # A different set of versions needs explicit reconciliation.
+                    raise ValueError('current_source_snapshot_incomplete')
             for number,data in enumerate(validated,1):
                 membership=self._save(connection,current,'source_part_v1',identity+':'+str(generation)+':'+str(number),
                     {key:value for key,value in data.items() if key!='key'})
@@ -514,13 +587,14 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                 'part_receipt_ids':immutable,'total_bytes':total,'verified_at':self.clock().isoformat()}
             result=self._save(connection,current,'source_snapshot_v1',identity,values,previous=previous)
             old_versions=[]
-            if previous:
-                old_ids=previous['data']['part_receipt_ids']
-                old_versions=connection.execute(text("SELECT CAST(data->>'version_id' AS uuid) FROM c0_objects WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))"),{'space':self._space_id,'ids':old_ids}).scalars().all()
-                connection.execute(text('DELETE FROM c0_objects WHERE space_id=:space AND id=ANY(CAST(:ids AS uuid[]))'),{'space':self._space_id,'ids':old_ids})
+            if old_parts:
+                old_versions=[part['version_id'] for part in old_parts]
+                connection.execute(text('DELETE FROM c0_objects WHERE space_id=:space AND type_name=:type AND id=ANY(CAST(:ids AS uuid[]))'),
+                    {'space':self._space_id,'type':PREFIX+'source_part_v1','ids':[part['id'] for part in old_parts]})
                 obsolete=[identifier for identifier in old_versions if identifier not in versions]
                 # Clear current pointers of parts removed by a shrinking parent.
-                connection.execute(text('UPDATE c0_sources SET current_version_id=NULL WHERE current_version_id=ANY(CAST(:old AS uuid[]))'),{'old':obsolete})
+                connection.execute(text('UPDATE c0_sources SET current_version_id=NULL WHERE space_id=:space AND current_version_id=ANY(CAST(:old AS uuid[]))'),
+                    {'old':obsolete,'space':self._space_id})
             publish_versions(connection,versions)
             retire_versions(connection,old_versions)
             return result

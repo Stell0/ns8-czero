@@ -58,7 +58,9 @@ class AutomaticSourceService(DriveSources, SpaceBound):
         with self.database.engine.connect() as c:
             self._authorize(c, actor)
             self._row(c, identifier)
-            return [dict(row) for row in c.execute(text('''SELECT id,definition_id,revision,state,error_code,processed,created_at,finished_at
+            return [dict(row) for row in c.execute(text('''SELECT id,definition_id,revision,state,error_code,processed,created_at,finished_at,
+                    diagnostics,CASE WHEN state IN ('queued','pending') THEN available_at END AS available_at,
+                    cursor<>'{}' AS checkpoint_available
                 FROM c0_source_update_runs WHERE definition_id=:id ORDER BY number DESC LIMIT :limit OFFSET :offset'''),
                 {'id': identifier, 'limit': limit, 'offset': offset}).mappings()]
 
@@ -77,12 +79,15 @@ class AutomaticSourceService(DriveSources, SpaceBound):
         with self.database.engine.connect() as c:
             self._authorize(c, actor, Role.EDITOR)
         checked = configuration(kind, config)
-        checked.update(max_items=1, max_requests=4, timeout=3)
-        items, _, complete = collect(kind, checked, {}, preview=True)
+        sample = 5 if checked.get('attachments') else 1
+        checked.update(max_items=sample, max_requests=4, timeout=3)
+        items, cursor, complete = collect(kind, checked, {}, preview=True)
         with self.database.engine.connect() as c:
             self._authorize(c, actor, Role.EDITOR)
-        return {'items': [{'title': item['title'], 'url': item['metadata']['original_url']} for item in items],
-                'complete': complete}
+        return {'items': [{'title': item['title'], 'url': item['metadata']['original_url'],
+                           **{key: item[key] for key in ('kind', 'selection', 'reason') if key in item}}
+                          for item in items],
+                'complete': complete and not cursor.get('attachment_failures') and not cursor.get('depth_limited')}
 
     def save(self, actor, *, name, kind, config, enabled, interval_seconds, idempotency_key,
              identifier=None, expected_revision=None):
@@ -234,7 +239,7 @@ class AutomaticSourceService(DriveSources, SpaceBound):
                 ORDER BY next_run_at,id LIMIT 100 FOR UPDATE SKIP LOCKED''')).mappings().all()
             for row in due:
                 self._enqueue(c, row)
-            row = c.execute(text('''SELECT d.*,r.id AS run_id,r.cursor,r.processed FROM c0_automatic_sources d
+            row = c.execute(text('''SELECT d.*,r.id AS run_id,r.cursor,r.processed,r.diagnostics FROM c0_automatic_sources d
                 JOIN c0_source_update_runs r ON r.definition_id=d.id
                 WHERE r.state IN ('queued','pending') AND r.available_at<=now() ORDER BY r.available_at,r.id LIMIT 1 FOR UPDATE OF d,r SKIP LOCKED''')).mappings().one_or_none()
             if row is None:
@@ -303,6 +308,35 @@ def cancel_staged(c, identifier):
     retire_versions(c,rows)
 
 
+def queued_attachment_actor(c, version, access):
+    """Resolve only a queue-only native website stage bound to a saved definition."""
+    metadata = version['publication_metadata'] or {}
+    if (access is None or metadata.get('_automatic_attachment_queue') is not True
+            or version['media_type'] != 'application/pdf' or version['job_id'] is not None):
+        raise PermissionDenied()
+    try:
+        identifier = UUID(metadata['automatic_source_id'])
+    except (ValueError, TypeError, KeyError, AttributeError):
+        raise PermissionDenied() from None
+    service = AutomaticSourceService(None, access).in_space(version['space_id'])
+    try:
+        definition = service._row(c, identifier)
+    except UpdateNotFound:
+        raise PermissionDenied() from None
+    if (definition['kind'] != 'website' or definition['revision'] != metadata.get('_automatic_source_revision')
+            or not definition['config'].get('attachments', {}).get('page_queue')):
+        raise PermissionDenied()
+    owned = c.execute(text("""SELECT 1 FROM c0_automatic_source_items i
+        JOIN c0_sources s ON s.id=i.source_id
+        WHERE i.definition_id=:id AND i.source_id=:source AND i.version_id=:version
+        AND s.space_id=:space AND NOT s.deleted AND i.source_revision=s.revision"""),
+        {'id': identifier, 'source': version['source_id'], 'version': version['id'],
+         'space': version['space_id']}).scalar_one_or_none()
+    if not owned:
+        raise PermissionDenied()
+    return service._background_actor(c, definition)
+
+
 def guard_publication(c, version, access):
     """Recheck native authority at extraction's final atomic publication boundary."""
     metadata=version['publication_metadata'] or {}
@@ -332,5 +366,5 @@ def guard_publication(c, version, access):
         c.execute(text('UPDATE c0_automatic_sources SET next_run_at=NULL WHERE id=:id'),{'id':identifier})
         return False
     # The private stage marker must not become editable current-source metadata.
-    c.execute(text("UPDATE c0_source_versions SET publication_metadata=CAST(publication_metadata AS jsonb)-'_automatic_source_revision' WHERE id=:id"),{'id':version['id']})
+    c.execute(text("UPDATE c0_source_versions SET publication_metadata=CAST(publication_metadata AS jsonb)-'_automatic_source_revision'-'_automatic_attachment_queue' WHERE id=:id"),{'id':version['id']})
     return True

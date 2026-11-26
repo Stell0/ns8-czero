@@ -39,6 +39,16 @@ def install(app,auth,sources,read_context,write_context):
             allowed={'staging_expired','original_unavailable','managed_source_reindex'}
             raise HTTPException(422,code if code in allowed else 'invalid_extraction_request') from None
 
+    import czero_core.extraction_status as core_status
+    if hasattr(core_status, 'reconciliation'):
+        app.state.website.ingestion_diagnostics = True
+
+        @app.get('/api/v1/ingestion-diagnostics')
+        def diagnostics(space_id:UUID, limit:int=Query(50,ge=1,le=100),
+                        offset:int=Query(0,ge=0,le=10000), context:RequestAccess=Depends(read_context)):
+            """Preview reconciliation of a selected space without starting work."""
+            return {'items':invoke(core_status.reconciliation,selected(space_id),context.actor,limit=limit,offset=offset)}
+
     @app.get('/api/v1/sources/{source_id}/extraction')
     def progress(source_id:UUID,space_id:UUID|None=None,context:RequestAccess=Depends(read_context)):
         return invoke(selected(space_id).progress,context.actor,source_id)

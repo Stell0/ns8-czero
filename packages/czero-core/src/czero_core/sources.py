@@ -393,6 +393,8 @@ class SourceService(SpaceBound):
             {'space': space, 'id': identifier}).mappings().one_or_none()
         if row is None:
             raise SourceNotFound()
+        if row['publication_metadata'].get('_automatic_attachment_queue') and row['job_id'] is None:
+            raise SourceConflict()
         if (type(expected_generation) is not int or expected_generation != row['generation']
                 or row['state'] == 'ready' or (row['state'] == 'queued' and row['job_state'] in ('queued','running'))):
             raise SourceConflict()
@@ -649,7 +651,7 @@ def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=T
     if automatic is False:return {'state':'cancelled'}
     if automatic:reuse_identical=False
     if automatic:
-        row={**row,'publication_metadata':{key:value for key,value in row['publication_metadata'].items() if key!='_automatic_source_revision'}}
+        row={**row,'publication_metadata':{key:value for key,value in row['publication_metadata'].items() if key not in ('_automatic_source_revision', '_automatic_attachment_queue')}}
     from .current_content import publish_versions
     version_id=row['id']
     source=connection.execute(text('SELECT * FROM c0_sources WHERE id=:id'),{'id':row['source_id']}).mappings().one()
@@ -702,7 +704,14 @@ def register_source_handlers(registry, database, originals, *, access=None, pdf_
             saved = PdfAccess.get(connection, row) if row['media_type'] == 'application/pdf' else None
             original = originals.check(row)
             if saved is None:
-                evidence = extract_isolated(original, row['media_type'])
+                if (row['media_type'] == 'application/pdf'
+                        and row['publication_metadata'].get('attachment_type') == 'application/pdf'
+                        and '_automatic_source_revision' in row['publication_metadata']):
+                    evidence = extract_isolated(original, row['media_type'], allow_mixed_pdf=True)
+                    if evidence.textless_pages:
+                        raise ExtractionError('unsupported_scan')
+                else:
+                    evidence = extract_isolated(original, row['media_type'])
             else:
                 started = time.monotonic()
                 with pdf_input(original, row, saved, pdf_access) as parser_path:

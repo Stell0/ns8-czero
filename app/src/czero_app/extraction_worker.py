@@ -12,6 +12,31 @@ from czero_core.database import Database
 from czero_core.sources import OriginalStore
 
 
+def configured_queue(database, access, originals):
+    from czero_core.extraction_queue import ExtractionQueue
+    flag = os.getenv('CZERO_EXTRACTION_UNITS', '0')
+    if flag not in ('0', '1'):
+        raise ValueError('invalid_extraction_flag')
+    if flag == '0':
+        return None
+    workers=int(os.getenv('CZERO_EXTRACTION_WORKERS','2'))
+    ocr=os.getenv('CZERO_EXTRACTION_OCR_ENABLED','0')
+    if ocr not in ('0','1'): raise ValueError('invalid_extraction_flag')
+    cache=os.getenv('CZERO_EXTRACTION_CACHE_ENABLED','1')
+    if cache not in ('0','1'): raise ValueError('invalid_cache_flag')
+    options = {}
+    from czero_core.sources import SourceService
+    if hasattr(SourceService, 'ingest_manual'):
+        from czero_core.pdf_access import PdfAccess
+        options['pdf_access'] = PdfAccess.configured()
+    return ExtractionQueue(database,access,originals,enabled=True,instance_workers=workers,
+        document_workers=int(os.getenv('CZERO_EXTRACTION_DOCUMENT_WORKERS','2')),
+        space_workers=int(os.getenv('CZERO_EXTRACTION_SPACE_WORKERS','2')),
+        max_queued_units=int(os.getenv('CZERO_EXTRACTION_MAX_QUEUED_UNITS','2000')),
+        max_staging_bytes=int(os.getenv('CZERO_EXTRACTION_MAX_STAGING_BYTES','33554432')),
+        ocr_language=os.getenv('CZERO_EXTRACTION_OCR_LANGUAGE','eng') if ocr=='1' else None,cache_enabled=cache=='1', **options)
+
+
 def main():
     database = None
     try:
@@ -20,28 +45,14 @@ def main():
             raise ValueError('invalid_extraction_flag')
         processed = 0
         if flag == '1':
-            from czero_core.extraction_queue import ExtractionQueue, ExtractionPool
+            from czero_core.extraction_queue import ExtractionPool
             issuer = os.environ['CZERO_OIDC_ISSUER']
             owner = UUID(os.environ['CZERO_OWNER_LDAP_UUID'])
             database = Database()
             access = AccessService(database, issuer, owner)
             originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
-            workers=int(os.getenv('CZERO_EXTRACTION_WORKERS','2'))
-            ocr=os.getenv('CZERO_EXTRACTION_OCR_ENABLED','0')
-            if ocr not in ('0','1'): raise ValueError('invalid_extraction_flag')
-            cache=os.getenv('CZERO_EXTRACTION_CACHE_ENABLED','1')
-            if cache not in ('0','1'): raise ValueError('invalid_cache_flag')
-            options = {}
-            from czero_core.sources import SourceService
-            if hasattr(SourceService, 'ingest_manual'):
-                from czero_core.pdf_access import PdfAccess
-                options['pdf_access'] = PdfAccess.configured()
-            queue=ExtractionQueue(database,access,originals,enabled=True,instance_workers=workers,
-                document_workers=int(os.getenv('CZERO_EXTRACTION_DOCUMENT_WORKERS','2')),
-                space_workers=int(os.getenv('CZERO_EXTRACTION_SPACE_WORKERS','2')),
-                max_queued_units=int(os.getenv('CZERO_EXTRACTION_MAX_QUEUED_UNITS','2000')),
-                max_staging_bytes=int(os.getenv('CZERO_EXTRACTION_MAX_STAGING_BYTES','33554432')),
-                ocr_language=os.getenv('CZERO_EXTRACTION_OCR_LANGUAGE','eng') if ocr=='1' else None,cache_enabled=cache=='1', **options)
+            queue = configured_queue(database, access, originals)
+            workers = queue.instance_workers
             stop=Event()
             previous=signal.signal(signal.SIGTERM,lambda *_:stop.set())
             try: result=ExtractionPool(queue,workers=workers).tick(stop=stop)

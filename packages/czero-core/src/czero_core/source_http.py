@@ -91,7 +91,7 @@ class Fetcher:
         for connection,_ in self._connections.values():connection.close()
         self._connections.clear()
 
-    def response(self,url,*,headers=None,allow_status=(200,),validate_url=None,interval=0,remaining_bytes=None):
+    def response(self,url,*,headers=None,allow_status=(200,),validate_url=None,interval=0,remaining_bytes=None,deadline=None, batch_limit=None, reject_media=(), first_request_headers=None):
         initial=urlsplit(public_url(url))
         try:
             for redirect in range(4):
@@ -101,8 +101,13 @@ class Fetcher:
                     raise C0Error('source_cross_host_redirect_denied')
                 if self.requests>=self.config['max_requests']:
                     raise C0Error('source_request_budget_exhausted')
+                def timeout():
+                    remaining = self.config['timeout'] if deadline is None else deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise C0Error('source_time_budget_exhausted')
+                    return min(self.config['timeout'], remaining)
                 port=443 if parsed.scheme=='https' else 80
-                peers=public_addresses(parsed.hostname,port,self.config['timeout'])
+                peers=public_addresses(parsed.hostname,port,timeout())
                 origin=(parsed.scheme,parsed.hostname,port)
                 cached=self._connections.get(origin)
                 if cached and cached[1] not in peers:
@@ -115,7 +120,14 @@ class Fetcher:
                     self._connections[origin]=(connection,peers[0])
                 delay=interval(url) if callable(interval) else interval
                 wait=delay-(time.monotonic()-self._last.get(origin,0))
-                if wait>0:time.sleep(min(wait,60))
+                if wait > 0:
+                    if deadline is not None and deadline - time.monotonic() <= wait:
+                        raise C0Error('source_time_budget_exhausted')
+                    time.sleep(min(wait,60))
+                request_timeout = timeout()
+                connection.timeout = request_timeout
+                if connection.sock is not None:
+                    connection.sock.settimeout(request_timeout)
                 self._last[origin]=time.monotonic()
                 self.requests+=1
                 def expire(current=connection):
@@ -123,13 +135,14 @@ class Fetcher:
                         if current.sock: current.sock.shutdown(socket.SHUT_RDWR)
                     except OSError: pass
                     current.close()
-                timer=Timer(self.config['timeout'],expire);timer.daemon=True;timer.start()
+                timer=Timer(request_timeout,expire);timer.daemon=True;timer.start()
                 success=False
                 try:
                     authorization=({'Authorization':'Bearer '+self._github_token}
                         if self._github_token and parsed.scheme=='https' and parsed.hostname.lower()=='api.github.com' else {})
                     connection.request('GET',(parsed.path or '/')+('?' + parsed.query if parsed.query else ''),
-                        headers={'User-Agent':'c0-projects/0.3','Accept':self.accept,**(headers or {}),**authorization})
+                        headers={'User-Agent':'c0-projects/0.3','Accept':self.accept,**(headers or {}),
+                                 **((first_request_headers or {}) if redirect == 0 else {}),**authorization})
                     response=connection.getresponse()
                     if response.status in (301,302,303,307,308):
                         if redirect==3 or not response.getheader('Location'):
@@ -143,23 +156,36 @@ class Fetcher:
                             try:retry_after=retry_time(str(max(0,int(response.getheader('X-RateLimit-Reset'))-int(time.time()))))
                             except (ValueError,TypeError):pass
                         raise FetchError('source_http_' + str(response.status),retry_after)
+                    media = response.getheader('Content-Type','text/plain').split(';')[0].strip().lower()
+                    if media in reject_media:
+                        raise C0Error('website_unsupported_media')
                     remaining=remaining_bytes() if callable(remaining_bytes) else remaining_bytes
-                    limit=self.config['max_bytes'] if remaining is None else min(self.config['max_bytes'],remaining)
+                    object_limit = self.config['max_bytes'] if batch_limit is None else min(self.config['max_bytes'], batch_limit)
+                    limit=object_limit if remaining is None else min(object_limit,remaining)
                     if limit<=0:raise C0Error('source_byte_budget_exhausted')
+                    defer = batch_limit is not None and limit < object_limit
                     declared=response.getheader('Content-Length') if response.status!=304 else None
-                    if declared is not None and (not declared.isdigit() or int(declared)>limit):
-                        raise C0Error('source_content_length_invalid_or_too_large')
-                    content=response.read(limit+1)
+                    if declared is not None:
+                        if not declared.isdigit() or int(declared)>object_limit:
+                            raise C0Error('source_content_length_invalid_or_too_large')
+                        if int(declared)>limit:
+                            raise C0Error('source_byte_budget_exhausted' if defer else 'source_content_length_invalid_or_too_large')
+                    try:
+                        content=response.read(limit+1)
+                    except (OSError, http.client.HTTPException):
+                        # A failed read can consume bytes before reporting an error.
+                        self.downloaded += limit
+                        raise
+                    self.downloaded+=len(content)
                     if len(content)>limit:
-                        raise C0Error('source_content_too_large')
+                        raise C0Error('source_byte_budget_exhausted' if defer else 'source_content_too_large')
                     if declared is not None and len(content)!=int(declared):
                         raise C0Error('source_incomplete_body')
                     if response.getheader('Content-Encoding','identity')!='identity':
                         raise C0Error('source_encoding_unsupported')
-                    self.downloaded+=len(content)
                     success=True
-                    return content,url,response.getheader('Content-Type','text/plain').split(';')[0].strip().lower(),{
-                        'status':response.status,'etag':response.getheader('ETag',''),
+                    return content,url,media,{
+                        'status':response.status,'redirects':redirect,'etag':response.getheader('ETag',''),
                         'last_modified':response.getheader('Last-Modified',''),'retry_after':retry_time(response.getheader('Retry-After'))}
                 finally:
                     timer.cancel()
