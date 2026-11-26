@@ -289,6 +289,9 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
             raise HTTPException(422, 'invalid_source_request') from None
 
+    previous_validation_handler = app.exception_handlers.get(
+        RequestValidationError, request_validation_exception_handler)
+
     @app.exception_handler(RequestValidationError)
     async def text_validation_error(request, error):
         # FastAPI's default errors contain submitted input. Keep text evidence
@@ -299,7 +302,7 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             or '/api/v1/extraction-runs/' in request.url.path
             or request.url.path.endswith('/reindex')):
             return JSONResponse({'detail': 'invalid_source_request'}, status_code=422)
-        return await request_validation_exception_handler(request, error)
+        return await previous_validation_handler(request, error)
 
     @app.post('/api/v1/sources/ingest-text', response_model=VersionView, status_code=202,
         responses={422:{'model':TextRequestError}, 409:{'description':'Source revision or idempotency conflict'},
