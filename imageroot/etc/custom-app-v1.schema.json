@@ -15,6 +15,15 @@
     "shutdown_seconds"
   ],
   "properties": {
+    "grafana_dashboard": {
+      "type": "object",
+      "description": "Operator-provided Grafana dashboard, limited to 256 KiB serialized. Hosting assigns its UID per module and app.",
+      "required": ["title", "panels"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "maxLength": 128},
+        "panels": {"type": "array"}
+      }
+    },
     "version": {
       "const": 1,
       "type": "integer"

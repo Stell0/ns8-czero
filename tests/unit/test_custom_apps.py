@@ -23,6 +23,127 @@ def manifest(app='first', **changes):
 
 
 @pytest.fixture
+def dashboard_pipe(platform, monkeypatch):
+	from unittest.mock import MagicMock
+	connection = MagicMock()
+	monkeypatch.setattr(platform.agent, 'redis_connect', MagicMock(return_value=connection), raising=False)
+	return connection.pipeline.return_value.__enter__.return_value
+
+
+def test_hosted_dashboard_lifecycle(platform, dashboard_pipe):
+	pipe = dashboard_pipe
+	dashboard = {'title': 'Demo', 'panels': [], 'id': 42, 'uid': 'previous-system'}
+	host = platform.host
+	host.deploy(manifest(grafana_dashboard=dashboard))
+	key, field, body = pipe.hset.call_args.args
+	assert (key, field) == ('module/czero9/metrics_dashboards', 'c0app-first')
+	registered = json.loads(body)
+	assert registered['title'] == 'czero9/first: Demo'
+	assert registered['id'] is None and registered['uid'] != dashboard['uid']
+	assert pipe.publish.call_args.args == ('module/czero9/event/metrics-dashboard-changed', '{}')
+	host.deploy(manifest(), update=True)
+	pipe.hdel.assert_called_with(key, field)
+	host.deploy(manifest(grafana_dashboard=dashboard), update=True)
+	assert json.loads(pipe.hset.call_args.args[2])['uid'] == registered['uid']
+	host.remove(host.record('first'))
+	assert pipe.hdel.call_count == 2
+
+
+def test_hosted_dashboard_rejects_invalid_data():
+	for panels in ('bad', ['x' * 262144], [{'min': float('inf')}]):
+		with pytest.raises(hosting.HostingError, match='invalid_grafana_dashboard'):
+			hosting.validate(manifest(grafana_dashboard={'title': 'x', 'panels': panels}))
+	with pytest.raises(hosting.HostingError, match='invalid_grafana_dashboard'):
+		hosting.validate(manifest(grafana_dashboard={}))
+
+
+def test_dashboard_reconciliation_notifies_metrics_once(platform, dashboard_pipe):
+	host = platform.host
+	dashboard = {'title': 'Demo', 'panels': []}
+	host.deploy(manifest(grafana_dashboard=dashboard))
+	host.deploy(manifest('second', grafana_dashboard=dashboard))
+	dashboard_pipe.reset_mock()
+	dashboard_pipe.execute.side_effect = TimeoutError('registry unavailable')
+	host.sync_dashboards()
+	assert dashboard_pipe.hset.call_count == 2
+	dashboard_pipe.publish.assert_called_once()
+	dashboard_pipe.execute.assert_called_once()
+	assert all(record['dashboard_pending'] for record in host.records())
+
+	dashboard_pipe.reset_mock(side_effect=True)
+	host.sync_dashboards(pending_only=True)
+	assert dashboard_pipe.hset.call_count == 2
+	dashboard_pipe.publish.assert_called_once()
+	assert not any(record['dashboard_pending'] for record in host.records())
+
+
+def test_dashboard_failure_keeps_application_start_and_recovery_available(platform, dashboard_pipe, monkeypatch):
+	p = platform
+	pipe = dashboard_pipe
+	pipe.execute.side_effect = TimeoutError('registry unavailable')
+	p.host.deploy(manifest(grafana_dashboard={'title': 'Demo', 'panels': []}))
+	assert p.host.record('first')['dashboard_pending']
+	pipe.execute.side_effect = None
+	p.host.start(p.host.record('first'))
+	assert p.running == {'c0app-first.service'}
+	assert not p.host.record('first')['dashboard_pending']
+
+	p.host.quiesce('update')
+	assert not p.running
+	pipe.execute.side_effect = TimeoutError('registry unavailable')
+	monkeypatch.setattr(hosting, 'Host', lambda: p.host)
+	monkeypatch.setattr(sys, 'argv', ['czero-custom-app', 'maintenance-end'])
+	hosting.main()
+	assert p.running == {'c0app-first.service'}
+	assert not p.host.recovery.exists()
+	assert p.host.record('first')['dashboard_pending']
+
+
+def test_removed_dashboard_registration_is_retried(platform, dashboard_pipe, monkeypatch):
+	p = platform
+	pipe = dashboard_pipe
+	p.host.deploy(manifest(grafana_dashboard={'title': 'Demo', 'panels': []}))
+	pipe.execute.side_effect = TimeoutError('registry unavailable')
+	p.host.remove(p.host.record('first'))
+	assert p.host.record('first')['status'] == 'removed'
+	assert p.host.record('first')['dashboard_pending']
+
+	pipe.execute.side_effect = None
+	monkeypatch.setattr(hosting, 'Host', lambda: p.host)
+	monkeypatch.setattr(sys, 'argv', ['czero-custom-app', 'recover', '--automatic'])
+	hosting.main()
+	assert not p.host.record('first')['dashboard_pending']
+	assert pipe.hdel.call_count == 2
+	pipe.hdel.assert_called_with('module/czero9/metrics_dashboards', 'c0app-first')
+
+
+def test_dashboard_restore_changes_module_namespace_and_stays_stopped(platform, dashboard_pipe, monkeypatch):
+	p = platform
+	writes = dashboard_pipe.hset
+	p.host.deploy(manifest(grafana_dashboard={'title': 'Example', 'panels': []}), start=True)
+	source = json.loads(writes.call_args.args[2])
+	p.host.quiesce('backup')
+	p.host.export()
+	p.host.recovery.unlink()
+	p.volumes.clear()
+	(p.host.state / 'custom-app-ports.json').unlink()
+	p.host.module = 'czero10'
+	p.host.restore()
+	key, _, dashboard = writes.call_args.args
+	assert key == 'module/czero10/metrics_dashboards'
+	destination = json.loads(dashboard)
+	assert destination['uid'] != source['uid']
+	assert destination['title'] != source['title']
+	assert not p.running and not p.enabled
+	monkeypatch.setattr(hosting, 'Host', lambda: p.host)
+	monkeypatch.setattr(sys, 'argv', ['czero-custom-app', 'regenerate'])
+	hosting.main()
+	assert writes.call_count == 3
+	assert writes.call_args.args[2] == dashboard
+	assert not p.running
+
+
+@pytest.fixture
 def platform(monkeypatch, tmp_path):
 	state = tmp_path / 'state'
 	state.mkdir()

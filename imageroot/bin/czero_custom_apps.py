@@ -38,7 +38,16 @@ def identifier(value):
 
 def validate(manifest):
 	required = {'version', 'id', 'image', 'http_port', 'readiness_path', 'data_path', 'memory_mb', 'pids_limit', 'shutdown_seconds'}
-	require(isinstance(manifest, dict) and required <= manifest.keys() and not manifest.keys() - required - {'hostname', 'environment', 'secrets'}, 'invalid_manifest_fields')
+	require(isinstance(manifest, dict) and required <= manifest.keys() and not manifest.keys() - required - {'hostname', 'environment', 'secrets', 'grafana_dashboard'}, 'invalid_manifest_fields')
+	if 'grafana_dashboard' in manifest:
+		dashboard = manifest['grafana_dashboard']
+		require(isinstance(dashboard, dict) and isinstance(dashboard.get('title'), str)
+			and 0 < len(dashboard['title']) <= 128 and isinstance(dashboard.get('panels'), list), 'invalid_grafana_dashboard')
+		try:
+			serialized = json.dumps(dashboard, allow_nan=False)
+		except ValueError:
+			raise HostingError('invalid_grafana_dashboard') from None
+		require(len(serialized) <= 262144, 'invalid_grafana_dashboard')
 	require(type(manifest['version']) is int and manifest['version'] == 1, 'unsupported_contract')
 	identifier(manifest['id'])
 	require(isinstance(manifest['image'], str) and IMAGE.fullmatch(manifest['image']), 'digest_required')
@@ -197,6 +206,40 @@ class Host:
 		unit.write_text('[Unit]\nDescription=C0 custom application ' + record['id'] + '\nWants=czero.service\nAfter=czero.service\n\n[Service]\nType=simple\nExecStart=/usr/local/bin/runagent czero-custom-app launch ' + record['id'] + '\nExecStop=/usr/bin/podman stop --ignore --time=' + str(manifest['shutdown_seconds']) + ' ' + self.name(record['id']) + '\nRestart=on-failure\nRestartSec=10\nTimeoutStopSec=' + str(manifest['shutdown_seconds'] + 15) + '\nSyslogIdentifier=' + self.name(record['id']) + '\n\n[Install]\nWantedBy=default.target\n')
 		unit.chmod(0o600)
 
+	def sync_dashboards(self, records=None, *, pending_only=False):
+		"""Reconcile operator dashboards in this module's own namespace."""
+		managed = [record for record in (self.records() if records is None else records)
+			if record.get('dashboard_managed') and (not pending_only or record.get('dashboard_pending'))]
+		if not managed:
+			return
+		import agent
+		require(re.fullmatch(r'[a-z][a-z0-9]*[0-9]+', self.module), 'invalid_module_identity')
+		namespace = 'module/' + self.module
+		key = namespace + '/metrics_dashboards'
+		dashboards = [(record['id'], None if record['status'] == 'removed'
+			else self.manifest(record).get('grafana_dashboard')) for record in managed]
+		pending = False
+		try:
+			with agent.redis_connect(privileged=True, socket_connect_timeout=2, socket_timeout=2).pipeline() as pipe:
+				for app, dashboard in dashboards:
+					name = self.name(app)
+					if dashboard is None:
+						pipe.hdel(key, name)
+					else:
+						# NS8 Metrics provisions dashboards from all modules in one folder.
+						uid = hashlib.sha256((namespace + '/' + name).encode()).hexdigest()[:32]
+						title = f'{self.module}/{app}: {dashboard["title"]}'[:128]
+						pipe.hset(key, name, json.dumps({**dashboard, 'id': None, 'uid': uid, 'title': title}))
+				pipe.publish(namespace + '/event/metrics-dashboard-changed', '{}')
+				pipe.execute()
+		except Exception:
+			pending = True
+			print('Grafana registration changes pending', file=sys.stderr)
+		for record in managed:
+			if pending != record.get('dashboard_pending', False):
+				record['dashboard_pending'] = pending
+				self.write(record)
+
 	def stage(self, manifest, secrets_dir):
 		manifest = validate(manifest)
 		generation = uuid.uuid4().hex
@@ -247,6 +290,9 @@ class Host:
 		if previous:
 			save(self.root / app / previous['generation'] / 'deployment.json', previous)
 		record = {'id': app, 'generation': generation, 'port': port, 'enabled': previous['enabled'] if update else start, 'status': 'deploying', 'previous_generation': previous['generation'] if previous else None}
+		if 'grafana_dashboard' in manifest or (previous and previous.get('dashboard_managed')):
+			record['dashboard_managed'] = True
+			record['dashboard_pending'] = True
 		# Stop the old image before changing the generation that launches on restart.
 		if previous:
 			run('systemctl', '--user', 'stop', self.unit(app))
@@ -260,6 +306,7 @@ class Host:
 			else:
 				record['status'] = 'stopped'
 				self.write(record)
+				self.sync_dashboards([record])
 		except BaseException:
 			record['status'] = 'deployment_failed'
 			self.write(record)
@@ -291,6 +338,8 @@ class Host:
 		run('systemctl', '--user', 'enable', self.unit(record['id']))
 		record.update(enabled=True, status='running')
 		self.write(record)
+		if record.get('dashboard_pending'):
+			self.sync_dashboards([record])
 
 	def stop(self, record):
 		require(record['status'] != 'removed', 'application_removed')
@@ -307,7 +356,10 @@ class Host:
 		(self.units / self.unit(record['id'])).unlink(missing_ok=True)
 		run('systemctl', '--user', 'daemon-reload')
 		record['status'] = 'removed'
+		if record.get('dashboard_managed'):
+			record['dashboard_pending'] = True
 		self.write(record)
+		self.sync_dashboards([record])
 
 	def inspect(self, app):
 		record = self.record(app)
@@ -393,6 +445,8 @@ class Host:
 				save(receipt, item)
 			removed = record['status'] == 'removed'
 			record.update(port=ports[index], enabled=False, status='removed' if removed else 'restored_stopped')
+			if record.get('dashboard_managed'):
+				record['dashboard_pending'] = True
 			self.write(record)
 			if not removed:
 				self.generate(record)
@@ -406,6 +460,7 @@ class Host:
 					self.write(record)
 					raise
 		run('systemctl', '--user', 'daemon-reload')
+		self.sync_dashboards()
 
 	def launch(self, app):
 		record = self.record(app)
@@ -479,7 +534,8 @@ def main():
 			getattr(host, args.command)(host.record(args.id))
 			result = host.inspect(args.id)
 		elif args.command == 'recover':
-			if host.recovery.exists():
+			recovering = host.recovery.exists()
+			if recovering:
 				journal = read_json(host.recovery)
 				if process_identity(journal['owner']) == journal['identity']:
 					if args.automatic:
@@ -489,12 +545,17 @@ def main():
 				run('czero-cleanup-database')
 				host.regenerate()
 				host.resume()
+			host.sync_dashboards(pending_only=not recovering)
 		elif args.command == 'maintenance-begin':
 			host.quiesce('update')
 		elif args.command == 'maintenance-end':
 			require(host.recovery.exists() and read_json(host.recovery).get('kind') == 'update', 'update_recovery_record_required')
 			host.regenerate()
 			host.resume()
+			host.sync_dashboards()
+		elif args.command == 'regenerate':
+			host.regenerate()
+			host.sync_dashboards()
 		elif args.command == 'remove-all':
 			for record in host.records():
 				if record['status'] != 'removed':
