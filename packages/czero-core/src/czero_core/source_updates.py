@@ -171,8 +171,10 @@ class SourceUpdater:
                     drive = service._drive_worker_binding(c, row)
                 if handoff is None and row['cursor'].get('collection_complete'):
                     if collect_attachments:
-                        progress['reasons'] = {
-                            **progress.get('reasons', {}), **row['cursor'].get('attachment_failures', {})}
+                        reasons = progress.setdefault('reasons', {})
+                        for group in ('attachment_failures', 'html_failures'):
+                            for code, count in row['cursor'].get(group, {}).items():
+                                reasons[code] = reasons.get(code, 0) + count
                         if row['cursor'].get('depth_limited'):
                             record(progress, 'reasons', 'website_link_depth_or_frontier_limit')
                         progress['pending'] = 0
@@ -198,6 +200,13 @@ class SourceUpdater:
             else:
                 options = {'attachment_validator': pdf_validator(sources, pending)} if collect_attachments else {}
                 items,cursor,complete=self.collector(row['kind'],row['config'],row['cursor'],**options)
+            queue_available = False
+            if page_queue and self.extraction_queue is not None and any(
+                old['error_code'] in ('extraction_units_disabled', 'extraction_manifest_exceeds_queue_limit')
+                for old in pending
+            ):
+                queue = self._queue()
+                queue_available = queue is not None and queue.enabled
             if row['processed']+len(items)>10000:raise CollectionError('source_run_item_limit')
             with service.database.engine.begin() as c:
                 hold_authority(c);content_lock(c);service.fenced(c,row)
@@ -232,11 +241,28 @@ class SourceUpdater:
                         saved=sources._source(c,old['source_id'],lock=True)
                         if saved['deleted'] or saved['revision']!=old['source_revision']:
                             raise UpdateConflict('source_changed')
+                        if collect_attachments and kind == 'pdf' and old['version_id'] != saved['current_version_id']:
+                            current = c.execute(text('''SELECT id AS version_id,id AS current_version_id,
+                                content_hash AS version_content_hash,content_hash,size_bytes,original_present
+                                FROM c0_source_versions WHERE id=:id AND space_id=:space AND source_id=:source AND content_hash=:hash
+                                AND media_type='application/pdf' AND retain_original AND state='ready'
+                                '''), {'id': saved['current_version_id'], 'space': row['space_id'], 'source': saved['id'], 'hash': digest}).mappings().one_or_none()
+                            if current:
+                                if restore_original(c, sources, current, item['body'], digest):
+                                    record(progress, kind, 'restored_original')
+                                record(progress, kind, 'unchanged')
+                                retire_versions(c, [old['version_id']])
+                                c.execute(text('''UPDATE c0_automatic_source_items SET version_id=:version,content_hash=:hash
+                                    WHERE definition_id=:id AND external_key=:key'''),
+                                    {'id': row['id'], 'key': item['key'], 'version': current['version_id'], 'hash': digest})
+                                continue
                         if old['content_hash'] == digest and not reindex:
                             if collect_attachments:
                                 old_status = previous[old['external_key']]
                                 if terminal_failure(old_status):
-                                    if old_status['state'] is not None and old_status['original_present']:
+                                    if queue_available and old_status['error_code'] in ('extraction_units_disabled', 'extraction_manifest_exceeds_queue_limit'):
+                                        reindex = True
+                                    elif old_status['state'] is not None and old_status['original_present']:
                                         try:
                                             sources.originals.check({**old_status, 'id': old_status['version_id']})
                                         except ExtractionError:
@@ -335,11 +361,14 @@ class SourceUpdater:
             self._fail(row,'failed','source_update_failed')
         return 1
 
+    def _queue(self):
+        return self.extraction_queue() if callable(self.extraction_queue) else self.extraction_queue
+
     def _handoff(self, row, version):
         failure = None
         retry = False
         try:
-            queue = self.extraction_queue() if callable(self.extraction_queue) else self.extraction_queue
+            queue = self._queue()
             if queue is None:
                 raise ValueError('extraction_units_disabled')
             queue.in_space(row['space_id']).enqueue_automatic_attachment(

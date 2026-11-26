@@ -405,7 +405,8 @@ def test_manual_metadata_edit_before_extraction_cannot_be_overwritten(automatic)
 
 
 @pytest.fixture
-def website_pdf(tmp_path):
+def website_pdf(tmp_path, request):
+    listing_tag = getattr(request, 'param', 'article')
     from pathlib import Path
     from runpy import run_path
     from czero_core.source_collectors import collect
@@ -442,7 +443,7 @@ def website_pdf(tmp_path):
                 body, media = b'User-agent: *\nAllow: /', 'text/plain'
             elif url == listing:
                 links = ''.join(f'<a href="{target}">Notice</a>' for target in [notice, '/files/notice.pdf#featured', *[target for target in files if target != notice]])
-                body, media = f'<article><h1>Notices</h1>{links}</article>'.encode(), 'text/html'
+                body, media = f'<{listing_tag}><h1>Notices</h1>{links}</{listing_tag}>'.encode(), 'text/html'
             else:
                 body, media = files[url], 'application/pdf'
                 validator = (options.get('first_request_headers') or {}).get('If-None-Match')
@@ -540,6 +541,15 @@ def test_website_pdf_continuation_readback_and_failed_replacement(automatic, web
     assert diagnostic['next_step'] == 'reacquire_original'
     assert run_again()['state'] == 'partial'
 
+    before_repair = sources.get(owner, doc['id'])
+    sources.originals.path(current).unlink()
+    assert update('first.pdf', ['Synthetic notice original']) == first
+    restored = run_again()
+    assert restored['state'] == 'complete'
+    assert restored['diagnostics']['pdf']['restored_original'] == 1
+    assert sources.get(owner, doc['id']) == before_repair
+    assert sources.original(owner, current)[0].read_bytes() == first
+
     updated = update('replacement.pdf', ['Synthetic replacement evidence'])
     assert run_again()['state'] == 'complete'
     new_version = sources.get(owner, doc['id'])['current_version_id']
@@ -552,6 +562,7 @@ def test_website_pdf_continuation_readback_and_failed_replacement(automatic, web
 @pytest.mark.parametrize('pause', [False, True])
 def test_website_pdf_page_queue_handoff_and_pause(automatic, website_pdf, pause):
     from czero_core.extraction_queue import ExtractionQueue, ExtractionWorker
+    from czero_core.extraction_status import reconciliation
 
     service, sources, owner, registry = automatic
     config, collect_pdf, update, *_ = website_pdf
@@ -569,8 +580,14 @@ def test_website_pdf_page_queue_handoff_and_pause(automatic, website_pdf, pause)
     Worker(sources.database, registry).tick()
     assert sources.get(owner, doc['id'])['current_version_id'] is None
     updater.tick()  # Resume and hand off the staged original.
+    def diagnostic_state():
+        return next(row['state'] for row in reconciliation(queue, owner)
+                    if row['source_id'] == UUID(str(doc['id'])))
+
+    assert diagnostic_state() == 'queued'
     claim = queue.claim()
     assert claim is not None
+    assert diagnostic_state() == 'running'
     if pause:
         service.command(owner, saved['id'], expected_revision=1, action='pause', idempotency_key=str(uuid4()))
         assert not queue.fail(claim, 'parser_failed')
@@ -584,3 +601,40 @@ def test_website_pdf_page_queue_handoff_and_pause(automatic, website_pdf, pause)
         current = sources.get(owner, doc['id'])['current_version_id']
         evidence = sources.document(owner, current)
         assert [location['index'] for location in evidence['locations']] == [1, 2]
+
+
+@pytest.mark.parametrize('website_pdf', ['body'], indirect=True)
+@pytest.mark.parametrize('attachment_include', [[], ['*']], ids=['suffix', 'glob'])
+def test_website_pdf_publishes_from_listing_without_article(automatic, website_pdf, attachment_include):
+    service, sources, owner, registry = automatic
+    config, collect_pdf, update, *_ = website_pdf
+    config['attachments']['include'] = attachment_include
+    original = update('first.pdf', ['Selected PDF from plain listing'])
+    saved = definition(automatic, kind='website', config=config, interval_seconds=None)
+    result = published_run(service, sources, owner, registry, saved['id'], collect_pdf)
+    assert result['state'] == 'partial'
+    assert result['diagnostics']['reasons'] == {'website_article_missing_or_javascript_only': 1}
+    document, = service.documents(owner, saved['id'])
+    current = sources.get(owner, document['id'])['current_version_id']
+    assert sources.original(owner, current)[0].read_bytes() == original
+
+
+def test_website_pdf_retries_after_page_queue_is_enabled(automatic, website_pdf):
+    from czero_core.extraction_queue import ExtractionQueue
+
+    service, sources, owner, registry = automatic
+    config, collect_pdf, update, *_ = website_pdf
+    config['attachments']['page_queue'] = True
+    original = update('first.pdf', ['Native page one', 'Native page two'])
+    saved = definition(automatic, kind='website', config=config, interval_seconds=None)
+    params = (service, sources, owner, registry, saved['id'], collect_pdf)
+    failed = published_run(*params)
+    assert failed['state'] == 'partial'
+    assert failed['diagnostics']['reasons'] == {'extraction_units_disabled': 1}
+    doc = next(row for row in service.documents(owner, saved['id']) if row['title'] == 'notice.pdf')
+
+    service.command(owner, saved['id'], expected_revision=1, action='run', idempotency_key=str(uuid4()))
+    queue = ExtractionQueue(sources.database, sources.access, sources.originals, enabled=True)
+    assert published_run(*params, queue=queue)['state'] == 'complete'
+    current = sources.get(owner, doc['id'])['current_version_id']
+    assert sources.original(owner, current)[0].read_bytes() == original

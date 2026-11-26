@@ -2,6 +2,7 @@
 """Project REST/MCP bindings; authority and transitions stay in reusable Core."""
 import importlib.util
 from copy import deepcopy
+from inspect import signature
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
@@ -306,13 +307,14 @@ class ProjectAgentPackageView(StrictRequest):
     archive_base64: str = Field(max_length=350000)
 
 
-def install_project_routes(app, database, auth, read_context, write_context):
+def install_project_routes(app, database, auth, read_context, write_context, *, originals=None):
     # Producer work can precede the immutable Core release. Old consumers stay
     # operational and explicitly reject project work until their pin is adopted.
     service = None
     if importlib.util.find_spec('czero_core.projects') is not None:
         from czero_core.projects import ProjectService
-        service = ProjectService(database, auth.access if auth else None)
+        options = {'originals': originals} if 'originals' in signature(ProjectService).parameters else {}
+        service = ProjectService(database, auth.access if auth else None, **options)
     app.state.projects = service
     operation = app.state.operation_catalog.bind
 

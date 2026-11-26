@@ -274,7 +274,7 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None, features=None
         reference = getattr(getattr(request, 'state', None), 'c0_request_id', None)
         if result.is_error and reference:
             result.meta = {**(result.meta or {}), 'c0/request_id': reference}
-            logging.getLogger('czero.requests').info('mcp operation error request %s', reference)
+            logging.getLogger('uvicorn.error.czero.requests').info('mcp operation error request %s', reference)
         return result
 
     async def resources(ctx, params):

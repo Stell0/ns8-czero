@@ -87,7 +87,7 @@ class AutomaticSourceService(DriveSources, SpaceBound):
         return {'items': [{'title': item['title'], 'url': item['metadata']['original_url'],
                            **{key: item[key] for key in ('kind', 'selection', 'reason') if key in item}}
                           for item in items],
-                'complete': complete and not cursor.get('attachment_failures') and not cursor.get('depth_limited')}
+                'complete': complete and not any(cursor.get(key) for key in ('attachment_failures', 'html_failures', 'depth_limited'))}
 
     def save(self, actor, *, name, kind, config, enabled, interval_seconds, idempotency_key,
              identifier=None, expected_revision=None):

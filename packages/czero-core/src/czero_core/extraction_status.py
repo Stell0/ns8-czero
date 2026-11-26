@@ -59,7 +59,9 @@ def reconciliation(queue, actor, *, limit=50, offset=0):
             COALESCE(v.publication_metadata->>'_automatic_attachment_queue' = 'true', false) AS automatic_queue,
             j.state AS job_state, r.id AS run_id, r.revision AS run_revision, r.state AS run_state,
             r.error_code AS run_error, r.expires_at<=clock_timestamp() AS expired,
-            EXISTS (SELECT 1 FROM c0_extraction_units u WHERE u.run_id=r.id AND u.state='failed') AS failed_unit
+            EXISTS (SELECT 1 FROM c0_extraction_units u WHERE u.run_id=r.id AND u.state='failed') AS failed_unit,
+            EXISTS (SELECT 1 FROM c0_extraction_units u WHERE u.run_id=r.id AND u.state='leased'
+                AND u.lease_deadline > clock_timestamp()) AS active_unit
         FROM selected s
         LEFT JOIN c0_documents current_doc ON current_doc.version_id=s.current_version_id
             AND current_doc.space_id=:space
@@ -108,7 +110,8 @@ def reconciliation_item(queue, row, can_recover, duplicates):
             elif not row['automatic_queue'] and error not in ('unsupported_scan', 'no_text', 'invalid_pdf', 'too_large'):
                 action = 'retry_version'
     elif row['version_state'] == 'queued':
-        state = 'running' if row['job_state'] == 'running' or row['run_state'] == 'assembling' else 'queued'
+        active = row['job_state'] == 'running' or row['run_state'] == 'assembling' or row['active_unit']
+        state = 'running' if active else 'queued'
         action = 'wait_for_work'
     elif not row['current_available']:
         state, action = 'incomplete', 'review_inventory'

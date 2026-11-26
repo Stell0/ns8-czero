@@ -89,6 +89,8 @@ class DocumentService(SpaceBound):
                         AND original.id=CASE WHEN pg_input_is_valid(receipt.data->>'source_id','uuid')
                             THEN CAST(receipt.data->>'source_id' AS uuid) END
                     WHERE original.deleted
+                        AND receipt.data->>'connector_id'=p.data->>'connector_id'
+                        AND receipt.data->>'parent_external_id'=p.data->>'external_id'
                 )
             ), page AS MATERIALIZED (
                 SELECT * FROM summaries ORDER BY sort_at DESC,id LIMIT :limit OFFSET :offset
@@ -240,7 +242,10 @@ class DocumentService(SpaceBound):
             'text_hash':None,'content_hash':data['content_hash'],'parts':[],'multipart':True,'deleted':False,
             'number':None,'error_code':'missing_or_unready_part','original_version_ids':[]}
         if len(rows)!=len(ids) or any(row['state']!='ready' or row['document_id'] is None for row in rows):return result
-        rows.sort(key=lambda row:row['data'].get('part_number',0))
+        if any(type(row['data'].get(field)) is not int
+               for row in rows for field in ('part_number', 'start_byte', 'end_byte')):
+            raise SourceConflict()
+        rows.sort(key=lambda row:row['data']['part_number'])
         bodies=[];parts=[];byte_offset=0;offset=0;media=rows[0]['media_type']
         for number,row in enumerate(rows,1):
             receipt=row['data'];body=row['body']

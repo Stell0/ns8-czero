@@ -240,5 +240,5 @@ diagnostics. Use `source_versions_list` with the technical source ID for
 eligible staging. Whole-document REST and MCP reads share fixed source errors.
 Send the opaque `X-C0-Request-ID` response header or MCP tool-error
 `c0/request_id` metadata to the operator when investigating a specific call.
-Server logs can correlate these IDs using the `czero.requests` logger at INFO.
+Server logs can correlate these IDs using the `uvicorn.error.czero.requests` logger at INFO.
 Request arguments, tokens and source content are excluded from this logger.

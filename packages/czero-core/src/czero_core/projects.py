@@ -37,8 +37,9 @@ def logical_key(kind, identity):
 
 class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, ProjectEvents, ProjectReports, ProjectEvidence, ProjectSchedules, ProjectMonitoring, ProjectWorkflows, SpaceBound):
     conflict = ProjectConflict
-    def __init__(self, database, access, *, clock=None):
+    def __init__(self, database, access, *, clock=None, originals=None):
         self.database, self.access = database, access
+        self.originals = originals
         self.clock = clock or (lambda: datetime.now(timezone.utc))
 
     def _authorize(self, connection, actor, role=Role.READER):
@@ -524,9 +525,12 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
             previous=self._find(connection,'source_snapshot_v1',identity,required=False)
             if (previous['revision'] if previous else 0)!=expected_revision:raise ProjectConflict()
             generation=(previous['revision'] if previous else 0)+1
-            total=0;digest=hashlib.sha256();binary=False;immutable=[];versions=[];validated=[];part_sources=set()
+            total=0;digest=hashlib.sha256();immutable=[];versions=[];validated=[];part_sources=set()
+            binary_original = None
             for number,receipt_id in enumerate(part_receipt_ids,1):
-                row=connection.execute(text('''SELECT o.data,v.media_type,d.body,d.text_hash,v.source_id AS actual_source_id,v.content_hash AS actual_source_hash FROM c0_objects o
+                row=connection.execute(text('''SELECT o.data,v.id AS original_id,v.media_type,v.original_present,v.retain_original,
+                    v.size_bytes,d.body,d.text_hash,v.source_id AS actual_source_id,v.content_hash AS actual_source_hash
+                    FROM c0_objects o
                     JOIN c0_source_versions v ON v.id=CAST(o.data->>'version_id' AS uuid) AND v.space_id=o.space_id
                     JOIN c0_documents d ON d.version_id=v.id AND d.space_id=v.space_id
                     WHERE o.space_id=:space AND o.type_name=:type AND o.id=CAST(:id AS uuid) AND v.state='ready' '''),
@@ -541,8 +545,10 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                         or hashlib.sha256(row['body'].encode()).hexdigest()!=row['text_hash']):
                     raise ValueError('source_part_retained_integrity_mismatch')
                 if (data['connector_id']!=connector_id or data['parent_external_id']!=external_id
-                        or data['parent_content_hash']!=content_hash or data['part_number']!=number
-                        or data['start_byte']!=total or data['sync_status']!='verified'
+                        or data['parent_content_hash']!=content_hash or type(data['part_number']) is not int
+                        or data['part_number']!=number or type(data['start_byte']) is not int
+                        or data['start_byte']!=total or type(data['end_byte']) is not int
+                        or data['sync_status']!='verified' or data['extraction_status']!='ready'
                         or data['definition_hash']!=connector['data']['definition_hash']):
                     raise ValueError('source_part_identity_mismatch')
                 if row['media_type'] in ('text/plain','text/markdown'):
@@ -551,13 +557,14 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                         raise ValueError('source_part_content_mismatch')
                     digest.update(content)
                 else:
-                    binary=True
-                    if len(part_receipt_ids)!=1 or content_hash!=data['last_content_hash']:
+                    if (len(part_receipt_ids)!=1 or content_hash!=data['last_content_hash']
+                            or row['size_bytes'] != data['end_byte'] - total):
                         raise ValueError('invalid_binary_source_parts')
+                    binary_original = row
                 validated.append(data);versions.append(UUID(data['version_id']))
                 total=data['end_byte']
                 if total>16777216:raise ValueError('source_snapshot_too_large')
-            if not binary and digest.hexdigest()!=content_hash:raise ValueError('source_snapshot_hash_mismatch')
+            if binary_original is None and digest.hexdigest()!=content_hash:raise ValueError('source_snapshot_hash_mismatch')
             old_parts = []
             if previous:
                 repair = previous['data'].get('content_hash') == content_hash
@@ -573,12 +580,21 @@ class ProjectService(ProjectExports, ProjectReleases, ProjectMaintenance, Projec
                     else:
                         if checked['state']=='ready':
                             return previous
-                    if binary:
-                        raise ValueError('current_source_snapshot_incomplete')
                 old_parts = self._owned_snapshot_parts(connection, previous, connector_id, external_id, repair=repair)
                 if repair and [part['version_id'] for part in old_parts] != versions:
                     # A different set of versions needs explicit reconciliation.
                     raise ValueError('current_source_snapshot_incomplete')
+                if repair and binary_original is not None:
+                    from .extraction import ExtractionError
+
+                    if (self.originals is None or not binary_original['original_present']
+                            or not binary_original['retain_original']):
+                        raise ValueError('current_source_snapshot_incomplete')
+                    try:
+                        self.originals.check({'id': binary_original['original_id'],
+                            'size_bytes': binary_original['size_bytes'], 'content_hash': content_hash})
+                    except (ExtractionError, ValueError):
+                        raise ValueError('current_source_snapshot_incomplete') from None
             for number,data in enumerate(validated,1):
                 membership=self._save(connection,current,'source_part_v1',identity+':'+str(generation)+':'+str(number),
                     {key:value for key,value in data.items() if key!='key'})

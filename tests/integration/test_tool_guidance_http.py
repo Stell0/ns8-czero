@@ -171,9 +171,9 @@ def test_durable_replay_and_ordinary_create_have_different_real_effects(knowledg
 
 
 def test_selective_context_contract_is_explicitly_frozen(application):
-    from czero_app.context_errors import CONTEXT_OPERATIONS
+    from czero_app.context_errors import SELECTIVE_CONTEXT_OPERATIONS
     app=application[0]
     baseline=json.loads((Path(__file__).parents[1]/'fixtures/tool_guidance/selective_context_contract.json').read_text())
-    actual=[contract.operation_contract(app.state.operations.definition(name)) for name in sorted(CONTEXT_OPERATIONS)]
+    actual=[contract.operation_contract(app.state.operations.definition(name)) for name in sorted(SELECTIVE_CONTEXT_OPERATIONS)]
     assert actual==baseline['operations']
-    assert [row for row in contract.route_contract(app.openapi()) if row['operation'] in CONTEXT_OPERATIONS]==baseline['rest_bindings']
+    assert [row for row in contract.route_contract(app.openapi()) if row['operation'] in SELECTIVE_CONTEXT_OPERATIONS]==baseline['rest_bindings']

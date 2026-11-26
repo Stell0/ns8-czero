@@ -92,7 +92,9 @@ Preview shows a bounded sample with selected or skipped PDF links. It checks
 public transport, robots, media type and file signature. A selected preview
 item still needs full extraction and publication. Preview only inspects the
 selection. Run **Update now**, inspect **Recent runs**, and
-open the completed documents. A partial run records unresolved reasons. A
+open the completed documents. An HTML listing without an extractable article
+can still supply approved PDF links. The run records the HTML failure and
+publishes any complete attachments. A partial run records unresolved reasons. A
 completed run covers the recorded frontier under the saved definition. Coverage
 depends on what the publisher exposes through the selected website paths.
 

@@ -13,7 +13,7 @@ from urllib.parse import quote, unquote, urlsplit
 from urllib.robotparser import RobotFileParser
 
 from .source_http import Fetcher, CollectionError
-from .source_html import configuration, boundary, extract, normalize
+from .source_html import configuration, boundary, extract, normalize, parse_page
 
 
 def validate(kind, config):
@@ -88,8 +88,15 @@ def attachment_boundary(url, options):
 
 
 def attachment_candidate(url, options):
-    return unquote(urlsplit(url).path).lower().endswith('.pdf') or (
-        bool(options['include']) and matches(url, options['include']))
+    if unquote(urlsplit(url).path).lower().endswith('.pdf'):
+        return True
+    if not matches(url, options['include']):
+        return False
+    try:
+        boundary(url, options)
+    except CollectionError:
+        return False
+    return True
 
 
 def attachment_key(url):
@@ -143,6 +150,7 @@ def website(config,cursor,fetcher,*,preview=False,attachment_validator=None):
     attachment_retry_after = cursor.get('attachment_retry_after', '')
     attachment_seen = set(cursor.get('attachment_seen', ()))
     attachment_failures = dict(cursor.get('attachment_failures', {}))
+    html_failures = dict(cursor.get('html_failures', {}))
     attachment_selected = cursor.get('attachment_selected', len(attachment_pending))
     depths = dict(cursor.get('depths', {}))
     depth_limited = cursor.get('depth_limited', False)
@@ -186,6 +194,16 @@ def website(config,cursor,fetcher,*,preview=False,attachment_validator=None):
     def budget_error(error):
         return str(error) in ('source_request_budget_exhausted', 'source_time_budget_exhausted',
                               'source_byte_budget_exhausted')
+
+    def record_html_failure(error):
+        nonlocal attachment_retry_after
+        code = str(error)
+        if code.startswith('source_http_'):
+            code = 'source_http_error'
+        if not re.fullmatch(r'[a-z][a-z0-9_]{0,63}', code):
+            code = 'website_collection_incomplete'
+        html_failures[code] = html_failures.get(code, 0) + 1
+        attachment_retry_after = max(attachment_retry_after, getattr(error, 'retry_after', ''))
 
     def discover_attachment(target, parent, *, required=False):
         nonlocal attachment_selected
@@ -323,8 +341,15 @@ def website(config,cursor,fetcher,*,preview=False,attachment_validator=None):
         try:
             rule=rules(url)
         except CollectionError as error:
-            if attachments and budget_error(error): break
-            raise
+            if not attachments:
+                raise
+            if budget_error(error):
+                break
+            record_html_failure(error)
+            pending.pop(0)
+            seen.add(url)
+            depths.pop(url, None)
+            continue
         if (not rule.can_fetch('c0-projects',url) or
                 any(fnmatch.fnmatch(url,p) or fnmatch.fnmatch(parsed.path,p) for p in options['exclude'])):
             pending.pop(0);seen.add(url);continue
@@ -337,16 +362,21 @@ def website(config,cursor,fetcher,*,preview=False,attachment_validator=None):
         try:
             raw,final,media,_=response(url,validate_url=checked,interval=delay_for,
                                      **({'reject_media': ('application/pdf',)} if attachments else {}))
+            if media not in ('text/html','application/xhtml+xml'):
+                raise CollectionError('website_unsupported_media')
         except CollectionError as error:
+            if not attachments:
+                raise
+            if budget_error(error):
+                break
+            pending.pop(0)
+            seen.add(url)
+            depths.pop(url, None)
             if str(error) == 'website_attachment_redirect':
-                pending.pop(0)
-                seen.add(url)
                 draw_attachments()
-                continue
-            if attachments and budget_error(error): break
-            raise
-        if media not in ('text/html','application/xhtml+xml'):
-            raise CollectionError('website_unsupported_media')
+            else:
+                record_html_failure(error)
+            continue
         if preview:
             # HTTP previews never run article selectors; the worker owns conversion.
             class Title(HTMLParser):
@@ -369,9 +399,19 @@ def website(config,cursor,fetcher,*,preview=False,attachment_validator=None):
             links=title.links
             canonical=final
         else:
-            title,body,canonical,links,metadata=extract(raw,final,options)
-            if not config['include'] or any(fnmatch.fnmatch(url,p) or fnmatch.fnmatch(parsed.path,p) for p in config['include']):
-                items.append(item(canonical,title,body,canonical,**metadata))
+            canonical, links = final, []
+            selected = not config['include'] or matches(url, config['include'])
+            try:
+                page = parse_page(raw, final)
+                links = page[1]
+                if selected or not attachments:
+                    title, body, canonical, links, metadata = extract(raw, final, options, page=page)
+                    if selected:
+                        items.append(item(canonical, title, body, canonical, **metadata))
+            except CollectionError as error:
+                if not attachments:
+                    raise
+                record_html_failure(error)
         pending.pop(0);seen.add(url)
         depth = depths.pop(url, 0)
         if attachments and len(links) >= 10000:
@@ -410,7 +450,8 @@ def website(config,cursor,fetcher,*,preview=False,attachment_validator=None):
         ):
             raise CollectionError('website_collection_budget_stalled')
         state.update(attachment_pending=attachment_pending, attachment_seen=sorted(attachment_seen),
-                     attachment_failures=attachment_failures, attachment_retry_after=attachment_retry_after,
+                     attachment_failures=attachment_failures, html_failures=html_failures,
+                     attachment_retry_after=attachment_retry_after,
                      attachment_selected=attachment_selected,
                      depths=depths, depth_limited=depth_limited)
     return items, state, not pending and not inventories and not attachment_pending

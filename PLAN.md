@@ -53,6 +53,12 @@ successor uses an ASGI response wrapper and passes the chunked 413 and both
 SDK correlation regressions. The Core and Vue package trees retain their
 previous tested bytes.
 
+The [third full run](https://github.com/Stell0/ns8-czero/actions/runs/45861333019)
+preserves the reviewed source `f1bcbe4611f1c1047bef5e58a2c9163ecb083501`.
+The review successor verifies independent PDF discovery, recovery of retained
+originals and page extraction, multipart repair through the publisher, and
+request correlation in runtime logs. It updates the guidance expectations
+that failed in the original Rocky browser and integration checks.
 
 
 ## C0 Grafana monitoring

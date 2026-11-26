@@ -1,8 +1,9 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Fixed, payload-free errors for complete-document and context reads."""
-CONTEXT_OPERATIONS=frozenset({'source_documents_list','source_documents_get','source_version_document_get',
-    'source_document_outline_get','source_document_sections_get',
-    'source_document_references_get','context_bundle_get'})
+SELECTIVE_CONTEXT_OPERATIONS = frozenset({'source_document_outline_get', 'source_document_sections_get',
+    'source_document_references_get', 'context_bundle_get'})
+CONTEXT_OPERATIONS = SELECTIVE_CONTEXT_OPERATIONS | {
+    'source_documents_list', 'source_documents_get', 'source_version_document_get'}
 PUBLIC=frozenset({(404,'source_not_found'),(409,'source_conflict'),(410,'content_superseded'),
     (413,'too_large'),(422,'invalid_source_request'),(503,'authentication_not_configured')})
 

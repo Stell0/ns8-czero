@@ -125,7 +125,7 @@ class C0:
                      'service_unavailable', 'project_conflict', 'project_not_found', 'invalid_project_request', 'project_core_upgrade_required', 'project_connection_not_configured'}
             code = next((item.get('text') for item in raw.get('content', [])
                          if item.get('type') == 'text' and item.get('text') in known), 'operation_rejected')
-            raise C0Error(code + ': ' + name + '; inspect authority/current state before retrying')
+            raise C0Error(code + ': ' + name + '; inspect authority/current state before retrying', code=code)
         if raw.get('structuredContent') is not None:
             return raw['structuredContent']
         for item in raw.get('content', []):

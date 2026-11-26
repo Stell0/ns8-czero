@@ -60,7 +60,7 @@ class RequestCorrelation:
             if message['type'] == 'http.response.start':
                 MutableHeaders(scope=message)['X-C0-Request-ID'] = reference
                 if message['status'] >= 400:
-                    logging.getLogger('czero.requests').info('%s response %s request %s',
+                    logging.getLogger('uvicorn.error.czero.requests').info('%s response %s request %s',
                         transport, message['status'], reference)
             await send(message)
 
@@ -147,9 +147,9 @@ def create_app(module_id: str | None = None, frontend_dir: Path | None = None,
     instance_app.state.operations = catalog.registry
     instance_app.state.operation_catalog = catalog
     install_profile_routes(instance_app, auth, read_context)
-    install_project_routes(instance_app, database, auth, read_context, write_context)
-    install_space_routes(instance_app, database, auth, read_context, write_context)
     originals = OriginalStore(os.getenv('CZERO_SOURCE_DIR', '/var/lib/czero/sources'))
+    install_project_routes(instance_app, database, auth, read_context, write_context, originals=originals)
+    install_space_routes(instance_app, database, auth, read_context, write_context)
     retrieval_settings=load_settings()
     registry = build_registry(database, originals, settings=retrieval_settings,access=auth.access if auth else None)
     install_job_routes(instance_app, database, auth, read_context, write_context, registry=registry)
