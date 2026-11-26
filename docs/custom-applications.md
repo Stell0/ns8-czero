@@ -188,7 +188,9 @@ An operator can include one exported Grafana dashboard object in the optional
 `grafana_dashboard` manifest field. The host registers this object in the NS8
 metrics module dashboard registry on install, update and restore. Give the
 dashboard a title and panels, use datasources available on the node, and keep
-its serialized size within 256 KiB. The node generates a stable UID for each
-module and application pair. Omitting the field on a later update or removing
-the application withdraws its dashboard. Dashboard JSON is visible to Grafana
-users. Keep credentials in the application's secret files.
+its serialized size within 256 KiB. Each module and application pair uses a
+stable UID and a title prefixed with that pair to avoid collisions in Grafana.
+Omitting the field on update or removing the application withdraws its Metrics
+registration. NS8 Metrics retains dashboards that Grafana has already provisioned.
+Failed registration changes are retried by C0's recovery timer. Dashboard JSON
+is visible to Grafana users. Keep credentials in the application's secret files.
