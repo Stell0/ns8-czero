@@ -103,6 +103,20 @@ restoring an app that uses a private image. See the [Podman login
 options](https://docs.podman.io/en/latest/markdown/podman-login.1.html) and
 [credential lookup order](https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md).
 
+NS8's `runagent` can set `REGISTRY_AUTH_FILE` to the shared NS8 registry
+configuration. Select the module account's private file explicitly for hosting
+commands that pull images, including `install`, `update`, and `restore`:
+
+```sh
+runagent -m czero1 sh -c '
+    export REGISTRY_AUTH_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/containers/auth.json"
+    exec czero-custom-app "$@"
+' sh install /path/to/manifest.json --secrets-dir /path/to/private-files
+```
+
+For an NS8-managed restore, provision access through the destination's NS8
+registry configuration before starting the restore.
+
 ## Updates and recovery
 
 Custom image updates are independent from C0 upgrades. Install and update pull
