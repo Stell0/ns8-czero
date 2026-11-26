@@ -77,6 +77,30 @@ def test_invalid_creation(access,scopes,spaces,days):
     with pytest.raises(ValueError):keys.create(owner,name='Invalid',scopes=scopes,space_ids=spaces or [],lifetime_days=days)
 
 
+@pytest.mark.parametrize('prefix', ['', '/czero/czero900'])
+def test_browser_key_validation_is_private(application, prefix):
+    from pathlib import Path
+    from czero_app.main import create_app
+
+    async def check():
+        root, _, _, _, database, _ = application
+        app = create_app('czero900', Path('app/frontend/dist'), prefix, database, auth=root.state.auth) if prefix else root
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
+            state = parse_qs(urlsplit((await browser.get(prefix+'/auth/login')).headers['location']).query)['state'][0]
+            await browser.get(prefix+'/auth/callback', params={'state':state, 'code':'unit-only-code'})
+            me = (await browser.get(prefix+'/api/v1/me')).json()
+            headers = {'Origin':ORIGIN, 'X-C0-CSRF':me['csrf_token']}
+            for path, code in (('api-keys', 'invalid_api_key_request'),
+                               ('sources/ingest-text', 'invalid_source_request')):
+                response = await browser.post(prefix+'/api/v1/'+path,
+                    json={'name':{'synthetic':'submitted-value'}, 'body':'submitted-value'}, headers=headers)
+                assert response.status_code == 422
+                assert response.json() == {'detail':code}
+                assert response.headers['cache-control'] == 'no-store'
+
+    asyncio.run(check())
+
+
 def test_browser_create_rest_mcp_logout_and_revoke(knowledge_http):
     application = knowledge_http
     async def check():

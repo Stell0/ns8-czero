@@ -1,7 +1,7 @@
 # Copyright (C) 2026 C0 contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Fixed space-policy errors contain no private names, identities or details."""
-SPACE_OPERATIONS = frozenset({'spaces_list','spaces_create','spaces_get','space_grants_list','space_grants_set'})
+SPACE_OPERATIONS = frozenset({'spaces_list','spaces_create','spaces_get','space_access_set','space_grants_list','space_grants_set'})
 _PUBLIC = frozenset({(409,'space_conflict'),(422,'invalid_space_request'),(503,'service_unavailable')})
 
 

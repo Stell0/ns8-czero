@@ -88,6 +88,44 @@ def test_default_read_exposes_content_and_tightening_retires_oauth(space_http, k
     asyncio.run(check())
 
 
+@pytest.mark.parametrize('mode', ['auto', 'legacy'])
+def test_stale_space_audience_revision_is_a_conflict(space_http, transport, mode):
+    import httpx2
+    from mcp import Client
+    from mcp.client.streamable_http import streamable_http_client
+
+    async def check():
+        app, child, _, _, owner_pair, issue, owner, member = transport
+        access = app.state.auth.access
+        access.admit_readers = True
+        identity = app.state.auth.oidc.verify_access_token(member)
+        access.resolve(identity)
+        reader_pair = issue(identity, {'c0:read'})
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN,
+                headers={'Authorization':'Bearer '+owner}) as rest:
+            space = await create_space(rest, space_http)
+            path = '/api/v1/spaces/'+space['id']
+            changed = await rest.put(path+'/access', json={'readable_by_all':True,
+                'expected_revision':space['revision'], 'idempotency_key':uuid4().hex})
+            assert changed.status_code == 200
+            stale = {'readable_by_all':False, 'expected_revision':space['revision'],
+                'idempotency_key':uuid4().hex}
+            response = await rest.put(path+'/access', json=stale)
+            assert response.status_code == 409 and response.json() == {'detail':'space_conflict'}
+            async with child.router.lifespan_context(child):
+                for pair, code, status in ((owner_pair, 'space_conflict', 409),
+                                          (reader_pair, 'permission_denied', 403)):
+                    async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app),
+                            base_url=ORIGIN, headers={'Authorization':'Bearer '+pair.access_token}) as http:
+                        async with Client(streamable_http_client(ORIGIN+'/mcp', http_client=http), mode=mode) as sdk:
+                            result = await sdk.call_tool('space_access_set', {'space_id':space['id'], 'data':stale})
+                            assert result.is_error
+                            assert result.meta['c0/error'] == {'code':code, 'status':status}
+            assert (await rest.get(path)).json() == changed.json()
+
+    asyncio.run(check())
+
+
 def test_signed_space_discovery_wiki_names_replay_and_fail_closed_selectors(space_http, knowledge_http):
     async def check():
         app, owner, member, *_ = space_http[0]
