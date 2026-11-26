@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "c0-ingestion-samples"
-version = "0.4.0"
+version = "0.4.1"
 description = "Reusable C0 ingestion helpers and a public GitHub example"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
@@ -15,6 +15,7 @@ dependencies = ["mcp==2.3.0", "httpx2==2.13.1", "anyio==4.15.1", "PyYAML==6.0.3"
 c0-compile = "c0_compiler.cli:main"
 c0-ingest = "c0_ingest.cli:main"
 c0-projects = "c0_projects.cli:main"
+c0-freshdesk-faq = "c0_freshdesk:main"
 c0-docs-recipe = "c0_projects.recipe:main"
 c0-retrieval-benchmark = "c0_benchmark:main"
 
@@ -25,4 +26,4 @@ test = ["pytest==8.4.2"]
 where = ["src"]
 
 [tool.setuptools]
-py-modules = ["c0_benchmark"]
+py-modules = ["c0_benchmark", "c0_freshdesk"]

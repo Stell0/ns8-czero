@@ -31,6 +31,7 @@ def artifacts(tmp_path_factory):
         assert any(n.endswith('/c0_ingest/client.py') or n == 'c0_ingest/client.py' for n in names)
         assert 'c0_compiler/cli.py' in names and 'c0_compiler/model.py' in names and 'c0_compiler/runner.py' in names
         assert 'c0_projects/adapters.py' in names and 'c0_projects/publish.py' in names
+        assert 'c0_freshdesk.py' in names
         assert 'github_vault/scrape.py' in names and 'github_vault/sync.py' in names
         licenses = [n for n in names if '.dist-info/licenses/' in n]
         assert len(licenses) == 1 and zipped.read(licenses[0]) == (PROJECT / 'LICENSE').read_bytes()
@@ -69,6 +70,8 @@ def test_sample_installs_and_initializes_without_core_or_checkout(artifacts, kin
 
     project_help=command([str(venv/'bin/c0-projects'),'--help'],cwd=work,env=env)
     assert 'resume' in project_help and 'verify' in project_help
+    faq_help=command([str(venv/'bin/c0-freshdesk-faq'),'--help'],cwd=work,env=env)
+    assert '--env' in faq_help and '--continue-scan' in faq_help
     settings=work/'project.json'
     settings.write_text(json.dumps({'schema_version':1,'server_url':'https://c0.example.org/mcp',
         'project_space_id':'00000000-0000-4000-8000-000000000001',
