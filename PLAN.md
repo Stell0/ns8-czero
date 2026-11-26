@@ -45,6 +45,15 @@ native Robot suite. The successor fixes those current-version assertions.
 The existing frozen predecessor still uses its recorded app, Core and images.
 The version policy regressions and all 22 Robot dry runs pass locally.
 
+A wider real OAuth regression exposed an exception-group interaction between
+request correlation and the existing bounded chunked-body receiver. The
+[second full run](https://github.com/Stell0/ns8-czero/actions/runs/45860222290)
+preserves source `9efe8e7b4051b5ba4d9280182ad23b5476a25ac7`. The transport
+successor uses an ASGI response wrapper and passes the chunked 413 and both
+SDK correlation regressions. The Core and Vue package trees retain their
+previous tested bytes.
+
+
 
 ## C0 Grafana monitoring
 
