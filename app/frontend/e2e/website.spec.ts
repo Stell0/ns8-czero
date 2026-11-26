@@ -223,6 +223,59 @@ test('source replacement defaults to no original retention and retains revision 
   )
 })
 
+for (const [language, theme, width, message] of [
+  ['en', 'light', 1440, 'Missing or incomplete document parts'],
+  ['it', 'dark', 390, 'Parti del documento mancanti o incomplete'],
+] as const) {
+  test(`multipart inventory explains incomplete parts in ${language}`, async ({
+    page,
+  }) => {
+    await api(page)
+    await page.setViewportSize({ width, height: 844 })
+    await page.addInitScript(
+      ({ language, theme }) => {
+        localStorage.setItem('c0-language', language)
+        localStorage.setItem('c0-theme', theme)
+      },
+      { language, theme },
+    )
+    const summary = {
+      id: source,
+      title: 'Multipart fixture',
+      state: 'incomplete',
+      error_code: 'missing_or_unready_part',
+      media_type: 'text/markdown',
+      metadata: {},
+      multipart: true,
+    }
+    await page.route('**/api/v1/source-documents?**', (route) =>
+      route.fulfill({ json: { documents: [summary] } }),
+    )
+    await page.route(`**/api/v1/source-documents/${source}?**`, (route) =>
+      route.fulfill({
+        json: {
+          ...summary,
+          body: null,
+          parts: [],
+          original_version_ids: [],
+        },
+      }),
+    )
+    await page.goto(`/sources?space_id=${privateSpace}`)
+    await expect(page.getByRole('gridcell', { name: message })).toBeVisible()
+    const parent = page.getByRole('link', { name: summary.title, exact: true })
+    await parent.focus()
+    await parent.press('Enter')
+    await expect(page).toHaveURL(
+      (url) => url.searchParams.get('space_id') === privateSpace,
+    )
+    await expect(
+      page.getByRole('heading', { name: summary.title }),
+    ).toBeVisible()
+    await expect(page.getByText(message, { exact: true })).toBeVisible()
+  })
+}
+
 const extractionFailures = [
   ['encrypted_pdf', 'The PDF is encrypted. Upload an unencrypted copy.'],
   [

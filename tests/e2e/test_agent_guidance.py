@@ -47,7 +47,9 @@ def test_selective_context_guidance_and_stable_workflow_identity(live,browser,ro
     open_advanced(browser)
     expect(browser.get_by_text('Your current access: '+effective+'.',exact=True)).to_have_text('Your current access: '+effective+'.')
     expected={'research','structured-research','selective-context','cross-space-navigation'}
-    if effective!='reader':expected|={'knowledge-compiler','evidence','update','investigation','consolidate'}
+    if effective != 'reader':
+        expected |= {'knowledge-compiler', 'evidence', 'update', 'investigation', 'consolidate',
+                     'automatic-source-evidence'}
     workflows=browser.locator('details[data-workflow]')
     expect(workflows).to_have_count(len(expected))
     assert set(workflows.evaluate_all("nodes => nodes.map(node => node.dataset.workflow)"))==expected

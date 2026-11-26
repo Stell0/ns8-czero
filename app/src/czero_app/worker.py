@@ -39,10 +39,14 @@ def update_sources():
         access=AccessService(database,issuer,UUID(owner))
         originals=OriginalStore(os.getenv('CZERO_SOURCE_DIR','/var/lib/czero/sources'))
         sources=SourceService(database,access,build_registry(database,originals,access=access),originals)
-        def registered(kind,config,cursor):
-            return collect(kind,config,cursor,github_token=github_token() if kind=='github' else None)
+        def registered(kind,config,cursor,**options):
+            return collect(kind,config,cursor,github_token=github_token() if kind=='github' else None,**options)
         service = AutomaticSourceService(database, access)
         options = {}
+        from czero_core.extraction_queue import ExtractionQueue
+        if hasattr(ExtractionQueue, 'enqueue_automatic_attachment') and os.getenv('CZERO_EXTRACTION_UNITS') == '1':
+            from czero_app.extraction_worker import configured_queue
+            options['extraction_queue'] = lambda: configured_queue(database, access, originals)
         if hasattr(service, 'drive_status'):
             from czero_app.google_drive import GoogleDrive
             try:

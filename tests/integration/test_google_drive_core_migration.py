@@ -71,7 +71,7 @@ def test_drive_schema_retains_public_definitions_runs_and_receipts(current_core_
                        'SELECT r.* FROM c0_source_update_runs r JOIN c0_automatic_sources d ON d.id=r.definition_id WHERE d.kind<>\'google_drive\'',
                        'SELECT * FROM c0_knowledge_receipts')
             with db.connect() as c:
-                return tuple(c.exec_driver_sql('SELECT jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text) FROM ('+query+') t').scalar_one()
+                return tuple(c.exec_driver_sql("SELECT jsonb_agg(to_jsonb(t)-'diagnostics' ORDER BY to_jsonb(t)::text) FROM ("+query+') t').scalar_one()
                              for query in queries)
         before = public_state()
         assert len(before[0]) == 2 and before[1][0]['state'] == 'cancelled'
@@ -106,7 +106,8 @@ db.close()
             run([str(current_core_python),'-I','-m','czero_core.migrate'], runtime=runtime)
             assert public_state() == before
             with db.connect() as c:
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0046_pdf_authorization'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0047_collection_diagnostics'
+                assert c.execute(text("SELECT count(*) FROM c0_source_update_runs WHERE diagnostics<>'{}'")).scalar_one() == 0
                 assert c.execute(text('SELECT enabled,revision,next_run_at FROM c0_automatic_sources WHERE id=:id'),
                                  {'id':legacy}).one()==(False,2,None)
                 assert c.execute(text('SELECT state,error_code FROM c0_source_update_runs WHERE definition_id=:id'),

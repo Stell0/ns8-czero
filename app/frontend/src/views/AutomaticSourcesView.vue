@@ -34,6 +34,8 @@ import {
   type DrivePreview,
 } from '../api/googleDrive'
 
+import { websitePdfAttachmentsAvailable } from '../api/features'
+
 type SourceKind = 'github' | 'website' | 'google_drive'
 interface Definition {
   owner_id: string
@@ -53,7 +55,26 @@ interface Run {
   state: string
   processed: number
   error_code: string | null
+  diagnostics?: {
+    html?: Record<string, number>
+    pdf?: Record<string, number>
+    reasons?: Record<string, number>
+    pending?: number
+  }
+  checkpoint_available?: boolean
+  available_at?: string | null
 }
+interface SourcePreview {
+  items: {
+    title: string
+    url: string
+    kind?: 'pdf' | 'html'
+    selection?: 'selected' | 'skipped'
+    reason?: string
+  }[]
+  complete: boolean
+}
+const attachmentsAvailable = websitePdfAttachmentsAvailable()
 const { t, te, locale } = useI18n(),
   session = useSession()
 const offset = ref(0)
@@ -83,6 +104,11 @@ function emptyDraft() {
     name: '',
     locations: '',
     rootURLs: '',
+    collectPdfs: false,
+    pdfRoots: '',
+    pdfSeeds: '',
+    pdfInclude: '',
+    pageQueue: false,
     sitemaps: '',
     include: '',
     exclude: '',
@@ -117,10 +143,7 @@ const sourceOptions = computed(() => {
     kinds.push('google_drive')
   return kinds.map((id) => ({ id, label: t(`automatic.${id}`) }))
 })
-const preview = ref<{
-  items: { title: string; url: string }[]
-  complete: boolean
-}>()
+const preview = ref<SourcePreview>()
 const invalid = ref(false)
 const mutationMode = ref<'save' | 'preview'>('save')
 const nameValid = computed(
@@ -223,6 +246,14 @@ function edit(row?: Definition) {
       : website.seeds) as string[]) || []
   ).join('\n')
   form.value.rootURLs = ((website.allowed_roots || []) as string[]).join('\n')
+  const attachments = config.attachments as Record<string, unknown> | undefined
+  form.value.collectPdfs = !!attachments
+  form.value.pdfRoots = ((attachments?.allowed_roots || []) as string[]).join(
+    '\n',
+  )
+  form.value.pdfSeeds = ((attachments?.seeds || []) as string[]).join('\n')
+  form.value.pdfInclude = ((attachments?.include || []) as string[]).join('\n')
+  form.value.pageQueue = attachments?.page_queue === true
   form.value.sitemaps = ((website.sitemaps || []) as string[]).join('\n')
   form.value.include = (
     ((kind.value === 'github' ? config.paths : config.include) as string[]) ||
@@ -279,8 +310,20 @@ function config() {
       ref: form.value.branch,
     }
   const seeds = lines(form.value.locations)
+  const { attachments, ...publicConfig } = previous
   return {
-    ...previous,
+    ...publicConfig,
+    ...(form.value.collectPdfs && attachmentsAvailable
+      ? {
+          attachments: {
+            ...((attachments || {}) as Record<string, unknown>),
+            allowed_roots: lines(form.value.pdfRoots),
+            seeds: lines(form.value.pdfSeeds),
+            include: lines(form.value.pdfInclude),
+            page_queue: form.value.pageQueue,
+          },
+        }
+      : {}),
     website: {
       ...((previous.website || {}) as Record<string, unknown>),
       seeds,
@@ -358,10 +401,10 @@ const mutation = useMutation({
       ? { preview_token: drivePreview.value!.preview_token }
       : { kind: kind.value, config: config() }
     if (mode === 'preview') {
-      const result = await request<{
-        items: { title: string; url: string }[]
-        complete: boolean
-      }>('automatic-sources/preview', { method: 'POST', data: selection })
+      const result = await request<SourcePreview>('automatic-sources/preview', {
+        method: 'POST',
+        data: selection,
+      })
       if (active && drawer.value && editorEpoch === epoch)
         preview.value = result
       return
@@ -425,6 +468,7 @@ watch(mutation.error, (error) => {
     [
       'config.ref',
       'config.website.allowed_roots',
+      'config.attachments.allowed_roots',
       'config.include',
       'config.exclude',
       'config.paths',
@@ -644,6 +688,51 @@ const command = useMutation({
                   : run.error_code
               }}</template
             >
+            <dl v-if="run.diagnostics" class="mb-3 space-y-1 text-sm">
+              <template v-for="type in ['html', 'pdf'] as const" :key="type">
+                <template v-if="run.diagnostics[type]">
+                  <dt>{{ t(`automatic.attachments.${type}`) }}</dt>
+                  <dd class="flex flex-wrap gap-x-3">
+                    <span
+                      v-for="(count, outcome) in run.diagnostics[type]"
+                      :key="outcome"
+                    >
+                      {{ t(`automatic.outcomes.${outcome}`, { count }) }}
+                    </span>
+                  </dd>
+                </template>
+              </template>
+              <template v-if="run.diagnostics.pending">
+                <dt>{{ t('automatic.states.pending') }}</dt>
+                <dd>{{ run.diagnostics.pending }}</dd>
+              </template>
+              <template
+                v-if="Object.keys(run.diagnostics.reasons || {}).length"
+              >
+                <dt>{{ t('automatic.attachments.unresolved') }}</dt>
+                <dd
+                  v-for="(count, reason) in run.diagnostics.reasons"
+                  :key="reason"
+                >
+                  {{ t(`automatic.errors.${reason}`, reason) }} ({{ count }})
+                </dd>
+              </template>
+            </dl>
+            <p
+              v-if="
+                run.available_at && Date.parse(run.available_at) > Date.now()
+              "
+              class="text-sm"
+            >
+              {{
+                t('automatic.attachments.availableAt', {
+                  time: formatDate(run.available_at),
+                })
+              }}
+            </p>
+            <p v-if="run.checkpoint_available" class="text-sm">
+              {{ t('automatic.attachments.checkpoint') }}
+            </p>
           </li>
         </ul></ResourceState
       >
@@ -803,6 +892,46 @@ const command = useMutation({
               />
             </details>
           </template>
+          <fieldset
+            v-if="attachmentsAvailable && kind === 'website'"
+            class="space-y-3"
+          >
+            <legend>{{ t('automatic.attachments.title') }}</legend>
+            <NeCheckbox
+              v-model="form.collectPdfs"
+              :label="t('automatic.attachments.enable')"
+            />
+            <template v-if="form.collectPdfs">
+              <NeTextArea
+                v-model="form.pdfRoots"
+                :label="t('automatic.attachments.roots')"
+                :helper-text="t('automatic.attachments.rootsHelp')"
+                :invalid-message="
+                  fieldError('config.attachments.allowed_roots')
+                "
+                :aria-invalid="
+                  !!fieldError('config.attachments.allowed_roots') || undefined
+                "
+              />
+              <NeTextArea
+                v-model="form.pdfSeeds"
+                :label="t('automatic.attachments.seeds')"
+                :helper-text="t('automatic.lines')"
+              />
+              <NeTextArea
+                v-model="form.pdfInclude"
+                :label="t('automatic.attachments.filters')"
+                :helper-text="t('automatic.lines')"
+              />
+              <NeCheckbox
+                v-model="form.pageQueue"
+                :label="t('automatic.attachments.pageQueue')"
+              />
+              <p class="text-sm">
+                {{ t('automatic.attachments.pageQueueHelp') }}
+              </p>
+            </template>
+          </fieldset>
           <NeCheckbox v-model="form.enabled" :label="t('automatic.enable')" />
           <template v-if="kind !== 'google_drive' || form.enabled">
             <fieldset class="space-y-2">
@@ -836,9 +965,27 @@ const command = useMutation({
           <DriveFolderPreview v-if="drivePreview" :preview="drivePreview" />
           <div v-if="preview">
             <p>{{ t('automatic.previewHelp') }}</p>
+            <p v-if="!preview.complete">
+              {{ t('automatic.attachments.partialPreview') }}
+            </p>
             <ul>
               <li v-for="item in preview.items" :key="item.url">
-                {{ item.title }} — {{ item.url }}
+                {{ item.title
+                }}<template v-if="item.title !== item.url">
+                  — {{ item.url }}</template
+                >
+                <template v-if="item.kind === 'pdf'">
+                  ·
+                  {{
+                    t(`automatic.attachments.${item.selection || 'selected'}`)
+                  }}
+                  <template v-if="item.reason">
+                    ·
+                    {{
+                      t(`automatic.errors.${item.reason}`, item.reason)
+                    }}</template
+                  >
+                </template>
               </li>
             </ul>
           </div>

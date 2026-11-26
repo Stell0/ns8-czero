@@ -69,7 +69,7 @@ def boundary(url,config,*,inventory=False):
     raise C0Error('website_destination_not_approved')
 
 
-def extract(raw,url,config,*,extractor=None):
+def parse_page(raw, url):
     try:html=raw.decode('utf-8-sig')
     except UnicodeError:raise C0Error('website_invalid_utf8') from None
     soup=BeautifulSoup(html,'html.parser')
@@ -78,6 +78,11 @@ def extract(raw,url,config,*,extractor=None):
     for anchor in soup.select('a[href]',limit=MAX_FRONTIER):
         try:links.append(normalize(anchor['href'],url))
         except (C0Error,ValueError):continue
+    return soup, links
+
+
+def extract(raw, url, config, *, extractor=None, page=None):
+    soup, links = parse_page(raw, url) if page is None else page
     canonical=soup.select_one('link[rel~=canonical][href]')
     canonical=boundary(normalize(canonical['href'],url),config) if canonical else url
     def partition(value):

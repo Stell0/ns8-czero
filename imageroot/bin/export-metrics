@@ -15,6 +15,9 @@ METRICS = {
     'source_versions': ('state', ('queued', 'ready', 'failed')),
     'source_failures': ('reason', ('protected_pdf', 'unreadable', 'no_text', 'limits', 'other')),
     'jobs': ('state', ('queued', 'running', 'succeeded', 'failed')),
+    'collection_runs': ('state', ('queued', 'running', 'pending', 'complete', 'partial', 'blocked', 'failed', 'cancelled')),
+    'queue_age_seconds': ('kind', ('collection', 'extraction')),
+    'extraction_attempts': ('outcome', ('failed', 'retried')),
     'extraction_runs': ('state', ('staging', 'extracting', 'assembling', 'ready', 'failed', 'superseded')),
 }
 SERVICES = {

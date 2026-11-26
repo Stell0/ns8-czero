@@ -549,7 +549,7 @@ class NativeWebsite:
             self.run('Wait For Elements State','details[data-task="status"]','visible','timeout=30s')
             self.run('Get Element Count','details[data-task]','==',2 if role=='reader' else 15)
             expected={'research','structured-research','selective-context','cross-space-navigation'}
-            if role!='reader':expected|={'knowledge-compiler','evidence','update','investigation','consolidate'}
+            if role!='reader':expected|={'knowledge-compiler','evidence','update','investigation','consolidate','automatic-source-evidence'}
             self.run('Get Element Count','details[data-workflow]','==',len(expected))
             actual=self.browser.evaluate_javascript(None,
                 '() => Array.from(document.querySelectorAll("details[data-workflow]"), node => node.dataset.workflow)')

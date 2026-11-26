@@ -33,6 +33,7 @@ ERRORS = {
     'invalid_revision': ('expected_revision', 'To edit a source, provide its identifier and current revision together. Reload the configuration before trying again.'),
     'invalid_source_replay_key': ('idempotency_key', 'Provide an idempotency key of 1–128 characters for this change.'),
     'invalid_source_action': ('action', 'Choose run, pause or remove.'),
+    'invalid_website_attachments': ('config.attachments.allowed_roots', 'Enter approved HTTPS prefixes and valid PDF selection options.'),
     'invalid_website_configuration': ('config.website', 'Provide website settings with starting URLs and allowed URL prefixes, using supported settings only.'),
     'invalid_website_selection': ('config.website', 'Website URL and selector lists must contain at most 100 nonempty strings, each at most 4096 characters.'),
     'explicit_documentation_roots_required': ('config.website', 'Enter at least one starting URL and allowed URL prefix. Use a supported website profile: generic, docusaurus or sphinx.'),

@@ -28,7 +28,7 @@ class Save(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True)
     name:str=Field(min_length=1,max_length=256)
     kind:Literal['github','website']
-    config:dict=Field(description='GitHub: repositories (owner/repository_name list), include (files/issues/pull_requests/releases), paths/exclude globs, ref. Website: website.seeds, website.allowed_roots, website.sitemaps, website.exclude; optional include URL/path globs. Limits: max_items 1-20, max_requests 4-30, max_bytes up to 2097152, timeout 1-10 seconds. No credentials or commands.')
+    config:dict=Field(description='GitHub: repositories (owner/repository_name list), include (files/issues/pull_requests/releases), paths/exclude globs, ref. Website: website.seeds, website.allowed_roots, website.sitemaps, website.exclude; optional include URL/path globs. Optional attachments.allowed_roots selects HTTPS PDF attachments independently; attachments.seeds and attachments.include select explicit URLs and URL/path globs. attachments.page_queue opts into the instance’s existing page processing. Attachments default off. Limits: max_items 1-20, max_requests 4-30, max_bytes up to 2097152, timeout 1-10 seconds. No credentials or commands.')
     enabled:bool=False
     interval_seconds:int|None=Field(default=None,ge=300,le=2678400)
     identifier:UUID|None=Field(default=None,strict=False)
@@ -39,12 +39,15 @@ class Save(BaseModel):
 class Preview(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True)
     kind:Literal['github','website']
-    config:dict=Field(description='GitHub: repositories (owner/repository_name list), include (files/issues/pull_requests/releases), paths/exclude globs, ref. Website: website.seeds, website.allowed_roots, website.sitemaps, website.exclude; optional include URL/path globs. Limits: max_items 1-20, max_requests 4-30, max_bytes up to 2097152, timeout 1-10 seconds. No credentials or commands.')
+    config:dict=Field(description='GitHub: repositories (owner/repository_name list), include (files/issues/pull_requests/releases), paths/exclude globs, ref. Website: website.seeds, website.allowed_roots, website.sitemaps, website.exclude; optional include URL/path globs. Optional attachments.allowed_roots selects HTTPS PDF attachments independently; attachments.seeds and attachments.include select explicit URLs and URL/path globs. attachments.page_queue opts into the instance’s existing page processing. Attachments default off. Limits: max_items 1-20, max_requests 4-30, max_bytes up to 2097152, timeout 1-10 seconds. No credentials or commands.')
 
 
 class PreviewItem(BaseModel):
     title:str
     url:str
+    kind:Literal['html','pdf']|None=None
+    selection:Literal['selected','skipped']|None=None
+    reason:str|None=None
 
 
 class PreviewResult(BaseModel):
@@ -70,7 +73,7 @@ class Definition(BaseModel):
     space_id:UUID
     name:str
     kind:str
-    config:dict=Field(description='GitHub: repositories (owner/repository_name list), include (files/issues/pull_requests/releases), paths/exclude globs, ref. Website: website.seeds, website.allowed_roots, website.sitemaps, website.exclude; optional include URL/path globs. Limits: max_items 1-20, max_requests 4-30, max_bytes up to 2097152, timeout 1-10 seconds. No credentials or commands.')
+    config:dict=Field(description='GitHub: repositories (owner/repository_name list), include (files/issues/pull_requests/releases), paths/exclude globs, ref. Website: website.seeds, website.allowed_roots, website.sitemaps, website.exclude; optional include URL/path globs. Optional attachments.allowed_roots selects HTTPS PDF attachments independently; attachments.seeds and attachments.include select explicit URLs and URL/path globs. attachments.page_queue opts into the instance’s existing page processing. Attachments default off. Limits: max_items 1-20, max_requests 4-30, max_bytes up to 2097152, timeout 1-10 seconds. No credentials or commands.')
     enabled:bool
     interval_seconds:int|None
     revision:int
@@ -94,6 +97,9 @@ class Run(BaseModel):
     processed:int
     created_at:datetime
     finished_at:datetime|None
+    available_at:datetime|None=None
+    checkpoint_available:bool=False
+    diagnostics:dict=Field(default_factory=dict,description='Measured per-kind outcomes and bounded reason counts. Pending work and partial coverage are not complete publication.')
 
 
 class Document(BaseModel):
@@ -116,7 +122,10 @@ def install(app,database,auth,read_context,write_context):
     from czero_core.automatic_sources import AutomaticSourceService,UpdateConflict,UpdateNotFound
     service=AutomaticSourceService(database,auth.access if auth else None)
     app.state.automatic_sources=service
-    if hasattr(app.state,'website'):app.state.website.automatic_sources=True
+    if hasattr(app.state,'website'):
+        from czero_core.extraction_queue import ExtractionQueue
+        app.state.website.automatic_sources = True
+        app.state.website.website_pdf_attachments = hasattr(ExtractionQueue, 'enqueue_automatic_attachment')
     operation=app.state.operation_catalog.bind
     def invoke(space_id,method,actor,**kwargs):
         if auth is None:raise HTTPException(503,'authentication_not_configured')

@@ -19,6 +19,8 @@ class Website:
         self.directory = directory
         self.base_path = base_path
         self.automatic_sources = False
+        self.website_pdf_attachments = False
+        self.ingestion_diagnostics = False
 
     def render(self, boot=None, *, status_code=200):
         path = self.directory / 'index.html'
@@ -26,8 +28,10 @@ class Website:
             raise HTTPException(503, 'website_build_unavailable')
         value = json.dumps(boot or {}, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
         body = path.read_text().replace('<base href="/" />', '<base href="' + escape(self.base_path + '/', quote=True) + '" />')
-        available='true' if self.automatic_sources else 'false'
-        body = body.replace('</head>', '<meta name="c0-automatic-sources" content="'+available+'"></head>', 1)
+        features = {'automatic-sources': self.automatic_sources, 'website-pdf-attachments': self.website_pdf_attachments,
+                    'ingestion-diagnostics': self.ingestion_diagnostics}
+        tags = ''.join(f'<meta name="c0-{name}" content="{str(available).lower()}">' for name, available in features.items())
+        body = body.replace('</head>', tags + '</head>', 1)
         body = body.replace('<!--C0_BOOT-->', '<script id="c0-boot" type="application/json">' + value + '</script>')
         return HTMLResponse(body, status_code=status_code, headers={'Cache-Control': 'no-store', 'Content-Security-Policy': CSP,
             'Referrer-Policy': 'strict-origin', 'X-Content-Type-Options': 'nosniff'})

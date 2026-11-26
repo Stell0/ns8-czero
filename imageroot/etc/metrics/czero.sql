@@ -41,6 +41,16 @@ SELECT json_build_object(
     'jobs', (SELECT json_object_agg(key, value)
         FROM (SELECT state AS key, count(*) AS value FROM c0_jobs GROUP BY state) AS states),
     'extraction_runs', (SELECT json_object_agg(key, value)
-        FROM (SELECT state AS key, count(*) AS value FROM c0_extraction_runs WHERE expires_at > now() GROUP BY state) AS runs)
+        FROM (SELECT state AS key, count(*) AS value FROM c0_extraction_runs WHERE expires_at > now() GROUP BY state) AS runs),
+    'collection_runs', (SELECT json_object_agg(key, value) FROM (
+        SELECT state AS key, count(*) AS value FROM c0_source_update_runs GROUP BY state) AS states),
+    'queue_age_seconds', json_build_object(
+        'collection', (SELECT GREATEST(0,floor(extract(epoch FROM now()-min(created_at))))::bigint
+            FROM c0_source_update_runs WHERE state IN ('queued','pending')),
+        'extraction', (SELECT GREATEST(0,floor(extract(epoch FROM now()-min(created_at))))::bigint
+            FROM c0_extraction_runs WHERE state IN ('extracting','assembling') AND expires_at > now())
+    ),
+    'extraction_attempts', (SELECT json_build_object('failed', COALESCE(sum(failed),0),
+        'retried', COALESCE(sum(retried),0)) FROM c0_extraction_runs WHERE expires_at > now())
 );
 ROLLBACK;

@@ -120,12 +120,12 @@ class C0:
         if raw.get('isError'):
             # Retain value-free API codes, never arbitrary server text or challenges.
             known = {'content_superseded', 'insufficient_scope', 'permission_denied', 'object_conflict', 'object_not_found',
-                     'knowledge_conflict', 'knowledge_not_found', 'evidence_not_ready', 'space_conflict',
+                     'source_not_found', 'source_conflict', 'invalid_source_request', 'knowledge_conflict', 'knowledge_not_found', 'evidence_not_ready', 'space_conflict',
                      'invalid_space_request', 'invalid_knowledge_request', 'invalid_operation_request',
                      'service_unavailable', 'project_conflict', 'project_not_found', 'invalid_project_request', 'project_core_upgrade_required', 'project_connection_not_configured'}
             code = next((item.get('text') for item in raw.get('content', [])
                          if item.get('type') == 'text' and item.get('text') in known), 'operation_rejected')
-            raise C0Error(code + ': ' + name + '; inspect authority/current state before retrying')
+            raise C0Error(code + ': ' + name + '; inspect authority/current state before retrying', code=code)
         if raw.get('structuredContent') is not None:
             return raw['structuredContent']
         for item in raw.get('content', []):

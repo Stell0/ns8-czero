@@ -12,6 +12,9 @@ from c0_ingest.state import atomic, read
 from .model import Item, now, sha
 
 
+REPAIRABLE_MEMBERSHIP = frozenset({'missing_or_unready_part', 'invalid_part_membership'})
+
+
 @dataclass(frozen=True)
 class Part:
     item: Item
@@ -54,7 +57,21 @@ def publication_parts(client,item):
     previous=client.call('objects_list',type_name='c0_project_source_snapshot_v1',
         where=json.dumps({'connector_id':item.connector_id,'external_id':item.external_id}),limit=2,offset=0)['objects']
     if len(previous)>1:raise C0Error('ambiguous_source_snapshot')
-    return parts(item,limit=131072 if previous and len(previous[0]['data']['part_receipt_ids'])>1 else None)
+    if not previous or item.media_type not in ('text/plain', 'text/markdown'):
+        return parts(item)
+    snapshot = previous[0]
+    references = snapshot['data'].get('part_receipt_ids')
+    split = isinstance(references, list) and len(references) > 1
+    if snapshot['data']['content_hash'] == item.content_hash and len(item.content) > 131072:
+        # Preserve the split even if the damaged snapshot lists too few or too many members.
+        identity = f'{item.connector_id}:{item.external_id}:{snapshot["revision"]}:1'
+        key = sha(('source_part_v1\n' + identity).encode())
+        first = client.call('objects_list', type_name='c0_project_source_part_v1',
+            where=json.dumps({'key': key}), limit=1, offset=0)['objects']
+        first_end = first[0]['data'].get('end_byte') if first else None
+        if type(first_end) is int:
+            split = first_end < len(item.content)
+    return parts(item, limit=131072 if split else None)
 
 
 def listing(client,name,field,**arguments):
@@ -233,8 +250,14 @@ def save_snapshot(client,item,results,*,timings=None):
         where=json.dumps({'connector_id':item.connector_id,'external_id':item.external_id}),limit=2,offset=0)['objects']
     if len(previous)>1:raise C0Error('ambiguous_source_snapshot')
     if previous and previous[0]['data']['content_hash']==item.content_hash:
-        verify_snapshot(client,item,previous[0],timings=timings)
-        return previous[0]
+        try:
+            verify_snapshot(client,item,previous[0],timings=timings)
+        except C0Error as error:
+            # Core revalidates ownership and the exact current versions under CAS.
+            if error.code != 'source_conflict' and error.code not in REPAIRABLE_MEMBERSHIP:
+                raise
+        else:
+            return previous[0]
     saved=client.call('project_source_snapshot_set',data={'connector_id':item.connector_id,'external_id':item.external_id,
         'content_hash':item.content_hash,'part_receipt_ids':[row['receipt_id'] for row in results],
         'expected_revision':previous[0]['revision'] if previous else 0,
@@ -254,6 +277,8 @@ def verify_snapshot(client,item,saved=None,*,timings=None):
         if len(rows)!=1:raise C0Error('current_snapshot_missing_or_ambiguous')
         saved=rows[0]
     full=client.call('source_documents_get',logical_document_id=saved['id'])
+    if full['state'] == 'incomplete' and full.get('error_code') in REPAIRABLE_MEMBERSHIP:
+        raise C0Error('current_document_readback_mismatch', code=full['error_code'])
     if full['state']!='ready' or (item.media_type in ('text/plain','text/markdown') and (full['body'].encode()!=item.content or full['text_hash']!=item.content_hash)):
         raise C0Error('current_document_readback_mismatch')
     if timings is not None:timings['readback_seconds']=timings.get('readback_seconds',0.)+perf_counter()-started

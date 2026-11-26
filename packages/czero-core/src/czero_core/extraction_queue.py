@@ -171,22 +171,31 @@ class ExtractionQueue(SpaceBound):
         self.max_queued_units,self.max_staging_bytes=max_queued_units,max_staging_bytes
 
     def enqueue(self, actor, version_id, *, expected_generation):
-        if not self.enabled:
-            raise ValueError('extraction_units_disabled')
         if not isinstance(actor, Actor):
             raise PermissionDenied()
         if (actor.api_key_binding is not None or actor.delegation is not None or actor.delegated_scopes is not None or actor.session_binding is not None):
             raise ValueError('unsupported_extraction_handoff')
+        return self._enqueue(actor, version_id, expected_generation)
+
+    def enqueue_automatic_attachment(self, version_id, *, expected_generation):
+        return self._enqueue(None, version_id, expected_generation, automatic=True)
+
+    def _enqueue(self, actor, version_id, expected_generation, *, automatic=False):
+        if not self.enabled:
+            raise ValueError('extraction_units_disabled')
+        from .automatic_sources import queued_attachment_actor
         if type(expected_generation) is not int or expected_generation<1:
             raise ValueError('invalid_generation')
         # Read/preflight without holding any work connection or content lock.
         with self.database.engine.connect() as c:
-            current=self._space_authorize(c,actor,Role.EDITOR)
-            check_retired(c,current.space_id,'source_version',UUID(str(version_id)))
+            space = self._space(c) if automatic else self._space_authorize(c, actor, Role.EDITOR).space_id
+            check_retired(c,space,'source_version',UUID(str(version_id)))
             original=c.execute(text('''SELECT v.* FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id
                 WHERE v.space_id=:space AND v.id=:id AND NOT s.deleted'''),
-                {'space':current.space_id,'id':UUID(str(version_id))}).mappings().one_or_none()
+                {'space':space,'id':UUID(str(version_id))}).mappings().one_or_none()
             if original is None: raise SourceNotFound()
+            if automatic:
+                queued_attachment_actor(c, original, self.access)
             if original['generation']!=expected_generation or original['state']!='queued': raise SourceConflict()
             existing=c.execute(text('SELECT * FROM c0_extraction_runs WHERE version_id=:id AND processing_generation=:generation'),
                 {'id':original['id'],'generation':expected_generation}).mappings().one_or_none()
@@ -208,13 +217,15 @@ class ExtractionQueue(SpaceBound):
         profile['chunking']=self.chunking_profile
         with self.database.engine.begin() as c:
             content_lock(c); hold_authority(c)
-            current = self._space_authorize(c, actor, Role.EDITOR)
-            check_retired(c,current.space_id,'source_version',UUID(str(version_id)))
+            current = None if automatic else self._space_authorize(c, actor, Role.EDITOR)
+            check_retired(c,space,'source_version',UUID(str(version_id)))
             v = c.execute(text("""SELECT v.* FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id
                 WHERE v.space_id=:space AND v.id=:id AND NOT s.deleted FOR UPDATE OF v"""),
-                {'space':current.space_id,'id':UUID(str(version_id))}).mappings().one_or_none()
+                {'space':space,'id':UUID(str(version_id))}).mappings().one_or_none()
             if v is None:
                 raise SourceNotFound()
+            if automatic:
+                current = queued_attachment_actor(c, v, self.access)
             if v['generation']!=expected_generation or v['state']!='queued':
                 raise SourceConflict()
             if any(v[key]!=original[key] for key in ('content_hash','size_bytes','media_type','original_present')):
@@ -229,6 +240,8 @@ class ExtractionQueue(SpaceBound):
                 WHERE r.state IN ('extracting','assembling','failed') AND r.expires_at>clock_timestamp()
                 AND u.state IN ('queued','leased','retry_wait')"""),{'space':current.space_id}).mappings().one()
             count=len(_locators(profile))
+            if automatic and count > self.max_queued_units:
+                raise ValueError('extraction_manifest_exceeds_queue_limit')
             space_limit = max(200, self.max_queued_units // 2)
             if counts['total'] + count > self.max_queued_units or (counts['selected'] and counts['selected'] + count > space_limit):
                 raise ValueError('extraction_queue_full')
@@ -237,10 +250,11 @@ class ExtractionQueue(SpaceBound):
             if not v['original_present']:
                 raise ValueError('staging_expired')
             # Only a still-queued legacy attempt can be handed off atomically.
-            changed = c.execute(text("""UPDATE c0_jobs SET state='succeeded',finished_at=clock_timestamp(),
+            if not automatic:
+                changed = c.execute(text("""UPDATE c0_jobs SET state='succeeded',finished_at=clock_timestamp(),
                 result='{"state":"extraction_staged"}'::jsonb WHERE id=:id AND state='queued'"""), {'id':v['job_id']})
-            if changed.rowcount!=1:
-                raise SourceConflict()
+                if changed.rowcount!=1:
+                    raise SourceConflict()
             manifest = _manifest(v,current.space_id,profile)
             manifest_hash = _hash(manifest)
             run_id = uuid5(v['id'], 'extraction:'+str(expected_generation))
@@ -330,7 +344,13 @@ class ExtractionQueue(SpaceBound):
         try:
             if run['actor_id'] is None:
                 raise PermissionDenied()
-            self.in_space(run['space_id'])._space_authorize(c, Actor(run['actor_id'],Role.READER),Role.EDITOR)
+            if (source['publication_metadata'] or {}).get('_automatic_attachment_queue'):
+                from .automatic_sources import queued_attachment_actor
+                actor = queued_attachment_actor(c, source, self.access)
+                if actor.user_id != run['actor_id']:
+                    raise PermissionDenied()
+            else:
+                self.in_space(run['space_id'])._space_authorize(c, Actor(run['actor_id'],Role.READER),Role.EDITOR)
         except PermissionDenied:
             cancel_versions(c, [run['version_id']], 'authority_lost')
             return False
@@ -599,7 +619,11 @@ class ExtractionQueue(SpaceBound):
         try:
             self.originals.check(source)
             kind=run['profile']['partitioner']
-            if kind=='pdf-page-v1': evidence=assemble_pdf(units,run['expected_units'])
+            if kind=='pdf-page-v1':
+                evidence=assemble_pdf(units,run['expected_units'])
+                if ((source['publication_metadata'] or {}).get('_automatic_attachment_queue')
+                        and len(evidence.locations) != run['expected_units']):
+                    raise ExtractionError('unsupported_scan')
             elif kind in FORMATS: evidence=assemble_document(units,source['media_type'],run['profile']['spec'])
             else:
                 if len(units)!=1 or units[0]['state']!='succeeded': raise ExtractionError('parser_failed')

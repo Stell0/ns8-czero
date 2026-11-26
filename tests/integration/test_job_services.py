@@ -36,11 +36,12 @@ def service(access):
 
 def test_enqueue_is_idempotent_and_conflicting_request_is_atomic(service):
     queue,owner=service
+    previous = {job['id'] for job in queue.list_jobs(owner)}
     first=queue.enqueue(owner,'health',{},'one')
     assert first['state']=='queued' and first['attempts']==0
     assert queue.enqueue(owner,'health',{},'one')['id']==first['id']
     with pytest.raises(JobConflict):queue.enqueue(owner,'maintenance',{},'one')
-    assert [j['id'] for j in queue.list_jobs(owner)]==[first['id']]
+    assert {job['id'] for job in queue.list_jobs(owner)} == previous | {first['id']}
     assert queue.job_runs(owner,first['id'])==[]
 
 
@@ -91,13 +92,14 @@ def test_schedule_due_once_and_missed_intervals_coalesce(service):
 
 def test_registered_payloads_intervals_and_unknown_ids_fail_without_writes(service):
     queue,owner=service
+    previous = queue.list_jobs(owner)
     for handler,payload in [('os.system',{}),('health',{'command':'DROP TABLE c0_jobs'})]:
         with pytest.raises(ValueError):queue.enqueue(owner,handler,payload,'bad')
     for interval in (True,0,59,2678401):
         with pytest.raises(ValueError):queue.create_schedule(owner,name='test-invalid',handler='health',payload={},interval_seconds=interval)
     with pytest.raises(ValueError,match='schedule_not_found'):
         queue.update_schedule(owner,uuid4(),enabled=True,interval_seconds=60)
-    assert queue.list_jobs(owner)==[]
+    assert queue.list_jobs(owner) == previous
 
 
 def test_schedule_name_conflict_and_repeat_migration_preserve_config(service):

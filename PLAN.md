@@ -2,6 +2,65 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## Public website collection and ingestion reliability
+
+Baseline upstream `1e75e9e3d6f41366185a993b816a9b97a1e215a9` has producer
+Core 0.53.1. The app 0.70.0 consumer lock pins released Core 0.53.0 at
+`88b0635d0bc588d7048f09822019e5f22817bfc8` and schema `0046_pdf_authorization`.
+The [baseline validation](https://github.com/Stell0/ns8-czero/actions/runs/45835725920)
+passed. The producer candidate is Core 0.54.0 and schema
+`0047_collection_diagnostics`. Consumer release adoption is pending.
+
+1. Compare selected-space run and document reads through authenticated REST
+   and MCP. Preserve role, delegated scope and negative controls. Keep the
+   installed connector diagnosis separate from source-level findings.
+2. Add an optional HTTPS PDF selection to the existing website collector.
+   Persist a bounded frontier, retain originals, and publish through fenced
+   complete extraction. Preserve HTML-only definitions and evidence identities.
+3. Check complete multipart readiness in inventory. Expose selected-space
+   staging and run outcomes, and reuse supported retry and reacquisition
+   operations with current-generation and authority checks.
+
+Acceptance covers unchanged and changed bytes, first failure and failed
+replacement, cancellation, private destinations and redirects, partial
+coverage, and exact citation readback. Producer validation, released Core
+adoption and deployment are separate gates.
+
+The [transport issue](https://github.com/Stell0/ns8-czero/issues/168) traces
+a fixed source error lost in the MCP mapper. Synthetic Read-only credentials
+exercise the same protected-space, definition, run and document selectors on
+REST and both SDK modes. Wrong-space controls deny access. The
+[attachment feature](https://github.com/Stell0/ns8-czero/issues/167) uses
+normal retained originals and the serial or explicitly selected page parser.
+A real browser drives preview, save, run, original readback and exact citation
+against a disposable HTTPS publisher and PostgreSQL. The
+[ingestion issue](https://github.com/Stell0/ns8-czero/issues/166) reproduces
+false-ready multipart inventory and adds a verified same-content repair.
+Native source and released-consumer acceptance still require their own gates.
+
+The first [full producer run](https://github.com/Stell0/ns8-czero/actions/runs/45859353456)
+preserves source `57f6ecc60beecd3df15820ec12c112754a1466e6` and its images.
+Fast feedback identified three stale producer version expectations in the
+native Robot suite. The successor fixes those current-version assertions.
+The existing frozen predecessor still uses its recorded app, Core and images.
+The version policy regressions and all 22 Robot dry runs pass locally.
+
+A wider real OAuth regression exposed an exception-group interaction between
+request correlation and the existing bounded chunked-body receiver. The
+[second full run](https://github.com/Stell0/ns8-czero/actions/runs/45860222290)
+preserves source `9efe8e7b4051b5ba4d9280182ad23b5476a25ac7`. The transport
+successor uses an ASGI response wrapper and passes the chunked 413 and both
+SDK correlation regressions. The Core and Vue package trees retain their
+previous tested bytes.
+
+The [third full run](https://github.com/Stell0/ns8-czero/actions/runs/45861333019)
+preserves the reviewed source `f1bcbe4611f1c1047bef5e58a2c9163ecb083501`.
+The review successor verifies independent PDF discovery, recovery of retained
+originals and page extraction, multipart repair through the publisher, and
+request correlation in runtime logs. It updates the guidance expectations
+that failed in the original Rocky browser and integration checks.
+
+
 ## C0 Grafana monitoring
 
 Ship an instance-scoped dashboard through the NS8 Metrics application.

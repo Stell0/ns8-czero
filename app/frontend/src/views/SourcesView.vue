@@ -16,7 +16,10 @@ import {
   NeTableRow,
   NeTableCell,
 } from '@nethesis/vue-components'
-import { automaticSourcesAvailable } from '../api/features'
+import {
+  automaticSourcesAvailable,
+  ingestionDiagnosticsAvailable,
+} from '../api/features'
 import { ReplayIdentity } from '../api/replay'
 import { ApiError, request } from '../api/client'
 import {
@@ -47,6 +50,34 @@ const list = useResource(
   () => `sources:${offset.value}`,
   () => knowledge.sources(offset.value),
   () => !id.value && !query.value,
+)
+interface IngestionItem {
+  source_id: string
+  title: string
+  state: string
+  current_available: boolean
+  next_step: string
+  error_code: string | null
+  original: string
+  possible_duplicate: boolean
+}
+const diagnosticsAvailable = ingestionDiagnosticsAvailable()
+const reviewIngestion = ref(false)
+const diagnosticsOffset = ref(0)
+const diagnostics = useResource(
+  () => `ingestion-diagnostics:${diagnosticsOffset.value}`,
+  () =>
+    request<{ items: IngestionItem[] }>(
+      `ingestion-diagnostics?offset=${diagnosticsOffset.value}`,
+    ),
+  () => diagnosticsAvailable && reviewIngestion.value && !id.value,
+)
+watch(
+  () => session.generation,
+  () => {
+    reviewIngestion.value = false
+    diagnosticsOffset.value = 0
+  },
 )
 const matches = useResource(
   () => `source-search:${query.value}:${offset.value}`,
@@ -158,6 +189,32 @@ const needsPdfReview = computed(() =>
     'pdf_unlock_unavailable',
   ].includes(latest.value?.error_code || progress.data.value?.error_code || ''),
 )
+const retryable = computed(() => {
+  const current = progress.data.value
+  if (
+    !latest.value?.original_present ||
+    (current?.version_id && latest.value.id !== current.version_id)
+  )
+    return false
+  if (current?.run) {
+    return (
+      current.run.state === 'failed' &&
+      current.run.failed > 0 &&
+      current.error_code !== 'staging_expired'
+    )
+  }
+  return (
+    latest.value.state === 'failed' &&
+    ![
+      'unsupported_scan',
+      'no_text',
+      'invalid_pdf',
+      'too_large',
+      'extraction_units_disabled',
+      'extraction_manifest_exceeds_queue_limit',
+    ].includes(latest.value.error_code || '')
+  )
+})
 const replay = new ReplayIdentity()
 watch([id, () => session.generation], () => {
   upload.value = false
@@ -208,6 +265,7 @@ const recovery = useMutation({
 })
 async function reload() {
   await Promise.all([
+    reviewIngestion.value ? diagnostics.refetch() : undefined,
     document.refetch(),
     sourceId.value ? source.refetch() : Promise.resolve(),
     sourceId.value ? versions.refetch() : Promise.resolve(),
@@ -272,6 +330,88 @@ async function uploaded(version: Version) {
         >{{ t('common.reload') }}</NeButton
       >
     </div>
+    <section v-if="!id && diagnosticsAvailable" class="space-y-3">
+      <NeButton
+        kind="secondary"
+        :aria-expanded="reviewIngestion"
+        @click="reviewIngestion = !reviewIngestion"
+      >
+        {{ t('sources.reconciliation.title') }}
+      </NeButton>
+      <ResourceState
+        v-if="reviewIngestion"
+        :error="diagnostics.error.value"
+        :loading="diagnostics.isPending.value"
+      >
+        <NeTable
+          :aria-label="t('sources.reconciliation.title')"
+          card-breakpoint="md"
+        >
+          <NeTableHead>
+            <NeTableHeadCell>{{ t('common.title') }}</NeTableHeadCell>
+            <NeTableHeadCell>{{ t('common.status') }}</NeTableHeadCell>
+            <NeTableHeadCell>{{
+              t('sources.reconciliation.nextStep')
+            }}</NeTableHeadCell>
+          </NeTableHead>
+          <NeTableBody>
+            <NeTableRow
+              v-for="entry in diagnostics.data.value?.items"
+              :key="entry.source_id"
+            >
+              <NeTableCell :data-label="t('common.title')">
+                <RouterLink
+                  :to="{
+                    path: `/sources/${entry.source_id}`,
+                    query: route.query,
+                  }"
+                  class="text-link"
+                >
+                  {{ entry.title }}
+                </RouterLink>
+              </NeTableCell>
+              <NeTableCell :data-label="t('common.status')">
+                <p>{{ t(`sources.reconciliation.${entry.state}`) }}</p>
+                <p v-if="entry.current_available && entry.state !== 'ready'">
+                  {{ t('sources.reconciliation.currentAvailable') }}
+                </p>
+                <p v-if="entry.error_code">
+                  {{
+                    t(
+                      `sources.extractionErrors.${entry.error_code}`,
+                      entry.error_code,
+                    )
+                  }}
+                </p>
+                <p v-if="entry.possible_duplicate">
+                  {{ t('sources.reconciliation.possibleDuplicate') }}
+                </p>
+              </NeTableCell>
+              <NeTableCell :data-label="t('sources.reconciliation.nextStep')">
+                {{ t(`sources.reconciliation.${entry.next_step}`) }}
+              </NeTableCell>
+            </NeTableRow>
+          </NeTableBody>
+        </NeTable>
+        <div class="flex gap-3">
+          <NeButton
+            kind="secondary"
+            :disabled="diagnosticsOffset === 0"
+            @click="diagnosticsOffset -= 50"
+            >{{ t('common.previous') }}</NeButton
+          >
+          <NeButton
+            kind="secondary"
+            :disabled="
+              diagnostics.data.value?.items.length !== 50 ||
+              diagnosticsOffset >= 10000
+            "
+            @click="diagnosticsOffset += 50"
+            >{{ t('common.next') }}</NeButton
+          >
+        </div>
+      </ResourceState>
+    </section>
     <template v-if="!id">
       <form class="flex items-end gap-3" @submit.prevent="search">
         <NeTextInput
@@ -319,7 +459,9 @@ async function uploaded(version: Version) {
                 }}</RouterLink></NeTableCell
               ><NeTableCell :data-label="t('common.status')">{{
                 t(
-                  `sources.states.${entry.state}`,
+                  entry.error_code
+                    ? `sources.documentDiagnostics.${entry.error_code}`
+                    : `sources.states.${entry.state}`,
                   t('sources.states.incomplete'),
                 )
               }}</NeTableCell></NeTableRow
@@ -429,7 +571,7 @@ async function uploaded(version: Version) {
             >{{ t('sources.reprocess') }}</NeButton
           >
           <NeButton
-            v-if="latest?.original_present && latest.state === 'failed'"
+            v-if="retryable"
             kind="secondary"
             :loading="recovery.isLoading.value"
             :disabled="recovery.isLoading.value"

@@ -40,13 +40,17 @@ class DocumentService(SpaceBound):
             {'space':self._space(connection),'id':_uuid(identifier),'type':kind}).mappings().one_or_none()
 
     def browse_documents(self, actor, *, limit=50, offset=0):
-        """Summaries only; one initial pending entry or verified parent per document."""
-        # Keep UUID columns indexable; managed receipt IDs are validated UUIDs.
+        """Check structural readiness on the selected summary page without loading bodies."""
         SourceService._page(limit, offset)
         with self.database.engine.begin() as connection:
             self._authorize(connection, actor)
             rows = connection.execute(text('''WITH parents AS MATERIALIZED (
-                SELECT id,data,space_id,updated_at,created_at FROM c0_objects WHERE space_id=:space AND type_name=:snapshot
+                SELECT id,data,space_id,updated_at,created_at,
+                    CASE WHEN jsonb_typeof(data->'part_receipt_ids')='array' THEN
+                        CASE WHEN jsonb_array_length(data->'part_receipt_ids') BETWEEN 1 AND 100
+                            THEN data->'part_receipt_ids' END
+                    END AS part_ids
+                FROM c0_objects WHERE space_id=:space AND type_name=:snapshot
             ), hidden_parts AS MATERIALIZED (
                 SELECT receipt.space_id,receipt.data->>'source_id' AS source_id
                 FROM c0_objects receipt LEFT JOIN parents p ON p.space_id=receipt.space_id
@@ -56,7 +60,9 @@ class DocumentService(SpaceBound):
                     AND (receipt.type_name=:receipt OR receipt.data->>'part_number'<>'1' OR p.id IS NOT NULL)
             ), summaries AS (
                 SELECT s.id,s.title,s.metadata,s.updated_at,CASE WHEN s.current_version_id IS NULL THEN 'incomplete' ELSE COALESCE(v.state,'queued') END AS state,
-                    COALESCE(v.media_type,'text/plain') AS media_type,false AS multipart,s.created_at AS sort_at
+                    COALESCE(v.media_type,'text/plain') AS media_type,false AS multipart,s.created_at AS sort_at,
+                    NULL::jsonb AS part_ids,NULL::text AS connector_id,NULL::text AS external_id,
+                    NULL::text AS content_hash,NULL::jsonb AS total_bytes
                 FROM c0_sources s LEFT JOIN LATERAL (
                     SELECT state,media_type FROM c0_source_versions WHERE space_id=s.space_id AND source_id=s.id
                     ORDER BY (id=s.current_version_id) DESC,number DESC LIMIT 1
@@ -65,22 +71,82 @@ class DocumentService(SpaceBound):
                     AND receipt.source_id=s.id::text
                 )
                 UNION ALL
-                SELECT p.id,COALESCE(s.title,p.data->>'external_id'),COALESCE(s.metadata,'{}'::jsonb),p.updated_at,
-                    CASE WHEN v.state='ready' THEN 'ready' ELSE 'incomplete' END,
-                    COALESCE(v.media_type,'text/plain'),true,p.created_at
+                SELECT p.id,COALESCE(s.title,p.data->>'external_id',p.id::text),COALESCE(s.metadata,'{}'::jsonb),p.updated_at,
+                    'ready',COALESCE(v.media_type,'text/plain'),true,p.created_at,
+                    p.part_ids,p.data->>'connector_id',p.data->>'external_id',
+                    p.data->>'content_hash',p.data->'total_bytes'
                 FROM parents p LEFT JOIN c0_objects r ON r.space_id=p.space_id AND r.type_name=:receipt
-                    AND r.id=CAST(p.data->'part_receipt_ids'->>0 AS uuid)
-                LEFT JOIN c0_source_versions v ON v.space_id=p.space_id AND v.id=CAST(r.data->>'version_id' AS uuid)
-                    AND v.source_id=CAST(r.data->>'source_id' AS uuid)
+                    AND r.id=CASE WHEN pg_input_is_valid(p.part_ids->>0,'uuid') THEN CAST(p.part_ids->>0 AS uuid) END
+                LEFT JOIN c0_source_versions v ON v.space_id=p.space_id
+                    AND v.id=CASE WHEN pg_input_is_valid(r.data->>'version_id','uuid') THEN CAST(r.data->>'version_id' AS uuid) END
+                    AND v.source_id::text=r.data->>'source_id'
                 LEFT JOIN c0_sources s ON s.space_id=p.space_id AND s.id=v.source_id
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM jsonb_array_elements_text(p.data->'part_receipt_ids') part(id)
-                    JOIN c0_objects receipt ON receipt.id=CAST(part.id AS uuid) AND receipt.space_id=p.space_id AND receipt.type_name=:receipt
-                    JOIN c0_sources original ON original.id=CAST(receipt.data->>'source_id' AS uuid) AND original.space_id=p.space_id
+                    SELECT 1 FROM jsonb_array_elements_text(p.part_ids) part(id)
+                    JOIN c0_objects receipt ON receipt.space_id=p.space_id AND receipt.type_name=:receipt
+                        AND receipt.id=CASE WHEN pg_input_is_valid(part.id,'uuid') THEN CAST(part.id AS uuid) END
+                    JOIN c0_sources original ON original.space_id=p.space_id
+                        AND original.id=CASE WHEN pg_input_is_valid(receipt.data->>'source_id','uuid')
+                            THEN CAST(receipt.data->>'source_id' AS uuid) END
                     WHERE original.deleted
+                        AND receipt.data->>'connector_id'=p.data->>'connector_id'
+                        AND receipt.data->>'parent_external_id'=p.data->>'external_id'
                 )
-            ) SELECT id,title,metadata,updated_at,state,media_type,multipart FROM summaries ORDER BY sort_at DESC,id LIMIT :limit OFFSET :offset'''),
-                {'space':self._space(connection),'snapshot':SNAPSHOT,'receipt':RECEIPT,'current_receipt':'c0_project_source_sync_v1','limit':limit,'offset':offset}).mappings()
+            ), page AS MATERIALIZED (
+                SELECT * FROM summaries ORDER BY sort_at DESC,id LIMIT :limit OFFSET :offset
+            )
+            SELECT page.id,page.title,page.metadata,page.updated_at,
+                CASE WHEN readiness.error_code IS NULL THEN page.state ELSE 'incomplete' END AS state,
+                page.media_type,page.multipart,readiness.error_code
+            FROM page LEFT JOIN LATERAL (
+                WITH parts AS (
+                    SELECT part.id AS member_id,r.id AS receipt_id,r.data,v.state,v.media_type,
+                        v.content_hash,v.size_bytes,d.id AS document_id,
+                        CASE WHEN jsonb_typeof(r.data->'start_byte')='number'
+                            AND r.data->>'start_byte' ~ '^[0-9]{1,8}$'
+                            THEN CAST(r.data->>'start_byte' AS integer) END AS stored_start,
+                        COALESCE(sum(v.size_bytes) OVER (ORDER BY r.data->'part_number'
+                            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING),0) AS expected_start,
+                        CASE WHEN r.data->>'parent_content_hash' IS DISTINCT FROM page.content_hash THEN
+                            COALESCE(r.data->>'key'=encode(sha256(convert_to('source_sync_history_v1'||chr(10)
+                                ||COALESCE(r.data->>'connector_id','')||':'||COALESCE(r.data->>'external_id','')
+                                ||':'||v.id::text,'UTF8')),'hex'),false)
+                            ELSE false END AS legacy
+                    FROM jsonb_array_elements_text(page.part_ids) part(id)
+                    LEFT JOIN c0_objects r ON r.space_id=:space AND r.type_name=:receipt
+                        AND r.id=CASE WHEN pg_input_is_valid(part.id,'uuid') THEN CAST(part.id AS uuid) END
+                    LEFT JOIN c0_source_versions v ON v.space_id=r.space_id
+                        AND v.id=CASE WHEN pg_input_is_valid(r.data->>'version_id','uuid') THEN CAST(r.data->>'version_id' AS uuid) END
+                        AND v.source_id::text=r.data->>'source_id'
+                    LEFT JOIN c0_documents d ON d.space_id=v.space_id AND d.version_id=v.id
+                )
+                SELECT CASE
+                    WHEN page.part_ids IS NULL OR bool_or(member_id IS NULL OR NOT pg_input_is_valid(member_id,'uuid'))
+                        OR count(DISTINCT receipt_id) < count(receipt_id) THEN 'invalid_part_membership'
+                    WHEN bool_or(state IS DISTINCT FROM 'ready' OR document_id IS NULL) THEN 'missing_or_unready_part'
+                    WHEN count(DISTINCT data->'part_number') <> count(*) OR count(DISTINCT media_type) <> 1
+                        OR page.total_bytes IS DISTINCT FROM to_jsonb(sum(size_bytes))
+                        OR page.total_bytes::text !~ '^[1-9][0-9]{0,7}$'
+                        OR sum(size_bytes) NOT BETWEEN 1 AND :maximum
+                        OR bool_or(data->>'connector_id' IS DISTINCT FROM page.connector_id
+                            OR data->>'parent_external_id' IS DISTINCT FROM page.external_id
+                            OR data->>'sync_status' IS DISTINCT FROM 'verified'
+                            OR data->>'extraction_status' IS DISTINCT FROM 'ready'
+                            OR data->>'last_content_hash' IS DISTINCT FROM content_hash
+                            OR jsonb_typeof(data->'part_number') IS DISTINCT FROM 'number'
+                            OR data->>'part_number' !~ '^[1-9][0-9]{0,2}$'
+                            OR data->'part_number' > to_jsonb(jsonb_array_length(page.part_ids))
+                            -- Legacy receipts can keep their original offsets, but must prove their identity and length.
+                            OR (NOT legacy AND (data->>'parent_content_hash' IS DISTINCT FROM page.content_hash
+                                OR stored_start IS DISTINCT FROM expected_start))
+                            OR stored_start IS NULL OR data->'end_byte' IS DISTINCT FROM to_jsonb(stored_start + size_bytes))
+                        THEN 'invalid_part_membership'
+                END AS error_code
+                FROM parts
+            ) readiness ON page.multipart
+            ORDER BY page.sort_at DESC,page.id'''),
+                {'space':self._space(connection),'snapshot':SNAPSHOT,'receipt':RECEIPT,'current_receipt':'c0_project_source_sync_v1',
+                 'limit':limit,'offset':offset,'maximum':MAX_DOCUMENT_BYTES}).mappings()
             return [dict(row) for row in rows]
 
     def document_history(self, actor, identifier, *, limit=50, offset=0):
@@ -150,10 +216,16 @@ class DocumentService(SpaceBound):
 
     def _composite(self, connection, parent, selected, revision_id, *, receipt_kind=RECEIPT):
         data=selected['data'];ids=data.get('part_receipt_ids')
-        if (not isinstance(ids,list) or not 1<=len(ids)<=100 or len(set(ids))!=len(ids)
+        if (not isinstance(ids,list) or not 1<=len(ids)<=100
                 or type(data.get('total_bytes')) is not int or not 1<=data['total_bytes']<=MAX_DOCUMENT_BYTES):
             raise SourceConflict()
-        for identifier in ids:_uuid(identifier)
+        try:
+            ids = [_uuid(identifier) for identifier in ids]
+        except ValueError:
+            # Invalid stored membership is a document conflict, even for a valid caller selector.
+            raise SourceConflict() from None
+        if len(set(ids))!=len(ids):
+            raise SourceConflict()
         rows = list(connection.execute(text('''SELECT r.id,r.data,v.id AS version_id,v.source_id,v.state,v.media_type,
             v.content_hash,v.size_bytes,v.original_present,v.retain_original,d.id AS document_id,d.text_hash,
             CASE WHEN sum(octet_length(d.body)) OVER()<=:maximum THEN d.body END AS body,
@@ -170,7 +242,10 @@ class DocumentService(SpaceBound):
             'text_hash':None,'content_hash':data['content_hash'],'parts':[],'multipart':True,'deleted':False,
             'number':None,'error_code':'missing_or_unready_part','original_version_ids':[]}
         if len(rows)!=len(ids) or any(row['state']!='ready' or row['document_id'] is None for row in rows):return result
-        rows.sort(key=lambda row:row['data'].get('part_number',0))
+        if any(type(row['data'].get(field)) is not int
+               for row in rows for field in ('part_number', 'start_byte', 'end_byte')):
+            raise SourceConflict()
+        rows.sort(key=lambda row:row['data']['part_number'])
         bodies=[];parts=[];byte_offset=0;offset=0;media=rows[0]['media_type']
         for number,row in enumerate(rows,1):
             receipt=row['data'];body=row['body']
