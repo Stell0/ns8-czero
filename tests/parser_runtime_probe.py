@@ -6,9 +6,11 @@ from tempfile import TemporaryDirectory
 
 from docx import Document
 from pypdf import PdfWriter
+from pypdf.constants import UserAccessPermissions
 from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
 
 from czero_core.extraction import extract_isolated
+from czero_core.protected_pdf import PDFProtection, inspect_pdf
 
 
 def probe():
@@ -35,13 +37,21 @@ def probe():
         source = root / 'document.pdf'
         writer.write(source)
         assert extract_isolated(source, 'application/pdf').text == 'PDF evidence'
+        password = 'synthetic-opening-password'
+        permissions = UserAccessPermissions(-1) & ~UserAccessPermissions.EXTRACT
+        writer.encrypt(password, algorithm='AES-256', permissions_flag=permissions)
+        protected = root / 'protected.pdf'
+        writer.write(protected)
+        with protected.open('rb') as stream:
+            assert inspect_pdf(stream, password) == PDFProtection(
+                encrypted=True, restricted=True, password_required=True)
     for name in ('tesseract-ocr','tesseract-ocr-eng','tesseract-ocr-ita','poppler-utils'):
         assert (Path('/usr/share/doc')/name/'copyright').is_file()
     from czero_core.local_ocr import preflight,extract_unit
     with TemporaryDirectory() as directory:
         scanned=Path(directory)/'scan.pdf'; scanned.write_bytes(scanned_original())
         assert extract_unit(scanned,1,preflight()).evidence.text==PHRASE
-    print('Four isolated packaged parsers and optional local OCR preserve expected text')
+    print('Packaged parsers, protected PDF inspection, and local OCR pass')
 
 
 if __name__ == '__main__':
