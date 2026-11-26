@@ -57,9 +57,29 @@ Use the configured module ID, not one copied from another operator. For direct a
 
 C0 uses journald. Empty Podman logs or an inaccessible module-user journal do not prove privacy. An authorized log audit must use bounded actual application entries, the verified UID/container and positive request controls. Keep raw journals, cookies and tokens private. Share fixed status/error codes, not complete OAuth authorization URLs or credential-bearing traces.
 
+### Grafana
+
+Enable Grafana in the NS8 Metrics application, then sign in with a cluster
+administrator account and open **Dashboards**. C0 ships a separate overview
+for each installed instance. The dashboard shows service and collector health,
+MCP tool outcomes, HTTP traffic for C0 and its custom apps, source ingestion
+and failure categories, knowledge and connection counts, background work,
+and container and storage usage.
+
+C0's aggregate counters are collected by NS8 about every five minutes. HTTP
+metrics come from Traefik and include traffic to registered custom app routes.
+MCP counters count completed calls handled by C0 and reset when the application
+restarts. A tool can report an error in an HTTP 200 response. A custom app's
+private conversations, model usage and costs are outside these counters.
+The C0 exporter uses a bounded read-only database query and omits database
+statistics when the query fails. It exposes no customer content, account
+identifiers, filenames, tokens or tool arguments.
+
 ## Update, backup and restore
 
 Use native NS8 backup for the C0 instance and check completion/integrity before an update. Retained source files and logical database state must remain coordinated; do not copy a live PostgreSQL data directory as a logical backup substitute. Backups retain private data and require appropriate storage/access policy.
+The C0 backup includes the instance key for saved PDF unlocking and its sealed
+password records so retained originals can be reprocessed after a restore.
 
 Use the canonical verified candidate tag with the supported targeted update:
 

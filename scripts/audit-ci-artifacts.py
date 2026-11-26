@@ -95,9 +95,10 @@ def audit_reports(directory, source, images, logs):
         ui = {t.get('name') for t in tests if any(tag.text == 'ui' for tag in t.findall('tag'))}
         assert all(t.find('status').get('status') == 'PASS' for t in tests if t.get('name') in ui)
         actual_ui |= ui
-        assert len(tests) == 21 + len(ui), 'Native cases were omitted'
+        assert len(tests) == 22 + len(ui), 'Native cases were omitted'
         for name in ('Verify exact installed candidate images', 'Verify protected Core spaces in the installed runtime',
-                'Preserve admitted identities through update and clean restore'):
+                'Preserve admitted identities through update and clean restore',
+                'Verify the module ships its Grafana dashboard and exports instance statistics'):
             assert any(t.get('name') == name and t.find('status').get('status') == 'PASS' for t in tests), name
         sso = [kw for kw in root.iter('kw') if kw.get('name') == 'Verify Disposable Sso']
         assert len(sso) == 2 and all(kw.find('status').get('status') == 'PASS' for kw in sso)

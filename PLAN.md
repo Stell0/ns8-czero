@@ -2,6 +2,107 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## C0 Grafana monitoring
+
+Ship an instance-scoped dashboard through the NS8 Metrics application.
+Use the native node collector for aggregate C0 metrics and the existing
+Traefik, container, and volume series for platform observations. Measure
+MCP outcomes at C0's tool boundary. Keep names, arguments, content, and
+credentials outside telemetry.
+
+Verify lifecycle registration, per-instance isolation, data collection on
+clean and upgraded installations, and a successful and failed SDK call.
+Live acceptance checks the authenticated Grafana route, provisioning, and
+fresh Prometheus samples for each authorized instance after its native
+backup, upgrade, and restart.
+
+### Installed monitoring baseline
+
+[PR 160](https://github.com/Stell0/ns8-czero/pull/160) merged as
+`4f2447d45fc331b53deabb39c37e60a7af02cf69`. The
+[accepted candidate run](https://github.com/Stell0/ns8-czero/actions/runs/45456339586)
+passed the Python/PostgreSQL suite, 22 Debian upgrade cases and 27 Rocky cases
+with three expected skips. The independently downloaded reports include eight
+browser workflows and five scan pairs. The
+[merged main run](https://github.com/Stell0/ns8-czero/actions/runs/45465993753)
+also passed. The installed app reports released Core 0.53.0 and
+schema `0046_pdf_authorization`.
+
+The three authorized C0 instances use source `4172d37da936647ef6b3decea045dd4304e17c93` and
+immutable tag `ci-4172d37da936647ef6b3decea045dd4304e17c93-45456339586-1`.
+
+| Image | Installed digest |
+| --- | --- |
+| `czero` | `sha256:0333ca60c458d2cad60bf5fd9c978f4631d9419a0a40d690071ec47e29b62853` |
+| `czero-app` | `sha256:fe41e4a620fab01dd7a674c7e13479a40403675da33c56b99e053c8e5b69deba` |
+| `czero-postgres` | `sha256:4896eed333507dd35a7b169f588e2736c0dc8059ad4baa3bcca36a529c0a95cb` |
+
+All three C0-only backups passed a full Restic read. Supported updates and
+restarts preserved source originals, stable content and authority fingerprints,
+scheduled definitions, and 11 unrelated modules. The existing custom
+application returned to ready with its image, mounts and nine registered
+files preserved. Root journal checks observed health and denied MCP controls
+with zero OAuth query or credential candidates.
+
+Grafana provisioned all three dashboards through NS8 Metrics. Each of the
+21 queries per dashboard ran through Grafana, with data in all 16 panels and
+a fresh post-restart sample from the expected node. The public route required
+cluster administrator authentication. MCP outcome grading used the real SDK
+in the disposable acceptance suite.
+
+## Protected PDF upload and recovery
+
+Source details show the failed file and its ingestion error after
+[PR 153](https://github.com/Stell0/ns8-czero/pull/153). The protected PDF
+workflow in [PR 155](https://github.com/Stell0/ns8-czero/pull/155) checks
+encryption before queuing. It requests an opening password when needed and
+requires separate approval for each extraction-restricted PDF. Editors can
+review and retry previously failed originals. Extraction preserves the
+encrypted original bytes.
+
+The producer passed [full acceptance](https://github.com/Stell0/ns8-czero/actions/runs/45418392746).
+[Core 0.53.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.53.0)
+was independently published from `88b0635d0bc588d7048f09822019e5f22817bfc8`.
+App 0.70 adopted the immutable released Core source in
+[PR 157](https://github.com/Stell0/ns8-czero/pull/157). Its
+[full native run](https://github.com/Stell0/ns8-czero/actions/runs/45430403893)
+passed the Debian upgrade from the installed predecessor, Rocky installation,
+eight browser workflows, and five image/filesystem scan pairs. The candidate
+and regular merge `1287e89b9490bdc3e5f958525e68fc26801887ba` have identical
+tracked trees.
+
+### Installed baseline
+
+The authorized dedicated instance now runs app 0.70.0, released Core 0.53.0,
+and schema `0046_pdf_authorization`. The frozen predecessor ran Core 0.52.0
+and schema `0045_drive_audience` from
+`450b9b385ed2ee2d9b29da280fa1c67f9d5513b9`. The installed source is
+`cc4f8165b069fbf35c1f5b03cdfae683e2a363b0` under immutable tag
+`ci-cc4f8165b069fbf35c1f5b03cdfae683e2a363b0-45430403893-1`.
+
+| Image | Installed digest |
+| --- | --- |
+| `czero` | `sha256:ebcb1211428036b4ed2767521b16d301b40d3f51e6ba297005c90b467e1783f6` |
+| `czero-app` | `sha256:55c74ada192ff94ed87365495111eca8e6bb87c8e59e21a3d184559bb6928492` |
+| `czero-postgres` | `sha256:c993d88e95e7688fe1c710dc6ff943d4178d29f2d4a4cc89bee4c4351504a815` |
+
+A scoped backup passed a full Restic data read. The supported module update
+and restart passed HTTPS, image and released package checks. Preservation
+checks covered 77 prior tables, 54 originals, authority, scheduled tasks,
+settings and 13 unrelated modules. The existing connected account and natural
+worker invocation passed. The root journal audit observed health and denied
+MCP controls with zero detected credentials or OAuth query parameters.
+Retention dry run reported zero original files to remove.
+
+Synthetic PDF checks passed after the instance settled, both after update
+and after restart. They covered password-only, extraction-restricted, and
+combined cases, identical encrypted original bytes, and the same instance key.
+Some checks during startup reached the five-second inspection deadline.
+Separately measured parser imports implicated eager initialization of the
+database library. The installed build and failed probe evidence retain their
+original identities. Existing protected originals still require individual
+editor approval to retry.
+
 ## Personal Google Drive automatic sources
 
 Developed on original main `a5758ad`. App 0.70 and Core 0.52/schema0045 add
@@ -2557,6 +2658,18 @@ installation. Preserve candidate `401336b681ff64898bb937add88f8e12ca026dae`,
 successful full43126746286 and its exact-source promotion proof. The successor
 resolves instruction conflicts against that closeout, retains its deployment
 evidence and repeats the required current-base checks before merge.
+
+## Protected PDF uploads and retries
+
+Manual PDF uploads and retries check passwords and request explicit per-file
+extraction approval before queueing. Editors with current Write access can
+reprocess the same retained original using saved authorization. The PDF key is
+private NS8 state included in native backups. Automatic imports keep their
+existing policy. Core 0.53.0 and schema `0046_pdf_authorization` provide this feature. The
+[published Core source](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.53.0)
+is frozen at `88b0635d0bc588d7048f09822019e5f22817bfc8`. The reference app adopts the released tag
+and frozen lock with a patch-only update range. Full native acceptance
+and the dedicated C01 rollout are checked separately.
 
 ## Current baseline
 

@@ -165,7 +165,24 @@ def test_invalid_backup_stops_before_database_restore(monkeypatch,tmp_path,capsy
 def test_backup_inputs_include_logical_dump_not_live_database():
     lines=set((ROOT/'imageroot/etc/state-include.conf').read_text().splitlines())
     assert {'state/czero.pg_dump','state/passwords.env','state/backup-metadata.json','volumes/czero-sources'} <= lines
+    assert 'state/pdf-unlock.key' in lines
     assert 'volumes/czero-db-data' not in lines
+
+
+def test_restore_requires_saved_pdf_key_when_archive_declares_it(monkeypatch, tmp_path):
+    monkeypatch.setenv('AGENT_STATE_DIR', str(tmp_path))
+    (tmp_path/'backup-metadata.json').write_text(json.dumps(
+        {'format':1,'app_active':True,'app_enabled':True,'pdf_unlock_key':True}))
+    (tmp_path/'czero.pg_dump').write_bytes(b'PGDMP fixture')
+    (tmp_path/'passwords.env').touch(mode=0o600)
+    validator = str(ROOT/'imageroot/actions/restore-module/30validate-backup')
+    with pytest.raises(SystemExit, match='1'):
+        runpy.run_path(validator)
+    key = tmp_path/'pdf-unlock.key'
+    key.touch(mode=0o600)
+    key.write_bytes(b'k' * 32)
+    runpy.run_path(validator)
+    assert key.read_bytes() == b'k' * 32
 
 
 def test_backup_destination_helper_sanitizes_generated_password(monkeypatch):

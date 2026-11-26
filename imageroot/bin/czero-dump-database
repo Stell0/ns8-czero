@@ -20,6 +20,8 @@ db_active = active('czero-postgres.service')
 metadata = {'format': 1, 'app_active': active('czero.service'),
     'app_enabled': subprocess.run(['systemctl','--user','is-enabled','--quiet','czero.service']).returncode == 0,
     'scheduler_active': active('czero-worker.timer'),'extraction_active':active('czero-extraction.timer')}
+if (state / 'pdf-unlock.key').is_file():
+    metadata['pdf_unlock_key'] = True
 old_umask = os.umask(0o077)
 failed = False
 try:

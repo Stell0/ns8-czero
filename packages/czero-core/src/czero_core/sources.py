@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import time
 from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import text
@@ -16,6 +17,7 @@ from .identity import PermissionDenied, Role
 from .spaces import SpaceBound, SpaceService, content_row, hold_authority
 from .jobs import Handler, JobService, bounded_json
 from .receipts import mutate
+from .pdf_access import PdfAccess, pdf_input
 
 MAX_INGEST_TEXT_BYTES = 131072
 TEXT_MEDIA_TYPES = frozenset(('text/plain', 'text/markdown'))
@@ -147,9 +149,10 @@ class OriginalStore:
 
 
 class SourceService(SpaceBound):
-    def __init__(self, database, access, registry, originals):
+    def __init__(self, database, access, registry, originals, *, pdf_access=None):
         self.database, self.access = database, access
         self.originals = originals
+        self.pdf_access = pdf_access
         self.jobs = JobService(database, registry)
 
     def _authorize(self, connection, actor, role=Role.READER):
@@ -174,8 +177,36 @@ class SourceService(SpaceBound):
             revision=revision+1,updated_at=now() WHERE id=:id RETURNING revision"""),
             {'id':source_id,'title':title,'metadata':encoded}).scalar_one()
 
+    def _check_manual_pdf(self, stream, current, *, target, revision, password, approval_token):
+        if password is not None and (not isinstance(password, str) or len(password.encode()) > 1024
+                                     or '\0' in password):
+            raise ValueError('invalid_pdf_password')
+        if self.pdf_access is None:
+            from .protected_pdf import inspect_pdf
+            if inspect_pdf(stream, password).encrypted or password is not None or approval_token is not None:
+                raise ExtractionError('pdf_unlock_unavailable')
+            return None
+        return self.pdf_access.check(stream, actor_id=current.user_id, space_id=current.space_id,
+            target=target, revision=revision, password=password, token=approval_token)
+
+    def ingest_manual(self, actor, stream, *, pdf_password=None, pdf_approval_token=None, **options):
+        authorization = None
+        if options['media_type'] == 'application/pdf':
+            source_id, revision = options.get('source_id'), options.get('expected_revision')
+            with self.database.engine.connect() as connection:
+                current = self._authorize(connection, actor, Role.EDITOR)
+                if source_id is not None:
+                    source = self._source(connection, source_id)
+                    if source['deleted'] or source['revision'] != revision:
+                        raise SourceConflict()
+            authorization = self._check_manual_pdf(stream, current, target=('upload:' + str(source_id)),
+                revision=revision, password=pdf_password, approval_token=pdf_approval_token)
+        elif pdf_password is not None or pdf_approval_token is not None:
+            raise ValueError('unexpected_pdf_authorization')
+        return self.ingest(actor, stream, **options, _pdf_authorization=authorization)
+
     def ingest(self, actor, stream, *, title, filename, media_type, retain_original=False,
-               metadata=None, source_id=None, expected_revision=None):
+               metadata=None, source_id=None, expected_revision=None, _pdf_authorization=None):
         title, filename = _label(title, 256), _label(filename, 255)
         if media_type not in MEDIA_TYPES or type(retain_original) is not bool:
             raise ValueError('invalid_upload')
@@ -187,7 +218,7 @@ class SourceService(SpaceBound):
             mark_local_change(connection, source_id)
             return self._ingest(connection, stream, title=title, filename=filename,
                 media_type=media_type, retain_original=retain_original, encoded=encoded,
-                source_id=source_id, expected_revision=expected_revision)
+                source_id=source_id, expected_revision=expected_revision, pdf_authorization=_pdf_authorization)
 
     def ingest_text(self, actor, *, idempotency_key, title, body, media_type='text/plain',
                     metadata=None, source_id=None, expected_revision=None):
@@ -227,7 +258,7 @@ class SourceService(SpaceBound):
                       idempotency_key, execute, conflict=SourceConflict)
 
     def _ingest(self, connection, stream, *, title, filename, media_type,
-                retain_original, encoded, source_id, expected_revision, force_reindex=False, queue_extraction=True):
+                retain_original, encoded, source_id, expected_revision, force_reindex=False, queue_extraction=True, pdf_authorization=None):
         """Trusted writer; callers own validation, authorization and transaction."""
         from .current_content import content_lock,retire_versions
         content_lock(connection)
@@ -247,6 +278,9 @@ class SourceService(SpaceBound):
             intent.execute(text("INSERT INTO c0_original_cleanup(version_id,space_id,available_at) VALUES (:id,:space,now()+interval '1 hour')"),
                 {'id':version_id,'space':self._space(connection)})
         digest, size = self.originals.write(version_id, stream, media_type=media_type)
+        if pdf_authorization is not None and digest != pdf_authorization.digest:
+            self.originals.remove(version_id)
+            raise ExtractionError('invalid_file')
         if source_id is None:
             # Identical first uploads with the same provenance deduplicate,
             # including concurrent deliveries. Different provenance stays
@@ -262,6 +296,13 @@ class SourceService(SpaceBound):
                 raise SourceConflict()
         existing = connection.execute(text('SELECT * FROM c0_source_versions WHERE source_id=:source AND content_hash=:hash ORDER BY number DESC LIMIT 1'),
             {'source': source_id, 'hash': digest}).mappings().one_or_none()
+        if existing and pdf_authorization is not None and existing['state'] == 'failed':
+            try:
+                if not existing['original_present']:
+                    raise ExtractionError('invalid_file')
+                self.originals.check(existing)
+            except ExtractionError:
+                existing = None  # The verified new copy can replace unavailable staging.
         if existing and not force_reindex:
             self.originals.remove(version_id)
             connection.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=:id'),{'id':version_id})
@@ -273,6 +314,13 @@ class SourceService(SpaceBound):
                 connection.execute(text('UPDATE c0_source_versions SET publication_title=:title,publication_metadata=CAST(:metadata AS jsonb) WHERE id=:id'),
                     {'id':existing['id'],'title':title,'metadata':encoded})
                 connection.execute(text('UPDATE c0_sources SET revision=revision+1,updated_at=now() WHERE id=:id'),{'id':source_id})
+            if pdf_authorization is not None:
+                if existing['state'] == 'failed' and existing['error_code'] == 'encrypted_pdf':
+                    self.originals.check(existing)
+                    self.pdf_access.save(connection, existing, pdf_authorization)
+                    return self._queue_retry(connection, existing)
+                if existing['original_present'] and existing['retain_original']:
+                    self.pdf_access.save(connection, existing, pdf_authorization)
             return version_view(existing)
         # Bound abandoned replacements; current publication remains protected.
         pending=connection.execute(text('SELECT id FROM c0_source_versions WHERE source_id=:source AND id IS DISTINCT FROM CAST(:current AS uuid)'),
@@ -288,6 +336,8 @@ class SourceService(SpaceBound):
             VALUES (:space,:id,:source,:number,:filename,:media,:hash,:size,:retain,:job,:title,CAST(:metadata AS jsonb),:reindex) RETURNING *'''),
             {'space': self._space(connection), 'id': version_id, 'source': source_id, 'number': number, 'filename': filename,
              'media': media_type, 'hash': digest, 'size': size, 'retain': retain_original, 'job': job_id,'title':title,'metadata':encoded,'reindex':force_reindex}).mappings().one()
+        if pdf_authorization is not None:
+            self.pdf_access.save(connection, row, pdf_authorization)
         if number > 1:
             connection.execute(text('UPDATE c0_sources SET revision=revision+1,updated_at=now() WHERE id=:id'), {'id': source_id})
         connection.execute(text('DELETE FROM c0_original_cleanup WHERE version_id=:id'),{'id':version_id})
@@ -331,29 +381,74 @@ class SourceService(SpaceBound):
                 {'space':self._space(connection),'id':_uuid(source_id),'staging':staging,
                  'current':source['current_version_id'],'limit':limit,'offset':offset}).mappings()]
 
-    def retry(self, actor, version_id, *, expected_generation):
+    def _retry_version(self, connection, version_id, expected_generation, *, lock=False):
+        from .current_content import check_retired
+        identifier = _uuid(version_id)
+        space = self._space(connection)
+        check_retired(connection, space, 'source_version', identifier)
+        row = connection.execute(text('''SELECT v.*,j.state AS job_state FROM c0_source_versions v
+            JOIN c0_sources s ON s.id=v.source_id AND NOT s.deleted
+            LEFT JOIN c0_jobs j ON j.id=v.job_id WHERE v.space_id=:space AND v.id=:id'''
+            + (' FOR UPDATE OF v' if lock else '')),
+            {'space': space, 'id': identifier}).mappings().one_or_none()
+        if row is None:
+            raise SourceNotFound()
+        if (type(expected_generation) is not int or expected_generation != row['generation']
+                or row['state'] == 'ready' or (row['state'] == 'queued' and row['job_state'] in ('queued','running'))):
+            raise SourceConflict()
+        return row
+
+    def retry_pdf(self, actor, version_id, *, expected_generation, pdf_password=None, pdf_approval_token=None):
+        with self.database.engine.connect() as connection:
+            current = self._authorize(connection, actor, Role.EDITOR)
+            row = self._retry_version(connection, version_id, expected_generation)
+            if row['media_type'] != 'application/pdf':
+                raise ValueError('unexpected_pdf_authorization')
+            saved = PdfAccess.get(connection, row)
+        original_path = self.originals.check(row)
+        if saved is not None and self.pdf_access is not None and pdf_password is None and pdf_approval_token is None:
+            try:
+                self.pdf_access.authorization(row, saved)
+            except ExtractionError:
+                pass  # The retained original can be reviewed again after key loss.
+            else:
+                return self.retry(actor, version_id, expected_generation=expected_generation)
+        try:
+            original = original_path.open('rb')
+        except OSError:
+            with self.database.engine.connect() as connection:
+                self._authorize(connection, actor, Role.EDITOR)
+                self._retry_version(connection, version_id, expected_generation)
+            raise ExtractionError('invalid_file') from None
+        with original:
+            authorization = self._check_manual_pdf(original, current, target='retry:' + str(row['id']),
+                revision=expected_generation, password=pdf_password, approval_token=pdf_approval_token)
+        return self.retry(actor, version_id, expected_generation=expected_generation,
+            _pdf_authorization=authorization)
+
+    def retry(self, actor, version_id, *, expected_generation, _pdf_authorization=None):
         with self.database.engine.begin() as connection:
             from .current_content import content_lock
-            from .extraction_queue import cancel_versions
             content_lock(connection)
             hold_authority(connection)
             self._authorize(connection, actor, Role.EDITOR)
-            row = connection.execute(text('''SELECT v.*,j.state AS job_state FROM c0_source_versions v
-                LEFT JOIN c0_jobs j ON j.id=v.job_id WHERE v.space_id=:space AND v.id=:id FOR UPDATE OF v'''),
-                {'space': self._space(connection), 'id': _uuid(version_id)}).mappings().one_or_none()
-            if row is None:
-                raise SourceNotFound()
-            if (type(expected_generation) is not int or expected_generation != row['generation']
-                or row['state'] == 'ready' or (row['state'] == 'queued' and row['job_state'] in ('queued','running'))):
-                raise SourceConflict()
+            row = self._retry_version(connection, version_id, expected_generation, lock=True)
+            if _pdf_authorization is not None:
+                self.pdf_access.save(connection, row, _pdf_authorization)
+            elif row['error_code'] == 'encrypted_pdf' and PdfAccess.get(connection, row) is None:
+                raise ExtractionError('encrypted_pdf')
             self.originals.check(row)
-            cancel_versions(connection, [row['id']])
-            generation = row['generation'] + 1
-            job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(row['id'])},
-                'source:' + str(row['id']) + ':extract:' + str(generation), space_id=self._space(connection))
-            return version_view(connection.execute(text('''UPDATE c0_source_versions SET state='queued',error_code=NULL,
-                generation=:generation,job_id=:job WHERE id=:id RETURNING *'''),
-                {'id': row['id'], 'generation': generation, 'job': job['id']}).mappings().one())
+            return self._queue_retry(connection, row)
+
+    def _queue_retry(self, connection, row):
+        from .extraction_queue import cancel_versions
+        cancel_versions(connection, [row['id']])
+        generation = row['generation'] + 1
+        job = self.jobs._enqueue(connection, 'source.extract', {'version_id': str(row['id'])},
+            'source:' + str(row['id']) + ':extract:' + str(generation), space_id=self._space(connection))
+        return version_view(connection.execute(text('''UPDATE c0_source_versions SET state='queued',error_code=NULL,
+            generation=:generation,job_id=:job WHERE id=:id RETURNING *'''),
+            {'id': row['id'], 'generation': generation, 'job': job['id']}).mappings().one())
 
     def reindex(self, actor, source_id, *, expected_revision, idempotency_key):
         """A new complete generation, using only a retained verified original.
@@ -376,11 +471,19 @@ class SourceService(SpaceBound):
             if row is None or not row['original_present']: raise ValueError('original_unavailable')
             if connection.execute(text("SELECT 1 FROM c0_source_versions WHERE source_id=:id AND state='queued' LIMIT 1"),
                     {'id':identifier}).scalar_one_or_none(): raise SourceConflict()
+            authorization = None
+            if row['media_type'] == 'application/pdf':
+                saved = PdfAccess.get(connection, row)
+                if saved is not None:
+                    if self.pdf_access is None:
+                        raise ExtractionError('pdf_unlock_unavailable')
+                    authorization = self.pdf_access.authorization(row, saved)
             # check() verifies immutable input; open pins bytes across cleanup.
             with self.originals.check(row).open('rb') as original:
                 return self._ingest(connection,original,title=source['title'],filename=row['filename'],
                     media_type=row['media_type'],retain_original=row['retain_original'],encoded=json.dumps(source['metadata']),
-                    source_id=identifier,expected_revision=expected_revision,force_reindex=True)
+                    source_id=identifier,expected_revision=expected_revision,force_reindex=True,
+                    pdf_authorization=authorization)
         return mutate(self.database,self._authorize,actor,'source.reindex',payload,idempotency_key,
             execute,conflict=SourceConflict)
 
@@ -573,19 +676,22 @@ def _publish_extracted(connection,row,evidence,segments,jobs,*,reuse_identical=T
     connection.execute(text("UPDATE c0_source_versions SET state='ready',error_code=NULL WHERE id=:id"), {'id': version_id})
     if not managed:publish_versions(connection,[version_id])
     if not row['retain_original']:
+        if row['media_type'] == 'application/pdf':
+            connection.execute(text('DELETE FROM c0_pdf_authorizations WHERE version_id=:id'), {'id':version_id})
         jobs._enqueue(connection, 'source.cleanup', {'version_id':str(version_id)}, 'source:' + str(version_id) + ':cleanup', space_id=row['space_id'])
     return {'state': 'ready', 'document_id': str(document_id), 'chunks': len(segments)}
 
 
-def register_source_handlers(registry, database, originals, *, access=None):
+def register_source_handlers(registry, database, originals, *, access=None, pdf_access=None):
     jobs = JobService(database, registry)
 
     def extract(connection, payload):
         from .current_content import content_lock
         content_lock(connection)
         version_id = _uuid(payload['version_id'])
-        row = connection.execute(text('SELECT * FROM c0_source_versions WHERE id=:id FOR UPDATE'),
-            {'id': version_id}).mappings().one_or_none()
+        row = connection.execute(text('''SELECT v.* FROM c0_source_versions v
+            JOIN c0_sources s ON s.id=v.source_id AND NOT s.deleted
+            WHERE v.id=:id FOR UPDATE OF v'''), {'id': version_id}).mappings().one_or_none()
         if row is None or row['state'] != 'queued':
             return {'state': 'unchanged'}
         if connection.execute(text('''SELECT 1 FROM c0_extraction_runs
@@ -593,7 +699,17 @@ def register_source_handlers(registry, database, originals, *, access=None):
             {'id':version_id,'generation':row['generation']}).scalar_one_or_none():
             return {'state':'extraction_staged'}
         try:
-            evidence = extract_isolated(originals.check(row), row['media_type'])
+            saved = PdfAccess.get(connection, row) if row['media_type'] == 'application/pdf' else None
+            original = originals.check(row)
+            if saved is None:
+                evidence = extract_isolated(original, row['media_type'])
+            else:
+                started = time.monotonic()
+                with pdf_input(original, row, saved, pdf_access) as parser_path:
+                    timeout = min(25, 27 - (time.monotonic() - started))
+                    if timeout <= 0:
+                        raise ExtractionError('parser_timeout')
+                    evidence = extract_isolated(parser_path, row['media_type'], timeout=timeout)
             segments = chunks(evidence)
         except ExtractionError as error:
             connection.execute(text("UPDATE c0_source_versions SET state='failed',error_code=:code WHERE id=:id"),
@@ -609,6 +725,8 @@ def register_source_handlers(registry, database, originals, *, access=None):
             cleanup_extractions(connection)
             abandoned=connection.execute(text("""SELECT v.id FROM c0_source_versions v JOIN c0_sources s ON s.id=v.source_id
                 WHERE v.id IS DISTINCT FROM s.current_version_id AND v.created_at<now()-interval '24 hours'
+                AND NOT EXISTS(SELECT 1 FROM c0_jobs j WHERE j.id=v.job_id
+                    AND j.state IN ('queued','running') AND j.created_at>now()-interval '24 hours')
                 AND NOT EXISTS(SELECT 1 FROM c0_extraction_runs r WHERE r.version_id=v.id
                     AND r.expires_at>clock_timestamp() AND r.state IN ('extracting','assembling','failed'))
                 ORDER BY v.created_at LIMIT 20""")).scalars().all()

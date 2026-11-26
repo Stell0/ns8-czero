@@ -123,6 +123,21 @@
     "invalidFile": "Choose a supported file",
     "required": "Enter a title",
     "confirmReprocess": "Reprocess every part of the retained original. Exact citations change only when the complete replacement publishes.",
+    "pdf": {
+      "password": "PDF password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "pdf_password_required": "Enter the password to open this PDF.",
+      "pdf_password_incorrect": "The password could not open this PDF. Try again.",
+      "invalid_pdf": "The PDF could not be read. Open and export a new copy, then upload it.",
+      "pdf_unlock_unavailable": "Saved access to this PDF is unavailable. Review the PDF and try again.",
+      "restriction": "This PDF restricts text extraction. People with Read access to {space} will be able to read the extracted text from {file}.",
+      "approve": "I’m authorized to extract text from this PDF",
+      "retentionHelp": "If C0 retains the original, it saves any required password and approval so editors can reprocess it.",
+      "reviewRetry": "Review PDF and retry",
+      "continue": "Continue",
+      "retryHelp": "Check the protection settings on {file} and retry processing."
+    },
     "states": {
       "queued": "Queued",
       "processing": "Processing",

@@ -54,7 +54,7 @@ Check legacy route
     Should Be Equal    ${health}[database][status]    ok
 
 Check application route
-    [Arguments]    ${expected_app}=0.70.0    ${route_host}=${host}    ${expected_core}=0.52.0
+    [Arguments]    ${expected_app}=0.70.0    ${route_host}=${host}    ${expected_core}=0.53.0
     ${output}    ${rc} =    Execute Command
     ...    curl --fail --silent --show-error --max-time 10 https://${route_host}/api/v1/health --insecure --resolve ${route_host}:443:127.0.0.1
     ...    return_rc=True
@@ -64,6 +64,20 @@ Check application route
     Should Be Equal    ${health}[database][status]    ok
     Should Be Equal    ${health}[core_version]    ${expected_core}
     Should Be Equal    ${health}[app_version]    ${expected_app}
+
+Check C0 dashboard registration
+    ${output}    ${rc} =    Execute Command    redis-cli --raw HGET module/${module_id}/metrics_dashboards czero-overview
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    ${dashboard} =    Evaluate    json.loads($output)    modules=json
+    Should Be Equal    ${dashboard}[uid]    czero-${module_id}
+    Should Contain    ${dashboard}[title]    ${module_id}
+
+Check C0 metrics textfile
+    ${scrape}    ${rc} =    Execute Command    cat /var/lib/nethserver/node/state/node_exporter/module-${module_id}.prom
+    ...    return_rc=True
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${scrape}    czero_database_metrics_up{module="${module_id}"} 1
 
 Check worker timer recovered
     ${output}    ${rc} =    Execute Command    api-cli run module/${module_id}/get-scheduler-status
@@ -84,7 +98,7 @@ Check worker timer recovered
 Install Czero with its own identity
     ${install_image} =    Set Variable    ${IMAGE_URL}
     IF    $SCENARIO == 'update'
-        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:ef32840cf6b92730f80decb8c45ac3b1d0076bb7ed0623b5b7fb5869b8820714
+        ${install_image} =    Set Variable    ghcr.io/stell0/czero@sha256:70ccf02cb54ee16acaeacf7d9fe699983d1b95baaca7729224eb4b8919baf630
     END
     ${output}    ${rc} =    Execute Command    add-module ${install_image} 1
     ...    return_rc=True
@@ -94,9 +108,9 @@ Install Czero with its own identity
     Should Start With    ${module_id}    czero
     Set Global Variable    ${host}    ${module_id}.test
     IF    $SCENARIO == 'update'
-        # Freeze all three actually deployed a106f18 predecessor images.
+        # Freeze all three actually deployed 450b9b3 predecessor images.
         ${rc} =    Execute Command
-        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:05e37d34478b14f6d5ac24f1c72a88f9777aa64270940d8007a537fcdb681185','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:bee0fac158c41ae862a78464a94a6a950704e27de38a9b3213b5512d1b4abd00'})"
+        ...    runagent -m ${module_id} python3 -c "import agent; agent.mset_env({'CZERO_APP_IMAGE':'ghcr.io/stell0/czero-app@sha256:e038b78d182701b42bf0cb879d0c66a504a96da2213be4a0f2b95d4ece21cdc2','CZERO_POSTGRES_IMAGE':'ghcr.io/stell0/czero-postgres@sha256:e24608eab2ff5b5827f89e29ec98f4dbe01fd138b202c0b35249910e4cd2d85b'})"
         ...    return_rc=True    return_stdout=False
         Should Be Equal As Integers    ${rc}    0
         # Seed a real predecessor database before running current lifecycle hooks.
@@ -110,7 +124,7 @@ Install Czero with its own identity
         Should Be Equal As Integers    ${rc}    0
         # Use the later suite hostname so one private provider/CA can be reused.
         Provision Disposable Sso    ${module_id}    changed-${host}
-        Predecessor Profile    ${module_id}    changed-${host}    seed    0.64.0    0.46.0
+        Predecessor Profile    ${module_id}    changed-${host}    seed    0.70.0    0.52.0
         Predecessor Content    seed
         ${rc} =    Execute Command
         ...    api-cli run update-module --data '{"force":true,"module_url":"${IMAGE_URL}","instances":["${module_id}"]}'
@@ -121,7 +135,7 @@ Install Czero with its own identity
         ...    return_rc=True
         Should Be Equal As Integers    ${rc}    0
         Should Be Equal    ${output}    7
-        Predecessor Profile    ${module_id}    changed-${host}    verify    0.70.0    0.52.0
+        Predecessor Profile    ${module_id}    changed-${host}    verify    0.70.0    0.53.0
         Predecessor Content    verify
         ${rc} =    Execute Command
         ...    api-cli run module/${module_id}/configure-module --data '{"host":"${host}","lets_encrypt":false,"user_domain":"","idp":"","owner":""}'
@@ -201,6 +215,18 @@ Configure and reconfigure the hostname service
     Should Be Equal    ${service}[active]    ${True}
     Should Be Equal    ${service}[enabled]    ${True}
     Should Be Equal    ${service}[failed]    ${False}
+
+Verify the module ships its Grafana dashboard and exports instance statistics
+    Check C0 dashboard registration
+    ${metrics}    ${rc} =    Execute Command    runagent -m ${module_id} export-metrics
+    ...    return_rc=True    timeout=25s
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${metrics}    czero_database_metrics_up 1
+    Should Contain    ${metrics}    czero_service_up{service="app"} 1
+    Should Contain    ${metrics}    czero_source_versions{state="failed"}
+    ${rc} =    Execute Command    runagent -m node refresh-module-metrics
+    ...    return_rc=True    return_stdout=False    timeout=45s
+    Wait Until Keyword Succeeds    45s    2s    Check C0 metrics textfile
 
 Verify HTTPS redirect and replace the hostname route
     ${code}    ${rc} =    Execute Command
@@ -574,6 +600,7 @@ Backup and restore into a clean disposable instance
     ${restored_id} =    Installed Module Id    ${output}
     Set Global Variable    ${module_id}    ${restored_id}
     Log To Console    Restore phase: verify health and data
+    Check C0 dashboard registration
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py restored
     ...    return_rc=True    timeout=180s
@@ -633,6 +660,7 @@ Backup and restore into a clean disposable instance
     ...    return_rc=True    return_stdout=False    timeout=180s
     Should Be Equal As Integers    ${rc}    0
     Log To Console    Restore phase: verify health and data
+    Check C0 dashboard registration
     ${output}    ${rc} =    Execute Command
     ...    runagent -m ${module_id} python3 /tmp/czero-custom-app-probe.py restored
     ...    return_rc=True    timeout=180s
@@ -717,7 +745,7 @@ Check saved settings and application HTTPS in a browser
     Should Be Equal As Integers    ${rc}    0
     Wait Until Keyword Succeeds    30s    2s    Check application route
     Go To    https://${host}/api/v1/health
-    Get Text    body    contains    "core_version":"0.52.0"
+    Get Text    body    contains    "core_version":"0.53.0"
     Get Text    body    contains    "app_version":"0.70.0"
     Go To    https://${host}/openapi.json
     Get Text    body    contains    /api/v1/health

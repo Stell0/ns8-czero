@@ -264,7 +264,7 @@ test = [
 requires-dist = [
     { name = "certifi", specifier = "==2026.10.19" },
     { name = "cryptography", specifier = "==50.0.2" },
-    { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.52.0" },
+    { name = "czero-core", git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.53.0" },
     { name = "fastapi", specifier = "==0.143.0" },
     { name = "httpcore", specifier = "==1.0.9" },
     { name = "httpx", marker = "extra == 'test'", specifier = "==0.28.1" },
@@ -279,8 +279,8 @@ provides-extras = ["test"]
 
 [[package]]
 name = "czero-core"
-version = "0.52.0"
-source = { git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.52.0#0e2930f7ec73123486d42ab2327eaa0c21e3b3b9" }
+version = "0.53.0"
+source = { git = "https://github.com/Stell0/ns8-czero.git?subdirectory=packages%2Fczero-core&tag=core-v0.53.0#88b0635d0bc588d7048f09822019e5f22817bfc8" }
 dependencies = [
     { name = "alembic" },
     { name = "authlib" },

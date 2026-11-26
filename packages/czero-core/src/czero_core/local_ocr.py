@@ -16,6 +16,7 @@ from tempfile import TemporaryDirectory
 
 from .extraction import MAX_PDF_PAGES, Extracted,ExtractionError,valid_text
 from .pdf_units import _reader,validate_page
+from .protected_pdf import native_input, parser_input, receive_parser_input
 
 LANGUAGES=('eng','ita','eng+ita')
 ENGINE=Path('/usr/bin/tesseract')
@@ -104,8 +105,9 @@ def _parse(path,page,profile):
     with TemporaryDirectory(prefix='c0-ocr-') as directory:
         environment={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','OMP_THREAD_LIMIT':'1','HOME':directory,'TMPDIR':directory}
         prefix=str(Path(directory)/'page')
+        argument, pass_fds = native_input(path)
         rendered=subprocess.run([str(RENDERER),'-f',str(page),'-l',str(page),'-singlefile','-gray','-png',
-            '-r','150','-scale-to','2400',str(path),prefix],env=environment,capture_output=True,timeout=10)
+            '-r','150','-scale-to','2400',argument,prefix],env=environment,capture_output=True,timeout=10,pass_fds=pass_fds)
         image=Path(prefix+'.png')
         if rendered.returncode or not image.is_file() or image.stat().st_size>16777216: raise ExtractionError('parser_failed')
         parsed=subprocess.run([str(ENGINE),str(image),'stdout','--tessdata-dir',str(DATA),'-l',profile['language'],'--psm','3','tsv'],
@@ -130,8 +132,9 @@ def extract_unit(path,page,profile):
     if type(page) is not int or not 1<=page<=MAX_PDF_PAGES: raise ValueError('invalid_page')
     environment={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','OMP_THREAD_LIMIT':'1'}
     if 'PYTHONPATH' in os.environ: environment['PYTHONPATH']=os.environ['PYTHONPATH']
-    child=subprocess.Popen([sys.executable,'-m','czero_core.local_ocr',str(path),str(page),json.dumps(profile)],
-        stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,env=environment)
+    argument, pass_fds = parser_input(path)
+    child=subprocess.Popen([sys.executable,'-m','czero_core.local_ocr',argument,str(page),json.dumps(profile)],
+        stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,env=environment,pass_fds=pass_fds)
     try: output,_=child.communicate(timeout=PARENT_SECONDS)
     except subprocess.TimeoutExpired:
         os.killpg(child.pid,signal.SIGKILL); child.communicate()
@@ -155,7 +158,7 @@ def main():
     import resource
     resource.setrlimit(resource.RLIMIT_AS,(512*1024*1024,512*1024*1024))
     resource.setrlimit(resource.RLIMIT_CPU,(20,21)); resource.setrlimit(resource.RLIMIT_FSIZE,(16777216,16777216))
-    try: print(json.dumps(_parse(Path(sys.argv[1]),int(sys.argv[2]),json.loads(sys.argv[3])),ensure_ascii=False))
+    try: print(json.dumps(_parse(receive_parser_input(sys.argv[1]),int(sys.argv[2]),json.loads(sys.argv[3])),ensure_ascii=False))
     except ExtractionError as error: print(json.dumps({'error':error.code}))
     except subprocess.TimeoutExpired: print(json.dumps({'error':'parser_timeout'}))
     except MemoryError: print(json.dumps({'error':'resource_limit'}))
