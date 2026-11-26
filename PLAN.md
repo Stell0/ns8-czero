@@ -38,6 +38,14 @@ against a disposable HTTPS publisher and PostgreSQL. The
 false-ready multipart inventory and adds a verified same-content repair.
 Native source and released-consumer acceptance still require their own gates.
 
+The first [full producer run](https://github.com/Stell0/ns8-czero/actions/runs/45859353456)
+preserves source `57f6ecc60beecd3df15820ec12c112754a1466e6` and its images.
+Fast feedback identified three stale producer version expectations in the
+native Robot suite. The successor fixes those current-version assertions.
+The existing frozen predecessor still uses its recorded app, Core and images.
+The version policy regressions and all 22 Robot dry runs pass locally.
+
+
 ## C0 Grafana monitoring
 
 Ship an instance-scoped dashboard through the NS8 Metrics application.
