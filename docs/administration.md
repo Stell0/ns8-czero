@@ -18,13 +18,14 @@ In Czero Settings, configure the hostname and certificate option. Enable NethSer
 
 ## Admit users and grant spaces
 
-The owner receives application Admin access. New accounts verified by the configured sign-in provider receive Reader access to Shared and spaces open to all signed-in users automatically. Open **Administration → Workspace access** to change permissions, review application requests, disconnect one connection or block a user. See the [access-page guide](workspace-access.md) for exact action meanings. Permission presets map to Reader, Editor and Admin; **Block user** is a separate explicit action. Blocking persists across later sign-ins and revokes existing access. Earlier accounts denied before this update stay blocked until an Admin deliberately changes their role. Native Settings owns the owner selection; a username or token role claim alone grants nothing.
+The owner receives application Admin access. New accounts verified by the configured sign-in provider receive Reader access to Shared and spaces open to all signed-in users automatically. Open **Administration → People and applications** to change permissions, review application requests, disconnect one connection or block a user. See the [access-page guide](workspace-access.md) for exact action meanings. Permission presets map to Reader, Editor and Admin; **Block user** is a separate explicit action. Blocking persists across later sign-ins and revokes existing access. Earlier accounts denied before this update stay blocked until an Admin deliberately changes their role. Native Settings owns the owner selection; a username or token role claim alone grants nothing.
 
 Use **Administration → Spaces** to choose **All signed-in users** or **Selected people** and manage additional grants. The first audience gives Read for the whole space, including sources and attachments; existing protected spaces remain restricted after migration. Roles and actual OAuth scopes continue to cap access. Revoking membership, a space grant or an approved client takes effect on subsequent authorized operations, including existing sessions.
 
-## Approve ChatGPT
+<a id="approve-chatgpt"></a>
+## Approve an assistant
 
-Use the [ChatGPT guide](chatgpt.md). Validated new metadata clients can connect for Read after company sign-in and user consent, without administrator review. The discovery switch is removed for both new and upgraded/restored installations. Requests for additional application permissions still need explicit administrator approval. **Decline** cancels only the selected request; it does not block a person. Technical metadata configuration is under **Technical clients**. Client approval grants no user additional role or space permission.
+Follow the [assistant setup guide](byoa.md). Validated new metadata clients can connect for Read after company sign-in and personal consent. Requests for additional application permissions require administrator approval. Use **People and applications** to review or decline a request and **Technical clients** to manage a registered application. Application approval leaves the person's role and space permissions intact.
 
 Existing manually approved UUID clients remain supported. Keep their exact callbacks and identifiers; enabling CIMD does not migrate them or require replacing a working connection. The internal UUID displayed for a CIMD approval is an administrative identifier, not its public OAuth client ID.
 
@@ -36,7 +37,7 @@ Native Settings exposes the idle and absolute bounds for ordinary website sign-i
 
 Short access tokens and normal refresh rotation do not mean that a user should log in every five minutes. Interactive requests can renew within the original bounds. Once idle/absolute browser authority expires, sign in normally; refreshing cannot add scopes or extend that browser's original absolute deadline.
 
-Users can explicitly select background access for each client on the consent page. It requires verified provider offline access with the same account. Existing active offline sign-ins can be reused when their saved inactivity limit matches the current setting; otherwise C0 requests another sign-in before final consent. Native Settings exposes its inactivity limit in whole days, from 1 to 365, default 30. This is snapshotted for new connections; changing it does not extend or shorten existing grants. Background access has no fixed maximum duration while used and survives browser logout. Browser inactivity remains independent of assistant activity. Website users can explicitly choose a fixed seven-day inactivity window after the provider authorizes offline renewal. Ordinary browser limits remain unchanged. Remembering a device does not consent to background connections, and background consent preserves that browser choice.
+Eligible new connections show **Allow background access** selected on the consent page. The user can clear it before authorizing. Background access requires verified provider offline access with the same account. C0 can reuse an active offline sign-in with the current inactivity limit, or ask for another sign-in before final consent. Native Settings sets the inactivity limit for new grants in whole days from 1 to 365, with a default of 30. Each grant uses the limit set at consent. Background access survives browser logout and has no fixed maximum while the connection is active. The website's separate **Remember this device** choice has a fixed seven-day inactivity window.
 
 Users disconnect their own connections from **Account → Your connected apps**. Disable a specific approved client to revoke all its grants; reenable permits fresh consent but does not revive old grants. Membership changes revoke existing authority. Local logout revokes bounded grants and preserves explicitly consented background grants. Provider rejection ends authority; provider sign-out may require its own confirmation and ordinarily preserves offline access. A plugin's installation policy and each user's connection credentials are separate. Database restore with a new native client or secret cannot revive the old connection.
 
@@ -56,9 +57,29 @@ Use the configured module ID, not one copied from another operator. For direct a
 
 C0 uses journald. Empty Podman logs or an inaccessible module-user journal do not prove privacy. An authorized log audit must use bounded actual application entries, the verified UID/container and positive request controls. Keep raw journals, cookies and tokens private. Share fixed status/error codes, not complete OAuth authorization URLs or credential-bearing traces.
 
+### Grafana
+
+Enable Grafana in the NS8 Metrics application, then sign in with a cluster
+administrator account and open **Dashboards**. C0 ships a separate overview
+for each installed instance. The dashboard shows service and collector health,
+MCP tool outcomes, HTTP traffic for C0 and its custom apps, source ingestion
+and failure categories, knowledge and connection counts, background work,
+and container and storage usage.
+
+C0's aggregate counters are collected by NS8 about every five minutes. HTTP
+metrics come from Traefik and include traffic to registered custom app routes.
+MCP counters count completed calls handled by C0 and reset when the application
+restarts. A tool can report an error in an HTTP 200 response. A custom app's
+private conversations, model usage and costs are outside these counters.
+The C0 exporter uses a bounded read-only database query and omits database
+statistics when the query fails. It exposes no customer content, account
+identifiers, filenames, tokens or tool arguments.
+
 ## Update, backup and restore
 
 Use native NS8 backup for the C0 instance and check completion/integrity before an update. Retained source files and logical database state must remain coordinated; do not copy a live PostgreSQL data directory as a logical backup substitute. Backups retain private data and require appropriate storage/access policy.
+The C0 backup includes the instance key for saved PDF unlocking and its sealed
+password records so retained originals can be reprocessed after a restore.
 
 Use the canonical verified candidate tag with the supported targeted update:
 

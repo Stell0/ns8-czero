@@ -66,7 +66,7 @@ def test_reader_and_editor_key_creation_respects_current_permissions(live,browse
     dialog.get_by_role('textbox',name='Name',exact=True).fill(role+' workflow')
     choice=dialog.get_by_role('checkbox',name='Shared',exact=True)
     choice.check()
-    dialog.get_by_role('checkbox',name='Write',exact=True).check()
+    dialog.get_by_role('checkbox',name='Read and write',exact=True).check()
     if role=='reader':
         expect(choice).to_be_disabled()
         dialog.get_by_role('button',name='Create API key',exact=True).click()
@@ -78,10 +78,12 @@ def test_reader_and_editor_key_creation_respects_current_permissions(live,browse
           return (await fetch('/api/v1/api-keys',{method:'POST',headers:{'Content-Type':'application/json','X-C0-CSRF':me.csrf_token},body:JSON.stringify({name:'Denied',lifetime_days:1,space_ids:[space],scopes:['c0:read','c0:write']})})).status;
         }""",shared)
         assert denied==403
-        dialog.get_by_role('checkbox',name='Write',exact=True).uncheck()
+        dialog.get_by_role('checkbox',name='Read and write',exact=True).uncheck()
     dialog.get_by_role('button',name='Create API key',exact=True).click()
     expect(browser.get_by_role('textbox',name=SECRET,exact=True)).to_be_visible()
     browser.get_by_role('button',name='I saved the key',exact=True).click()
     browser.reload()
     expect(browser.get_by_text(role+' workflow',exact=False)).to_be_visible()
-    if role=='editor':expect(browser.get_by_text(role+' workflow',exact=False)).to_contain_text('c0:write')
+    key=browser.get_by_role('listitem').filter(has=browser.get_by_role('heading',name=role+' workflow',exact=True))
+    expect(key.get_by_text('Read and write' if role=='editor' else 'Read only',exact=True)).to_be_visible()
+    expect(key.get_by_text('Shared',exact=True)).to_be_visible()

@@ -99,6 +99,32 @@ def test_rest_roles_and_negative_token_authorization(application):
     asyncio.run(check())
 
 
+@pytest.mark.parametrize('target,expected', [
+    ('admin/advanced', '/admin/advanced'),
+    ('wiki/33333333-3333-4333-8333-333333333333?space_id=22222222-2222-4222-8222-222222222222&revision=3',
+     '/wiki/33333333-3333-4333-8333-333333333333?space_id=22222222-2222-4222-8222-222222222222&revision=3'),
+    ('sources/33333333-3333-4333-8333-333333333333?version=22222222-2222-4222-8222-222222222222',
+     '/sources/33333333-3333-4333-8333-333333333333?version=22222222-2222-4222-8222-222222222222'),
+    ('search?query=Juniper+batch&mode=text', '/search?query=Juniper+batch&mode=text'),
+    ('not-a-website-route', '/'),
+])
+def test_sign_in_returns_to_supported_website_destination(application, target, expected):
+    async def check():
+        app, *_ = application
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            page = await client.get('/auth/sign-in', params={'return_to': target})
+            boot = json.loads(page.text.split('<script id="c0-boot" type="application/json">')[1].split('</script>')[0])
+            login = await client.post('/auth/sign-in', headers={'Origin': ORIGIN}, data={
+                'intent': boot['intent'], 'return_to': boot['return_to'],
+            })
+            assert login.status_code == 302
+            state = parse_qs(urlsplit(login.headers['location']).query)['state'][0]
+            callback = await client.get('/auth/callback', params={'state': state, 'code': 'unit-only-code'})
+            assert callback.status_code == 302
+            assert callback.headers['location'] == expected
+    asyncio.run(check())
+
+
 def test_browser_cookie_flags_callback_logout_and_csrf(application):
     async def check():
         app, _, _, _, _, _ = application

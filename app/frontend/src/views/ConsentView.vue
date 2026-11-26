@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import { NeButton, NeCheckbox } from '@nethesis/vue-components'
+import { StorageSerializers, useSessionStorage } from '@vueuse/core'
 import { useDraftGuard } from '../composables/draft'
 import { useSession } from '../stores/session'
 import { ApiError, localURL, request } from '../api/client'
@@ -23,9 +24,12 @@ interface Consent {
   eligible_scopes?: string[]
   allowed_scopes?: string[]
   approved?: boolean
+  draft_id?: string
+  profile?: { display_name?: string; username?: string }
+  review_id?: string
+  review_requested?: boolean
   csrf_token: string
   background_supported?: boolean
-  background_requested?: boolean
   background_ready?: boolean
   next?: string
   connection_idle_seconds?: number
@@ -47,19 +51,19 @@ const needsReview = computed(
     connecting.value &&
     !!data.value &&
     (!data.value.approved ||
-      data.value.scopes.some(
+      data.value.eligible_scopes?.some(
         (scope) => !data.value?.allowed_scopes?.includes(scope),
       )),
 )
 const eligible = computed(() =>
   needsReview.value && session.isAdmin
-    ? (data.value?.scopes || []).filter(
+    ? (data.value?.eligible_scopes || []).filter(
         (scope) =>
           !reviewed.value?.value.descriptor.scope_ceiling ||
           reviewed.value.value.descriptor.scope_ceiling.includes(scope),
       )
     : connecting.value
-      ? (data.value?.scopes || []).filter((scope) =>
+      ? (data.value?.eligible_scopes || []).filter((scope) =>
           data.value?.allowed_scopes?.includes(scope),
         )
       : data.value?.eligible_scopes || [],
@@ -83,21 +87,46 @@ interface Existing {
 const reviewed = ref<{ value: Review; existing?: Existing }>()
 const choices = ref<Record<string, boolean>>({}),
   background = ref(false)
-let initialized = false
+interface ConsentDraft {
+  id: string
+  choices: Record<string, boolean>
+  background: boolean
+}
+const saved = useSessionStorage<ConsentDraft | null>('c0-consent-draft', null, {
+  serializer: StorageSerializers.object,
+})
+let initialized: Consent | undefined
 watch([data, eligible], ([value]) => {
   if (!value) return
+  const id = value.draft_id || value.review_id
+  const sameRequest =
+    value === initialized ||
+    (id && id === (initialized?.draft_id || initialized?.review_id))
+  const savedChoices =
+    value.draft_id && saved.value?.id === value.draft_id
+      ? saved.value
+      : undefined
+  const stored = sameRequest ? choices.value : savedChoices?.choices
   choices.value = Object.fromEntries(
-    eligible.value.map((scope) => [
-      scope,
-      initialized
-        ? !!choices.value[scope]
-        : !connecting.value || scope === 'c0:read',
-    ]),
+    eligible.value.map((scope) => [scope, stored?.[scope] ?? true]),
   )
-  initialized = true
   background.value =
-    !!value?.background_supported && !!value.background_requested
+    !!value.background_supported &&
+    (sameRequest ? background.value : (savedChoices?.background ?? true))
+  initialized = value
 })
+watch(
+  [choices, background],
+  () => {
+    if (!data.value?.draft_id) return
+    saved.value = {
+      id: data.value.draft_id,
+      choices: { ...choices.value },
+      background: background.value,
+    }
+  },
+  { deep: true },
+)
 const selected = computed(() =>
   Object.keys(choices.value).filter((scope) => choices.value[scope]),
 )
@@ -143,7 +172,8 @@ watch(
 )
 async function approveApplication() {
   const review = reviewed.value
-  if (!review || !data.value || !selected.value.length) throw new ApiError(409)
+  if (!review || !data.value?.review_id || !selected.value.length)
+    throw new ApiError(409)
   if (
     review.value.descriptor.scope_ceiling &&
     selected.value.some(
@@ -152,45 +182,48 @@ async function approveApplication() {
   )
     throw new ApiError(422)
   await request(
-    `oauth/cimd/clients${review.existing ? '/' + review.existing.client_id : ''}`,
+    '/oauth/connect/approve',
     {
-      method: review.existing ? 'PUT' : 'POST',
+      method: 'POST',
       data: {
         metadata_digest: review.value.metadata_digest,
-        allowed_scopes: [
-          ...new Set([
-            ...(review.existing?.allowed_scopes || []).filter(
-              (scope) =>
-                !review.value.descriptor.scope_ceiling ||
-                review.value.descriptor.scope_ceiling.includes(scope),
-            ),
-            ...selected.value,
-          ]),
-        ],
-        ...(review.existing
-          ? { expected_revision: review.existing.revision }
-          : { metadata_url: data.value.metadata_url }),
+        review_id: data.value.review_id,
+        scopes: selected.value,
+        expected_revision: review.existing?.revision,
       },
     },
     false,
   )
 }
+const expanding = computed(
+  () =>
+    connecting.value &&
+    selected.value.some(
+      (scope) => !data.value?.allowed_scopes?.includes(scope),
+    ),
+)
+const reviewRequest = useMutation({
+  mutation: async () => {
+    await request('/oauth/connect/review', { method: 'POST', data: {} }, false)
+    await refetch()
+  },
+})
 const canSubmit = computed(
   () =>
     !!data.value &&
     !!selected.value.length &&
     !submit.isLoading.value &&
     !preview.isLoading.value &&
-    (!connecting.value ||
-      !needsReview.value ||
-      (session.isAdmin && !!reviewed.value)),
+    (!expanding.value || (session.isAdmin && !!reviewed.value)),
 )
 const submit = useMutation({
   mutation: async (approve: boolean) => {
     const current = draft.current()
     const value = data.value
     if (!value) return
-    if (approve && needsReview.value) {
+    if (!connecting.value && !value.draft_id)
+      throw new Error('Missing consent draft')
+    if (approve && expanding.value) {
       await approveApplication()
       if (!current()) return
     }
@@ -208,10 +241,12 @@ const submit = useMutation({
       path,
       {
         method: 'POST',
-        data:
-          connecting.value || signIn
-            ? { scopes: selected.value }
+        data: connecting.value
+          ? { scopes: selected.value }
+          : signIn
+            ? { draft_id: value.draft_id, scopes: selected.value }
             : {
+                draft_id: value.draft_id,
                 approve,
                 scopes: selected.value,
                 persistent: approve && background.value,
@@ -224,9 +259,10 @@ const submit = useMutation({
       location.assign(localURL(result.next))
     else if (connecting.value && result.next === '/oauth/consent')
       location.assign(localURL(result.next))
-    else if (!connecting.value && !signIn && result.redirect_uri)
+    else if (!connecting.value && !signIn && result.redirect_uri) {
+      saved.value = null
       location.assign(result.redirect_uri)
-    else throw new Error('Invalid consent destination')
+    } else throw new Error('Invalid consent destination')
   },
 })
 </script>
@@ -251,27 +287,48 @@ const submit = useMutation({
         >
           {{ data.metadata_url }}
         </p>
-        <p>{{ t('consent.permissions') }}</p>
+        <p v-if="data.profile?.display_name || data.profile?.username">
+          {{
+            t('consent.signedIn', {
+              name: data.profile.display_name || data.profile.username,
+            })
+          }}
+        </p>
         <p v-if="data.scopes?.includes('c0:read')">
           {{ t('consent.readBoundary') }}
         </p>
       </div>
       <fieldset class="min-w-0 space-y-3" :disabled="submit.isLoading.value">
         <legend class="sr-only">{{ t('consent.permissions') }}</legend>
-        <NeCheckbox
-          v-for="scope in data.scopes"
-          :key="scope"
-          v-model="choices[scope]"
-          :label="
-            t(`account.${scope === 'c0:admin' ? 'manage' : scope.slice(3)}`)
-          "
-          :disabled="
-            submit.isLoading.value ||
-            preview.isLoading.value ||
-            !eligible.includes(scope)
-          "
-        />
+        <div v-for="scope in data.scopes" :key="scope" class="space-y-1">
+          <NeCheckbox
+            v-model="choices[scope]"
+            :label="
+              t(`account.${scope === 'c0:admin' ? 'manage' : scope.slice(3)}`)
+            "
+            :disabled="
+              submit.isLoading.value ||
+              preview.isLoading.value ||
+              !eligible.includes(scope)
+            "
+          />
+          <p
+            v-if="scope === 'c0:write' || scope === 'c0:admin'"
+            class="text-sm text-text-secondary"
+          >
+            {{
+              t(
+                scope === 'c0:write'
+                  ? 'consent.writeHelp'
+                  : 'consent.manageHelp',
+              )
+            }}
+          </p>
+        </div>
       </fieldset>
+      <p v-if="!connecting && !background" class="text-sm text-text-secondary">
+        {{ t('consent.sessionHelp') }}
+      </p>
       <div v-if="data.background_supported" class="space-y-3">
         <NeCheckbox
           v-model="background"
@@ -286,21 +343,32 @@ const submit = useMutation({
           }}
         </p>
       </div>
-      <details>
-        <summary class="cursor-pointer text-link">
-          {{ t('common.details') }}
-        </summary>
-        <p class="mt-3 break-all text-sm">
-          {{ t('consent.callback') }}: {{ data.callback }}
-        </p>
-      </details>
+      <dl class="space-y-1 text-sm">
+        <dt class="font-medium">{{ t('consent.callback') }}</dt>
+        <dd class="break-all">{{ data.callback }}</dd>
+      </dl>
       <ErrorNotice
-        v-if="submit.error.value || preview.error.value"
-        :error="submit.error.value || preview.error.value"
+        v-if="
+          submit.error.value || preview.error.value || reviewRequest.error.value
+        "
+        :error="
+          submit.error.value || preview.error.value || reviewRequest.error.value
+        "
       />
       <div v-if="connecting && needsReview" class="space-y-3">
         <p>
-          {{ t(session.isAdmin ? 'consent.adminApproval' : 'consent.pending') }}
+          {{
+            t(
+              session.isAdmin
+                ? 'consent.adminApproval'
+                : data.review_requested
+                  ? 'consent.pending'
+                  : 'consent.extraApproval',
+            )
+          }}
+        </p>
+        <p v-if="expanding && reviewed?.existing">
+          {{ t('consent.reapproval') }}
         </p>
         <NeButton
           v-if="session.isAdmin && preview.error.value"
@@ -310,10 +378,17 @@ const submit = useMutation({
           >{{ t('common.reload') }}</NeButton
         >
         <NeButton
-          v-else-if="!session.isAdmin"
+          v-else-if="!session.isAdmin && data.review_requested"
           kind="secondary"
           @click="refetch()"
           >{{ t('common.reload') }}</NeButton
+        >
+        <NeButton
+          v-else-if="!session.isAdmin"
+          kind="secondary"
+          :loading="reviewRequest.isLoading.value"
+          @click="reviewRequest.mutate()"
+          >{{ t('consent.requestApproval') }}</NeButton
         >
       </div>
       <div class="flex flex-wrap gap-4">
@@ -325,11 +400,13 @@ const submit = useMutation({
         >
           {{
             t(
-              connecting && needsReview && session.isAdmin
+              expanding && session.isAdmin
                 ? 'consent.approveContinue'
-                : background && !data.background_ready
-                  ? 'consent.continue'
-                  : 'consent.authorize',
+                : connecting
+                  ? 'consent.continueWithSelected'
+                  : background && !data.background_ready
+                    ? 'consent.continue'
+                    : 'consent.authorize',
             )
           }}
         </NeButton>

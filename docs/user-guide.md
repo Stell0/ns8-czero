@@ -4,7 +4,7 @@
 
 Open the instance URL provided by your administrator and sign in with your domain account. The C0 application account is separate from NS8 cluster administration. A new verified account receives Reader access to Shared. If access is denied, ask the C0 owner/Admin to check Workspace access for an explicit block or retained earlier denial; repeat login after a role change. Approval of a ChatGPT connection does not grant membership.
 
-Use the space picker to choose the intended knowledge space. Shared is the legacy common space. Protected spaces need explicit grants, capped by your application role; application Admins can access all spaces. A failed or revoked selection is not permission to switch to Shared. Check the account and space again when changing connections.
+Use the space picker to choose the intended knowledge space. Shared is the legacy common space. A space can allow all signed-in users to read or restrict access to selected people. Individual grants are capped by your workspace role. Workspace Admins can access all spaces. A failed or revoked selection is not permission to switch to Shared. Check the account and space again when changing connections.
 
 | Role | Typical access |
 | --- | --- |
@@ -74,12 +74,23 @@ and retain only current content. Article slugs such as `product/install` form
 the navigation tree; existing slugs are fixed.
 
 Editors can use **Sources → Upload source** for TXT, Markdown, PDF or DOCX, with
-a title and optional provenance. **Retain the original file** starts unchecked.
+a title and optional provenance. A PDF may contain up to 2,000 pages and be up
+to 100 MiB. Other upload formats have a 10 MiB limit. **Retain the original
+file** starts unchecked.
+
+C0 checks PDF protection before processing. Enter the opening password if
+requested. If the PDF restricts text copying, confirm that you are authorized
+to extract its text into the selected space. People who can read that space can
+read the extracted text. Use **Review PDF and retry** for a failed protected
+PDF whose upload is still available. If the original was discarded, upload a
+replacement. For a retained PDF, C0 saves its authorization and any required
+password securely so an editor can reprocess the same file later.
+
 Original download and reprocessing require retention. On a source, **Upload
 replacement** keeps its current complete document readable while extraction and
 whole-document validation run. **Reprocess original**, **Retry processing** and
 **Cancel processing** appear when supported and authorized. Reload only refreshes
-the displayed state. External collectors remain assistant/script workflows.
+the displayed state. If an administrator has enabled Automatic sources, authorized users can follow collection status from Sources. External assistants and scripts can also collect and ingest material. [Automatic sources](automatic-sources.md)
 
 Before changing a page, read its current revision. A conflict means another change occurred: reload, reconcile both observations and retry with the new revision. An unchanged request with an idempotency key keeps that key after an uncertain reply. Not every mutation has replay protection; inspect saved results before repeating an ordinary create.
 
@@ -95,7 +106,7 @@ Use your owner/Editor account and choose the intended authorized space. This sma
 2. Open **Sources → Upload source**, select that file, give the source a recognizable title and upload. Opt into retention if you want to test downloading it. Wait for successful extraction; an accepted upload alone is insufficient.
 3. Browse the saved source, select its extracted document and read the passage. Retain its source/version/document/chunk identity or copy the source reader's link. Stop and inspect the fixed error/status if extraction fails.
 4. Ask an authorized assistant to create a Wiki page in this same space with slug `quickstart/first-read`, title `First C0 read`, and Markdown describing the synthetic 37-kilopascal observation with a link to that original source. Have it read back the saved revision, then open Wiki and check the article. A normal Markdown link is a navigational reference; it does not create a structured sourced claim.
-5. After [connecting ChatGPT](chatgpt.md), ask it to read that article, find the original demonstration-gauge passage in the same space and cite its immutable evidence. Make no changes. Confirm the answer says that this is synthetic data and includes the actual source identity.
+5. After [connecting your assistant](byoa.md), ask it to read that article, find the original demonstration-gauge passage in the same space and cite its immutable evidence. Make no changes. Confirm the answer says that this is synthetic data and includes the actual source identity.
 
 For a maintenance test, explicitly request one small edit to this owned page after the Admin approves write scope and you consent. Read it back and check its new current revision. A Reader connection should explain denial and leave content unchanged. Keep the fixture available for repeat/renewal tests; ask the authorized assistant to archive the test page when finished.
 

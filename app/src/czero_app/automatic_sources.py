@@ -126,7 +126,10 @@ def install(app,database,auth,read_context,write_context):
         except UpdateConflict:raise AutomaticSourceError('automatic_source_conflict',409) from None
         except (ValueError,RuntimeError) as error:
             reason=error.args[0] if len(error.args)==1 and type(error.args[0]) is str else 'invalid_automatic_source'
-            raise AutomaticSourceError(reason) from None
+            raise AutomaticSourceError(reason, 429 if reason == 'drive_preview_busy' else 422) from None
+
+    from czero_app.google_drive_routes import install as install_google_drive
+    install_google_drive(app, auth, service, invoke, read_context, write_context)
 
     async def source_error(request,error):
         return JSONResponse(error.payload,status_code=error.status_code,headers=error.headers)
@@ -161,7 +164,7 @@ def install(app,database,auth,read_context,write_context):
         return invoke(space_id,'save',context.actor,**data.model_dump())
 
     @app.post('/api/v1/automatic-sources/{identifier}/actions',response_model=Ack,responses=VALIDATION_RESPONSE)
-    @operation('automatic_sources_command','Run now, pause or remove a source definition. Removal retains collected documents. Requires current revision; running requires enabled background authority.',Role.EDITOR,Ack,read_only=False,space_field='space_id')
+    @operation('automatic_sources_command','Run a public source, or pause or remove a definition. Personal Drive runs require the owning Editor’s browser. Removal retains collected documents. Requires current revision; running requires enabled background authority.',Role.EDITOR,Ack,read_only=False,space_field='space_id')
     def command(space_id:UUID,identifier:UUID,data:Command,context:RequestAccess=Depends(write_context)):
         return invoke(space_id,'command',context.actor,identifier=identifier,**data.model_dump())
 

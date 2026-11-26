@@ -6,6 +6,7 @@ export class ApiError extends Error {
     public code = '',
     public reason = '',
     public field = '',
+    public approvalToken = '',
   ) {
     super('C0 request failed')
   }
@@ -17,14 +18,14 @@ export class StaleResponse extends Error {}
 export class AccessBoundary {
   epoch = 0
   private controllers = new Set<AbortController>()
-  private listeners = new Set<() => void>()
-  invalidate() {
+  private listeners = new Set<(rejection?: ApiError) => void>()
+  invalidate(rejection?: ApiError) {
     this.epoch++
     for (const controller of this.controllers) controller.abort()
     this.controllers.clear()
-    for (const listener of this.listeners) listener()
+    for (const listener of this.listeners) listener(rejection)
   }
-  onClear(listener: () => void) {
+  onClear(listener: (rejection?: ApiError) => void) {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
@@ -104,14 +105,21 @@ export async function request<T>(
         typeof error.response?.data?.detail === 'string'
           ? error.response.data.detail
           : ''
-      if (status === 401 || status === 403) boundary.invalidate()
       const data = error.response?.data
-      throw new ApiError(
+      const failure = new ApiError(
         status,
         code,
         typeof data?.reason === 'string' ? data.reason : '',
         typeof data?.field === 'string' ? data.field : '',
+        status === 422 &&
+          code === 'pdf_extraction_approval_required' &&
+          typeof data?.approval_token === 'string' &&
+          data.approval_token.length <= 80
+          ? data.approval_token
+          : '',
       )
+      if (status === 401 || status === 403) boundary.invalidate(failure)
+      throw failure
     }
   })
 }
@@ -133,6 +141,10 @@ export function errorKey(error: unknown) {
     if (error.status === 409) return 'errors.conflict'
     if (error.status === 401 || error.status === 403) return 'errors.access'
     if (error.status === 404) return 'errors.missing'
+    if (error.code === 'pdf_unlock_unavailable')
+      return 'sources.pdf.pdf_unlock_unavailable'
+    if (error.status === 422 && error.code === 'invalid_pdf')
+      return 'sources.pdf.invalid_pdf'
     if (error.status === 422) return 'errors.invalid'
   }
   return 'errors.unavailable'
@@ -143,6 +155,14 @@ const automaticSourceReasons = [
   'invalid_github_repositories',
   'invalid_github_selection',
   'invalid_github_ref',
+  'invalid_drive_folder',
+  'drive_unavailable',
+  'drive_reconnect_required',
+  'drive_offline_required',
+  'drive_preview_required',
+  'drive_item_unavailable',
+  'drive_provider_error',
+  'drive_scope_mismatch',
   'invalid_source_configuration',
   'invalid_source_selection',
   'invalid_source_limit',

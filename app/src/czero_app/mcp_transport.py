@@ -33,6 +33,7 @@ from czero_core.renewal import RenewalUnavailable
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 from czero_app.agent_guidance import agent_guidance, SERVER_INSTRUCTIONS
+from czero_app.mcp_metrics import module_tool_counts
 from czero_app.tool_guidance import annotations_for, presented_operations
 from czero_app.object_errors import mcp_object_error
 from czero_app.knowledge_errors import KNOWLEDGE_OPERATIONS, mcp_knowledge_error
@@ -263,6 +264,14 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
         metadata = {'c0/error':{'code':message, 'status':status}} if params.name in REFERENCE_OPERATIONS | KNOWLEDGE_OPERATIONS | SPACE_OPERATIONS | PROJECT_OPERATIONS | CONTEXT_OPERATIONS | COMPILATION_OPERATIONS else None
         return types.CallToolResult(is_error=True, content=[types.TextContent(type='text', text=message)], meta=metadata)
 
+    tool_counts = module_tool_counts()
+
+    async def counted_call(ctx, params):
+        result = await call(ctx, params)
+        if tool_counts is not None:
+            tool_counts.record(is_error=result.is_error)
+        return result
+
     async def resources(ctx, params):
         await describe()
         return types.ListResourcesResult(resources=[types.Resource(uri='c0://capabilities',
@@ -299,7 +308,7 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
         except (SQLAlchemyError, TransportUnavailable):
             raise MCPError(-32603, 'service_unavailable') from None
 
-    server = Server('Czero', version=__version__, instructions=SERVER_INSTRUCTIONS, on_list_tools=tools, on_call_tool=call,
+    server = Server('Czero', version=__version__, instructions=SERVER_INSTRUCTIONS, on_list_tools=tools, on_call_tool=counted_call,
         on_list_resources=resources, on_list_resource_templates=templates, on_read_resource=read)
     server.middleware.append(oauth_tool_metadata)
     child = server.streamable_http_app(stateless_http=True, json_response=True,
@@ -308,10 +317,9 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None):
             validate_token_resource=True, required_scopes=[]), token_verifier=Verifier(),
         transport_security=TransportSecuritySettings(allowed_hosts=[parsed.netloc],
             allowed_origins=[parsed.scheme + '://' + parsed.netloc]))
-    # Start discovery with basic read access. Per-tool requirements/challenges
-    # describe upgrades; no scope is globally mandatory for write/admin tokens.
+    # Advertise the catalog without making any one scope globally mandatory.
     metadata = create_protected_resource_routes(AnyHttpUrl(resource), [AnyHttpUrl(issuer_url)],
-        scopes_supported=['c0:read'], resource_name='Czero')
+        scopes_supported=sorted(SCOPES), resource_name='Czero')
     path = metadata[0].path
     child.router.routes = [route for route in child.router.routes if route.path != path] + metadata
     child.add_middleware(TransportLimits)

@@ -4,7 +4,7 @@ from io import BytesIO
 from uuid import uuid4
 
 import pytest
-from czero_core.extraction import ExtractionError, MAX_UPLOAD
+from czero_core.extraction import ExtractionError, MAX_PDF_BYTES, MAX_UPLOAD
 from czero_core.sources import OriginalStore, _metadata, _payload
 
 
@@ -13,6 +13,26 @@ def test_oversized_empty_and_invalid_uploads_leave_no_partial_files(tmp_path):
     for content, code in [(b'', 'empty_upload'), (b'x' * (MAX_UPLOAD + 1), 'too_large')]:
         with pytest.raises(ValueError, match=code): store.write(uuid4(), BytesIO(content))
         assert list(store.root.iterdir()) == []
+
+
+def test_pdf_original_stream_accepts_100_mib_and_rejects_the_next_byte(tmp_path):
+    class SizedStream:
+        def __init__(self, size):
+            self.remaining = size
+
+        def read(self, limit):
+            count = min(self.remaining,limit)
+            self.remaining -= count
+            return b'x' * count
+
+    store = OriginalStore(tmp_path / 'originals')
+    identifier = uuid4()
+    assert MAX_PDF_BYTES == 100 * 1024 * 1024
+    _, size = store.write(identifier, SizedStream(MAX_PDF_BYTES), media_type='application/pdf')
+    assert store.path(identifier).stat().st_size == size == MAX_PDF_BYTES
+    with pytest.raises(ExtractionError,match='too_large'):
+        store.write(uuid4(), SizedStream(MAX_PDF_BYTES+1), media_type='application/pdf')
+    assert list(store.root.iterdir()) == [store.path(identifier)]
 
 
 def test_source_root_symlink_and_request_path_are_rejected(tmp_path):

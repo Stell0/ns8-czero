@@ -45,6 +45,24 @@ const { t } = useI18n(),
   reviewed = ref<Review>(),
   scopes = ref<Record<string, boolean>>({ 'c0:read': true })
 const notice = ref('')
+const registered = ref('')
+const copied = ref(false)
+function publicId(client: Client) {
+  return (
+    cimd.data.value?.clients.find((item) => item.client_id === client.client_id)
+      ?.metadata_url || client.client_id
+  )
+}
+async function copyId() {
+  const id = registered.value
+  if (!id) return
+  try {
+    await navigator.clipboard.writeText(id)
+    if (registered.value === id) copied.value = true
+  } catch {
+    copied.value = false
+  }
+}
 const allowed = computed(() =>
   Object.keys(scopes.value).filter((scope) => scopes.value[scope]),
 )
@@ -87,8 +105,8 @@ const save = useMutation({
     const allowed_scopes = [...allowed.value]
     if (!allowed_scopes.length) return
     notice.value = ''
-    if (mode.value === 'uuid')
-      await request(
+    if (mode.value === 'uuid') {
+      const client = await request<Client>(
         'oauth/clients',
         {
           method: 'POST',
@@ -103,8 +121,10 @@ const save = useMutation({
         },
         false,
       )
-    else {
+      if (current()) registered.value = client.client_id
+    } else {
       if (!reviewed.value) return
+      const metadataId = reviewed.value.descriptor.client_id
       const existing = selected.value
       if (
         existing?.enabled &&
@@ -131,11 +151,16 @@ const save = useMutation({
         },
         false,
       )
+      if (current()) registered.value = metadataId
     }
     if (current()) {
       drawer.value = false
       reviewed.value = undefined
-      notice.value = t('admin.approvalSaved')
+      notice.value = t(
+        mode.value === 'uuid'
+          ? 'admin.registrationSaved'
+          : 'admin.approvalSaved',
+      )
     }
     await Promise.all([clients.refetch(), cimd.refetch()])
   },
@@ -157,6 +182,9 @@ function create() {
   draft.clear()
   scopes.value = { 'c0:read': true }
   selected.value = undefined
+  registered.value = ''
+  notice.value = ''
+  copied.value = false
   name.value = ''
   callbacks.value = ''
   url.value = ''
@@ -166,6 +194,9 @@ function create() {
 }
 function review(client: Client) {
   draft.clear()
+  registered.value = ''
+  copied.value = false
+  notice.value = ''
   selected.value = client
   url.value = client.metadata_url || ''
   mode.value = 'metadata'
@@ -180,6 +211,23 @@ function review(client: Client) {
 <template>
   <div class="space-y-6">
     <p v-if="notice" role="status">{{ notice }}</p>
+    <div
+      v-if="registered"
+      class="space-y-3 rounded-lg border border-default p-4"
+    >
+      <NeTextInput
+        :model-value="registered"
+        :label="t('admin.publicClientId')"
+        readonly
+      />
+      <p class="text-sm text-text-secondary">
+        {{ t('admin.publicClientHelp') }}
+      </p>
+      <NeButton kind="secondary" @click="copyId">{{
+        t('admin.copyClientId')
+      }}</NeButton>
+      <p v-if="copied" role="status">{{ t('admin.clientIdCopied') }}</p>
+    </div>
     <NeButton kind="primary" @click="create">{{
       t('admin.createClient')
     }}</NeButton
@@ -195,14 +243,29 @@ function review(client: Client) {
           :key="client.client_id"
           class="space-y-3 rounded-lg border border-default p-4"
         >
-          <h2 class="text-lg font-medium">{{ client.client_name }}</h2>
-          <p>{{ client.allowed_scopes.join(', ') }}</p>
-          <details>
-            <summary>{{ t('common.details') }}</summary>
-            <pre class="overflow-auto text-sm">{{
-              JSON.stringify(client, null, 2)
-            }}</pre>
-          </details>
+          <h2 class="break-all text-lg font-medium">
+            {{ client.client_name }}
+          </h2>
+          <dl class="space-y-1 break-all text-sm">
+            <template v-if="cimd.data.value">
+              <dt class="font-medium">{{ t('admin.publicClientId') }}</dt>
+              <dd>{{ publicId(client) }}</dd>
+            </template>
+            <dt class="font-medium">{{ t('consent.callback') }}</dt>
+            <dd v-for="uri in client.redirect_uris" :key="uri">{{ uri }}</dd>
+            <dt class="font-medium">{{ t('admin.clientPermissions') }}</dt>
+            <dd>
+              {{
+                client.allowed_scopes
+                  .map((scope) =>
+                    t(
+                      `account.${scope === 'c0:admin' ? 'manage' : scope.slice(3)}`,
+                    ),
+                  )
+                  .join(', ')
+              }}
+            </dd>
+          </dl>
           <div class="flex flex-wrap gap-3">
             <NeButton
               kind="secondary"
@@ -252,15 +315,15 @@ function review(client: Client) {
           :error="save.error.value || preview.error.value"
         /><NeListbox
           v-model="mode"
-          :label="t('admin.clients')"
+          :label="t('admin.registrationMethod')"
           :disabled="
             !!selected || save.isLoading.value || preview.isLoading.value
           "
           :options="[
-            { id: 'uuid', label: 'OAuth' },
+            { id: 'uuid', label: t('admin.manualRegistration') },
             {
               id: 'metadata',
-              label: 'HTTPS',
+              label: t('admin.metadataRegistration'),
               disabled: !cimd.data.value?.enabled,
             },
           ]"
@@ -325,7 +388,9 @@ function review(client: Client) {
             !allowed.length ||
             (mode === 'metadata' && !reviewed)
           "
-          >{{ t('admin.approve') }}</NeButton
+          >{{
+            t(mode === 'uuid' ? 'admin.createClient' : 'admin.approve')
+          }}</NeButton
         >
       </form></NeSideDrawer
     >

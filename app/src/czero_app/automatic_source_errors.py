@@ -10,6 +10,15 @@ AUTOMATIC_SOURCE_OPERATIONS = frozenset({
 
 # Field paths describe the request, not values supplied by a caller or remote host.
 ERRORS = {
+    'invalid_drive_folder': ('folder_url', 'Enter a folder link from your own My Drive.'),
+    'drive_preview_busy': (None, 'Another folder preview is in progress. Try again shortly.'),
+    'drive_unavailable': (None, 'Google Drive is unavailable on this instance.'),
+    'drive_reconnect_required': (None, 'Reconnect your Google account.'),
+    'drive_offline_required': (None, 'Connect Google with background access before enabling updates.'),
+    'drive_preview_required': ('preview_token', 'Preview the selected folder again before saving.'),
+    'drive_item_unavailable': ('folder_url', 'Check access to the selected Google Drive folder.'),
+    'drive_provider_error': (None, 'Google Drive could not complete this request.'),
+    'drive_scope_mismatch': (None, 'Reconnect with the requested Google Drive permission.'),
     'invalid_automatic_source': (None, 'Check the source configuration and try again.'),
     'invalid_github_repositories': ('config.repositories', 'Enter 1–100 distinct repositories as owner/repository_name. An organization name alone is not supported.'),
     'invalid_github_selection': ('config.include', 'Select at least one GitHub content type: files, issues, pull_requests or releases.'),

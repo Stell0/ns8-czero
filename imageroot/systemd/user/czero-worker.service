@@ -20,7 +20,11 @@ ExecStart=/usr/bin/podman run --rm --name=czero-worker \
     --cap-drop=ALL --security-opt=no-new-privileges \
     --pod-id-file=%t/czero.pod-id \
     --env-file=./passwords.env --env-file=./auth.env \
+    --env=CZERO_BASE_PATH=${CZERO_BASE_PATH} \
+    --env-file=./google-drive.env \
     --env-file=./retrieval.env \
+    --secret=czero-pdf-unlock,target=/run/czero-pdf-unlock.key,uid=10001,gid=10001,mode=0400 \
+    --env=CZERO_PDF_UNLOCK_KEY_FILE=/run/czero-pdf-unlock.key \
     --volume=czero-sources:/var/lib/czero/sources:z \
     --entrypoint=python ${CZERO_APP_IMAGE} -m czero_app.worker
 ExecStop=/usr/bin/podman stop --ignore -t 10 czero-worker

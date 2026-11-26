@@ -10,7 +10,7 @@ PR recorded in the historical evidence below.
 ## Developer documentation classification
 
 The closed documentation allowlist includes the PR template, shared developer
-reference and all ten named repository skills. Packaged end-user skills remain
+reference and the named repository skills. Packaged end-user skills remain
 runtime inputs and require full acceptance. Documentation checks validate links,
 skill discovery metadata and generated standalone-fork references.
 

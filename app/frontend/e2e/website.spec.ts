@@ -1,4 +1,19 @@
 import { expect, test } from '@playwright/test'
+
+test('signed-out administration offers a single sign-in action and an internal return', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/me', (route) =>
+    route.fulfill({ status: 401, json: {} }),
+  )
+  await page.goto('/admin/advanced')
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Sign in' }),
+  ).toHaveAttribute('href', /return_to=admin%2Fadvanced$/)
+  await expect(
+    page.getByRole('main').getByRole('button', { name: 'Reload' }),
+  ).toHaveCount(0)
+})
 import {
   api,
   shared,
@@ -208,6 +223,94 @@ test('source replacement defaults to no original retention and retains revision 
   )
 })
 
+const extractionFailures = [
+  ['encrypted_pdf', 'The PDF is encrypted. Upload an unencrypted copy.'],
+  [
+    'unsupported_scan',
+    'The PDF contains scanned pages without searchable text. Upload a copy with a searchable text layer.',
+  ],
+  [
+    'invalid_pdf',
+    'The PDF could not be read. Open and export a new copy, then upload it.',
+  ],
+  [
+    'too_large',
+    'The file or its extracted text exceeds a processing limit. Split it into smaller files or upload a shorter version.',
+  ],
+  [
+    'unrecognized_failure',
+    'The file could not be processed. If you have Write access, retry processing or upload a new copy.',
+  ],
+] as const
+
+for (const [code, message] of extractionFailures) {
+  test(`source file explains ${code} using the document failure`, async ({
+    page,
+  }) => {
+    await api(page)
+    await page.route(`**/api/v1/source-documents/${source}?**`, (route) =>
+      route.fulfill({
+        json: {
+          id: source,
+          title: 'Example PDF',
+          state: 'incomplete',
+          error_code: code,
+          media_type: 'application/pdf',
+          body: null,
+          metadata: {},
+          multipart: false,
+          parts: [],
+          original_version_ids: [],
+        },
+      }),
+    )
+    await page.route(`**/api/v1/sources/${source}/extraction?**`, (route) =>
+      route.fulfill({ status: 404, json: { detail: 'source_not_found' } }),
+    )
+    await page.goto(`/sources/${source}?space_id=${shared}`)
+    const notice = page
+      .getByRole('alert')
+      .filter({ hasText: 'Cannot process source file' })
+    await expect(notice).toContainText(message)
+    await expect(notice).not.toContainText(code)
+  })
+}
+
+test('failed extraction leaves the published source available', async ({
+  page,
+}) => {
+  await api(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => localStorage.setItem('c0-theme', 'dark'))
+  let state = 'failed'
+  await page.route(`**/api/v1/sources/${source}/extraction?**`, (route) =>
+    route.fulfill({
+      json: {
+        version_id: 'staged',
+        state,
+        error_code: 'parser_timeout',
+        current_available: true,
+        run: null,
+      },
+    }),
+  )
+  await page.goto(`/sources/${source}?space_id=${shared}`)
+  const notice = page
+    .getByRole('alert')
+    .filter({ hasText: 'Cannot process source file' })
+  await expect(notice).toContainText('Processing took too long.')
+  await expect(page.locator('article')).toContainText(
+    'Original published document.',
+  )
+
+  state = 'retrying'
+  await page.getByRole('button', { name: 'Reload', exact: true }).click()
+  await expect(notice).toHaveCount(0)
+  await expect(page.locator('article')).toContainText(
+    'Original published document.',
+  )
+})
+
 test('superseded evidence stays unavailable without requesting replacement text', async ({
   page,
 }) => {
@@ -298,7 +401,9 @@ test('closing key creation discards a late one-time secret', async ({
   await drawer
     .getByRole('textbox', { name: 'Name', exact: true })
     .fill('Cancelled disclosure')
-  await drawer.getByRole('checkbox', { name: 'Write', exact: true }).check()
+  await drawer
+    .getByRole('checkbox', { name: 'Read and write', exact: true })
+    .check()
   await drawer.getByRole('checkbox', { name: 'Shared', exact: true }).check()
   await drawer
     .getByRole('button', { name: 'Create API key', exact: true })
@@ -321,7 +426,7 @@ test('closing key creation discards a late one-time secret', async ({
     drawer.getByRole('textbox', { name: 'Name', exact: true }),
   ).toHaveValue('')
   await expect(
-    drawer.getByRole('checkbox', { name: 'Write', exact: true }),
+    drawer.getByRole('checkbox', { name: 'Read and write', exact: true }),
   ).not.toBeChecked()
   await expect(
     drawer.getByRole('checkbox', {

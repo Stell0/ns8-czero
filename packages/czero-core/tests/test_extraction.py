@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
 from pathlib import Path
-from types import SimpleNamespace
+import sys
 import zipfile
 
 import pytest
@@ -105,14 +105,18 @@ def test_special_files_limits_unknown_format_and_chunk_bounds(tmp_path):
         with pytest.raises(ValueError):chunks(Extracted('text',[]),size=size,overlap=overlap)
 
 
-def test_isolated_parser_deadline_and_signals_have_safe_codes(tmp_path,monkeypatch):
+def test_isolated_parser_deadline_and_signals_have_safe_codes(monkeypatch):
     import subprocess
-    import czero_core.extraction as module
-    def timeout(*args,**kwargs):raise subprocess.TimeoutExpired('private-path',25)
-    monkeypatch.setattr(module.subprocess,'run',timeout)
-    with pytest.raises(ExtractionError,match='parser_timeout'):extract_isolated(tmp_path/'file','text/plain')
-    monkeypatch.setattr(module.subprocess,'run',lambda *args,**kwargs:SimpleNamespace(returncode=-9,stdout=b'',stderr=b'private-path'))
-    with pytest.raises(ExtractionError,match='resource_limit'):extract_isolated(tmp_path/'file','text/plain')
+    from czero_core.extraction import parser_output
+    communicate = subprocess.Popen.communicate
+    def shortened_deadline(process, input=None, timeout=None):
+        return communicate(process, input, 0.05 if timeout is not None else None)
+    with monkeypatch.context() as patch:
+        patch.setattr(subprocess.Popen, 'communicate', shortened_deadline)
+        with pytest.raises(ExtractionError, match='^parser_timeout$'):
+            parser_output([sys.executable, '-c', 'import time; time.sleep(5)'])
+    with pytest.raises(ExtractionError, match='^resource_limit$'):
+        parser_output([sys.executable, '-c', 'import os, signal; os.kill(os.getpid(), signal.SIGKILL)'])
 
 
 def test_parser_isolation_works_without_existing_bytecode_cache(tmp_path,monkeypatch):

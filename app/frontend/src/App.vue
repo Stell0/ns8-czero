@@ -11,7 +11,7 @@ import {
 } from '@nethesis/vue-components'
 import { useSession } from './stores/session'
 import { usePreferences } from './stores/preferences'
-import { boundary, localURL } from './api/client'
+import { ApiError, boundary, localURL } from './api/client'
 import ErrorNotice from './components/ErrorNotice.vue'
 
 const session = useSession()
@@ -20,6 +20,13 @@ const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authFlow = computed(() => /^\/(auth|oauth)\//.test(route.path))
+const signedOut = computed(
+  () => session.error instanceof ApiError && session.error.status === 401,
+)
+const signIn = computed(() => {
+  const path = route.fullPath.slice(1).split('#', 1)[0]
+  return localURL('/auth/sign-in?return_to=' + encodeURIComponent(path))
+})
 const menu = ref(false)
 function openMenu() {
   document.getElementById('navigation-toggle')?.focus()
@@ -65,9 +72,21 @@ watch(
     () => route.query.space_id,
     () => route.meta.public,
     () => route.meta.optionalSession,
+    () => route.fullPath.split('#')[0],
   ],
-  ([value]) => {
-    if (!route.meta.public || route.meta.optionalSession)
+  (
+    [value, isPublic, optional],
+    [oldValue, wasPublic, wasOptional, previousLocation],
+  ) => {
+    if (isPublic && !optional) return
+    if (
+      previousLocation === undefined ||
+      value !== oldValue ||
+      isPublic !== wasPublic ||
+      optional !== wasOptional ||
+      (!session.ready &&
+        (session.loading || (session.profile && session.space)))
+    )
       void session.load(value ?? null)
   },
   { immediate: true },
@@ -277,17 +296,51 @@ function search() {
         >
           <RouterView :key="`${session.generation}:${route.path}`" />
         </template>
+        <template v-else-if="signedOut">
+          <p>{{ t('account.signInRequired') }}</p>
+          <a :href="signIn" class="text-link">{{ t('account.signin') }}</a>
+        </template>
+        <template
+          v-else-if="
+            session.error instanceof ApiError &&
+            session.error.code === 'space_unavailable'
+          "
+        >
+          <p role="alert">{{ t('errors.spaceDenied') }}</p>
+          <a
+            :href="
+              localURL(
+                '/' +
+                  (session.spaces[0]
+                    ? '?space_id=' + session.spaces[0].id
+                    : ''),
+              )
+            "
+            class="text-link"
+            >{{ t('nav.home') }}</a
+          >
+        </template>
+        <template
+          v-else-if="
+            !session.profile &&
+            session.error instanceof ApiError &&
+            session.error.status === 403
+          "
+        >
+          <p role="alert">{{ t('errors.accountDenied') }}</p>
+        </template>
+        <template
+          v-else-if="session.ready && route.meta.admin && !session.isAdmin"
+        >
+          <p role="alert">{{ t('errors.adminDenied') }}</p>
+          <a :href="localURL('/')" class="text-link">{{ t('nav.home') }}</a>
+        </template>
         <template v-else>
           <ErrorNotice v-if="session.error" :error="session.error" />
-          <p v-else>{{ t('errors.access') }}</p>
-          <div class="flex gap-4">
-            <a :href="localURL('/auth/sign-in')" class="text-link">{{
-              t('account.signin')
-            }}</a>
-            <NeButton kind="secondary" @click="session.load()">{{
-              t('common.reload')
-            }}</NeButton>
-          </div>
+          <p v-else role="alert">{{ t('errors.access') }}</p>
+          <NeButton kind="secondary" @click="session.load()">{{
+            t('common.reload')
+          }}</NeButton>
         </template>
       </main>
     </div>

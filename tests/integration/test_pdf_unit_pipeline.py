@@ -40,6 +40,41 @@ def drain(queue):
         if worker.tick()==0: break
 
 
+def test_resume_and_publish_a_2000_page_pdf_in_the_default_queue(sources):
+    from io import BytesIO
+    from pypdf import PdfReader, PdfWriter
+    from czero_core.extraction import Extracted
+    from czero_core.extraction_queue import _result
+
+    writer = PdfWriter()
+    for _ in range(1999):
+        writer.add_blank_page(width=612, height=792)
+    writer.add_page(PdfReader(FIXTURES/'mixed-scan.pdf').pages[0])
+    original = BytesIO()
+    writer.write(original)
+    version = upload(sources, original.getvalue(), filename='long.pdf', media_type='application/pdf',
+                     retain_original=True)
+    service, owner, _, _ = sources
+    queue = ExtractionQueue(service.database, service.access, service.originals, enabled=True)
+    run = queue.enqueue(owner, version['id'], expected_generation=1)
+    assert run['expected_units'] == 2000
+    # Resume just before the last page. The seeded successful units represent
+    # actual blank pages and retain the original enqueue-time fingerprints.
+    blank = Extracted('', [])
+    with service.database.engine.begin() as connection:
+        connection.execute(text("""UPDATE c0_extraction_units SET state='succeeded', attempts=1,
+            lease_token=:token, body='', locations='[]', result_sha256=:result, text_sha256=:hash
+            WHERE run_id=:run AND ordinal<2000"""), {'run':run['id'], 'token':uuid4(),
+            'result':_result(blank, allow_blank=True), 'hash':blank.text_hash})
+        connection.execute(text("""UPDATE c0_extraction_runs SET claimed=1999, succeeded=1999
+            WHERE id=:run"""), {'run':run['id']})
+    assert ExtractionWorker(queue).tick(max_units=1) == 1
+    assert queue.status(owner, run['id'])['state'] == 'ready'
+    document = service.document(owner, version['id'])
+    assert document['body'].strip()
+    assert [location['index'] for location in document['locations']] == [2000]
+
+
 def test_100_pages_two_failures_real_worker_kill_and_only_failed_pages_repeat(sources,monkeypatch):
     import czero_core.extraction_queue as module
     queue,owner,version,run=pdf(sources)

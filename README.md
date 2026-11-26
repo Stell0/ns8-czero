@@ -26,6 +26,7 @@ Use C0 for team procedures, support knowledge, ongoing research or project knowl
 | Research projects | Protected-space manifests, topic scope, monitoring/queue budgets, external workflow coordination and saved reports |
 | Browser reading | Wiki, Sources, Tables, Projects and Explore; English/Italian, responsive pages and light/dark/system themes |
 | Reusable base | Independently distributable Python Core, reference application, tests, fork-update tools and NethServer 8 packaging |
+| Monitoring | [NS8 Grafana dashboards](docs/administration.md#grafana) for per-instance traffic, ingestion, background work and resource use |
 
 Ordinary text search needs no model provider. Semantic retrieval requires a configured embedding service and a ready index.
 The [retrieval evidence candidate](docs/retrieval-evidence.md) adds bounded query
@@ -59,7 +60,7 @@ flowchart LR
     Write --> Knowledge
 ```
 
-ChatGPT, OpenAI Codex, Claude and custom agents use their own connection and instruction formats. Vendor MCP support and tested C0 compatibility are separate facts; see [connection guidance](docs/byoa.md).
+Connect C0 from ChatGPT, Claude, Grok or Gemini using the app and instruction formats your account supports. The [assistant setup guide](docs/byoa.md) links each web recipe and its C0 test record.
 
 C0 goes beyond a vector index of retrieved chunks. Complete documents remain readable, Wiki pages hold maintained explanations, and entities and sourced claims connect knowledge. Exact citations and current-content checks keep evidence identities explicit. Vectors are optional derivatives. Configured embedding or relevance services can process selected content internally; they do not turn C0 into a conversational AI engine.
 
@@ -73,7 +74,7 @@ A Wiki can start as a small topic collection in an ordinary space. A protected r
 
 [Daily and weekly maintenance](docs/wiki-maintenance.md) uses an external assistant and scheduler. Downloading a package or copying a prompt installs no task. Compiler capabilities are implemented, but the [latest measured compiler study failed its quality gates](docs/knowledge-compilation/RESULTS.md); automatic compilation is not an accepted retrieval improvement or a default-on rollout.
 
-Automatic source updates support public GitHub repositories and websites through per-space UI/MCP definitions and the native worker. See the [contract](docs/automatic-sources.md) and [accepted deployment](PLAN.md#automatic-sources-accepted-deployment).
+Automatic sources can update from public GitHub repositories, websites and folders you own in Google Drive. Connect a Google account in the browser to preview which files a folder will import and why any files are skipped. The native worker runs enabled updates. See the [automatic sources guide](docs/automatic-sources.md), [Drive validation](PLAN.md#personal-google-drive-automatic-sources) and [earlier public-source deployment](PLAN.md#automatic-sources-accepted-deployment).
 
 ## How C0 works
 
@@ -123,28 +124,15 @@ C0's Unix-account lifecycle and native backup; this candidate awaits native acce
 
 ## Connect your AI assistant
 
-The native OAuth callback repair is delivered in released Core0.46.0 and the
-accepted app0.64.0 dedicated deployment. Approved portless HTTP loopback callbacks
-accept a client-selected port with host/path, explicit consent and exact code
-redemption checks. The [accepted deployment record](PLAN.md#native-oauth-accepted-deployment)
-contains its checked source and immutable images. Start a fresh authorization
-flow if an earlier request expired; a new application can still need administrator
-approval. Actual Claude Code end-user acceptance remains a separate check.
+Open **Use with AI** on your C0 site, choose ChatGPT, Claude, Grok or Gemini, and
+follow the matching steps to connect and install the instance skill. Sign in to
+C0, review the suggested permissions and authorize the app. In a fresh
+conversation, select the intended space and ask for an answer with a citation
+you can open in C0. See the [assistant setup guide](docs/byoa.md).
 
-Open **Use with AI** at `https://c0.example.org/agents` on your instance. Copy its canonical `/mcp` URL, configure your client's OAuth connection, sign in and consent to the required scopes. New clients can require administrator approval. Verify the returned profile and exact space before reading or writing.
-
-The page also generates an instance-bound `.skill` archive and a ChatGPT plugin `.zip` for an existing registered app. These supply instructions; they grant no permissions. Other agents use their own formats. [BYOA setup](docs/byoa.md), [ChatGPT setup](docs/chatgpt.md) and [plugin packaging](docs/plugin.md) give the detailed steps.
-
-A minimal end-to-end example:
-
-1. Connect the intended account with Read scope and select its space.
-2. Ask: “In this C0 space, find the backup procedure. Read the Wiki page and current original passages. Cite the evidence. Make no changes.”
-3. If a change is needed, obtain effective Editor access and explicit Write consent. Ask: “Using only these selected current sources, update the named procedure in this same space. Preserve conflicting observations. Read back the saved revision and evidence.”
-4. Open that page in C0 and inspect its current content. API or host completion alone is not readback proof.
-
-For custom automation, [personal API keys](docs/api-keys.md) provide explicit Read/Write and selected-space bounds. They have no administration scope. [Recurring maintenance](docs/wiki-maintenance.md) explains unattended authentication and verification.
-The Account form defaults to 90 days, accepts 1–365 days and offers an explicit
-**Never expires** choice with a security explanation.
+For unattended Wiki maintenance, connect the scheduler to the same authorized
+space and verify its first due run. See [recurring maintenance](docs/wiki-maintenance.md)
+and [personal API keys](docs/api-keys.md) for scripted automation.
 
 ## Documentation and license
 

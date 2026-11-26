@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from sqlalchemy import text
 from czero_core import Database
+from czero_core.database import SCHEMA_REVISION
 from czero_core.access import AccessService
 from czero_core.cross_space_references import CrossSpaceReferenceService
 from czero_core.identity import VerifiedIdentity
@@ -68,8 +69,8 @@ try:
             state_path.write_text(json.dumps(state))
             state_path.chmod(0o600)
     with db.engine.connect() as c:
-        assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()=='0042_automatic_sources'
-    print(json.dumps({'installed_references':True,'payload_free_replay':True,'packaged_schema0042':True,
+        assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one()==SCHEMA_REVISION
+    print(json.dumps({'installed_references':True,'payload_free_replay':True,'packaged_schema_current':True,
         **({'retained_reference_seeded':True} if mode=='seed' else {}),
         **({'restored_reference_verified':True} if mode=='verify' else {})}))
 finally:db.close()

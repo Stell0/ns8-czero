@@ -1,26 +1,80 @@
 # Copyright (C) 2026 C0 contributors; SPDX-License-Identifier: GPL-3.0-or-later
 """Bounded page parsing from the immutable PDF original and exact assembly."""
+from contextlib import contextmanager
 import hashlib
 import json
 import logging
 from pathlib import Path
+import signal
 import stat
 import subprocess
 import sys
+from tempfile import TemporaryDirectory, TemporaryFile
 
-from .extraction import Extracted, ExtractionError, MAX_UPLOAD, _has_images, valid_text
+from .protected_pdf import MAX_WORKING_PDF_BYTES, WorkingPDF, native_input, parser_input, receive_parser_input
+from .extraction import (
+    Extracted, ExtractionError, MAX_PDF_BYTES, MAX_PDF_PAGES, MAX_TEXT_BYTES,
+    PYTHON_PDF_PAGES, _has_images, parser_output, valid_text,
+)
 
 
+@contextmanager
 def _reader(path):
     from pypdf import PdfReader
-    path=Path(path)
-    if not stat.S_ISREG(path.lstat().st_mode): raise ExtractionError('invalid_file')
-    if path.stat().st_size>MAX_UPLOAD: raise ExtractionError('too_large')
+    if isinstance(path, WorkingPDF):
+        maximum = MAX_WORKING_PDF_BYTES
+    else:
+        path = Path(path)
+        maximum = MAX_PDF_BYTES
+    info = path.lstat()
+    if not stat.S_ISREG(info.st_mode): raise ExtractionError('invalid_file')
+    if info.st_size > maximum: raise ExtractionError('too_large')
     logging.getLogger('pypdf').setLevel(logging.CRITICAL)
-    reader=PdfReader(path,strict=True)
-    if reader.is_encrypted: raise ExtractionError('encrypted_pdf')
-    if not 1<=len(reader.pages)<=200: raise ExtractionError('too_large')
-    return reader
+    with path.open('rb') as original:
+        reader = PdfReader(original, strict=True)
+        if reader.is_encrypted: raise ExtractionError('encrypted_pdf')
+        if not 1 <= len(reader.pages) <= MAX_PDF_PAGES: raise ExtractionError('too_large')
+        yield reader
+
+
+def native_pages(path, page_count, *, page=None):
+    """Extract the text layer in a single bounded pass, preserving page breaks."""
+    limit = MAX_TEXT_BYTES + MAX_PDF_PAGES
+    selection = [] if page is None else ['-f', str(page), '-l', str(page)]
+    # prlimit execs the fixed tool. Limits precede opening the PDF; the
+    # threaded web/worker process never runs a Python preexec callback.
+    argument, pass_fds = native_input(path)
+    command = ['/usr/bin/prlimit', '--as=536870912', '--cpu=15:16', f'--fsize={limit + 1}',
+               '--core=0', '--', '/usr/bin/pdftotext', '-enc', 'UTF-8', '-eol', 'unix',
+               *selection, argument, '-']
+    try:
+        with TemporaryDirectory(prefix='c0-pdf-text-') as directory, \
+             TemporaryFile(dir=directory) as output, TemporaryFile(dir=directory) as errors:
+            child = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=output, stderr=errors,
+                env={'LC_ALL':'C', 'HOME':directory, 'TMPDIR':directory},
+                cwd=directory, timeout=18, check=False, pass_fds=pass_fds)
+            if output.tell() > limit or child.returncode == -signal.SIGXFSZ:
+                raise ExtractionError('too_large')
+            if child.returncode < 0 or errors.tell() > 65536:
+                raise ExtractionError('resource_limit')
+            if child.returncode in (126, 127):
+                raise ExtractionError('parser_failed')
+            # Poppler sometimes reports a repair or incomplete output and still
+            # exits successfully. Never publish it or expose private diagnostics.
+            if child.returncode or errors.tell():
+                raise ExtractionError('invalid_pdf')
+            output.seek(0)
+            pages = output.read(limit + 1).decode('utf-8').split('\f')
+    except UnicodeDecodeError:
+        raise ExtractionError('invalid_text') from None
+    except subprocess.TimeoutExpired:
+        raise ExtractionError('parser_timeout') from None
+    except OSError:
+        raise ExtractionError('parser_failed') from None
+    expected = page_count if page is None else 1
+    if len(pages) != expected + 1 or pages.pop() != '':
+        raise ExtractionError('invalid_pdf')
+    return pages
 
 
 def _blank(page):
@@ -41,8 +95,16 @@ def _blank(page):
 
 
 def _parse(path,mode,page=None):
-    reader=_reader(path)
+    with _reader(path) as reader:
+        return _parse_reader(reader, path, mode, page)
+
+
+def _parse_reader(reader, path, mode, page):
     if mode=='inventory':
+        if len(reader.pages) > PYTHON_PDF_PAGES:
+            # Page workers enforce native parser limits per unit. Do not inflate
+            # every content stream just to determine a long document's extent.
+            return {'pages':len(reader.pages)}
         total=0
         for value in reader.pages:
             content=value.get_contents()
@@ -52,10 +114,13 @@ def _parse(path,mode,page=None):
     if mode!='page' or type(page) is not int or not 1<=page<=len(reader.pages):
         raise ExtractionError('invalid_pdf')
     value=reader.pages[page-1]
-    content=value.get_contents()
-    if content is not None and len(content.get_data())>16*1024*1024:
-        raise ExtractionError('too_large')
-    body=valid_text(value.extract_text().replace('\r\n','\n').replace('\r','\n'))
+    if len(reader.pages) > PYTHON_PDF_PAGES:
+        body = valid_text(native_pages(path, len(reader.pages), page=page)[0])
+    else:
+        content=value.get_contents()
+        if content is not None and len(content.get_data())>16*1024*1024:
+            raise ExtractionError('too_large')
+        body=valid_text(value.extract_text().replace('\r\n','\n').replace('\r','\n'))
     if not body.strip():
         _blank(value)
         return {'text':'','locations':[]}
@@ -63,15 +128,12 @@ def _parse(path,mode,page=None):
 
 
 def _isolated(path,mode,page=None):
-    command=[sys.executable,'-m','czero_core.pdf_units',str(path),mode]
+    argument, pass_fds = parser_input(path)
+    command=[sys.executable,'-m','czero_core.pdf_units',argument,mode]
     if page is not None: command.append(str(page))
-    try: result=subprocess.run(command,capture_output=True,timeout=25,check=False)
-    except subprocess.TimeoutExpired: raise ExtractionError('parser_timeout') from None
-    if len(result.stdout)>16*1024*1024: raise ExtractionError('resource_limit')
-    if result.returncode!=0:
-        raise ExtractionError('resource_limit' if result.returncode<0 else 'parser_failed')
+    output = parser_output(command, pass_fds=pass_fds)
     try:
-        payload=json.loads(result.stdout)
+        payload=json.loads(output)
         if 'error' in payload: raise ExtractionError(payload['error'])
         return payload
     except ExtractionError: raise
@@ -80,7 +142,7 @@ def _isolated(path,mode,page=None):
 
 def inventory_isolated(path):
     value=_isolated(path,'inventory')
-    if type(value) is not dict or set(value)!={'pages'} or type(value['pages']) is not int or not 1<=value['pages']<=200:
+    if type(value) is not dict or set(value)!={'pages'} or type(value['pages']) is not int or not 1<=value['pages']<=MAX_PDF_PAGES:
         raise ExtractionError('parser_failed')
     return value['pages']
 
@@ -98,7 +160,7 @@ def validate_page(evidence,page):
 
 
 def extract_page_isolated(path,page):
-    if type(page) is not int or not 1<=page<=200: raise ValueError('invalid_page')
+    if type(page) is not int or not 1<=page<=MAX_PDF_PAGES: raise ValueError('invalid_page')
     payload=_isolated(path,'page',page)
     if type(payload) is not dict or set(payload)!={'text','locations'}:
         raise ExtractionError('parser_failed')
@@ -106,7 +168,7 @@ def extract_page_isolated(path,page):
 
 
 def assemble_pdf(rows,pages):
-    if type(pages) is not int or not 1<=pages<=200 or len(rows)!=pages:
+    if type(pages) is not int or not 1<=pages<=MAX_PDF_PAGES or len(rows)!=pages:
         raise ExtractionError('parser_failed')
     texts=[]; locations=[]; cursor=0
     for page,row in enumerate(rows,1):
@@ -133,10 +195,11 @@ def main():
     import resource
     resource.setrlimit(resource.RLIMIT_AS,(512*1024*1024,512*1024*1024))
     resource.setrlimit(resource.RLIMIT_CPU,(20,21))
-    resource.setrlimit(resource.RLIMIT_FSIZE,(0,0))
+    write_limit = MAX_TEXT_BYTES + MAX_PDF_PAGES + 1
+    resource.setrlimit(resource.RLIMIT_FSIZE,(write_limit,write_limit))
     try:
         if len(sys.argv) not in (3,4): raise ExtractionError('invalid_file')
-        result=_parse(sys.argv[1],sys.argv[2],int(sys.argv[3]) if len(sys.argv)==4 else None)
+        result=_parse(receive_parser_input(sys.argv[1]),sys.argv[2],int(sys.argv[3]) if len(sys.argv)==4 else None)
         print(json.dumps(result,ensure_ascii=False))
     except ExtractionError as error: print(json.dumps({'error':error.code}))
     except MemoryError: print(json.dumps({'error':'resource_limit'}))

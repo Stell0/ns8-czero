@@ -1,70 +1,38 @@
-# Connect your own ChatGPT to C0
+# Connect ChatGPT to C0
 
-Use your instance's URL throughout. This guide requires a ChatGPT account/workspace that permits custom MCP connections. Packaged workflow creation/import has [additional prerequisites](plugin.md). Menu availability depends on the account and workspace; an absent control needs workspace/product access, not a C0 security workaround.
+Open **Use with AI → ChatGPT** on your C0 site. You need a ChatGPT web account or workspace that permits custom MCP apps. Skill upload and plugin creation have their own account or workspace controls. [Custom MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-developer-mode-and-full-mcp-connectors-in-chatgpt-beta) · [Skills in ChatGPT](https://help.openai.com/en/articles/20001066-skills-in-chatgpt)
 
-## 1. Administrator prepares the instance
+<a id="1-administrator-prepares-the-instance"></a>
+<a id="2-user-creates-the-chatgpt-connection"></a>
+## Connect the app
 
-1. Configure trusted public HTTPS and NethServer sign-in in NS8 Czero Settings.
-2. Sign in to C0 as owner/Admin. New verified users receive Reader access to Shared and spaces open to all signed-in users; grant additional roles or space access only when needed.
-3. Give the user the canonical MCP URL shown by **Use with AI**, for example `https://knowledge.example.org/mcp`.
-
-Do not use the NS8 cluster address or legacy `/czero/<module-id>` path as an MCP URL. Manual UUID client approval remains an alternative for compatible clients; keep an existing working connection while testing a new one.
-
-## 2. User creates the ChatGPT connection
-
-Open your instance’s **Use with AI** page (`/agents`). It supplies the instance name, description and Connection URL with small copy icons. In ChatGPT web, open [Plugins → personal](https://chatgpt.com/plugins?directoryTab=personal) → **+ → Add custom MCP server**, and copy those values. Choose **OAuth** and **CIMD / Client ID Metadata Document**, leaving static client ID and secret empty. Review the displayed notice and create the connection/plugin. [Official custom MCP setup](https://developers.openai.com/api/docs/guides/custom-mcp-server).
-
-Start **Connect**. C0 opens company sign-in and then user consent. Sign in with your own domain account. A new verified account receives Reader access to Shared and spaces whose audience is **All signed-in users**. An explicitly blocked account remains blocked.
+1. Open [ChatGPT Plugins → personal](https://chatgpt.com/plugins?directoryTab=personal) and choose **Add custom MCP server**. In a managed workspace, use the workspace's custom app creation flow where offered, or ask its administrator to make the app available.
+2. Use a recognizable name and paste the MCP URL from C0. Choose **OAuth**. Under **Advanced OAuth settings**, check that discovery selected **Client Identifier Metadata Document (CIMD)**. When a connection needs Write or Manage and ChatGPT asks for Read alone, set the corresponding `c0:write` or `c0:admin` under **Base scopes**, one per line alongside `c0:read`. C0 still checks client approval and the current account before showing the final consent choices. [Official custom MCP setup](https://developers.openai.com/api/docs/guides/custom-mcp-server)
+3. Start **Connect**, check the C0 hostname and sign in. Review the suggested permissions and background setting, then authorize. [C0 consent and approval](byoa.md#sign-in-and-choose-permissions)
 
 <a id="3-administrator-reviews-and-approves"></a>
-## 3. User authorizes Read
+<a id="3-user-authorizes-read"></a>
+<a id="enable-editing-deliberately"></a>
+If C0 asks for additional app approval, follow the options on the C0 page. A C0 administrator can check approval in **Administration → People and applications** or **Technical clients**. Start Connect again if the request expires. [Workspace access](workspace-access.md)
 
-Validated new HTTPS metadata clients can connect for Read without administrator review. Review the application identity and choose **Authorize**. Read consent covers every space your account can read, including restricted spaces explicitly granted to you. It does not allow editing or administration.
+<a id="5-add-reusable-workflow-skills"></a>
+## Install the skill
 
-If an application requests Read alongside additional permissions, you can start with Read immediately. An Admin must approve additional application permissions, and your account must have the corresponding role and space grants before you consent to them. Requests that offer no permitted Read scope retain the administrator review workflow under **Administration → People and applications** or **Technical clients**. Existing manually approved UUID clients keep their normal flow.
+1. From C0's **Use with AI → ChatGPT**, download the ChatGPT `.skill` file.
+2. In [ChatGPT Skills](https://chatgpt.com/skills), choose **Create → Upload from your computer** if available. Confirm that the C0 skill is installed and enabled.
+3. For a private or managed plugin that bundles the five C0 workflows with the app, use the existing connection and follow [plugin packaging](plugin.md).
 
-There is no discovery toggle, including after upgrading or restoring an installation where discovery used to be off. Explicit account blocks, disabled applications, callback validation and metadata-change review remain enforced. Requests expire after five minutes; start Connect again if necessary. Keep full authorization URLs, passwords, tokens and cookies private.
+<a id="4-user-connects-and-verifies"></a>
+## Try the connection
 
-## 4. User connects and verifies
+In a new ChatGPT web conversation, select the C0 app and use the installed skill. Ask for the connected account and a cited read from an authorized space. Open the cited passage in C0. [First read and authorized edit](byoa.md#first-read-and-authorized-edit)
 
-Complete explicit read consent in the connection opened above, or start a fresh **Connect** if it expired. Install/select the resulting plugin and start a new chat with that connection.
+<a id="reconnect-while-already-signed-in"></a>
+<a id="troubleshooting"></a>
+## Reconnect
 
-On an empty new instance, first follow the [first-content walkthrough](user-guide.md#first-content-on-a-new-instance) with an owner/Editor account. Then try:
-
-> Show my connected C0 account and the knowledge spaces I can access. Then, in [space], read an existing article about [topic] and cite its original source passages. Make no changes.
-
-Confirm the correct connected-account name and real citations. A successful tool refresh alone does not prove an authenticated content read. Repeat a read after more than five minutes to exercise normal renewal. [Official connection/testing guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
-
-For a connection that should keep working between visits, select **Keep this connection working in the background** on the C0 consent page. If needed, continue through sign-in with the same account, then return and choose **Authorize**. A changed administrator inactivity setting can require a new sign-in for a new connection. The pending request still expires after five minutes. Grant write permission only when you intend to let the assistant maintain knowledge and both your C0 role and the approved client permit it.
-
-Background connections use short access tokens and rotating refresh credentials. By default they end after thirty days without use; regular use keeps them active without a fixed end date. Your browser still signs out after its usual idle or maximum duration. C0 **Account → Your connected apps → Disconnect** stops a connection, including access it already holds. Client/account revocation and sign-in-provider rejection also stop access. Existing connections keep their original limits until you reconnect and explicitly choose background access.
-
-Background authorization lets a compatible client renew access unattended. Whether a particular ChatGPT scheduled task can use the connection must be verified in that client; enabling background access does not create a schedule or authorize unspecified knowledge changes.
-
-## 5. Add reusable workflow skills
-
-On **Use with AI**, download the generated **.skill** and upload it at [ChatGPT Skills](https://chatgpt.com/skill), where your account supports skill upload. It contains this instance’s hostname and MCP URL. Alternatively, paste your ChatGPT connection page address or technical app ID and download the generated **plugin .zip** for the five setup/research/maintenance/project-discovery/compiler workflows. See [Plugin installation](plugin.md). A local desktop marketplace installation does not prove those skills are available on the web.
-
-## Enable editing deliberately
-
-An application Admin must approve the necessary write scope, and the user needs effective Editor access to the intended space. Reapproval revokes existing affected grants, so coordinate it and reconnect with explicit write consent. Do not request Admin scope for ordinary research or Wiki editing. Existing authorization remains enforced on every operation.
-
-## Troubleshooting
-
-| Symptom | Check and next step |
-| --- | --- |
-| Initial `invalid_request` | Confirm this instance runs the self-service Read update with configured HTTPS and sign-in. Valid new CIMD requests proceed to consent; malformed callbacks, duplicate parameters, wrong resources and disabled applications still fail. Start Connect afresh; keep its full URL private. |
-| Login succeeds but C0 denies access | Ask the owner/Admin to check Workspace access for an explicit block or retained earlier denial. New verified users receive Shared Reader access by default; client approval grants no additional role. |
-| OAuth `invalid_scope` during reconnect | Continue with requested Read when available, or ask an Admin to review additional scopes. A Write-only request cannot receive unrequested Read. Existing UUID clients retain strict scope errors. Do not grant Admin merely to silence an error. |
-| `insufficient_scope` | Request fresh explicit consent only if your role and approved client permit the operation. Refresh cannot add scope. |
-| Permission denied for a space | Request an authorized grant; do not switch to Shared to bypass denial. |
-| Reconnect after inactivity | Check actual C0 idle/absolute settings and IdP policy. Defaults are one hour idle/eight hours absolute; earlier revocation/provider expiry is possible. |
-| Tools look stale | Refresh the connection's tools and start a new conversation; test an actual read afterward. |
-| Plugin/Creator/import control missing | Check the intended ChatGPT workspace, product availability and permissions. See the prerequisites in the plugin guide. |
-| Wrong account or instance | Stop and select the intended connection, then confirm profile/space. Do not overwrite another connection's configuration. |
-
-When reporting a problem, include the action, fixed error code, whether it was a new or existing connection and approximate time. Keep passwords, tokens, cookies, raw journals and full authorization URLs out of reports.
+Use **Reconnect** on the affected ChatGPT app and review the new C0 consent. If prompted for background sign-in, use the same C0 account. If tools changed, refresh them or ask the workspace administrator to update the reviewed app, then try a read in a new conversation. For permission or account issues, see [common troubleshooting](byoa.md#reconnect-or-get-help). [Troubleshooting ChatGPT apps](https://help.openai.com/en/articles/20001497-troubleshooting-plugins-and-apps-in-chatgpt)
 
 ## Recurring maintenance
 
-Use [the maintenance guide](wiki-maintenance.md#chatgpt) for current host scheduling steps, scoped daily/weekly prompts and independent saved-result verification. Background consent, package installation and task creation are separate operations.
+Follow the [ChatGPT scheduling guide](wiki-maintenance.md#chatgpt) when the chosen task surface can retain the C0 app and skill.

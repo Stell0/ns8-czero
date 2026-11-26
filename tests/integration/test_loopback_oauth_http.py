@@ -54,7 +54,9 @@ def test_native_reader_approval_consent_reconnect_and_exact_token_callback(cimd_
                     view = await user.get('/oauth/consent/request')
                     assert view.status_code == 200 and view.json()['callback'] == callback
                     assert view.json()['eligible_scopes'] == ['c0:read']
-                    result = await user.post('/oauth/consent', json={'approve': True, 'scopes': ['c0:read']}, headers=headers(profile))
+                    result = await user.post('/oauth/consent',
+                        json={'draft_id': view.json()['draft_id'], 'approve': True, 'scopes': ['c0:read']},
+                        headers=headers(profile))
                     assert result.status_code == 200
                     target = urlsplit(result.json()['redirect_uri'])
                     assert target._replace(query='').geturl() == callback

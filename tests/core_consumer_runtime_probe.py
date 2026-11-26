@@ -11,6 +11,7 @@ from czero_core.database import SCHEMA_REVISION
 from czero_core.current_content import ContentSuperseded
 from czero_core.retention import preflight
 from czero_core.documents import DocumentService
+from czero_core.extraction import MAX_PDF_BYTES, MAX_PDF_PAGES
 from czero_core.api_keys import ApiKeyService, ApiKeyBinding
 from czero_core.oauth_clients import OAuthClientService
 
@@ -25,7 +26,13 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0042_automatic_sources'
+assert SCHEMA_REVISION == '0046_pdf_authorization'
+from czero_core.pdf_access import PdfAccess
+from czero_core.protected_pdf import inspect_pdf
+from czero_core.sources import SourceService
+assert callable(PdfAccess.check) and callable(inspect_pdf)
+assert callable(SourceService.ingest_manual) and callable(SourceService.retry_pdf)
+assert (MAX_PDF_BYTES, MAX_PDF_PAGES) == (104857600, 2000)
 assert str(ContentSuperseded()) == 'content_superseded'
 assert callable(ApiKeyService.verify) and callable(ApiKeyBinding.validate)
 assert callable(preflight) and callable(DocumentService.read_document)
@@ -66,6 +73,9 @@ from czero_core.automatic_sources import AutomaticSourceService
 from czero_app.automatic_sources import install as install_automatic_sources
 install_automatic_sources(application, None, None, lambda: None, lambda: None)
 assert isinstance(application.state.automatic_sources, AutomaticSourceService)
-assert len([route for route in application.routes
-            if route.path.startswith('/api/v1/automatic-sources')]) == 6
+assert callable(AutomaticSourceService.preview_drive) and callable(AutomaticSourceService.save_drive)
+public_routes=[route for route in application.routes if route.path.startswith('/api/v1/automatic-sources')
+               and not route.path.startswith('/api/v1/automatic-sources/google-drive/')]
+assert len(public_routes) == 6
+assert application.state.google_drive is None
 print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')

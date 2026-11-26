@@ -25,6 +25,17 @@ candidate satisfies all release, consumer and deployment gates.
    reviewed durable-authority binding. Existing collectors/public imports retain
    their original path and approvals; enabling a worker never promotes a grant.
 
+### Large PDFs in the optional page queue
+
+A PDF can contain up to 2,000 pages and occupy up to 100 MiB. The ordinary
+upload worker extracts a long PDF in one bounded pass. The optional page queue
+verifies the original's size and SHA-256 during processing and records each page
+separately so interrupted work can resume. With the default two workers, one
+activation processes up to 40 pages. A 2,000-page document needs at least 50
+activations. The NS8 timer waits a minute after each completed activation.
+Processing time, retries and other queued documents add to those waits. Check
+the completed page count for progress and the ready document for publication.
+
 ## Observe and recover
 
 Use selected-space reader progress and Background Work. Inspect safe unit errors,

@@ -75,12 +75,17 @@ def issue(browser,profile,client,password,*,offline=False,expect_policy=None):
     status,body,_=browser.api('/oauth/consent/request');assert status==200
     initial=json.loads(body)
     assert initial['background_supported'] and not initial['background_requested']
+    choice = {'scopes': scopes}
+    # The native upgrade suite also seeds grants on a frozen predecessor.
+    if 'draft_id' in initial:
+        choice['draft_id'] = initial['draft_id']
+    approval = {**choice, 'approve': True, 'persistent': True}
     if expect_policy is not None:
         assert not initial['background_ready'] and initial['connection_idle_seconds']==expect_policy
-        status,_,_=browser.api('/oauth/consent',{'approve':True,'scopes':scopes,'persistent':True},'POST',profile['csrf_token'])
+        status, _, _ = browser.api('/oauth/consent', approval, 'POST', profile['csrf_token'])
         assert status==400, 'Previous offline policy authorized a new connection'
     if offline:
-        status,body,_=browser.api('/oauth/consent/background',{'scopes':scopes},'POST',profile['csrf_token'])
+        status, body, _ = browser.api('/oauth/consent/background', choice, 'POST', profile['csrf_token'])
         assert status==200 and json.loads(body)=={'next':'/auth/login'}, 'Background sign-in handoff failed'
         status,body,url=browser.request('/auth/login');assert status==200
         form=Form('kc-form-login');form.feed(body.decode());assert form.action, 'Background native login form missing'
@@ -101,8 +106,9 @@ def issue(browser,profile,client,password,*,offline=False,expect_policy=None):
     status,body,_=browser.api('/oauth/consent/request');assert status==200
     view=json.loads(body)
     assert view['background_ready'] and view['expires_at']==initial['expires_at'], 'Background request changed its lifetime'
-    assert browser.api('/oauth/consent',{'approve':True,'scopes':scopes,'persistent':True},'POST')[0]==403
-    status,body,_=browser.api('/oauth/consent',{'approve':True,'scopes':scopes,'persistent':True},'POST',profile['csrf_token'])
+    assert view.get('draft_id') == initial.get('draft_id'), 'Background sign-in changed the consent draft'
+    assert browser.api('/oauth/consent', approval, 'POST')[0] == 403
+    status, body, _ = browser.api('/oauth/consent', approval, 'POST', profile['csrf_token'])
     assert status==200, 'Explicit background consent failed'
     values=parse_qs(urlsplit(json.loads(body)['redirect_uri']).query);assert values['state']==[state]
     status,body,_=browser.request('/oauth/token',urlencode({'grant_type':'authorization_code','client_id':client['client_id'],

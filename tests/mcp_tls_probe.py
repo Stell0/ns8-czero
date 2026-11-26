@@ -572,7 +572,7 @@ async def check(value):
         metadata = metadata.json()
         assert metadata['resource'] == origin + '/mcp', 'Installed resource metadata audience mismatch'
         assert metadata['authorization_servers'] == [origin + '/oauth'], 'Installed authorization-server mismatch'
-        assert metadata['scopes_supported'] == ['c0:read'], 'Installed initial read scope mismatch'
+        assert set(metadata['scopes_supported']) == {'c0:read', 'c0:write', 'c0:admin'}, 'Installed resource scope catalog mismatch'
         authority = await http.get('/.well-known/oauth-authorization-server/oauth')
         assert authority.status_code == 200, 'Installed authorization metadata unavailable'
         authority = authority.json()

@@ -5,14 +5,19 @@ from dataclasses import dataclass
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
 import re
+import signal
 import stat
 import subprocess
 import sys
 import zipfile
 
 MAX_UPLOAD=10*1024*1024
+MAX_PDF_BYTES=100*1024*1024
+MAX_PDF_PAGES=2000
+PYTHON_PDF_PAGES=200  # Existing short-document text layout and hashes.
 MAX_TEXT_BYTES=2*1024*1024
 MAX_CHARACTERS=1_000_000
 MAX_LOCATIONS=4000
@@ -21,7 +26,8 @@ MEDIA_TYPES={'text/plain','text/markdown','application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
 ERRORS={'unsupported_format','too_large','invalid_text','invalid_pdf','invalid_docx',
     'encrypted_pdf','no_text','unsupported_scan','archive_limit','unsupported_xml',
-    'resource_limit','parser_timeout','parser_failed','invalid_file','unsupported_docx','ocr_unavailable'}
+    'pdf_password_required','pdf_password_incorrect','pdf_extraction_approval_required','pdf_unlock_unavailable',
+    'resource_limit','parser_timeout','pdf_too_many_pages','parser_failed','invalid_file','unsupported_docx','ocr_unavailable'}
 
 
 class ExtractionError(ValueError):
@@ -38,6 +44,15 @@ class Extracted:
     @property
     def text_hash(self):
         return hashlib.sha256(self.text.encode('utf-8')).hexdigest()
+
+
+@dataclass(frozen=True)
+class TextLayer(Extracted):
+    textless_pages: tuple[int, ...]
+
+
+def upload_limit(media_type):
+    return MAX_PDF_BYTES if media_type == 'application/pdf' else MAX_UPLOAD
 
 
 def valid_text(text):
@@ -154,39 +169,76 @@ def _has_images(resources,seen=None,depth=0):
     return False
 
 
-def _pdf(path):
+def _pdf(path, *, allow_mixed_pdf=False):
     try:
         from pypdf import PdfReader
         logging.getLogger('pypdf').setLevel(logging.CRITICAL)
-        reader=PdfReader(path,strict=True)
-        if reader.is_encrypted:raise ExtractionError('encrypted_pdf')
-        if len(reader.pages)>200:raise ExtractionError('too_large')
-        parts=[]; stream_bytes=0
-        for index,page in enumerate(reader.pages,1):
-            content=page.get_contents()
-            if content is not None:
-                stream_bytes+=len(content.get_data())
-                if stream_bytes>16*1024*1024:raise ExtractionError('too_large')
-            text=page.extract_text()
-            if not text.strip():
-                if _has_images(page.get('/Resources',{})):
-                    raise ExtractionError('unsupported_scan')
-            parts.append(('page',index,text))
-        return _parts(parts)
+        # An open stream lets pypdf seek within the original without copying a
+        # potentially 100 MiB file into BytesIO.
+        with path.open('rb') as original:
+            reader = PdfReader(original, strict=True)
+            if reader.is_encrypted:
+                raise ExtractionError('encrypted_pdf')
+            page_count = len(reader.pages)
+            if not 1 <= page_count <= MAX_PDF_PAGES:
+                code = 'pdf_too_many_pages' if allow_mixed_pdf and page_count > MAX_PDF_PAGES else 'too_large'
+                raise ExtractionError(code)
+            if page_count > PYTHON_PDF_PAGES:
+                # Short documents retain their historical extraction and hashes.
+                # A single bounded native pass avoids a Python text-layout pass
+                # on every page of a long document.
+                from .pdf_units import native_pages
+                pages = native_pages(path, page_count)
+            else:
+                pages = _short_pdf_pages(reader)
+            textless = []
+            parts = []
+            scanned = False
+            for index, text in enumerate(pages, 1):
+                if not text.strip():
+                    textless.append(index)
+                    if _has_images(reader.pages[index - 1].get('/Resources', {})):
+                        scanned = True
+                        if not allow_mixed_pdf:
+                            raise ExtractionError('unsupported_scan')
+                parts.append(('page', index, text))
+            if scanned and len(textless) == page_count:
+                raise ExtractionError('unsupported_scan')
+            document = _parts(parts)
+            if allow_mixed_pdf:
+                return TextLayer(document.text, document.locations, tuple(textless))
+            return document
     except ExtractionError:raise
     except MemoryError:raise ExtractionError('resource_limit') from None
     except Exception:raise ExtractionError('invalid_pdf') from None
 
 
-def extract_file(path: Path,media_type: str):
+def _short_pdf_pages(reader):
+    stream_bytes = 0
+    for page in reader.pages:
+        content = page.get_contents()
+        if content is not None:
+            stream_bytes += len(content.get_data())
+            if stream_bytes > 16 * 1024 * 1024:
+                raise ExtractionError('too_large')
+        yield page.extract_text()
+
+
+def extract_file(path: Path,media_type: str,*,allow_mixed_pdf=False):
     """Pure parser entry point; untrusted uploads call the isolated wrapper."""
     if media_type not in MEDIA_TYPES:raise ExtractionError('unsupported_format')
-    path=Path(path)
+    from .protected_pdf import MAX_WORKING_PDF_BYTES, WorkingPDF
+    if isinstance(path, WorkingPDF):
+        if media_type != 'application/pdf':raise ExtractionError('invalid_file')
+        maximum = MAX_WORKING_PDF_BYTES
+    else:
+        path = Path(path)
+        maximum = upload_limit(media_type)
     try: info=path.lstat()
     except OSError:raise ExtractionError('invalid_file') from None
     if not stat.S_ISREG(info.st_mode):raise ExtractionError('invalid_file')
-    if info.st_size>MAX_UPLOAD:raise ExtractionError('too_large')
-    if media_type=='application/pdf':return _pdf(path)
+    if info.st_size>maximum:raise ExtractionError('too_large')
+    if media_type=='application/pdf':return _pdf(path,allow_mixed_pdf=allow_mixed_pdf)
     if media_type.endswith('wordprocessingml.document'):return _docx(path)
     try:text=valid_text(path.read_bytes().decode('utf-8-sig').replace('\r\n','\n').replace('\r','\n'))
     except UnicodeError:raise ExtractionError('invalid_text') from None
@@ -214,21 +266,50 @@ def chunks(document: Extracted,*,size=1200,overlap=150):
     return result
 
 
-def extract_isolated(path: Path,media_type: str):
+def parser_output(command, *, pass_fds=(), input_data=None, timeout=25, env=None):
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                          stdin=subprocess.DEVNULL if input_data is None else subprocess.PIPE,
+                          pass_fds=pass_fds, start_new_session=True, env=env) as parser:
+        try:
+            output, _ = parser.communicate(input=input_data, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try: os.killpg(parser.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
+            parser.communicate()
+            raise ExtractionError('parser_timeout') from None
+        finally:
+            # The long-PDF parser runs Poppler as a child in the same group.
+            try: os.killpg(parser.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
+    if len(output)>16*1024*1024:raise ExtractionError('resource_limit')
+    if parser.returncode!=0:raise ExtractionError('resource_limit' if parser.returncode<0 else 'parser_failed')
+    return output
+
+
+def extract_isolated(path: Path,media_type: str,*,allow_mixed_pdf=False,timeout=25):
     """Trusted fixed parser command, bounded by child rlimits and parent time."""
     if media_type not in MEDIA_TYPES:raise ExtractionError('unsupported_format')
+    from .protected_pdf import parser_input
+    argument, pass_fds = parser_input(path)
+    command = [sys.executable, '-m', 'czero_core.extraction', argument, media_type]
+    if allow_mixed_pdf:
+        if media_type != 'application/pdf':
+            raise ExtractionError('unsupported_format')
+        command.append('text-layer')
+    output = parser_output(command, pass_fds=pass_fds, timeout=timeout)
     try:
-        result=subprocess.run([sys.executable,'-m','czero_core.extraction',str(path),media_type],
-            capture_output=True,timeout=25,check=False)
-    except subprocess.TimeoutExpired:raise ExtractionError('parser_timeout') from None
-    if len(result.stdout)>16*1024*1024:raise ExtractionError('resource_limit')
-    if result.returncode!=0:raise ExtractionError('resource_limit' if result.returncode<0 else 'parser_failed')
-    try:
-        payload=json.loads(result.stdout)
+        payload=json.loads(output)
         if 'error' in payload:raise ExtractionError(payload['error'])
         document=Extracted(valid_text(payload['text']),payload['locations'])
         if not isinstance(document.locations,list) or len(document.locations)>MAX_LOCATIONS:raise ValueError()
         if any(type(loc) is not dict or set(loc)!={'kind','index','start','end'} or not 0<=loc['start']<=loc['end']<=len(document.text) for loc in document.locations):raise ValueError()
+        if allow_mixed_pdf:
+            pages = payload['textless_pages']
+            if (type(pages) is not list or len(pages) > MAX_PDF_PAGES
+                or any(type(page) is not int or not 1 <= page <= MAX_PDF_PAGES for page in pages)
+                or pages != sorted(set(pages))):
+                raise ValueError()
+            return TextLayer(document.text, document.locations, tuple(pages))
         return document
     except ExtractionError:raise
     except Exception:raise ExtractionError('parser_failed') from None
@@ -238,14 +319,25 @@ def main():
     import resource
     resource.setrlimit(resource.RLIMIT_AS,(512*1024*1024,512*1024*1024))
     resource.setrlimit(resource.RLIMIT_CPU,(20,21))
-    resource.setrlimit(resource.RLIMIT_FSIZE,(0,0))
+    # Native PDF extraction writes only to bounded, anonymous temporary files.
+    pdf = len(sys.argv) >= 3 and sys.argv[2] == 'application/pdf'
+    write_limit = MAX_TEXT_BYTES + MAX_PDF_PAGES + 1 if pdf else 0
+    resource.setrlimit(resource.RLIMIT_FSIZE, (write_limit, write_limit))
     try:
-        if len(sys.argv)!=3:raise ExtractionError('invalid_file')
-        result=extract_file(Path(sys.argv[1]),sys.argv[2])
-        print(json.dumps({'text':result.text,'locations':result.locations},ensure_ascii=False))
+        allow_mixed_pdf = pdf and sys.argv[3:] == ['text-layer']
+        if len(sys.argv)!=3 and not allow_mixed_pdf:raise ExtractionError('invalid_file')
+        from .protected_pdf import receive_parser_input
+        result=extract_file(receive_parser_input(sys.argv[1]),sys.argv[2],allow_mixed_pdf=allow_mixed_pdf)
+        output = {'text':result.text,'locations':result.locations}
+        if allow_mixed_pdf:
+            output['textless_pages'] = result.textless_pages
+        print(json.dumps(output, ensure_ascii=False))
     except ExtractionError as error:print(json.dumps({'error':error.code}))
     except MemoryError:print(json.dumps({'error':'resource_limit'}))
     except Exception:print(json.dumps({'error':'parser_failed'}))
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    # Helpers import the canonical ExtractionError class when run as a module.
+    from czero_core.extraction import main as parser_main
+    parser_main()

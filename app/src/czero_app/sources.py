@@ -9,15 +9,19 @@ import weakref
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import Depends, File, Form, HTTPException, UploadFile
+from fastapi import Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 
 from czero_core.documents import DocumentService
-from czero_core.extraction import ExtractionError, MAX_UPLOAD
+from czero_core import extraction
+from czero_core.extraction import ExtractionError
 from czero_core.identity import PermissionDenied, Role
+from czero_core.spaces import SpaceService
 from czero_core.sources import MAX_INGEST_TEXT_BYTES, SourceService, SourceConflict, SourceNotFound
 from czero_app.auth import RequestAccess
 
@@ -202,6 +206,11 @@ class RetryRequest(BaseModel):
     expected_generation: int = Field(ge=1, le=2147483646)
 
 
+class PdfRetryRequest(RetryRequest):
+    pdf_password: str | None = Field(default=None, max_length=1024, repr=False)
+    pdf_approval_token: str | None = Field(default=None, max_length=80, repr=False)
+
+
 class _UploadLimitExceeded(BaseException):
     # Bypass FastAPI's generic body-parse Exception -> HTTP 400 conversion.
     # Starlette closes multipart temporary files on every BaseException.
@@ -216,14 +225,14 @@ class UploadBodyLimit:
     async def __call__(self, scope, receive, send):
         path = scope.get('path', '')
         limited = scope['type'] == 'http' and scope.get('method') == 'POST' and path.endswith('/api/v1/sources/upload')
-        maximum = MAX_UPLOAD + 65536
+        maximum = getattr(extraction, 'MAX_PDF_BYTES', extraction.MAX_UPLOAD) + 65536
         if scope['type'] == 'http' and scope.get('method') in ('POST','PUT','PATCH'):
             resource = path.split('/api/v1/', 1)[-1]
             if resource in ('entities', 'sources/ingest-text') or resource.startswith(('wiki/', 'entities/', 'claims', 'knowledge/')):
                 limited, maximum = True, 1048576
             if resource in ('context-bundles', 'api-keys') or resource.startswith('source-documents/'):
                 limited,maximum=True,16384
-            if resource.startswith('extraction-runs/') or resource.startswith('sources/') and resource.endswith('/reindex'):
+            if resource.startswith('extraction-runs/') or resource.startswith('sources/') and resource.endswith('/reindex') or resource.endswith('/pdf-retry'):
                 limited,maximum=True,4096
             if resource.startswith(('oauth/', '/oauth/')):
                 limited, maximum = True, 16384
@@ -246,7 +255,11 @@ class UploadBodyLimit:
 
 def install_source_routes(app, database, auth, read_context, write_context, registry, originals):
     operation = app.state.operation_catalog.bind
-    service = SourceService(database, auth.access if auth else None, registry, originals)
+    options = {}
+    if hasattr(SourceService, 'ingest_manual'):
+        from czero_core.pdf_access import PdfAccess
+        options['pdf_access'] = PdfAccess.configured()
+    service = SourceService(database, auth.access if auth else None, registry, originals, **options)
     app.state.sources = service
     documents = DocumentService(database, auth.access if auth else None)
     app.state.source_documents = documents
@@ -269,6 +282,8 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
         except SourceNotFound:
             raise HTTPException(404, 'source_not_found') from None
         except ExtractionError as error:
+            if error.code == 'pdf_extraction_approval_required':
+                return JSONResponse({'detail': error.code, 'approval_token': error.token}, status_code=422)
             raise HTTPException(413 if error.code == 'too_large' else 422, error.code) from None
         except ValueError as error:
             if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
@@ -278,7 +293,7 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     async def text_validation_error(request, error):
         # FastAPI's default errors contain submitted input. Keep text evidence
         # out of every validation response, including malformed JSON/Unicode.
-        if (request.url.path.endswith('/api/v1/sources/ingest-text')
+        if (request.url.path.endswith(('/api/v1/sources/ingest-text', '/api/v1/sources/upload', '/pdf-retry'))
             or ('/api/v1/source-documents/' in request.url.path and request.url.path.endswith(('/outline','/sections','/references')))
             or request.url.path.endswith('/api/v1/context-bundles')
             or '/api/v1/extraction-runs/' in request.url.path
@@ -295,22 +310,55 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     def ingest_text(data: IngestTextRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         return invoke(selected(space_id).ingest_text, context.actor, **data.model_dump())
 
-    @app.post('/api/v1/sources/upload', response_model=VersionView, status_code=202)
+    def admit_upload(request):
+        context = write_context(request)
+        selector = request.query_params.get('space_id')
+        try:
+            space_id = UUID(selector) if selector is not None else None
+        except ValueError:
+            raise HTTPException(422, 'invalid_space_request') from None
+        with database.engine.connect() as connection:
+            SpaceService(database, auth.access).authorize(connection, context.actor, Role.EDITOR,
+                                                          space_id=space_id)
+
+    class AuthorizedUpload(APIRoute):
+        def get_route_handler(self):
+            parse_and_dispatch = super().get_route_handler()
+
+            async def handle(request: Request):
+                # FastAPI parses multipart before resolving dependencies. Check
+                # current authority before reading a byte; normal dependencies
+                # and the Core transaction recheck it after the transfer.
+                await run_in_threadpool(admit_upload, request)
+                return await parse_and_dispatch(request)
+
+            return handle
+
     def upload(file: Annotated[UploadFile, File()], title: Annotated[str, Form(max_length=256)],
                media_type: Annotated[str, Form(max_length=128)],
                retain_original: Annotated[Literal['true', 'false'], Form()] = 'false',
                metadata: Annotated[str, Form(max_length=16384)] = '{}',
                source_id: Annotated[UUID | None, Form()] = None,
                expected_revision: Annotated[int | None, Form(ge=1)] = None,
+               pdf_password: Annotated[str | None, Form(max_length=1024)] = None,
+               pdf_approval_token: Annotated[str | None, Form(max_length=80)] = None,
                space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         try:
             value = json.loads(metadata)
         except (ValueError, RecursionError):
             raise HTTPException(422, 'invalid_metadata') from None
-        return invoke(selected(space_id).ingest, context.actor, file.file, title=title,
+        if not hasattr(service, 'ingest_manual') and (pdf_password is not None or pdf_approval_token is not None):
+            raise HTTPException(503, 'pdf_unlock_unavailable')
+        scoped = selected(space_id)
+        ingest = getattr(scoped, 'ingest_manual', scoped.ingest)
+        options = {'pdf_password': pdf_password, 'pdf_approval_token': pdf_approval_token} if hasattr(scoped, 'ingest_manual') else {}
+        return invoke(ingest, context.actor, file.file, title=title,
             filename=file.filename or 'document', media_type=media_type,
             retain_original=retain_original == 'true', metadata=value,
-            source_id=source_id, expected_revision=expected_revision)
+            source_id=source_id, expected_revision=expected_revision, **options)
+
+    app.router.add_api_route('/api/v1/sources/upload', upload, methods=['POST'],
+        response_model=VersionView, status_code=202, route_class_override=AuthorizedUpload)
 
     @app.get('/api/v1/source-documents', response_model=SourceDocumentsView)
     @operation('source_documents_list', 'Browse complete source document summaries without loading bodies; verified multipart sources appear once.',
@@ -372,6 +420,12 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
     def retry(version_id: UUID, data: RetryRequest, space_id: UUID | None = None, context: RequestAccess = Depends(write_context)):
         return invoke(selected(space_id).retry, context.actor, version_id, expected_generation=data.expected_generation)
 
+    if hasattr(service, 'retry_pdf'):
+        @app.post('/api/v1/source-versions/{version_id}/pdf-retry', response_model=VersionView, status_code=202)
+        def retry_pdf(version_id: UUID, data: PdfRetryRequest, space_id: UUID | None = None,
+                      context: RequestAccess = Depends(write_context)):
+            return invoke(selected(space_id).retry_pdf, context.actor, version_id, **data.model_dump())
+
     @app.get('/api/v1/source-versions/{version_id}/document', response_model=DocumentView)
     @operation('documents_get', 'Read complete retained extracted text', Role.READER, DocumentView, read_only=True, space_field='space_id')
     def document(version_id: UUID, space_id: UUID | None = None, context: RequestAccess = Depends(read_context)):
@@ -394,8 +448,18 @@ def install_source_routes(app, database, auth, read_context, write_context, regi
             invoke(selected(space_id).original,context.actor,version_id)
             raise HTTPException(409,'source_original_changed') from None
         try:
-            body=stream.read(MAX_UPLOAD+1)
-            if len(body)!=version['size_bytes'] or hashlib.sha256(body).hexdigest()!=version['content_hash']:
+            expected_size = version['size_bytes']
+            if os.fstat(stream.fileno()).st_size != expected_size:
+                raise HTTPException(409, 'source_original_changed')
+            checksum = hashlib.sha256()
+            remaining = expected_size
+            while remaining:
+                block = stream.read(min(remaining, 1024 * 1024))
+                if not block:
+                    raise HTTPException(409, 'source_original_changed')
+                checksum.update(block)
+                remaining -= len(block)
+            if stream.read(1) or checksum.hexdigest() != version['content_hash']:
                 raise HTTPException(409,'source_original_changed')
             stream.seek(0)
             return OriginalFileResponse(stream,media_type='application/octet-stream',filename=filename,

@@ -26,6 +26,7 @@ export interface Source {
 export interface Version {
   id: string
   source_id: string
+  filename: string
   number: number
   state: string
   original_present: boolean
@@ -44,6 +45,7 @@ export interface SourceDocument {
 }
 export interface FullDocument extends SourceDocument {
   body: string | null
+  error_code: string | null
   revision_id: string
   number: number | null
   parts: { source_id: string; version_id: string }[]
