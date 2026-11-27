@@ -35,3 +35,19 @@ modes and fallbacks, measure useful evidence and complete subquestion coverage,
 and retain every attempt. Existing ticket grades are diagnostic development data;
 an untouched sample is required for a general quality claim. Activation/reindex,
 Core publication, consumer adoption and live deployment are separate operations.
+
+## Compact original passages
+
+Clients can opt into `knowledge_search_compact` over MCP or
+`GET /api/v1/knowledge/search/compact` over REST. It accepts the standard
+search options and preserves the selected space, ranked hits, supporting
+passages and original citations. The full citation body appears once. For a
+source passage whose `excerpt` is omitted, subtract `citation.start_offset` from
+both passage offsets and slice `citation.body` using Unicode code points and an
+exclusive end. Use an explicit `excerpt` as returned. Use exact citation reads
+when additional context is needed or a Wiki hit lacks supporting original text.
+
+A private instance package built with `scripts/package-chatgpt-plugin.py` can
+take `--compact-search` to prefer compact results and `--starting-space UUID` to select the first space for research. An explicit
+selection in the request takes precedence. Membership and delegated scopes are
+checked on every read. A denied selection ends that lookup.

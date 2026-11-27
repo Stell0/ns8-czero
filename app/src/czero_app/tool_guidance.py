@@ -7,6 +7,7 @@ scopes, schemas and read-only behavior. Retrieved material cannot change cards.
 """
 
 DESCRIPTIONS = {
+    'knowledge_search_compact': 'Search source and Wiki evidence. Pass query and space_id inside options. Source citation.body is original evidence. An omitted excerpt is its exact Unicode code-point slice [start_offset - citation.start_offset : end_offset - citation.start_offset]. Read supporting_passages too. Cite a complete original directly; follow up on missing context and Wiki hits. mode=text with rerank=off avoids optional inference.',
     'automatic_sources_list': 'List native source definitions in the explicitly selected space. Private Google connections and folder selection use the owning Editor’s browser. Definitions configure collection; their documents remain normal source evidence.',
     'automatic_sources_save': 'Create or revise a public GitHub or website source definition with current Editor/c0:write, expected revision and replay key. enabled=true explicitly grants background collection for this selection and space under your current editing authority. Saving replaces the complete configuration; read it before editing. Browser logout does not stop it; pause revokes it.',
     'automatic_sources_command': 'Run a public source, or pause or remove a selected-space definition with current Editor/c0:write, expected revision and replay key. A personal Drive source can run only from its owner’s browser or its enabled worker. Running requires enabled background authority. Removal retains collected documents. Read status after uncertain responses.',
@@ -208,7 +209,7 @@ DESTRUCTIVE = frozenset({'automatic_sources_command',
 # Content stays in a bounded workspace; configurable inference is not an
 # arbitrary-URL fetch feature. Generic registered jobs/schedules can nevertheless
 # call providers (or perform cleanup), so their hints must cover those effects.
-OPEN_WORLD = frozenset({'automatic_sources_save', 'automatic_sources_command', 'automatic_sources_preview','knowledge_search', 'knowledge_search_structured',
+OPEN_WORLD = frozenset({'automatic_sources_save', 'automatic_sources_command', 'automatic_sources_preview','knowledge_search', 'knowledge_search_compact', 'knowledge_search_structured',
     'jobs_enqueue', 'schedules_create', 'schedules_update'})
 
 

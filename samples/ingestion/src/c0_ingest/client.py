@@ -101,7 +101,7 @@ class C0:
             if not requested or requested != self.space_id:
                 raise C0Error('Missing or wrong target space_id')
             arguments['space_id'] = requested
-        if name == 'knowledge_search':
+        if name in ('knowledge_search', 'knowledge_search_compact'):
             options = arguments.get('options', {})
             if not self.space_id or options.get('space_id', self.space_id) != self.space_id:
                 raise C0Error('Missing or wrong target search space_id')

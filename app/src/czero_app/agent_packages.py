@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 from urllib.parse import urlsplit
 import zipfile
+from uuid import UUID
 
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = Path(os.getenv('CZERO_AGENT_PACKAGE_DIR', ROOT / 'plugins/c0-knowledge'))
@@ -89,7 +90,7 @@ def license_bytes(template, license_file=None):
     return asset(path.parent, path.name)
 
 
-def plugin_payload(url, connection, name, *, template=TEMPLATE, license_file=None):
+def plugin_payload(url, connection, name, *, template=TEMPLATE, license_file=None, starting_space=None, compact_search=False):
     url, connection = mcp_url(url), app_id(connection)
     if not isinstance(name, str) or len(name) > 64 or not re.fullmatch(r'[a-z][a-z0-9]*(?:-[a-z0-9]+)*', name):
         raise ValueError('invalid_package_name')
@@ -112,6 +113,13 @@ def plugin_payload(url, connection, name, *, template=TEMPLATE, license_file=Non
         'Generation cannot prove their association. Do not substitute another '
         'connection, ask for credentials in chat or infer additional access.\n'
     ).encode()
+    if compact_search:
+        payload['references/instance.md'] += b'\nThis profile selects compact search for research when advertised.\n'
+    if starting_space is not None:
+        space_id = UUID(str(starting_space))
+        payload['references/instance.md'] += (
+            f'\nStarting space for research: `{space_id}`. An explicit selection in the request takes precedence.\n'
+        ).encode()
     return payload
 
 

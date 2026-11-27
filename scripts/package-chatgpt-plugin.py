@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / 'app/src'))
 from czero_app.agent_packages import TEMPLATE, mcp_url, app_id, json_bytes, plugin_payload, zip_bytes
 
 
-def build(url, connection, name, output, *, template=TEMPLATE, license_file=ROOT / 'LICENSE'):
+def build(url, connection, name, output, *, template=TEMPLATE, license_file=ROOT / 'LICENSE', starting_space=None, compact_search=False):
     url, connection = mcp_url(url), app_id(connection)
     if not re.fullmatch(r'[a-z][a-z0-9]*(?:-[a-z0-9]+)*', name) or len(name) > 64:
         raise ValueError('Use a unique lowercase kebab-case plugin name, at most 64 characters')
@@ -24,7 +24,7 @@ def build(url, connection, name, output, *, template=TEMPLATE, license_file=ROOT
         raise ValueError('Choose a new output directory; existing output is never replaced')
     base = 'plugins/' + name + '/'
     payload = {base + path: content for path, content in plugin_payload(url, connection, name,
-        template=template, license_file=license_file).items()}
+        template=template, license_file=license_file, starting_space=starting_space, compact_search=compact_search).items()}
     manifest = json.loads(payload[base + 'plugin.json'])
     payload['.agents/plugins/marketplace.json'] = json_bytes({
         'name': name + '-marketplace', 'interface': {'displayName': name},
@@ -105,9 +105,12 @@ def main():
     p.add_argument('--chatgpt-app-id', required=True)
     p.add_argument('--name', required=True)
     p.add_argument('--output', required=True, type=Path)
+    p.add_argument('--compact-search', action='store_true', help='Prefer compact evidence in this private package')
+    p.add_argument('--starting-space', help='Explicit default research space UUID for this private package')
     args = p.parse_args()
     try:
-        result = build(args.mcp_url, args.chatgpt_app_id, args.name, args.output)
+        result = build(args.mcp_url, args.chatgpt_app_id, args.name, args.output, starting_space=args.starting_space,
+                       compact_search=args.compact_search)
     except (ValueError, OSError, json.JSONDecodeError):
         p.exit(2, 'Package not created: check inputs, template and new output directory.\n')
     print(json.dumps(result))

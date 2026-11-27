@@ -28,7 +28,9 @@ REFERENCE_OPERATIONS = frozenset({'cross_space_ref_create','cross_space_refs_lis
 SPACE_ACCESS_OPERATIONS = frozenset({'space_access_set'})
 AUTOMATIC_SOURCE_OPERATIONS = frozenset({'automatic_sources_list','automatic_sources_save','automatic_sources_preview',
     'automatic_sources_command','automatic_source_runs_list','automatic_source_documents_list'})
-TOOL_COUNT = len(AUTOMATIC_SOURCE_OPERATIONS) + len(REFERENCE_OPERATIONS) + len(COMPILATION_OPERATIONS) + len(SPACE_ACCESS_OPERATIONS) + 75 + len(PROJECT_OPERATIONS) + len(DOCUMENT_OPERATIONS)
+ADDITIVE_OPERATIONS = (AUTOMATIC_SOURCE_OPERATIONS | REFERENCE_OPERATIONS | COMPILATION_OPERATIONS |
+    SPACE_ACCESS_OPERATIONS | PROJECT_OPERATIONS | DOCUMENT_OPERATIONS | {'knowledge_search_compact'})
+TOOL_COUNT = 75 + len(ADDITIVE_OPERATIONS)
 
 REMOVED_HISTORY_OPERATIONS=frozenset({'wiki_revisions_list','knowledge_annotations_history','source_document_history'})
 CHANGED_VALIDATION_CONTRACTS=frozenset({'claims_annotate','claims_create','claims_get','claims_list','claims_retract','knowledge_bundle_apply','sources_list'})

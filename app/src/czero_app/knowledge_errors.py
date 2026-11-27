@@ -12,7 +12,7 @@ KNOWLEDGE_OPERATIONS = frozenset({
     'knowledge_annotations_get', 'knowledge_annotations_history', 'knowledge_annotations_update',
     'knowledge_search_structured',
     'knowledge_bundle_apply',
-    'knowledge_graph', 'knowledge_changes', 'knowledge_search', 'knowledge_index_status',
+    'knowledge_graph', 'knowledge_changes', 'knowledge_search', 'knowledge_search_compact', 'knowledge_index_status',
 })
 _PUBLIC_HTTP_ERRORS = frozenset({
     (410, 'content_superseded'),

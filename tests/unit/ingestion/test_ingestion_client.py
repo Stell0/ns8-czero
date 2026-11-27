@@ -19,6 +19,7 @@ class Transport:
             {'name': 'spaces_get', 'read_only': True, 'input_schema': {'properties': {'space_id': {}}}},
             {'name': 'sources_ingest_text', 'read_only': False, 'input_schema': {'properties': {'space_id': {}}}},
             {'name': 'spaces_create', 'read_only': False, 'input_schema': {'properties': {}}},
+            {'name': 'knowledge_search_compact', 'read_only': True, 'input_schema': {'properties': {'options': {}}}},
             {'name': 'knowledge_search', 'read_only': True, 'input_schema': {'properties': {'options': {}}}},
         ]
 
@@ -63,11 +64,14 @@ def test_every_write_and_nested_search_has_exact_selected_space():
         client.call('sources_ingest_text', data={})
     client.select_space('target')
     for name, args in [('sources_ingest_text', {'space_id': 'other', 'data': {}}),
+                       ('knowledge_search_compact', {'options': {'space_id': 'other'}}),
                        ('knowledge_search', {'options': {'space_id': 'other'}}),
                        ('spaces_create', {'data': {}})]:
         with pytest.raises(C0Error):
             client.call(name, **args)
     assert client.writes == 0
+    client.call('knowledge_search_compact', options={'query':'test'})
+    assert transport.calls[-1][1]['options']['space_id'] == 'target'
     client.call('sources_ingest_text', data={})
     assert transport.calls[-1][1]['space_id'] == 'target'
 

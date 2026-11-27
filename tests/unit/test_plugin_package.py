@@ -163,3 +163,17 @@ def test_standalone_memory_skill_is_deterministic_and_instance_specific():
     assert b'https://other.example.net/mcp' in second['agents/openai.yaml']
     assert b'transport: "streamable_http"' in second['agents/openai.yaml']
     assert second['LICENSE'] == (ROOT/'LICENSE').read_bytes()
+
+
+def test_private_starting_space_is_optional_and_validated(tmp_path):
+    selected = 'a61ca63d-68d4-42a0-bc4a-a2c1d66cf149'
+    build(tmp_path/'default')
+    build(tmp_path/'selected', starting_space=selected, compact_search=True)
+    for name in ('default', 'selected'):
+        with zipfile.ZipFile(tmp_path/name/'plugin.zip') as archive:
+            binding = archive.read('references/instance.md').decode()
+            assert ('selects compact search' in binding) == (name == 'selected')
+            assert (selected in binding) == (name == 'selected')
+    with pytest.raises(ValueError):
+        build(tmp_path/'bad', starting_space='invalid')
+    assert not (tmp_path/'bad').exists()
