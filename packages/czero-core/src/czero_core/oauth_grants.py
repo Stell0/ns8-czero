@@ -273,10 +273,12 @@ class OAuthGrantService:
             return self._issue_code(connection, session, client_id, callback=callback,
                 scopes=scopes, challenge=challenge, resource=resource, verification=verification, persistent=persistent)
 
-    def _issue_code(self, connection, session, client_id, *, callback, scopes, challenge, resource, verification=None, persistent=False):
+    def _issue_code(self, connection, session, client_id, *, callback, scopes, challenge, resource,
+                    verification=None, persistent=False, session_only=False):
         """Called only after explicit, CSRF-protected consent by this session."""
         if (not isinstance(session, SessionContext) or session.expires_at.tzinfo is None or type(persistent) is not bool
-                or session.remembered and session.native_authority_id is None):
+                or session.remembered and session.native_authority_id is None
+                or type(session_only) is not bool or (session_only and persistent)):
             raise GrantRejected()
         if type(scopes) not in (set, frozenset) or not scopes or not scopes <= SCOPES:
             raise GrantRejected()
@@ -303,6 +305,8 @@ class OAuthGrantService:
             except RenewalRejected:
                 raise GrantRejected() from None
             expires = min(session.expires_at.timestamp(), native['expires_at'].timestamp()) if native['expires_at'] is not None else session.expires_at.timestamp()
+        if session_only and session.native_authority_id is not None:
+            expires = min(expires, current + min(self.authority.policy.absolute_seconds, 8 * 3600))
         if session.remembered and not persistent:
             expires = min(expires, current + self.authority.policy.absolute_seconds)
         if session.expires_at.timestamp() <= current or expires <= current:

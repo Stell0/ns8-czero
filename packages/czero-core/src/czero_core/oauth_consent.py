@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """One-use browser-bound consent; HTTP, cookies and SSO remain app concerns."""
 from dataclasses import dataclass, field
+import hashlib
 import json
 import re
 import secrets
@@ -14,6 +15,22 @@ from .identity import PermissionDenied, Role
 from .operations import SCOPES
 from .personal_data import require_consent_role
 from .sessions import SessionContext
+
+
+# Include the server-chosen mode in the existing browser-binding digest.
+# Removing the prefix therefore cannot convert a pending session-only request.
+_SESSION_ONLY_PREFIX = 's-'
+
+
+def _session_only(binding):
+    return len(binding) == 43 + len(_SESSION_ONLY_PREFIX) and binding.startswith(_SESSION_ONLY_PREFIX)
+
+
+def _browser_hash(binding):
+    if isinstance(binding, str) and _session_only(binding):
+        _digest(binding[len(_SESSION_ONLY_PREFIX):])
+        return hashlib.sha256(binding.encode('ascii')).hexdigest()
+    return _digest(binding)
 
 
 class ConsentRejected(ValueError):
@@ -48,18 +65,21 @@ class ConsentResult:
 
 
 class OAuthConsentService:
+    supports_session_only = True
+
     def __init__(self, grants):
         self.grants = grants
 
-    def begin(self, client_id, *, callback, scopes, challenge, state, resource, verification=None):
+    def begin(self, client_id, *, callback, scopes, challenge, state, resource, verification=None, session_only=False):
         with self.grants.access.database.engine.begin() as connection:
             return self._begin(connection, client_id, callback=callback, scopes=scopes,
-                challenge=challenge, state=state, resource=resource, verification=verification)
+                challenge=challenge, state=state, resource=resource, verification=verification,
+                session_only=session_only)
 
-    def _begin(self, connection, client_id, *, callback, scopes, challenge, state, resource, verification=None):
+    def _begin(self, connection, client_id, *, callback, scopes, challenge, state, resource, verification=None, session_only=False):
         if (type(scopes) not in (set, frozenset) or not scopes or not scopes <= SCOPES
                 or not isinstance(challenge, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', challenge)
-                or resource != self.grants.resource):
+                or resource != self.grants.resource or type(session_only) is not bool):
             raise ConsentRejected()
         if state is not None and (not isinstance(state, str) or not state.isascii()
                 or not state.isprintable() or not 1 <= len(state) <= 512):
@@ -68,7 +88,10 @@ class OAuthConsentService:
             callback = redirect_uri(callback)
         except ValueError:
             raise ConsentRejected() from None
-        pending = PendingConsent(secrets.token_urlsafe(32), secrets.token_urlsafe(32))
+        binding = secrets.token_urlsafe(32)
+        if session_only:
+            binding = _SESSION_ONLY_PREFIX + binding
+        pending = PendingConsent(secrets.token_urlsafe(32), binding)
         self.grants._lock(connection, roles=True)
         connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
         now = _date(self.grants._now())
@@ -91,7 +114,7 @@ class OAuthConsentService:
         connection.execute(text('''INSERT INTO c0_oauth_consent
             (hash,browser_hash,client_id,client_revision,issuer,native_client,resource,callback,scopes,challenge,state,expires_at)
             VALUES (:hash,:browser,:client,:revision,:issuer,:native,:resource,:callback,CAST(:scopes AS jsonb),:challenge,:state,:expires)'''),
-            {'hash': _digest(pending.request), 'browser': _digest(pending.binding),
+            {'hash': _digest(pending.request), 'browser': _browser_hash(pending.binding),
              'client': internal_id(client), 'revision': client['revision'], 'issuer': self.grants.access.issuer,
              'native': self.grants.native_client, 'resource': resource, 'callback': callback,
              'scopes': json.dumps(sorted(scopes)), 'challenge': challenge, 'state': state,
@@ -100,7 +123,7 @@ class OAuthConsentService:
 
     def _request(self, connection, request, binding):
         try:
-            parameters = {'hash': _digest(request), 'browser': _digest(binding), 'now': _date(self.grants._now()),
+            parameters = {'hash': _digest(request), 'browser': _browser_hash(binding), 'now': _date(self.grants._now()),
                 'issuer': self.grants.access.issuer, 'native': self.grants.native_client, 'resource': self.grants.resource}
         except GrantRejected:
             raise ConsentRejected() from None
@@ -120,7 +143,8 @@ class OAuthConsentService:
             # State/challenge/binding and native identity stay out of the UI DTO.
             return {'client_id': client['client_id'], 'client_name': client['client_name'],
                 'callback': row['callback'], 'scopes': row['scopes'], 'resource': row['resource'],
-                'expires_at': row['expires_at'], 'background_requested': row['background_requested']}
+                'expires_at': row['expires_at'], 'background_requested': row['background_requested'],
+                'session_only': _session_only(binding)}
 
     def prepare_background(self, session, request, binding, *, scopes):
         """Stage explicit offline sign-in, preserving the original five-minute bound."""
@@ -133,7 +157,8 @@ class OAuthConsentService:
             connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
             row, _ = self._request(connection, request, binding)
             actor = self.grants.access.checked_actor(connection, session.actor)
-            if not scopes <= set(row['scopes']) or row['expected_account_id'] not in (None, actor.user_id):
+            if (_session_only(binding) or not scopes <= set(row['scopes'])
+                    or row['expected_account_id'] not in (None, actor.user_id)):
                 raise ConsentRejected()
             for scope, role in [('c0:write',Role.EDITOR),('c0:admin',Role.ADMIN)]:
                 if scope in scopes:
@@ -153,7 +178,7 @@ class OAuthConsentService:
             self.grants._lock(connection, roles=True)
             connection.execute(text('SELECT pg_advisory_xact_lock(49380)'))
             row, client = self._request(connection, request, binding)
-            if session.expires_at.timestamp() <= self.grants._now():
+            if session.expires_at.timestamp() <= self.grants._now() or (persistent and _session_only(binding)):
                 raise ConsentRejected()
             actor = self.grants.access.checked_actor(connection, session.actor)
             if row['expected_account_id'] not in (None, actor.user_id):
@@ -166,6 +191,6 @@ class OAuthConsentService:
                     raise ConsentRejected()
                 code = self.grants._issue_code(connection, session, client['client_id'],
                     callback=row['callback'], scopes=scopes, challenge=row['challenge'], resource=row['resource'],
-                    verification=verification, persistent=persistent)
+                    verification=verification, persistent=persistent, session_only=_session_only(binding))
             connection.execute(text('DELETE FROM c0_oauth_consent WHERE hash=:hash'), {'hash': row['hash']})
             return ConsentResult(row['callback'], row['state'], code)

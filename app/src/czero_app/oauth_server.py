@@ -34,8 +34,8 @@ from czero_core.renewal import RenewalRejected, RenewalUnavailable
 from czero_app.oauth_provider import OAuthProvider, raw_request, pending_response, request_kind
 
 COOKIE = 'c0_consent'
-COOKIE_PATTERN = re.compile(r'([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})\Z')
-AUTHORIZE_FIELDS = {'client_id','redirect_uri','response_type','code_challenge','code_challenge_method','state','scope','resource'}
+COOKIE_PATTERN = re.compile(r'([A-Za-z0-9_-]{43})\.((?:s-)?[A-Za-z0-9_-]{43})\Z')
+AUTHORIZE_FIELDS = {'client_id','redirect_uri','response_type','code_challenge','code_challenge_method','state','scope','resource','c0_session_only'}
 TOKEN_FIELDS = {'client_id','grant_type','code','redirect_uri','code_verifier','refresh_token','scope','resource','client_secret'}
 REVOKE_FIELDS = {'client_id','token','token_type_hint','client_secret','resource'}
 
@@ -134,12 +134,17 @@ def install_oauth_server(app, auth, read_context, write_context):
         if raw.get('resource') != grants.resource:
             return JSONResponse({'error':'invalid_target'}, status_code=400)
         if kind == 'authorize':
+            if ('c0_session_only' in raw and (raw['c0_session_only'] != 'true'
+                    or not getattr(consent, 'supports_session_only', False))):
+                return JSONResponse({'error':'invalid_request'}, status_code=400)
             saved = await to_thread.run_sync(partial(grants.clients._lookup, raw.get('client_id')))
             if saved is not None and not callback_matches(raw.get('redirect_uri'), saved['redirect_uris']):
                 return JSONResponse({'error': 'invalid_request'}, status_code=400)
             if (raw.get('client_id', '').startswith('https://')
                     and (saved is None or not set(raw.get('scope', 'c0:read').split()) <= set(saved['allowed_scopes']))
                     and await to_thread.run_sync(grants.cimd.enabled)):
+                if 'c0_session_only' in raw:
+                    return JSONResponse({'error':'invalid_request'}, status_code=400)
                 try:
                     pending = await to_thread.run_sync(partial(onboarding.begin, raw))
                 except OnboardingRejected:
@@ -254,7 +259,7 @@ def install_oauth_server(app, auth, read_context, write_context):
         eligible = eligible_consent_scopes(session.actor, view['scopes'])
         authority = auth.sessions.authority
         client = grants.clients._lookup(view['client_id'])
-        supported = (grants.background_enabled and client is not None
+        supported = (not view.pop('session_only', False) and grants.background_enabled and client is not None
             and 'refresh_token' in client.get('grant_types', ['authorization_code', 'refresh_token']))
         seconds = authority.connection_policy.idle_seconds if supported else None
         ready = bool(supported and background_ready(session))
