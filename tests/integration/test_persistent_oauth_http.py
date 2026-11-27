@@ -52,6 +52,64 @@ async def background_pair(client, saved, state):
     return issued.json(), profile
 
 
+@pytest.mark.parametrize(('renewing_app', 'background'), [
+    ((43200, 3600), False),
+    ((28800, 3600), True),
+], indirect=['renewing_app'])
+def test_registered_client_can_require_session_only_consent(renewing_app, background):
+    async def check():
+        app, saved, clock, state = renewing_app
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            if background:
+                _, profile = await background_pair(client, saved, state)
+            else:
+                profile = await login(client, state)
+            headers = {'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']}
+            verifier, request_state = await authorize(client, saved, method='POST' if background else 'GET',
+                optional=(('c0_session_only', 'true'),))
+            view = (await client.get('/oauth/consent/request')).json()
+            assert not view['background_supported'] and not view['background_ready']
+
+            pending = client.cookies.get('c0_consent')
+            request_id, browser_binding = pending.split('.')
+            client.cookies.set('c0_consent', request_id + '.' + browser_binding.removeprefix('s-'),
+                domain='c0.example.test', path='/')
+            assert (await client.get('/oauth/consent/request')).status_code == 400
+            client.cookies.set('c0_consent', pending, domain='c0.example.test', path='/')
+
+            choice = {'draft_id': view['draft_id'], 'scopes': ['c0:read']}
+            offline = await client.post('/oauth/consent/background', json=choice, headers=headers)
+            assert offline.status_code == 400
+            persistent = await client.post('/oauth/consent', json={**choice, 'approve': True, 'persistent': True},
+                headers=headers)
+            assert persistent.status_code == 400
+
+            accepted = await client.post('/oauth/consent', json={**choice, 'approve': True}, headers=headers)
+            assert accepted.status_code == 200
+            callback = parse_qs(urlsplit(accepted.json()['redirect_uri']).query)
+            assert callback['state'] == [request_state]
+            issued = await client.post('/oauth/token', data={
+                'grant_type': 'authorization_code', 'client_id': saved['client_id'],
+                'redirect_uri': CALLBACK, 'code': callback['code'][0],
+                'code_verifier': verifier, 'resource': RESOURCE,
+            })
+            assert issued.status_code == 200 and issued.json()['refresh_token']
+            with app.state.auth.access.database.engine.connect() as connection:
+                expires = connection.execute(text('''SELECT extract(epoch FROM expires_at)
+                    FROM c0_oauth_grants WHERE client_id=:id AND NOT persistent'''),
+                    {'id': UUID(saved['client_id'])}).scalar_one()
+            assert expires == clock[0] + (3600 if background else 8 * 3600)
+            pair = issued.json()
+            for advance in (0,) if background else (1800, 1801):
+                clock[0] += advance
+                renewed = await refresh(client, saved, pair)
+                assert renewed.status_code == 200 and renewed.json()['refresh_token'] != pair['refresh_token']
+                pair = renewed.json()
+            clock[0] = int(expires)
+            assert (await refresh(client, saved, pair)).status_code == 400
+    asyncio.run(check())
+
+
 def test_replaced_consent_draft_cannot_authorize_or_deny_a_different_client(renewing_app):
     async def check():
         app, first_client, _, state = renewing_app

@@ -118,6 +118,15 @@ Read for validated exact HTTPS URL identities. Pin public DNS/TLS peers and rech
 authority after I/O. Additional client permissions require administrator approval;
 remote metadata never supplies roles. Existing UUID clients remain independent.
 
+A registered client can add `c0_session_only=true` to an authorization request
+to suppress background access for that consent. The server binds that choice to
+the pending browser request and rejects offline sign-in and persistent approval
+for it. Session-only grants still rotate refresh tokens when the client permits
+refresh. They expire within the current native session and its configured
+absolute limit, capped at eight hours. Without renewable native authority, the
+existing one-hour maximum applies. Client onboarding must be complete before
+using the parameter.
+
 Refresh cannot add scope or extend existing interactive grants' absolute authority.
 New background grants explicitly opt into separate offline authority with a
 snapshotted thirty-day inactivity window and no fixed maximum; never promote old

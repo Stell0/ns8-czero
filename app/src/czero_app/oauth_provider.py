@@ -95,10 +95,12 @@ class OAuthProvider:
             raise AuthorizeError('invalid_request')
         try:
             verification = await self.cimd.verification(client.client_id) if self.cimd is not None else None
+            extra = {'session_only': True} if raw.get('c0_session_only') == 'true' else {}
             pending = await to_thread.run_sync(partial(self.consent.begin, client.client_id,
                 callback=raw['redirect_uri'],
                 scopes=set(params.scopes or ['c0:read']) & client.approved_scopes,
-                challenge=params.code_challenge, state=params.state, resource=params.resource, verification=verification))
+                challenge=params.code_challenge, state=params.state, resource=params.resource, verification=verification,
+                **extra))
         except (ConsentRejected, CimdRejected, FetchRejected):
             raise AuthorizeError('invalid_request') from None
         pending_response.set(pending)
