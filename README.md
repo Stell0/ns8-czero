@@ -1,4 +1,4 @@
-# C0 — Shared knowledge for people and AI agents
+# C0 - Shared knowledge for people and AI agents
 
 **Keep knowledge across conversations. Find its evidence. Use your preferred AI.**
 
