@@ -34,31 +34,34 @@ class AccessService:
         self.admit_readers = admit_readers
 
     def resolve(self, identity: VerifiedIdentity) -> Actor:
+        # Keep an authenticated, unadmitted profile for owner-reviewed sharing.
+        with self.database.engine.begin() as connection:
+            user_id = self._record_identity(connection, identity)
+        with self.database.engine.connect() as connection:
+            return self._actor(connection, user_id)
+
+    def _record_identity(self, connection, identity, *, allow_admission=True):
         if (not isinstance(identity, VerifiedIdentity) or identity.issuer != self.issuer
                 or identity.expires_at <= time.time()):
             raise PermissionDenied()
-        # Keep an authenticated, unadmitted profile for owner-reviewed sharing.
-        # Commit the identity separately; recording it confers no permission.
-        with self.database.engine.begin() as connection:
-            if self.admit_readers:
-                connection.execute(text('SELECT pg_advisory_xact_lock(49372)'))
-            user_id = connection.execute(text("""
-                INSERT INTO c0_accounts (id, issuer, account_key, subject, username, display_name)
-                VALUES (:id, :issuer, :key, :subject, :username, :display_name)
-                ON CONFLICT (issuer, account_key) DO UPDATE
-                SET subject = EXCLUDED.subject, username = EXCLUDED.username,
-                    display_name = EXCLUDED.display_name, last_seen = now()
-                RETURNING id
-            """), {"id": uuid4(), "issuer": self.issuer, "key": UUID(identity.account_key),
-                   "subject": identity.subject, "username": identity.username,
-                   "display_name": identity.display_name}).scalar_one()
-            if self.admit_readers and UUID(identity.account_key) != self.owner_account_key:
-                connection.execute(text('''INSERT INTO c0_memberships(account_id,role)
-                    SELECT :id,'reader' WHERE NOT EXISTS
-                    (SELECT 1 FROM c0_account_blocks WHERE account_id=:id)
-                    ON CONFLICT(account_id) DO NOTHING'''), {'id': user_id})
-        with self.database.engine.connect() as connection:
-            return self._actor(connection, user_id)
+        if self.admit_readers and allow_admission:
+            connection.execute(text('SELECT pg_advisory_xact_lock(49372)'))
+        user_id = connection.execute(text("""
+            INSERT INTO c0_accounts (id, issuer, account_key, subject, username, display_name)
+            VALUES (:id, :issuer, :key, :subject, :username, :display_name)
+            ON CONFLICT (issuer, account_key) DO UPDATE
+            SET subject = EXCLUDED.subject, username = EXCLUDED.username,
+                display_name = EXCLUDED.display_name, last_seen = now()
+            RETURNING id
+        """), {"id": uuid4(), "issuer": self.issuer, "key": UUID(identity.account_key),
+               "subject": identity.subject, "username": identity.username,
+               "display_name": identity.display_name}).scalar_one()
+        if self.admit_readers and allow_admission and UUID(identity.account_key) != self.owner_account_key:
+            connection.execute(text('''INSERT INTO c0_memberships(account_id,role)
+                SELECT :id,'reader' WHERE NOT EXISTS
+                (SELECT 1 FROM c0_account_blocks WHERE account_id=:id)
+                ON CONFLICT(account_id) DO NOTHING'''), {'id': user_id})
+        return user_id
 
     def _actor(self, connection, user_id: UUID) -> Actor:
         row = connection.execute(text("""

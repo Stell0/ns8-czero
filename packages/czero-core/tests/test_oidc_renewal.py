@@ -238,3 +238,12 @@ def test_malformed_saved_offline_attestation_never_contacts_provider(provider, o
     with pytest.raises(RenewalRejected):
         client.check_renewal(json.dumps(saved))
     assert calls == []
+
+
+@pytest.mark.parametrize('status', [502, 503, 504])
+def test_gateway_failure_after_rotating_post_cannot_authorize_retry(provider, status):
+    client, options, calls, credential = provider
+    options['http'] = status
+    with pytest.raises(RenewalRejected):
+        client.check_renewal(credential(exp=int(time.time()) + 10))
+    assert [path for path, _ in calls] == ['/realm/token']

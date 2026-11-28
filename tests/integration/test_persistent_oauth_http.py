@@ -6,7 +6,8 @@ import os
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID, uuid4
 
-from httpx import ASGITransport, AsyncClient
+from oauth_browser import OAuthBrowser
+from httpx import ASGITransport
 import pytest
 from sqlalchemy import text
 
@@ -25,7 +26,7 @@ async def background_pair(client, saved, state):
     headers = {'Origin':ORIGIN,'X-C0-CSRF':original['csrf_token']}
     result = await client.post('/oauth/consent/background',
         json={'draft_id': initial['draft_id'], 'scopes': ['c0:read', 'c0:write']}, headers=headers)
-    assert result.status_code == 200 and result.json() == {'next':'/auth/login'}
+    assert result.status_code == 200 and urlsplit(result.json()['next']).path == '/auth/login'
     assert all(flag in result.headers['set-cookie'] for flag in ('Secure','HttpOnly','SameSite=lax','Max-Age=300'))
     started = await client.get('/auth/login')
     assert started.status_code == 302
@@ -33,7 +34,7 @@ async def background_pair(client, saved, state):
     assert fields['scope'] == ['openid profile offline_access'] and fields['prompt'] == ['login']
     state['nonce'] = fields['nonce'][0]; state['offline'] = True
     completed = await client.get('/auth/callback',params={'code':'private-code','state':fields['state'][0]})
-    assert completed.status_code == 302 and completed.headers['location'] == '/oauth/consent'
+    assert completed.status_code == 302 and urlsplit(completed.headers['location']).path == '/oauth/consent'
     assert 'Max-Age=28800' in completed.headers['set-cookie']
     view = (await client.get('/oauth/consent/request')).json()
     assert view['background_ready'] and view['background_requested'] and view['expires_at'] == initial['expires_at']
@@ -59,7 +60,7 @@ async def background_pair(client, saved, state):
 def test_registered_client_can_require_session_only_consent(renewing_app, background):
     async def check():
         app, saved, clock, state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             if background:
                 _, profile = await background_pair(client, saved, state)
             else:
@@ -70,12 +71,12 @@ def test_registered_client_can_require_session_only_consent(renewing_app, backgr
             view = (await client.get('/oauth/consent/request')).json()
             assert not view['background_supported'] and not view['background_ready']
 
-            pending = client.cookies.get('c0_consent')
-            request_id, browser_binding = pending.split('.')
-            client.cookies.set('c0_consent', request_id + '.' + browser_binding.removeprefix('s-'),
+            pending = client.cookies.get(client.binding_cookie)
+            browser_binding = pending
+            client.cookies.set(client.binding_cookie, browser_binding.removeprefix('s-'),
                 domain='c0.example.test', path='/')
             assert (await client.get('/oauth/consent/request')).status_code == 400
-            client.cookies.set('c0_consent', pending, domain='c0.example.test', path='/')
+            client.cookies.set(client.binding_cookie, pending, domain='c0.example.test', path='/')
 
             choice = {'draft_id': view['draft_id'], 'scopes': ['c0:read']}
             offline = await client.post('/oauth/consent/background', json=choice, headers=headers)
@@ -113,7 +114,7 @@ def test_registered_client_can_require_session_only_consent(renewing_app, backgr
 def test_replaced_consent_draft_cannot_authorize_or_deny_a_different_client(renewing_app):
     async def check():
         app, first_client, _, state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             _, profile = await background_pair(client, first_client, state)
             headers = {'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']}
             registration = await client.post('/api/v1/oauth/clients', headers=headers, json={
@@ -171,7 +172,7 @@ def test_replaced_consent_draft_cannot_authorize_or_deny_a_different_client(rene
 def test_browser_choice_requires_a_well_formed_draft_id(renewing_app, path, body):
     async def check():
         app, saved, _, state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             profile = await login(client, state)
             await authorize(client, saved)
             headers = {'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']}
@@ -186,7 +187,7 @@ def test_browser_choice_requires_a_well_formed_draft_id(renewing_app, path, body
 def test_background_survives_logout_and_self_disconnect_stops_next_use(renewing_app):
     async def check():
         app,saved,clock,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             pair,profile = await background_pair(client,saved,state)
             assert (await client.post('/auth/logout',json={},headers={'Origin':ORIGIN,'X-C0-CSRF':profile['csrf_token']})).status_code == 200
             clock[0] += 86401
@@ -215,7 +216,7 @@ def test_background_survives_logout_and_self_disconnect_stops_next_use(renewing_
 def test_background_activity_does_not_keep_browser_signed_in(renewing_app):
     async def check():
         app,saved,clock,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             pair,_ = await background_pair(client,saved,state)
             clock[0] += 3601
             renewed = await refresh(client,saved,pair)
@@ -229,10 +230,14 @@ def test_background_activity_does_not_keep_browser_signed_in(renewing_app):
 def test_background_renewal_recovers_from_outage_but_replay_revokes(renewing_app):
     async def check():
         app,saved,clock,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             pair,_ = await background_pair(client,saved,state)
-            clock[0] += 86400; state['status'] = 503
-            assert (await refresh(client,saved,pair)).status_code == 503
+            # The native provider is down while C0 and its database remain healthy.
+            state['status'] = 503
+            assert (await client.get('/api/v1/health')).status_code == 200
+            offline = await refresh(client,saved,pair)
+            assert offline.status_code == 503 and offline.json() == {
+                'error':'temporarily_unavailable', 'c0_rotation':'not_started'}
             state['status'] = 200
             renewed = await refresh(client,saved,pair)
             assert renewed.status_code == 200
@@ -246,7 +251,7 @@ def test_background_renewal_recovers_from_outage_but_replay_revokes(renewing_app
 def test_offline_signin_requires_csrf_and_ignores_query_authority(renewing_app):
     async def check():
         app,saved,_,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile = await login(client,state)
             await authorize(client,saved)
             view = (await client.get('/oauth/consent/request')).json()
@@ -263,7 +268,7 @@ def test_offline_signin_requires_csrf_and_ignores_query_authority(renewing_app):
 def test_background_callback_rejects_switched_identity_or_missing_offline_scope(renewing_app,change):
     async def check():
         app,saved,_,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile = await login(client,state); await authorize(client,saved)
             view = (await client.get('/oauth/consent/request')).json()
             assert (await client.post('/oauth/consent/background',
@@ -286,7 +291,7 @@ def test_background_callback_rejects_switched_identity_or_missing_offline_scope(
 def test_invalid_background_input_never_echoes_submitted_values(renewing_app,path,body):
     async def check():
         app,saved,_,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile = await login(client,state); await authorize(client,saved)
             view = (await client.get('/oauth/consent/request')).json()
             response = await client.post(path, json={'draft_id': view['draft_id'], **body},
@@ -299,7 +304,7 @@ def test_invalid_background_input_never_echoes_submitted_values(renewing_app,pat
 def test_background_consent_keeps_the_chunked_body_limit(renewing_app):
     async def check():
         app,saved,_,state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile = await login(client,state); await authorize(client,saved)
             async def content():
                 for _ in range(17):yield b'x'*1024
@@ -314,7 +319,7 @@ def test_new_connection_uses_current_policy_instead_of_previous_offline_signin(r
     from czero_core.renewal import ConnectionPolicy
     async def check():
         app,saved,_,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             old_pair,profile=await background_pair(client,saved,state)
             # A settings update restarts the app with a new policy; the saved
             # native authority and its existing grants retain their old limit.
@@ -334,7 +339,7 @@ def test_direct_consent_cannot_reuse_previous_policy_but_new_offline_signin_can(
     from uuid import UUID
     async def check():
         app,saved,_,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             old_pair,profile=await background_pair(client,saved,state)
             app.state.auth.sessions.authority.connection_policy=ConnectionPolicy(days*86400)
             await authorize(client,saved,scope='c0:read c0:write')

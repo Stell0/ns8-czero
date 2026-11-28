@@ -5,7 +5,8 @@ import asyncio
 import json
 from urllib.parse import parse_qs, urlsplit
 
-from httpx import ASGITransport, AsyncClient
+from oauth_browser import OAuthBrowser
+from httpx import ASGITransport
 import pytest
 from sqlalchemy import text
 
@@ -41,7 +42,7 @@ async def remembered_login(client,state):
 def test_rolling_cookie_survives_restart_hour_day_and_expires_at_seven_days(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile=await remembered_login(client,state)
             assert profile['browser_session']=={'remembered':True,'idle_seconds':604800}
             for elapsed in (3601,28801,6*86400):
@@ -49,7 +50,7 @@ def test_rolling_cookie_survives_restart_hour_day_and_expires_at_seven_days(rene
                 result=await client.get('/api/v1/me')
                 assert result.status_code==200 and 'Max-Age=604800' in result.headers['set-cookie']
             cookies=client.cookies
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN,cookies=cookies) as restarted:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN,cookies=cookies) as restarted:
             clock[0]+=REMEMBER_SECONDS-1
             assert (await restarted.get('/api/v1/me')).status_code==200
             clock[0]+=REMEMBER_SECONDS
@@ -61,7 +62,7 @@ def test_rolling_cookie_survives_restart_hour_day_and_expires_at_seven_days(rene
 def test_ordinary_form_and_compatibility_entry_cannot_be_upgraded_by_query(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             data=await form(client)
             started=await client.post('/auth/sign-in?remember=yes',data=data,headers={'Origin':ORIGIN})
             fields=parse_qs(urlsplit(started.headers['location']).query)
@@ -72,6 +73,7 @@ def test_ordinary_form_and_compatibility_entry_cannot_be_upgraded_by_query(renew
             assert (await client.get('/api/v1/me')).json()['browser_session']['remembered'] is False
             clock[0]+=3600
             assert (await client.get('/api/v1/me')).status_code==401
+            assert (await client.get('/auth/sign-in')).status_code == 200
             started=await client.get('/auth/login?remember=yes')
             assert parse_qs(urlsplit(started.headers['location']).query)['scope']==['openid profile']
     asyncio.run(check())
@@ -80,12 +82,12 @@ def test_ordinary_form_and_compatibility_entry_cannot_be_upgraded_by_query(renew
 def test_intent_origin_binding_replay_duplicates_size_and_expiry(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             data=await form(client)
             for origin in (None,'null','https://attacker.example.test'):
                 result=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':origin} if origin else {})
                 assert result.status_code==403
-            async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as other:
+            async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as other:
                 assert (await other.post('/auth/sign-in',data=data,headers={'Origin':ORIGIN})).status_code==400
             headers={'Origin':ORIGIN,'Content-Type':'application/x-www-form-urlencoded'}
             for body in ('intent='+data['intent']+'&remember=yes&remember=yes','intent='+data['intent']+'&unknown=yes','intent='+'x'*16384):
@@ -101,7 +103,7 @@ def test_intent_origin_binding_replay_duplicates_size_and_expiry(renewing_app):
 def test_offline_failure_explains_ordinary_signin_and_never_sets_remembered_cookie(renewing_app,failure):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             data=await form(client)
             started=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':ORIGIN})
             fields=parse_qs(urlsplit(started.headers['location']).query);state['nonce']=fields['nonce'][0];state['offline']=True
@@ -111,17 +113,23 @@ def test_offline_failure_explains_ordinary_signin_and_never_sets_remembered_cook
             elif failure=='code':pass
             else:state['nonce']='wrong-nonce'
             response=await client.get('/auth/callback',params={'code':'' if failure=='code' else 'private-code','state':fields['state'][0]})
-            assert response.status_code==403 and 'remembered_unavailable' in response.text
-            assert 'Max-Age=604800' not in response.headers.get('set-cookie','')
-            assert (await client.get('/api/v1/me')).status_code==401
-            assert (await client.get('/auth/callback',params={'code':'private-code','state':fields['state'][0]})).status_code==400
+            if failure == 'code':
+                # Malformed callbacks leave the legitimate transaction available.
+                assert response.status_code == 400 and 'callback_rejected' in response.text
+                good = await client.get('/auth/callback',params={'code':'private-code','state':fields['state'][0]})
+                assert good.status_code == 302
+            else:
+                assert response.status_code==403 and 'remembered_unavailable' in response.text
+                assert 'Max-Age=604800' not in response.headers.get('set-cookie','')
+                assert (await client.get('/api/v1/me')).status_code==401
+                assert (await client.get('/auth/callback',params={'code':'private-code','state':fields['state'][0]})).status_code==400
     asyncio.run(check())
 
 
 def test_failed_public_bearer_and_mcp_requests_do_not_renew_browser(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile=await remembered_login(client,state);clock[0]+=86400
             for path,headers in (('/',{}),('/api/v1/auth/status',{}),('/api/v1/me',{'Authorization':'Bearer invalid'}),('/mcp',{})):
                 response=await client.get(path,headers=headers)
@@ -138,7 +146,7 @@ def test_failed_public_bearer_and_mcp_requests_do_not_renew_browser(renewing_app
 def test_background_consent_preserves_remembered_browser_and_profile_isolation(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             await remembered_login(client,state)
             # Existing helper begins ordinary login; stage the actual background flow here instead.
             from test_oauth_server_http import authorize,CALLBACK,RESOURCE
@@ -171,7 +179,7 @@ def test_background_consent_preserves_remembered_browser_and_profile_isolation(r
 def test_unavailable_offline_support_offers_ordinary_signin(application):
     async def check():
         app,*_=application
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             data=await form(client)
             response=await client.post('/auth/sign-in',data={**data,'remember':'yes'},headers={'Origin':ORIGIN})
             assert response.status_code==403 and 'remembered_unavailable' in response.text
@@ -183,7 +191,7 @@ def test_reauthentication_retires_old_cookie_and_retains_existing_connection(ren
     async def check():
         from test_oauth_server_http import authorize,CALLBACK,RESOURCE
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             profile=await remembered_login(client,state)
             old=next(c.value for c in client.cookies.jar if c.name=='c0_session')
             verifier,_=await authorize(client,saved,scope='c0:read')
@@ -204,4 +212,27 @@ def test_reauthentication_retires_old_cookie_and_retains_existing_connection(ren
             assert delegated.status_code==200 and 'set-cookie' not in delegated.headers
             rotated=await refresh(client,saved,pair)
             assert rotated.status_code==200 and rotated.json()['scope']=='c0:read'
+    asyncio.run(check())
+
+def test_native_revocation_fences_login_start_and_bind(renewing_app):
+    from czero_core.sessions import LoginStateRejected
+
+    async def check():
+        app, _, _, state = renewing_app
+        auth = app.state.auth
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            await login(client, state)
+            cookie = client.cookies.get('c0_session')
+            context = auth.sessions.get(cookie)
+            pending = auth.sessions.begin_login(prior_cookie=cookie)
+            with auth.access.database.engine.begin() as connection:
+                connection.execute(text("UPDATE c0_native_authority SET revoked=true, credential=NULL WHERE id=:id"),
+                                   {'id': context.native_authority_id})
+            with pytest.raises(LoginStateRejected):
+                auth.sessions.bind_browser_login(pending, pending.browser_binding, cookie)
+            assert (await client.get('/auth/login')).status_code == 400
+            # An explicitly chosen fresh sign-in retires the stale cookie.
+            assert (await client.get('/auth/sign-in')).status_code == 200
+            assert client.cookies.get('c0_session') is None
+            await login(client, state)
     asyncio.run(check())

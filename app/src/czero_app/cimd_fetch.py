@@ -24,6 +24,7 @@ class FetchRejected(ValueError):
             code = 'metadata_unavailable'
         super().__init__(code)
         self.code = code
+        self.outcome = 'metadata_rejected' if code == 'metadata_rejected' else 'dependency_unavailable'
 
 
 def public_addresses(results):
@@ -269,6 +270,8 @@ class MetadataFetcher:
                         headers = response.headers
                         types = [v.split(b';', 1)[0].strip().lower() for k, v in headers if k.lower() == b'content-type']
                         encodings = [v.strip().lower() for k, v in headers if k.lower() == b'content-encoding']
+                        if response.status == 429 or 500 <= response.status <= 599:
+                            raise FetchRejected('metadata_unavailable')
                         if (response.status != 200 or len(types) != 1
                                 or not re.fullmatch(rb'application/(?:json|[a-z0-9!#$&^_.+-]+\+json)', types[0])
                                 or encodings not in ([], [b'identity'])):

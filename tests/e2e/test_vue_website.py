@@ -485,3 +485,23 @@ def test_vue_self_service_read_connects_then_preserves_existing_approval(live,re
             assert page.request.get(live.origin+'/api/v1/me',headers={'Authorization':'Bearer '+token['access_token']}).status==200
         finally:
             context.close();browser.close();registry.sync_policy(False)
+
+
+def test_vue_replayed_callback_offers_fresh_signin(live):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(ignore_https_errors=True)
+            with page.expect_request(lambda req: '/auth/callback?' in req.url) as callback:
+                page.goto(live.origin + '/auth/login')
+            expect(page.get_by_role('link', name='Administration', exact=True)).to_be_visible()
+            rejected = page.goto(callback.value.url)
+            assert rejected.status == 400
+            expect(page.get_by_role('heading', name='This sign-in request is unavailable')).to_be_visible()
+            expect(page.get_by_text('Support reference ' + rejected.headers['x-c0-request-id'])).to_be_visible()
+            page.get_by_role('link', name='Start fresh sign-in').click()
+            page.get_by_role('button', name='Continue with NethServer').click()
+            expect(page.get_by_role('link', name='Administration', exact=True)).to_be_visible()
+            assert page.request.get(live.origin + '/api/v1/me').json()['is_owner']
+        finally:
+            browser.close()

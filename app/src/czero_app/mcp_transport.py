@@ -30,6 +30,7 @@ from starlette.responses import JSONResponse
 from czero_core.identity import PermissionDenied, TokenRejected
 from czero_core.oauth_grants import GrantRejected
 from czero_core.renewal import RenewalUnavailable
+from czero_app.auth_events import mark
 from czero_core.operations import OperationRejected, ScopeDenied, SCOPES
 from czero_app import __version__
 from czero_app.agent_guidance import agent_guidance, SERVER_INSTRUCTIONS
@@ -167,9 +168,11 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None, features=None
 
     class Verifier:
         async def verify_token(self, value):
+            mark(None, access_token=value)
             try:
                 current = await verified(value)
-            except (GrantRejected, TokenRejected, PermissionDenied):
+            except (GrantRejected, TokenRejected, PermissionDenied) as error:
+                mark(getattr(error, 'reason', 'credential_rejected'))
                 return None
             return PrivateAccessToken(token=value, client_id=current.client_id,
                 subject=str(current.actor.user_id), scopes=sorted(current.scopes),
@@ -273,8 +276,12 @@ def create_mcp_app(registry, grants, *, issuer_url, api_keys=None, features=None
         request = ctx.request
         reference = getattr(getattr(request, 'state', None), 'c0_request_id', None)
         if result.is_error and reference:
+            mark('tool_error')
             result.meta = {**(result.meta or {}), 'c0/request_id': reference}
-            logging.getLogger('uvicorn.error.czero.requests').info('mcp operation error request %s', reference)
+            status = (result.meta.get('c0/error') or {}).get('status')
+            logging.getLogger('uvicorn.error.czero.requests').info(
+                'mcp operation error request %s status=%s', reference,
+                status if type(status) is int and 400 <= status <= 599 else 'unknown')
         return result
 
     async def resources(ctx, params):

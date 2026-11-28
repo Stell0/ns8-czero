@@ -120,3 +120,87 @@ def test_session_rechecks_member_roles_and_client_context(sessions):
     service.access.set_role(owner, account["id"], None)
     with pytest.raises(PermissionDenied):
         service.get(cookie)
+
+
+@pytest.mark.parametrize('interruption', ['logout','replacement','deadline'])
+def test_late_provider_response_cannot_publish_session(sessions, interruption):
+    service, identity, clock = sessions
+    old = service.create(identity)
+    context = service.get(old)
+    owner = 'b' * 43
+    pending = service.begin_login(prior_cookie=old, return_target='account')
+    service.bind_browser_login(pending, owner, old)
+    attempt = service.claim_browser_login(pending.state, pending.browser_binding, owner, old)
+    assert attempt.return_target == 'account'
+    if interruption == 'logout':
+        service.logout(old, context.csrf_token, owner=owner)
+    elif interruption == 'replacement':
+        newer = service.begin_login(prior_cookie=old)
+        service.bind_browser_login(newer, owner, old)
+    else:
+        # Expire the login transaction independently of the test identity.
+        with service.access.database.engine.begin() as conn:
+            conn.execute(text('UPDATE c0_login_states SET expires_at=now() WHERE issuer=:issuer'),
+                         {'issuer':identity.issuer})
+        clock[0] += 1
+    with pytest.raises(LoginStateRejected):
+        service.create(identity, attempt=attempt)
+    with service.access.database.engine.connect() as conn:
+        assert conn.execute(text('SELECT count(*) FROM c0_sessions WHERE issuer=:issuer'),
+                            {'issuer':identity.issuer}).scalar_one() == (0 if interruption == 'logout' else 1)
+
+
+def test_lost_fence_or_draft_never_admits_new_account(sessions):
+    from dataclasses import replace
+    service, identity, _ = sessions
+    service.access.admit_readers = True
+    owner = 'x' * 43
+    pending = service.begin_login()
+    service.bind_browser_login(pending, owner, None)
+    claim = service.claim_browser_login(pending.state, pending.browser_binding, owner, None)
+    replacement = service.begin_login()
+    service.bind_browser_login(replacement, owner, None)
+    stranger = replace(identity, account_key=str(uuid4()), subject='new-person', username='new-person')
+    touched = []
+    def unavailable(connection, account_id):
+        touched.append(account_id)
+        return False
+    with pytest.raises(LoginStateRejected):
+        service.create(stranger, attempt=claim, bind_flow=unavailable)
+    assert not touched
+    claim = service.claim_browser_login(replacement.state, replacement.browser_binding, owner, None)
+    with pytest.raises(LoginStateRejected):
+        service.create(stranger, attempt=claim, bind_flow=unavailable)
+    assert len(touched) == 1
+    with service.access.database.engine.connect() as conn:
+        assert conn.execute(text('SELECT count(*) FROM c0_accounts WHERE issuer=:issuer'),
+                            {'issuer': identity.issuer}).scalar_one() == 0
+
+
+@pytest.mark.parametrize('after_publication', [299, 300])
+def test_logout_receipt_deadline_starts_at_publication(sessions, after_publication):
+    from dataclasses import replace
+    service, identity, clock = sessions
+    prior = service.create(identity)
+    csrf = service.get(prior).csrf_token
+    owner = 'b' * 43
+    pending = service.begin_login(prior_cookie=prior, return_target='account')
+    proof = pending.browser_binding
+    service.bind_browser_login(pending, owner, prior)
+    login = service.claim_browser_login(pending.state, proof, owner, prior)
+    clock[0] += 299
+    successor = service.create(replace(identity, expires_at=clock[0] + 900), attempt=login)
+
+    clock[0] += after_publication
+    service.begin_login()  # Run normal expired-state cleanup.
+    assert service.recovery_target(pending.state, proof) is None
+    with pytest.raises(LoginStateRejected):
+        service.claim_browser_login(pending.state, proof, owner, prior)
+    if after_publication == 299:
+        service.logout(prior, csrf)
+        with pytest.raises(SessionRejected):
+            service.get(successor)
+    else:
+        with pytest.raises(SessionRejected):
+            service.logout(prior, csrf)
+        assert service.get(successor).actor.is_owner

@@ -31,7 +31,9 @@ from czero_core.operations import SCOPES
 from czero_core.client_onboarding import ClientOnboardingService, OnboardingRejected
 from czero_core.sessions import SessionRejected
 from czero_core.renewal import RenewalRejected, RenewalUnavailable
-from czero_app.oauth_provider import OAuthProvider, raw_request, pending_response, request_kind
+from czero_app.auth_events import mark
+from czero_app.oauth_flow import browser_flows, selected, flow_url, login_url, set_flow_cookie
+from czero_app.oauth_provider import incoming_flows, OAuthProvider, raw_request, pending_response, request_kind
 
 COOKIE = 'c0_consent'
 COOKIE_PATTERN = re.compile(r'([A-Za-z0-9_-]{43})\.((?:s-)?[A-Za-z0-9_-]{43})\Z')
@@ -55,6 +57,13 @@ class BackgroundChoice(BaseModel):
 
 
 def pending_cookie(request):
+    tokens = selected(request)
+    if tokens is not None:
+        if not hasattr(request.app.state.oauth_consent, 'review'):
+            raise ConsentRejected()
+        return tokens
+    if hasattr(request.app.state.oauth_consent, 'review'):
+        raise ConsentRejected()
     match = COOKIE_PATTERN.fullmatch(request.cookies.get(COOKIE, ''))
     if match is None:
         raise ConsentRejected()
@@ -68,6 +77,7 @@ def consent_draft_id(pending, session):
 def reviewed_pending(request, session, draft_id):
     pending = pending_cookie(request)
     if not hmac.compare_digest(draft_id, consent_draft_id(pending, session)):
+        request.state.c0_auth_reason = 'draft_mismatch'
         raise ConsentRejected()
     return pending
 
@@ -101,6 +111,7 @@ def install_oauth_server(app, auth, read_context, write_context):
     # Older released Core retains exact matching until independent adoption.
     callback_matches = getattr(grants.clients, 'redirect_uri_matches', lambda callback, registered: callback in registered)
     consent = OAuthConsentService(grants)
+    scoped_flows = hasattr(consent, 'review')
     onboarding = ClientOnboardingService(grants)
     app.state.client_onboarding = onboarding
     cimd = install_cimd_routes(app, grants.cimd, read_context, write_context)
@@ -131,9 +142,17 @@ def install_oauth_server(app, auth, read_context, write_context):
         # RFC 6749 section 3.1: ignore unknown authorization parameters only
         # after checking every raw name for duplicates. Core receives known fields.
         raw = {key: form[key] for key in form if key in fields}
+        if kind == 'token' and raw.get('grant_type') in ('authorization_code', 'refresh_token'):
+            request.state.c0_grant_kind = raw['grant_type']
         if raw.get('resource') != grants.resource:
             return JSONResponse({'error':'invalid_target'}, status_code=400)
+        flows = None
         if kind == 'authorize':
+            if scoped_flows:
+                try:
+                    flows = browser_flows(request)
+                except ConsentRejected:
+                    return JSONResponse({'error':'invalid_request'}, status_code=400)
             if ('c0_session_only' in raw and (raw['c0_session_only'] != 'true'
                     or not getattr(consent, 'supports_session_only', False))):
                 return JSONResponse({'error':'invalid_request'}, status_code=400)
@@ -146,17 +165,22 @@ def install_oauth_server(app, auth, read_context, write_context):
                 if 'c0_session_only' in raw:
                     return JSONResponse({'error':'invalid_request'}, status_code=400)
                 try:
-                    pending = await to_thread.run_sync(partial(onboarding.begin, raw))
+                    pending = await to_thread.run_sync(partial(onboarding.begin, raw,
+                        **({'browser_flows':tuple(flows.items())} if scoped_flows else {})))
                 except OnboardingRejected:
                     return JSONResponse({'error': 'invalid_request'}, status_code=400)
-                response = RedirectResponse('/oauth/connect', status_code=302,
+                response = RedirectResponse(flow_url('/oauth/' + pending.stage, pending.request) if scoped_flows else '/oauth/connect', status_code=302,
                     headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+                if scoped_flows:
+                    set_flow_cookie(response, pending)
+                    return response
                 response.set_cookie('c0_onboarding', pending.request + '.' + pending.binding,
                     max_age=300, secure=True, httponly=True, samesite='lax', path='/')
                 response.delete_cookie(COOKIE, path='/', secure=True, httponly=True, samesite='lax')
                 return response
             if saved is None or not callback_matches(raw.get('redirect_uri'), saved['redirect_uris']):
                 return JSONResponse({'error':'invalid_request'}, status_code=400)
+        flows_token = incoming_flows.set(tuple(flows.items()) if flows is not None else None)
         request_token, response_token = raw_request.set(raw), pending_response.set(None)
         kind_token = request_kind.set(kind)
         try:
@@ -164,12 +188,18 @@ def install_oauth_server(app, auth, read_context, write_context):
             response = await handlers[kind].handle(incoming)
             pending = pending_response.get()
             if kind == 'authorize' and pending is not None and response.status_code == 302:
+                if scoped_flows:
+                    response.headers['location'] = origin + flow_url('/oauth/' + pending.stage, pending.request)
+                    response.headers['Cache-Control'] = 'no-store'
+                    set_flow_cookie(response, pending)
+                    return response
                 response.set_cookie(COOKIE, pending.request + '.' + pending.binding, max_age=300,
                     secure=True, httponly=True, samesite='lax', path='/')
                 response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
             response.headers['Cache-Control'] = 'no-store'
             return response
         finally:
+            incoming_flows.reset(flows_token)
             request_kind.reset(kind_token)
             raw_request.reset(request_token)
             pending_response.reset(response_token)
@@ -178,7 +208,13 @@ def install_oauth_server(app, auth, read_context, write_context):
         async def endpoint(request):
             try:
                 return await bounded(request, kind)
-            except (SQLAlchemyError, RenewalUnavailable):
+            except RenewalUnavailable as error:
+                if kind == 'token' and getattr(error, 'before_refresh_rotation', False):
+                    request.state.c0_auth_reason = 'provider_unavailable'
+                    return JSONResponse({'error':'temporarily_unavailable', 'c0_rotation':'not_started'},
+                                        status_code=503, headers={'Cache-Control':'no-store'})
+                return JSONResponse({'error':'service_unavailable'}, status_code=503)
+            except SQLAlchemyError:
                 return JSONResponse({'error':'service_unavailable'}, status_code=503)
             except Exception as error:
                 logging.getLogger('czero.oauth').error('OAuth handler failed (%s)', type(error).__name__)
@@ -196,6 +232,22 @@ def install_oauth_server(app, auth, read_context, write_context):
         metadata.client_id_metadata_document_supported = grants.cimd.enabled()
         return JSONResponse(metadata.model_dump(mode='json', by_alias=True, exclude_none=True),
             headers={'Cache-Control':'no-store'})
+
+    def verified_oauth_flow(request, stage, flow, *, account_id=None, connection=None):
+        if not scoped_flows or stage not in ('connect', 'consent'):
+            return False
+        try:
+            tokens = selected(request, selector=flow)
+            service = onboarding if stage == 'connect' else consent
+            if connection is None:
+                service.available(*tokens, account_id=account_id)
+            else:
+                service.bind_login_account(connection, *tokens, account_id)
+            return True
+        except (ConsentRejected, OnboardingRejected):
+            return False
+
+    app.state.verified_oauth_flow = verified_oauth_flow
 
     def browser_session(request):
         if request.headers.get('authorization') is not None:
@@ -234,27 +286,38 @@ def install_oauth_server(app, auth, read_context, write_context):
 
     @app.get('/oauth/consent', include_in_schema=False)
     def consent_page(request: Request):
-        consent.view(*pending_cookie(request))
+        tokens = pending_cookie(request)
+        flow = request.query_params.get('flow')
+        if flow and scoped_flows:
+            consent.available(*tokens)
+        else:
+            consent.view(*tokens)
+        destination = login_url('consent', flow)
         if not request.cookies.get('c0_session'):
-            return RedirectResponse('/auth/login', status_code=302)
+            return RedirectResponse(destination, status_code=302,
+                headers={'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer'})
         try:
             browser_session(request)
         except (SessionRejected, RenewalRejected):
             # The browser cookie can outlive its native identity. Preserve the
             # validated pending request, but require a fresh ordinary sign-in.
-            response = RedirectResponse('/auth/login', status_code=302,
+            response = RedirectResponse(destination, status_code=302,
                 headers={'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer'})
             response.delete_cookie('c0_session', path='/', secure=True,
                 httponly=True, samesite='lax')
             return response
-        return app.state.website.render()
+        response = app.state.website.render()
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
 
     @app.get('/oauth/consent/request', include_in_schema=False)
     def consent_request(request: Request, response: Response):
         response.headers['Cache-Control'] = 'no-store'
         session = browser_session(request)
         tokens = pending_cookie(request)
-        view = consent.view(*tokens)
+        view = consent.review(session, *tokens) if scoped_flows and 'flow' in request.query_params else consent.view(*tokens)
+        if 'decision' in view:
+            return view
         draft_id = consent_draft_id(tokens, session)
         eligible = eligible_consent_scopes(session.actor, view['scopes'])
         authority = auth.sessions.authority
@@ -274,10 +337,13 @@ def install_oauth_server(app, auth, read_context, write_context):
         pending_request = reviewed_pending(request, session, choice.draft_id)
         await to_thread.run_sync(partial(consent.prepare_background, session, *pending_request,
             scopes=set(choice.scopes)))
-        pending = await to_thread.run_sync(partial(auth.sessions.begin_login, background=True, session=session))
-        response = JSONResponse({'next': '/auth/login'},
+        flow = request.query_params.get('flow')
+        extra = {'return_target':flow_url('/oauth/consent', flow),
+                 'prior_cookie':request.cookies.get('c0_session')} if flow else {}
+        pending = await to_thread.run_sync(partial(auth.sessions.begin_login, background=True, session=session, **extra))
+        response = JSONResponse({'next': login_url('background', flow)},
             headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
-        response.set_cookie('c0_background_login', pending.state + '.' + pending.browser_binding,
+        response.set_cookie('__Host-c0-background-' + flow if flow else 'c0_background_login', pending.state + '.' + pending.browser_binding,
             max_age=300, secure=True, httponly=True, samesite='lax', path='/')
         return response
 
@@ -285,9 +351,14 @@ def install_oauth_server(app, auth, read_context, write_context):
     async def consent_complete(request: Request, choice: ConsentChoice, context=Depends(write_context)):
         session = await to_thread.run_sync(partial(browser_session, request))
         pending = reviewed_pending(request, session, choice.draft_id)
+        scoped = scoped_flows and 'flow' in request.query_params
+        view = await to_thread.run_sync(partial(consent.review, session, *pending)) if scoped else None
+        if view and 'decision' in view:
+            request.state.c0_auth_reason = 'completed'
+            return JSONResponse(view, headers={'Cache-Control':'no-store'})
         verification = None
         if choice.approve:
-            view = await to_thread.run_sync(partial(consent.view, *pending))
+            view = view or await to_thread.run_sync(partial(consent.view, *pending))
             verification = await cimd.verification(view['client_id'])
         if choice.approve and choice.persistent and not await to_thread.run_sync(partial(background_ready, session)):
             raise ConsentRejected()
@@ -295,18 +366,33 @@ def install_oauth_server(app, auth, read_context, write_context):
             result = await to_thread.run_sync(partial(consent.complete, session, *pending, approve=choice.approve,
                 scopes=set(choice.scopes) if choice.scopes is not None else None, verification=verification,
                 persistent=choice.persistent))
-        except GrantRejected:
+        except GrantRejected as error:
+            if getattr(error, 'reason', '') == 'account_grant_limit':
+                request.state.c0_auth_reason = 'grant_limit'
+                raise HTTPException(409, 'account_grant_limit') from None
             raise ConsentRejected() from None
+        request.state.c0_auth_reason = 'completed'
+        if hasattr(result, 'decision'):
+            return JSONResponse({'decision':result.decision}, headers={'Cache-Control':'no-store'})
+        mark('completed', issued_code=result.code)
         values = {'code':result.code} if result.code else {'error':'access_denied'}
         if result.state is not None:
             values['state'] = result.state
         response = JSONResponse({'redirect_uri':result.callback + '?' + urlencode(values)},
             headers={'Cache-Control':'no-store'})
-        response.delete_cookie(COOKIE, path='/', secure=True, httponly=True, samesite='lax')
+        if not scoped:
+            response.delete_cookie(COOKIE, path='/', secure=True, httponly=True, samesite='lax')
         return response
 
     @app.exception_handler(ConsentRejected)
     def rejected(request, error):
+        if not getattr(request.state, 'c0_auth_reason', None):
+            request.state.c0_auth_reason = getattr(error, 'reason', 'draft_unavailable')
+        if (request.method == 'GET' and request.url.path == '/oauth/consent'
+                and 'text/html' in request.headers.get('accept', '')):
+            response = app.state.website.render({'error':'flow_unavailable'}, status_code=400)
+            response.headers['Referrer-Policy'] = 'no-referrer'
+            return response
         return JSONResponse({'detail':'invalid_consent'}, status_code=400, headers={'Cache-Control':'no-store'})
     from czero_app.onboarding import install_onboarding_routes
     from czero_app.workspace_access import install_workspace_routes

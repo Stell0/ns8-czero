@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-SCHEMA_REVISION = "0047_collection_diagnostics"
+SCHEMA_REVISION = "0048_consent_flows"
 
 
 class Database:

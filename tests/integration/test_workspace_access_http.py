@@ -89,8 +89,10 @@ def test_browser_approval_decline_disconnect_and_persistent_block_are_separate(c
                 blocked=await member_row(admin);assert blocked['blocked'] and blocked['role'] is None
                 assert (await admin.put(rolepath,json={'role':'admin','expected_revision':current['access_revision']},headers=headers(adm))).status_code==409
                 assert (await user.get('/api/v1/profile',headers={'Authorization':'Bearer '+second['access_token']})).status_code==401
+                # Start a new website sign-in after the admin retired this session.
+                assert (await user.get('/auth/sign-in')).status_code == 200
                 for _ in range(2):
-                    started=await user.get('/auth/login')
+                    started=await user.ordinary_signin()
                     from urllib.parse import parse_qs,urlsplit
                     state=parse_qs(urlsplit(started.headers['location']).query)['state'][0]
                     assert (await user.get('/auth/callback',params={'state':state,'code':'unit-only-forbidden-code'})).status_code==403

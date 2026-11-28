@@ -80,11 +80,12 @@ export async function request<T>(
   path: string,
   options: AxiosRequestConfig = {},
   scoped = true,
+  reviewedCsrf?: string,
 ): Promise<T> {
   const epoch = boundary.epoch
   return boundary.run(async (signal) => {
     const method = (options.method || 'GET').toUpperCase()
-    const csrf = context().csrf
+    const csrf = reviewedCsrf ?? context().csrf
     if (method !== 'GET' && !csrf) throw new ApiError(403)
     try {
       const response = await http.request<T>({

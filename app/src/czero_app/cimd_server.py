@@ -125,14 +125,17 @@ def install_cimd_routes(app, service, read_context, write_context):
 
     @app.exception_handler(CimdRejected)
     def rejected(request, error):
+        request.state.c0_auth_reason = getattr(error, 'reason', 'metadata_rejected')
         return JSONResponse({'detail': 'cimd_unavailable'}, status_code=409, headers={'Cache-Control': 'no-store'})
 
     @app.exception_handler(MetadataRejected)
     def invalid(request, error):
+        request.state.c0_auth_reason = 'metadata_rejected'
         return JSONResponse({'detail': 'invalid_client_metadata'}, status_code=422, headers={'Cache-Control': 'no-store'})
 
     @app.exception_handler(FetchRejected)
     def unavailable(request, error):
+        request.state.c0_auth_reason = error.outcome
         return JSONResponse({'detail': error.code}, status_code=503, headers={'Cache-Control': 'no-store'})
 
     @app.exception_handler(ClientConflict)

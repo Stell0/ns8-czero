@@ -2,6 +2,33 @@
 
 [Execution plan for the C0 UI, documentation and Support integration](docs/support-integration-plan.md)
 
+## OAuth browser and connector recovery
+
+Development base `55138e3` pins released Core 0.53.0. The producer candidate adds
+browser flow ownership, callback publication fencing and status-only consent
+receipts in schema `0048_consent_flows`. Publish independently verified Core
+artifacts before updating the consumer range and frozen lock. A consumer built
+with the previous pin rejects the session-only parameter added in PR 174.
+
+Acceptance exercises overlapping browser requests, explicit background login,
+lost completion and rotation responses, current account and role, and
+credential-free access logs. Repeat the installed console and assistant reads
+after reconnect and after a recoverable outage. A clean restore with a new
+native identity requires fresh consent. Keep rollout gated on full native
+acceptance, supported backup, readiness, and those client readbacks.
+
+Roll out proxy sanitization first and verify synthetic callback canaries on each
+ingress. Promote the Core producer from the accepted source, then lock the app
+to that immutable tag and rerun the released-consumer image and native suites.
+Deploy the verified app before enabling the consumer's session-only flow. A
+generic proxy or transport failure after refresh dispatch still requires fresh
+consent. Only C0's confirmed pre-rotation result allows a retry with that
+refresh token. Stop rollout on a leaked canary, a binding or revocation failure,
+a second redemption, lost backup evidence, or a failed protected read on a
+healthy service. Recover a failed schema update using the supported, matched
+pre-update backup and image. Preserve the native client identity when recovering
+the same instance.
+
 ## Public website collection and ingestion reliability
 
 Baseline upstream `1e75e9e3d6f41366185a993b816a9b97a1e215a9` has producer
