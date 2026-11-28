@@ -158,11 +158,11 @@ def test_vue_native_approval_waits_for_saved_metadata(live,vue_browser,request,m
     params={'client_id':metadata_url,'redirect_uri':'https://client.example.test/callback',
         'response_type':'code','code_challenge_method':'S256','code_challenge':'a'*43,
         'scope':'c0:write','resource':live.origin+'/mcp'}
-    page.goto(live.origin+'/oauth/authorize?'+urlencode(params))
-    profile=page.request.get(live.origin+'/api/v1/me').json()
-    pending=page.request.post(live.origin+'/oauth/connect/request',data={},
-        headers={'X-C0-CSRF':profile['csrf_token'],'Origin':live.origin})
-    assert pending.status==200 and not pending.json()['approved']
+    with page.expect_response('**/oauth/connect/request?flow=*') as onboarding:
+        page.goto(live.origin+'/oauth/authorize?'+urlencode(params))
+    pending = onboarding.value
+    assert pending.request.method == 'POST' and pending.status == 200
+    assert not pending.json()['approved']
     context=page.context.browser.new_context(ignore_https_errors=True)
     try:
         admin=context.new_page();admin.goto(live.origin+'/auth/login')
