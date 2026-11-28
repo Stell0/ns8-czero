@@ -202,7 +202,8 @@ def test_provider_outage_is_static_for_browser_mcp_refresh_and_local_logout_stil
             result=await client.get('/api/v1/me')
             assert result.status_code==503 and result.json()=={'detail':'authentication_unavailable'}
             token=await refresh(client,saved,current)
-            assert token.status_code==503 and token.json()=={'error':'service_unavailable'}
+            assert token.status_code == 503 and token.json() == {
+                'error':'temporarily_unavailable', 'c0_rotation':'not_started'}
             async with app.router.lifespan_context(app):
                 result=await client.post('/mcp',headers={'Authorization':'Bearer '+current['access_token'],
                     'Accept':'application/json, text/event-stream'},json={'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}})
