@@ -140,3 +140,30 @@ def test_invalid_or_expired_completion_preserves_pending_request(consent):
         with pytest.raises(ConsentRejected):
             pending.complete(current, request.request, request.binding, approve=approve, scopes=scopes)
         assert pending.view(request.request, request.binding)['scopes'] == ['c0:read']
+
+
+def test_completed_receipts_preserve_room_for_new_authorizations(consent):
+    pending, (_, _, _, session, clock, *_) = consent
+    for number in range(33):
+        request, _ = begin(consent, state=f'bounded-{number}', browser_flows=())
+        pending.complete(session, request.request, request.binding, approve=False, scopes=set())
+    assert pending.review(session, request.request, request.binding) == {'decision': 'declined'}
+    clock[0] += 300
+    with pytest.raises(ConsentRejected):
+        pending.review(session, request.request, request.binding)
+
+
+def test_first_authenticated_review_prevents_other_account_completion(consent):
+    service, (grants, _, _, owner, _, app, member_token) = consent
+    grants.access.admit_readers = True
+    member_actor = grants.access.resolve(app.state.auth.oidc.verify_access_token(member_token))
+    member = SessionContext(member_actor, owner.expires_at, 'test-only-member-csrf')
+    flow, _ = begin(consent, browser_flows=())
+    assert service.review(owner, flow.request, flow.binding)['scopes'] == ['c0:read']
+    with pytest.raises(ConsentRejected):
+        service.review(member, flow.request, flow.binding)
+    with pytest.raises(ConsentRejected):
+        service.complete(member, flow.request, flow.binding, approve=False)
+    service.complete(owner, flow.request, flow.binding, approve=False)
+    with pytest.raises(ConsentRejected):
+        service.review(member, flow.request, flow.binding)

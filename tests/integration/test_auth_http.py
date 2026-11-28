@@ -189,7 +189,18 @@ def test_forbidden_browser_login_can_retry_with_another_account(application, bas
             started = await client.get(base_path + "/auth/login")
             state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
             assert "prompt" not in parse_qs(urlsplit(started.headers["location"]).query)
-            binding = client.cookies.get("c0_login")
+            from czero_app.auth import attempt_cookie
+            cookie_name = attempt_cookie(state, base_path + '/') if hasattr(auth.sessions, 'claim_browser_login') else 'c0_login'
+            binding = client.cookies.get(cookie_name)
+            if hasattr(auth.sessions, 'claim_browser_login'):
+                from czero_app.auth import cookie_namespace
+                namespace = cookie_namespace(base_path + '/')
+                owner_name = '__Host-c0-login-owner-' + namespace
+                assert cookie_name.startswith('__Host-c0-attempt-' + namespace + '-')
+                proof_cookies = [c for c in client.cookies.jar if c.name in (cookie_name, owner_name)]
+                assert len(proof_cookies) == 2
+                assert all(c.path == '/' and c.secure and not c.domain_specified for c in proof_cookies)
+                assert all(c.path == base_path + '/' for c in client.cookies.jar if c.name == 'c0_session')
             denied = await client.get(base_path + "/auth/callback",
                 params={"state": state, "code": "unit-only-forbidden-code"})
             assert denied.status_code == 403
@@ -198,9 +209,14 @@ def test_forbidden_browser_login_can_retry_with_another_account(application, bas
             assert denied.headers["referrer-policy"] == "no-referrer"
             boot=json.loads(denied.text.split('id="c0-boot" type="application/json">')[1].split('</script>')[0])
             assert boot=={'error':'access_denied'}
+            with database.engine.connect() as connection:
+                recorded = connection.execute(text('''SELECT a.username,m.role FROM c0_accounts a
+                    LEFT JOIN c0_memberships m ON m.account_id=a.id
+                    WHERE a.issuer=:issuer AND a.username='member' '''), {'issuer': auth.access.issuer}).one()
+                assert tuple(recorded) == ('member', None)
             assert '<base href="'+base_path+'/"' in denied.text
             assert state not in denied.text and "unit-only-forbidden-code" not in denied.text
-            binding_present = "c0_login" in client.cookies
+            binding_present = cookie_name in client.cookies
             session_present = "c0_session" in client.cookies
             assert not binding_present and not session_present
             if old_session:
@@ -208,7 +224,7 @@ def test_forbidden_browser_login_can_retry_with_another_account(application, bas
                 assert stale.status_code == 401
             assert (await client.get(base_path + "/api/v1/me")).status_code == 401
             replay = await client.get(base_path + "/auth/callback",
-                params={"state":state,"code":"unit-only-code"}, headers={"Cookie":"c0_login="+binding})
+                params={"state":state,"code":"unit-only-code"}, headers={"Cookie":cookie_name+"="+binding})
             assert replay.status_code == 400
             api_denied = await client.get(base_path + "/api/v1/me",
                 headers={"Authorization": "Bearer " + member})
@@ -238,4 +254,81 @@ def test_local_logout_completes_during_provider_outage(application, monkeypatch)
             assert result.status_code == 200
             assert result.json() == {"logout_url": ORIGIN + "/", "provider_logout": False}
             assert (await client.get("/api/v1/me")).status_code == 401
+    asyncio.run(check())
+
+
+def test_rejected_callback_never_consumes_malformed_input_or_reuses_provider_error(application):
+    async def check():
+        app, *_ = application
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
+            started = await browser.get('/auth/login')
+            state = parse_qs(urlsplit(started.headers['location']).query)['state'][0]
+            for bad in [
+                [('code','one'), ('code','two')],
+                [('state',state), ('code','one')],
+                [('code','one'), ('error','access_denied')],
+                [('iss','https://untrusted.invalid'), ('code','one')],
+            ]:
+                response = await browser.get('/auth/callback', params=[('state',state), *bad])
+                assert response.status_code == 400
+                assert 'callback_rejected' in response.text and state not in response.text
+            error = await browser.get('/auth/callback', params={'state':state,'error':'temporarily_unavailable',
+                                                                'error_description':'private-provider-explanation'})
+            assert error.status_code == 503 and 'provider_unavailable' in error.text
+            assert state not in error.text and 'private-provider-explanation' not in error.text
+            assert error.headers['cache-control'] == 'no-store'
+            assert error.headers['referrer-policy'] == 'no-referrer'
+            stale = await browser.get('/auth/callback', params={'state':state,'code':'unit-only-code'})
+            assert stale.status_code == 400
+            fresh = await browser.get('/auth/login')
+            next_state = parse_qs(urlsplit(fresh.headers['location']).query)['state'][0]
+            assert next_state != state
+            completed = await browser.get('/auth/callback', params={'state':next_state,'code':'unit-only-code'})
+            assert completed.status_code == 302 and (await browser.get('/api/v1/me')).status_code == 200
+    asyncio.run(check())
+
+
+def test_logout_received_with_predecessor_cookie_after_callback_publication(application):
+    async def check():
+        app, *_ = application
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
+            for step in range(3):
+                start = await browser.get('/auth/login')
+                state = parse_qs(urlsplit(start.headers['location']).query)['state'][0]
+                callback = await browser.get('/auth/callback', params={'state':state,'code':'unit-only-code'})
+                assert callback.status_code == 302
+                if step == 0:
+                    old = browser.cookies['c0_session']
+                    csrf = (await browser.get('/api/v1/me')).json()['csrf_token']
+            headers = {'Cookie':'c0_session='+old,'Origin':ORIGIN, 'X-C0-CSRF':'wrong-proof'}
+            assert (await browser.get('/auth/login',headers={'Cookie':'c0_session='+old})).status_code == 400
+            assert (await browser.post('/auth/logout',headers=headers)).status_code in (401,403)
+            assert (await browser.get('/api/v1/me')).status_code == 200
+            headers['X-C0-CSRF'] = csrf
+            successor = browser.cookies['c0_session']
+            assert (await browser.post('/auth/logout',headers=headers)).status_code == 200
+            assert (await browser.get('/api/v1/me',headers={'Cookie':'c0_session='+successor})).status_code == 401
+            assert (await browser.post('/auth/logout',headers=headers)).status_code in (401,403)
+    asyncio.run(check())
+
+@pytest.mark.parametrize('failure', ['provider','database','authority'])
+def test_callback_error_does_not_fill_browser_attempt_capacity(application, monkeypatch, failure):
+    async def check():
+        app, *_ = application
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
+            if failure != 'provider':
+                from sqlalchemy.exc import SQLAlchemyError
+                from czero_core.renewal import RenewalRejected
+                def unavailable(*args, **kwargs):
+                    raise SQLAlchemyError() if failure == 'database' else RenewalRejected()
+                monkeypatch.setattr(app.state.auth.sessions, 'create', unavailable)
+            for _ in range(13):
+                started = await browser.get('/auth/login')
+                assert started.status_code == 302
+                state = parse_qs(urlsplit(started.headers['location']).query)['state'][0]
+                params = {'error': 'access_denied'} if failure == 'provider' else {'code':'unit-only-code'}
+                denied = await browser.get('/auth/callback', params={'state': state, **params})
+                assert denied.status_code == {'provider':400,'database':503,'authority':401}[failure]
+                assert not any('c0-attempt-' in cookie for cookie in browser.cookies)
+            assert (await browser.get('/auth/login')).status_code == 302
     asyncio.run(check())

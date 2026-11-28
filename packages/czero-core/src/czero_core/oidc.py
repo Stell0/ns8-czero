@@ -255,14 +255,17 @@ class OidcClient:
                 if not isinstance(result, dict):
                     raise RenewalRejected()
                 return result
-        except httpx2.RequestError:
+        except (httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.PoolTimeout):
+            # No credential was submitted before connection acquisition.
+            raise RenewalUnavailable() from None
+        except (httpx2.RequestError, httpx2.HTTPStatusError):
             # The provider may already have rotated the credential when a
             # transport failure prevents us receiving its response. Never retry
             # that ambiguous refresh with the old credential.
             if rotating:
                 raise RenewalRejected() from None
             raise RenewalUnavailable() from None
-        except (httpx2.HTTPStatusError, OidcUnavailable):
+        except OidcUnavailable:
             raise RenewalUnavailable() from None
         except (ValueError, TypeError, RecursionError):
             raise RenewalRejected() from None

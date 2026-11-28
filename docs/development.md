@@ -127,6 +127,15 @@ absolute limit, capped at eight hours. Without renewable native authority, the
 existing one-hour maximum applies. Client onboarding must be complete before
 using the parameter.
 
+The producer binds each pending browser authorization to a flow-specific
+HttpOnly cookie and an independent selector. A repeated request must match
+the original registered client, revision, callback, resource, state, scopes,
+session-only choice and PKCE challenge. Consent and onboarding carry the
+original deadline across ordinary and background sign-in. The first verified
+account owns the review. A completed draft has a status-only receipt until
+the original expiry. A client that missed the callback starts a new request.
+The receipt cannot return an authorization code or prove token redemption.
+
 Refresh cannot add scope or extend existing interactive grants' absolute authority.
 New background grants explicitly opt into separate offline authority with a
 snapshotted thirty-day inactivity window and no fixed maximum; never promote old

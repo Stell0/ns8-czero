@@ -41,6 +41,17 @@ Eligible new connections show **Allow background access** selected on the consen
 
 Users disconnect their own connections from **Account → Your connected apps**. Disable a specific approved client to revoke all its grants; reenable permits fresh consent but does not revive old grants. Membership changes revoke existing authority. Local logout revokes bounded grants and preserves explicitly consented background grants. Provider rejection ends authority; provider sign-out may require its own confirmation and ordinarily preserves offline access. A plugin's installation policy and each user's connection credentials are separate. Database restore with a new native client or secret cannot revive the old connection.
 
+If sign-in has expired, use the recovery page to start a fresh attempt.
+Return to the application's Connect action when its request has expired.
+If consent was recorded but the application missed the callback, start
+Connect again in the application. At the per-account connection limit,
+review **Account → Your connected apps** and disconnect a chosen entry.
+
+A cold backup temporarily stops C0. Wait for the health endpoint to report
+a healthy database and verify a protected read using the existing connection.
+A lost response while a refresh token was being rotated can require fresh
+consent. Replaying a consumed refresh token revokes its grant.
+
 ## Operate and troubleshoot
 
 Use NS8's Configuration/Status pages and supported module actions. Runtime status distinguishes database readiness, authentication configuration and scheduler activity. Configuration alone does not prove provider connectivity or output quality. An idle one-shot worker is normal; a failed worker is not.
@@ -56,6 +67,21 @@ api-cli run module/<module-id>/get-scheduler-status
 Use the configured module ID, not one copied from another operator. For direct administration assistance, install the maintained [NethServer agent skills](https://github.com/NethServer/agents); their `nethserver-admin` skill covers supported NS8 actions and rootless contexts.
 
 C0 uses journald. Empty Podman logs or an inaccessible module-user journal do not prove privacy. An authorized log audit must use bounded actual application entries, the verified UID/container and positive request controls. Keep raw journals, cookies and tokens private. Share fixed status/error codes, not complete OAuth authorization URLs or credential-bearing traces.
+
+OAuth and MCP responses carry an opaque `X-C0-Request-ID`. Search the C0
+journal for that exact ID. For one process lifetime, the `flow` reference
+joins browser stages, `exchange` joins consent to code redemption, and
+`generation` joins issuance to a bearer check. A challenge on discovery,
+a rejected bearer, and an operation error inside an HTTP 200 have separate
+records. A proxy 502 can precede any C0 event. Compare its time to service
+readiness and backup records. The OAuth recovery update can use the existing
+Traefik configuration. Traefik can retain OAuth callback queries in its access
+logs. Restrict raw proxy logs to authorized operators and exclude them from
+shared incident exports.
+
+For the credential-free logging check, exercise the OAuth flow and verify that
+C0 and the installed connector each recorded the expected events. Check those
+diagnostic entries for credential canaries and stop the rollout if any appear.
 
 ### Inspect incomplete source work
 

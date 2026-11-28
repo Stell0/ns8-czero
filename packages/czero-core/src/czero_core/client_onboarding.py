@@ -12,7 +12,7 @@ from .cimd import CimdRejected
 from .cimd_metadata import metadata_url
 from .identity import PermissionDenied, Role
 from .oauth_clients import redirect_uri
-from .oauth_consent import ConsentRejected, OAuthConsentService, PendingConsent, eligible_consent_scopes
+from .oauth_consent import ConsentRejected, OAuthConsentService, PendingConsent, eligible_consent_scopes, request_hash
 from .oauth_grants import GrantRejected, _date, _digest
 from .operations import SCOPES
 from .sessions import SessionContext
@@ -46,7 +46,7 @@ class ClientOnboardingService:
             raise PermissionDenied()
         return actor
 
-    def begin(self, parameters):
+    def begin(self, parameters, *, browser_flows=None):
         """The transport has already rejected duplicate names and credentials."""
         fields = {'client_id', 'redirect_uri', 'response_type', 'code_challenge',
                   'code_challenge_method', 'state', 'scope', 'resource'}
@@ -69,12 +69,30 @@ class ClientOnboardingService:
                 raise ValueError()
         except (KeyError, TypeError, ValueError):
             raise OnboardingRejected() from None
-        pending = PendingConsent(secrets.token_urlsafe(32), secrets.token_urlsafe(32))
+        pending = PendingConsent(secrets.token_urlsafe(32), secrets.token_urlsafe(32), stage='connect')
         with self.grants.access.database.engine.begin() as connection:
             self._lock(connection)
             policy = self.grants.cimd._policy(connection)
             now = _date(self.grants._now())
             connection.execute(text('DELETE FROM c0_client_onboarding WHERE expires_at<=:now'), {'now': now})
+            if browser_flows is not None and state is not None:
+                resumed = self._resume(connection, url, state, parameters['redirect_uri'], parameters['resource'],
+                    scopes, parameters['code_challenge'], browser_flows, False)
+                if resumed is not None:
+                    return resumed
+                client = self.grants.clients._registered(connection, url)
+                if client is not None:
+                    consent = OAuthConsentService(self.grants)
+                    fingerprint = consent._fingerprint(client, parameters['redirect_uri'], parameters['resource'],
+                        scopes, parameters['code_challenge'], state, False)
+                    try:
+                        resumed = consent._resume(connection, client, request_hash(state), fingerprint, browser_flows)
+                    except ConsentRejected:
+                        raise OnboardingRejected() from None
+                    if resumed is not None:
+                        return resumed
+            if browser_flows is not None and len(browser_flows) >= 16:
+                raise OnboardingRejected()
             if (connection.execute(text('SELECT count(*) FROM c0_client_onboarding')).scalar_one() >= 1000
                     or connection.execute(text('SELECT count(*) FROM c0_client_onboarding WHERE metadata_url=:url'),
                                           {'url': url}).scalar_one() >= 32):
@@ -87,6 +105,25 @@ class ClientOnboardingService:
                  'resource': self.grants.resource, 'policy': policy['revision'],
                  'parameters': json.dumps(parameters), 'expires': _date(self.grants._now() + 300)})
         return pending
+
+    def _resume(self, connection, url, state, callback, resource, scopes, challenge, browser_flows, session_only):
+        existing = connection.execute(text("""SELECT * FROM c0_client_onboarding
+            WHERE metadata_url=:url AND issuer=:issuer AND native_client=:native AND expires_at>:now
+            AND parameters->>'state'=:state"""), {'url':url, 'issuer':self.grants.access.issuer,
+            'native':self.grants.native_client, 'state':state, 'now':_date(self.grants._now())}).mappings().first()
+        if existing is None:
+            return None
+        raw = existing['parameters']
+        policy = self.grants.cimd._policy(connection)
+        if (session_only or policy['revision'] != existing['policy_revision'] or callback != raw['redirect_uri']
+                or resource != raw['resource'] or challenge != raw['code_challenge']
+                or set(scopes) != set(raw.get('scope','c0:read').split())):
+            raise OnboardingRejected()
+        for selector, proof in browser_flows:
+            if (len(proof) == 43 and _digest(selector) == existing['hash']
+                    and _digest(proof) == existing['browser_hash']):
+                return PendingConsent(selector, proof, stage='connect')
+        raise OnboardingRejected()
 
     def _request(self, connection, request, binding):
         try:
@@ -104,10 +141,30 @@ class ClientOnboardingService:
             raise OnboardingRejected()
         return row
 
-    def available(self, request, binding):
+    def available(self, request, binding, *, account_id=None):
         """Trusted SSO return routing only; disclose no request parameters."""
-        with self.grants.access.database.engine.connect() as connection:
-            self._request(connection, request, binding)
+        with self.grants.access.database.engine.begin() as connection:
+            self.bind_login_account(connection, request, binding, account_id)
+
+    def bind_login_account(self, connection, request, binding, account_id):
+        """Verify the selected flow in the same transaction that publishes login."""
+        if account_id is not None:
+            self._lock(connection)
+        row = self._request(connection, request, binding)
+        if account_id is not None:
+            self._bind_account(connection, row, account_id)
+
+    def _bind_account(self, connection, row, account_id):
+        if row['account_id'] not in (None, account_id):
+            raise OnboardingRejected()
+        if row['account_id'] is None:
+            count = connection.execute(text("""SELECT count(*) FROM c0_client_onboarding
+                WHERE account_id=:id AND expires_at>:now"""),
+                {'id':account_id, 'now':_date(self.grants._now())}).scalar_one()
+            if count >= 16:
+                raise OnboardingRejected()
+            connection.execute(text('UPDATE c0_client_onboarding SET account_id=:id,review_requested=false WHERE hash=:hash'),
+                {'id':account_id, 'hash':row['hash']})
 
     def _view(self, connection, row):
         raw = row['parameters']
@@ -142,16 +199,8 @@ class ClientOnboardingService:
             self._lock(connection)
             actor = self._session(connection, session)
             row = self._request(connection, request, binding)
-            if row['account_id'] not in (None, actor.user_id):
-                raise OnboardingRejected()
-            if row['account_id'] is None:
-                count = connection.execute(text('SELECT count(*) FROM c0_client_onboarding WHERE account_id=:id AND expires_at>:now'),
-                    {'id': actor.user_id, 'now': _date(self.grants._now())}).scalar_one()
-                if count >= 16:
-                    raise OnboardingRejected()
-                connection.execute(text('UPDATE c0_client_onboarding SET account_id=:id,review_requested=:review WHERE hash=:hash'),
-                                   {'id': actor.user_id, 'hash': row['hash'], 'review': review_requested})
-            elif review_requested and not row['review_requested']:
+            self._bind_account(connection, row, actor.user_id)
+            if review_requested and (row['account_id'] is None or not row['review_requested']):
                 connection.execute(text('UPDATE c0_client_onboarding SET review_requested=true WHERE hash=:hash'), {'hash': row['hash']})
             return {**self._view_for_actor(connection, row, actor),
                     'review_requested': review_requested or (
@@ -229,7 +278,7 @@ class ClientOnboardingService:
                  'policy': policy['revision']}).mappings().all()
             return [{**self._view(connection, row), 'username': row['username']} for row in rows]
 
-    def complete(self, session, request, binding, *, scopes, verification):
+    def complete(self, session, request, binding, *, scopes, verification, preserve_flow=False):
         """Atomically consume the handoff and create ordinary explicit consent."""
         with self.grants.access.database.engine.begin() as connection:
             self._lock(connection)
@@ -243,7 +292,10 @@ class ClientOnboardingService:
             try:
                 pending = OAuthConsentService(self.grants)._begin(connection, row['metadata_url'],
                     callback=raw['redirect_uri'], scopes=scopes, challenge=raw['code_challenge'],
-                    state=raw.get('state'), resource=raw['resource'], verification=verification)
+                    state=raw.get('state'), resource=raw['resource'], verification=verification,
+                    **({'browser_flows': (), 'requested_scopes':raw.get('scope','c0:read').split(),
+                        'pending':PendingConsent(request, binding), 'expires':row['expires_at'],
+                        'account_id':actor.user_id} if preserve_flow else {}))
             except ConsentRejected:
                 raise OnboardingRejected() from None
             connection.execute(text('DELETE FROM c0_client_onboarding WHERE hash=:hash'), {'hash': row['hash']})

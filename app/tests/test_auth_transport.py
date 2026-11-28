@@ -18,12 +18,21 @@ def test_access_logs_do_not_contain_callback_query_credentials():
     assert "/auth/callback" in record.getMessage()
 
 
-def test_unconfigured_app_fails_closed_and_documents_auth_schemes():
+def test_unconfigured_app_fails_closed_and_documents_auth_schemes(caplog):
+    caplog.set_level(logging.INFO, logger='uvicorn.error.czero.requests')
     async def check():
         app = create_app("czero901", base_path="")
         async with AsyncClient(transport=ASGITransport(app=app), base_url="https://c0.example.test") as client:
             assert (await client.get("/api/v1/auth/status")).json() == {"configured": False}
-            assert (await client.get("/auth/login")).status_code == 503
+            result = await client.get('/auth/login?state=sensitive-state-probe',
+                headers={'Referer': 'https://example.test/private-referrer-probe'})
+            assert result.status_code == 503 and result.headers['retry-after'] == '5'
+            events = [record.getMessage() for record in caplog.records
+                      if record.name == 'uvicorn.error.czero.requests']
+            assert any('auth route=/auth/login status=503 reason=dependency_unavailable' in event
+                       and result.headers['x-c0-request-id'] in event for event in events)
+            assert all('sensitive-state-probe' not in event and 'private-referrer-probe' not in event
+                       for event in events)
             assert (await client.get("/api/v1/me")).status_code == 401
             document = (await client.get("/openapi.json")).json()
             assert document["components"]["securitySchemes"]["BearerAuth"]["scheme"] == "bearer"

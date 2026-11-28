@@ -35,9 +35,9 @@ def test_native_reader_approval_consent_reconnect_and_exact_token_callback(cimd_
                     response = (await user.get('/oauth/authorize', params=raw) if method == 'GET'
                                 else await user.post('/oauth/authorize', data=raw))
                     if port == 53123:
-                        assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
+                        assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/connect'
                         pending = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                        assert pending.status_code == 200 and pending.json() == {'next': '/oauth/consent'}
+                        assert pending.status_code == 200 and urlsplit(pending.json()['next']).path == '/oauth/consent'
                         assert registry.clients._lookup(URL)['allowed_scopes'] == ['c0:read']
                         path = '/api/v1/access/accounts/' + profile['id'] + '/applications'
                         assert (await admin.get(path)).json()['applications'] == []
@@ -47,10 +47,11 @@ def test_native_reader_approval_consent_reconnect_and_exact_token_callback(cimd_
                             denied = await user.get('/oauth/authorize', params={**raw, 'redirect_uri': rejected})
                             assert denied.status_code == 400
                             assert 'location' not in denied.headers and 'set-cookie' not in denied.headers
-                        assert (await user.post('/oauth/connect/request', json={}, headers=headers(profile))).status_code == 410
+                        repeated = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
+                        assert repeated.status_code == 200 and repeated.json() == pending.json()
                     else:
                         # Already approved: exercise both Core and the SDK's authorization guard.
-                        assert response.status_code == 302 and response.headers['location'].endswith('/oauth/consent')
+                        assert response.status_code == 302 and response.headers['location'].split('?')[0].endswith('/oauth/consent')
                     view = await user.get('/oauth/consent/request')
                     assert view.status_code == 200 and view.json()['callback'] == callback
                     assert view.json()['eligible_scopes'] == ['c0:read']

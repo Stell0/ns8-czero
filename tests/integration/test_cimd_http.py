@@ -12,7 +12,8 @@ from uuid import UUID
 import httpx2
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
-from httpx import ASGITransport, AsyncClient
+from oauth_browser import OAuthBrowser
+from httpx import ASGITransport
 import pytest
 from project_contract import TOOL_COUNT
 from sqlalchemy import text
@@ -71,7 +72,7 @@ async def connect(http, public_id=URL):
 
 
 
-async def rejected_authorization(http, public_id, *, callback_error=False):
+async def rejected_authorization(http, public_id, *, callback_error=False, reason='invalid_request'):
     response = await http.get('/oauth/authorize', params={'client_id': public_id,
         'redirect_uri': CALLBACK, 'response_type': 'code', 'code_challenge': 'a' * 43,
         'code_challenge_method': 'S256', 'scope': 'c0:read', 'resource': RESOURCE})
@@ -79,7 +80,7 @@ async def rejected_authorization(http, public_id, *, callback_error=False):
         assert response.status_code == 302
         target = urlsplit(response.headers['location'])
         assert target._replace(query='').geturl() == CALLBACK
-        assert parse_qs(target.query)['error'] == ['invalid_request']
+        assert parse_qs(target.query)['error'] == [reason]
     else:
         assert response.status_code == 400 and response.json()['error'] == 'invalid_request'
 
@@ -88,7 +89,7 @@ def test_actual_https_review_approval_oauth_rotation_replay_and_no_token_fetch(c
         app, owner, registry = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 client = await approve(http)
                 assert len(h.requests) == 2  # Approval fetches the document again.
@@ -121,7 +122,7 @@ def test_unknown_urls_and_global_off_never_fetch_and_uuid_clients_continue(cimd_
         app, owner, registry = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 known = await approve(http)
                 actor = registry.access.resolve(app.state.auth.oidc.verify_access_token(owner))
@@ -131,7 +132,7 @@ def test_unknown_urls_and_global_off_never_fetch_and_uuid_clients_continue(cimd_
                     pending = await http.get('/oauth/authorize', params={'client_id': 'https://unknown.example.test/client.json',
                         'redirect_uri': CALLBACK, 'response_type': 'code', 'code_challenge': 'a' * 43,
                         'code_challenge_method': 'S256', 'scope': 'c0:read', 'resource': RESOURCE})
-                    assert pending.status_code == 302 and pending.headers['location'] == '/oauth/connect'
+                    assert pending.status_code == 302 and urlsplit(pending.headers['location']).path == '/oauth/connect'
                     assert len(h.requests) == 2
                     assert (await http.get('/.well-known/oauth-authorization-server/oauth')).json()['client_id_metadata_document_supported'] is True
                     registry.sync_policy(False)
@@ -153,7 +154,7 @@ def test_admin_reapproval_pins_digest_and_invalidates_previous_authority(cimd_ht
         app, owner, registry = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 client = await approve(http)
                 http.headers.pop('Authorization')
@@ -186,7 +187,7 @@ def test_no_store_refreshes_after_login_and_denial_does_not_fetch(cimd_http, mon
             h.body = document(token_endpoint_auth_method='none',
                 grant_types=['authorization_code', 'refresh_token', 'urn:ietf:params:oauth:grant-type:jwt-bearer'])
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 await approve(http)
                 http.headers.pop('Authorization')
@@ -208,7 +209,7 @@ def test_no_store_refreshes_after_login_and_denial_does_not_fetch(cimd_http, mon
                     headers={'Origin': ORIGIN, 'X-C0-CSRF': profile['csrf_token']})
                 assert denied.status_code == 200 and 'access_denied' in denied.json()['redirect_uri']
                 assert len(h.requests) == before
-                await rejected_authorization(http, URL, callback_error=True)
+                await rejected_authorization(http, URL, callback_error=True, reason='temporarily_unavailable')
     asyncio.run(check())
 
 
@@ -218,7 +219,7 @@ def test_authcode_only_metadata_omits_refresh_in_public_sdk_response(cimd_http, 
         async with Harness(monkeypatch, certificates) as h:
             h.body = document(grant_types=['authorization_code'])
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 await approve(http)
                 http.headers.pop('Authorization')
@@ -234,7 +235,7 @@ def test_real_url_tokens_support_current_legacy_sdk_tools_and_revocation(cimd_ht
         app, owner, _ = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 await approve(http)
                 http.headers.pop('Authorization')
@@ -268,7 +269,7 @@ def test_stale_metadata_outage_blocks_new_consent_then_recovers(cimd_http, monke
         app, owner, registry = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 await approve(http)
                 http.headers.pop('Authorization')
@@ -277,7 +278,7 @@ def test_stale_metadata_outage_blocks_new_consent_then_recovers(cimd_http, monke
                 with registry.access.database.engine.begin() as c:
                     c.execute(text("UPDATE c0_cimd_clients SET verified_at=now()-interval '120 seconds',fresh_until=now()-interval '60 seconds'"))
                 h.status = 503
-                await rejected_authorization(http, URL, callback_error=True)
+                await rejected_authorization(http, URL, callback_error=True, reason='temporarily_unavailable')
                 assert (await http.get('/api/v1/profile', headers={'Authorization': 'Bearer ' + tokens['access_token']})).status_code == 200
                 h.status = 200
                 await authorize(http, {'client_id': URL})
@@ -291,7 +292,7 @@ def test_metadata_cache_and_authority_survive_restart_and_missing_sso_revokes(ci
         app, owner, registry = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 await approve(http)
                 http.headers.pop('Authorization')
@@ -328,7 +329,7 @@ def test_delegated_read_scope_cannot_administer_cimd_even_for_owner(cimd_http, m
         app, owner, _ = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 client = await approve(http)
                 http.headers.pop('Authorization')
@@ -356,7 +357,7 @@ def test_browser_cimd_writes_require_origin_and_csrf_before_fetch(cimd_http, mon
         app, _, _ = cimd_http
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 started = await http.get('/auth/login')
                 state = parse_qs(urlsplit(started.headers['location']).query)['state'][0]
                 response = await http.get('/auth/callback', params={'state': state, 'code': 'unit-only-code'})
@@ -389,7 +390,7 @@ def test_admin_role_is_rechecked_after_metadata_io(cimd_http, application, monke
         access.set_role(owner_actor, account_id, Role.ADMIN)
         async with Harness(monkeypatch, certificates) as h:
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as http:
                 http.headers['Authorization'] = 'Bearer ' + owner
                 preview = (await http.post('/api/v1/oauth/cimd/preview', json={'metadata_url': URL})).json()
                 h.gate = asyncio.Event()
@@ -423,21 +424,21 @@ def test_sdk_automatically_selects_cimd_from_empty_storage_and_renews_without_fe
         async with Harness(monkeypatch, certificates) as h:
             h.headers = [(b'Cache-Control', b'no-store')]
             app.state.cimd.fetcher = h.fetcher
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as browser:
                 browser.headers['Authorization'] = 'Bearer ' + owner
                 await approve(browser)
                 browser.headers.pop('Authorization')
                 async def redirect(url):
                     from test_onboarding_http import signin, headers
                     response = await browser.get(url)
-                    assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
+                    assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/connect'
                     profile = await signin(browser, target='/oauth/connect')
                     handoff = await browser.post('/oauth/connect/request', json={}, headers=headers(profile))
                     assert handoff.status_code == 200 and handoff.json()['allowed_scopes'] == ['c0:read']
                     assert set(handoff.json()['eligible_scopes']) == {'c0:read','c0:write','c0:admin'}
                     continued = await browser.post('/oauth/connect/continue',
                         json={'scopes': ['c0:read']}, headers=headers(profile))
-                    assert continued.status_code == 200 and continued.json() == {'next': '/oauth/consent'}
+                    assert continued.status_code == 200 and urlsplit(continued.json()['next']).path == '/oauth/consent'
                     view = (await browser.get('/oauth/consent/request')).json()
                     response = await browser.post('/oauth/consent',
                         json={'draft_id': view['draft_id'], 'approve': True, 'scopes': ['c0:read']},

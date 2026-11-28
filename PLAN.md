@@ -11,10 +11,9 @@ starting each milestone.
 
 | Layer | Recorded state |
 | --- | --- |
-| Reviewed upstream | `06896a2eb47e5c1aba0ef1016992983ef460a99e` (merge of PR 176); recheck main before starting implementation |
-| Main producer | Core 0.54.0, schema `0047_collection_diagnostics`; publication and released-consumer adoption still need evidence |
-| Released application dependency | App 0.70.0 pins Core 0.53.0, schema `0046_pdf_authorization`, released source `88b0635d0bc588d7048f09822019e5f22817bfc8` |
-| OAuth corrective candidate | [PR 177](https://github.com/Stell0/ns8-czero/pull/177), producer Core 0.55.0; not an accepted consumer or installed version |
+| Reviewed upstream | `baa6dbc2fe9ac73ceebf67b63f6f6d36a0e8d63d` (merge of PR 180). Recheck main before starting implementation. |
+| Main producer | Core 0.55.0, schema `0048_consent_flows`, released from `a85dac044bc4b38e0bb581111cda4a04a104124a` |
+| Reference application dependency | The App 0.70.0 source lock pins released Core 0.55.0. [PR 179 passed full released-consumer and native acceptance](https://github.com/Stell0/ns8-czero/actions/runs/46148996526). |
 | Recorded installed monitoring baseline | App 0.70.0 / released Core 0.53.0, source `4172d37da936647ef6b3decea045dd4304e17c93`, three authorized instances; see [native and live evidence](https://github.com/Stell0/ns8-czero/blob/06896a2eb47e5c1aba0ef1016992983ef460a99e/PLAN.md#installed-monitoring-baseline) |
 | Module release | Development candidate; no stable NS8 release or public plugin-directory listing is claimed |
 
@@ -106,21 +105,21 @@ unrelated implementation. Do not wait for M32 to propose a supported release.
 
 ### M22 — Runtime stabilization
 
-**P0 / in progress.** Absorbs the active ingestion reliability candidate and
-new OAuth corrective work (part of former R1 and the M20 residual).
+**P0 / in progress.** Core 0.55.0 shipped the collection and OAuth recovery
+changes, and the reference app adopted the release. M22 still tracks
+issue acceptance and authorized rollout and readback (part of former R1
+and the M20 residual).
 
-- Finish [#166](https://github.com/Stell0/ns8-czero/issues/166) multipart readiness and
-  diagnostics, [#167](https://github.com/Stell0/ns8-czero/issues/167) explicit website PDF
-  attachment collection, and [#168](https://github.com/Stell0/ns8-czero/issues/168)
-  REST/MCP error parity. Reuse existing staging, retained originals, extraction,
-  request correlation, fences and repair operations.
-- Review [PR 177](https://github.com/Stell0/ns8-czero/pull/177) against current main:
-  bound browser consent, native callback/relogin, session and refresh recovery,
-  concurrent flow fencing and replay revocation. Reconcile Core 0.54 and 0.55
-  delivery; publish immutable Core and adopt it in the app only after each
-  producer/consumer gate. Avoid duplicated migrations or unnecessary rollouts.
-- Resolve open native and released-consumer acceptance; retain failed evidence.
-  Verify existing hosted Support state and SAT full-document/citation access
+- Confirm issue acceptance for [#166](https://github.com/Stell0/ns8-czero/issues/166)
+  multipart readiness and diagnostics, [#167](https://github.com/Stell0/ns8-czero/issues/167)
+  explicit website PDF attachment collection, and [#168](https://github.com/Stell0/ns8-czero/issues/168)
+  REST/MCP error parity. Core 0.54.0 added schema `0047_collection_diagnostics`,
+  and these changes shipped in Core 0.55.0. See the
+  [collection delivery record](#public-website-collection-and-ingestion-reliability).
+- Verify installed behavior using the [OAuth recovery rollout](#oauth-browser-and-connector-recovery)
+  criteria below. Retain failed evidence and confirm the exact consumer image
+  and genuine predecessor before any authorized rollout.
+- Verify existing hosted Support state and SAT full-document/citation access
   on an explicitly authorized lab. Keep the separately approved
   [Support integration plan](docs/support-integration-plan.md) and its paired
   application/fixture acceptance in scope; simulated investigations are not
@@ -132,6 +131,50 @@ whole-document identity, complete/partial coverage, revocation, OAuth
 renewal/replay, backup/restore and existing authority survive. Separate
 publication, consumer adoption and authorized deployment records identify the
 actual images. Close issues only with corresponding evidence.
+
+#### OAuth browser and connector recovery
+
+[PR 177](https://github.com/Stell0/ns8-czero/pull/177) added browser flow
+ownership, callback publication fencing and status-only consent receipts in
+schema `0048_consent_flows`. The [full producer acceptance](https://github.com/Stell0/ns8-czero/actions/runs/46144047419)
+passed on `a85dac044bc4b38e0bb581111cda4a04a104124a`, including Debian upgrade
+and Rocky install. [Core 0.55.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.55.0)
+was published from that commit. The downloaded wheel and source archive matched
+the independent build and the published checksums. Their SHA256 digests are
+`549a513679ffa3e32612a5cc507a1eb3af326825c651bd489a479ef292950ddf` and
+`601eec83b6d605bc0d9684e0d4cdd8a33bdb6ccf104badfd6e65d91111a623d7`, respectively.
+
+The reference app lock selects that exact Git commit through `core-v0.55.0`.
+[PR 179](https://github.com/Stell0/ns8-czero/pull/179) adopted the lock after
+[full consumer acceptance](https://github.com/Stell0/ns8-czero/actions/runs/46148996526)
+on `ace6c91c2f51166487c215d4c20260ac6e0c7be0`, including Debian upgrade and
+Rocky install.
+Its predecessor used Core 0.53.0 and rejected the session-only parameter.
+With the producer and the affected console, a disposable Keycloak and PostgreSQL
+run verified an authenticated MCP profile read after disconnect and fresh consent,
+and another on the original connection after C0 restarted and became ready.
+
+Acceptance exercises overlapping browser requests, explicit background login,
+lost completion and rotation responses, current account and role, and
+credential-free C0 and connector diagnostics. Repeat the installed console
+and assistant reads after reconnect and after a recoverable outage. A clean
+restore with a new native identity requires fresh consent. Keep rollout
+gated on full native acceptance, supported backup, readiness and those
+client readbacks.
+
+The OAuth recovery rollout can proceed with the existing Traefik configuration.
+Traefik can retain OAuth callback queries. Restrict access to raw proxy logs
+and exclude them from shared incident exports. After released-consumer image
+and native acceptance, deploy the same verified C0 image one instance at a
+time. Verify the existing grant with an authenticated MCP profile read before
+updating the connector where it is already installed. A generic proxy or
+transport failure after refresh dispatch still requires fresh consent. Only
+C0's confirmed pre-rotation result allows a retry with that refresh token.
+Stop rollout on a credential in C0 or connector diagnostics, a binding or
+revocation failure, a second redemption, lost backup evidence, or a failed
+protected read on a healthy service. Recover a failed schema update using the
+supported, matched pre-update backup and image. Preserve the native client
+identity when recovering the same instance.
 
 ### M23 — BYOA and release readiness
 
@@ -433,7 +476,7 @@ previous root plan continue to resolve through the compatibility index below.
 <details>
 <summary>Historical section links (compatibility index)</summary>
 
-<a id="public-website-collection-and-ingestion-reliability"></a>[Public website collection and ingestion reliability](https://github.com/Stell0/ns8-czero/blob/06896a2eb47e5c1aba0ef1016992983ef460a99e/PLAN.md#public-website-collection-and-ingestion-reliability)
+<a id="public-website-collection-and-ingestion-reliability"></a>[Public website collection and ingestion reliability](https://github.com/Stell0/ns8-czero/blob/baa6dbc2fe9ac73ceebf67b63f6f6d36a0e8d63d/PLAN.md#public-website-collection-and-ingestion-reliability)
 
 <a id="c0-grafana-monitoring"></a>[C0 Grafana monitoring](https://github.com/Stell0/ns8-czero/blob/06896a2eb47e5c1aba0ef1016992983ef460a99e/PLAN.md#c0-grafana-monitoring)
 

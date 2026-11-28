@@ -14,8 +14,10 @@ from czero_core.oauth_consent import ConsentRejected
 from czero_core.cimd import CimdRejected
 from czero_core.operations import SCOPES
 from czero_app.cimd_fetch import FetchRejected
+from czero_app.auth_events import mark
 
 raw_request = ContextVar('c0_oauth_raw_request', default=None)
+incoming_flows = ContextVar('c0_browser_flows', default=None)
 pending_response = ContextVar('c0_oauth_pending_response', default=None)
 request_kind = ContextVar('c0_oauth_request_kind', default=None)
 
@@ -96,12 +98,20 @@ class OAuthProvider:
         try:
             verification = await self.cimd.verification(client.client_id) if self.cimd is not None else None
             extra = {'session_only': True} if raw.get('c0_session_only') == 'true' else {}
+            if incoming_flows.get() is not None:
+                extra.update(browser_flows=incoming_flows.get(), requested_scopes=params.scopes or ['c0:read'])
             pending = await to_thread.run_sync(partial(self.consent.begin, client.client_id,
                 callback=raw['redirect_uri'],
                 scopes=set(params.scopes or ['c0:read']) & client.approved_scopes,
                 challenge=params.code_challenge, state=params.state, resource=params.resource, verification=verification,
                 **extra))
-        except (ConsentRejected, CimdRejected, FetchRejected):
+        except FetchRejected as error:
+            mark(error.outcome)
+            if error.outcome == 'dependency_unavailable':
+                raise AuthorizeError('temporarily_unavailable') from None
+            raise AuthorizeError('invalid_request') from None
+        except (ConsentRejected, CimdRejected) as error:
+            mark(getattr(error, 'reason', 'metadata_rejected' if isinstance(error, CimdRejected) else 'draft_unavailable'))
             raise AuthorizeError('invalid_request') from None
         pending_response.set(pending)
         return self.origin + '/oauth/consent'
@@ -127,8 +137,10 @@ class OAuthProvider:
         try:
             pair = await to_thread.run_sync(partial(self.grants.exchange_code, authorization_code.code,
                 client.client_id, callback=raw.get('redirect_uri'), verifier=raw.get('code_verifier'), resource=raw.get('resource')))
-        except GrantRejected:
+        except GrantRejected as error:
+            mark(getattr(error, 'reason', 'grant_rejected'))
             raise TokenError('invalid_grant') from None
+        mark('code_exchanged', access_token=pair.access_token, issued_code=authorization_code.code)
         return self._response(pair)
 
     async def load_refresh_token(self, client, refresh_token):
@@ -136,7 +148,8 @@ class OAuthProvider:
             return None
         try:
             value = await to_thread.run_sync(partial(self.grants._refresh_token, refresh_token, client.client_id))
-        except GrantRejected:
+        except GrantRejected as error:
+            mark(getattr(error, 'reason', 'grant_rejected'))
             return None
         return PrivateRefresh(token=value.token, client_id=value.client_id, scopes=sorted(value.scopes),
             expires_at=int(value.expires_at.timestamp()), resource=value.resource, subject=str(value.subject))
@@ -148,8 +161,10 @@ class OAuthProvider:
         try:
             pair = await to_thread.run_sync(partial(self.grants.refresh, refresh_token.token,
                 client.client_id, scopes=set(scopes), resource=raw.get('resource')))
-        except GrantRejected:
+        except GrantRejected as error:
+            mark(getattr(error, 'reason', 'grant_rejected'))
             raise TokenError('invalid_grant') from None
+        mark('refresh_rotated', access_token=pair.access_token)
         return self._response(pair)
 
     async def load_access_token(self, token):
@@ -157,7 +172,8 @@ class OAuthProvider:
             return None
         try:
             value = await to_thread.run_sync(partial(self.grants.verify, token, resource=self.grants.resource))
-        except GrantRejected:
+        except GrantRejected as error:
+            mark(getattr(error, 'reason', 'grant_rejected'))
             return None
         return PrivateAccess(token=token, client_id=value.client_id, scopes=sorted(value.scopes),
             expires_at=int(value.expires_at.timestamp()), resource=value.resource,

@@ -11,7 +11,8 @@ from urllib.parse import parse_qs, urlsplit
 from uuid import UUID, uuid4
 
 import httpx2
-from httpx import ASGITransport, AsyncClient
+from oauth_browser import OAuthBrowser
+from httpx import ASGITransport
 from joserfc import jwt
 from joserfc.jwk import RSAKey
 from mcp import Client
@@ -155,7 +156,7 @@ async def refresh(client, saved, current):
 def test_signed_browser_and_public_refresh_continue_beyond_original_token_expiry(renewing_app):
     async def check():
         app, saved, clock, state = renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             current, profile = await pair(client, saved, state)
             assert app.state.delegated_grants.authority is app.state.auth.sessions.authority
             with app.state.auth.access.database.engine.connect() as c:
@@ -195,13 +196,14 @@ def test_signed_browser_and_public_refresh_continue_beyond_original_token_expiry
 def test_provider_outage_is_static_for_browser_mcp_refresh_and_local_logout_still_revokes(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             current,profile=await pair(client,saved,state)
             state['status']=503
             result=await client.get('/api/v1/me')
             assert result.status_code==503 and result.json()=={'detail':'authentication_unavailable'}
             token=await refresh(client,saved,current)
-            assert token.status_code==503 and token.json()=={'error':'service_unavailable'}
+            assert token.status_code == 503 and token.json() == {
+                'error':'temporarily_unavailable', 'c0_rotation':'not_started'}
             async with app.router.lifespan_context(app):
                 result=await client.post('/mcp',headers={'Authorization':'Bearer '+current['access_token'],
                     'Accept':'application/json, text/event-stream'},json={'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}})
@@ -221,7 +223,7 @@ def test_provider_outage_is_static_for_browser_mcp_refresh_and_local_logout_stil
 def test_transient_outage_recovers_without_rotating_public_refresh_or_extending_absolute_bound(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             current,_=await pair(client,saved,state)
             state['status']=503
             assert (await refresh(client,saved,current)).status_code==503
@@ -236,12 +238,17 @@ def test_transient_outage_recovers_without_rotating_public_refresh_or_extending_
 def test_short_configured_bound_expires_browser_and_delegation_without_revival(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             current,_=await pair(client,saved,state)
             assert 0<current['expires_in']<=60
             clock[0]+=60
             assert (await client.get('/api/v1/me')).status_code==401
             assert (await refresh(client,saved,current)).status_code==400
+            # A retired predecessor cannot anchor a replacement attempt. Follow
+            # the recovery page through the explicit first-party sign-in.
+            assert (await client.get('/auth/login')).status_code == 400
+            assert (await client.get('/auth/sign-in')).status_code == 200
+            assert client.cookies.get('c0_session') is None
             await login(client,state)
             assert (await refresh(client,saved,current)).status_code==400
     asyncio.run(check())
@@ -250,7 +257,7 @@ def test_short_configured_bound_expires_browser_and_delegation_without_revival(r
 def test_provider_native_revocation_is_durable_until_fresh_signin(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             current,_=await pair(client,saved,state)
             state['active']=False
             result=await client.get('/api/v1/me')
@@ -259,6 +266,11 @@ def test_provider_native_revocation_is_durable_until_fresh_signin(renewing_app):
             assert (await client.get('/api/v1/me')).status_code==401
             assert (await client.get('/api/v1/me',headers={'Authorization':'Bearer '+current['access_token']})).status_code==401
             assert (await refresh(client,saved,current)).status_code==400
+            # A retired predecessor cannot anchor a replacement attempt. Follow
+            # the recovery page through the explicit first-party sign-in.
+            assert (await client.get('/auth/login')).status_code == 400
+            assert (await client.get('/auth/sign-in')).status_code == 200
+            assert client.cookies.get('c0_session') is None
             await login(client,state)
             assert (await refresh(client,saved,current)).status_code==400
     asyncio.run(check())
@@ -267,7 +279,7 @@ def test_provider_native_revocation_is_durable_until_fresh_signin(renewing_app):
 def test_public_refresh_replay_revokes_family_even_during_provider_outage(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             current,_=await pair(client,saved,state)
             renewed=await refresh(client,saved,current)
             assert renewed.status_code==200
@@ -281,12 +293,12 @@ def test_public_refresh_replay_revokes_family_even_during_provider_outage(renewi
 def test_native_revocation_on_consent_page_requires_fresh_browser_login(renewing_app):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             await login(client,state)
             await authorize(client,saved)
             state['active']=False
             response=await client.get('/oauth/consent')
-            assert response.status_code==302 and response.headers['location']=='/auth/login'
+            assert response.status_code==302 and urlsplit(response.headers['location']).path == '/auth/login'
             assert 'c0_session' not in client.cookies
             assert response.headers['cache-control']=='no-store'
     asyncio.run(check())
@@ -382,7 +394,7 @@ def test_exact_native_renewal_probe_through_signed_http_with_controlled_clock(re
 def test_public_sdk_revocation_does_not_depend_on_provider_availability(renewing_app,kind):
     async def check():
         app,saved,clock,state=renewing_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             current,_=await pair(client,saved,state)
             state['status']=503
             response=await client.post('/oauth/revoke',data={'client_id':saved['client_id'],
@@ -400,7 +412,7 @@ def test_outage_revocation_cannot_delete_a_different_clients_grant(renewing_app,
         app,saved,clock,state=renewing_app
         wrong_id=None
         try:
-            async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+            async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
                 current,profile=await pair(client,saved,state)
                 registered=await client.post('/api/v1/oauth/clients',json={'client_name':'Other revocation caller '+uuid4().hex,
                     'redirect_uris':['https://other-client.example.test/callback'],'allowed_scopes':['c0:read']},
@@ -427,7 +439,7 @@ def test_long_native_access_with_shorter_refresh_window_stays_active(renewing_ap
     app,saved,clock,state=renewing_app
     state.update(access_seconds=3600,refresh_seconds=1800)
     async def run():
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as browser:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as browser:
             current,profile=await pair(browser,saved,state)
             with app.state.auth.access.database.engine.connect() as c:
                 original=c.execute(text("SELECT id,expires_at,native_authority_id,scopes FROM c0_oauth_grants WHERE client_id=:client"),{'client':UUID(saved['client_id'])}).mappings().one()
