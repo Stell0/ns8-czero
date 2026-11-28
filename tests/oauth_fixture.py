@@ -7,12 +7,22 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 import secrets
+import re
 import subprocess
 import sys
 from urllib.parse import urlencode, urlsplit, parse_qs
 
 from oidc_fixture import STATE
 from oidc_probe import Browser
+
+
+def flow_suffix(browser, url):
+    """Carry only the selector returned by the trusted installed authorization page."""
+    parts = urlsplit(url)
+    assert parts.scheme + '://' + parts.netloc == browser.origin
+    assert parts.path in ('/oauth/consent', '/oauth/connect') and not parts.fragment
+    assert not parts.query or re.fullmatch(r'flow=[A-Za-z0-9_-]{43}', parts.query)
+    return '?' + parts.query if parts.query else ''
 
 
 def registered(browser, profile, *, client_name='Disposable TLS MCP client'):
@@ -30,7 +40,9 @@ def recover_consent_session(module_id, browser, client, *, expire_session=None):
         'response_type':'code', 'code_challenge_method':'S256',
         'code_challenge':base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode(),
         'state':secrets.token_urlsafe(32), 'scope':'c0:read', 'resource':browser.origin+'/mcp'}
-    assert browser.request('/oauth/authorize?'+urlencode(parameters))[0] == 200, 'Installed recovery request failed'
+    status, _, page = browser.request('/oauth/authorize?'+urlencode(parameters))
+    assert status == 200, 'Installed recovery request failed'
+    flow = flow_suffix(browser, page)
     cookies = [cookie for cookie in browser.cookies if cookie.name == 'c0_session']
     assert len(cookies) == 1, 'Disposable recovery session missing'
     old_cookie = cookies[0].value
@@ -47,21 +59,21 @@ def recover_consent_session(module_id, browser, client, *, expire_session=None):
             'psql','-U','czero','-d','czero','-v','ON_ERROR_STOP=1'],
             input=sql.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
         assert result.returncode == 0 and b'UPDATE 1' in result.stdout, 'Disposable session expiry failed'
-    assert browser.api('/oauth/consent/request')[0] == 401, 'Installed expired session remained valid'
-    assert browser.request('/oauth/consent')[0] == 200, 'Installed expired consent session did not recover through SSO'
+    assert browser.api('/oauth/consent/request' + flow)[0] == 401, 'Installed expired session remained valid'
+    assert browser.request('/oauth/consent' + flow)[0] == 200, 'Installed expired consent session did not recover through SSO'
     cookies = [cookie for cookie in browser.cookies if cookie.name == 'c0_session']
     assert len(cookies) == 1 and cookies[0].value != old_cookie, 'Installed recovery reused expired session'
     status, body, _ = browser.api('/api/v1/me')
     assert status == 200, 'Installed recovered profile unavailable'
     profile = json.loads(body)
-    status, body, _ = browser.api('/oauth/consent/request')
+    status, body, _ = browser.api('/oauth/consent/request' + flow)
     assert status == 200, 'Installed recovery lost pending consent'
     view = json.loads(body)
     assert view['client_id'] == client['client_id'], 'Installed recovery changed the consent client'
     choice = {'approve': True}
     if 'draft_id' in view:
         choice['draft_id'] = view['draft_id']
-    assert browser.api('/oauth/consent', choice, 'POST')[0] == 403, 'Installed recovery bypassed explicit CSRF consent'
+    assert browser.api('/oauth/consent' + flow, choice, 'POST')[0] == 403, 'Installed recovery bypassed explicit CSRF consent'
     print('Disposable expired consent session recovered through real SSO; explicit consent still required')
     return profile
 
@@ -81,22 +93,31 @@ def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None,
     # Both methods ignore future optional fields while retaining explicit consent.
     assert browser.request('/oauth/authorize',urlencode(parameters).encode(),'POST',
         {'Content-Type':'application/x-www-form-urlencoded'})[0]==200,'Installed optional authorization form failed'
-    status, _, _=browser.request('/oauth/authorize?'+urlencode(parameters))
+    status, _, page=browser.request('/oauth/authorize?'+urlencode(parameters))
     assert status==200,'Installed OAuth consent page unavailable'
+    flow = flow_suffix(browser, page)
     if self_service:
-        assert browser.api('/oauth/connect/request', {}, 'POST')[0] == 403, 'Self-service bypassed CSRF'
-        status, body, _ = browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])
-        assert status == 200 and json.loads(body) == {'next':'/oauth/consent'}, 'Self-service Read did not reach consent'
-        assert browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])[0] == 410, 'Self-service handoff replay accepted'
+        assert browser.api('/oauth/connect/request' + flow, {}, 'POST')[0] == 403, 'Self-service bypassed CSRF'
+        status, body, _ = browser.api('/oauth/connect/request' + flow, {}, 'POST', profile['csrf_token'])
+        assert status == 200 and json.loads(body) == {'next':'/oauth/consent' + flow}, 'Self-service Read did not reach consent'
+        replay_status, replay, _ = browser.api('/oauth/connect/request' + flow, {}, 'POST', profile['csrf_token'])
+        if flow:
+            assert replay_status == 200 and json.loads(replay) == json.loads(body)
+        else:
+            assert replay_status == 410
     if prepare_connection is not None:
-        assert browser.api('/oauth/connect/request', {}, 'POST')[0] == 403, 'Installed onboarding CSRF bypass'
+        assert browser.api('/oauth/connect/request' + flow, {}, 'POST')[0] == 403, 'Installed onboarding CSRF bypass'
         # Core-seeded native recovery deliberately supplies no live metadata endpoint.
         # The unknown handoff was created above; seed its verified descriptor before resuming.
         prepare_connection()
-        status, body, _ = browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])
-        assert status == 200 and json.loads(body)['next'] == '/oauth/consent', 'Prepared Read connection lost consent handoff'
-        assert browser.api('/oauth/connect/request', {}, 'POST', profile['csrf_token'])[0] == 410, 'Installed connection handoff replay accepted'
-    status, body, _=browser.api('/oauth/consent/request')
+        status, body, _ = browser.api('/oauth/connect/request' + flow, {}, 'POST', profile['csrf_token'])
+        assert status == 200 and json.loads(body)['next'] == '/oauth/consent' + flow, 'Prepared Read connection lost consent handoff'
+        replay_status, replay, _ = browser.api('/oauth/connect/request' + flow, {}, 'POST', profile['csrf_token'])
+        if flow:
+            assert replay_status == 200 and json.loads(replay) == json.loads(body)
+        else:
+            assert replay_status == 410
+    status, body, _=browser.api('/oauth/consent/request' + flow)
     assert status==200,'Installed consent details unavailable'
     view=json.loads(body)
     assert view['client_id']==client['client_id'] and view['profile']['id']==profile['id'],'Installed consent identity mismatch'
@@ -104,8 +125,8 @@ def issue(browser, profile, client, *, scope='c0:read', prepare_connection=None,
     # The native upgrade suite also seeds grants on a frozen predecessor.
     if 'draft_id' in view:
         choice['draft_id'] = view['draft_id']
-    assert browser.api('/oauth/consent', choice, 'POST')[0] == 403, 'Installed consent CSRF bypass'
-    status, body, _ = browser.api('/oauth/consent', choice, 'POST', profile['csrf_token'])
+    assert browser.api('/oauth/consent' + flow, choice, 'POST')[0] == 403, 'Installed consent CSRF bypass'
+    status, body, _ = browser.api('/oauth/consent' + flow, choice, 'POST', profile['csrf_token'])
     assert status==200,'Installed explicit consent failed'
     values=parse_qs(urlsplit(json.loads(body)['redirect_uri']).query)
     assert values['state']==[state],'Installed OAuth state mismatch'
@@ -216,6 +237,20 @@ def verify_persistence(module_id, browser, profile, *, snapshot_fn=snapshot, sdk
     sdk_fn(module_id, browser.origin, pair)
     expected.update(module_id=module_id, pair=pair, rows=snapshot_fn(module_id,client['client_id']))
     path.write_text(json.dumps(expected)); path.chmod(0o600)
+
+
+def after_backup(module_id):
+    """Use the pre-backup connection on the ready donor. Keep restore evidence intact."""
+    expected = json.loads((STATE / 'expected-oauth-grant.json').read_text())
+    assert expected['module_id'] == module_id
+    personas = json.loads((STATE / 'personas.json').read_text())
+    browser = Browser('https://' + personas['host'])
+    form = {'grant_type': 'refresh_token', 'client_id': expected['client']['client_id'],
+            'refresh_token': expected['pair']['refresh_token'], 'resource': browser.origin + '/mcp'}
+    status, body, _ = browser.request('/oauth/token', urlencode(form).encode(), 'POST',
+                                      {'Content-Type': 'application/x-www-form-urlencoded'})
+    assert status == 200, 'Ready donor could not refresh the pre-backup grant'
+    sdk(module_id, browser.origin, json.loads(body))
 
 
 def persistence(module_id, operation):
@@ -347,6 +382,7 @@ if __name__=='__main__':
         elif len(sys.argv) > 2 and sys.argv[2] == 'browser-complete': complete_browser(sys.argv[1])
         elif len(sys.argv) > 2 and sys.argv[2] == 'browser-disconnected': browser_disconnected(sys.argv[1])
         elif len(sys.argv) > 2 and sys.argv[2] == 'browser-cleanup': cleanup_browser(sys.argv[1])
+        elif len(sys.argv) == 3 and sys.argv[2] == 'after-backup': after_backup(sys.argv[1])
         elif len(sys.argv) > 2: persistence(sys.argv[1], sys.argv[2])
         else: run(sys.argv[1])
     except AssertionError as error:print(str(error),file=sys.stderr);sys.exit(1)

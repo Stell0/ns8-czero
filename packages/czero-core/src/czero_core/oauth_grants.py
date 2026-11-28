@@ -18,11 +18,18 @@ from .identity import Actor, PermissionDenied, Role
 from .oauth_clients import OAuthClientService, redirect_uri, internal_id
 from .operations import SCOPES
 from .sessions import SessionContext
+from .renewal import RenewalUnavailable
 
 
 class GrantRejected(ValueError):
-    def __init__(self):
+    def __init__(self, reason='grant_rejected'):
         super().__init__('invalid_grant')
+        self.reason = reason
+
+
+class RefreshNotStarted(RenewalUnavailable):
+    """This request could not check native authority before starting delegated rotation."""
+    before_refresh_rotation = True
 
 
 @dataclass(frozen=True)
@@ -198,7 +205,7 @@ class OAuthGrantService:
             try:
                 self.authority.authenticate(row['native_authority_id'])
             except RenewalRejected:
-                raise GrantRejected() from None
+                raise GrantRejected('native_authority_rejected') from None
         if row['persistent'] and not row['token_consumed']:
             with self.access.database.engine.begin() as connection:
                 self._lock(connection, roles=True, client_id=client['client_id'])
@@ -264,7 +271,7 @@ class OAuthGrantService:
             try:
                 self.authority.peek(connection, row['native_authority_id'], account_id=row['account_id'])
             except RenewalRejected:
-                raise GrantRejected() from None
+                raise GrantRejected('native_authority_rejected') from None
         return row, actor
 
     def issue_code(self, session, client_id, *, callback, scopes, challenge, resource, verification=None, persistent=False):
@@ -303,7 +310,7 @@ class OAuthGrantService:
             try:
                 native = self.authority.peek(connection, session.native_authority_id, account_id=session.actor.user_id)
             except RenewalRejected:
-                raise GrantRejected() from None
+                raise GrantRejected('native_authority_rejected') from None
             expires = min(session.expires_at.timestamp(), native['expires_at'].timestamp()) if native['expires_at'] is not None else session.expires_at.timestamp()
         if session_only and session.native_authority_id is not None:
             expires = min(expires, current + min(self.authority.policy.absolute_seconds, 8 * 3600))
@@ -338,7 +345,7 @@ class OAuthGrantService:
         if connection.execute(text('''SELECT count(*) FROM c0_oauth_grants
                 WHERE account_id=:id AND issuer=:issuer AND native_client=:native'''),
                 {'id': actor.user_id, 'issuer': self.access.issuer, 'native': self.native_client}).scalar_one() >= 32:
-            raise GrantRejected()
+            raise GrantRejected('account_grant_limit')
         identifier = uuid4()
         connection.execute(text('''INSERT INTO c0_oauth_grants
             (id,account_id,client_id,client_revision,issuer,native_client,resource,scopes,expires_at,native_authority_id,
@@ -407,6 +414,12 @@ class OAuthGrantService:
             return CodeMetadata(code, row['challenge'], client_id, row['redirect_uri'],
                 frozenset(grant['scopes']), row['expires_at'], grant['account_id'], self.resource)
 
+    def _prepare_refresh(self, token, client_id, resource):
+        try:
+            self._prepare(token, 'refresh', client_id, resource)
+        except RenewalUnavailable:
+            raise RefreshNotStarted() from None
+
     def _refresh_token(self, token, client_id):
         """Trusted SDK loader; a consumed-token replay revokes before parsing scope.
 
@@ -414,8 +427,8 @@ class OAuthGrantService:
         Call only after the transport has validated the exact resource.
         """
         digest = _digest(token)
-        self._prepare(token, 'refresh', client_id, self.resource)
-        rejected = False
+        self._prepare_refresh(token, client_id, self.resource)
+        rejection = None
         result = None
         with self.access.database.engine.begin() as connection:
             self._lock(connection, client_id=client_id)
@@ -426,18 +439,18 @@ class OAuthGrantService:
             if row['consumed']:
                 self._cimd_revocation_lock(connection, grant['client_id'])
                 connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
-                rejected = True
+                rejection = 'refresh_replay'
             else:
                 result = RefreshMetadata(token, client_id, frozenset(grant['scopes']),
                     row['expires_at'], grant['account_id'], self.resource)
-        if rejected:
-            raise GrantRejected()
+        if rejection:
+            raise GrantRejected(rejection)
         return result
 
     def refresh(self, token, client_id, *, resource, scopes=None):
         digest = _digest(token)
-        self._prepare(token, 'refresh', client_id, resource)
-        rejected = False
+        self._prepare_refresh(token, client_id, resource)
+        rejection = None
         result = None
         with self.access.database.engine.begin() as connection:
             self._lock(connection, client_id=client_id)
@@ -449,7 +462,7 @@ class OAuthGrantService:
             if row['consumed']:
                 # Commit family revocation before reporting replay failure.
                 connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
-                rejected = True
+                rejection = 'refresh_replay'
             else:
                 if scopes is None:
                     scopes = frozenset(grant['scopes'])
@@ -466,14 +479,14 @@ class OAuthGrantService:
                         or not grant['persistent'] and connection.execute(text('SELECT count(*) FROM c0_oauth_tokens WHERE grant_id=:id'),
                             {'id': grant['id']}).scalar_one() >= (2048 if grant['native_authority_id'] else 128)):
                     connection.execute(text('DELETE FROM c0_oauth_grants WHERE id=:id'), {'id': grant['id']})
-                    rejected = True
+                    rejection = 'rotation_limit'
                 else:
                     if grant['persistent']:
                         connection.execute(text('UPDATE c0_oauth_grants SET refresh_generation=refresh_generation+1 WHERE id=:id'), {'id': grant['id']})
                         grant = {**grant, 'refresh_generation': grant['refresh_generation'] + 1}
                     result = self._tokens(connection, grant, scopes)
-        if rejected:
-            raise GrantRejected()
+        if rejection:
+            raise GrantRejected(rejection)
         return result
 
     def verify(self, token, *, resource):

@@ -16,6 +16,7 @@ from starlette.types import ASGIApp, Scope, Receive, Send
 
 from czero_core import core_health, Database
 from czero_app import __version__
+from czero_app.auth_events import ROUTES, REASONS, current_event, flow_reference
 from czero_app.auth import AppAuth, install_auth_routes
 from czero_app.jobs import install_job_routes
 from czero_app.objects import install_object_routes
@@ -50,21 +51,46 @@ class RequestCorrelation:
             return
         path = scope['path'].removeprefix(self.base_path)
         transport = 'mcp' if path == '/mcp' else 'rest' if path.startswith('/api/v1/') else None
+        if path in ROUTES and path != '/mcp':
+            transport = 'oauth'
         if transport is None:
             await self.app(scope, receive, send)
             return
         reference = uuid4().hex
-        scope.setdefault('state', {})['c0_request_id'] = reference
+        state = scope.setdefault('state', {})
+        state['c0_request_id'] = reference
+        if path in ROUTES and path != '/mcp' and len(scope.get('query_string', b'')) <= 16384:
+            state['c0_flow_ref'] = flow_reference(Request(scope).query_params.get('flow'))
+        context = current_event.set(state)
 
         async def correlated(message):
             if message['type'] == 'http.response.start':
                 MutableHeaders(scope=message)['X-C0-Request-ID'] = reference
+                if path in ROUTES:
+                    status = message['status']
+                    if status == 503:
+                        MutableHeaders(scope=message).setdefault('Retry-After', '5')
+                    reason = state.get('c0_auth_reason')
+                    if reason not in REASONS:
+                        if path == '/mcp' and status == 401:
+                            has_bearer = any(key == b'authorization' for key, _ in scope['headers'])
+                            reason = 'credential_rejected' if has_bearer else 'discovery_challenge'
+                        else:
+                            reason = 'dependency_unavailable' if status == 503 else 'unknown' if status >= 400 else 'ok'
+                    logging.getLogger('uvicorn.error.czero.requests').info(
+                        'auth route=%s status=%d reason=%s grant=%s generation=%s flow=%s exchange=%s request=%s',
+                        path, status, reason, state.get('c0_grant_kind', '-'),
+                        state.get('c0_generation_ref', '-'), state.get('c0_flow_ref', '-'),
+                        state.get('c0_exchange_ref', '-'), reference)
                 if message['status'] >= 400:
                     logging.getLogger('uvicorn.error.czero.requests').info('%s response %s request %s',
                         transport, message['status'], reference)
             await send(message)
 
-        await self.app(scope, receive, correlated)
+        try:
+            await self.app(scope, receive, correlated)
+        finally:
+            current_event.reset(context)
 
 
 class DatabaseHealth(BaseModel):

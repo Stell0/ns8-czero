@@ -10,13 +10,27 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from czero_app.oauth_flow import flow_url, selected, login_url
+from czero_core.oauth_consent import ConsentRejected
 from czero_core.cimd import CimdRejected
 from czero_core.client_onboarding import OnboardingRejected
 from czero_core.identity import PermissionDenied, Role
 from czero_core.oauth_clients import ClientConflict
+from czero_core.renewal import RenewalRejected
+from czero_core.sessions import SessionRejected
 
 
 def pending(request):
+    try:
+        tokens = selected(request)
+    except ConsentRejected:
+        raise OnboardingRejected() from None
+    if tokens is not None:
+        if not hasattr(request.app.state.oauth_consent, 'review'):
+            raise OnboardingRejected()
+        return tokens
+    if hasattr(request.app.state.oauth_consent, 'review'):
+        raise OnboardingRejected()
     match = re.fullmatch(r'([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})',
                          request.cookies.get('c0_onboarding', ''))
     if match is None:
@@ -37,16 +51,38 @@ class ConnectionApproval(ConnectionScopes):
 
 def install_onboarding_routes(app, service, cimd, auth, read_context, write_context,
                               browser_session):
+    def next_response(request, consent):
+        flow = request.query_params.get('flow')
+        response = JSONResponse({'next': flow_url('/oauth/consent', flow)},
+            headers={'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer'})
+        if not flow:
+            response.set_cookie('c0_consent', consent.request + '.' + consent.binding,
+                max_age=300, secure=True, httponly=True, samesite='lax', path='/')
+            response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
+        return response
+
     @app.get('/oauth/connect', include_in_schema=False)
     def page(request: Request):
         try:
             service.available(*pending(request))
         except OnboardingRejected:
-            pass  # The page explains expiry without leaking the request.
+            if 'text/html' in request.headers.get('accept', ''):
+                flow = request.query_params.get('flow')
+                if flow and app.state.verified_oauth_flow(request, 'consent', flow):
+                    return RedirectResponse(flow_url('/oauth/consent', flow), status_code=302,
+                        headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
+                response = app.state.website.render({'error':'flow_unavailable'}, status_code=410)
+                response.headers['Referrer-Policy'] = 'no-referrer'
+                return response
         else:
-            if not request.cookies.get('c0_session'):
-                return RedirectResponse('/auth/login', status_code=302,
+            try:
+                browser_session(request)
+            except (SessionRejected, RenewalRejected):
+                response = RedirectResponse(login_url('connect', request.query_params.get('flow')), status_code=302,
                     headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+                if request.cookies.get('c0_session'):
+                    response.delete_cookie('c0_session', path='/', secure=True, httponly=True, samesite='lax')
+                return response
         response = app.state.website.render()
         response.headers['Referrer-Policy'] = 'no-referrer'
         return response
@@ -55,7 +91,17 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
     async def submit(request: Request, context=Depends(write_context)):
         session = await to_thread.run_sync(partial(browser_session, request))
         tokens = pending(request)
-        view = await to_thread.run_sync(partial(service.submit, session, *tokens, review_requested=False))
+        try:
+            view = await to_thread.run_sync(partial(service.submit, session, *tokens, review_requested=False))
+        except OnboardingRejected:
+            # The previous response may have been lost after the handoff committed.
+            if 'flow' in request.query_params:
+                try:
+                    await to_thread.run_sync(partial(app.state.oauth_consent.review, session, *tokens))
+                except ConsentRejected:
+                    raise OnboardingRejected() from None
+                return next_response(request, None)
+            raise
         if view['self_service_allowed'] and 'c0:read' in view['scopes']:
             # Fetch only after first-party sign-in and CSRF-bound account admission.
             fetched = await cimd.fetcher.fetch(view['metadata_url'], cache=True)
@@ -69,12 +115,8 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
             verification = await cimd.verification(view['metadata_url'])
             session = await to_thread.run_sync(partial(browser_session, request))
             consent = await to_thread.run_sync(partial(service.complete, session, *tokens,
-                scopes=scopes, verification=verification))
-            response = JSONResponse({'next': '/oauth/consent'}, headers={'Cache-Control': 'no-store'})
-            response.set_cookie('c0_consent', consent.request + '.' + consent.binding,
-                max_age=300, secure=True, httponly=True, samesite='lax', path='/')
-            response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
-            return response
+                scopes=scopes, verification=verification, **({'preserve_flow':True} if 'flow' in request.query_params else {})))
+            return next_response(request, consent)
         if not scopes and not view['review_requested']:
             view = await to_thread.run_sync(partial(service.submit, session, *tokens))
         return JSONResponse(jsonable_encoder({
@@ -120,12 +162,8 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
         verification = await cimd.verification(view['metadata_url'])
         session = await to_thread.run_sync(partial(browser_session, request))
         consent = await to_thread.run_sync(partial(service.complete, session, *tokens,
-            scopes=set(data.scopes), verification=verification))
-        response = JSONResponse({'next': '/oauth/consent'}, headers={'Cache-Control': 'no-store'})
-        response.set_cookie('c0_consent', consent.request + '.' + consent.binding,
-            max_age=300, secure=True, httponly=True, samesite='lax', path='/')
-        response.delete_cookie('c0_onboarding', path='/', secure=True, httponly=True, samesite='lax')
-        return response
+            scopes=set(data.scopes), verification=verification, **({'preserve_flow':True} if 'flow' in request.query_params else {})))
+        return next_response(request, consent)
 
     @app.get('/api/v1/oauth/connection-requests')
     def requests(context=Depends(read_context)):
@@ -133,5 +171,6 @@ def install_onboarding_routes(app, service, cimd, auth, read_context, write_cont
 
     @app.exception_handler(OnboardingRejected)
     def rejected(request, error):
+        request.state.c0_auth_reason = 'onboarding_unavailable'
         return JSONResponse({'detail': 'connection_request_unavailable'}, status_code=410,
                             headers={'Cache-Control': 'no-store'})

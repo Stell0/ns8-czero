@@ -106,7 +106,7 @@ db.close()
             run([str(current_core_python),'-I','-m','czero_core.migrate'], runtime=runtime)
             assert public_state() == before
             with db.connect() as c:
-                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0047_collection_diagnostics'
+                assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0048_consent_flows'
                 assert c.execute(text("SELECT count(*) FROM c0_source_update_runs WHERE diagnostics<>'{}'")).scalar_one() == 0
                 assert c.execute(text('SELECT enabled,revision,next_run_at FROM c0_automatic_sources WHERE id=:id'),
                                  {'id':legacy}).one()==(False,2,None)

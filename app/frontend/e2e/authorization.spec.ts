@@ -425,3 +425,57 @@ test('a Write-only request never selects an unrequested Read scope', async ({
     }),
   ).toBeDisabled()
 })
+
+test('overlapping consent pages keep their selected draft and recover a lost completion', async ({
+  context,
+}) => {
+  const first = await context.newPage()
+  const second = await context.newPage()
+  const flows = ['a'.repeat(43), 'b'.repeat(43)]
+  const completed = new Set<string>()
+  for (const [index, tab] of [first, second].entries()) {
+    await api(tab, 'reader')
+    const flow = flows[index]!
+    await tab.route('**/oauth/consent/request?*', (route) => {
+      expect(new URL(route.request().url()).searchParams.get('flow')).toBe(flow)
+      return route.fulfill({
+        json: completed.has(flow)
+          ? { decision: 'approved' }
+          : {
+              client_name: 'Client ' + index,
+              callback,
+              scopes: ['c0:read'],
+              eligible_scopes: ['c0:read'],
+              draft_id: String(index).repeat(64),
+              csrf_token: 'reviewed-' + flow,
+              background_supported: false,
+            },
+      })
+    })
+    await tab.route('**/oauth/consent?*', (route) => {
+      if (route.request().method() === 'GET') return route.continue()
+      expect(new URL(route.request().url()).searchParams.get('flow')).toBe(flow)
+      expect(route.request().headers()['x-c0-csrf']).toBe('reviewed-' + flow)
+      expect(route.request().postDataJSON().draft_id).toBe(
+        String(index).repeat(64),
+      )
+      completed.add(flow)
+      return route.abort('failed')
+    })
+    await tab.goto('/oauth/consent?flow=' + flow)
+  }
+  const authorized = first.waitForRequest(
+    (request) =>
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === '/oauth/consent',
+  )
+  await first.getByRole('button', { name: 'Authorize', exact: true }).click()
+  await authorized
+  await first.reload()
+  await expect(first.getByRole('status')).toContainText('Consent recorded')
+  await expect(second.getByRole('heading', { name: 'Client 1' })).toBeVisible()
+  await expect(
+    second.getByRole('button', { name: 'Authorize', exact: true }),
+  ).toBeEnabled()
+  expect(completed.size).toBe(1)
+})

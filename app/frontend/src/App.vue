@@ -19,6 +19,11 @@ const preferences = usePreferences()
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const unavailableFlow =
+  JSON.parse(document.getElementById('c0-boot')?.textContent || '{}').error ===
+  'flow_unavailable'
+    ? location.pathname + location.search
+    : null
 const authFlow = computed(() => /^\/(auth|oauth)\//.test(route.path))
 const signedOut = computed(
   () => session.error instanceof ApiError && session.error.status === 401,
@@ -283,8 +288,11 @@ function search() {
         >
           {{ t('consent.signedIn', { name: session.profile.username }) }}
         </p>
+        <p v-if="unavailableFlow === localURL(route.fullPath)" role="alert">
+          {{ t('consent.unavailable') }}
+        </p>
         <NeSkeleton
-          v-if="session.loading && !route.meta.public"
+          v-else-if="session.loading && !route.meta.public"
           class="h-24"
           :aria-label="t('common.loading')"
         />

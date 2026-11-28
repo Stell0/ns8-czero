@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useMutation } from '@pinia/colada'
 import { NeButton, NeCheckbox } from '@nethesis/vue-components'
-import { StorageSerializers, useSessionStorage } from '@vueuse/core'
+import { useSessionStorage } from '@vueuse/core'
 import { useDraftGuard } from '../composables/draft'
 import { useSession } from '../stores/session'
 import { ApiError, localURL, request } from '../api/client'
@@ -15,7 +15,16 @@ const session = useSession()
 const route = useRoute(),
   { t } = useI18n()
 const connecting = computed(() => route.params.flow === 'connect')
+const selector = computed(() => route.query.flow)
+function flowPath(path: string) {
+  const flow = selector.value
+  if (flow === undefined) return path
+  if (typeof flow !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(flow))
+    throw new ApiError(400)
+  return path + '?flow=' + flow
+}
 interface Consent {
+  decision?: 'approved' | 'declined'
   client_name?: string
   metadata_url?: string
   client_id?: string
@@ -35,16 +44,19 @@ interface Consent {
   connection_idle_seconds?: number
 }
 const { data, error, isPending, refetch } = useResource(
-  () => `consent:${route.params.flow}`,
+  () => `consent:${route.params.flow}:${selector.value || ''}`,
   () =>
     request<Consent>(
-      connecting.value ? '/oauth/connect/request' : '/oauth/consent/request',
+      flowPath(
+        connecting.value ? '/oauth/connect/request' : '/oauth/consent/request',
+      ),
       connecting.value ? { method: 'POST', data: {} } : {},
       false,
     ),
 )
 watch(data, (value) => {
-  if (value?.next === '/oauth/consent') location.assign(localURL(value.next))
+  if (value?.next === flowPath('/oauth/consent'))
+    location.assign(localURL(value.next))
 })
 const needsReview = computed(
   () =>
@@ -92,9 +104,10 @@ interface ConsentDraft {
   choices: Record<string, boolean>
   background: boolean
 }
-const saved = useSessionStorage<ConsentDraft | null>('c0-consent-draft', null, {
-  serializer: StorageSerializers.object,
-})
+const saved = useSessionStorage<ConsentDraft[]>('c0-consent-drafts', [])
+function forgetDraft(id?: string) {
+  saved.value = saved.value.filter((draft) => draft.id !== id)
+}
 let initialized: Consent | undefined
 watch([data, eligible], ([value]) => {
   if (!value) return
@@ -102,10 +115,7 @@ watch([data, eligible], ([value]) => {
   const sameRequest =
     value === initialized ||
     (id && id === (initialized?.draft_id || initialized?.review_id))
-  const savedChoices =
-    value.draft_id && saved.value?.id === value.draft_id
-      ? saved.value
-      : undefined
+  const savedChoices = saved.value.find((draft) => draft.id === value.draft_id)
   const stored = sameRequest ? choices.value : savedChoices?.choices
   choices.value = Object.fromEntries(
     eligible.value.map((scope) => [scope, stored?.[scope] ?? true]),
@@ -119,18 +129,18 @@ watch(
   [choices, background],
   () => {
     if (!data.value?.draft_id) return
-    saved.value = {
-      id: data.value.draft_id,
-      choices: { ...choices.value },
-      background: background.value,
-    }
+    const id = data.value.draft_id
+    saved.value = [
+      ...saved.value.filter((draft) => draft.id !== id).slice(-15),
+      { id, choices: { ...choices.value }, background: background.value },
+    ]
   },
   { deep: true },
 )
 const selected = computed(() =>
   Object.keys(choices.value).filter((scope) => choices.value[scope]),
 )
-const draft = useDraftGuard([data, selected, background])
+const draft = useDraftGuard([selector, data, selected, background])
 const preview = useMutation({
   mutation: async () => {
     if (!session.isAdmin || !data.value?.metadata_url) return
@@ -182,7 +192,7 @@ async function approveApplication() {
   )
     throw new ApiError(422)
   await request(
-    '/oauth/connect/approve',
+    flowPath('/oauth/connect/approve'),
     {
       method: 'POST',
       data: {
@@ -204,7 +214,11 @@ const expanding = computed(
 )
 const reviewRequest = useMutation({
   mutation: async () => {
-    await request('/oauth/connect/review', { method: 'POST', data: {} }, false)
+    await request(
+      flowPath('/oauth/connect/review'),
+      { method: 'POST', data: {} },
+      false,
+    )
     await refetch()
   },
 })
@@ -237,8 +251,12 @@ const submit = useMutation({
       : signIn
         ? '/oauth/consent/background'
         : '/oauth/consent'
-    const result = await request<{ next?: string; redirect_uri?: string }>(
-      path,
+    const result = await request<{
+      next?: string
+      redirect_uri?: string
+      decision?: string
+    }>(
+      flowPath(path),
       {
         method: 'POST',
         data: connecting.value
@@ -253,14 +271,22 @@ const submit = useMutation({
               },
       },
       false,
+      value.csrf_token,
     )
     if (!current()) return
-    if (signIn && result.next === '/auth/login')
-      location.assign(localURL(result.next))
-    else if (connecting.value && result.next === '/oauth/consent')
+    if (result.decision) {
+      forgetDraft(value.draft_id)
+      await refetch()
+      return
+    }
+    const login = selector.value
+      ? flowPath('/auth/login') + '&stage=background'
+      : '/auth/login'
+    if (signIn && result.next === login) location.assign(localURL(result.next))
+    else if (connecting.value && result.next === flowPath('/oauth/consent'))
       location.assign(localURL(result.next))
     else if (!connecting.value && !signIn && result.redirect_uri) {
-      saved.value = null
+      forgetDraft(value.draft_id)
       location.assign(result.redirect_uri)
     } else throw new Error('Invalid consent destination')
   },
@@ -268,8 +294,17 @@ const submit = useMutation({
 </script>
 <template>
   <ResourceState :error="error" :loading="isPending">
+    <p v-if="data?.decision" role="status">
+      {{
+        t(
+          data.decision === 'approved'
+            ? 'consent.recorded'
+            : 'consent.declined',
+        )
+      }}
+    </p>
     <form
-      v-if="data"
+      v-else-if="data"
       class="min-w-0 space-y-6"
       @submit.prevent="canSubmit && submit.mutate(true)"
     >
@@ -342,13 +377,25 @@ const submit = useMutation({
             })
           }}
         </p>
+        <p v-if="background && !data.background_ready">
+          {{ t('consent.backgroundStep') }}
+        </p>
       </div>
       <dl class="space-y-1 text-sm">
         <dt class="font-medium">{{ t('consent.callback') }}</dt>
         <dd class="break-all">{{ data.callback }}</dd>
       </dl>
-      <ErrorNotice
+      <p
         v-if="
+          submit.error.value instanceof ApiError &&
+          submit.error.value.code === 'account_grant_limit'
+        "
+      >
+        {{ t('consent.connectionLimit') }}
+        <RouterLink to="/account">{{ t('account.title') }}</RouterLink>
+      </p>
+      <ErrorNotice
+        v-else-if="
           submit.error.value || preview.error.value || reviewRequest.error.value
         "
         :error="

@@ -158,11 +158,11 @@ def test_vue_native_approval_waits_for_saved_metadata(live,vue_browser,request,m
     params={'client_id':metadata_url,'redirect_uri':'https://client.example.test/callback',
         'response_type':'code','code_challenge_method':'S256','code_challenge':'a'*43,
         'scope':'c0:write','resource':live.origin+'/mcp'}
-    page.goto(live.origin+'/oauth/authorize?'+urlencode(params))
-    profile=page.request.get(live.origin+'/api/v1/me').json()
-    pending=page.request.post(live.origin+'/oauth/connect/request',data={},
-        headers={'X-C0-CSRF':profile['csrf_token'],'Origin':live.origin})
-    assert pending.status==200 and not pending.json()['approved']
+    with page.expect_response('**/oauth/connect/request?flow=*') as onboarding:
+        page.goto(live.origin+'/oauth/authorize?'+urlencode(params))
+    pending = onboarding.value
+    assert pending.request.method == 'POST' and pending.status == 200
+    assert not pending.json()['approved']
     context=page.context.browser.new_context(ignore_https_errors=True)
     try:
         admin=context.new_page();admin.goto(live.origin+'/auth/login')
@@ -485,3 +485,23 @@ def test_vue_self_service_read_connects_then_preserves_existing_approval(live,re
             assert page.request.get(live.origin+'/api/v1/me',headers={'Authorization':'Bearer '+token['access_token']}).status==200
         finally:
             context.close();browser.close();registry.sync_policy(False)
+
+
+def test_vue_replayed_callback_offers_fresh_signin(live):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(ignore_https_errors=True)
+            with page.expect_request(lambda req: '/auth/callback?' in req.url) as callback:
+                page.goto(live.origin + '/auth/login')
+            expect(page.get_by_role('link', name='Administration', exact=True)).to_be_visible()
+            rejected = page.goto(callback.value.url)
+            assert rejected.status == 400
+            expect(page.get_by_role('heading', name='This sign-in request is unavailable')).to_be_visible()
+            expect(page.get_by_text('Support reference ' + rejected.headers['x-c0-request-id'])).to_be_visible()
+            page.get_by_role('link', name='Start fresh sign-in').click()
+            page.get_by_role('button', name='Continue with NethServer').click()
+            expect(page.get_by_role('link', name='Administration', exact=True)).to_be_visible()
+            assert page.request.get(live.origin + '/api/v1/me').json()['is_owner']
+        finally:
+            browser.close()

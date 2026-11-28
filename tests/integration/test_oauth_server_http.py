@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import asyncio
 import json
+import logging
+import re
 import os
 import secrets
 import importlib.util
@@ -9,6 +11,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit, urlencode
 from uuid import UUID, uuid4
 
+from oauth_browser import OAuthBrowser
 from httpx import ASGITransport, AsyncClient
 from fastapi.testclient import TestClient
 import pytest
@@ -49,7 +52,7 @@ async def authorize(client, saved, *, scope='c0:read', method='GET', optional=()
         'redirect_uri':CALLBACK,'response_type':'code','code_challenge':pkce_challenge(verifier),
         'code_challenge_method':'S256','state':state,'scope':scope,'resource':RESOURCE}
     response = await authorization_request(client, method, list(parameters.items()) + list(optional))
-    assert response.status_code == 302 and response.headers['location'] == ORIGIN + '/oauth/consent'
+    assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/consent'
     flags = response.headers['set-cookie']
     assert 'HttpOnly' in flags and 'Secure' in flags and 'SameSite=lax' in flags
     return PrivateFixture((verifier,state))
@@ -71,7 +74,7 @@ def test_registered_read_only_uuid_client_can_request_the_full_discovery_catalog
                 WHERE id=:id"""), {'id': UUID(saved['client_id'])})
         child = app.state.mcp_app
         async with child.router.lifespan_context(child):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
                 catalog = (await client.get('/.well-known/oauth-protected-resource/mcp')).json()['scopes_supported']
                 for attempt in range(2):
                     verifier, state = await authorize(client, saved, scope=' '.join(catalog))
@@ -112,7 +115,7 @@ def test_optional_authorization_fields_are_ignored_before_core(oauth_app, monkey
         return begin(*args, **kwargs)
     monkeypatch.setattr(consent, 'begin', checked_begin)
     async def check():
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             verifier, state = await authorize(client, saved, scope=scope, method=method, optional=optional)
             assert len(captured) == 1
             assert set(captured[0]) == {'client_id', 'redirect_uri', 'response_type', 'code_challenge',
@@ -150,7 +153,7 @@ def test_duplicate_authorization_fields_remain_rejected(oauth_app, method, dupli
             'state':'preserved-state', 'scope':'c0:read', 'resource':RESOURCE,
             'ui_locales':'en-US', 'future_extension':''}
         values = list(parameters.items()) + [(duplicate, parameters[duplicate])]
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             response = await authorization_request(client, method, values)
             assert response.status_code == 400 and response.json() == {'error':'invalid_request'}
             assert 'location' not in response.headers and 'set-cookie' not in response.headers
@@ -170,7 +173,7 @@ def test_optional_authorization_fields_do_not_relax_security(oauth_app, method, 
         parameters = {'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'response_type':'code',
             'code_challenge':pkce_challenge('x' * 43), 'code_challenge_method':'S256',
             'state':'preserved-state', 'scope':'c0:read', 'resource':RESOURCE, 'ui_locales':'en-US', **overrides}
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             response = await authorization_request(client, method, parameters)
             assert response.status_code in (400, 302)
             assert 'set-cookie' not in response.headers
@@ -190,7 +193,7 @@ def test_optional_authorization_fields_cannot_exceed_request_limit(oauth_app, me
         parameters = {'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'response_type':'code',
             'code_challenge':pkce_challenge('x' * 43), 'code_challenge_method':'S256',
             'state':'preserved-state', 'scope':'c0:read', 'resource':RESOURCE, 'future_extension':'x' * 16385}
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             response = await authorization_request(client, method, parameters)
             assert response.status_code == (400 if method == 'GET' else 413)
             assert 'set-cookie' not in response.headers and 'location' not in response.headers
@@ -208,7 +211,7 @@ def test_optional_authorization_fields_cannot_exceed_request_limit(oauth_app, me
 def test_optional_fields_remain_rejected_on_token_and_revocation(oauth_app):
     async def check():
         app, saved, grants, _ = oauth_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             verifier, _ = await authorize(client, saved)
             profile = await login(client)
             view = (await client.get('/oauth/consent/request')).json()
@@ -237,7 +240,7 @@ async def login(client, *, code='unit-only-code'):
     response = await client.get('/auth/login')
     state = parse_qs(urlsplit(response.headers['location']).query)['state'][0]
     response = await client.get('/auth/callback', params={'state':state,'code':code})
-    assert response.status_code == 302 and response.headers['location'] == '/oauth/consent'
+    assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/consent'
     return (await client.get('/api/v1/me')).json()
 
 
@@ -260,24 +263,24 @@ async def issued_pair(client, saved, *, scope='c0:read', login_code='unit-only-c
 def test_consent_get_recovers_stale_cookie_through_explicit_login(oauth_app, stale):
     async def check():
         app, saved, grants, _ = oauth_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             verifier, state = await authorize(client, saved)
             await login(client)
             draft = (await client.get('/oauth/consent/request')).json()['draft_id']
             old_cookie = client.cookies.get('c0_session')
-            pending_cookie = client.cookies.get('c0_consent')
+            pending_cookie = client.cookies.get(client.binding_cookie)
             with grants.access.database.engine.begin() as connection:
                 connection.execute(text("UPDATE c0_sessions SET expires_at=now()-interval '1 second' "
                     "WHERE issuer=:issuer"), {'issuer':grants.access.issuer})
             client.cookies.clear()
-            client.cookies.set('c0_consent', pending_cookie, domain='c0.example.test', path='/')
+            client.cookies.set(client.binding_cookie, pending_cookie, domain='c0.example.test', path='/')
             cookie = old_cookie if stale == 'expired' else ('x'*43 if stale == 'unknown' else 'malformed!')
             client.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
             assert (await client.get('/oauth/consent/request')).status_code == 401
             assert (await client.post('/oauth/consent', json={'draft_id': draft, 'approve': True},
                 headers={'Origin':ORIGIN})).status_code == 401
             response = await client.get('/oauth/consent')
-            assert response.status_code == 302 and response.headers['location'] == '/auth/login'
+            assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/auth/login'
             assert response.headers['cache-control'] == 'no-store'
             assert response.headers['referrer-policy'] == 'no-referrer'
             flags = response.headers['set-cookie']
@@ -309,7 +312,7 @@ def test_consent_get_recovers_stale_cookie_through_explicit_login(oauth_app, sta
 def test_stale_session_recovery_requires_valid_pending_consent(oauth_app, pending):
     async def check():
         app, saved, grants, _ = oauth_app
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             if pending != 'missing':
                 await authorize(client, saved)
                 with grants.access.database.engine.begin() as connection:
@@ -338,7 +341,7 @@ def test_consent_session_recovery_does_not_catch_other_authorization_failures(oa
         member = next(row for row in access.list_accounts(owner) if row['username'] == 'member')
         access.set_role(owner, member['id'], Role.READER)
         cookie = app.state.auth.sessions.create(app.state.auth.oidc.verify_access_token(member_token))
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             await authorize(client, saved)
             client.cookies.set('c0_session', cookie, domain='c0.example.test', path='/')
             response = await client.get('/oauth/consent')
@@ -413,7 +416,7 @@ def test_scope_upgrade_requires_new_role_eligible_explicit_consent(oauth_app, ap
             access.resolve(app.state.auth.oidc.verify_access_token(member_token))
         member_id = next(row['id'] for row in access.list_accounts(owner) if row['username'] == 'member')
         access.set_role(owner, member_id, role)
-        async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as client:
             pair = await issued_pair(client, saved, login_code='unit-only-forbidden-code')
             original = grants.verify(pair['access_token'], resource=RESOURCE)
             refresh = {'grant_type':'refresh_token', 'client_id':saved['client_id'],
@@ -446,13 +449,13 @@ def test_scope_upgrade_requires_new_role_eligible_explicit_consent(oauth_app, ap
 def test_explicit_cookie_csrf_consent_s256_token_refresh_replay_and_metadata(oauth_app):
     async def check():
         app,saved,grants,_ = oauth_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             metadata = (await client.get('/.well-known/oauth-authorization-server/oauth')).json()
             assert metadata['issuer'] == ORIGIN + '/oauth' and metadata['token_endpoint'] == ORIGIN + '/oauth/token'
             assert metadata['token_endpoint_auth_methods_supported'] == ['none']
             assert 'registration_endpoint' not in metadata and metadata['code_challenge_methods_supported'] == ['S256']
             verifier,state = await authorize(client,saved)
-            assert (await client.get('/oauth/consent')).headers['location'] == '/auth/login'
+            assert (await client.get('/oauth/consent')).headers['location'].split('?')[0] == '/auth/login'
             profile = await login(client)
             assert (await client.get('/oauth/consent')).status_code == 200
             view = (await client.get('/oauth/consent/request')).json()
@@ -492,7 +495,7 @@ def test_explicit_cookie_csrf_consent_s256_token_refresh_replay_and_metadata(oau
 def test_denial_duplicate_raw_parameters_oversize_and_no_public_registration(oauth_app):
     async def check():
         app,saved,_,_=oauth_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             _,state=await authorize(client,saved)
             profile=await login(client)
             view = (await client.get('/oauth/consent/request')).json()
@@ -516,10 +519,11 @@ def test_denial_duplicate_raw_parameters_oversize_and_no_public_registration(oau
     asyncio.run(check())
 
 
-def test_real_sdk_and_rest_share_issued_scopes_and_public_revocation(oauth_app):
+def test_real_sdk_and_rest_share_issued_scopes_and_public_revocation(oauth_app, caplog):
+    caplog.set_level(logging.INFO, logger='uvicorn.error.czero.requests')
     async def check():
         app,saved,grants,_=oauth_app
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             pair=await issued_pair(client,saved)
             client.headers['Authorization']='Bearer '+pair['access_token']
             expected=(await client.get('/api/v1/object-types')).json()
@@ -536,7 +540,23 @@ def test_real_sdk_and_rest_share_issued_scopes_and_public_revocation(oauth_app):
                         assert 'object_types_list' in names and 'objects_create' in names
                         result=await sdk.call_tool('object_types_list',{})
                         assert not result.is_error and result.structured_content==expected
-                        assert (await sdk.call_tool('objects_create',{'data':{'type_name':'absent','data':{}}})).is_error
+                        denied = await sdk.call_tool('objects_create',{'data':{'type_name':'absent','data':{}}})
+                        assert denied.is_error
+                        events = [record.getMessage() for record in caplog.records
+                                  if record.name == 'uvicorn.error.czero.requests']
+                        issued = next(event for event in events if 'reason=code_exchanged' in event)
+                        generation = re.search(r'generation=([a-f0-9]{24})\b', issued)
+                        assert generation and 'grant=authorization_code' in issued
+                        exchange = re.search(r'exchange=([a-f0-9]{24})\b', issued)
+                        assert exchange
+                        completion = next(event for event in events if 'reason=completed' in event and exchange[0] in event)
+                        flow = re.search(r'flow=([a-f0-9]{24})\b', completion)
+                        assert flow and any('route=/auth/callback' in event and flow[0] in event for event in events)
+                        assert any('route=/mcp status=200' in event and generation[0] in event for event in events)
+                        assert any('mcp operation error' in event and denied.meta['c0/request_id'] in event
+                                   for event in events)
+                        assert all(all(secret not in event for secret in (pair['access_token'],
+                                   pair['refresh_token'], client.flow)) for event in events)
             client.headers.pop('Authorization')
             response=await client.post('/oauth/revoke',data={'client_id':saved['client_id'],
                 'token':pair['refresh_token'],'resource':RESOURCE,'token_type_hint':'refresh_token'})
@@ -561,7 +581,7 @@ def test_reader_can_narrow_client_consent_and_cannot_grant_write(oauth_app, appl
         access.set_role(owner,identifier,Role.READER)
         identity=app.state.auth.oidc.verify_access_token(member_token)
         cookie=app.state.auth.sessions.create(identity)
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             await authorize(client,saved,scope='c0:read c0:write')
             client.cookies.set('c0_session',cookie,domain='c0.example.test',path='/')
             view=(await client.get('/oauth/consent/request')).json()
@@ -580,7 +600,7 @@ def test_callback_comparison_preserves_exact_raw_spelling_before_sdk_normalizati
     async def check():
         app,saved,_,_=oauth_app
         # Use the already-approved callback and its normalized-equivalent spelling.
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as client:
             verifier=secrets.token_urlsafe(32)
             parameters={'client_id':saved['client_id'],'redirect_uri':'https://CLIENT.EXAMPLE.TEST:443/callback',
                 'response_type':'code','code_challenge':pkce_challenge(verifier),'code_challenge_method':'S256',
@@ -617,7 +637,7 @@ def test_official_oauth_client_discovers_authorizes_and_calls_mcp(oauth_app):
             async def set_client_info(self,value):self.client=value
         storage=Storage()
         result=[None]
-        async with AsyncClient(transport=ASGITransport(app=app),base_url=ORIGIN) as browser:
+        async with OAuthBrowser(transport=ASGITransport(app=app),base_url=ORIGIN) as browser:
             async def redirect(url):
                 response=await browser.get(url + '&' + urlencode({'ui_locales':'en-US', 'future_extension':'ignored'}))
                 assert response.status_code==302
@@ -687,7 +707,7 @@ def test_native_browser_roles_do_not_reuse_disabled_client(oauth_app, applicatio
                 assert identifier not in identifiers, 'Fixture reused another case client'
                 identifiers.append(identifier)
                 result = client.get(value['authorization_url'], follow_redirects=False)
-                assert result.status_code == 302 and result.headers['location'] == ORIGIN + '/oauth/consent'
+                assert result.status_code == 302 and urlsplit(result.headers['location']).path == '/oauth/consent'
                 assert '<img' in value['client']['client_name']
                 fixture.cleanup_browser('czero1')
                 assert client.get(value['authorization_url'], follow_redirects=False).status_code == 400
@@ -791,11 +811,13 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
                 request_path=tmp_path/'browser-oauth.json'
                 value=json.loads(request_path.read_text())
                 assert request_path.stat().st_mode & 0o777 == 0o600
-                assert browser.request(value['authorization_url'])[0]==200
-                status, body, _ = browser.api('/oauth/consent/request')
+                status, _, review_url = browser.request(value['authorization_url'])
+                assert status == 200
+                query = urlsplit(review_url).query
+                status, body, _ = browser.api('/oauth/consent/request?' + query)
                 assert status == 200
                 draft = json.loads(body)['draft_id']
-                status, body, _ = browser.api('/oauth/consent',
+                status, body, _ = browser.api('/oauth/consent?' + query,
                     {'draft_id': draft, 'approve': True, 'scopes': ['c0:read', 'c0:write', 'c0:admin']},
                     'POST', profile['csrf_token'])
                 assert status==200
@@ -812,3 +834,67 @@ def test_exact_disposable_oauth_issue_helper_uses_real_signed_http(oauth_app, ap
             with app.state.auth.access.database.engine.begin() as connection:
                 for row in (saved,preceding):
                     connection.execute(text('DELETE FROM c0_oauth_clients WHERE id=:id'),{'id':UUID(row['client_id'])})
+
+
+def test_browser_confines_overlapping_flows_and_returns_status_after_lost_response(oauth_app):
+    async def check():
+        app, saved, grants, _ = oauth_app
+        async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as tab:
+            verifier = secrets.token_urlsafe(32)
+            raw = {'client_id':saved['client_id'], 'redirect_uri':CALLBACK, 'response_type':'code',
+                   'scope':'c0:read', 'resource':RESOURCE, 'code_challenge':pkce_challenge(verifier),
+                   'code_challenge_method':'S256', 'state':secrets.token_urlsafe(32)}
+            first = await tab.get('/oauth/authorize', params=raw)
+            first_url = first.headers['location']
+            first_selector = tab.flow
+            assert first_selector and raw['state'] not in first_url
+            assert (await tab.get('/oauth/authorize', params=raw)).headers['location'] == first_url
+            for changed in ({'scope':'c0:read c0:write'}, {'c0_session_only':'true'},
+                            {'code_challenge':pkce_challenge(secrets.token_urlsafe(32))}):
+                refused = await tab.get('/oauth/authorize', params={**raw, **changed})
+                assert 'set-cookie' not in refused.headers
+                assert refused.headers.get('location') != first_url
+            assert (await tab.get('/oauth/authorize', params=raw)).headers['location'] == first_url
+            # Moving a current flow into the retired cookie cannot select it.
+            proof = tab.cookies.get(tab.binding_cookie)
+            async with AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN) as downgraded:
+                downgraded.cookies.set('c0_consent', first_selector + '.' + proof)
+                assert (await downgraded.get('/oauth/consent')).status_code == 400
+            ambiguous = first_url + '&flow=' + first_selector
+            assert (await tab.get(ambiguous)).status_code == 400
+
+            profile = await login(tab)
+            headers = {'Origin': ORIGIN, 'X-C0-CSRF':profile['csrf_token']}
+            first_draft = (await tab.get('/oauth/consent/request')).json()['draft_id']
+            await authorize(tab, saved)
+            second_selector = tab.flow
+            second_view = (await tab.get('/oauth/consent/request')).json()
+            assert first_selector != second_selector and first_draft != second_view['draft_id']
+
+            choice = {'draft_id':first_draft, 'approve':True, 'scopes':['c0:read']}
+            assert (await tab.post('/oauth/consent', json=choice, headers=headers)).status_code == 400
+            first_action = '/oauth/consent?flow=' + first_selector
+            # Simultaneous submits model a lost delivery and a double-click. Only one
+            # response can carry the one-use code; reloading the tab shows the receipt.
+            responses = await asyncio.gather(*(tab.post(first_action, json=choice, headers=headers)
+                                               for _ in range(2)))
+            values = [response.json() for response in responses]
+            assert all(response.status_code == 200 for response in responses)
+            assert values.count({'decision':'approved'}) == 1
+            callback = next(v['redirect_uri'] for v in values if 'redirect_uri' in v)
+            receipt = await tab.get('/oauth/consent/request?flow=' + first_selector)
+            assert receipt.json() == {'decision':'approved'}
+            assert (await tab.post(first_action, json={**choice,'approve':False}, headers=headers)).json() == receipt.json()
+            assert (await tab.get('/oauth/consent/request')).json()['draft_id'] == second_view['draft_id']
+
+            async with OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN) as other:
+                assert (await other.get(first_url)).status_code == 400
+            code = parse_qs(urlsplit(callback).query)['code'][0]
+            redeem = {'grant_type':'authorization_code','client_id':saved['client_id'],'resource':RESOURCE,
+                      'code':code,'redirect_uri':CALLBACK,'code_verifier':verifier}
+            assert (await tab.post('/oauth/token', data=redeem)).status_code == 200
+            assert (await tab.post('/oauth/token', data=redeem)).status_code == 400
+            with grants.access.database.engine.connect() as db:
+                assert db.execute(text('SELECT count(*) FROM c0_oauth_grants WHERE client_id=:id'),
+                                  {'id':UUID(saved['client_id'])}).scalar_one() == 1
+    asyncio.run(check())

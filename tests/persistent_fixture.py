@@ -71,8 +71,11 @@ def issue(browser,profile,client,password,*,offline=False,expect_policy=None):
     query={'client_id':client['client_id'],'redirect_uri':client['redirect_uris'][0],'response_type':'code',
         'code_challenge_method':'S256','code_challenge':base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode(),
         'state':state,'scope':' '.join(scopes),'resource':browser.origin+'/mcp'}
-    assert browser.request('/oauth/authorize?'+urlencode(query))[0]==200, 'Background consent unavailable'
-    status,body,_=browser.api('/oauth/consent/request');assert status==200
+    from oauth_fixture import flow_suffix
+    status, _, page = browser.request('/oauth/authorize?'+urlencode(query))
+    assert status == 200, 'Background consent unavailable'
+    flow = flow_suffix(browser, page)
+    status,body,_=browser.api('/oauth/consent/request' + flow);assert status==200
     initial=json.loads(body)
     assert initial['background_supported'] and not initial['background_requested']
     choice = {'scopes': scopes}
@@ -82,12 +85,13 @@ def issue(browser,profile,client,password,*,offline=False,expect_policy=None):
     approval = {**choice, 'approve': True, 'persistent': True}
     if expect_policy is not None:
         assert not initial['background_ready'] and initial['connection_idle_seconds']==expect_policy
-        status, _, _ = browser.api('/oauth/consent', approval, 'POST', profile['csrf_token'])
+        status, _, _ = browser.api('/oauth/consent' + flow, approval, 'POST', profile['csrf_token'])
         assert status==400, 'Previous offline policy authorized a new connection'
     if offline:
-        status, body, _ = browser.api('/oauth/consent/background', choice, 'POST', profile['csrf_token'])
-        assert status==200 and json.loads(body)=={'next':'/auth/login'}, 'Background sign-in handoff failed'
-        status,body,url=browser.request('/auth/login');assert status==200
+        status, body, _ = browser.api('/oauth/consent/background' + flow, choice, 'POST', profile['csrf_token'])
+        next_login = '/auth/login' + (flow + '&stage=background' if flow else '')
+        assert status==200 and json.loads(body)=={'next': next_login}, 'Background sign-in handoff failed'
+        status,body,url=browser.request(next_login);assert status==200
         form=Form('kc-form-login');form.feed(body.decode());assert form.action, 'Background native login form missing'
         action=urljoin(url,form.action);assert urlsplit(action).scheme=='https' and urlsplit(action).netloc==urlsplit(url).netloc
         status,body,url=browser.request(action,urlencode({**form.fields,'username':'c0owner','password':password}).encode(),
@@ -99,16 +103,16 @@ def issue(browser,profile,client,password,*,offline=False,expect_policy=None):
             status,_,url=browser.request(action,urlencode({**form.fields,'accept':'Yes'}).encode(),
                 'POST',{'Content-Type':'application/x-www-form-urlencoded'})
             assert status==200, 'Background provider consent failed'
-        assert url==browser.origin+'/oauth/consent', 'Background callback returned elsewhere'
+        assert url==browser.origin+'/oauth/consent' + flow, 'Background callback returned elsewhere'
         status,body,_=browser.api('/api/v1/me');assert status==200
         current=json.loads(body);assert current['id']==profile['id'], 'Background sign-in switched account'
         profile=current
-    status,body,_=browser.api('/oauth/consent/request');assert status==200
+    status,body,_=browser.api('/oauth/consent/request' + flow);assert status==200
     view=json.loads(body)
     assert view['background_ready'] and view['expires_at']==initial['expires_at'], 'Background request changed its lifetime'
     assert view.get('draft_id') == initial.get('draft_id'), 'Background sign-in changed the consent draft'
-    assert browser.api('/oauth/consent', approval, 'POST')[0] == 403
-    status, body, _ = browser.api('/oauth/consent', approval, 'POST', profile['csrf_token'])
+    assert browser.api('/oauth/consent' + flow, approval, 'POST')[0] == 403
+    status, body, _ = browser.api('/oauth/consent' + flow, approval, 'POST', profile['csrf_token'])
     assert status==200, 'Explicit background consent failed'
     values=parse_qs(urlsplit(json.loads(body)['redirect_uri']).query);assert values['state']==[state]
     status,body,_=browser.request('/oauth/token',urlencode({'grant_type':'authorization_code','client_id':client['client_id'],

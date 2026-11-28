@@ -6,7 +6,8 @@ import os
 import secrets
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from httpx import ASGITransport, AsyncClient
+from oauth_browser import OAuthBrowser
+from httpx import ASGITransport
 import pytest
 from sqlalchemy import text
 
@@ -26,17 +27,20 @@ def parameters(**updates):
 
 
 async def signin(client, *, code='unit-only-code', target='/', return_to=None):
-    response = await client.get('/auth/login', params={'return_to': return_to} if return_to else None)
+    if target == '/' and not return_to:
+        response = await client.get('/auth/login', params={})
+    else:
+        response = await client.get('/auth/login', params={'return_to': return_to} if return_to else None)
     state = parse_qs(urlsplit(response.headers['location']).query)['state'][0]
     response = await client.get('/auth/callback', params={'state': state, 'code': code})
-    assert response.status_code == 302 and response.headers['location'] == target
+    assert response.status_code == 302 and urlsplit(response.headers['location']).path == target
     response = await client.get('/api/v1/me')
     assert response.status_code == 200
     return response.json()
 
 
 def browser(app):
-    return AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN)
+    return OAuthBrowser(transport=ASGITransport(app=app), base_url=ORIGIN)
 
 
 def headers(profile):
@@ -52,17 +56,17 @@ def test_new_reader_gets_signin_visible_approval_then_explicit_consent_and_real_
             async with browser(app) as user, browser(app) as admin:
                 raw, verifier = parameters()
                 response = await user.get('/oauth/authorize', params=raw)
-                assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
+                assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/connect'
                 assert all(flag in response.headers['set-cookie'] for flag in ('HttpOnly', 'Secure', 'SameSite=lax'))
                 assert raw['state'] not in response.headers['location'] and not harness.requests
                 response = await user.get('/oauth/connect')
-                assert response.status_code == 302 and response.headers['location'] == '/auth/login'
+                assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/auth/login'
                 profile = await signin(user, code='unit-only-forbidden-code', target='/oauth/connect')
                 assert profile['role'] == 'reader' and not profile['is_owner']
                 assert (await user.get('/oauth/connect')).status_code == 200
                 assert (await user.post('/oauth/connect/request', json={})).status_code == 403
                 request = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
-                assert request.status_code == 200 and request.json() == {'next': '/oauth/consent'}
+                assert request.status_code == 200 and urlsplit(request.json()['next']).path == '/oauth/consent'
                 assert harness.requests
                 assert (await user.get('/api/v1/oauth/connection-requests')).status_code == 403
                 admin.headers['Authorization'] = 'Bearer ' + owner
@@ -106,7 +110,7 @@ def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(ci
     async def reader_token(reader, profile):
         raw, verifier = parameters()
         response = await reader.get('/oauth/authorize', params=raw)
-        assert response.status_code == 302 and response.headers['location'] == ORIGIN + '/oauth/consent'
+        assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/consent'
         consent = (await reader.get('/oauth/consent/request')).json()
         assert consent['scopes'] == consent['eligible_scopes'] == ['c0:read']
         return await consent_token(reader, profile, consent, raw, verifier, ['c0:read'])
@@ -125,7 +129,7 @@ def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(ci
                 reader_bearer = {'Authorization': 'Bearer ' + original['access_token']}
                 raw, verifier = parameters(scope='c0:read c0:write c0:admin')
                 response = await user.get('/oauth/authorize', params=raw)
-                assert response.status_code == 302 and response.headers['location'] == '/oauth/connect'
+                assert response.status_code == 302 and urlsplit(response.headers['location']).path == '/oauth/connect'
                 profile = await signin(user, target='/oauth/connect')
                 assert profile['id'] != reader_profile['id']
                 result = await user.post('/oauth/connect/request', json={}, headers=headers(profile))
@@ -149,9 +153,18 @@ def test_eligible_admin_can_keep_read_or_approve_requested_application_scopes(ci
                     assert (await admin.get('/api/v1/profile', headers=reader_bearer)).json()['id'] == reader_profile['id']
                     assert (await user.post('/oauth/connect/approve', json=approval,
                         headers=headers(profile))).status_code == 204
+                    # Registry approval changes /authorize routing before this browser leaves onboarding.
+                    original_flow = user.flow
+                    retried = await user.get('/oauth/authorize', params=raw)
+                    assert urlsplit(retried.headers['location']).path == '/oauth/connect'
+                    assert user.flow == original_flow
                     assert 'c0_consent' not in user.cookies
                 response = await user.post('/oauth/connect/continue', json={'scopes': scopes}, headers=headers(profile))
-                assert response.status_code == 200 and response.json() == {'next': '/oauth/consent'}
+                assert response.status_code == 200 and urlsplit(response.json()['next']).path == '/oauth/consent'
+                original_flow = user.flow
+                retried = await user.get('/oauth/authorize', params=raw)
+                assert urlsplit(retried.headers['location']).path == '/oauth/consent'
+                assert user.flow == original_flow
                 consent = (await user.get('/oauth/consent/request')).json()
                 assert set(consent['scopes']) == set(scopes)
                 owner_pair = await consent_token(user, profile, consent, raw, verifier, scopes)
@@ -240,7 +253,8 @@ def test_handoff_policy_change_binding_and_expired_page_are_human_readable(cimd_
             assert view.status_code == 200 and view.json()['review_requested'] is True
             pending = (await user.get('/api/v1/oauth/connection-requests')).json()['requests']
             assert len(pending) == 1 and pending[0]['scopes'] == ['c0:write']
-            other.cookies.set('c0_onboarding', user.cookies.get('c0_onboarding'), domain='c0.example.test', path='/')
+            other.flow, other.stage = user.flow, user.stage
+            other.cookies.set(user.binding_cookie, user.cookies.get(user.binding_cookie), domain='c0.example.test', path='/')
             assert (await other.post('/oauth/connect/request', json={}, headers=headers(profile))).status_code == 401
             registry.sync_policy(False); registry.sync_policy(True)
             assert (await user.post('/oauth/connect/request', json={}, headers=headers(profile))).status_code == 410

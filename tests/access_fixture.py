@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 
 from oidc_fixture import STATE, command
 from oidc_probe import Browser
-from oauth_fixture import issue, registered
+from oauth_fixture import flow_suffix, issue, registered
 
 URL='https://cdn.jsdelivr.net/gh/Stell0/ns8-czero@test-workspace-client-v1/tests/fixtures/workspace-client.json'
 NAME='C0 disposable access browser'
@@ -56,8 +56,10 @@ def run(module_id,phase):
         raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
              'code_challenge_method':'S256','code_challenge':'a'*43,'state':secrets.token_urlsafe(32),
              'scope':'c0:write','resource':origin+'/mcp'}
-        assert user.request('/oauth/authorize?'+urlencode(raw))[0]==200
-        pending=checked(user,'/oauth/connect/request',{},'POST',profile['csrf_token'])
+        status, _, page = user.request('/oauth/authorize?'+urlencode(raw))
+        assert status == 200
+        flow = flow_suffix(user, page)
+        pending=checked(user,'/oauth/connect/request' + flow,{},'POST',profile['csrf_token'])
         assert pending['approved'] is True and pending['allowed_scopes']==['c0:read'], 'Self-service changed the application permission ceiling'
         request=checked(admin,'/api/v1/access/accounts/'+member['id']+'/applications')['applications'][0]
         proof.update(fresh_reader=profile['role']=='reader',pending_request=request['kind']=='request')
@@ -82,8 +84,10 @@ def run(module_id,phase):
             raw={'client_id':URL,'redirect_uri':'https://client.example.test/callback','response_type':'code',
                  'code_challenge_method':'S256','code_challenge':'b'*43,'scope':'c0:admin',
                  'resource':origin+'/mcp'}
-            assert user.request('/oauth/authorize?'+urlencode(raw))[0]==200
-            checked(user,'/oauth/connect/request',{},'POST',profile['csrf_token'])
+            status, _, page = user.request('/oauth/authorize?'+urlencode(raw))
+            assert status == 200
+            flow = flow_suffix(user, page)
+            checked(user,'/oauth/connect/request' + flow,{},'POST',profile['csrf_token'])
             user.logout(profile)
         elif phase=='declined':
             requests=[a for a in checked(admin,'/api/v1/access/accounts/'+member['id']+'/applications')['applications'] if a['kind']=='request']

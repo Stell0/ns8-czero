@@ -19,7 +19,8 @@ from .operations import SCOPES
 
 
 class CimdRejected(ValueError):
-    def __init__(self):
+    def __init__(self, reason='metadata_rejected'):
+        self.reason = reason
         super().__init__('cimd_unavailable')
 
 
@@ -202,6 +203,7 @@ class CimdService(CimdPolicyService):
         if not isinstance(metadata, ClientMetadata) or not 0 <= cache_seconds <= 300:
             raise CimdRejected()
         result = None
+        reason = 'metadata_rejected'
         with self.access.database.engine.begin() as connection:
             _lock(connection)
             policy = self._policy(connection)
@@ -210,6 +212,7 @@ class CimdService(CimdPolicyService):
             if row is None or row['revision'] != expected_revision or row['review_required']:
                 raise CimdRejected()
             if row['metadata_digest'] != metadata.digest:
+                reason = 'metadata_changed'
                 connection.execute(text('UPDATE c0_cimd_clients SET review_required=true WHERE client_id=:id'),
                                    {'id': row['client_id']})
                 connection.execute(text('DELETE FROM c0_oauth_consent WHERE client_id=:id'),
@@ -222,7 +225,7 @@ class CimdService(CimdPolicyService):
                     result = VerificationProof(self, row['client_id'], metadata.client_id, row['revision'],
                                                policy['revision'], metadata.digest, now)
         if result is None:
-            raise CimdRejected()
+            raise CimdRejected(reason)
         return result
 
     def _check_proof(self, connection, client, proof):

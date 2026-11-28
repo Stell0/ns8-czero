@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """FastAPI transport for shared Core authentication and membership services."""
 from dataclasses import dataclass, field
+import hashlib
+import secrets
 import logging
 import os
 import re
@@ -14,6 +16,7 @@ from fastapi.security import APIKeyCookie, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import SQLAlchemyError
 
+from czero_app.auth_events import flow_reference
 from czero_core.access import AccessService
 from czero_core.database import Database
 from czero_core.identity import Actor, PermissionDenied, Role, TokenRejected
@@ -55,6 +58,53 @@ def login_return(value: str | None) -> str:
     if len(query) > 1600:
         return ''
     return path + ('?' + query if query else '')
+
+
+_FLOW = re.compile(r'/oauth/(consent|connect)\?flow=([A-Za-z0-9_-]{43})\Z')
+
+
+def cookie_namespace(cookie_path):
+    # Legacy deployments can serve multiple C0 instances on one host.
+    return hashlib.sha256(cookie_path.encode('utf-8')).hexdigest()[:32]
+
+
+def attempt_cookie(state, cookie_path):
+    key = hashlib.sha256(state.encode('ascii')).hexdigest()[:32]
+    return f'__Host-c0-attempt-{cookie_namespace(cookie_path)}-{key}'
+
+
+def browser_cookie(request, name):
+    """Reject ambiguous cookies (including duplicate Cookie headers)."""
+    matches = [value for header in request.headers.getlist('cookie') for part in header.split(';')
+               for key, _, value in [part.strip().partition('=')] if key == name]
+    if len(matches) > 1:
+        raise LoginStateRejected()
+    return matches[0] if matches else None
+
+
+def secret_cookie(request, name):
+    value = browser_cookie(request, name)
+    return value if value and re.fullmatch(r'[A-Za-z0-9_-]{43}', value) else None
+
+
+def callback_fields(request, issuer):
+    raw = request.scope['query_string']
+    try:
+        if len(raw) > 16384:
+            raise ValueError
+        pairs = parse_qsl(raw.decode('ascii'), keep_blank_values=True, strict_parsing=True,
+                          errors='strict', max_num_fields=6)
+        fields = dict(pairs)
+        if (len(fields) != len(pairs) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', fields.get('state', ''))
+                or set(fields) - {'state','code','error','error_description','iss','session_state'}
+                or ('code' in fields) == ('error' in fields)
+                or fields.get('iss', issuer) != issuer or ('error_description' in fields and 'error' not in fields)
+                or 'code' in fields and not re.fullmatch(r'[!-~]{1,8192}', fields['code'])
+                or 'error' in fields and not re.fullmatch(r'[A-Za-z0-9_]{1,64}', fields['error'])):
+            raise ValueError
+    except (ValueError, UnicodeError):
+        raise LoginStateRejected() from None
+    return fields
 
 
 class SafeAccessLog(logging.Filter):
@@ -121,6 +171,9 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     if not any(isinstance(item, SafeAccessLog) for item in logger.filters):
         logger.addFilter(SafeAccessLog())
     cookie_path = base_path + "/"
+    owner_cookie = '__Host-c0-login-owner-' + cookie_namespace(cookie_path)
+    fenced = bool(auth and hasattr(auth.sessions, 'claim_browser_login'))
+    attempt_path = '/' if fenced else cookie_path
     bearer_scheme = HTTPBearer(auto_error=False, scheme_name="BearerAuth")
     cookie_scheme = APIKeyCookie(name="c0_session", auto_error=False, scheme_name="SessionCookie")
 
@@ -128,12 +181,18 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         if isinstance(error, PermissionDenied):
             return JSONResponse({"detail": "forbidden"}, status_code=403)
         if isinstance(error, LoginStateRejected):
+            if request.url.path.endswith(('/auth/login','/auth/callback')):
+                return login_failure(request)
             return JSONResponse({"detail": "invalid_login_state"}, status_code=400)
         if isinstance(error, (TokenRejected, SessionRejected, RenewalRejected)):
             return JSONResponse({"detail": str(error)}, status_code=401, headers={"WWW-Authenticate": "Bearer"})
         if isinstance(error, (OidcUnavailable, RenewalUnavailable)):
+            if request.url.path.endswith(('/auth/login','/auth/callback')):
+                return login_failure(request, 'provider_unavailable', status=503)
             return JSONResponse({"detail": "authentication_unavailable"}, status_code=503)
         logging.getLogger("czero.auth").error("Authentication service failed (%s)", type(error).__name__)
+        if request.url.path.endswith(('/auth/login','/auth/callback')):
+            return login_failure(request, 'dependency_unavailable', status=503)
         return JSONResponse({"detail": "service_unavailable"}, status_code=503)
 
     for error_class in (PermissionDenied, LoginStateRejected, TokenRejected, SessionRejected, RenewalRejected, RenewalUnavailable, OidcUnavailable, SQLAlchemyError):
@@ -142,6 +201,10 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     @app.middleware("http")
     async def private_responses(request: Request, call_next):
         response = await call_next(request)
+        # Consume only the confirmed attempt, including on a handled storage or provider failure.
+        claimed = getattr(request.state, 'claimed_login_cookie', None)
+        if claimed:
+            response.delete_cookie(claimed, path=attempt_path, secure=True, httponly=True, samesite='lax')
         cookie = getattr(request.state, 'remembered_cookie', None)
         if cookie and response.status_code < 400 and request.url.path != '/auth/logout':
             try:
@@ -192,8 +255,13 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         context = active.sessions.get(cookie)
         if write:
             if request.headers.get("origin") != active.oidc.config.public_origin.rstrip("/"):
+                request.state.c0_auth_reason = 'origin_rejected'
                 raise PermissionDenied()
-            active.sessions.check_csrf(context, request.headers.get("x-c0-csrf"))
+            try:
+                active.sessions.check_csrf(context, request.headers.get("x-c0-csrf"))
+            except PermissionDenied:
+                request.state.c0_auth_reason = 'csrf_rejected'
+                raise
         if context.remembered:
             request.state.remembered_cookie = cookie
         return RequestAccess(context.actor, context.csrf_token, remembered=context.remembered)
@@ -254,21 +322,59 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
             raise HTTPException(404, "account_not_found") from None
         return Response(status_code=204)
 
-    def remembered_unavailable(request):
-        configured().sessions.destroy(request.cookies.get('c0_session'))
+    def remembered_unavailable(request, attempt=None):
+        if attempt is None:
+            configured().sessions.destroy(request.cookies.get('c0_session'))
+        else:
+            try:
+                configured().sessions.reject_browser_login(attempt)
+            except LoginStateRejected:
+                return login_failure(request)
         response = app.state.website.render({'error': 'remembered_unavailable'}, status_code=403)
         response.headers['Referrer-Policy'] = 'no-referrer'
         for name in ('c0_login', 'c0_session', 'c0_login_return'):
             response.delete_cookie(name, path=cookie_path, secure=True, httponly=True, samesite='lax')
         return response
 
+    def login_failure(request, reason='callback_rejected', *, status=400, retry=None):
+        request.state.c0_auth_reason = reason
+        boot = {'error': reason}
+        reference = getattr(request.state, 'c0_request_id', None)
+        if reference:
+            boot['reference'] = reference
+        if retry:
+            boot['restart'] = retry
+        response = app.state.website.render(boot, status_code=status)
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
+
+    def begin_browser_login(request, target='', **kwargs):
+        sessions = configured().sessions
+        if fenced:
+            kwargs.update(return_target=target, prior_cookie=secret_cookie(request, 'c0_session'))
+        return sessions.begin_login(**kwargs)
+
     def start_login(request, pending):
         active = configured()
         switch = request.query_params.get('switch_account') == 'true'
         destination = active.oidc.authorization_url(pending, reauthenticate=True) if switch or pending.background else active.oidc.authorization_url(pending)
         response = RedirectResponse(destination, status_code=302, headers={'Referrer-Policy':'no-referrer'})
-        response.set_cookie('c0_login', pending.browser_binding, max_age=300,
-            secure=True, httponly=True, samesite='lax', path=cookie_path)
+        name = 'c0_login'
+        if fenced:
+            owner = secret_cookie(request, owner_cookie)
+            if owner is None:
+                owner = secrets.token_urlsafe(32)
+            # A new redirect supersedes the prior native login. Consent cookies
+            # survive independently so its tab can still reopen its live draft.
+            prefix = attempt_cookie(pending.state, cookie_path)[:-32]
+            stale = [key for key in request.cookies if key.startswith(prefix)]
+            if len(stale) >= 12:
+                raise LoginStateRejected()
+            active.sessions.bind_browser_login(pending, owner, secret_cookie(request, 'c0_session'))
+            name = attempt_cookie(pending.state, cookie_path)
+            response.set_cookie(owner_cookie, owner, max_age=300, secure=True, httponly=True, samesite='lax', path='/')
+        response.set_cookie(name, pending.browser_binding, max_age=300,
+            secure=True, httponly=True, samesite='lax', path=attempt_path)
         return response
 
     @app.get('/auth/sign-in', include_in_schema=False)
@@ -277,6 +383,11 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         intent, browser = active.sessions.begin_sign_in()
         target = login_return(request.query_params.get('return_to'))
         response = app.state.website.render({'intent': intent, 'return_to': target})
+        # The user explicitly started a fresh sign-in. Discard a retired
+        # predecessor before its new attempt snapshots the browser binding.
+        prior = secret_cookie(request, 'c0_session')
+        if fenced and prior and not active.sessions.known_browser(prior):
+            response.delete_cookie('c0_session', path=cookie_path, secure=True, httponly=True, samesite='lax')
         response.set_cookie('c0_signin', browser, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
         return response
 
@@ -307,7 +418,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
         remembered = form.get('remember') == 'yes'
         if remembered and active.sessions.authority is None:
             return await to_thread.run_sync(remembered_unavailable, request)
-        pending = await to_thread.run_sync(partial(active.sessions.begin_login, remembered=remembered))
+        target = login_return(form.get('return_to'))
+        pending = await to_thread.run_sync(partial(begin_browser_login, request, target, remembered=remembered))
         try:
             response = await to_thread.run_sync(start_login, request, pending)
         except OidcUnavailable:
@@ -315,7 +427,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
                 raise
             return await to_thread.run_sync(remembered_unavailable, request)
         response.delete_cookie('c0_signin', path=cookie_path, secure=True, httponly=True, samesite='lax')
-        target = login_return(form.get('return_to'))
+        if fenced:
+            return response
         if target:
             response.set_cookie('c0_login_return', target, max_age=300, secure=True, httponly=True, samesite='lax', path=cookie_path)
         else:
@@ -325,18 +438,38 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     @app.get("/auth/login", include_in_schema=False)
     def login(request: Request):
         active = configured()
-        background = request.cookies.get('c0_background_login')
+        target = login_return(request.query_params.get('return_to'))
+        flow = request.query_params.get('flow')
+        stage = request.query_params.get('stage')
+        background_name = 'c0_background_login'
+        if flow is not None or stage is not None:
+            if (not fenced or len(request.query_params.getlist('flow')) != 1
+                    or len(request.query_params.getlist('stage')) != 1
+                    or not re.fullmatch(r'[A-Za-z0-9_-]{43}', flow or '')
+                    or stage not in ('consent', 'connect', 'background')):
+                return login_failure(request)
+            review = 'connect' if stage == 'connect' else 'consent'
+            verify_flow = getattr(app.state, 'verified_oauth_flow', None)
+            if verify_flow is None or not verify_flow(request, review, flow):
+                return login_failure(request)
+            target = '/oauth/' + review + '?flow=' + flow
+            background_name = '__Host-c0-background-' + flow
+        background = browser_cookie(request, background_name) if stage in (None, 'background') else None
+        if stage == 'background' and not background:
+            return login_failure(request)
+
         if background is not None:
             match = re.fullmatch(r'([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})', background)
             if match is None:
                 raise LoginStateRejected()
             pending = active.sessions.pending_login(*match.groups())
         else:
-            pending = active.sessions.begin_login()
+            pending = begin_browser_login(request, target)
         response = start_login(request, pending)
-        response.delete_cookie('c0_background_login', path=cookie_path,
+        response.delete_cookie(background_name, path=attempt_path,
             secure=True, httponly=True, samesite='lax')
-        target = login_return(request.query_params.get('return_to'))
+        if fenced:
+            return response
         if target:
             response.set_cookie('c0_login_return', target, max_age=300,
                 secure=True, httponly=True, samesite='lax', path=cookie_path)
@@ -348,54 +481,108 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
     @app.get("/auth/callback", include_in_schema=False)
     def callback(request: Request):
         active = configured()
-        login = active.sessions.consume_login(request.query_params.get("state"), request.cookies.get("c0_login"))
+        fields, proof = {}, None
+        try:
+            fields = callback_fields(request, active.oidc.config.issuer)
+            name = attempt_cookie(fields['state'], cookie_path) if fenced else 'c0_login'
+            proof = browser_cookie(request, name)
+            if fenced:
+                login = active.sessions.claim_browser_login(fields['state'], proof,
+                    secret_cookie(request, owner_cookie), secret_cookie(request, 'c0_session'))
+            else:
+                login = active.sessions.consume_login(fields['state'], proof)
+        except LoginStateRejected:
+            retry = None
+            if fenced and proof:
+                target = active.sessions.recovery_target(fields['state'], proof)
+                flow = _FLOW.fullmatch(target or '')
+                if flow and app.state.verified_oauth_flow(request, *flow.groups()):
+                    retry = target
+            return login_failure(request, retry=retry)
+
+        if fenced:
+            request.state.claimed_login_cookie = name
+
+        target = getattr(login, 'return_target', '')
+        flow = _FLOW.fullmatch(target)
+        if flow:
+            request.state.c0_flow_ref = flow_reference(flow.group(2))
+        if flow and not app.state.verified_oauth_flow(request, *flow.groups()):
+            return login_failure(request)
+        if 'error' in fields:
+            reason = 'provider_unavailable' if fields['error'] in ('temporarily_unavailable','server_error') else 'provider_rejected'
+            return login_failure(request, reason, status=503 if reason == 'provider_unavailable' else 400,
+                                 retry=target if flow else None)
         renewal = None
         try:
             if active.sessions.authority is not None:
-                identity, renewal = active.oidc.exchange_renewable(request.query_params.get("code"), login)
+                identity, renewal = active.oidc.exchange_renewable(fields['code'], login)
             else:
-                identity = active.oidc.exchange(request.query_params.get("code"), login)
-        except (OfflineUnavailable, OidcUnavailable, TokenRejected):
-            if not login.remembered:
-                raise
-            return remembered_unavailable(request)
+                identity = active.oidc.exchange(fields['code'], login)
+        except (OfflineUnavailable, OidcUnavailable, TokenRejected) as error:
+            if login.remembered:
+                return remembered_unavailable(request, login if fenced else None)
+            reason = 'provider_unavailable' if isinstance(error, OidcUnavailable) else 'provider_rejected'
+            return login_failure(request, reason, status=503 if reason == 'provider_unavailable' else 401,
+                                 retry=target if flow else None)
         try:
             extra = {'background': True, 'expected_account_key': login.expected_account_key} if login.background else {}
+            if fenced:
+                if flow:
+                    def bind_flow(connection, account_id):
+                        return app.state.verified_oauth_flow(request, *flow.groups(),
+                            connection=connection, account_id=account_id)
+                    extra['bind_flow'] = bind_flow
+                extra['attempt'] = login
             cookie = active.sessions.create(identity, renewal=renewal, remembered=login.remembered, **extra)
+        except (LoginStateRejected, SessionRejected):
+            return login_failure(request)
+        except RenewalRejected:
+            return login_failure(request, 'native_authority_rejected', status=401)
         except PermissionDenied:
-            active.sessions.destroy(request.cookies.get("c0_session"))
+            if fenced:
+                try:
+                    active.sessions.reject_browser_login(login, denied_identity=identity)
+                except LoginStateRejected:
+                    return login_failure(request)
+            else:
+                active.sessions.destroy(request.cookies.get("c0_session"))
             # Admission failure does not clear the provider's SSO session.
             # Retry must explicitly reauthenticate instead of reusing it.
             response = app.state.website.render({'error': 'access_denied'}, status_code=403)
             response.headers['Referrer-Policy'] = 'no-referrer'
-            response.delete_cookie("c0_login", path=cookie_path,
-                                   secure=True, httponly=True, samesite="lax")
+            if not fenced:
+                response.delete_cookie(name, path=cookie_path, secure=True, httponly=True, samesite="lax")
             response.delete_cookie("c0_session", path=cookie_path,
                                    secure=True, httponly=True, samesite="lax")
             response.delete_cookie('c0_login_return', path=cookie_path,
                 secure=True, httponly=True, samesite='lax')
             return response
-        active.sessions.replace_browser(request.cookies.get('c0_session'))
-        destination = cookie_path
-        destination += login_return(request.cookies.get('c0_login_return'))
-        onboarding = getattr(app.state, 'client_onboarding', None)
-        if onboarding is not None and request.cookies.get('c0_onboarding'):
-            # The destination is fixed: original OAuth state stays server-side.
-            # The handoff page explains expiry and never trusts a redirect URL.
-            destination = '/oauth/connect'
-        consent = getattr(app.state, 'oauth_consent', None)
-        if destination == cookie_path and consent is not None and request.cookies.get('c0_consent'):
-            from czero_app.oauth_server import pending_cookie
-            from czero_core.oauth_consent import ConsentRejected
-            try:
-                consent.view(*pending_cookie(request))
-                destination = '/oauth/consent'
-            except ConsentRejected:
-                pass
+        if fenced:
+            destination = target if flow else cookie_path + login_return(target)
+        else:
+            active.sessions.replace_browser(request.cookies.get('c0_session'))
+            destination = cookie_path
+            destination += login_return(request.cookies.get('c0_login_return'))
+            onboarding = getattr(app.state, 'client_onboarding', None)
+            if onboarding is not None and request.cookies.get('c0_onboarding'):
+                # The destination is fixed: original OAuth state stays server-side.
+                # The handoff page explains expiry and never trusts a redirect URL.
+                destination = '/oauth/connect'
+            consent = getattr(app.state, 'oauth_consent', None)
+            if destination == cookie_path and consent is not None and request.cookies.get('c0_consent'):
+                from czero_app.oauth_server import pending_cookie
+                from czero_core.oauth_consent import ConsentRejected
+                try:
+                    consent.view(*pending_cookie(request))
+                    destination = '/oauth/consent'
+                except ConsentRejected:
+                    pass
         response = RedirectResponse(destination, status_code=302)
         response.set_cookie("c0_session", cookie, max_age=REMEMBER_SECONDS if login.remembered else active.sessions.max_session_seconds,
                             secure=True, httponly=True, samesite="lax", path=cookie_path)
-        response.delete_cookie("c0_login", path=cookie_path, secure=True, httponly=True, samesite="lax")
+        if not fenced:
+            response.delete_cookie(name, path=cookie_path, secure=True, httponly=True, samesite="lax")
         response.delete_cookie('c0_login_return', path=cookie_path,
             secure=True, httponly=True, samesite='lax')
         return response
@@ -407,7 +594,8 @@ def install_auth_routes(app: FastAPI, auth: AppAuth | None, base_path: str) -> t
                 or request.headers.get('origin') != active.oidc.config.public_origin.rstrip('/')):
             raise PermissionDenied()
         # Local revocation cannot depend on provider authentication/availability.
-        active.sessions.logout(cookie, request.headers.get('x-c0-csrf'))
+        extra = {'owner': secret_cookie(request, owner_cookie)} if fenced else {}
+        active.sessions.logout(cookie, request.headers.get('x-c0-csrf'), **extra)
         try:
             logout_url = active.oidc.logout_url()
             provider_logout = True
