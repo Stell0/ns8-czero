@@ -26,7 +26,12 @@ assert source['vcs_info']['vcs'] == 'git'
 assert source['vcs_info']['commit_id'] == commit
 assert source['subdirectory'] == 'packages/czero-core'
 assert importlib.util.find_spec('agent') is None
-assert SCHEMA_REVISION == '0046_pdf_authorization'
+assert SCHEMA_REVISION == '0048_consent_flows'
+from czero_core.oauth_consent import OAuthConsentService
+from czero_core.sessions import SessionService
+assert OAuthConsentService.supports_session_only is True
+assert callable(OAuthConsentService.review)
+assert callable(SessionService.claim_browser_login)
 from czero_core.pdf_access import PdfAccess
 from czero_core.protected_pdf import inspect_pdf
 from czero_core.sources import SourceService
@@ -78,4 +83,4 @@ public_routes=[route for route in application.routes if route.path.startswith('/
                and not route.path.startswith('/api/v1/automatic-sources/google-drive/')]
 assert len(public_routes) == 6
 assert application.state.google_drive is None
-print('Released image Core matches immutable Git lock, schema and native loopback contracts; no NS8 SDK')
+print('Released image Core matches immutable Git lock, schema, OAuth flow and native loopback contracts; no NS8 SDK')
