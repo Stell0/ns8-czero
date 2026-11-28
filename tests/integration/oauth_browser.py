@@ -19,15 +19,12 @@ class OAuthBrowser(AsyncClient):
     def signin_url(self):
         return self.form_url('/auth/login') + '&stage=' + self.stage if self.flow else '/auth/login'
 
-    async def ordinary_signin(self, **kwargs):
-        return await super().request('GET', '/auth/login', **kwargs)
-
     async def request(self, method, url, **kwargs):
         path = urlsplit(str(url)).path
         if self.flow and '?' not in str(url):
             if path.startswith(('/oauth/connect', '/oauth/consent')):
                 url = self.form_url(str(url))
-            elif path == '/auth/login' and not kwargs.get('params'):
+            elif path == '/auth/login' and kwargs.get('params') is None:
                 url = self.signin_url()
         response = await super().request(method, url, **kwargs)
         if path == '/oauth/authorize' and response.status_code == 302:

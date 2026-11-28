@@ -92,7 +92,7 @@ def test_browser_approval_decline_disconnect_and_persistent_block_are_separate(c
                 # Start a new website sign-in after the admin retired this session.
                 assert (await user.get('/auth/sign-in')).status_code == 200
                 for _ in range(2):
-                    started=await user.ordinary_signin()
+                    started=await user.get('/auth/login', params={})
                     from urllib.parse import parse_qs,urlsplit
                     state=parse_qs(urlsplit(started.headers['location']).query)['state'][0]
                     assert (await user.get('/auth/callback',params={'state':state,'code':'unit-only-forbidden-code'})).status_code==403

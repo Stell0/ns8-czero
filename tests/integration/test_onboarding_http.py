@@ -28,7 +28,7 @@ def parameters(**updates):
 
 async def signin(client, *, code='unit-only-code', target='/', return_to=None):
     if target == '/' and not return_to:
-        response = await client.ordinary_signin()
+        response = await client.get('/auth/login', params={})
     else:
         response = await client.get('/auth/login', params={'return_to': return_to} if return_to else None)
     state = parse_qs(urlsplit(response.headers['location']).query)['state'][0]
