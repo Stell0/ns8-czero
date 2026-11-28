@@ -4,11 +4,21 @@
 
 ## OAuth browser and connector recovery
 
-Development base `55138e3` pins released Core 0.53.0. The producer candidate adds
-browser flow ownership, callback publication fencing and status-only consent
-receipts in schema `0048_consent_flows`. Publish independently verified Core
-artifacts before updating the consumer range and frozen lock. A consumer built
-with the previous pin rejects the session-only parameter added in PR 174.
+[PR 177](https://github.com/Stell0/ns8-czero/pull/177) added browser flow
+ownership, callback publication fencing and status-only consent receipts in
+schema `0048_consent_flows`. The [full producer acceptance](https://github.com/Stell0/ns8-czero/actions/runs/46144047419)
+passed on `a85dac044bc4b38e0bb581111cda4a04a104124a`, including Debian upgrade
+and Rocky install. [Core 0.55.0](https://github.com/Stell0/ns8-czero/releases/tag/core-v0.55.0)
+was published from that commit. The downloaded wheel and source archive matched
+the independent build and the published checksums. Their SHA256 digests are
+`549a513679ffa3e32612a5cc507a1eb3af326825c651bd489a479ef292950ddf` and
+`601eec83b6d605bc0d9684e0d4cdd8a33bdb6ccf104badfd6e65d91111a623d7`, respectively.
+
+The reference app lock selects that exact Git commit through `core-v0.55.0`.
+Its predecessor used Core 0.53.0 and rejected the session-only parameter.
+With the producer and the affected console, a disposable Keycloak and PostgreSQL
+run verified an authenticated MCP profile read after disconnect and fresh consent,
+and another on the original connection after C0 restarted and became ready.
 
 Acceptance exercises overlapping browser requests, explicit background login,
 lost completion and rotation responses, current account and role, and
@@ -32,11 +42,11 @@ the same instance.
 ## Public website collection and ingestion reliability
 
 Baseline upstream `1e75e9e3d6f41366185a993b816a9b97a1e215a9` has producer
-Core 0.53.1. The app 0.70.0 consumer lock pins released Core 0.53.0 at
+Core 0.53.1. Its app 0.70.0 consumer lock pinned released Core 0.53.0 at
 `88b0635d0bc588d7048f09822019e5f22817bfc8` and schema `0046_pdf_authorization`.
 The [baseline validation](https://github.com/Stell0/ns8-czero/actions/runs/45835725920)
-passed. The producer candidate is Core 0.54.0 and schema
-`0047_collection_diagnostics`. Consumer release adoption is pending.
+passed. The Core 0.54.0 producer added schema `0047_collection_diagnostics`.
+These changes shipped in Core 0.55.0 with the OAuth recovery work above.
 
 1. Compare selected-space run and document reads through authenticated REST
    and MCP. Preserve role, delegated scope and negative controls. Keep the
