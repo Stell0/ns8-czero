@@ -59,6 +59,8 @@ def test_rest_and_both_sdk_modes_normalize_queries_and_preserve_semantic_passage
                         async with Client(streamable_http_client(RESOURCE,http_client=http),mode=mode) as client:
                             result=await client.call_tool('knowledge_search',{'options':{'query':' '*600+'alpha\nrecovery','mode':'hybrid','kind':'wiki'}})
                             assert not result.is_error and result.structured_content==expected
+                            compact=await client.call_tool('knowledge_search_compact',{'options':{'query':'alpha recovery','mode':'hybrid','kind':'wiki'}})
+                            assert not compact.is_error and compact.structured_content==expected
                             assert (await client.call_tool('knowledge_search',{'options':{'query':'a'*513}})).is_error
             def score_reply(request):
                 payload=json.loads(request.content)

@@ -7,12 +7,16 @@ import os
 from pathlib import Path
 import sys
 
+import httpx2
+from mcp import Client
+from mcp.client.streamable_http import streamable_http_client
 import pytest
 from project_contract import TOOL_COUNT
 from sqlalchemy import create_engine,text
+from czero_core.worker import Worker
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from evaluation.fixture import Fixture,disposable_database,database_parameters
+from evaluation.fixture import Fixture,disposable_database,database_parameters,ORIGIN
 from evaluation.grader import content,grade
 
 pytestmark=pytest.mark.skipif(not os.getenv('CZERO_TEST_DATABASE_URL'),reason='disposable PostgreSQL required')
@@ -22,6 +26,68 @@ def test_only_loopback_database_administrator_is_allowed():
     for value in ('postgresql+psycopg://user@remote.example.test/db',
                   'postgresql+psycopg://user@/db','sqlite:///tmp.db'):
         with pytest.raises(ValueError): database_parameters(value)
+
+
+def test_compact_search_preserves_originals_and_checks_current_authority(tmp_path):
+    async def check():
+        async with disposable_database(os.environ['CZERO_TEST_DATABASE_URL']) as url:
+            fixture = Fixture(url, tmp_path)
+            try:
+                await fixture.seed('cited-research')
+                options = {'space_id': fixture.space, 'query': 'Quasar', 'mode': 'text', 'rerank': 'off'}
+                citation = fixture.ground['citation']
+                target = {'space_id': fixture.space, 'chunk_id': citation['chunk_id']}
+                async with fixture.mcp('reader-denial') as reader:
+                    tools = {tool.name: tool for tool in (await reader.list_tools()).tools}
+                    assert tools['knowledge_search_compact'].annotations.read_only_hint
+                    full = await reader.call_tool('knowledge_search', {'options': options})
+                    result = await reader.call_tool('knowledge_search_compact', {'options': options})
+                    assert not full.is_error and not result.is_error
+                    compact = result.structured_content
+                    rest = await fixture.http.get('/api/v1/knowledge/search/compact', params=options)
+                    assert rest.status_code == 200 and rest.json() == compact
+                    assert json.loads(result.content[0].text) == compact
+                    assert {hit['kind'] for hit in compact['hits']} == {'chunk', 'wiki_revision'}
+                    source = next(hit for hit in compact['hits'] if hit['kind'] == 'chunk')
+                    assert 'excerpt' not in source and source['citation'] == citation
+                    exact = await reader.call_tool('citations_get', target)
+                    assert not exact.is_error and exact.structured_content == citation
+                    origin = citation['start_offset']
+                    source['excerpt'] = citation['body'][source['start_offset'] - origin:source['end_offset'] - origin]
+                    assert compact == full.structured_content
+
+                    foreign = {**options, 'space_id': fixture.ground['Finance']['id']}
+                    denied = await reader.call_tool('knowledge_search_compact', {'options': foreign})
+                    assert denied.is_error and denied.meta['c0/error']['status'] == 403
+                    original = await fixture.request('GET', '/api/v1/sources/' + citation['source_id'], space=fixture.space)
+                    await fixture.request('POST', '/api/v1/sources/ingest-text', {
+                        'source_id': citation['source_id'], 'title': original['title'], 'metadata': original['metadata'],
+                        'expected_revision': original['revision'], 'body': 'Quasar replacement measurement.',
+                        'idempotency_key': 'replace-measurement'}, fixture.space)
+                    Worker(fixture.db, fixture.app.state.jobs.registry).tick()
+                    retired = await reader.call_tool('citations_get', target)
+                    assert retired.is_error and retired.meta['c0/error'] == {'status': 410, 'code': 'content_superseded'}
+                    current = await reader.call_tool('knowledge_search_compact', {'options': {**options, 'kind': 'source'}})
+                    assert not current.is_error
+                    hit, = current.structured_content['hits']
+                    assert hit['citation']['body'] == 'Quasar replacement measurement.'
+                    assert hit['citation']['version_id'] != citation['version_id']
+                    accounts = await fixture.request('GET', '/api/v1/access/accounts')
+                    member = next(row for row in accounts['accounts'] if row['username'] == 'reader')
+                    await fixture.request('PUT', '/api/v1/spaces/' + fixture.space + '/grants/' + member['id'],
+                        {'role': None, 'expected_revision': 1, 'idempotency_key': 'remove-test-reader'})
+                    # Revocation also invalidates the old token. A fresh, valid reader token
+                    # must still be denied both the search and the expired evidence status.
+                    fresh = fixture.token('reader-denial')
+                    async with httpx2.AsyncClient(transport=httpx2.ASGITransport(app=fixture.app), base_url=ORIGIN,
+                            headers={'Authorization': 'Bearer ' + fresh.access_token}) as http:
+                        async with Client(streamable_http_client(ORIGIN + '/mcp', http_client=http)) as revoked:
+                            for name, arguments in [('knowledge_search_compact', {'options': options}), ('citations_get', target)]:
+                                denied = await revoked.call_tool(name, arguments)
+                                assert denied.is_error and denied.content[0].text == 'permission_denied'
+            finally:
+                await fixture.close()
+    asyncio.run(check())
 
 
 @pytest.mark.parametrize('case',['cited-research','wiki-conflict','uncertain-replay','queued-evidence',

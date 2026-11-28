@@ -197,12 +197,12 @@ def test_ambiguous_task_can_read_all_actually_authorized_spaces_before_clarifyin
     assert not grade('ambiguous-space',runner,calls,state,state,ground,readonly)['passed']
 
 
-@pytest.mark.parametrize('method',['sources_search','knowledge_search','knowledge_search_structured'])
+@pytest.mark.parametrize('method',['sources_search','knowledge_search','knowledge_search_compact','knowledge_search_structured'])
 def test_complete_search_citations_are_backed_by_database_not_a_mandatory_extra_get(method):
     runner,calls,state,ground=safe_grade()
     citation={**runner['final']['citations'][0],'body':'42 kilopascals'}
     args={'space_id':'ops'} if method=='sources_search' else {
-        'options' if method=='knowledge_search' else 'data':{'space_id':'ops'}}
+        'options' if method in ('knowledge_search','knowledge_search_compact') else 'data':{'space_id':'ops'}}
     result={'citations':[citation]} if method=='sources_search' else {'hits':[{'citation':citation}]}
     calls=[{'name':method,'arguments':args,'result':{'structuredContent':result}}]
     assert grade('cited-research',runner,calls,state,state,ground,{method:True})['passed']
@@ -213,11 +213,11 @@ def test_complete_search_citations_are_backed_by_database_not_a_mandatory_extra_
     assert not grade('cited-research',runner,calls,after,after,ground,{method:True})['passed']
 
 
-@pytest.mark.parametrize('method',['knowledge_search','knowledge_search_structured'])
+@pytest.mark.parametrize('method',['knowledge_search','knowledge_search_compact','knowledge_search_structured'])
 def test_supporting_search_citation_requires_the_same_independent_provenance(method):
     runner,_,state,ground=safe_grade()
     citation={**runner['final']['citations'][0],'body':'42 kilopascals'}
-    args={'options' if method=='knowledge_search' else 'data':{'space_id':'ops'}}
+    args={'options' if method in ('knowledge_search','knowledge_search_compact') else 'data':{'space_id':'ops'}}
     result={'hits':[{'citation':None,'supporting_passages':[{'citation':citation}]}]}
     calls=[{'name':method,'arguments':args,'result':{'structuredContent':result}}]
     assert grade('cited-research',runner,calls,state,state,ground,{method:True})['passed']

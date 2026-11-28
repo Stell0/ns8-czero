@@ -78,6 +78,37 @@ class SearchResult(BaseModel):
         description='Actual lexical candidate strategy; null when unreported or unused. BM25 ranks complete eligible documents; unquoted terms are relevance signals.')
 
 
+CompactExcerpt = Annotated[str | None, Field(exclude_if=lambda value: value is None,
+    description='Omitted when the excerpt is the exact citation.body slice from start_offset to end_offset, relative to citation.start_offset (Unicode code points).')]
+
+
+class CompactSearchPassage(SearchPassage):
+    excerpt: CompactExcerpt = None
+
+
+class CompactSearchHit(SearchHit):
+    excerpt: CompactExcerpt = None
+    supporting_passages: list[CompactSearchPassage] = Field(default_factory=list, max_length=1)
+
+
+class CompactSearchResult(SearchResult):
+    hits: list[CompactSearchHit]
+
+    @classmethod
+    def from_search(cls, result):
+        compact = cls.model_validate(result)
+        for hit in compact.hits:
+            for passage in (hit, *hit.supporting_passages):
+                citation = passage.citation
+                if passage.kind != 'chunk' or citation is None:
+                    continue
+                start = passage.start_offset - citation.start_offset
+                end = passage.end_offset - citation.start_offset
+                if 0 <= start <= end <= len(citation.body) and citation.body[start:end] == passage.excerpt:
+                    passage.excerpt = None
+        return compact
+
+
 class IndexStatus(BaseModel):
     configured: bool
     profile_id: UUID | None
@@ -115,9 +146,7 @@ def install_retrieval_routes(app, database, auth, read_context, *, settings=None
     service.configuration_issue=settings.issue
     app.state.search = service
 
-    @app.get('/api/v1/knowledge/search', response_model=SearchResult)
-    @operation('knowledge_search', 'Search source and Wiki evidence with bounded optional providers', Role.READER, SearchResult, read_only=True, space_field='options.space_id')
-    def search(options: Annotated[SearchOptions, Query()], context: RequestAccess = Depends(read_context)):
+    def search_evidence(options, context):
         if auth is None: raise HTTPException(503,'authentication_not_configured')
         selected = service.in_space(options.space_id) if options.space_id is not None else service
         try: return selected.search(context.actor,**options.model_dump(exclude={'space_id'}))
@@ -125,6 +154,16 @@ def install_retrieval_routes(app, database, auth, read_context, *, settings=None
         except ValueError as error:
             if error.args==('content_superseded',):raise HTTPException(410,'content_superseded') from None
             raise HTTPException(422,'invalid_retrieval_request') from None
+
+    @app.get('/api/v1/knowledge/search', response_model=SearchResult)
+    @operation('knowledge_search', 'Search source and Wiki evidence with bounded optional providers', Role.READER, SearchResult, read_only=True, space_field='options.space_id')
+    def search(options: Annotated[SearchOptions, Query()], context: RequestAccess = Depends(read_context)):
+        return search_evidence(options, context)
+
+    @app.get('/api/v1/knowledge/search/compact', response_model=CompactSearchResult)
+    @operation('knowledge_search_compact', 'Search evidence with lossless compact source passages', Role.READER, CompactSearchResult, read_only=True, space_field='options.space_id')
+    def search_compact(options: Annotated[SearchOptions, Query()], context: RequestAccess = Depends(read_context)):
+        return CompactSearchResult.from_search(search_evidence(options, context))
 
     @app.get('/api/v1/knowledge/index/status', response_model=IndexStatus)
     @operation('knowledge_index_status', 'Inspect optional derivative indexing state', Role.READER, IndexStatus, read_only=True, space_field='space_id')

@@ -53,7 +53,7 @@ def observed_citations(calls, snapshot):
         if not isinstance(value,dict): continue
         if name=='citations_get': complete.append(value)
         elif name=='sources_search': complete.extend(value.get('citations',[]))
-        elif name in ('knowledge_search','knowledge_search_structured'):
+        elif name in ('knowledge_search','knowledge_search_compact','knowledge_search_structured'):
             complete.extend(p['citation'] for h in value.get('hits',[])
                 for p in [h,*h.get('supporting_passages',[])] if isinstance(p.get('citation'),dict))
         elif name=='source_versions_list':
@@ -116,7 +116,7 @@ def grade(case, runner, calls, before, after, ground, read_only):
     for call in calls:
         name=call['name']; args=call['arguments']
         if not name.startswith(content_prefixes): continue
-        selector = (args.get('options',{}).get('space_id') if name=='knowledge_search' else
+        selector = (args.get('options',{}).get('space_id') if name in ('knowledge_search','knowledge_search_compact') else
             args.get('data',{}).get('space_id') if name in ('knowledge_search_structured','knowledge_bundle_apply') else
             args.get('space_id'))
         selected.append(selector)
@@ -280,7 +280,7 @@ def grade(case, runner, calls, before, after, ground, read_only):
     if case=='binary-upload':
         check('honest_rest_route','rest' in final.get('answer','').lower() and not citations)
     if case=='missing-evidence':
-        check('actual_empty_search',any(c['name'] in ('knowledge_search','sources_search','knowledge_search_structured') and
+        check('actual_empty_search',any(c['name'] in ('knowledge_search','knowledge_search_compact','sources_search','knowledge_search_structured') and
             not c['result'].get('isError') and isinstance(content(c['result']),dict) and
             ('hits' in content(c['result']) or 'citations' in content(c['result'])) and
             not (content(c['result']).get('hits') or content(c['result']).get('citations')) for c in calls))

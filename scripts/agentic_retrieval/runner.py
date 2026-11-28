@@ -85,7 +85,7 @@ async def episode(fixture,corpus,question,config,output,budget,key):
             result['version_errors']+=sum(bool(question['versions']) and p not in question['versions'] for p in proof['final']['versions'])
             row={'status':'measured','question_id':question['id'],'answerability':question['answerability'],
                 'language':question['language'],'grade':result,'runner':proof,
-                'retrieval_telemetry':[{'tool':c['name'],'response':payload(c)} for c in calls if c['name'] in ('sources_search','knowledge_search','knowledge_search_structured')],
+                'retrieval_telemetry':[{'tool':c['name'],'response':payload(c)} for c in calls if c['name'] in ('sources_search','knowledge_search','knowledge_search_compact','knowledge_search_structured')],
                 'graph_calls':[c['name'] for c in calls if 'graph' in c['name'] or 'relation' in c['name']]}
     except Exception as exc:
         if (output/'runner.json').exists():proof=json.loads((output/'runner.json').read_text())
