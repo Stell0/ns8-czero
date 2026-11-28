@@ -8,6 +8,7 @@ Assistants reason over evidence. C0 stores it, enforces access and runs register
 - Fetch `main` from [original C0](https://github.com/Stell0/ns8-czero) and start an isolated worktree at that commit. Preserve dirty checkouts and fork customizations.
 - Use the [roadmap](PLAN.md#roadmap) and the relevant delivery record in PLAN for accepted scope and deployed identities. Use manifests and locks for source versions.
 - Read the matching skill in `.agents/skills/` and [feature contract](docs/development.md#feature-contracts). Use the installed NethServer skills for native operations, commits, PRs and releases, and Nebula for frontend work.
+- When asked to run the kbnethesis benchmark, use `python3 scripts/web-vs-kb.py rerun` and compare the saved run with the historical baselines. Follow the [benchmark guide](docs/web-vs-kb.md).
 
 ## Where changes belong
 

@@ -1,5 +1,8 @@
 # Controlled agentic retrieval experiments
 
+The [Nethesis web versus web-plus-KB benchmark](web-vs-kb.md) measures the
+installed connector and public web tools in fresh Codex sessions.
+
 These are external development workflows, never a production maintenance service.
 Use the three repository skills in `.agents/skills`: generate retrieval questions,
 maintain semantic layer, and benchmark agentic retrieval. They compose through
