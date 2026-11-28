@@ -22,18 +22,20 @@ and another on the original connection after C0 restarted and became ready.
 
 Acceptance exercises overlapping browser requests, explicit background login,
 lost completion and rotation responses, current account and role, and
-credential-free access logs. Repeat the installed console and assistant reads
+credential-free C0 and connector diagnostics. Repeat the installed console and assistant reads
 after reconnect and after a recoverable outage. A clean restore with a new
 native identity requires fresh consent. Keep rollout gated on full native
 acceptance, supported backup, readiness, and those client readbacks.
 
-Roll out proxy sanitization first and verify synthetic callback canaries on each
-ingress. Promote the Core producer from the accepted source, then lock the app
-to that immutable tag and rerun the released-consumer image and native suites.
-Deploy the verified app before enabling the consumer's session-only flow. A
+The OAuth recovery rollout can proceed with the existing Traefik configuration.
+Traefik can retain OAuth callback queries. Restrict access to raw proxy logs
+and exclude them from shared incident exports. After released-consumer image
+and native acceptance, deploy the same verified C0 image one instance at a
+time. Verify the existing grant with an authenticated MCP profile read before
+updating the connector where it is already installed. A
 generic proxy or transport failure after refresh dispatch still requires fresh
 consent. Only C0's confirmed pre-rotation result allows a retry with that
-refresh token. Stop rollout on a leaked canary, a binding or revocation failure,
+refresh token. Stop rollout on a credential in C0 or connector diagnostics, a binding or revocation failure,
 a second redemption, lost backup evidence, or a failed protected read on a
 healthy service. Recover a failed schema update using the supported, matched
 pre-update backup and image. Preserve the native client identity when recovering

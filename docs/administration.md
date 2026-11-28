@@ -74,9 +74,14 @@ joins browser stages, `exchange` joins consent to code redemption, and
 `generation` joins issuance to a bearer check. A challenge on discovery,
 a rejected bearer, and an operation error inside an HTTP 200 have separate
 records. A proxy 502 can precede any C0 event. Compare its time to service
-readiness and backup records. Deploy the proxy privacy update on each ingress
-node and verify a synthetic callback produces a path/status record with all
-credential canaries absent.
+readiness and backup records. The OAuth recovery update can use the existing
+Traefik configuration. Traefik can retain OAuth callback queries in its access
+logs. Restrict raw proxy logs to authorized operators and exclude them from
+shared incident exports.
+
+For the credential-free logging check, exercise the OAuth flow and verify that
+C0 and the installed connector each recorded the expected events. Check those
+diagnostic entries for credential canaries and stop the rollout if any appear.
 
 ### Inspect incomplete source work
 
